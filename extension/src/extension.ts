@@ -5,6 +5,8 @@ import { StatusBar } from './ui/statusBar';
 import { ReviewPanelProvider } from './panel/reviewPanelProvider';
 import { ReviewController } from './review/reviewController';
 import { LearningStore } from './learning/learningStore';
+import { SessionManager } from './auth/session';
+import { SyncService } from './sync/syncService';
 import { isExcludedPath } from './config/exclusions';
 import type { ExplanationLevel, ReviewRequest, ReviewScope } from './panel/reviewTypes';
 
@@ -18,7 +20,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new StatusBar();
   const panel = new ReviewPanelProvider(context.extensionUri);
   const store = new LearningStore(context.globalState);
-  const controller = new ReviewController(panel, log, context.globalState, store);
+  const session = new SessionManager(context.secrets);
+  const sync = new SyncService(session, log);
+  const controller = new ReviewController(panel, log, context.globalState, store, sync);
   const selectionWatcher = new SelectionWatcher();
 
   context.subscriptions.push(
@@ -99,6 +103,12 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('uncode.showProgress', () => controller.showProgress()),
+
+    vscode.commands.registerCommand('uncode.signIn', () => sync.signIn()),
+
+    vscode.commands.registerCommand('uncode.signOut', () => sync.signOut()),
+
+    vscode.commands.registerCommand('uncode.openDashboard', () => sync.openDashboard()),
 
     vscode.commands.registerCommand('uncode.dismissPrompt', () => {
       lastPromptedSignature = lastDetected?.signature;

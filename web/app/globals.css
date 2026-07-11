@@ -1,0 +1,180 @@
+/* Uncode dashboard — strict black/white/grays. Mirrors docs/design-system.md */
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f7;
+  --fg: #0a0a0a;
+  --fg-muted: #6b6b6b;
+  --fg-faint: #9a9a9a;
+  --line: #e5e5e5;
+  --line-strong: #c9c9c9;
+  --fill-hover: #f0f0f0;
+  --fill-active: #0a0a0a;
+  --on-fill: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0b0b;
+    --bg-subtle: #141414;
+    --fg: #f2f2f2;
+    --fg-muted: #a3a3a3;
+    --fg-faint: #6e6e6e;
+    --line: #242424;
+    --line-strong: #3a3a3a;
+    --fill-hover: #1c1c1c;
+    --fill-active: #f2f2f2;
+    --on-fill: #0b0b0b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 56px;
+  border-bottom: 1px solid var(--line);
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.nav__brand {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-right: auto;
+}
+.nav a {
+  color: var(--fg-muted);
+  font-size: 14px;
+  padding: 4px 0;
+}
+.nav a:hover {
+  color: var(--fg);
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 32px 0 4px;
+}
+.subtitle {
+  color: var(--fg-muted);
+  margin: 0 0 32px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.tile {
+  background: var(--bg);
+  padding: 20px;
+}
+.tile__value {
+  font-size: 30px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tile__label {
+  color: var(--fg-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.list {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.row:last-child {
+  border-bottom: none;
+}
+.row__main {
+  font-weight: 500;
+}
+.row__meta {
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace;
+}
+.badge {
+  font-size: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  padding: 1px 6px;
+  color: var(--fg-muted);
+}
+
+.empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--fg-muted);
+}
+.empty__title {
+  color: var(--fg);
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+.btn {
+  display: inline-block;
+  background: var(--fill-active);
+  color: var(--on-fill);
+  border: 1px solid var(--fill-active);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.field {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.mono {
+  font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace;
+}

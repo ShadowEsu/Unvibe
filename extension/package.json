@@ -61,6 +61,18 @@
         "title": "Uncode: Show Progress"
       },
       {
+        "command": "uncode.signIn",
+        "title": "Uncode: Sign In"
+      },
+      {
+        "command": "uncode.signOut",
+        "title": "Uncode: Sign Out"
+      },
+      {
+        "command": "uncode.openDashboard",
+        "title": "Uncode: Open Dashboard"
+      },
+      {
         "command": "uncode.dismissPrompt",
         "title": "Uncode: Dismiss Review Prompt"
       }

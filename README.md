@@ -20,19 +20,23 @@ npm run build
 Open this folder in VS Code or Cursor and press **F5** to launch the Extension Development Host.
 A "Uncode" item appears in the status bar and an Uncode view in the Activity Bar.
 
-## Run the AI service (dev)
+## Run the backend + dashboard (dev)
 ```
-cd server
+cd web
 npm install
-npm run dev          # http://localhost:8787 — MOCK provider, no API key needed
+npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 ```
-Set `ANTHROPIC_API_KEY` for real explanations. The extension calls this service; configure
-its URL with the `uncode.backendUrl` setting (default `http://localhost:8787`).
+- No keys needed for dev: a **mock AI provider** and an **in-memory dev store** are used.
+- `ANTHROPIC_API_KEY` → real explanations. `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` → real DB.
+- The extension talks to this origin (`uncode.backendUrl`, default `http://localhost:8787`).
+  Run **Uncode: Sign In** in the editor to connect and sync your learning to the dashboard.
+
+`server/` is an optional AI-only dev harness (superseded by `web/`).
 
 ## Milestones
 1. ✅ Extension skeleton + detection
 2. ✅ AI layer + context builder + secret filter (streaming explanations)
 3. ✅ Project-summary scope + clickable, validated file/line citations
-4. ✅ Comprehension checks + local persistence (streak, mastery, history) ← current
-5. Dashboard + auth + sync (migrate service into Next.js)
+4. ✅ Comprehension checks + local persistence (streak, mastery, history)
+5. ✅ Dashboard + auth + sync (AI endpoints migrated into Next.js) ← current
 6. States, polish, validation

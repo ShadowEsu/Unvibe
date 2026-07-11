@@ -9,6 +9,7 @@ import { fetchComprehension } from '../net/comprehensionClient';
 import { toSegments, basename } from '../citations/citations';
 import type { LearningStore } from '../learning/learningStore';
 import type { LearningEvent } from '../learning/types';
+import type { SyncService } from '../sync/syncService';
 import type { ComprehensionQuestion, ReviewRequestPayload as Payload } from '../protocol';
 
 interface ActiveReview {
@@ -35,6 +36,7 @@ export class ReviewController {
     private readonly log: vscode.OutputChannel,
     private readonly memento: vscode.Memento,
     private readonly store: LearningStore,
+    private readonly sync: SyncService,
   ) {
     this.panel.onMessage = (m) => this.onWebviewMessage(m);
   }
@@ -91,7 +93,8 @@ export class ReviewController {
     if (!this.active.eventId && !question && variant !== 'different') {
       const id = genId();
       this.active.eventId = id;
-      void this.store.addReview(makeEvent(id, this.active.request, this.active.context.primaryFile));
+      const event = await this.store.addReview(makeEvent(id, this.active.request, this.active.context.primaryFile));
+      void this.sync.push([event]);
     }
 
     const payload: ReviewRequestPayload = {
@@ -188,12 +191,9 @@ export class ReviewController {
     }
     const pass = selectedIndex === q.answerIndex;
     if (this.active?.eventId) {
-      void this.store.setOutcome(
-        this.active.eventId,
-        pass ? 'understood' : 'needs_review',
-        q.concept,
-        q.conceptLabel,
-      );
+      void this.store
+        .setOutcome(this.active.eventId, pass ? 'understood' : 'needs_review', q.concept, q.conceptLabel)
+        .then((e) => e && this.sync.push([e]));
     }
     this.panel.showComprehensionResult(pass, q.rationale);
     this.log.appendLine(`[review] comprehension ${pass ? 'pass' : 'fail'} — concept ${q.concept}`);
@@ -250,9 +250,9 @@ export class ReviewController {
           void this.send(undefined, 'different');
         } else if (message.action === 'understand') {
           if (this.active?.eventId) {
-            void this.store.setOutcome(this.active.eventId, 'understood');
+            void this.store.setOutcome(this.active.eventId, 'understood').then((e) => e && this.sync.push([e]));
           }
-          void vscode.window.setStatusBarMessage('Uncode: saved. Open the panel menu → Test me, or run Uncode: Show Progress.', 3000);
+          void vscode.window.setStatusBarMessage('Uncode: saved. Try "Test me", or run Uncode: Show Progress.', 3000);
         } else if (message.action === 'testMe') {
           void this.startComprehension();
         }
@@ -264,7 +264,7 @@ export class ReviewController {
         void this.openCitation(message.file, message.startLine);
         break;
       case 'openDashboard':
-        void vscode.window.setStatusBarMessage('Uncode: dashboard arrives in Milestone 5', 2500);
+        this.sync.openDashboard();
         break;
     }
   }

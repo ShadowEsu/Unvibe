@@ -16,8 +16,9 @@ export class LearningStore {
     return this.memento.update(KEY, state);
   }
 
-  async addReview(event: LearningEvent): Promise<void> {
+  async addReview(event: LearningEvent): Promise<LearningEvent> {
     await this.save(addEvent(this.load(), event));
+    return event;
   }
 
   async setOutcome(
@@ -25,8 +26,10 @@ export class LearningStore {
     outcome: Outcome,
     concept?: string,
     conceptLabel?: string,
-  ): Promise<void> {
-    await this.save(setOutcome(this.load(), id, outcome, concept, conceptLabel));
+  ): Promise<LearningEvent | undefined> {
+    const next = setOutcome(this.load(), id, outcome, concept, conceptLabel);
+    await this.save(next);
+    return next.events.find((e) => e.id === id);
   }
 
   progress(): Progress {

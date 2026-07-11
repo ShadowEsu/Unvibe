@@ -36,15 +36,17 @@ mobile · complex gamification · custom model training / RL · vector search ·
 ## Directory structure
 ```
 extension/   VS Code/Cursor extension (Milestone 1+)
-server/      AI explanation service — streaming SSE, swappable provider (Milestone 2).
-             Framework-agnostic; its provider/prompt modules migrate into web/ at M5.
-web/         Next.js dashboard + backend API (Milestone 5)   [not yet created]
+web/         Next.js backend + black-and-white dashboard (Milestone 5). Hosts the AI
+             endpoints AND the learning-sync/auth API. Data layer: SupabaseStore (prod) or
+             MemoryStore (dev). SQL in web/supabase/migrations.
+server/      Legacy standalone AI-only dev harness (Milestone 2). Superseded by web/ for the
+             full backend; kept for quick AI iteration without Next.js.
 docs/        architecture.md · design-system.md · privacy.md
 ```
 
-> M2 decision (change-control): the AI service is a dependency-free standalone Node service
-> for now rather than the Next.js app, because M2 needs only a streaming endpoint. The
-> provider/prompt modules are framework-agnostic and move into Next.js API routes at M5.
+> M5 note: the AI provider/prompt modules were migrated into web/src/ai (Next.js API routes).
+> The data layer is an abstraction — Supabase in prod (needs SUPABASE_URL + service-role key),
+> a labelled in-memory dev store otherwise. Auth is a device-code flow issuing bearer tokens.
 
 ## Coding conventions
 - TypeScript strict. No `any` without a comment justifying it.
@@ -82,11 +84,18 @@ npm run typecheck   # tsc --noEmit
 npm test            # node --test unit tests (secret filter, diff parse, parsers)
 # then press F5 in VS Code to launch the Extension Development Host
 
-# AI service
-cd server
+# backend + dashboard (full)
+cd web
 npm install
-npm run dev         # http://localhost:8787 (MOCK provider; no key needed)
-ANTHROPIC_API_KEY=sk-ant-... npm run dev   # real analysis
+npm run dev         # http://localhost:8787 — dashboard + AI + sync API
+npm run build       # next build
+npm run typecheck   # tsc --noEmit
+# env: ANTHROPIC_API_KEY (real AI, else mock) · SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+#      (prod store, else dev MemoryStore). See web/.env.example.
+
+# AI-only dev harness (optional)
+cd server
+npm install && npm run dev   # http://localhost:8787 (mock unless ANTHROPIC_API_KEY set)
 ```
 
 ## Definition of done (strict)
