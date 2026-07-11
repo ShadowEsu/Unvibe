@@ -151,7 +151,17 @@
 
   function streamError(message) {
     show(els.explain);
-    els.explainBody.textContent = 'Could not complete the review: ' + message;
+    els.explainBody.textContent = '';
+    var p = document.createElement('p');
+    p.className = 'explanation__warn';
+    p.textContent = 'Could not complete the review: ' + message;
+    els.explainBody.appendChild(p);
+    var retry = document.createElement('button');
+    retry.className = 'btn';
+    retry.type = 'button';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', function () { vscode.postMessage({ type: 'retry' }); });
+    els.explainBody.appendChild(retry);
   }
 
   function showOffline() {

@@ -91,13 +91,15 @@ h1 {
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1px;
-  background: var(--line);
   border: 1px solid var(--line);
+  border-right: none;
+  border-bottom: none;
 }
 .tile {
   background: var(--bg);
   padding: 20px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .tile__value {
   font-size: 30px;

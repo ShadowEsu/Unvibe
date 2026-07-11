@@ -44,4 +44,5 @@ export type WebviewToHost =
   | { type: 'question'; text: string }
   | { type: 'comprehensionAnswer'; selectedIndex: number }
   | { type: 'openCitation'; file: string; startLine: number }
+  | { type: 'retry' }
   | { type: 'openDashboard' };

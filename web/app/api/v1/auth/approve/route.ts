@@ -11,11 +11,13 @@ export async function POST(req: Request): Promise<Response> {
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });
   }
+  // Secure only over HTTPS (so local http dev still works).
+  const isHttps = new URL(req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';
+  const cookie =
+    `uncode_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000` +
+    (isHttps ? '; Secure' : '');
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
-    headers: {
-      'content-type': 'application/json',
-      'set-cookie': `uncode_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`,
-    },
+    headers: { 'content-type': 'application/json', 'set-cookie': cookie },
   });
 }

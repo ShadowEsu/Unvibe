@@ -28,6 +28,7 @@ export class ReviewController {
   private active: ActiveReview | undefined;
   private abort: AbortController | undefined;
   private pendingQuestion: ComprehensionQuestion | undefined;
+  private lastSend: { question?: string; variant?: 'default' | 'different' } | undefined;
   /** Files (rel path + basename) actually sent in the current context — for citation validation. */
   private readonly contextFiles = new Set<string>();
 
@@ -88,6 +89,7 @@ export class ReviewController {
       return;
     }
     const backendUrl = this.backendUrl();
+    this.lastSend = { question, variant };
 
     // Record the review once, on the initial explanation (not follow-ups / re-explains).
     if (!this.active.eventId && !question && variant !== 'different') {
@@ -259,6 +261,11 @@ export class ReviewController {
         break;
       case 'comprehensionAnswer':
         this.gradeComprehension(message.selectedIndex);
+        break;
+      case 'retry':
+        if (this.active) {
+          void this.send(this.lastSend?.question, this.lastSend?.variant);
+        }
         break;
       case 'openCitation':
         void this.openCitation(message.file, message.startLine);

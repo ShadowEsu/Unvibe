@@ -21,7 +21,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const panel = new ReviewPanelProvider(context.extensionUri);
   const store = new LearningStore(context.globalState);
   const session = new SessionManager(context.secrets);
-  const sync = new SyncService(session, log);
+  const sync = new SyncService(session, log, context.globalState);
+  // Backfill anything queued while offline / signed out.
+  void sync.flush();
   const controller = new ReviewController(panel, log, context.globalState, store, sync);
   const selectionWatcher = new SelectionWatcher();
 

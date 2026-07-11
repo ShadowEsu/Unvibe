@@ -2,16 +2,29 @@ import * as vscode from 'vscode';
 import type { SessionManager } from '../auth/session';
 import type { LearningEvent } from '../learning/types';
 import { startDeviceAuth, pollToken, postEvents } from '../net/syncClient';
+import { enqueue, removeIds } from './outbox';
+
+const OUTBOX_KEY = 'uncode.outbox.v1';
 
 /**
  * Best-effort sync to the Uncode backend. Local-first: everything works signed-out; when a
- * token is present, review events are pushed. Failures never block the review flow.
+ * token is present, review events are pushed. Events are queued in a durable outbox first, so
+ * anything recorded offline (or while signed out) is backfilled on the next successful flush.
+ * Failures never block the review flow.
  */
 export class SyncService {
   constructor(
     private readonly session: SessionManager,
     private readonly log: vscode.OutputChannel,
+    private readonly memento: vscode.Memento,
   ) {}
+
+  private outbox(): LearningEvent[] {
+    return this.memento.get<LearningEvent[]>(OUTBOX_KEY, []);
+  }
+  private setOutbox(events: LearningEvent[]): Thenable<void> {
+    return this.memento.update(OUTBOX_KEY, events);
+  }
 
   private backendUrl(): string {
     return vscode.workspace
@@ -64,6 +77,7 @@ export class SyncService {
 
     if (token) {
       await this.session.setToken(token);
+      await this.flush(); // backfill anything recorded before sign-in
       void vscode.window.showInformationMessage('Uncode: connected. Your learning will now sync.');
     } else {
       void vscode.window.showWarningMessage('Uncode: sign-in was cancelled or timed out.');
@@ -75,19 +89,31 @@ export class SyncService {
     void vscode.window.showInformationMessage('Uncode: signed out. Learning stays on this machine.');
   }
 
-  /** Push events if signed in; swallow errors (local copy remains the source of truth). */
+  /** Queue events durably, then try to flush. Local copy always remains the source of truth. */
   async push(events: LearningEvent[]): Promise<void> {
     if (events.length === 0) {
       return;
     }
-    const token = await this.session.getToken();
-    if (!token) {
+    await this.setOutbox(enqueue(this.outbox(), events));
+    await this.flush();
+  }
+
+  /** Attempt to send all queued events; clear the outbox only on success. */
+  async flush(): Promise<void> {
+    const pending = this.outbox();
+    if (pending.length === 0) {
       return;
     }
+    const token = await this.session.getToken();
+    if (!token) {
+      return; // stay queued until signed in
+    }
     try {
-      await postEvents(this.backendUrl(), token, events);
+      await postEvents(this.backendUrl(), token, pending);
+      await this.setOutbox(removeIds(this.outbox(), pending.map((e) => e.id)));
+      this.log.appendLine(`[sync] flushed ${pending.length} event(s)`);
     } catch (err) {
-      this.log.appendLine(`[sync] push failed (will retry on next review): ${errMessage(err)}`);
+      this.log.appendLine(`[sync] flush failed (${pending.length} queued, will retry): ${errMessage(err)}`);
     }
   }
 

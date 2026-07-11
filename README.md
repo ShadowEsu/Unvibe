@@ -38,5 +38,8 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 2. ✅ AI layer + context builder + secret filter (streaming explanations)
 3. ✅ Project-summary scope + clickable, validated file/line citations
 4. ✅ Comprehension checks + local persistence (streak, mastery, history)
-5. ✅ Dashboard + auth + sync (AI endpoints migrated into Next.js) ← current
-6. States, polish, validation
+5. ✅ Dashboard + auth + sync (AI endpoints migrated into Next.js)
+6. ✅ States, polish, validation — offline outbox, retry, hardening, dashboard verified ← current
+
+The MVP loop is complete end-to-end. See [docs/validation.md](docs/validation.md) for what is
+verified vs. what still needs real credentials or a live-editor (F5) run.
