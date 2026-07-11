@@ -19,11 +19,20 @@ level select → follow-up → (I understand / Explain differently / Test me) �
 - Black-and-white companion dashboard: history, saved explanations, projects, profile
 - Secret filtering **before** any remote request; per-repo consent
 
-## Explicitly excluded from v1
-System-wide desktop capture / always-on desktop bar · IDEs beyond VS Code+Cursor ·
-browser extension / web IDEs · security certification · enterprise team admin · social ·
-mobile · complex gamification · custom model training / RL · vector search · briefings ·
-5-mode explanation set · local-model mode · non-English explanations.
+## v2 pivot — desktop-first (approved 2026-07-11)
+Unvibe is now a **desktop overlay app** (`app/` — Electron + React, macOS-first), not
+extension-first. Menu-bar agent (owns ALL network I/O + local secret filter) → tiny floating
+bar (bottom-center, dim when idle) → movable/pinnable floating explanation widgets → companion
+app (Home, Insights, Projects, Study, Concepts, Snippets, Briefings, Library, Profile).
+**Wispr Flow is the design benchmark**: same layout system and interaction quality, ORIGINAL
+assets/wording/fonts — never copy theirs. Explanations stream token-by-token; code renders as
+real syntax-highlighted snippet cards. 5 levels: New/Beginner/Intermediate/Advanced/Expert.
+The VS Code extension is parked (kept, not developed); backend (`web/`) is shared unchanged.
+
+## Explicitly excluded (current)
+Screen recording / OCR capture · Windows/Linux (macOS-first) · browser extension / web IDEs ·
+security certification · enterprise team admin · social · mobile · complex gamification ·
+custom model training / RL · vector search · local-model mode.
 
 ## Architecture summary
 - **Extension (TS)** builds context locally, **filters secrets locally**, calls backend over HTTPS.
@@ -35,7 +44,9 @@ mobile · complex gamification · custom model training / RL · vector search ·
 
 ## Directory structure
 ```
-extension/   VS Code/Cursor extension (Milestone 1+)
+app/         Unvibe desktop overlay app (Milestone D1+) — PRIMARY surface. Electron + React:
+             menu-bar agent, floating bar, explanation widgets, Wispr-Flow-style companion.
+extension/   VS Code/Cursor extension (M1–M6). PARKED at the desktop pivot; logic reused in app/.
 web/         Next.js backend + black-and-white dashboard (Milestone 5). Hosts the AI
              endpoints AND the learning-sync/auth API. Data layer: SupabaseStore (prod) or
              MemoryStore (dev). SQL in web/supabase/migrations.
@@ -75,7 +86,15 @@ the full loop. See `docs/` for the strategy as it lands.
 
 ## Commands
 ```
-# extension
+# desktop app (primary)
+cd app
+npm install
+npm run build       # esbuild: main + preload + renderers
+npm run typecheck   # tsc --noEmit
+npm test            # node --test (SSE parser, secret filter)
+npm start           # launch — expects backend at localhost:8787 (UNVIBE_BACKEND overrides)
+
+# extension (parked)
 cd extension
 npm install
 npm run build       # esbuild bundle

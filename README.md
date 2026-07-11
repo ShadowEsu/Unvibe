@@ -8,17 +8,19 @@ context — then checks that you understood it and tracks what you're learning.
 > AI-written code — not generating more of it.
 
 ## Status
-Early MVP build. **Milestone 1** (extension skeleton + change detection) is in `extension/`.
+**Desktop-first since July 2026** — Unvibe is a desktop overlay app (`app/`): a menu-bar agent,
+a tiny floating bar, movable streaming explanation widgets, and a Wispr-Flow-style companion
+app. The VS Code extension (M1–M6) is parked; its logic lives on inside the desktop agent.
 See [`CLAUDE.md`](CLAUDE.md) for scope and [`docs/`](docs/) for architecture, design, privacy.
 
-## Run the extension (dev)
+## Run the desktop app (dev)
 ```
-cd extension
+cd app
 npm install
-npm run build
+npm run dev          # builds + launches: ◆ in the menu bar, floating bar bottom-center
 ```
-Open this folder in VS Code or Cursor and press **F5** to launch the Extension Development Host.
-A "Uncode" item appears in the status bar and an Uncode view in the Activity Bar.
+Select code anywhere and press **⌥ Space** (grant Accessibility when asked), or use the
+clipboard fallback in the widget. Requires the backend below on localhost:8787.
 
 ## Run the backend + dashboard (dev)
 ```
@@ -39,7 +41,13 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 3. ✅ Project-summary scope + clickable, validated file/line citations
 4. ✅ Comprehension checks + local persistence (streak, mastery, history)
 5. ✅ Dashboard + auth + sync (AI endpoints migrated into Next.js)
-6. ✅ States, polish, validation — offline outbox, retry, hardening, dashboard verified ← current
+6. ✅ States, polish, validation — offline outbox, retry, hardening, dashboard verified
 
-The MVP loop is complete end-to-end. See [docs/validation.md](docs/validation.md) for what is
-verified vs. what still needs real credentials or a live-editor (F5) run.
+**Desktop milestones (v2 pivot):**
+
+- D1. ✅ Electron agent + floating bar + streaming explanation widget + companion shell ← current
+- D2. Learning store + comprehension in-widget + companion pages light up (Insights, History)
+- D3. Repo indexing + git-diff reviews + project scope from the desktop agent
+
+See [docs/validation.md](docs/validation.md) for what is verified vs. what still needs real
+credentials or permissions.

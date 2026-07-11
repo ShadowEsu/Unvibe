@@ -1,6 +1,7 @@
 /**
- * Wire contract — mirror of extension/src/protocol.ts (source of truth). Kept in sync by hand
- * during MVP; a shared package is a post-MVP cleanup.
+ * Wire contract with the Unvibe backend (web/src/ai/protocol.ts mirrors this).
+ * Source of truth moved here from extension/src/protocol.ts at the desktop pivot;
+ * adds the 5-level scale ('new' … 'expert').
  */
 
 export type ReviewScope = 'selection' | 'file' | 'diff' | 'project';
@@ -35,6 +36,7 @@ export interface ReviewRequestPayload {
   variant?: 'default' | 'different';
 }
 
+/** Server -> app streaming events (one JSON object per SSE `data:` line). */
 export type StreamEvent =
   | { type: 'token'; text: string }
   | { type: 'done'; model: string; mock: boolean }

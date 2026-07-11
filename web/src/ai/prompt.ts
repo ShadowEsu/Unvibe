@@ -1,6 +1,9 @@
 import type { ExplanationLevel, ReviewRequestPayload } from './protocol';
 
 const LEVEL_GUIDANCE: Record<ExplanationLevel, string> = {
+  new: 'The reader may never have programmed. Plain language, everyday analogies, zero jargon. Walk through what the code is doing step by step, gently.',
+  expert:
+    'The reader is a senior engineer. Skip basics entirely. Lead with intent, tradeoffs, invariants, and failure modes. Terse and dense.',
   beginner:
     'The reader is new to this. Avoid jargon or define it inline. Explain the intent before the mechanics. Short sentences.',
   intermediate:

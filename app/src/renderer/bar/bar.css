@@ -1,0 +1,50 @@
+* { box-sizing: border-box; margin: 0; }
+html, body { background: transparent; overflow: hidden; height: 100%; }
+body {
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.pill {
+  height: 36px;
+  margin: 4px;
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #f2f1ee;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 14px;
+  -webkit-app-region: drag;
+  opacity: 0.45;
+  transition: opacity 0.25s ease;
+}
+body:hover .pill { opacity: 1; }
+
+.glyph { font-size: 11px; letter-spacing: 0.02em; }
+.label { font-size: 12px; opacity: 0.9; flex: 1; white-space: nowrap; overflow: hidden; }
+.label .hint { display: none; color: #cfcecb; }
+body:hover .label .brand { display: none; }
+body:hover .label .hint { display: inline; }
+.kbd {
+  font-size: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+
+.pill button {
+  -webkit-app-region: no-drag;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 6px 7px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pill button:hover { background: rgba(255, 255, 255, 0.14); }

@@ -1,4 +1,30 @@
-# Validation & definition of done (Milestone 6)
+# Validation & definition of done
+
+## Milestone D1 — desktop app (2026-07-11)
+
+Verified in this environment (typecheck + build clean; 5/5 unit tests; driven live over the
+Chrome DevTools Protocol against the running Electron app, mock AI):
+- **Floating bar** renders bottom-center (dimmed idle state confirmed by screenshot).
+- **Companion app** — Wispr-Flow-style shell confirmed by screenshot: sidebar (9 sections +
+  Invite/Free month/Settings/Help), serif-italic hero banner, right-rail stats, dashed
+  empty feed, beta card, settings modal. Real first name resolved ("Preston").
+- **Streaming widget E2E**: clipboard code → main-process secret scan → SSE from the
+  `web/` backend → token-streamed explanation rendered with 5 level pills, action chips
+  (Got it / Explain differently / Test me·D2), follow-up input, honest "mock AI" label.
+- **Secret gate**: fake AWS key → hard **Blocked** state with masked finding
+  (`AKIA************LE`); the request never left the machine. Suspect-consent path implemented.
+- Backend accepts the new 5-level scale (`new`/`expert` streamed via curl + widget).
+
+NOT yet verified (needs permissions / a human / a key):
+- ⌘C selection capture via Accessibility (permission not grantable headlessly — clipboard
+  fallback verified instead). Grant in System Settings → Privacy → Accessibility.
+- Real Anthropic output (incl. code-fence syntax highlighting with real fenced output —
+  renderer implemented, but the mock emits no fences).
+- Widget drag/resize/pin/collapse ergonomics by hand; multi-display placement.
+- Learning events are NOT recorded in D1 (store arrives in D2 — deliberately unwired;
+  the companion shows real empty states, no fake data).
+
+## Milestone 6 (extension era — parked)
 
 ## Definition of done (per feature)
 A feature is done only when: happy path works AND loading/empty/error/offline states exist

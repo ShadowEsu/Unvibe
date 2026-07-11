@@ -1,0 +1,26 @@
+{
+  "name": "unvibe-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unvibe desktop — floating learning layer for code",
+  "main": "dist/main/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "electron .",
+    "dev": "npm run build && electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "electron": "^36.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.5.0"
+  }
+}
