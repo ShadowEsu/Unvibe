@@ -1,0 +1,115 @@
+{
+  "name": "uncode",
+  "displayName": "Uncode",
+  "description": "Understand, verify, and retain AI-generated code. Quiet reviews and context-aware explanations for changes made by coding agents.",
+  "version": "0.1.0",
+  "publisher": "uncode",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "uncode",
+          "title": "Uncode",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "uncode": [
+        {
+          "id": "uncode.reviewPanel",
+          "name": "Review",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "uncode.openPanel",
+        "title": "Uncode: Open Review Panel"
+      },
+      {
+        "command": "uncode.reviewSelection",
+        "title": "Uncode: Review Selected Code"
+      },
+      {
+        "command": "uncode.reviewFile",
+        "title": "Uncode: Review Current File"
+      },
+      {
+        "command": "uncode.reviewDiff",
+        "title": "Uncode: Review Recent Changes (Git Diff)"
+      },
+      {
+        "command": "uncode.dismissPrompt",
+        "title": "Uncode: Dismiss Review Prompt"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "uncode.reviewSelection",
+          "when": "uncode.hasSelection",
+          "group": "uncode@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "uncode.reviewSelection",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Uncode",
+      "properties": {
+        "uncode.explanationLevel": {
+          "type": "string",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced"
+          ],
+          "default": "intermediate",
+          "description": "Default explanation level for code reviews."
+        },
+        "uncode.notifications.offerReview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a quiet, non-modal notification when Uncode detects changed files."
+        },
+        "uncode.detection.minChangedFiles": {
+          "type": "number",
+          "default": 1,
+          "description": "Minimum number of changed files before Uncode offers a review."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
+  }
+}

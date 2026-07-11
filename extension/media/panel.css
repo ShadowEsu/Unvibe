@@ -1,0 +1,244 @@
+/* Uncode review panel — strict black/white/grays. See docs/design-system.md */
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f7;
+  --fg: #0a0a0a;
+  --fg-muted: #6b6b6b;
+  --fg-faint: #9a9a9a;
+  --line: #e5e5e5;
+  --line-strong: #c9c9c9;
+  --fill-hover: #f0f0f0;
+  --fill-active: #0a0a0a;
+  --on-fill: #ffffff;
+  --focus: #0a0a0a;
+
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-15: 15px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+
+  --r-1: 2px;
+  --r-2: 6px;
+
+  --t-fast: 120ms;
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+/* Adapt to editor dark theme (VS Code adds body.vscode-dark) and OS preference. */
+body.vscode-dark,
+body.vscode-high-contrast {
+  --bg: #0b0b0b;
+  --bg-subtle: #141414;
+  --fg: #f2f2f2;
+  --fg-muted: #a3a3a3;
+  --fg-faint: #6e6e6e;
+  --line: #242424;
+  --line-strong: #3a3a3a;
+  --fill-hover: #1c1c1c;
+  --fill-active: #f2f2f2;
+  --on-fill: #0b0b0b;
+  --focus: #f2f2f2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-4);
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.linkbtn {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: var(--fs-12);
+  cursor: pointer;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-1);
+}
+.linkbtn:hover {
+  color: var(--fg);
+  background: var(--fill-hover);
+}
+
+.context {
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  padding: var(--s-3);
+  background: var(--bg-subtle);
+}
+.context__title {
+  font-weight: 500;
+}
+.context__detail {
+  color: var(--fg-muted);
+  font-size: var(--fs-12);
+  margin-top: var(--s-1);
+}
+.filelist {
+  list-style: none;
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace;
+  font-size: var(--fs-11);
+  color: var(--fg-muted);
+  max-height: 96px;
+  overflow: auto;
+}
+.filelist li {
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.levels__label,
+.levels {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.levels__label {
+  color: var(--fg-muted);
+  font-size: var(--fs-12);
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.seg {
+  background: var(--bg);
+  color: var(--fg-muted);
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--fs-12);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.seg:last-child {
+  border-right: none;
+}
+.seg:hover {
+  background: var(--fill-hover);
+  color: var(--fg);
+}
+.seg[aria-checked="true"] {
+  background: var(--fill-active);
+  color: var(--on-fill);
+}
+
+.explanation {
+  min-height: 96px;
+}
+.state {
+  color: var(--fg-muted);
+}
+.state__title {
+  margin: 0 0 var(--s-1);
+  color: var(--fg);
+  font-weight: 500;
+}
+.state__body {
+  margin: 0;
+  font-size: var(--fs-12);
+}
+.notice {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-12);
+  border-left: 2px solid var(--line-strong);
+  padding-left: var(--s-3);
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.btn {
+  flex: 1 1 auto;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-12);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease);
+}
+.btn:hover {
+  background: var(--fill-hover);
+}
+.btn--primary {
+  background: var(--fill-active);
+  color: var(--on-fill);
+  border-color: var(--fill-active);
+}
+
+.input {
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-12);
+}
+.input:disabled {
+  color: var(--fg-faint);
+  background: var(--bg-subtle);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+out/
+*.vsix
+.next/
+build/
+
+# Env & secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs & OS
+*.log
+.DS_Store
+
+# Editor
+.vscode-test/
