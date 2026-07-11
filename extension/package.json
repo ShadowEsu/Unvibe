@@ -96,6 +96,11 @@
           "type": "number",
           "default": 1,
           "description": "Minimum number of changed files before Uncode offers a review."
+        },
+        "uncode.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8787",
+          "description": "URL of the Uncode AI service that generates explanations."
         }
       }
     }
@@ -104,12 +109,14 @@
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.20.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.4.0"
   }
 }

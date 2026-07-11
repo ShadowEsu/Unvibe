@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { SecretFinding } from '../security/secretFilter';
 import type {
   ExplanationLevel,
   HostToWebview,
@@ -7,24 +8,25 @@ import type {
 } from './reviewTypes';
 
 /**
- * The compact black-and-white review side panel (webview). In Milestone 1 it renders the
- * review context, the level selector, and the three outcome actions as a UI shell. The
- * explanation area is explicitly labelled as landing in Milestone 2 — no mock output is
- * presented as real.
+ * The compact black-and-white review side panel (webview). It is a *view*: it renders state
+ * and forwards user intents. All logic (context build, secret filter, consent, streaming)
+ * lives in ReviewController.
  */
 export class ReviewPanelProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = 'uncode.reviewPanel';
 
   private view: vscode.WebviewView | undefined;
-  private pending: ReviewRequest | undefined;
+  private readonly queue: HostToWebview[] = [];
+  private ready = false;
 
-  constructor(
-    private readonly extensionUri: vscode.Uri,
-    private readonly log: vscode.OutputChannel,
-  ) {}
+  /** Set by the controller to receive user intents from the webview. */
+  public onMessage: ((message: WebviewToHost) => void) | undefined;
+
+  constructor(private readonly extensionUri: vscode.Uri) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
+    this.ready = false;
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')],
@@ -32,52 +34,71 @@ export class ReviewPanelProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage((message: WebviewToHost) => {
-      switch (message.type) {
-        case 'ready':
-          if (this.pending) {
-            this.post({ type: 'review', request: this.pending });
-          }
-          break;
-        case 'levelChanged':
-          void vscode.workspace
-            .getConfiguration('uncode')
-            .update('explanationLevel', message.level, vscode.ConfigurationTarget.Global);
-          this.log.appendLine(`[panel] level changed -> ${message.level}`);
-          break;
-        case 'action':
-          // Milestone 2 wires these to the AI layer + persistence. For now, log honestly.
-          this.log.appendLine(`[panel] action: ${message.action} (not yet wired — Milestone 2)`);
-          void vscode.window.setStatusBarMessage(
-            `Uncode: "${message.action}" arrives in Milestone 2`,
-            2500,
-          );
-          break;
-        case 'openDashboard':
-          this.log.appendLine('[panel] open dashboard (Milestone 5)');
-          void vscode.window.setStatusBarMessage('Uncode: dashboard arrives in Milestone 5', 2500);
-          break;
+      if (message.type === 'ready') {
+        this.ready = true;
+        this.flush();
+        return;
       }
+      this.onMessage?.(message);
     });
   }
 
-  /** Show a review request in the panel, revealing the view if needed. */
-  requestReview(request: ReviewRequest): void {
-    this.pending = request;
+  reveal(): void {
     if (this.view) {
       this.view.show?.(true);
-      this.post({ type: 'review', request });
     } else {
       void vscode.commands.executeCommand(`${ReviewPanelProvider.viewId}.focus`);
-      // The view will pull `pending` when it fires 'ready'.
     }
   }
 
+  showContext(request: ReviewRequest): void {
+    this.reveal();
+    this.post({ type: 'review', request });
+  }
+
+  showPreview(text: string, suspects: SecretFinding[]): void {
+    this.post({ type: 'preview', text, suspects });
+  }
+
+  showBlocked(findings: SecretFinding[]): void {
+    this.post({ type: 'blocked', findings });
+  }
+
+  streamStart(): void {
+    this.post({ type: 'streamStart' });
+  }
+  streamToken(text: string): void {
+    this.post({ type: 'token', text });
+  }
+  streamDone(mock: boolean): void {
+    this.post({ type: 'streamDone', mock });
+  }
+  streamError(message: string): void {
+    this.post({ type: 'streamError', message });
+  }
+  showOffline(): void {
+    this.post({ type: 'offline' });
+  }
   setLevel(level: ExplanationLevel): void {
     this.post({ type: 'level', level });
   }
 
   private post(message: HostToWebview): void {
-    void this.view?.webview.postMessage(message);
+    if (this.view && this.ready) {
+      void this.view.webview.postMessage(message);
+    } else {
+      this.queue.push(message);
+      this.reveal();
+    }
+  }
+
+  private flush(): void {
+    while (this.queue.length && this.view) {
+      const msg = this.queue.shift();
+      if (msg) {
+        void this.view.webview.postMessage(msg);
+      }
+    }
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -117,41 +138,56 @@ export class ReviewPanelProvider implements vscode.WebviewViewProvider {
     <section class="levels" aria-label="Explanation level">
       <div class="levels__label">Level</div>
       <div class="segmented" role="radiogroup" aria-label="Explanation level">
-        <button class="seg" role="radio" data-level="beginner" aria-checked="false">Beginner</button>
-        <button class="seg" role="radio" data-level="intermediate" aria-checked="true">Intermediate</button>
-        <button class="seg" role="radio" data-level="advanced" aria-checked="false">Advanced</button>
+        <button class="seg" role="radio" data-level="beginner" aria-checked="false" tabindex="-1">Beginner</button>
+        <button class="seg" role="radio" data-level="intermediate" aria-checked="true" tabindex="0">Intermediate</button>
+        <button class="seg" role="radio" data-level="advanced" aria-checked="false" tabindex="-1">Advanced</button>
       </div>
     </section>
 
-    <section class="explanation" aria-label="Explanation">
-      <div id="empty" class="state">
-        <p class="state__title">Nothing to review yet</p>
-        <p class="state__body">Select code, open a file, or make a change, then choose a review action.</p>
-      </div>
-      <div id="explainBody" class="explanation__body" hidden>
-        <p class="notice">Explanations stream here in <strong>Milestone 2</strong> (AI layer + context builder).</p>
+    <!-- Empty -->
+    <section id="empty" class="state">
+      <p class="state__title">Nothing to review yet</p>
+      <p class="state__body">Select code, open a file, or make a change, then choose a review action.</p>
+    </section>
+
+    <!-- Transmission preview / consent -->
+    <section id="preview" class="preview" hidden>
+      <p class="preview__title">Review what will be sent</p>
+      <p class="preview__note" id="previewNote"></p>
+      <pre class="preview__code" id="previewText" tabindex="0"></pre>
+      <div class="actions">
+        <button id="consentCancel" class="btn" type="button">Cancel</button>
+        <button id="consentSend" class="btn btn--primary" type="button">Send to Uncode</button>
       </div>
     </section>
 
-    <section class="actions" aria-label="Outcome">
+    <!-- Secret block -->
+    <section id="blocked" class="blocked" hidden>
+      <p class="blocked__title">Blocked — possible secret detected</p>
+      <p class="blocked__body">Nothing was sent. Remove the value or add the file to <code>.unvibeignore</code>, then try again.</p>
+      <ul class="findinglist" id="blockedList"></ul>
+    </section>
+
+    <!-- Explanation (streaming target) -->
+    <section id="explain" class="explanation" aria-label="Explanation" hidden>
+      <div id="explainBody" class="explanation__body"></div>
+      <p id="explainMeta" class="explanation__meta" hidden></p>
+    </section>
+
+    <section id="controls" class="actions" aria-label="Outcome" hidden>
       <button id="understand" class="btn" type="button">I understand</button>
       <button id="explainDiff" class="btn" type="button">Explain differently</button>
-      <button id="testMe" class="btn btn--primary" type="button">Test me</button>
+      <button id="testMe" class="btn btn--primary" type="button" title="Comprehension check arrives in Milestone 4">Test me</button>
     </section>
 
-    <section class="followup">
+    <section id="followup" class="followup" hidden>
       <label class="visually-hidden" for="followupInput">Ask a follow-up question</label>
-      <input id="followupInput" class="input" type="text"
-             placeholder="Ask a follow-up… (Milestone 2)" disabled />
+      <input id="followupInput" class="input" type="text" placeholder="Ask a follow-up…" />
     </section>
   </main>
   <script nonce="${nonce}" src="${uri('panel.js')}"></script>
 </body>
 </html>`;
-  }
-
-  dispose(): void {
-    // WebviewView lifecycle is owned by VS Code; nothing to dispose explicitly here.
   }
 }
 

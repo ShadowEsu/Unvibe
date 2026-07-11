@@ -3,6 +3,7 @@ import { GitWatcher, type DetectedChange } from './detection/gitWatcher';
 import { SelectionWatcher } from './detection/selectionWatcher';
 import { StatusBar } from './ui/statusBar';
 import { ReviewPanelProvider } from './panel/reviewPanelProvider';
+import { ReviewController } from './review/reviewController';
 import { isExcludedPath } from './config/exclusions';
 import type { ExplanationLevel, ReviewRequest, ReviewScope } from './panel/reviewTypes';
 
@@ -11,15 +12,17 @@ let lastPromptedSignature: string | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const log = vscode.window.createOutputChannel('Uncode');
-  log.appendLine('[uncode] activating (Milestone 1: detection + panel shell)');
+  log.appendLine('[uncode] activating (Milestone 2: context + secret filter + streaming)');
 
   const statusBar = new StatusBar();
-  const panel = new ReviewPanelProvider(context.extensionUri, log);
+  const panel = new ReviewPanelProvider(context.extensionUri);
+  const controller = new ReviewController(panel, log, context.globalState);
   const selectionWatcher = new SelectionWatcher();
 
   context.subscriptions.push(
     log,
     statusBar,
+    controller,
     vscode.window.registerWebviewViewProvider(ReviewPanelProvider.viewId, panel),
   );
 
@@ -32,9 +35,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ---- Commands ----
   context.subscriptions.push(
-    vscode.commands.registerCommand('uncode.openPanel', () => {
-      void vscode.commands.executeCommand(`${ReviewPanelProvider.viewId}.focus`);
-    }),
+    vscode.commands.registerCommand('uncode.openPanel', () => panel.reveal()),
 
     vscode.commands.registerCommand('uncode.reviewSelection', () => {
       const editor = vscode.window.activeTextEditor;
@@ -48,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       const sel = editor.selection;
-      panel.requestReview(makeRequest('selection', {
+      void controller.review(makeRequest('selection', {
         title: 'Selected code',
         detail: `${basename(path)} · lines ${sel.start.line + 1}–${sel.end.line + 1}`,
         files: [path],
@@ -66,7 +67,7 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showWarningMessage('Uncode: this file is excluded from review (see privacy defaults).');
         return;
       }
-      panel.requestReview(makeRequest('file', {
+      void controller.review(makeRequest('file', {
         title: 'Current file',
         detail: `${basename(path)} · ${editor.document.lineCount} lines`,
         files: [path],
@@ -79,7 +80,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       const c = lastDetected;
-      panel.requestReview(makeRequest('diff', {
+      void controller.review(makeRequest('diff', {
         title: 'Recent changes',
         detail: `${c.fileCount} changed file${c.fileCount === 1 ? '' : 's'}`,
         files: c.changedFiles,
@@ -124,7 +125,6 @@ function onDetectedChange(
 }
 
 async function offerReview(change: DetectedChange): Promise<void> {
-  // Non-modal, quiet notification. Never steals focus.
   const noun = change.fileCount === 1 ? 'file' : 'files';
   const choice = await vscode.window.showInformationMessage(
     `Uncode detected ${change.fileCount} changed ${noun}. Review?`,

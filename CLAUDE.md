@@ -36,9 +36,15 @@ mobile · complex gamification · custom model training / RL · vector search ·
 ## Directory structure
 ```
 extension/   VS Code/Cursor extension (Milestone 1+)
+server/      AI explanation service — streaming SSE, swappable provider (Milestone 2).
+             Framework-agnostic; its provider/prompt modules migrate into web/ at M5.
 web/         Next.js dashboard + backend API (Milestone 5)   [not yet created]
 docs/        architecture.md · design-system.md · privacy.md
 ```
+
+> M2 decision (change-control): the AI service is a dependency-free standalone Node service
+> for now rather than the Next.js app, because M2 needs only a streaming endpoint. The
+> provider/prompt modules are framework-agnostic and move into Next.js API routes at M5.
 
 ## Coding conventions
 - TypeScript strict. No `any` without a comment justifying it.
@@ -73,7 +79,14 @@ npm install
 npm run build       # esbuild bundle
 npm run watch       # rebuild on change
 npm run typecheck   # tsc --noEmit
+npm test            # node --test unit tests (secret filter, diff parse, parsers)
 # then press F5 in VS Code to launch the Extension Development Host
+
+# AI service
+cd server
+npm install
+npm run dev         # http://localhost:8787 (MOCK provider; no key needed)
+ANTHROPIC_API_KEY=sk-ant-... npm run dev   # real analysis
 ```
 
 ## Definition of done (strict)

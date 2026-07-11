@@ -1,0 +1,17 @@
+{
+  "name": "uncode-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Uncode AI explanation service — streaming SSE endpoint with a swappable model provider. Framework-agnostic; migrates into the Next.js app at Milestone 5.",
+  "scripts": {
+    "dev": "node --import tsx src/index.ts",
+    "start": "node --import tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
