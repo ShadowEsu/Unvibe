@@ -32,7 +32,7 @@ its URL with the `uncode.backendUrl` setting (default `http://localhost:8787`).
 ## Milestones
 1. ✅ Extension skeleton + detection
 2. ✅ AI layer + context builder + secret filter (streaming explanations)
-3. ✅ Project-summary scope + clickable, validated file/line citations ← current
-4. Comprehension + follow-ups + persistence
+3. ✅ Project-summary scope + clickable, validated file/line citations
+4. ✅ Comprehension checks + local persistence (streak, mastery, history) ← current
 5. Dashboard + auth + sync (migrate service into Next.js)
 6. States, polish, validation

@@ -39,6 +39,25 @@ export class MockProvider implements Provider {
       await delay(12);
     }
   }
+
+  async complete(_system: string, user: string): Promise<string> {
+    const file = /Primary file: (.+)/.exec(user)?.[1]?.trim() ?? 'this code';
+    const lang = /Language: (.+)/.exec(user)?.[1]?.trim() ?? 'code';
+    // Returns a deterministic, clearly-mock multiple-choice question as JSON.
+    return JSON.stringify({
+      question: `(Mock question) What is the most accurate description of ${file}?`,
+      options: [
+        `It is ${lang} code whose purpose you just reviewed`,
+        'It is an unrelated configuration file',
+        'It is compiled binary output',
+        'It is documentation only',
+      ],
+      answerIndex: 0,
+      rationale: '(Mock) With a real ANTHROPIC_API_KEY the question would test the specific behaviour of the reviewed code.',
+      concept: 'code-comprehension',
+      conceptLabel: 'Code comprehension',
+    });
+  }
 }
 
 function delay(ms: number): Promise<void> {

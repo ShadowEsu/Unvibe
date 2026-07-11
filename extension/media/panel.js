@@ -18,11 +18,20 @@
     explain: $('explain'),
     explainBody: $('explainBody'),
     explainMeta: $('explainMeta'),
+    comprehension: $('comprehension'),
+    compQuestion: $('compQuestion'),
+    compOptions: $('compOptions'),
+    compCheck: $('compCheck'),
+    compResult: $('compResult'),
+    stats: $('stats'),
+    statsList: $('statsList'),
     controls: $('controls'),
     followup: $('followup'),
     followupInput: $('followupInput'),
     segs: Array.from(document.querySelectorAll('.seg')),
   };
+
+  var compSelected = -1;
 
   function hide(...nodes) {
     nodes.forEach((n) => n && (n.hidden = true));
@@ -53,7 +62,7 @@
       els.ctxFiles.appendChild(li);
     });
     show(els.context);
-    hide(els.empty, els.preview, els.blocked, els.explain, els.controls, els.followup);
+    hide(els.empty, els.preview, els.blocked, els.explain, els.comprehension, els.stats, els.controls, els.followup);
     setLevel(request.level, false);
   }
 
@@ -100,7 +109,7 @@
     els.explainBody.textContent = '';
     els.explainMeta.hidden = true;
     show(els.explain, els.controls, els.followup);
-    hide(els.empty, els.preview, els.blocked);
+    hide(els.empty, els.preview, els.blocked, els.comprehension, els.stats);
   }
 
   function appendToken(text) {
@@ -150,6 +159,75 @@
     els.explainBody.textContent = 'You appear to be offline. Uncode will retry when a connection is available.';
   }
 
+  function comprehensionLoading() {
+    compSelected = -1;
+    els.compQuestion.textContent = 'Preparing a question…';
+    els.compOptions.innerHTML = '';
+    els.compResult.hidden = true;
+    els.compCheck.disabled = true;
+    show(els.comprehension);
+    hide(els.explain, els.controls, els.followup, els.stats, els.empty, els.preview, els.blocked);
+  }
+
+  function showComprehension(question, options) {
+    compSelected = -1;
+    els.compQuestion.textContent = question;
+    els.compOptions.innerHTML = '';
+    els.compResult.hidden = true;
+    els.compCheck.disabled = false;
+    (options || []).forEach(function (opt, i) {
+      var b = document.createElement('button');
+      b.className = 'opt';
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.textContent = opt;
+      b.addEventListener('click', function () {
+        compSelected = i;
+        Array.prototype.forEach.call(els.compOptions.children, function (c, ci) {
+          c.setAttribute('aria-checked', ci === i ? 'true' : 'false');
+        });
+      });
+      els.compOptions.appendChild(b);
+    });
+    show(els.comprehension);
+    hide(els.explain, els.controls, els.followup, els.stats);
+  }
+
+  function showComprehensionResult(pass, rationale) {
+    els.compResult.hidden = false;
+    els.compResult.textContent = (pass ? '✓ Correct. ' : '✗ Not quite. ') + rationale;
+    els.compResult.className = 'comprehension__result' + (pass ? ' is-pass' : ' is-fail');
+    els.compCheck.disabled = true;
+    Array.prototype.forEach.call(els.compOptions.children, function (c) { c.disabled = true; });
+  }
+
+  function showStats(p) {
+    var rows = [
+      ['Reviews', p.totalReviews],
+      ['Understood', p.understood],
+      ['Needs review', p.needsReview],
+      ['Concepts understood', p.conceptsUnderstood],
+      ['Concepts to review', p.conceptsNeedReview],
+      ['Current streak', p.currentStreakDays + (p.currentStreakDays === 1 ? ' day' : ' days')],
+    ];
+    els.statsList.innerHTML = '';
+    rows.forEach(function (r) {
+      var li = document.createElement('li');
+      var k = document.createElement('span');
+      k.className = 'stats__k';
+      k.textContent = r[0];
+      var v = document.createElement('span');
+      v.className = 'stats__v';
+      v.textContent = String(r[1]);
+      li.appendChild(k);
+      li.appendChild(v);
+      els.statsList.appendChild(li);
+    });
+    show(els.stats);
+    hide(els.empty, els.preview, els.blocked, els.explain, els.comprehension, els.controls, els.followup);
+  }
+
   // Level selector (click + arrow keys)
   els.segs.forEach((seg) => {
     seg.addEventListener('click', () => setLevel(seg.dataset.level, true));
@@ -190,6 +268,18 @@
     });
   }
 
+  if (els.compCheck) {
+    els.compCheck.addEventListener('click', function () {
+      if (compSelected < 0) {
+        els.compResult.hidden = false;
+        els.compResult.className = 'comprehension__result';
+        els.compResult.textContent = 'Select an answer first.';
+        return;
+      }
+      vscode.postMessage({ type: 'comprehensionAnswer', selectedIndex: compSelected });
+    });
+  }
+
   const dashboard = $('dashboard');
   if (dashboard) dashboard.addEventListener('click', () => vscode.postMessage({ type: 'openDashboard' }));
 
@@ -206,6 +296,10 @@
       case 'rendered': renderSegments(msg.segments, msg.unverified); break;
       case 'streamDone': streamDone(msg.mock); break;
       case 'streamError': streamError(msg.message); break;
+      case 'comprehensionLoading': comprehensionLoading(); break;
+      case 'comprehension': showComprehension(msg.question, msg.options); break;
+      case 'comprehensionResult': showComprehensionResult(msg.pass, msg.rationale); break;
+      case 'stats': showStats(msg.progress); break;
       case 'offline': showOffline(); break;
       case 'clear':
         hide(els.context, els.preview, els.blocked, els.explain, els.controls, els.followup);

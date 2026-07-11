@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { SecretFinding } from '../security/secretFilter';
 import type { Segment } from '../citations/citations';
+import type { Progress } from '../learning/types';
 import type {
   ExplanationLevel,
   HostToWebview,
@@ -82,6 +83,20 @@ export class ReviewPanelProvider implements vscode.WebviewViewProvider {
   }
   showOffline(): void {
     this.post({ type: 'offline' });
+  }
+  comprehensionLoading(): void {
+    this.reveal();
+    this.post({ type: 'comprehensionLoading' });
+  }
+  showComprehension(question: string, options: string[]): void {
+    this.post({ type: 'comprehension', question, options });
+  }
+  showComprehensionResult(pass: boolean, rationale: string): void {
+    this.post({ type: 'comprehensionResult', pass, rationale });
+  }
+  showStats(progress: Progress): void {
+    this.reveal();
+    this.post({ type: 'stats', progress });
   }
   setLevel(level: ExplanationLevel): void {
     this.post({ type: 'level', level });
@@ -178,10 +193,26 @@ export class ReviewPanelProvider implements vscode.WebviewViewProvider {
       <p id="explainMeta" class="explanation__meta" hidden></p>
     </section>
 
+    <!-- Comprehension check -->
+    <section id="comprehension" class="comprehension" hidden aria-label="Comprehension check">
+      <p class="comprehension__q" id="compQuestion"></p>
+      <div class="comprehension__opts" id="compOptions" role="radiogroup" aria-label="Answer options"></div>
+      <div class="actions">
+        <button id="compCheck" class="btn btn--primary" type="button">Check answer</button>
+      </div>
+      <p id="compResult" class="comprehension__result" hidden></p>
+    </section>
+
+    <!-- Progress -->
+    <section id="stats" class="stats" hidden aria-label="Your progress">
+      <p class="stats__title">Your progress</p>
+      <ul class="stats__list" id="statsList"></ul>
+    </section>
+
     <section id="controls" class="actions" aria-label="Outcome" hidden>
       <button id="understand" class="btn" type="button">I understand</button>
       <button id="explainDiff" class="btn" type="button">Explain differently</button>
-      <button id="testMe" class="btn btn--primary" type="button" title="Comprehension check arrives in Milestone 4">Test me</button>
+      <button id="testMe" class="btn btn--primary" type="button">Test me</button>
     </section>
 
     <section id="followup" class="followup" hidden>

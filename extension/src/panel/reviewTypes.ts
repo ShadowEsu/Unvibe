@@ -1,6 +1,7 @@
 import type { ReviewScope, ExplanationLevel } from '../protocol';
 import type { SecretFinding } from '../security/secretFilter';
 import type { Segment } from '../citations/citations';
+import type { Progress } from '../learning/types';
 
 export type { ReviewScope, ExplanationLevel } from '../protocol';
 
@@ -27,6 +28,10 @@ export type HostToWebview =
   | { type: 'rendered'; segments: Segment[]; unverified: number }
   | { type: 'streamDone'; mock: boolean }
   | { type: 'streamError'; message: string }
+  | { type: 'comprehensionLoading' }
+  | { type: 'comprehension'; question: string; options: string[] }
+  | { type: 'comprehensionResult'; pass: boolean; rationale: string }
+  | { type: 'stats'; progress: Progress }
   | { type: 'offline' }
   | { type: 'clear' };
 
@@ -37,5 +42,6 @@ export type WebviewToHost =
   | { type: 'consent'; granted: boolean }
   | { type: 'action'; action: 'understand' | 'explainDifferently' | 'testMe' }
   | { type: 'question'; text: string }
+  | { type: 'comprehensionAnswer'; selectedIndex: number }
   | { type: 'openCitation'; file: string; startLine: number }
   | { type: 'openDashboard' };

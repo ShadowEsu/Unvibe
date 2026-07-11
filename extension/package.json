@@ -57,6 +57,10 @@
         "title": "Uncode: Review Project (Architecture Overview)"
       },
       {
+        "command": "uncode.showProgress",
+        "title": "Uncode: Show Progress"
+      },
+      {
         "command": "uncode.dismissPrompt",
         "title": "Uncode: Dismiss Review Prompt"
       }

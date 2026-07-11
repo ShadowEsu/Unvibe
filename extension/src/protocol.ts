@@ -46,3 +46,13 @@ export type StreamEvent =
   | { type: 'token'; text: string }
   | { type: 'done'; model: string; mock: boolean }
   | { type: 'error'; message: string };
+
+/** A single multiple-choice comprehension question (non-streaming response). */
+export interface ComprehensionQuestion {
+  question: string;
+  options: string[];
+  answerIndex: number;
+  rationale: string;
+  concept: string;
+  conceptLabel: string;
+}

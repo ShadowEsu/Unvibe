@@ -66,6 +66,32 @@ export class AnthropicProvider implements Provider {
       }
     }
   }
+
+  async complete(system: string, user: string, signal?: AbortSignal): Promise<string> {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: this.maxTokens,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      throw new Error(`Anthropic API ${res.status}: ${await safeText(res)}`);
+    }
+    const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
+    return (data.content ?? [])
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text ?? '')
+      .join('');
+  }
 }
 
 /** Pull text out of a `content_block_delta` SSE event from the Anthropic stream. */

@@ -81,6 +81,21 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   return parts.join('\n');
 }
 
+/** System + user prompt for generating one multiple-choice comprehension question as JSON. */
+export function buildComprehensionPrompt(payload: ReviewRequestPayload): { system: string; user: string } {
+  const system = [
+    'You are Uncode. Generate ONE multiple-choice question that tests whether the reader',
+    'UNDERSTOOD the provided code (not trivia or recall). Use only the provided context.',
+    '',
+    'Return ONLY a JSON object, no prose, no code fences, of exactly this shape:',
+    '{"question": string, "options": [string, string, string, string],',
+    ' "answerIndex": 0-3, "rationale": string, "concept": kebab-case-slug, "conceptLabel": string}',
+    'Exactly one option must be correct. Keep options plausible and similar in length.',
+  ].join('\n');
+  const user = buildUserPrompt({ ...payload, question: undefined });
+  return { system, user };
+}
+
 function taskForScope(scope: ReviewRequestPayload['scope']): string {
   switch (scope) {
     case 'project':

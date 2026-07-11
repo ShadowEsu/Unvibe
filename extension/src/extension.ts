@@ -4,6 +4,7 @@ import { SelectionWatcher } from './detection/selectionWatcher';
 import { StatusBar } from './ui/statusBar';
 import { ReviewPanelProvider } from './panel/reviewPanelProvider';
 import { ReviewController } from './review/reviewController';
+import { LearningStore } from './learning/learningStore';
 import { isExcludedPath } from './config/exclusions';
 import type { ExplanationLevel, ReviewRequest, ReviewScope } from './panel/reviewTypes';
 
@@ -16,7 +17,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const statusBar = new StatusBar();
   const panel = new ReviewPanelProvider(context.extensionUri);
-  const controller = new ReviewController(panel, log, context.globalState);
+  const store = new LearningStore(context.globalState);
+  const controller = new ReviewController(panel, log, context.globalState, store);
   const selectionWatcher = new SelectionWatcher();
 
   context.subscriptions.push(
@@ -95,6 +97,8 @@ export function activate(context: vscode.ExtensionContext): void {
         files: [],
       }));
     }),
+
+    vscode.commands.registerCommand('uncode.showProgress', () => controller.showProgress()),
 
     vscode.commands.registerCommand('uncode.dismissPrompt', () => {
       lastPromptedSignature = lastDetected?.signature;

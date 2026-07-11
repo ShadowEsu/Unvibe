@@ -5,12 +5,17 @@ import type { ReviewContext, ReviewRequestPayload } from '../protocol';
 import { buildContext, scanTargets } from '../context/contextBuilder';
 import { scanBlocks, hasBlocking, type SecretFinding } from '../security/secretFilter';
 import { streamReview } from '../net/reviewClient';
+import { fetchComprehension } from '../net/comprehensionClient';
 import { toSegments, basename } from '../citations/citations';
+import type { LearningStore } from '../learning/learningStore';
+import type { LearningEvent } from '../learning/types';
+import type { ComprehensionQuestion, ReviewRequestPayload as Payload } from '../protocol';
 
 interface ActiveReview {
   request: ReviewRequest;
   context: ReviewContext;
   repoKey: string;
+  eventId?: string;
 }
 
 /**
@@ -21,6 +26,7 @@ interface ActiveReview {
 export class ReviewController {
   private active: ActiveReview | undefined;
   private abort: AbortController | undefined;
+  private pendingQuestion: ComprehensionQuestion | undefined;
   /** Files (rel path + basename) actually sent in the current context — for citation validation. */
   private readonly contextFiles = new Set<string>();
 
@@ -28,8 +34,20 @@ export class ReviewController {
     private readonly panel: ReviewPanelProvider,
     private readonly log: vscode.OutputChannel,
     private readonly memento: vscode.Memento,
+    private readonly store: LearningStore,
   ) {
     this.panel.onMessage = (m) => this.onWebviewMessage(m);
+  }
+
+  /** Show the local progress summary in the panel. */
+  showProgress(): void {
+    this.panel.showStats(this.store.progress());
+  }
+
+  private backendUrl(): string {
+    return vscode.workspace
+      .getConfiguration('uncode')
+      .get<string>('backendUrl', 'http://localhost:8787');
   }
 
   /** Entry point from a command. */
@@ -67,9 +85,14 @@ export class ReviewController {
     if (!this.active) {
       return;
     }
-    const backendUrl = vscode.workspace
-      .getConfiguration('uncode')
-      .get<string>('backendUrl', 'http://localhost:8787');
+    const backendUrl = this.backendUrl();
+
+    // Record the review once, on the initial explanation (not follow-ups / re-explains).
+    if (!this.active.eventId && !question && variant !== 'different') {
+      const id = genId();
+      this.active.eventId = id;
+      void this.store.addReview(makeEvent(id, this.active.request, this.active.context.primaryFile));
+    }
 
     const payload: ReviewRequestPayload = {
       scope: this.active.request.scope,
@@ -138,6 +161,44 @@ export class ReviewController {
     context.projectStructure.forEach((p) => add(p.trim()));
   }
 
+  private async startComprehension(): Promise<void> {
+    if (!this.active) {
+      return;
+    }
+    this.panel.comprehensionLoading();
+    const payload: Payload = {
+      scope: this.active.request.scope,
+      level: this.active.request.level,
+      context: this.active.context,
+    };
+    try {
+      const question = await fetchComprehension(this.backendUrl(), payload);
+      this.pendingQuestion = question;
+      this.panel.showComprehension(question.question, question.options);
+    } catch (err) {
+      this.pendingQuestion = undefined;
+      this.panel.streamError(`Could not create a comprehension question: ${errMessage(err)}`);
+    }
+  }
+
+  private gradeComprehension(selectedIndex: number): void {
+    const q = this.pendingQuestion;
+    if (!q) {
+      return;
+    }
+    const pass = selectedIndex === q.answerIndex;
+    if (this.active?.eventId) {
+      void this.store.setOutcome(
+        this.active.eventId,
+        pass ? 'understood' : 'needs_review',
+        q.concept,
+        q.conceptLabel,
+      );
+    }
+    this.panel.showComprehensionResult(pass, q.rationale);
+    this.log.appendLine(`[review] comprehension ${pass ? 'pass' : 'fail'} — concept ${q.concept}`);
+  }
+
   private async openCitation(file: string, startLine: number): Promise<void> {
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (!folder) {
@@ -188,12 +249,16 @@ export class ReviewController {
         if (message.action === 'explainDifferently') {
           void this.send(undefined, 'different');
         } else if (message.action === 'understand') {
-          // Persistence of the outcome lands in Milestone 4 (dashboard sync).
-          this.log.appendLine('[review] marked understood (persisted in Milestone 4)');
-          void vscode.window.setStatusBarMessage('Uncode: saved locally — sync arrives in Milestone 4', 2500);
+          if (this.active?.eventId) {
+            void this.store.setOutcome(this.active.eventId, 'understood');
+          }
+          void vscode.window.setStatusBarMessage('Uncode: saved. Open the panel menu → Test me, or run Uncode: Show Progress.', 3000);
         } else if (message.action === 'testMe') {
-          void vscode.window.setStatusBarMessage('Uncode: comprehension check arrives in Milestone 4', 2500);
+          void this.startComprehension();
         }
+        break;
+      case 'comprehensionAnswer':
+        this.gradeComprehension(message.selectedIndex);
         break;
       case 'openCitation':
         void this.openCitation(message.file, message.startLine);
@@ -238,6 +303,21 @@ function previewText(request: ReviewRequest, context: ReviewContext): string {
     }
   }
   return lines.join('\n');
+}
+
+function makeEvent(id: string, request: ReviewRequest, file: string | undefined): LearningEvent {
+  return {
+    id,
+    ts: new Date().toISOString(),
+    scope: request.scope,
+    level: request.level,
+    file,
+    outcome: 'reviewed',
+  };
+}
+
+function genId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function repoKeyFor(fsPath: string | undefined): string {

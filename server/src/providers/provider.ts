@@ -12,4 +12,7 @@ export interface Provider {
     onToken: (text: string) => void,
     signal?: AbortSignal,
   ): Promise<void>;
+
+  /** Non-streaming completion — returns the full text. Used for structured JSON responses. */
+  complete(system: string, user: string, signal?: AbortSignal): Promise<string>;
 }
