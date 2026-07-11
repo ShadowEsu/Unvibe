@@ -1,5 +1,35 @@
 # Validation & definition of done
 
+## D2.1 — reliability, settings, onboarding, legal, packaging (2026-07-11)
+
+Verified live (typecheck + build clean; 9/9 app tests):
+- **Settings store persists + applies.** Driving `settings:set` over IPC wrote `barPosition`,
+  `launchAtLogin`, `notifications`, `onboarded` to `unvibe-settings.json` (confirmed on disk).
+- **Configurable global shortcut**, default **`⌘⌥U`** (not `⌥Space`, which types a non-breaking
+  space). The default flows settings → UI (hero shows "press ⌘⌥U"). A recorder in Settings
+  captures a new chord; the main process re-registers it and reverts on conflict.
+- **Onboarding** renders on first run (welcome → what-it-does → permission → shortcut test →
+  done) with the logo and step dots; completing it persists `onboarded: true`.
+- **Widget** now: sandbox on, window-open denied, bounds persisted (`lastWidgetBounds`), edge
+  snapping, inactive dim/stay/collapse from settings.
+- **Bar**: position from settings, premium restyle, notification pipeline with 15s rate limit +
+  quiet hours.
+
+Security review (this pass): context isolation ✓, nodeIntegration off ✓, **sandbox on** ✓,
+`setWindowOpenHandler` denies + routes https to the OS browser ✓, `will-navigate` blocked ✓, CSP
+in every renderer ✓, token encrypted at rest ✓, secrets filtered on-device ✓, RLS + policies on
+user tables ✓, no service-role key in the renderer ✓, no shell/openExternal of untrusted input ✓.
+Dependency licenses: **no copyleft** (see `docs/licenses.md`).
+
+Known limitations (honest):
+- **Double-tap-Option is not implemented** — macOS gives Electron no reliable API for it without
+  an Input-Monitoring native helper. A dependable configurable global shortcut is used instead.
+- `launchAtLogin` logs "Operation not permitted" unpackaged (`electron .`); works in a signed
+  packaged bundle.
+- Accessibility auto-capture (`⌥`+select) needs the Accessibility grant; clipboard fallback works
+  without it. Not exercised end-to-end here (needs a real grant + a second app).
+- Packaging is **config-only** — not signed, not notarized, no `.icns` (see `docs/packaging.md`).
+
 ## Milestone D2 — learning store, comprehension, accounts (2026-07-11)
 
 Verified live (typecheck + build clean; 9/9 app unit tests; web typecheck clean; driven end

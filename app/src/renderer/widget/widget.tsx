@@ -188,6 +188,10 @@ function Widget() {
           break;
       }
     });
+    window.unvibe.onAutocollapse((v) => {
+      setCollapsed(v);
+      window.unvibe.collapse(v);
+    });
     window.unvibe.widgetReady();
   }, []);
 

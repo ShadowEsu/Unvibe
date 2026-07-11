@@ -41,6 +41,8 @@ export interface ReviewSession {
   recorded: boolean;
   level: ExplanationLevel;
   pendingAnswer?: { answerIndex: number; concept: string; conceptLabel: string; rationale: string };
+  onRecorded?: () => void;
+  onUnderstood?: () => void;
 }
 
 export interface RequestOpts {
@@ -89,6 +91,7 @@ function recordReview(session: ReviewSession): void {
     sourceApp: session.sourceApp ?? undefined,
   };
   store().recordReview(ev);
+  session.onRecorded?.();
   void flush();
 }
 
@@ -166,6 +169,7 @@ export function gradeComprehension(win: BrowserWindow, session: ReviewSession, c
   if (!a) return;
   const correct = choice === a.answerIndex;
   store().setOutcome(session.reviewId, correct ? 'understood' : 'needs_review', a.concept, a.conceptLabel);
+  if (correct) session.onUnderstood?.();
   void flush();
   send(win, { type: 'graded', correct, answerIndex: a.answerIndex, rationale: a.rationale });
 }

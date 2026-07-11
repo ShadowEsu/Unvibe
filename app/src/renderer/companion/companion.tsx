@@ -1,36 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 
-type PageId =
-  | 'Home'
-  | 'Progress'
-  | 'Projects'
-  | 'Study'
-  | 'Concepts'
-  | 'Notebook'
-  | 'Briefings'
-  | 'Library'
-  | 'Profile';
+type PageId = 'Home' | 'Progress' | 'Projects' | 'Study' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
 
 interface Profile {
-  reviews: number;
-  understood: number;
-  needsReview: number;
-  linesUnderstood: number;
-  linesReviewed: number;
-  conceptsSeen: number;
-  conceptsMastered: number;
-  streak: number;
-  bestStreak: number;
-  usage: Array<{ label: string; pct: number }>;
-  heat: number[];
+  reviews: number; understood: number; needsReview: number;
+  linesUnderstood: number; linesReviewed: number;
+  conceptsSeen: number; conceptsMastered: number;
+  streak: number; bestStreak: number;
+  usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 type Account = { userId: string; email: string } | null;
+interface Settings {
+  onboarded: boolean; shortcut: string; barPosition: string;
+  widgetOpacityInactive: number; inactiveBehavior: string;
+  launchAtLogin: boolean; notifications: boolean;
+  quietHours: { enabled: boolean; start: string; end: string };
+}
 
 const IC = {
   home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
@@ -96,15 +87,9 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress'>, PageDef> = {
 };
 
 const NAV: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home },
-  { id: 'Progress', icon: IC.progress },
-  { id: 'Projects', icon: IC.projects },
-  { id: 'Study', icon: IC.study },
-  { id: 'Concepts', icon: IC.concepts },
-  { id: 'Notebook', icon: IC.notebook },
-  { id: 'Briefings', icon: IC.briefings },
-  { id: 'Library', icon: IC.library },
-  { id: 'Profile', icon: IC.profile },
+  { id: 'Home', icon: IC.home }, { id: 'Progress', icon: IC.progress }, { id: 'Projects', icon: IC.projects },
+  { id: 'Study', icon: IC.study }, { id: 'Concepts', icon: IC.concepts }, { id: 'Notebook', icon: IC.notebook },
+  { id: 'Briefings', icon: IC.briefings }, { id: 'Library', icon: IC.library }, { id: 'Profile', icon: IC.profile },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
@@ -118,9 +103,25 @@ function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
+function prettyAccel(a: string): string {
+  return a.replace('CommandOrControl', '⌘').replace('Command', '⌘').replace('Control', '⌃').replace('Alt', '⌥').replace('Shift', '⇧').replace(/\+/g, '');
+}
+function accelFromEvent(e: KeyboardEvent): string | null {
+  const mods: string[] = [];
+  if (e.metaKey) mods.push('CommandOrControl');
+  if (e.ctrlKey && !e.metaKey) mods.push('Control');
+  if (e.altKey) mods.push('Alt');
+  if (e.shiftKey) mods.push('Shift');
+  let key = e.key;
+  if (key === ' ') key = 'Space';
+  else if (/^[a-z]$/i.test(key)) key = key.toUpperCase();
+  else if (/^[0-9]$/.test(key)) { /* keep */ }
+  else return null; // must end on a printable/space key
+  if (mods.length === 0) return null; // require at least one modifier
+  return [...mods, key].join('+');
+}
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 function SignInForm({ onDone }: { onDone: (email: string) => void }) {
@@ -128,28 +129,117 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const submit = async () => {
-    setBusy(true);
-    setErr('');
+    setBusy(true); setErr('');
     const r = (await window.unvibe.signIn(email)) as { ok: boolean; email?: string; error?: string };
     setBusy(false);
-    if (r.ok && r.email) onDone(r.email);
-    else setErr(r.error ?? 'Sign-in failed.');
+    if (r.ok && r.email) onDone(r.email); else setErr(r.error ?? 'Sign-in failed.');
   };
   return (
     <div className="signin">
-      <input
-        className="field"
-        type="email"
-        placeholder="you@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && email && submit()}
-      />
-      <button className="field-btn" disabled={busy || !email} onClick={submit}>
-        {busy ? 'Signing in…' : 'Continue'}
-      </button>
+      <input className="field" type="email" placeholder="you@example.com" value={email}
+        onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && email && submit()} />
+      <button className="field-btn" disabled={busy || !email} onClick={submit}>{busy ? 'Signing in…' : 'Continue'}</button>
       {err && <div className="field-err">{err}</div>}
       <div className="field-note">Passwordless while in beta — we email you a link later. No password to forget.</div>
+    </div>
+  );
+}
+
+function PermRow({ compact }: { compact?: boolean }) {
+  const [state, setState] = useState<{ granted: boolean; platform: string } | null>(null);
+  const check = () => void window.unvibe.accessibility().then((r) => setState(r as { granted: boolean; platform: string }));
+  useEffect(() => {
+    check();
+    const t = setInterval(check, 2500); // reflect a grant made in System Settings without a manual re-check
+    return () => clearInterval(t);
+  }, []);
+  const granted = state?.granted ?? false;
+  const na = state?.platform !== 'darwin';
+  return (
+    <div className={compact ? '' : 'perm-block'}>
+      <div className="perm-head">
+        <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
+        <span className="perm-title">Accessibility</span>
+      </div>
+      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, Unvibe falls back to explaining whatever you last copied.</div>
+      {!granted && !na && (
+        <div className="perm-actions">
+          <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
+          <button className="act" onClick={() => window.unvibe.openAccessibility()}>Open System Settings</button>
+          <button className="act" onClick={check}>Re-check</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Onboarding({ shortcut, onDone }: { shortcut: string; onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const [fired, setFired] = useState(false);
+  useEffect(() => { window.unvibe.onShortcutFired(() => setFired(true)); }, []);
+  const steps = ['Welcome', 'What it does', 'Permission', 'Your shortcut', 'Done'];
+
+  const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
+  const finish = () => { void window.unvibe.completeOnboarding(); onDone(); };
+
+  return (
+    <div className="ob">
+      <div className="ob__card">
+        <div className="ob__dots">{steps.map((_, i) => <span key={i} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
+
+        {step === 0 && (
+          <>
+            <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
+            <h2 className="ob__title">Welcome to Unvibe</h2>
+            <p className="ob__sub">A quiet teacher that sits beside your editor and explains the code you are shipping — at your level, wherever you work.</p>
+            <button className="field-btn" onClick={next}>Get started</button>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <h2 className="ob__title">How it works</h2>
+            <ul className="ob__list">
+              <li><b>Select code</b> in Cursor, VS Code, a terminal, or a browser.</li>
+              <li><b>Press {prettyAccel(shortcut)}</b> — a floating explanation appears beside your work.</li>
+              <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress.</li>
+            </ul>
+            <button className="field-btn" onClick={next}>Next</button>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <h2 className="ob__title">One permission</h2>
+            <PermRow />
+            <div className="ob__actions">
+              <button className="ob__skip" onClick={next}>I'll do this later</button>
+              <button className="field-btn inline" onClick={next}>Continue</button>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <h2 className="ob__title">Try your shortcut</h2>
+            <p className="ob__sub">Press <span className="kbd-lg">{prettyAccel(shortcut)}</span> now. A floating widget should appear — that is where explanations live. You can change this shortcut any time in Settings.</p>
+            <div className={`ob__test ${fired ? 'ok' : ''}`}>{fired ? '✓ Detected — the overlay works.' : 'Waiting for the shortcut…'}</div>
+            <div className="ob__actions">
+              <button className="ob__skip" onClick={next}>Skip</button>
+              <button className="field-btn inline" disabled={!fired} onClick={next}>Continue</button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <div className="ob__mark"><LogoMark size={44} stroke={1.7} /></div>
+            <h2 className="ob__title">You're set</h2>
+            <p className="ob__sub">Select code anywhere and press {prettyAccel(shortcut)}. Your progress collects in this dashboard.</p>
+            <button className="field-btn" onClick={finish}>Enter Unvibe</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -172,59 +262,37 @@ function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => vo
 function Home({ user, shortcut, profile, feed }: { user: string; shortcut: string; profile: Profile | null; feed: FeedItem[] }) {
   return (
     <>
-      <div className="topline">
-        <h1>Hello again, {user}</h1>
-        <div className="avatar">{user[0]?.toUpperCase() ?? 'U'}</div>
-      </div>
+      <div className="topline"><h1>Hello again, {user}</h1><div className="avatar">{user[0]?.toUpperCase() ?? 'U'}</div></div>
       <div className="cols">
         <div className="main-col">
           <div className="hero">
             <h2>Understand everything you ship.</h2>
             <p>Highlight code in any app and Unvibe explains it right where you are working — pitched to how much you already know, and quiet until you ask.</p>
-            <div className="row">
-              <button onClick={() => window.unvibe.companionReview()}>Explain some code</button>
-              <span className="kbd">or press {shortcut} anywhere</span>
-            </div>
+            <div className="row"><button onClick={() => window.unvibe.companionReview()}>Explain some code</button><span className="kbd">or press {shortcut} anywhere</span></div>
           </div>
-
           <div className="feed-label">LATELY</div>
           {feed.length === 0 ? (
-            <div className="feed-empty">
-              <div className="t">Nothing reviewed yet</div>
-              <div className="d">Highlight some code and press {shortcut}. The things you review will gather here so you can return to any of them.</div>
-            </div>
+            <div className="feed-empty"><div className="t">Nothing reviewed yet</div><div className="d">Highlight some code and press {shortcut}. The things you review will gather here so you can return to any of them.</div></div>
           ) : (
             <div className="feed">
               {feed.map((f) => (
                 <div className="feed-row" key={f.id}>
                   <div className="feed-time">{fmtTime(f.ts)}</div>
-                  <div className="feed-main">
-                    <div className="feed-title">{f.title}</div>
-                    <div className="feed-meta">{f.meta}</div>
-                  </div>
-                  <span className={`tag tag--${f.outcome}`}>
-                    {f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}
-                  </span>
+                  <div className="feed-main"><div className="feed-title">{f.title}</div><div className="feed-meta">{f.meta}</div></div>
+                  <span className={`tag tag--${f.outcome}`}>{f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-
         <div className="rail">
           <div className="stats">
             <div className="stat"><span className="v">{profile?.linesUnderstood ?? 0}</span><span className="l">lines understood</span></div>
             <div className="stat"><span className="v">{profile?.conceptsMastered ?? 0}</span><span className="l">concepts mastered</span></div>
             <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
           </div>
-          <div className="rail-card">
-            <div className="t">Kept on your machine</div>
-            <div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div>
-          </div>
-          <div className="rail-card">
-            <div className="t">How it works</div>
-            <div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div>
-          </div>
+          <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
+          <div className="rail-card"><div className="t">How it works</div><div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div></div>
         </div>
       </div>
     </>
@@ -237,44 +305,25 @@ function Progress({ profile }: { profile: Profile | null }) {
     <>
       <div className="topline"><h1>Progress</h1></div>
       <p className="lead">The honest measure of what you have understood — not lines typed, but lines you could explain to someone else.</p>
-
       <div className="tiles">
         <div className="tile"><div className="v">{profile?.linesUnderstood ?? 0}</div><div className="l">lines understood</div><div className="note">of {profile?.linesReviewed ?? 0} reviewed</div></div>
         <div className="tile"><div className="v">{profile?.conceptsMastered ?? 0}</div><div className="l">concepts mastered</div><div className="note">{profile?.conceptsSeen ?? 0} seen</div></div>
         <div className="tile"><div className="v">{profile?.reviews ?? 0}</div><div className="l">reviews done</div><div className="note">{profile?.needsReview ?? 0} to revisit</div></div>
         <div className="tile"><div className="v">{profile?.streak ?? 0}</div><div className="l">day streak</div><div className="note">best: {profile?.bestStreak ?? 0} days</div></div>
       </div>
-
       <div className="panel-card">
         <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
-        <div className="heat">
-          {heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}
-        </div>
-        <div className="heat-legend">
-          <span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><span>More</span>
-          <span style={{ marginLeft: 'auto' }}>Review code on a day to light it up.</span>
-        </div>
+        <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
+        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><span>More</span><span style={{ marginLeft: 'auto' }}>Review code on a day to light it up.</span></div>
       </div>
-
       <div className="two">
         <div className="panel-card" style={{ marginBottom: 0 }}>
           <div className="ph"><span className="t">Where you learn</span></div>
-          {profile && profile.usage.length > 0 ? (
-            <div className="bars">
-              {profile.usage.map((u) => (
-                <div className="bar-row" key={u.label}>
-                  <div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div>
-                  <div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bars">
-              {['Editors & IDEs', 'Terminal', 'Browser & docs'].map((l) => (
-                <div className="bar-row" key={l}><div className="bl"><span>{l}</span><span>0%</span></div><div className="bar-track"><i style={{ width: '0%' }} /></div></div>
-              ))}
-            </div>
-          )}
+          <div className="bars">
+            {(profile && profile.usage.length > 0 ? profile.usage : [{ label: 'Editors & IDEs', pct: 0 }, { label: 'Terminal', pct: 0 }, { label: 'Browser & docs', pct: 0 }]).map((u) => (
+              <div className="bar-row" key={u.label}><div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div><div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div></div>
+            ))}
+          </div>
           <p className="soft-note">Unvibe notes which app you were in when you asked — never what you typed.</p>
         </div>
         <div className="panel-card" style={{ marginBottom: 0 }}>
@@ -293,10 +342,7 @@ function Explainer({ page }: { page: PageDef }) {
       <p className="lead">{page.lead}</p>
       <div className="feature-grid">
         {page.features.map((f) => (
-          <div className="feature" key={f.t}>
-            <div className="fh"><Icon d={f.icon} /><span className="t">{f.t}</span></div>
-            <div className="d">{f.d}</div>
-          </div>
+          <div className="feature" key={f.t}><div className="fh"><Icon d={f.icon} /><span className="t">{f.t}</span></div><div className="d">{f.d}</div></div>
         ))}
       </div>
       <div className="stub"><b>Nothing here yet.</b> This is where your {page.id.toLowerCase()} will live. Review some code with <b>⌥ Space</b> and it starts filling in on its own.</div>
@@ -304,44 +350,37 @@ function Explainer({ page }: { page: PageDef }) {
   );
 }
 
+function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return <button className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} onClick={onClick}><span className="knob" /></button>;
+}
+
 function AccountPanel({ account, onChange }: { account: Account; onChange: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-
   if (!account) {
     return (
-      <>
-        <div className="setrow" style={{ display: 'block' }}>
-          <div className="sl">Sign in</div>
-          <div className="sd" style={{ marginBottom: 14 }}>Sync your learning across devices. You are using Unvibe locally right now.</div>
-          <SignInForm onDone={onChange} />
-        </div>
-      </>
+      <div className="setrow" style={{ display: 'block' }}>
+        <div className="sl">Sign in</div>
+        <div className="sd" style={{ marginBottom: 14 }}>Sync your learning across devices. You are using Unvibe locally right now.</div>
+        <SignInForm onDone={onChange} />
+      </div>
     );
   }
-
   const del = async () => {
-    setBusy(true);
-    setErr('');
+    setBusy(true); setErr('');
     const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string };
     setBusy(false);
-    if (r.ok) onChange();
-    else setErr(r.error ?? 'Could not delete the account.');
+    if (r.ok) onChange(); else setErr(r.error ?? 'Could not delete the account.');
   };
-
   return (
     <>
-      <div className="setrow">
-        <div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
-        <button className="act" onClick={async () => { await window.unvibe.signOut(); onChange(); }}>Sign out</button>
-      </div>
+      <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
+        <button className="act" onClick={async () => { await window.unvibe.signOut(); onChange(); }}>Sign out</button></div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl" style={{ color: '#a1291f' }}>Delete account</div>
         <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this Mac and on our servers. This cannot be undone.</div>
-        {!confirming ? (
-          <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button>
-        ) : (
+        {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
             <button className="act danger" disabled={busy} onClick={del}>{busy ? 'Deleting…' : 'Yes, delete everything'}</button>
             <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
@@ -353,50 +392,98 @@ function AccountPanel({ account, onChange }: { account: Account; onChange: () =>
   );
 }
 
-function Settings({ info, account, onAccountChange, onClose }: {
-  info: { version: string; shortcut: string };
-  account: Account;
-  onAccountChange: () => void;
-  onClose: () => void;
+function Settings({ info, account, settings, onAccountChange, onSettings, onClose }: {
+  info: { version: string }; account: Account; settings: Settings;
+  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void;
 }) {
   const [tab, setTab] = useState('General');
+  const [recording, setRecording] = useState(false);
+  const [shortcutErr, setShortcutErr] = useState('');
+  const recRef = useRef(recording); recRef.current = recording;
+
+  useEffect(() => {
+    const onKey = async (e: KeyboardEvent) => {
+      if (!recRef.current) return;
+      e.preventDefault();
+      const accel = accelFromEvent(e);
+      if (!accel) return;
+      setRecording(false);
+      const err = await onSettings({ shortcut: accel });
+      setShortcutErr(err ?? '');
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onSettings]);
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="mside">
           <div className="mh">SETTINGS</div>
-          {['General', 'Overlay', 'Privacy'].map((t) => (
-            <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>
-          ))}
+          {['General', 'Overlay', 'Notifications', 'Permissions', 'Privacy'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
           <div className="mh" style={{ paddingTop: 18 }}>ACCOUNT</div>
-          {['Account', 'Data'].map((t) => (
-            <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>
-          ))}
+          {['Account', 'Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
           <div className="ver">Unvibe v{info.version}</div>
         </div>
         <div className="mbody">
           <h2>{tab}</h2>
+
           {tab === 'General' && (
             <>
-              <div className="setrow"><div><div className="sl">Trigger</div><div className="sd">Select code, then press {info.shortcut} to open an explanation.</div></div><button className="act" disabled>Change</button></div>
-              <div className="setrow"><div><div className="sl">Starting depth</div><div className="sd">Which level new explanations open at — currently Intermediate.</div></div><button className="act" disabled>Change</button></div>
+              <div className="setrow">
+                <div><div className="sl">Activation shortcut</div><div className="sd">Select code, then press this to open an explanation.</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div>
+                <button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button>
+              </div>
+              <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
             </>
           )}
+
+          {tab === 'Overlay' && (
+            <>
+              <div className="setrow"><div><div className="sl">Floating bar position</div><div className="sd">Where the small activation bar sits.</div></div>
+                <select className="sel-input" value={settings.barPosition} onChange={(e) => onSettings({ barPosition: e.target.value })}>
+                  <option value="bottom-center">Bottom center</option><option value="top-center">Top center</option>
+                  <option value="top-right">Top right</option><option value="bottom-right">Bottom right</option>
+                </select>
+              </div>
+              <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
+                <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
+                  <option value="dim">Dim</option><option value="stay">Stay solid</option><option value="collapse">Collapse</option>
+                </select>
+              </div>
+              <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
+                <input className="range" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
+              </div>
+            </>
+          )}
+
+          {tab === 'Notifications' && (
+            <>
+              <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages in the floating bar.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
+              {settings.quietHours.enabled && (
+                <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div>
+                  <div className="danger-row">
+                    <input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} />
+                    <input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'Permissions' && <PermRow compact />}
+
           {tab === 'Privacy' && (
             <>
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your Mac. Always on.</div></div><button className="act" disabled>On</button></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
             </>
           )}
-          {tab === 'Overlay' && (
-            <div className="setrow"><div><div className="sl">Floating bar</div><div className="sd">Position and idle opacity controls arrive in the next update.</div></div><button className="act" disabled>Soon</button></div>
-          )}
+
           {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} />}
           {tab === 'Data' && (
-            <div className="setrow" style={{ display: 'block' }}>
-              <div className="sl">Your data</div>
-              <div className="sd">Reviews and progress live in a file on this Mac. Deleting your account (under Account) erases them everywhere.</div>
-            </div>
+            <div className="setrow" style={{ display: 'block' }}><div className="sl">Your data</div><div className="sd">Reviews and progress live in a file on this Mac. Deleting your account (under Account) erases them everywhere.</div></div>
           )}
         </div>
       </div>
@@ -406,54 +493,53 @@ function Settings({ info, account, onAccountChange, onClose }: {
 
 function App() {
   const [page, setPage] = useState<PageId>('Home');
-  const [settings, setSettings] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState('');
-  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌥ Space' });
+  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌘⌥U' });
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [gate, setGate] = useState<'checking' | 'login' | 'app'>('checking');
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
 
   const refresh = async () => {
-    const [acct, prof, fd] = await Promise.all([
+    const [acct, prof, fd, st] = await Promise.all([
       window.unvibe.account() as Promise<Account>,
       window.unvibe.profile() as Promise<Profile>,
       window.unvibe.feed(8) as Promise<FeedItem[]>,
+      window.unvibe.getSettings() as Promise<Settings>,
     ]);
-    setAccount(acct);
-    setProfile(prof);
-    setFeed(fd);
-    return acct;
+    setAccount(acct); setProfile(prof); setFeed(fd); setSettings(st);
+    return { acct, st };
   };
 
   useEffect(() => {
-    void window.unvibe.appInfo().then(setInfo);
+    void window.unvibe.appInfo().then((i) => setInfo(i as typeof info));
     void (async () => {
-      const acct = await refresh();
-      setGate(acct ? 'app' : 'login');
+      const { acct, st } = await refresh();
+      setGate(!st.onboarded ? 'onboarding' : acct ? 'app' : 'login');
     })();
     const onFocus = () => void refresh();
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  const flash = (m: string) => {
-    setToast(m);
-    setTimeout(() => setToast(''), 1800);
+  const applySettings = async (patch: Partial<Settings>): Promise<string | undefined> => {
+    const r = (await window.unvibe.setSettings(patch)) as { settings: Settings; shortcutError?: string };
+    setSettings(r.settings);
+    if (r.settings.shortcut) setInfo((i) => ({ ...i, shortcut: r.settings.shortcut }));
+    return r.shortcutError;
   };
 
-  if (gate === 'checking') return <div className="titlebar" />;
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
+  const shortcutLabel = prettyAccel(info.shortcut);
 
+  if (gate === 'checking') return <div className="titlebar" />;
+  if (gate === 'onboarding') {
+    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+Alt+U'} onDone={async () => { const { acct } = await refresh(); setGate(acct ? 'app' : 'login'); }} /></>);
+  }
   if (gate === 'login') {
-    return (
-      <>
-        <div className="titlebar" />
-        <LoginScreen
-          onSignedIn={async () => { await refresh(); setGate('app'); }}
-          onSkip={() => setGate('app')}
-        />
-      </>
-    );
+    return (<><div className="titlebar" /><LoginScreen onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);
   }
 
   return (
@@ -461,51 +547,24 @@ function App() {
       <div className="titlebar" />
       <div className="layout">
         <aside className="side">
-          <div className="brand">
-            <span className="mark"><LogoMark size={22} /></span>
-            <span className="name">Unvibe</span>
-            <span className="badge">Beta</span>
-          </div>
-          <nav className="nav">
-            {NAV.map((p) => (
-              <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}>
-                <Icon d={p.icon} />{p.id}
-              </button>
-            ))}
-          </nav>
+          <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
-          <div className="promo">
-            <div className="t">Free while in <em>beta</em></div>
-            <div className="d">Everything is unlocked while Unvibe grows up alongside you.</div>
-            <button onClick={() => flash('The roadmap is coming together.')}>See the roadmap</button>
-          </div>
-          <nav className="nav">
-            {FOOT.map((f) => (
-              <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettings(true) : flash(f.toast))}>
-                <Icon d={f.icon} />{f.id}
-              </button>
-            ))}
-          </nav>
+          <div className="promo"><div className="t">Free while in <em>beta</em></div><div className="d">Everything is unlocked while Unvibe grows up alongside you.</div><button onClick={() => flash('The roadmap is coming together.')}>See the roadmap</button></div>
+          <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
           <div className="page">
-            {page === 'Home' ? (
-              <Home user={info.user} shortcut={info.shortcut} profile={profile} feed={feed} />
-            ) : page === 'Progress' ? (
-              <Progress profile={profile} />
-            ) : (
-              <Explainer page={PAGES[page]} />
-            )}
+            {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
+              : page === 'Progress' ? <Progress profile={profile} />
+              : <Explainer page={PAGES[page]} />}
           </div>
         </main>
       </div>
-      {settings && (
-        <Settings
-          info={info}
-          account={account}
-          onAccountChange={async () => { const a = await refresh(); if (!a) setGate('app'); }}
-          onClose={() => setSettings(false)}
-        />
+      {settingsOpen && settings && (
+        <Settings info={info} account={account} settings={settings}
+          onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
+          onSettings={applySettings} onClose={() => setSettingsOpen(false)} />
       )}
       {toast && <div className="toast">{toast}</div>}
     </>

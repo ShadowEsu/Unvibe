@@ -10,18 +10,21 @@ body {
   height: 36px;
   margin: 4px;
   border-radius: 999px;
-  background: rgba(18, 18, 18, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  color: #f2f1ee;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+  color: #fafafa;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 8px 0 14px;
   -webkit-app-region: drag;
-  opacity: 0.45;
-  transition: opacity 0.25s ease;
+  opacity: 0.4;
+  transition: opacity 0.28s ease, background 0.2s ease;
 }
 body:hover .pill { opacity: 1; }
+.pill--note { opacity: 1; background: #000; }
+.note { color: #fafafa; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .glyph { font-size: 11px; letter-spacing: 0.02em; }
 .label { font-size: 12px; opacity: 0.9; flex: 1; white-space: nowrap; overflow: hidden; }

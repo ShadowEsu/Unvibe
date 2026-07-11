@@ -9,7 +9,8 @@
     "start": "electron .",
     "dev": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js"
+    "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
+    "dist": "npm run build && electron-builder --mac"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -20,7 +21,28 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "electron": "^36.0.0",
+    "electron-builder": "^25.0.0",
     "esbuild": "^0.25.0",
     "typescript": "^5.5.0"
+  },
+  "build": {
+    "appId": "com.unvibe.app",
+    "productName": "Unvibe",
+    "copyright": "Copyright © 2026 Unvibe",
+    "files": ["dist/**/*", "package.json"],
+    "directories": { "output": "release", "buildResources": "build" },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
+        "LSUIElement": false
+      }
+    },
+    "dmg": { "sign": false }
   }
 }

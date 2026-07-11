@@ -1,13 +1,24 @@
 /**
  * Unvibe desktop agent.
- * Owns: tray, floating bar, widget windows, companion window, global shortcut, selection
- * capture, secret filtering, the local learning store, account/auth, and ALL network I/O.
- * Renderers are sandboxed (CSP: no network) and talk only over the preload bridge.
+ * Owns: tray, floating bar, widget windows, companion window, the global shortcut, selection
+ * capture, secret filtering, the local learning store, settings, account/auth, and ALL network
+ * I/O. Renderers are sandboxed (CSP: no network) and talk only over the preload bridge.
  */
-import { app, BrowserWindow, Menu, Tray, clipboard, globalShortcut, ipcMain, nativeImage } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  Tray,
+  clipboard,
+  globalShortcut,
+  ipcMain,
+  nativeImage,
+  shell,
+  systemPreferences,
+} from 'electron';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { createBar, createCompanion, createWidget } from './windows';
+import { createBar, createCompanion, createWidget, positionBar } from './windows';
 import { captureSelection, frontmostApp } from './selection';
 import {
   initWidget,
@@ -18,8 +29,10 @@ import {
   type RequestOpts,
 } from './review';
 import { store } from './store';
+import { settings, type Settings } from './settings';
 import { flush } from './sync';
 import { signIn, deleteAccount } from './backend';
+import { setBar, notify } from './notify';
 import { computeProfile, computeFeed } from '../core/learning';
 
 function firstName(): Promise<string> {
@@ -32,11 +45,18 @@ function firstName(): Promise<string> {
 }
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
+const isMac = process.platform === 'darwin';
 
 let tray: Tray | null = null;
+let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
 const sessions = new Map<number, ReviewSession>();
 const normalBounds = new Map<number, Electron.Rectangle>();
+
+function accessibilityGranted(prompt = false): boolean {
+  if (!isMac) return true;
+  return systemPreferences.isTrustedAccessibilityClient(prompt);
+}
 
 function openCompanion(): void {
   if (companion && !companion.isDestroyed()) {
@@ -48,7 +68,12 @@ function openCompanion(): void {
   companion.on('closed', () => (companion = null));
 }
 
+function broadcastShortcut(): void {
+  if (companion && !companion.isDestroyed()) companion.webContents.send('shortcut:fired');
+}
+
 async function startReview(): Promise<void> {
+  broadcastShortcut();
   const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
   const win = createWidget();
   const session: ReviewSession = {
@@ -58,6 +83,8 @@ async function startReview(): Promise<void> {
     abort: null,
     recorded: false,
     level: 'intermediate',
+    onRecorded: () => notify('Added to your learning history'),
+    onUnderstood: () => notify('Nice — concept understood'),
   };
   sessions.set(win.webContents.id, session);
   win.on('closed', () => {
@@ -67,28 +94,40 @@ async function startReview(): Promise<void> {
   });
 }
 
-function widgetOf(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): BrowserWindow | null {
-  return BrowserWindow.fromWebContents(event.sender);
+function registerShortcut(accel: string): boolean {
+  globalShortcut.unregisterAll();
+  try {
+    return globalShortcut.register(accel, () => void startReview());
+  } catch {
+    return false;
+  }
+}
+
+function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): BrowserWindow | null {
+  return BrowserWindow.fromWebContents(e.sender);
 }
 
 app.whenReady().then(() => {
-  store(); // initialise persistence early
-  void flush(); // backfill any queued events from a previous run
+  store();
+  const s = settings().all();
+  if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
+  void flush();
 
   tray = new Tray(nativeImage.createEmpty());
   tray.setTitle('◆');
   tray.setToolTip('Unvibe');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Review selection', accelerator: 'Alt+Space', click: () => void startReview() },
+      { label: 'Review selection', click: () => void startReview() },
       { label: 'Open Unvibe', click: openCompanion },
       { type: 'separator' },
       { label: 'Quit Unvibe', role: 'quit' },
     ]),
   );
 
-  createBar();
-  globalShortcut.register('Alt+Space', () => void startReview());
+  bar = createBar();
+  setBar(bar);
+  registerShortcut(s.shortcut);
 
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
@@ -128,7 +167,6 @@ app.whenReady().then(() => {
     const session = sessions.get(e.sender.id);
     if (win && session) gradeComprehension(win, session, choice);
   });
-
   ipcMain.on('widget:pin', (e, pinned: boolean) => {
     const win = widgetOf(e);
     if (!win) return;
@@ -149,15 +187,45 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
+  ipcMain.on('widget:openStudy', () => openCompanion());
 
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
     version: app.getVersion(),
     user: await firstName(),
-    shortcut: '⌥ Space',
+    shortcut: settings().all().shortcut,
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
+
+  // --- settings ---
+  ipcMain.handle('settings:get', () => settings().all());
+  ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
+    const before = settings().all().shortcut;
+    const next = settings().set(patch);
+    if (patch.shortcut && patch.shortcut !== before) {
+      const ok = registerShortcut(next.shortcut);
+      if (!ok) {
+        settings().set({ shortcut: before });
+        registerShortcut(before);
+        return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
+      }
+    }
+    if (patch.barPosition && bar && !bar.isDestroyed()) positionBar(bar);
+    return { settings: settings().all() };
+  });
+
+  // --- permissions ---
+  ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));
+  ipcMain.handle('perms:promptAccessibility', () => ({ granted: accessibilityGranted(true) }));
+  ipcMain.handle('perms:openAccessibility', () => {
+    if (isMac)
+      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    return { ok: true };
+  });
+
+  // --- onboarding ---
+  ipcMain.handle('onboarding:complete', () => settings().set({ onboarded: true }));
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
@@ -182,7 +250,7 @@ app.whenReady().then(() => {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Delete failed.' };
     }
-    store().wipeEverything(); // remove local data too
+    store().wipeEverything();
     return { ok: true };
   });
 });
