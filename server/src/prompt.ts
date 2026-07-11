@@ -21,7 +21,10 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
     'Rules:',
     '- Use ONLY the provided context. Do not invent files, symbols, or behaviour you cannot see.',
     '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
-    '- When you reference code, cite the file and line/range you were given (e.g. `foo.ts:12-18`).',
+    '- Wrap EVERY reference to specific code in a citation marker of the exact form',
+    '  [[cite:FILE:START-END]] or [[cite:FILE:LINE]], where FILE is a path shown in the context.',
+    '  Example: "the loop [[cite:src/sync.ts:20-27]] retries on failure". Never cite a file that',
+    '  is not present in the provided context.',
     '- If the context is insufficient to answer, say so and name what you would need.',
     '- Be direct. No preamble, no flattery, no restating the question.',
     '',
@@ -72,8 +75,19 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   if (payload.question) {
     parts.push(`\n## Follow-up question\n${payload.question}`);
   } else {
-    parts.push('\n## Task\nExplain what this code does and why, at the requested level. End with one sentence on what would break if it were removed or changed.');
+    parts.push(`\n## Task\n${taskForScope(scope)}`);
   }
 
   return parts.join('\n');
+}
+
+function taskForScope(scope: ReviewRequestPayload['scope']): string {
+  switch (scope) {
+    case 'project':
+      return 'Give an architecture-level overview: the main parts, how they fit together, the entry points, and where a newcomer should start reading. Cite the directories/files you reference.';
+    case 'diff':
+      return 'Explain what changed and why, and how data flows through the change. End with one sentence on what would break if the change were reverted.';
+    default:
+      return 'Explain what this code does and why, at the requested level. End with one sentence on what would break if it were removed or changed.';
+  }
 }

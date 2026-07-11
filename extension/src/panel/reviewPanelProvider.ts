@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { SecretFinding } from '../security/secretFilter';
+import type { Segment } from '../citations/citations';
 import type {
   ExplanationLevel,
   HostToWebview,
@@ -69,6 +70,9 @@ export class ReviewPanelProvider implements vscode.WebviewViewProvider {
   }
   streamToken(text: string): void {
     this.post({ type: 'token', text });
+  }
+  showRendered(segments: Segment[], unverified: number): void {
+    this.post({ type: 'rendered', segments, unverified });
   }
   streamDone(mock: boolean): void {
     this.post({ type: 'streamDone', mock });

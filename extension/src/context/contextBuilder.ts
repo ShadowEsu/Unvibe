@@ -21,6 +21,12 @@ export async function buildContext(req: ReviewRequest): Promise<ReviewContext> {
     imports: [],
   };
 
+  if (req.scope === 'project') {
+    ctx.projectStructure = await deepStructure();
+    ctx.primaryFile = undefined;
+    return ctx;
+  }
+
   if (req.scope === 'diff') {
     const root = repoRootFor(primaryFsPath);
     if (root) {
@@ -106,6 +112,42 @@ async function shallowStructure(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/** Two-level tree of the workspace (names only) for architecture-level project reviews. */
+async function deepStructure(maxEntries = 120): Promise<string[]> {
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  if (!folder) {
+    return [];
+  }
+  const skip = new Set(['node_modules', 'dist', 'build', 'out', '.next', 'target', 'vendor', '.git', '.venv', '__pycache__']);
+  const lines: string[] = [];
+
+  async function walk(uri: vscode.Uri, prefix: string, depth: number): Promise<void> {
+    if (depth > 1 || lines.length >= maxEntries) {
+      return;
+    }
+    let entries: [string, vscode.FileType][];
+    try {
+      entries = await vscode.workspace.fs.readDirectory(uri);
+    } catch {
+      return;
+    }
+    entries.sort((a, b) => a[0].localeCompare(b[0]));
+    for (const [name, type] of entries) {
+      if (name.startsWith('.') || skip.has(name) || lines.length >= maxEntries) {
+        continue;
+      }
+      const isDir = type === vscode.FileType.Directory;
+      lines.push(`${prefix}${name}${isDir ? '/' : ''}`);
+      if (isDir) {
+        await walk(vscode.Uri.joinPath(uri, name), `${prefix}  `, depth + 1);
+      }
+    }
+  }
+
+  await walk(folder.uri, '', 0);
+  return lines;
 }
 
 function repoRootFor(fsPath: string | undefined): string | undefined {

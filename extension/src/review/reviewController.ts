@@ -5,6 +5,7 @@ import type { ReviewContext, ReviewRequestPayload } from '../protocol';
 import { buildContext, scanTargets } from '../context/contextBuilder';
 import { scanBlocks, hasBlocking, type SecretFinding } from '../security/secretFilter';
 import { streamReview } from '../net/reviewClient';
+import { toSegments, basename } from '../citations/citations';
 
 interface ActiveReview {
   request: ReviewRequest;
@@ -20,6 +21,8 @@ interface ActiveReview {
 export class ReviewController {
   private active: ActiveReview | undefined;
   private abort: AbortController | undefined;
+  /** Files (rel path + basename) actually sent in the current context — for citation validation. */
+  private readonly contextFiles = new Set<string>();
 
   constructor(
     private readonly panel: ReviewPanelProvider,
@@ -47,7 +50,8 @@ export class ReviewController {
       return;
     }
 
-    const repoKey = request.files[0] ? repoKeyFor(request.files[0]) : 'workspace';
+    this.rememberContextFiles(context);
+    const repoKey = repoKeyFor(request.files[0]);
     this.active = { request, context, repoKey };
     const suspects = findings.filter((f) => f.severity === 'suspect');
 
@@ -79,17 +83,18 @@ export class ReviewController {
     this.abort = new AbortController();
     this.panel.streamStart();
 
-    let sawToken = false;
+    let full = '';
     await streamReview(
       backendUrl,
       payload,
       (event) => {
         switch (event.type) {
           case 'token':
-            sawToken = true;
+            full += event.text;
             this.panel.streamToken(event.text);
             break;
           case 'done':
+            this.renderCitations(full);
             this.panel.streamDone(event.mock);
             break;
           case 'error':
@@ -99,9 +104,61 @@ export class ReviewController {
       },
       this.abort.signal,
     );
-    if (!sawToken) {
+    if (!full) {
       this.log.appendLine('[review] stream produced no tokens');
     }
+  }
+
+  /** Parse citations from the completed explanation, validate them, and render clickable refs. */
+  private renderCitations(full: string): void {
+    const segments = toSegments(full, (file) => this.verifyCitation(file));
+    const unverified = segments.filter((s) => s.type === 'cite' && !s.verified).length;
+    if (unverified > 0) {
+      this.log.appendLine(`[review] ${unverified} citation(s) referenced files not in the sent context`);
+    }
+    this.panel.showRendered(segments, unverified);
+  }
+
+  private verifyCitation(file: string): boolean {
+    return this.contextFiles.has(file) || this.contextFiles.has(basename(file));
+  }
+
+  private rememberContextFiles(context: ReviewContext): void {
+    this.contextFiles.clear();
+    const add = (p: string | undefined) => {
+      if (p) {
+        const clean = p.replace(/\/$/, '');
+        this.contextFiles.add(clean);
+        this.contextFiles.add(basename(clean));
+      }
+    };
+    add(context.primaryFile);
+    add(context.selection?.file);
+    context.diffHunks?.forEach((h) => add(h.file));
+    context.projectStructure.forEach((p) => add(p.trim()));
+  }
+
+  private async openCitation(file: string, startLine: number): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
+      return;
+    }
+    let uri = vscode.Uri.joinPath(folder.uri, file);
+    try {
+      await vscode.workspace.fs.stat(uri);
+    } catch {
+      const found = await vscode.workspace.findFiles(`**/${basename(file)}`, '**/node_modules/**', 1);
+      if (found.length === 0) {
+        void vscode.window.showInformationMessage(`Uncode: could not locate ${file}.`);
+        return;
+      }
+      uri = found[0];
+    }
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const editor = await vscode.window.showTextDocument(doc, { preview: true });
+    const pos = new vscode.Position(Math.max(0, startLine - 1), 0);
+    editor.selection = new vscode.Selection(pos, pos);
+    editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
   }
 
   private onWebviewMessage(message: WebviewToHost): void {
@@ -137,6 +194,9 @@ export class ReviewController {
         } else if (message.action === 'testMe') {
           void vscode.window.setStatusBarMessage('Uncode: comprehension check arrives in Milestone 4', 2500);
         }
+        break;
+      case 'openCitation':
+        void this.openCitation(message.file, message.startLine);
         break;
       case 'openDashboard':
         void vscode.window.setStatusBarMessage('Uncode: dashboard arrives in Milestone 5', 2500);
@@ -180,10 +240,15 @@ function previewText(request: ReviewRequest, context: ReviewContext): string {
   return lines.join('\n');
 }
 
-function repoKeyFor(fsPath: string): string {
+function repoKeyFor(fsPath: string | undefined): string {
   const folders = vscode.workspace.workspaceFolders ?? [];
-  const match = folders.find((f) => fsPath.startsWith(f.uri.fsPath));
-  return match ? match.uri.fsPath : (folders[0]?.uri.fsPath ?? 'workspace');
+  if (fsPath) {
+    const match = folders.find((f) => fsPath.startsWith(f.uri.fsPath));
+    if (match) {
+      return match.uri.fsPath;
+    }
+  }
+  return folders[0]?.uri.fsPath ?? 'workspace';
 }
 
 function consentStoreKey(repoKey: string): string {

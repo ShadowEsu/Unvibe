@@ -80,7 +80,23 @@
     hide(els.empty, els.preview, els.explain, els.controls, els.followup);
   }
 
+  var rawExplanation = '';
+  var CITE_RE = /\[\[cite:([^\]:]+):(\d+)(?:-(\d+))?\]\]/g;
+  var PARTIAL_TAIL = /\[\[cite:[^\]]*$/;
+
+  function base(path) {
+    var p = String(path).replace(/\\/g, '/');
+    return p.slice(p.lastIndexOf('/') + 1);
+  }
+
+  function stripLive(text) {
+    return text
+      .replace(CITE_RE, function (_full, file, start) { return base(file) + ':' + start; })
+      .replace(PARTIAL_TAIL, '');
+  }
+
   function streamStart() {
+    rawExplanation = '';
     els.explainBody.textContent = '';
     els.explainMeta.hidden = true;
     show(els.explain, els.controls, els.followup);
@@ -88,7 +104,33 @@
   }
 
   function appendToken(text) {
-    els.explainBody.textContent += text;
+    rawExplanation += text;
+    els.explainBody.textContent = stripLive(rawExplanation);
+  }
+
+  function renderSegments(segments, unverified) {
+    els.explainBody.textContent = '';
+    (segments || []).forEach(function (s) {
+      if (s.type === 'text') {
+        els.explainBody.appendChild(document.createTextNode(s.value));
+        return;
+      }
+      var btn = document.createElement('button');
+      btn.className = 'cite' + (s.verified ? '' : ' cite--unverified');
+      btn.type = 'button';
+      btn.textContent = base(s.file) + ':' + s.startLine + (s.endLine ? '-' + s.endLine : '');
+      btn.title = (s.verified ? '' : 'Not in the sent context — verify. ') + s.file;
+      btn.addEventListener('click', function () {
+        vscode.postMessage({ type: 'openCitation', file: s.file, startLine: s.startLine });
+      });
+      els.explainBody.appendChild(btn);
+    });
+    if (unverified > 0) {
+      var warn = document.createElement('p');
+      warn.className = 'explanation__warn';
+      warn.textContent = unverified + ' citation(s) reference files that were not sent — treat with caution.';
+      els.explainBody.appendChild(warn);
+    }
   }
 
   function streamDone(mock) {
@@ -161,6 +203,7 @@
       case 'blocked': showBlocked(msg.findings); break;
       case 'streamStart': streamStart(); break;
       case 'token': appendToken(msg.text); break;
+      case 'rendered': renderSegments(msg.segments, msg.unverified); break;
       case 'streamDone': streamDone(msg.mock); break;
       case 'streamError': streamError(msg.message); break;
       case 'offline': showOffline(); break;

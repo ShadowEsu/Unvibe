@@ -20,13 +20,14 @@ export class MockProvider implements Provider {
     const file = fileMatch?.[1]?.trim() ?? 'this code';
     const lang = langMatch?.[1]?.trim() ?? 'unknown';
 
+    const cite = file !== 'this code' ? `[[cite:${file}:1]]` : '';
     const text =
       `[MOCK EXPLANATION — no ANTHROPIC_API_KEY set on the Uncode service]\n\n` +
-      `Visible: the request concerns ${file} (${lang}). The service received the constructed ` +
+      `Visible: the request concerns ${cite} (${lang}). The service received the constructed ` +
       `context (imports, diff/selection, project structure) and would normally send it to Claude.\n\n` +
       `Inferred: with a real key, you'd get a levelled explanation here that distinguishes what ` +
-      `the code shows from what is inferred, cites file:line, and ends with what would break if ` +
-      `the code were removed.\n\n` +
+      `the code shows from what is inferred, cites references like ${cite}, and ends with what ` +
+      `would break if the code were removed.\n\n` +
       `Uncertain: nothing further can be said without the model.\n\n` +
       `To enable real analysis: set ANTHROPIC_API_KEY in the service environment and restart.`;
 

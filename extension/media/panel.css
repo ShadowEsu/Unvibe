@@ -241,6 +241,35 @@ body {
   font-size: var(--fs-11);
 }
 
+/* Inline citation chips — clickable, monochrome. Verified vs unverified by border style. */
+.cite {
+  display: inline;
+  font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace;
+  font-size: var(--fs-11);
+  padding: 0 4px;
+  margin: 0 1px;
+  background: var(--bg-subtle);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.cite:hover {
+  background: var(--fill-hover);
+}
+.cite--unverified {
+  border-style: dashed;
+  text-decoration: line-through;
+}
+.explanation__warn {
+  margin: var(--s-3) 0 0;
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--fg);
+  font-size: var(--fs-11);
+  font-weight: 500;
+}
+
 .actions {
   display: flex;
   gap: var(--s-2);

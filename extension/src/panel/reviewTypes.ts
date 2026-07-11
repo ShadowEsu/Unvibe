@@ -1,5 +1,6 @@
 import type { ReviewScope, ExplanationLevel } from '../protocol';
 import type { SecretFinding } from '../security/secretFilter';
+import type { Segment } from '../citations/citations';
 
 export type { ReviewScope, ExplanationLevel } from '../protocol';
 
@@ -23,6 +24,7 @@ export type HostToWebview =
   | { type: 'blocked'; findings: SecretFinding[] }
   | { type: 'streamStart' }
   | { type: 'token'; text: string }
+  | { type: 'rendered'; segments: Segment[]; unverified: number }
   | { type: 'streamDone'; mock: boolean }
   | { type: 'streamError'; message: string }
   | { type: 'offline' }
@@ -35,4 +37,5 @@ export type WebviewToHost =
   | { type: 'consent'; granted: boolean }
   | { type: 'action'; action: 'understand' | 'explainDifferently' | 'testMe' }
   | { type: 'question'; text: string }
+  | { type: 'openCitation'; file: string; startLine: number }
   | { type: 'openDashboard' };

@@ -87,6 +87,15 @@ export function activate(context: vscode.ExtensionContext): void {
       }));
     }),
 
+    vscode.commands.registerCommand('uncode.reviewProject', () => {
+      const folder = vscode.workspace.workspaceFolders?.[0];
+      void controller.review(makeRequest('project', {
+        title: 'Project overview',
+        detail: folder ? folder.name : 'workspace',
+        files: [],
+      }));
+    }),
+
     vscode.commands.registerCommand('uncode.dismissPrompt', () => {
       lastPromptedSignature = lastDetected?.signature;
       statusBar.setIdle();
