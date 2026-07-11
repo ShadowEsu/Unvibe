@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { LogoMark } from '../shared/logo';
 
 type PageId =
   | 'Home'
@@ -12,17 +13,24 @@ type PageId =
   | 'Library'
   | 'Profile';
 
-interface Feature {
-  icon: string;
-  t: string;
-  d: string;
+interface Feature { icon: string; t: string; d: string }
+interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
+
+interface Profile {
+  reviews: number;
+  understood: number;
+  needsReview: number;
+  linesUnderstood: number;
+  linesReviewed: number;
+  conceptsSeen: number;
+  conceptsMastered: number;
+  streak: number;
+  bestStreak: number;
+  usage: Array<{ label: string; pct: number }>;
+  heat: number[];
 }
-interface PageDef {
-  id: PageId;
-  icon: string;
-  lead: string;
-  features: Feature[];
-}
+interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
+type Account = { userId: string; email: string } | null;
 
 const IC = {
   home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
@@ -43,83 +51,48 @@ const IC = {
 };
 
 const PAGES: Record<Exclude<PageId, 'Home' | 'Progress'>, PageDef> = {
-  Projects: {
-    id: 'Projects',
-    icon: IC.projects,
-    lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.',
-    features: [
-      { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
-      { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
-      { icon: IC.check, t: 'How much you grasp', d: 'A running sense of which corners you understand and which you have not opened yet.' },
-      { icon: IC.map, t: 'Where to start reading', d: 'Unvibe points you at the file a newcomer should open first.' },
-    ],
-  },
-  Study: {
-    id: 'Study',
-    icon: IC.study,
-    lead: 'Guided tracks built from your own repositories — Unvibe teaches the parts that matter, one short lesson at a time.',
-    features: [
-      { icon: IC.map, t: 'Paths from your code', d: 'Frontend, backend, security, architecture, databases, testing — drawn from what you actually ship.' },
-      { icon: IC.check, t: 'One lesson at a time', d: 'Bite-sized steps you can finish between commits, not a 40-hour course.' },
-      { icon: IC.spark, t: 'Tuned to your level', d: 'Lessons meet you where you are and climb only as fast as you do.' },
-      { icon: IC.clock, t: 'Pick up where you left off', d: 'Every track remembers your place, so momentum survives a busy week.' },
-    ],
-  },
-  Concepts: {
-    id: 'Concepts',
-    icon: IC.concepts,
-    lead: 'Your growing handbook of ideas — each one explained once, well, and tied back to the code where you met it.',
-    features: [
-      { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
-      { icon: IC.layers, t: 'Examples from your repos', d: 'Real snippets where the idea shows up in code you have touched.' },
-      { icon: IC.spark, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
-      { icon: IC.check, t: 'A quick check', d: 'One question to prove it landed and mark the concept mastered.' },
-    ],
-  },
-  Notebook: {
-    id: 'Notebook',
-    icon: IC.notebook,
-    lead: 'The keeper for anything worth a second look — explanations, diagrams, and the back-and-forth you had with Unvibe.',
-    features: [
-      { icon: IC.notebook, t: 'Saved explanations', d: 'Star an explanation in any widget and it lands here, searchable.' },
-      { icon: IC.layers, t: 'Diagrams', d: 'Execution flows and structure sketches, kept next to the code they describe.' },
-      { icon: IC.spark, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
-      { icon: IC.clock, t: 'Nothing evaporates', d: 'Close a widget without worry — what you kept is still here tomorrow.' },
-    ],
-  },
-  Briefings: {
-    id: 'Briefings',
-    icon: IC.briefings,
-    lead: 'Short recaps of what changed and what you picked up — a two-minute read each morning, a longer one each week.',
-    features: [
-      { icon: IC.clock, t: 'Morning recap', d: 'What the agents changed overnight, told as a story rather than a diff.' },
-      { icon: IC.check, t: 'Weekly review', d: 'The concepts you locked in and the ones worth revisiting.' },
-      { icon: IC.eye, t: 'Written for skimming', d: 'Headline first, detail underneath — read as deep as you have time for.' },
-      { icon: IC.spark, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
-    ],
-  },
-  Library: {
-    id: 'Library',
-    icon: IC.library,
-    lead: 'Hand-picked reading matched to whatever you are learning right now — guides and roadmaps, minus the rabbit holes.',
-    features: [
-      { icon: IC.map, t: 'Roadmaps', d: 'The shape of a topic end to end, so you know what is left to learn.' },
-      { icon: IC.eye, t: 'Focused guides', d: 'Chosen to match your open concepts — no endless tab-hoarding.' },
-      { icon: IC.layers, t: 'Reference you keep', d: 'The pages you return to, gathered in one calm place.' },
-      { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
-    ],
-  },
-  Profile: {
-    id: 'Profile',
-    icon: IC.profile,
-    lead: 'The long view of your learning — milestones you have hit, ideas you have mastered, and everything you have reviewed.',
-    features: [
-      { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first week-long streak.' },
-      { icon: IC.check, t: 'Mastery map', d: 'Concepts sorted by how solid they are, from seen to second-nature.' },
-      { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
-      { icon: IC.layers, t: 'Yours to share', d: 'Turn a mastered track into a clean certificate when you want to.' },
-    ],
-  },
+  Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
+    { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
+    { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
+    { icon: IC.check, t: 'How much you grasp', d: 'A running sense of which corners you understand and which you have not opened yet.' },
+    { icon: IC.map, t: 'Where to start reading', d: 'Unvibe points you at the file a newcomer should open first.' },
+  ] },
+  Study: { id: 'Study', icon: IC.study, lead: 'Guided tracks built from your own repositories — Unvibe teaches the parts that matter, one short lesson at a time.', features: [
+    { icon: IC.map, t: 'Paths from your code', d: 'Frontend, backend, security, architecture, databases, testing — drawn from what you actually ship.' },
+    { icon: IC.check, t: 'One lesson at a time', d: 'Bite-sized steps you can finish between commits, not a 40-hour course.' },
+    { icon: IC.spark, t: 'Tuned to your level', d: 'Lessons meet you where you are and climb only as fast as you do.' },
+    { icon: IC.clock, t: 'Pick up where you left off', d: 'Every track remembers your place, so momentum survives a busy week.' },
+  ] },
+  Concepts: { id: 'Concepts', icon: IC.concepts, lead: 'Your growing handbook of ideas — each one explained once, well, and tied back to the code where you met it.', features: [
+    { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
+    { icon: IC.layers, t: 'Examples from your repos', d: 'Real snippets where the idea shows up in code you have touched.' },
+    { icon: IC.spark, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
+    { icon: IC.check, t: 'A quick check', d: 'One question to prove it landed and mark the concept mastered.' },
+  ] },
+  Notebook: { id: 'Notebook', icon: IC.notebook, lead: 'The keeper for anything worth a second look — explanations, diagrams, and the back-and-forth you had with Unvibe.', features: [
+    { icon: IC.notebook, t: 'Saved explanations', d: 'Star an explanation in any widget and it lands here, searchable.' },
+    { icon: IC.layers, t: 'Diagrams', d: 'Execution flows and structure sketches, kept next to the code they describe.' },
+    { icon: IC.spark, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
+    { icon: IC.clock, t: 'Nothing evaporates', d: 'Close a widget without worry — what you kept is still here tomorrow.' },
+  ] },
+  Briefings: { id: 'Briefings', icon: IC.briefings, lead: 'Short recaps of what changed and what you picked up — a two-minute read each morning, a longer one each week.', features: [
+    { icon: IC.clock, t: 'Morning recap', d: 'What the agents changed overnight, told as a story rather than a diff.' },
+    { icon: IC.check, t: 'Weekly review', d: 'The concepts you locked in and the ones worth revisiting.' },
+    { icon: IC.eye, t: 'Written for skimming', d: 'Headline first, detail underneath — read as deep as you have time for.' },
+    { icon: IC.spark, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
+  ] },
+  Library: { id: 'Library', icon: IC.library, lead: 'Hand-picked reading matched to whatever you are learning right now — guides and roadmaps, minus the rabbit holes.', features: [
+    { icon: IC.map, t: 'Roadmaps', d: 'The shape of a topic end to end, so you know what is left to learn.' },
+    { icon: IC.eye, t: 'Focused guides', d: 'Chosen to match your open concepts — no endless tab-hoarding.' },
+    { icon: IC.layers, t: 'Reference you keep', d: 'The pages you return to, gathered in one calm place.' },
+    { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
+  ] },
+  Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — milestones you have hit, ideas you have mastered, and everything you have reviewed.', features: [
+    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first week-long streak.' },
+    { icon: IC.check, t: 'Mastery map', d: 'Concepts sorted by how solid they are, from seen to second-nature.' },
+    { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
+    { icon: IC.layers, t: 'Yours to share', d: 'Turn a mastered track into a clean certificate when you want to.' },
+  ] },
 };
 
 const NAV: Array<{ id: PageId; icon: string }> = [
@@ -142,14 +115,61 @@ const FOOT: Array<{ id: string; icon: string; toast: string }> = [
 ];
 
 function Icon({ d }: { d: string }) {
+  return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+}
+
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+function SignInForm({ onDone }: { onDone: (email: string) => void }) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const submit = async () => {
+    setBusy(true);
+    setErr('');
+    const r = (await window.unvibe.signIn(email)) as { ok: boolean; email?: string; error?: string };
+    setBusy(false);
+    if (r.ok && r.email) onDone(r.email);
+    else setErr(r.error ?? 'Sign-in failed.');
+  };
   return (
-    <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} />
-    </svg>
+    <div className="signin">
+      <input
+        className="field"
+        type="email"
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && email && submit()}
+      />
+      <button className="field-btn" disabled={busy || !email} onClick={submit}>
+        {busy ? 'Signing in…' : 'Continue'}
+      </button>
+      {err && <div className="field-err">{err}</div>}
+      <div className="field-note">Passwordless while in beta — we email you a link later. No password to forget.</div>
+    </div>
   );
 }
 
-function Home({ user, shortcut }: { user: string; shortcut: string }) {
+function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => void; onSkip: () => void }) {
+  return (
+    <div className="login">
+      <div className="login__card">
+        <div className="login__mark"><LogoMark size={54} stroke={1.7} /></div>
+        <div className="login__brand">unvibe</div>
+        <h2 className="login__tag">Understand everything you ship.</h2>
+        <p className="login__sub">Sign in to sync your learning across devices — or keep everything on this Mac for now.</p>
+        <SignInForm onDone={onSignedIn} />
+        <button className="login__skip" onClick={onSkip}>Keep it local for now</button>
+      </div>
+    </div>
+  );
+}
+
+function Home({ user, shortcut, profile, feed }: { user: string; shortcut: string; profile: Profile | null; feed: FeedItem[] }) {
   return (
     <>
       <div className="topline">
@@ -160,64 +180,50 @@ function Home({ user, shortcut }: { user: string; shortcut: string }) {
         <div className="main-col">
           <div className="hero">
             <h2>Understand everything you ship.</h2>
-            <p>
-              Highlight code in any app and Unvibe explains it right where you are working — pitched to
-              how much you already know, and quiet until you ask.
-            </p>
+            <p>Highlight code in any app and Unvibe explains it right where you are working — pitched to how much you already know, and quiet until you ask.</p>
             <div className="row">
               <button onClick={() => window.unvibe.companionReview()}>Explain some code</button>
               <span className="kbd">or press {shortcut} anywhere</span>
             </div>
           </div>
 
-          <h3 className="section-head">How it works</h3>
-          <div className="how">
-            <div className="how-card">
-              <div className="n">01</div>
-              <div className="t">Select &amp; ask</div>
-              <div className="d">Highlight code in any editor and press {shortcut}. Unvibe reads the surrounding project for context — never your secrets.</div>
-            </div>
-            <div className="how-card">
-              <div className="n">02</div>
-              <div className="t">Meet your level</div>
-              <div className="d">Five depths, from Completely new to Expert. Switch any time and the explanation rewrites itself.</div>
-            </div>
-            <div className="how-card">
-              <div className="n">03</div>
-              <div className="t">Make it stick</div>
-              <div className="d">A quick check and a saved note turn a one-off answer into something you actually keep.</div>
-            </div>
-          </div>
-
           <div className="feed-label">LATELY</div>
-          <div className="feed-empty">
-            <div className="t">Nothing reviewed yet</div>
-            <div className="d">
-              Highlight some code and press {shortcut}. The things you review will gather here so you can
-              return to any of them.
+          {feed.length === 0 ? (
+            <div className="feed-empty">
+              <div className="t">Nothing reviewed yet</div>
+              <div className="d">Highlight some code and press {shortcut}. The things you review will gather here so you can return to any of them.</div>
             </div>
-          </div>
+          ) : (
+            <div className="feed">
+              {feed.map((f) => (
+                <div className="feed-row" key={f.id}>
+                  <div className="feed-time">{fmtTime(f.ts)}</div>
+                  <div className="feed-main">
+                    <div className="feed-title">{f.title}</div>
+                    <div className="feed-meta">{f.meta}</div>
+                  </div>
+                  <span className={`tag tag--${f.outcome}`}>
+                    {f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="rail">
           <div className="stats">
-            <div className="stat"><span className="v">0</span><span className="l">lines understood</span></div>
-            <div className="stat"><span className="v">0</span><span className="l">concepts mastered</span></div>
-            <div className="stat"><span className="v">0</span><span className="l">day streak</span></div>
-          </div>
-          <div className="rail-card">
-            <div className="t">Your reading list</div>
-            <div className="d">
-              Once Unvibe has seen a little of your code, it will suggest one small thing to understand
-              next — right here.
-            </div>
+            <div className="stat"><span className="v">{profile?.linesUnderstood ?? 0}</span><span className="l">lines understood</span></div>
+            <div className="stat"><span className="v">{profile?.conceptsMastered ?? 0}</span><span className="l">concepts mastered</span></div>
+            <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
           </div>
           <div className="rail-card">
             <div className="t">Kept on your machine</div>
-            <div className="d">
-              Code is scanned for secrets on your device before anything is sent. The service never reads
-              your repository.
-            </div>
+            <div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div>
+          </div>
+          <div className="rail-card">
+            <div className="t">How it works</div>
+            <div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div>
           </div>
         </div>
       </div>
@@ -225,45 +231,27 @@ function Home({ user, shortcut }: { user: string; shortcut: string }) {
   );
 }
 
-function Progress() {
-  const cells = Array.from({ length: 7 * 26 });
+function Progress({ profile }: { profile: Profile | null }) {
+  const heat = profile?.heat ?? Array.from({ length: 182 }, () => 0);
   return (
     <>
-      <div className="topline">
-        <h1>
-          Progress
-          <span className="d2">tracking goes live next update</span>
-        </h1>
-      </div>
-      <p className="lead">
-        The honest measure of what you have understood — not lines typed, but lines you could explain to
-        someone else. Everything below fills in as you review code.
-      </p>
+      <div className="topline"><h1>Progress</h1></div>
+      <p className="lead">The honest measure of what you have understood — not lines typed, but lines you could explain to someone else.</p>
 
       <div className="tiles">
-        <div className="tile"><div className="v">0</div><div className="l">lines understood</div><div className="note">total, all projects</div></div>
-        <div className="tile"><div className="v">0</div><div className="l">concepts mastered</div><div className="note">passed a check</div></div>
-        <div className="tile"><div className="v">0</div><div className="l">reviews done</div><div className="note">explanations opened</div></div>
-        <div className="tile"><div className="v">0</div><div className="l">day streak</div><div className="note">best: 0 days</div></div>
+        <div className="tile"><div className="v">{profile?.linesUnderstood ?? 0}</div><div className="l">lines understood</div><div className="note">of {profile?.linesReviewed ?? 0} reviewed</div></div>
+        <div className="tile"><div className="v">{profile?.conceptsMastered ?? 0}</div><div className="l">concepts mastered</div><div className="note">{profile?.conceptsSeen ?? 0} seen</div></div>
+        <div className="tile"><div className="v">{profile?.reviews ?? 0}</div><div className="l">reviews done</div><div className="note">{profile?.needsReview ?? 0} to revisit</div></div>
+        <div className="tile"><div className="v">{profile?.streak ?? 0}</div><div className="l">day streak</div><div className="note">best: {profile?.bestStreak ?? 0} days</div></div>
       </div>
 
       <div className="panel-card">
-        <div className="ph">
-          <span className="t">Your streak</span>
-          <span className="m">last 6 months</span>
-        </div>
+        <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
         <div className="heat">
-          {cells.map((_, i) => (
-            <i key={i} />
-          ))}
+          {heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}
         </div>
         <div className="heat-legend">
-          <span>Less</span>
-          <i />
-          <i className="a1" />
-          <i className="a2" />
-          <i className="a3" />
-          <span>More</span>
+          <span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><span>More</span>
           <span style={{ marginLeft: 'auto' }}>Review code on a day to light it up.</span>
         </div>
       </div>
@@ -271,23 +259,24 @@ function Progress() {
       <div className="two">
         <div className="panel-card" style={{ marginBottom: 0 }}>
           <div className="ph"><span className="t">Where you learn</span></div>
-          <div className="bars">
-            <div className="bar-row">
-              <div className="bl"><span>Editors &amp; IDEs</span><span>0%</span></div>
-              <div className="bar-track"><i style={{ width: '0%' }} /></div>
+          {profile && profile.usage.length > 0 ? (
+            <div className="bars">
+              {profile.usage.map((u) => (
+                <div className="bar-row" key={u.label}>
+                  <div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div>
+                  <div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div>
+                </div>
+              ))}
             </div>
-            <div className="bar-row">
-              <div className="bl"><span>Terminal</span><span>0%</span></div>
-              <div className="bar-track"><i style={{ width: '0%' }} /></div>
+          ) : (
+            <div className="bars">
+              {['Editors & IDEs', 'Terminal', 'Browser & docs'].map((l) => (
+                <div className="bar-row" key={l}><div className="bl"><span>{l}</span><span>0%</span></div><div className="bar-track"><i style={{ width: '0%' }} /></div></div>
+              ))}
             </div>
-            <div className="bar-row">
-              <div className="bl"><span>Browser &amp; docs</span><span>0%</span></div>
-              <div className="bar-track"><i style={{ width: '0%' }} /></div>
-            </div>
-          </div>
+          )}
           <p className="soft-note">Unvibe notes which app you were in when you asked — never what you typed.</p>
         </div>
-
         <div className="panel-card" style={{ marginBottom: 0 }}>
           <div className="ph"><span className="t">Understanding over time</span></div>
           <div className="chart-empty">Your weekly curve of lines understood will draw itself here after a few days of reviewing.</div>
@@ -300,33 +289,76 @@ function Progress() {
 function Explainer({ page }: { page: PageDef }) {
   return (
     <>
-      <div className="topline">
-        <h1>
-          {page.id}
-          <span className="d2">fills in as you review</span>
-        </h1>
-      </div>
+      <div className="topline"><h1>{page.id}<span className="d2">fills in as you review</span></h1></div>
       <p className="lead">{page.lead}</p>
       <div className="feature-grid">
         {page.features.map((f) => (
           <div className="feature" key={f.t}>
-            <div className="fh">
-              <Icon d={f.icon} />
-              <span className="t">{f.t}</span>
-            </div>
+            <div className="fh"><Icon d={f.icon} /><span className="t">{f.t}</span></div>
             <div className="d">{f.d}</div>
           </div>
         ))}
       </div>
-      <div className="stub">
-        <b>Nothing here yet.</b> This is where your {page.id.toLowerCase()} will live. Review some code with{' '}
-        <b>⌥ Space</b> and it starts filling in on its own.
+      <div className="stub"><b>Nothing here yet.</b> This is where your {page.id.toLowerCase()} will live. Review some code with <b>⌥ Space</b> and it starts filling in on its own.</div>
+    </>
+  );
+}
+
+function AccountPanel({ account, onChange }: { account: Account; onChange: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  if (!account) {
+    return (
+      <>
+        <div className="setrow" style={{ display: 'block' }}>
+          <div className="sl">Sign in</div>
+          <div className="sd" style={{ marginBottom: 14 }}>Sync your learning across devices. You are using Unvibe locally right now.</div>
+          <SignInForm onDone={onChange} />
+        </div>
+      </>
+    );
+  }
+
+  const del = async () => {
+    setBusy(true);
+    setErr('');
+    const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string };
+    setBusy(false);
+    if (r.ok) onChange();
+    else setErr(r.error ?? 'Could not delete the account.');
+  };
+
+  return (
+    <>
+      <div className="setrow">
+        <div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
+        <button className="act" onClick={async () => { await window.unvibe.signOut(); onChange(); }}>Sign out</button>
+      </div>
+      <div className="setrow" style={{ display: 'block' }}>
+        <div className="sl" style={{ color: '#a1291f' }}>Delete account</div>
+        <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this Mac and on our servers. This cannot be undone.</div>
+        {!confirming ? (
+          <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button>
+        ) : (
+          <div className="danger-row">
+            <button className="act danger" disabled={busy} onClick={del}>{busy ? 'Deleting…' : 'Yes, delete everything'}</button>
+            <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+          </div>
+        )}
+        {err && <div className="field-err">{err}</div>}
       </div>
     </>
   );
 }
 
-function Settings({ info, onClose }: { info: { version: string; shortcut: string }; onClose: () => void }) {
+function Settings({ info, account, onAccountChange, onClose }: {
+  info: { version: string; shortcut: string };
+  account: Account;
+  onAccountChange: () => void;
+  onClose: () => void;
+}) {
   const [tab, setTab] = useState('General');
   return (
     <div className="overlay" onClick={onClose}>
@@ -344,24 +376,26 @@ function Settings({ info, onClose }: { info: { version: string; shortcut: string
         </div>
         <div className="mbody">
           <h2>{tab}</h2>
-          {tab === 'General' ? (
+          {tab === 'General' && (
             <>
-              <div className="setrow">
-                <div><div className="sl">Trigger</div><div className="sd">Select code, then press {info.shortcut} to open an explanation.</div></div>
-                <button className="act" disabled title="Next update">Change</button>
-              </div>
-              <div className="setrow">
-                <div><div className="sl">Starting depth</div><div className="sd">Which level new explanations open at — currently Intermediate.</div></div>
-                <button className="act" disabled title="Next update">Change</button>
-              </div>
-              <div className="setrow">
-                <div><div className="sl">Service</div><div className="sd">localhost:8787 — secrets are scanned on your device before anything leaves it.</div></div>
-                <button className="act" disabled title="Next update">Change</button>
-              </div>
+              <div className="setrow"><div><div className="sl">Trigger</div><div className="sd">Select code, then press {info.shortcut} to open an explanation.</div></div><button className="act" disabled>Change</button></div>
+              <div className="setrow"><div><div className="sl">Starting depth</div><div className="sd">Which level new explanations open at — currently Intermediate.</div></div><button className="act" disabled>Change</button></div>
             </>
-          ) : (
-            <div className="setrow">
-              <div><div className="sl">{tab}</div><div className="sd">Arrives in the next update.</div></div>
+          )}
+          {tab === 'Privacy' && (
+            <>
+              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your Mac. Always on.</div></div><button className="act" disabled>On</button></div>
+              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
+            </>
+          )}
+          {tab === 'Overlay' && (
+            <div className="setrow"><div><div className="sl">Floating bar</div><div className="sd">Position and idle opacity controls arrive in the next update.</div></div><button className="act" disabled>Soon</button></div>
+          )}
+          {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} />}
+          {tab === 'Data' && (
+            <div className="setrow" style={{ display: 'block' }}>
+              <div className="sl">Your data</div>
+              <div className="sd">Reviews and progress live in a file on this Mac. Deleting your account (under Account) erases them everywhere.</div>
             </div>
           )}
         </div>
@@ -375,9 +409,32 @@ function App() {
   const [settings, setSettings] = useState(false);
   const [toast, setToast] = useState('');
   const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌥ Space' });
+  const [account, setAccount] = useState<Account>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [gate, setGate] = useState<'checking' | 'login' | 'app'>('checking');
+
+  const refresh = async () => {
+    const [acct, prof, fd] = await Promise.all([
+      window.unvibe.account() as Promise<Account>,
+      window.unvibe.profile() as Promise<Profile>,
+      window.unvibe.feed(8) as Promise<FeedItem[]>,
+    ]);
+    setAccount(acct);
+    setProfile(prof);
+    setFeed(fd);
+    return acct;
+  };
 
   useEffect(() => {
     void window.unvibe.appInfo().then(setInfo);
+    void (async () => {
+      const acct = await refresh();
+      setGate(acct ? 'app' : 'login');
+    })();
+    const onFocus = () => void refresh();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const flash = (m: string) => {
@@ -385,21 +442,34 @@ function App() {
     setTimeout(() => setToast(''), 1800);
   };
 
+  if (gate === 'checking') return <div className="titlebar" />;
+
+  if (gate === 'login') {
+    return (
+      <>
+        <div className="titlebar" />
+        <LoginScreen
+          onSignedIn={async () => { await refresh(); setGate('app'); }}
+          onSkip={() => setGate('app')}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="titlebar" />
       <div className="layout">
         <aside className="side">
           <div className="brand">
-            <span className="mark">◆</span>
+            <span className="mark"><LogoMark size={22} /></span>
             <span className="name">Unvibe</span>
             <span className="badge">Beta</span>
           </div>
           <nav className="nav">
             {NAV.map((p) => (
               <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}>
-                <Icon d={p.icon} />
-                {p.id}
+                <Icon d={p.icon} />{p.id}
               </button>
             ))}
           </nav>
@@ -412,8 +482,7 @@ function App() {
           <nav className="nav">
             {FOOT.map((f) => (
               <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettings(true) : flash(f.toast))}>
-                <Icon d={f.icon} />
-                {f.id}
+                <Icon d={f.icon} />{f.id}
               </button>
             ))}
           </nav>
@@ -421,16 +490,23 @@ function App() {
         <main className="content">
           <div className="page">
             {page === 'Home' ? (
-              <Home user={info.user} shortcut={info.shortcut} />
+              <Home user={info.user} shortcut={info.shortcut} profile={profile} feed={feed} />
             ) : page === 'Progress' ? (
-              <Progress />
+              <Progress profile={profile} />
             ) : (
               <Explainer page={PAGES[page]} />
             )}
           </div>
         </main>
       </div>
-      {settings && <Settings info={info} onClose={() => setSettings(false)} />}
+      {settings && (
+        <Settings
+          info={info}
+          account={account}
+          onAccountChange={async () => { const a = await refresh(); if (!a) setGate('app'); }}
+          onClose={() => setSettings(false)}
+        />
+      )}
       {toast && <div className="toast">{toast}</div>}
     </>
   );

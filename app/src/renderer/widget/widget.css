@@ -188,3 +188,33 @@ code.inline {
 }
 .askrow input:focus { border-color: var(--muted); }
 .mock-note { font-size: 10.5px; color: var(--muted); }
+
+/* ---- comprehension quiz ---- */
+.quiz { padding: 2px; }
+.quiz__concept {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); margin-bottom: 8px;
+  font-family: -apple-system, sans-serif;
+}
+.quiz__q { font-size: 14.5px; font-weight: 600; line-height: 1.45; margin-bottom: 14px; }
+.quiz__opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.opt {
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.opt:hover:not(:disabled) { border-color: var(--muted); }
+.opt.sel { border-color: var(--fg); border-width: 2px; padding: 9px 11px; }
+.opt.right { border-color: var(--fg); border-width: 2px; padding: 9px 11px; }
+.opt.wrong { border-style: dashed; color: var(--muted); }
+.opt:disabled { cursor: default; }
+.quiz__actions { display: flex; gap: 8px; }
+.verdict { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.verdict.ok::before { content: '✓ '; }
+.verdict.no::before { content: '↻ '; }
+.quiz__why { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }

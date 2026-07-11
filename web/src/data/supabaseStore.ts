@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
+  Account,
   DeviceCode,
   EventRecord,
   IncomingEvent,
@@ -74,6 +75,41 @@ export class SupabaseStore implements Store {
       .eq('token', token)
       .maybeSingle();
     return (data?.user_id as string | undefined) ?? null;
+  }
+
+  async signIn(email: string): Promise<Account> {
+    const normalized = email.trim().toLowerCase();
+    const { data: existing } = await this.db
+      .from('users')
+      .select('id')
+      .eq('email', normalized)
+      .maybeSingle();
+    let userId = existing?.id as string | undefined;
+    if (!userId) {
+      userId = randomUUID();
+      await this.db.from('users').insert({ id: userId, email: normalized });
+    }
+    const token = randomUUID();
+    await this.db.from('tokens').insert({ token, user_id: userId });
+    return { token, userId, email: normalized };
+  }
+
+  async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
+    const { data } = await this.db
+      .from('users')
+      .select('email')
+      .eq('id', userId)
+      .maybeSingle();
+    return { userId, email: (data?.email as string | undefined) ?? undefined };
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    // Order matters if FKs are enforced: children before the user row.
+    await this.db.from('events').delete().eq('user_id', userId);
+    await this.db.from('tokens').delete().eq('user_id', userId);
+    await this.db.from('device_codes').delete().eq('user_id', userId);
+    await this.db.from('consent_log').delete().eq('user_id', userId);
+    await this.db.from('users').delete().eq('id', userId);
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {

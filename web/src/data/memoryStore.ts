@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  Account,
   DeviceCode,
   EventRecord,
   IncomingEvent,
@@ -20,6 +21,7 @@ interface MemoryData {
   events: EventRecord[];
   tokens: Map<string, string>; // token -> userId
   devices: Map<string, PendingDevice>; // deviceCode -> pending
+  users: Map<string, { email?: string }>; // userId -> profile
 }
 
 /**
@@ -33,7 +35,11 @@ export class MemoryStore implements Store {
   constructor() {
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
-      g.__uncodeData = { events: [], tokens: new Map(), devices: new Map() };
+      g.__uncodeData = { events: [], tokens: new Map(), devices: new Map(), users: new Map() };
+    }
+    // Additive migration for a store created before `users` existed.
+    if (!g.__uncodeData.users) {
+      g.__uncodeData.users = new Map();
     }
     this.data = g.__uncodeData;
   }
@@ -71,6 +77,37 @@ export class MemoryStore implements Store {
 
   async userForToken(token: string): Promise<string | null> {
     return this.data.tokens.get(token) ?? null;
+  }
+
+  async signIn(email: string): Promise<Account> {
+    const normalized = email.trim().toLowerCase();
+    let userId = [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0];
+    if (!userId) {
+      userId = randomUUID();
+      this.data.users.set(userId, { email: normalized });
+    }
+    const token = randomUUID();
+    this.data.tokens.set(token, userId);
+    return { token, userId, email: normalized };
+  }
+
+  async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
+    return { userId, email: this.data.users.get(userId)?.email };
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    this.data.events = this.data.events.filter((e) => e.userId !== userId);
+    for (const [token, uid] of [...this.data.tokens.entries()]) {
+      if (uid === userId) {
+        this.data.tokens.delete(token);
+      }
+    }
+    for (const [dc, dev] of [...this.data.devices.entries()]) {
+      if (dev.userId === userId) {
+        this.data.devices.delete(dc);
+      }
+    }
+    this.data.users.delete(userId);
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {

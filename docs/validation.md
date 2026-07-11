@@ -1,5 +1,33 @@
 # Validation & definition of done
 
+## Milestone D2 — learning store, comprehension, accounts (2026-07-11)
+
+Verified live (typecheck + build clean; 9/9 app unit tests; web typecheck clean; driven end
+to end against the running app + backend, mock AI):
+- **Login screen** with the Unvibe hexagon-U logo (SVG), passwordless email sign-in, and a
+  "keep it local" skip. Confirmed by screenshot.
+- **Sign-in → gate**: entering an email issues a bearer token, the login gate opens, and the
+  identity persists across relaunch (token encrypted at rest via Electron safeStorage —
+  confirmed `tokenEncrypted: true` in the store file).
+- **In-widget comprehension** ("Test me"): fetches a question, renders options with the answer
+  held in the main process (never sent to the renderer until graded), grades on Check, shows
+  the correct option + rationale, and records the outcome. Confirmed by screenshots.
+- **Real learning data**: a review recorded a local event; answering the check upgraded it to
+  `understood` with a concept. Local store showed the event; **outbox drained to 0** (synced).
+- **Sync proven end to end**: backend `/profile` for the account returned `totalReviews: 2,
+  understood: 1, conceptsUnderstood: 1, streak: 1` — an exact match to the local store; history
+  showed both events with correct outcomes.
+- **Account lifecycle (App Store rules)**: `DELETE /account` returns 200, wipes the user's data,
+  and revokes the token (subsequent `/profile` → 401). Sign-out clears identity locally but
+  keeps the user's own learning. Sign-in email validation returns 400 on bad input.
+
+NOT yet verified (needs permissions / a key):
+- ⌥Space Accessibility capture (clipboard fallback verified instead).
+- Real Anthropic questions/explanations (mock provider only here).
+- SupabaseStore account paths (signIn/deleteAccount code-complete, no project/keys here).
+- Companion "populated" screenshot — the CDP screenshot tool hangs on a backgrounded window;
+  data was verified via the store file + backend API instead (stronger than a screenshot).
+
 ## Milestone D1 — desktop app (2026-07-11)
 
 Verified in this environment (typecheck + build clean; 5/5 unit tests; driven live over the

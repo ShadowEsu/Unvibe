@@ -6,6 +6,17 @@ import type { SecretFinding } from '../../core/secretFilter';
 
 type Phase = 'boot' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
+interface Quiz {
+  phase: 'loading' | 'answering' | 'grading' | 'graded';
+  question?: string;
+  options?: string[];
+  conceptLabel?: string;
+  choice?: number;
+  correct?: boolean;
+  answerIndex?: number;
+  rationale?: string;
+}
+
 const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'new', label: 'New' },
   { id: 'beginner', label: 'Beginner' },
@@ -132,6 +143,7 @@ function Widget() {
   const [pinned, setPinned] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [ask, setAsk] = useState('');
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef(level);
   levelRef.current = level;
@@ -166,6 +178,13 @@ function Widget() {
         case 'error':
           setError(ev.message ?? 'Something went wrong.');
           setPhase('error');
+          setQuiz((q) => (q && q.phase !== 'graded' ? null : q));
+          break;
+        case 'question':
+          setQuiz({ phase: 'answering', question: ev.question, options: ev.options, conceptLabel: ev.conceptLabel });
+          break;
+        case 'graded':
+          setQuiz((q) => (q ? { ...q, phase: 'graded', correct: ev.correct, answerIndex: ev.answerIndex, rationale: ev.rationale } : q));
           break;
       }
     });
@@ -309,13 +328,72 @@ function Widget() {
             </div>
           )}
 
-          {(phase === 'streaming' || phase === 'done') && (
+          {(phase === 'streaming' || phase === 'done') && !quiz && (
             <div className="body" ref={bodyRef}>
               {renderRich(text, phase === 'streaming')}
             </div>
           )}
 
-          {(phase === 'streaming' || phase === 'done') && (
+          {quiz && (phase === 'streaming' || phase === 'done') && (
+            <div className="body">
+              {quiz.phase === 'loading' && <div className="state"><div className="sub">Writing you a question…</div></div>}
+              {quiz.phase !== 'loading' && (
+                <div className="quiz">
+                  {quiz.conceptLabel && <div className="quiz__concept">{quiz.conceptLabel}</div>}
+                  <div className="quiz__q">{quiz.question}</div>
+                  <div className="quiz__opts">
+                    {quiz.options?.map((o, i) => {
+                      const graded = quiz.phase === 'graded';
+                      const cls = graded
+                        ? i === quiz.answerIndex
+                          ? 'opt right'
+                          : i === quiz.choice
+                            ? 'opt wrong'
+                            : 'opt'
+                        : i === quiz.choice
+                          ? 'opt sel'
+                          : 'opt';
+                      return (
+                        <button
+                          key={i}
+                          className={cls}
+                          disabled={quiz.phase !== 'answering'}
+                          onClick={() => setQuiz({ ...quiz, choice: i })}
+                        >
+                          {o}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {quiz.phase === 'graded' ? (
+                    <>
+                      <div className={`verdict ${quiz.correct ? 'ok' : 'no'}`}>
+                        {quiz.correct ? 'Correct — that one is understood.' : 'Not quite — saved to revisit.'}
+                      </div>
+                      {quiz.rationale && <div className="quiz__why">{quiz.rationale}</div>}
+                      <button className="btn ghost" onClick={() => setQuiz(null)}>Back to the explanation</button>
+                    </>
+                  ) : (
+                    <div className="quiz__actions">
+                      <button
+                        className="btn"
+                        disabled={quiz.choice === undefined || quiz.phase === 'grading'}
+                        onClick={() => {
+                          window.unvibe.answer(quiz.choice!);
+                          setQuiz({ ...quiz, phase: 'grading' });
+                        }}
+                      >
+                        {quiz.phase === 'grading' ? 'Checking…' : 'Check'}
+                      </button>
+                      <button className="btn ghost" onClick={() => setQuiz(null)}>Cancel</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {(phase === 'streaming' || phase === 'done') && !quiz && (
             <div className="foot">
               <div className="chips">
                 <button className="chip" disabled={phase === 'streaming'} onClick={() => window.unvibe.closeWidget()}>
@@ -324,8 +402,15 @@ function Widget() {
                 <button className="chip" disabled={phase === 'streaming'} onClick={() => request({ variant: 'different' })}>
                   Explain differently
                 </button>
-                <button className="chip" disabled title="Coming in Milestone D2">
-                  Test me<span className="soon">D2</span>
+                <button
+                  className="chip"
+                  disabled={phase === 'streaming'}
+                  onClick={() => {
+                    setQuiz({ phase: 'loading' });
+                    window.unvibe.testMe();
+                  }}
+                >
+                  Test me
                 </button>
                 {mock && <span className="mock-note">mock AI — set ANTHROPIC_API_KEY for real explanations</span>}
               </div>

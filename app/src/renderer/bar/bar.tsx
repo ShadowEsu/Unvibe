@@ -1,9 +1,10 @@
 import { createRoot } from 'react-dom/client';
+import { LogoMark } from '../shared/logo';
 
 function Bar() {
   return (
     <div className="pill">
-      <span className="glyph">◆</span>
+      <span className="glyph"><LogoMark size={15} stroke={2} /></span>
       <span className="label">
         <span className="brand">Unvibe</span>
         <span className="hint">

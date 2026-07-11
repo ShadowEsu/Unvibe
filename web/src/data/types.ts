@@ -38,6 +38,12 @@ export interface DeviceCode {
   interval: number;
 }
 
+export interface Account {
+  token: string;
+  userId: string;
+  email: string;
+}
+
 /** Backend persistence + auth. Two implementations: MemoryStore (dev) and SupabaseStore (prod). */
 export interface Store {
   readonly kind: string;
@@ -47,6 +53,11 @@ export interface Store {
   approveDeviceCode(userCode: string, email?: string): Promise<string | null>; // returns token for browser, or null
   redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'>;
   userForToken(token: string): Promise<string | null>;
+
+  // Direct (in-app) auth. Passwordless in dev; production would add verification.
+  signIn(email: string): Promise<Account>;
+  accountInfo(userId: string): Promise<{ userId: string; email?: string }>;
+  deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
 
   // Data
   upsertEvents(userId: string, events: IncomingEvent[]): Promise<void>;

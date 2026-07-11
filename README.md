@@ -45,8 +45,9 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 
 **Desktop milestones (v2 pivot):**
 
-- D1. ✅ Electron agent + floating bar + streaming explanation widget + companion shell ← current
-- D2. Learning store + comprehension in-widget + companion pages light up (Insights, History)
+- D1. ✅ Electron agent + floating bar + streaming explanation widget + companion shell
+- D2. ✅ Local learning store + in-widget comprehension + accounts (login / sign-out /
+  delete-account) + sync + real data in Home & Progress + logo ← current
 - D3. Repo indexing + git-diff reviews + project scope from the desktop agent
 
 See [docs/validation.md](docs/validation.md) for what is verified vs. what still needs real
