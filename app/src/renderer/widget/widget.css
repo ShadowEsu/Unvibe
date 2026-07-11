@@ -24,7 +24,7 @@
 * { box-sizing: border-box; margin: 0; }
 html, body { background: transparent; height: 100%; overflow: hidden; }
 body {
-  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-family: "New York", "Iowan Old Style", Palatino, ui-serif, Georgia, serif;
   -webkit-font-smoothing: antialiased;
   padding: 10px;
   color: var(--fg);
