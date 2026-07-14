@@ -1,37 +1,103 @@
-# macOS packaging & release readiness
+# Desktop packaging & release readiness
 
-Status: **config-complete, not yet built or notarized.** The app runs in dev via `npm start`.
-Producing a signed, notarized `.dmg` requires a paid Apple Developer account and certificates
-that are not present in this environment.
+Unvibe is a **desktop Electron app** (`app/`), not a browser web app / PWA.
+Users install a `.dmg` (Mac) or `.exe` (Windows) — they do not “install the website.”
 
-## What is configured
-- `electron-builder` config in `app/package.json` (`build` block):
-  - appId `com.unvibe.app`, productName `Unvibe`, dev-tools category.
-  - Universal target: `dmg` for `arm64` + `x64` (Apple Silicon + Intel).
-  - **Hardened runtime on**, entitlements at `build/entitlements.mac.plist`.
-  - `NSAccessibilityUsageDescription` in Info.plist (the one permission we request).
-- Entitlements request only: JIT (Electron), network client. **No** screen-recording, input-
-  monitoring, camera, or mic entitlements — the app doesn't use them.
+## Honest status (2026-07-14)
 
-## Manual steps you must complete (require your Apple credentials)
-1. `cd app && npm install` (pulls `electron-builder`).
-2. Add an **app icon**: `app/build/icon.icns` (1024²). Not committed — supply your logo rendered
-   to `.icns`.
-3. Apple Developer setup: create a **Developer ID Application** certificate (for direct .dmg) or
-   an **App Store** distribution certificate (for the Mac App Store).
-4. Set signing env for electron-builder:
-   - `CSC_LINK` / `CSC_KEY_PASSWORD` (certificate), and for notarization
-     `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`.
-5. `npm run dist` to build. electron-builder will sign; add notarization config (`afterSign` /
-   `notarize`) before distributing.
-6. Test: clean install, upgrade install, uninstall (drag to Trash + remove
-   `~/Library/Application Support/unvibe-app`), offline startup, missing-permission startup.
+| Item | Status |
+|---|---|
+| Mac drag-to-Applications DMG config | Ready (`npm run dist:mac`) |
+| Mac `.icns` icon | Ready (`app/build/icon.icns`) |
+| Windows NSIS installer config | Ready (`npm run dist:win`) |
+| Windows `.ico` icon | Ready (`app/build/icon.ico`) |
+| Code-signed Mac build | Not ready — `identity: null`, no Developer ID cert here |
+| Apple notarization | Not ready — required for Gatekeeper on other Macs |
+| Windows Authenticode / SmartScreen | Not ready — no Windows code-signing cert |
+| Hosted production backend URL | Not ready — builds still default to `http://localhost:8788` unless you bake one |
+| Selection / Accessibility APIs | **macOS-first** — Windows packaging installs, but selection capture is not product-complete on Windows |
 
-## Honest status
-- ❌ Not code-signed (no certificate here).
-- ❌ Not notarized.
-- ❌ No `.icns` icon yet.
-- ❌ Not submitted to the App Store.
-- ✅ Build config, entitlements, and permission usage strings are ready.
-- ⚠️ `launchAtLogin` logs "Operation not permitted" when run unpackaged via `electron .`; it works
-  from a signed, packaged app bundle.
+**Verdict:** You can build installers locally for demos. You cannot yet ship a Gatekeeper-clean Mac download or a SmartScreen-clean Windows download to strangers until signing + a real HTTPS backend exist.
+
+## Build installers
+
+```bash
+cd app
+npm install
+
+# If DMG build fails looking for `python`, put a working Python 3.11+ first on PATH:
+#   mkdir -p .tools-bin && ln -sfn "$(which python3.11)" .tools-bin/python
+#   PATH="$PWD/.tools-bin:$PATH" npm run dist:mac
+
+# Mac: DMG + zip. DMG window shows Unvibe.app + Applications shortcut (drag to install).
+PATH="${PWD}/.tools-bin:$PATH" npm run dist:mac
+# → release/Unvibe-0.1.0-arm64.dmg
+# → release/Unvibe-0.1.0-arm64-mac.zip
+
+# Windows: NSIS installer (x64). Can cross-build from macOS.
+npm run dist:win
+# → release/Unvibe Setup 0.1.0.exe
+
+# Both
+PATH="${PWD}/.tools-bin:$PATH" npm run dist:all
+```
+
+Verified locally (unsigned):
+
+- `app/release/Unvibe-0.1.0-arm64.dmg` (~105 MB) — drag Unvibe → Applications
+- `app/release/Unvibe Setup 0.1.0.exe` (~84 MB) — Windows NSIS installer
+
+### Bake a production backend into the binary
+
+```bash
+UNVIBE_BACKEND=https://your-api.example.com npm run dist:mac
+```
+
+Without that, the packaged app talks to `http://localhost:8788` (fine only for local demos).
+Users can also override with a userData `.env`:
+
+- Mac: `~/Library/Application Support/Unvibe/.env`
+- Windows: `%APPDATA%\Unvibe\.env`
+
+```
+UNVIBE_BACKEND=https://your-api.example.com
+```
+
+## Mac install UX (what users do)
+
+1. Open the `.dmg`
+2. Drag **Unvibe** onto **Applications**
+3. Launch from Applications (first run may need right-click → Open if unsigned)
+
+## Windows install UX
+
+1. Run `Unvibe Setup x.y.z.exe`
+2. Choose install directory (NSIS allows customize)
+3. Launch from Start Menu / desktop shortcut
+
+## Signing (required before public release)
+
+### Mac
+1. Apple Developer Program — **Developer ID Application** certificate
+2. Set `CSC_LINK` / `CSC_KEY_PASSWORD` (or keychain identity); remove `"identity": null`
+3. Notarize with `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+4. Set `"dmg.sign": true` after signing works
+
+### Windows
+1. Authenticode certificate
+2. Configure electron-builder `win.certificateFile` / `certificatePassword` (or CI secrets)
+3. Expect SmartScreen reputation delay on first public downloads
+
+## Entitlements
+
+`app/build/entitlements.mac.plist` requests only: JIT, unsigned executable memory (Electron),
+network client. No screen recording / input monitoring / camera / mic.
+
+## Smoke test checklist before calling a build “ready”
+
+- [ ] Clean install from DMG / NSIS on a machine that never ran Unvibe
+- [ ] App talks to the intended HTTPS backend (not localhost) without a hand-written `.env`
+- [ ] Offline / backend-down states show calm errors (no hang)
+- [ ] Mac: Accessibility permission prompt appears and selection explain works
+- [ ] Signed + notarized Mac build opens without Gatekeeper block
+- [ ] Windows: installer completes; core companion UI opens (selection may still be macOS-only)

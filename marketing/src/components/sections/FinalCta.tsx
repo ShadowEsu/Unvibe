@@ -13,19 +13,19 @@ export function FinalCta() {
             Ship with AI. Learn what you shipped.
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-pretty text-fluid-lg leading-relaxed text-fg-muted">
-            Unvibe is free for everyone in the Mac beta. Join the waitlist if you
-            want to understand agent-written code without leaving your editor.
+            Download Unvibe free for Mac and Windows, or join the waitlist for
+            updates as we ship the next releases.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button href="#waitlist" size="lg">
-              Join free waitlist
+            <Button href="#download" size="lg">
+              Download free
             </Button>
-            <Button href="#demo" variant="secondary" size="lg">
-              Watch the demo
+            <Button href="#waitlist" variant="secondary" size="lg">
+              Join waitlist
             </Button>
           </div>
           <p className="mt-5 text-fluid-sm text-fg-faint">
-            Completely free · Mac first · No credit card · No pricing wall
+            Completely free · Mac + Windows · No credit card · No pricing wall
           </p>
         </div>
       </div>

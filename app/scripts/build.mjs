@@ -20,6 +20,13 @@ if (testsOnly) {
 
 rmSync('dist', { recursive: true, force: true });
 
+// Release builds can bake a default backend via UNVIBE_BACKEND / RELEASE_BACKEND.
+// Dev stays on localhost unless the process env overrides.
+const bakedBackend =
+  process.env.UNVIBE_BACKEND ||
+  process.env.RELEASE_BACKEND ||
+  'http://localhost:8788';
+
 // Main process + preload (node/cjs, electron external)
 await build({
   entryPoints: { 'main/main': 'src/main/main.ts', 'preload/preload': 'src/preload/preload.ts' },
@@ -30,6 +37,9 @@ await build({
   format: 'cjs',
   target: 'node20',
   external: ['electron'],
+  define: {
+    __UNVIBE_BACKEND_DEFAULT__: JSON.stringify(bakedBackend),
+  },
 });
 
 // Renderers (browser/iife) + static html/css
@@ -49,7 +59,7 @@ for (const name of ['bar', 'widget', 'companion']) {
   }
 }
 mkdirSync('dist/assets', { recursive: true });
-for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
+for (const f of ['icon.png', 'icon.icns', 'icon.ico', 'trayTemplate.png']) {
   try {
     cpSync(`build/${f}`, `dist/assets/${f}`);
   } catch {
@@ -57,3 +67,4 @@ for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
   }
 }
 console.log('build ok');
+console.log('default backend:', bakedBackend);

@@ -7,6 +7,7 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { DepthDemo } from "@/components/sections/DepthDemo";
 import { Privacy } from "@/components/sections/Privacy";
 import { Waitlist } from "@/components/sections/Waitlist";
+import { Download } from "@/components/sections/Download";
 import { Faq } from "@/components/sections/Faq";
 import { FinalCta } from "@/components/sections/FinalCta";
 import { FaqJsonLd } from "@/components/JsonLd";
@@ -33,6 +34,7 @@ export default function Home() {
       <Assessment />
       <Privacy />
       <Waitlist />
+      <Download />
       <Faq />
       <FinalCta />
     </>

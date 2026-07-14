@@ -2,5 +2,6 @@ node_modules/
 dist/
 dist-test/
 release/
-build/icon.icns
+.tools-bin/
 .env
+.env.local

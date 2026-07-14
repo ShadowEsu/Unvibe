@@ -5,13 +5,24 @@ import { join } from 'node:path';
 import type { LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
 
+declare const __UNVIBE_BACKEND_DEFAULT__: string | undefined;
+
+function userDataEnvPath(): string {
+  if (process.platform === 'darwin') {
+    return join(homedir(), 'Library', 'Application Support', 'Unvibe', '.env');
+  }
+  if (process.platform === 'win32') {
+    return join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'Unvibe', '.env');
+  }
+  return join(homedir(), '.config', 'Unvibe', '.env');
+}
+
 /** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
 function loadAppEnv(): void {
   const candidates = [
     join(process.cwd(), '.env'),
     join(__dirname, '..', '..', '.env'),
-    // Packaged app: ~/Library/Application Support/Unvibe/.env
-    join(homedir(), 'Library', 'Application Support', 'Unvibe', '.env'),
+    userDataEnvPath(),
   ];
   for (const file of candidates) {
     if (!existsSync(file)) continue;
@@ -34,8 +45,13 @@ function loadAppEnv(): void {
 
 loadAppEnv();
 
-// 8787 is commonly taken by other local services; Unvibe web often runs on 8788 in parallel.
-export const BACKEND = process.env.UNVIBE_BACKEND ?? 'http://localhost:8788';
+const bakedDefault =
+  typeof __UNVIBE_BACKEND_DEFAULT__ === 'string' && __UNVIBE_BACKEND_DEFAULT__.length > 0
+    ? __UNVIBE_BACKEND_DEFAULT__
+    : 'http://localhost:8788';
+
+// Runtime env wins; otherwise the value baked at build time (dev default: localhost:8788).
+export const BACKEND = process.env.UNVIBE_BACKEND ?? bakedDefault;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /** Network access stays in the main process. Bound requests so an unavailable backend never
