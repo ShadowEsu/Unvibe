@@ -13,6 +13,15 @@ a tiny floating bar, movable streaming explanation widgets, and a Wispr-Flow-sty
 app. The VS Code extension (M1–M6) is parked; its logic lives on inside the desktop agent.
 See [`CLAUDE.md`](CLAUDE.md) for scope and [`docs/`](docs/) for architecture, design, privacy.
 
+## Run the launch website (marketing)
+```
+cd marketing
+npm install
+npm run dev          # http://localhost:3000 — waitlist + product storytelling
+```
+See [`marketing/README.md`](marketing/README.md) for env vars, Supabase waitlist migration,
+and Vercel deploy steps. This site is separate from the product backend in `web/`.
+
 ## Run the desktop app (dev)
 ```
 cd app

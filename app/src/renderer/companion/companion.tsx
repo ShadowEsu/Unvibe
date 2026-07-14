@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 
@@ -103,6 +103,28 @@ function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
+/** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
+function FadeIn({
+  animKey,
+  className,
+  stagger = false,
+  children,
+}: {
+  animKey: string | number;
+  className?: string;
+  stagger?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      key={animKey}
+      className={`fade-in${stagger ? ' fade-stagger' : ''}${className ? ` ${className}` : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 function prettyAccel(a: string): string {
   return a.replace('CommandOrControl', '⌘').replace('Command', '⌘').replace('Control', '⌃').replace('Alt', '⌥').replace('Shift', '⇧').replace(/\+/g, '');
 }
@@ -192,101 +214,103 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
 
   return (
     <div className="ob">
-      <div className="ob__card">
+      <div className="ob__card fade-in">
         <div className="ob__progress"><span>Step {step + 1} of {steps.length}</span><span>{steps[step]}</span></div>
         <div className="ob__dots">{steps.map((_, i) => <span key={i} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
 
-        {step === 0 && (
-          <>
-            <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
-            <h2 className="ob__title">Welcome to Unvibe</h2>
-            <p className="ob__sub">A quiet teacher that sits beside your editor and explains the code you are shipping — at your level, wherever you work.</p>
-            {nav('Get started')}
-          </>
-        )}
+        <FadeIn animKey={step} stagger className="ob__step">
+          {step === 0 && (
+            <>
+              <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
+              <h2 className="ob__title">Welcome to Unvibe</h2>
+              <p className="ob__sub">A quiet teacher that sits beside your editor and explains the code you are shipping — at your level, wherever you work.</p>
+              {nav('Get started')}
+            </>
+          )}
 
-        {step === 1 && (
-          <>
-            <h2 className="ob__title">Keep it on this Mac—or sync it</h2>
-            <p className="ob__sub">An account syncs your learning across devices. Local-only keeps every record on this Mac.</p>
-            {account ? <div className="ob__status">✓ Signed in as {account.email}</div> : <SignInForm onDone={() => onSignedIn()} />}
-            {nav(account ? 'Continue' : 'Keep it local')}
-          </>
-        )}
+          {step === 1 && (
+            <>
+              <h2 className="ob__title">Keep it on this Mac—or sync it</h2>
+              <p className="ob__sub">An account syncs your learning across devices. Local-only keeps every record on this Mac.</p>
+              {account ? <div className="ob__status">✓ Signed in as {account.email}</div> : <SignInForm onDone={() => onSignedIn()} />}
+              {nav(account ? 'Continue' : 'Keep it local')}
+            </>
+          )}
 
-        {step === 2 && (
-          <>
-            <h2 className="ob__title">A quieter way to learn code</h2>
-            <ul className="ob__list">
-              <li><b>Select code</b> in Cursor, VS Code, a terminal, or a browser.</li>
-              <li><b>Press {prettyAccel(shortcut)}</b> — a floating explanation appears beside your work.</li>
-              <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress.</li>
-            </ul>
-            {nav()}
-          </>
-        )}
+          {step === 2 && (
+            <>
+              <h2 className="ob__title">A quieter way to learn code</h2>
+              <ul className="ob__list">
+                <li><b>Select code</b> in Cursor, VS Code, a terminal, or a browser.</li>
+                <li><b>Press {prettyAccel(shortcut)}</b> — a floating explanation appears beside your work.</li>
+                <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress.</li>
+              </ul>
+              {nav()}
+            </>
+          )}
 
-        {step === 3 && (
-          <>
-            <h2 className="ob__title">One permission</h2>
-            <PermRow />
-            {nav('Continue')}
-          </>
-        )}
+          {step === 3 && (
+            <>
+              <h2 className="ob__title">One permission</h2>
+              <PermRow />
+              {nav('Continue')}
+            </>
+          )}
 
-        {step === 4 && (
-          <>
-            <h2 className="ob__title">Try your shortcut</h2>
-            <p className="ob__sub">Press <span className="kbd-lg">{prettyAccel(shortcut)}</span> now. A floating widget should appear — that is where explanations live. You can change this shortcut any time in Settings.</p>
-            <div className={`ob__test ${fired ? 'ok' : ''}`}>{fired ? '✓ Detected — the overlay works.' : 'Waiting for the shortcut…'}</div>
-            {nav('Continue', !fired)}
-          </>
-        )}
+          {step === 4 && (
+            <>
+              <h2 className="ob__title">Try your shortcut</h2>
+              <p className="ob__sub">Press <span className="kbd-lg">{prettyAccel(shortcut)}</span> now. A floating widget should appear — that is where explanations live. You can change this shortcut any time in Settings.</p>
+              <div className={`ob__test ${fired ? 'ok' : ''}`}>{fired ? '✓ Detected — the overlay works.' : 'Waiting for the shortcut…'}</div>
+              {nav('Continue', !fired)}
+            </>
+          )}
 
-        {step === 5 && (
-          <>
-            <h2 className="ob__title">Put the overlay where it helps</h2>
-            <p className="ob__sub">You can drag and pin explanations later. This only chooses where the small activation bar begins.</p>
-            <div className="ob__choices"><Choice selected={position === 'bottom-center'} title="Bottom center" detail="Quiet and within reach" onClick={() => { setPosition('bottom-center'); void window.unvibe.setSettings({ barPosition: 'bottom-center' }); }} /><Choice selected={position === 'top-right'} title="Top right" detail="Closer to the menu bar" onClick={() => { setPosition('top-right'); void window.unvibe.setSettings({ barPosition: 'top-right' }); }} /></div>
-            {nav()}
-          </>
-        )}
+          {step === 5 && (
+            <>
+              <h2 className="ob__title">Put the overlay where it helps</h2>
+              <p className="ob__sub">You can drag and pin explanations later. This only chooses where the small activation bar begins.</p>
+              <div className="ob__choices"><Choice selected={position === 'bottom-center'} title="Bottom center" detail="Quiet and within reach" onClick={() => { setPosition('bottom-center'); void window.unvibe.setSettings({ barPosition: 'bottom-center' }); }} /><Choice selected={position === 'top-right'} title="Top right" detail="Closer to the menu bar" onClick={() => { setPosition('top-right'); void window.unvibe.setSettings({ barPosition: 'top-right' }); }} /></div>
+              {nav()}
+            </>
+          )}
 
-        {step === 6 && (
-          <>
-            <h2 className="ob__title">Start with a small selection</h2>
-            <p className="ob__sub">Highlight a function, a condition, or a confusing line. Unvibe only uses the exact filtered snippet you choose.</p>
-            <div className="ob__demo"><span>const</span> eligible = <b>user.age</b> {'>'}= 18</div>
-            {nav('I understand')}
-          </>
-        )}
+          {step === 6 && (
+            <>
+              <h2 className="ob__title">Start with a small selection</h2>
+              <p className="ob__sub">Highlight a function, a condition, or a confusing line. Unvibe only uses the exact filtered snippet you choose.</p>
+              <div className="ob__demo"><span>const</span> eligible = <b>user.age</b> {'>'}= 18</div>
+              {nav('I understand')}
+            </>
+          )}
 
-        {step === 7 && (
-          <>
-            <h2 className="ob__title">Choose how deep to go</h2>
-            <p className="ob__sub">Every explanation can change level later.</p>
-            <div className="ob__choices"><Choice selected={level === 'new'} title="New" detail="Start with the idea" onClick={() => setLevel('new')} /><Choice selected={level === 'intermediate'} title="Intermediate" detail="Practical detail and trade-offs" onClick={() => setLevel('intermediate')} /><Choice selected={level === 'expert'} title="Expert" detail="Implementation nuance" onClick={() => setLevel('expert')} /></div>
-            {nav()}
-          </>
-        )}
+          {step === 7 && (
+            <>
+              <h2 className="ob__title">Choose how deep to go</h2>
+              <p className="ob__sub">Every explanation can change level later.</p>
+              <div className="ob__choices"><Choice selected={level === 'new'} title="New" detail="Start with the idea" onClick={() => setLevel('new')} /><Choice selected={level === 'intermediate'} title="Intermediate" detail="Practical detail and trade-offs" onClick={() => setLevel('intermediate')} /><Choice selected={level === 'expert'} title="Expert" detail="Implementation nuance" onClick={() => setLevel('expert')} /></div>
+              {nav()}
+            </>
+          )}
 
-        {step === 8 && (
-          <>
-            <h2 className="ob__title">Your first explanation lives beside your work</h2>
-            <div className="ob__widget"><div><b>Why this condition?</b><span>The check keeps underage users out of an adult-only flow.</span></div><small>{level} · Save · Test me</small></div>
-            <div className="ob__theme"><span>Preview</span><button className={theme === 'light' ? 'on' : ''} onClick={() => { setTheme('light'); document.documentElement.dataset.theme = 'light'; void window.unvibe.setSettings({ theme: 'light' }); }}>Light</button><button className={theme === 'dark' ? 'on' : ''} onClick={() => { setTheme('dark'); document.documentElement.dataset.theme = 'dark'; void window.unvibe.setSettings({ theme: 'dark' }); }}>Dark</button></div>
-            {nav()}
-          </>
-        )}
+          {step === 8 && (
+            <>
+              <h2 className="ob__title">Your first explanation lives beside your work</h2>
+              <div className="ob__widget"><div><b>Why this condition?</b><span>The check keeps underage users out of an adult-only flow.</span></div><small>{level} · Save · Test me</small></div>
+              <div className="ob__theme"><span>Preview</span><button className={theme === 'light' ? 'on' : ''} onClick={() => { setTheme('light'); document.documentElement.dataset.theme = 'light'; void window.unvibe.setSettings({ theme: 'light' }); }}>Light</button><button className={theme === 'dark' ? 'on' : ''} onClick={() => { setTheme('dark'); document.documentElement.dataset.theme = 'dark'; void window.unvibe.setSettings({ theme: 'dark' }); }}>Dark</button></div>
+              {nav()}
+            </>
+          )}
 
-        {step === 9 && (
-          <>
-            <div className="ob__mark"><LogoMark size={44} stroke={1.7} /></div>
-            <h2 className="ob__title">You're set</h2>
-            <p className="ob__sub">Select code anywhere and press {prettyAccel(shortcut)}. Your progress collects in this dashboard.</p>
-            <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
-          </>
-        )}
+          {step === 9 && (
+            <>
+              <div className="ob__mark"><LogoMark size={44} stroke={1.7} /></div>
+              <h2 className="ob__title">You're set</h2>
+              <p className="ob__sub">Select code anywhere and press {prettyAccel(shortcut)}. Your progress collects in this dashboard.</p>
+              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
+            </>
+          )}
+        </FadeIn>
       </div>
     </div>
   );
@@ -295,14 +319,14 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
 function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => void; onSkip: () => void }) {
   return (
     <div className="login">
-      <div className="login__card">
+      <FadeIn animKey="login" stagger className="login__card">
         <div className="login__mark"><LogoMark size={54} stroke={1.7} /></div>
         <div className="login__brand">unvibe</div>
         <h2 className="login__tag">Understand everything you ship.</h2>
         <p className="login__sub">Sign in to sync your learning across devices — or keep everything on this Mac for now.</p>
         <SignInForm onDone={onSignedIn} />
         <button className="login__skip" onClick={onSkip}>Keep it local for now</button>
-      </div>
+      </FadeIn>
     </div>
   );
 }
@@ -603,7 +627,7 @@ function App() {
     <>
       <div className="titlebar" />
       <div className="layout">
-        <aside className="side">
+        <aside className="side fade-in fade-in--side">
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
@@ -612,9 +636,11 @@ function App() {
         </aside>
         <main className="content">
           <div className="page">
-            {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
-              : page === 'Progress' ? <Progress profile={profile} />
-              : <Explainer page={PAGES[page]} />}
+            <FadeIn animKey={page} stagger>
+              {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
+                : page === 'Progress' ? <Progress profile={profile} />
+                : <Explainer page={PAGES[page]} />}
+            </FadeIn>
           </div>
         </main>
       </div>

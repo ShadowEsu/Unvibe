@@ -1,8 +1,41 @@
 /** Thin HTTP client for the Unvibe backend. Main process only. */
+import { readFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
 
-export const BACKEND = process.env.UNVIBE_BACKEND ?? 'http://localhost:8787';
+/** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
+function loadAppEnv(): void {
+  const candidates = [
+    join(process.cwd(), '.env'),
+    join(__dirname, '..', '..', '.env'),
+    // Packaged app: ~/Library/Application Support/Unvibe/.env
+    join(homedir(), 'Library', 'Application Support', 'Unvibe', '.env'),
+  ];
+  for (const file of candidates) {
+    if (!existsSync(file)) continue;
+    try {
+      for (const line of readFileSync(file, 'utf8').split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eq = trimmed.indexOf('=');
+        if (eq <= 0) continue;
+        const key = trimmed.slice(0, eq).trim();
+        const value = trimmed.slice(eq + 1).trim();
+        if (!(key in process.env)) process.env[key] = value;
+      }
+    } catch {
+      // ignore unreadable env files
+    }
+    // Keep scanning so userData .env can fill gaps left by an earlier file.
+  }
+}
+
+loadAppEnv();
+
+// 8787 is commonly taken by other local services; Unvibe web often runs on 8788 in parallel.
+export const BACKEND = process.env.UNVIBE_BACKEND ?? 'http://localhost:8788';
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /** Network access stays in the main process. Bound requests so an unavailable backend never

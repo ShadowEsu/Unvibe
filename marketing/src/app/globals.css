@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Unvibe marketing design tokens.
+  Soft white base, restrained purple primary, semantic accents used sparingly.
+  Colors are stored as raw "R G B" triples so Tailwind can apply alpha values.
+*/
+
+:root {
+  --bg: 247 248 251;
+  --surface: 255 255 255;
+  --surface-2: 240 242 248;
+  --fg: 15 20 28;
+  --fg-muted: 75 86 102;
+  --fg-faint: 120 130 148;
+  --line: 226 230 238;
+  --line-strong: 205 212 224;
+
+  --primary: 79 70 229;
+  --primary-strong: 67 56 202;
+  --primary-soft: 238 242 255;
+  --on-primary: 255 255 255;
+
+  --blue: 37 99 235;
+  --green: 5 150 105;
+  --orange: 217 119 6;
+  --red: 220 38 38;
+
+  --focus: 79 70 229;
+
+  --font-display: var(--font-sans), "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --dur-micro: 150ms;
+  --dur-standard: 320ms;
+  --dur-story: 900ms;
+  --ease-calm: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light;
+}
+
+.dark {
+  --bg: 12 15 20;
+  --surface: 18 22 30;
+  --surface-2: 26 32 42;
+  --fg: 236 240 246;
+  --fg-muted: 156 168 184;
+  --fg-faint: 110 122 140;
+  --line: 38 46 58;
+  --line-strong: 54 64 80;
+
+  --primary: 129 140 248;
+  --primary-strong: 165 180 252;
+  --primary-soft: 30 36 58;
+  --on-primary: 12 15 24;
+
+  --blue: 96 165 250;
+  --green: 52 211 153;
+  --orange: 251 191 36;
+  --red: 248 113 113;
+
+  --focus: 129 140 248;
+
+  color-scheme: dark;
+}
+
+* {
+  border-color: rgb(var(--line));
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: rgb(var(--primary) / 0.22);
+  color: rgb(var(--fg));
+}
+
+/* Visible focus rings for keyboard users only. */
+:focus-visible {
+  outline: 2px solid rgb(var(--focus));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link — hidden until focused. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  background: rgb(var(--fg));
+  color: rgb(var(--bg));
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: transform var(--dur-micro) var(--ease-calm);
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+    font-weight: 600;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .container-page {
+    width: 100%;
+    max-width: 76rem;
+    margin-inline: auto;
+    padding-inline: clamp(1.1rem, 5vw, 3rem);
+  }
+  .grain {
+    background-image: radial-gradient(
+      rgb(var(--fg) / 0.025) 1px,
+      transparent 1px
+    );
+    background-size: 3px 3px;
+  }
+  .mask-fade-x {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 8%,
+      black 92%,
+      transparent
+    );
+  }
+}
+
+/* Respect reduced motion everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

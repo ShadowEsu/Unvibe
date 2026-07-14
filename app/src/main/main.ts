@@ -150,8 +150,13 @@ app.whenReady().then(() => {
 
   bar = createBar();
   setBar(bar);
+  if (bar && !bar.isDestroyed()) {
+    bar.showInactive();
+    positionBar(bar);
+  }
   registerShortcut(s.shortcut);
-  if (!s.onboarded) openCompanion();
+  // Always open the companion home window and keep the bottom bar visible on launch.
+  openCompanion();
 
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());

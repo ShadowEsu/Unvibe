@@ -345,11 +345,99 @@ h1 { font-size: 30px; font-weight: 500; letter-spacing: -0.01em; }
 .kbd-cap { font-family: ui-monospace, monospace; min-width: 64px; }
 .kbd-cap.rec { background: var(--ink); color: #fff; }
 
+/* ================= motion ================= */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeInUp 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.fade-in--side {
+  animation-name: fadeIn;
+  animation-duration: 0.55s;
+}
+
+.fade-stagger > * {
+  opacity: 0;
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.fade-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.fade-stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.fade-stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.fade-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.fade-stagger > *:nth-child(5) { animation-delay: 0.26s; }
+.fade-stagger > *:nth-child(6) { animation-delay: 0.32s; }
+.fade-stagger > *:nth-child(7) { animation-delay: 0.38s; }
+.fade-stagger > *:nth-child(8) { animation-delay: 0.44s; }
+.fade-stagger > *:nth-child(9) { animation-delay: 0.5s; }
+.fade-stagger > *:nth-child(10) { animation-delay: 0.56s; }
+
+/* Nested blocks inside a page also ease in cleanly */
+.fade-stagger .topline,
+.fade-stagger .hero,
+.fade-stagger .lead,
+.fade-stagger .tiles,
+.fade-stagger .panel-card,
+.fade-stagger .feature-grid,
+.fade-stagger .feature,
+.fade-stagger .feed,
+.fade-stagger .feed-empty,
+.fade-stagger .feed-label,
+.fade-stagger .stats,
+.fade-stagger .rail-card,
+.fade-stagger .stub,
+.fade-stagger .two {
+  opacity: 0;
+  animation: fadeInUp 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.fade-stagger .topline { animation-delay: 0.04s; }
+.fade-stagger .lead { animation-delay: 0.1s; }
+.fade-stagger .hero { animation-delay: 0.12s; }
+.fade-stagger .feed-label { animation-delay: 0.18s; }
+.fade-stagger .feed,
+.fade-stagger .feed-empty { animation-delay: 0.22s; }
+.fade-stagger .tiles { animation-delay: 0.14s; }
+.fade-stagger .panel-card { animation-delay: 0.2s; }
+.fade-stagger .two { animation-delay: 0.26s; }
+.fade-stagger .feature-grid { animation-delay: 0.16s; }
+.fade-stagger .feature:nth-child(1) { animation-delay: 0.18s; }
+.fade-stagger .feature:nth-child(2) { animation-delay: 0.24s; }
+.fade-stagger .feature:nth-child(3) { animation-delay: 0.3s; }
+.fade-stagger .feature:nth-child(4) { animation-delay: 0.36s; }
+.fade-stagger .stub { animation-delay: 0.4s; }
+.fade-stagger .stats { animation-delay: 0.16s; }
+.fade-stagger .rail-card:nth-child(2) { animation-delay: 0.22s; }
+.fade-stagger .rail-card:nth-child(3) { animation-delay: 0.28s; }
+
+.login { animation: fadeIn 0.4s ease both; }
+.ob { animation: fadeIn 0.35s ease both; }
+
 /* ================= toast ================= */
 .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 10px; padding: 10px 18px; font-family: -apple-system, sans-serif; font-size: 13px; z-index: 60; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .fade-stagger > *,
+  .fade-stagger .topline,
+  .fade-stagger .hero,
+  .fade-stagger .lead,
+  .fade-stagger .tiles,
+  .fade-stagger .panel-card,
+  .fade-stagger .feature-grid,
+  .fade-stagger .feature,
+  .fade-stagger .feed,
+  .fade-stagger .feed-empty,
+  .fade-stagger .feed-label,
+  .fade-stagger .stats,
+  .fade-stagger .rail-card,
+  .fade-stagger .stub,
+  .fade-stagger .two { opacity: 1 !important; transform: none !important; }
 }
 
 @media (max-width: 760px) {
