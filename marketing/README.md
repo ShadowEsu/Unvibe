@@ -59,10 +59,38 @@ third-party script, no cookies, no code contents):
 
 ## Deploy to Vercel
 
-1. Import the repository into Vercel and set the project root to `marketing/`.
-2. Add the environment variables above in Project Settings → Environment Variables.
-3. Vercel auto-detects Next.js; the default build (`next build`) is used.
-4. Point your domain and set `NEXT_PUBLIC_SITE_URL` to match.
+Project: **unvibe-site** (Vercel team `evantsai2010-labs-projects`).
+
+Staging / current production alias:
+
+- https://unvibe-site.vercel.app
+
+Custom domain target: **https://unvibe.site**
+
+1. Deploy from `marketing/` (`vercel deploy --prod`) or connect the GitHub repo with
+   **Root Directory** `marketing` and **Production Branch** `marketing`.
+2. Env vars are set on the Vercel project (`NEXT_PUBLIC_SITE_URL=https://unvibe.site`,
+   Supabase, `WAITLIST_NOTIFY_EMAIL`, etc.).
+3. Domains `unvibe.site` and `www.unvibe.site` are attached in Vercel.
+
+### GoDaddy DNS (required for unvibe.site)
+
+The domain currently uses GoDaddy Website Builder nameservers
+(`ns47.domaincontrol.com` / `ns48.domaincontrol.com`). Point it at Vercel instead:
+
+In GoDaddy → **unvibe.site** → **DNS** → **Records**:
+
+| Type | Name | Value | TTL |
+|---|---|---|---|
+| A | `@` | `76.76.21.21` | 600 |
+| CNAME | `www` | `cname.vercel-dns.com` | 600 |
+
+Remove or disable any GoDaddy Website Builder / forwarding records that conflict.
+After DNS propagates, https://unvibe.site should serve this Next.js waitlist site
+(not the GoDaddy builder page).
+
+Optional alternate: change nameservers to `ns1.vercel-dns.com` and
+`ns2.vercel-dns.com` (then manage DNS in Vercel).
 
 ## Structure
 
