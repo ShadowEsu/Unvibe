@@ -22,7 +22,7 @@ function Bar() {
           <>
             <span className="brand">Unvibe</span>
             <span className="hint">
-              Review selection<span className="kbd">⌘⌥U</span>
+              Review selection<span className="kbd">⌘U</span>
             </span>
           </>
         )}

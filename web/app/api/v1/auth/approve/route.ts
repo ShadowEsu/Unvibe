@@ -1,4 +1,5 @@
 import { getStore } from '@/data/store';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -7,7 +8,17 @@ export async function POST(req: Request): Promise<Response> {
   if (!body.userCode) {
     return Response.json({ error: 'missing userCode' }, { status: 400 });
   }
-  const token = await getStore().approveDeviceCode(body.userCode, body.email);
+  const authHeader = req.headers.get('authorization') ?? '';
+  const accessToken = /^Bearer\s+(.+)$/i.exec(authHeader)?.[1];
+  const url = process.env.SUPABASE_URL;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!accessToken || !url || !serviceRole) {
+    return Response.json({ error: 'sign in with Supabase before approving this device' }, { status: 401 });
+  }
+  const auth = createClient(url, serviceRole, { auth: { persistSession: false } });
+  const { data, error } = await auth.auth.getUser(accessToken);
+  if (error || !data.user) return Response.json({ error: 'your sign-in session is invalid or expired' }, { status: 401 });
+  const token = await getStore().approveDeviceCode(body.userCode, data.user.id, data.user.email);
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });
   }

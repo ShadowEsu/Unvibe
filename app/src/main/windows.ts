@@ -85,6 +85,23 @@ function snap(win: BrowserWindow): void {
   if (x !== b.x || y !== b.y) win.setBounds({ x, y, width: b.width, height: b.height });
 }
 
+function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
+  const displays = screen.getAllDisplays();
+  const visible = displays.find(({ workArea }) =>
+    bounds.x < workArea.x + workArea.width && bounds.x + bounds.width > workArea.x &&
+    bounds.y < workArea.y + workArea.height && bounds.y + bounds.height > workArea.y,
+  );
+  const workArea = (visible ?? screen.getPrimaryDisplay()).workArea;
+  const width = Math.min(bounds.width, workArea.width - 24);
+  const height = Math.min(bounds.height, workArea.height - 24);
+  return {
+    width,
+    height,
+    x: Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12),
+    y: Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12),
+  };
+}
+
 export function createWidget(): BrowserWindow {
   const s = settings().all();
   const cursor = screen.getCursorScreenPoint();
@@ -94,7 +111,7 @@ export function createWidget(): BrowserWindow {
 
   // Restore the last-used size/position; else place near the cursor.
   const saved = s.lastWidgetBounds;
-  const bounds = saved
+  const initialBounds = saved
     ? { ...saved }
     : {
         width: w,
@@ -104,8 +121,11 @@ export function createWidget(): BrowserWindow {
       };
   // Nudge so a second widget doesn't perfectly overlap the first.
   const stagger = BrowserWindow.getAllWindows().length * 26;
-  bounds.x += saved ? stagger : 0;
-  bounds.y += saved ? stagger : 0;
+  const bounds = clampToVisibleArea({
+    ...initialBounds,
+    x: initialBounds.x + (saved ? stagger : 0),
+    y: initialBounds.y + (saved ? stagger : 0),
+  });
 
   const win = new BrowserWindow({
     ...bounds,
@@ -117,6 +137,7 @@ export function createWidget(): BrowserWindow {
     hasShadow: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    show: false,
     webPreferences: secureWebPrefs(),
   });
   win.setAlwaysOnTop(true, 'floating');
@@ -145,6 +166,7 @@ export function createWidget(): BrowserWindow {
   });
 
   lockNavigation(win);
+  win.once('ready-to-show', () => win.showInactive());
   void win.loadFile(page('widget'));
   return win;
 }

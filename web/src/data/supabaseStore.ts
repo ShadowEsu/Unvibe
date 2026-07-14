@@ -33,25 +33,25 @@ export class SupabaseStore implements Store {
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
-  async approveDeviceCode(userCode: string, email?: string): Promise<string | null> {
+  async approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null> {
     const { data: device } = await this.db
       .from('device_codes')
       .select('device_code, user_id')
       .eq('user_code', userCode.toUpperCase())
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle();
     if (!device) {
       return null;
     }
-    let userId = device.user_id as string | null;
-    if (!userId) {
-      userId = randomUUID();
-      await this.db.from('users').insert({ id: userId, email: email ?? null });
-    }
+    const boundUserId = device.user_id as string | null;
+    if (boundUserId && boundUserId !== userId) return null;
+    await this.db.from('users').upsert({ id: userId, email: email ?? null }, { onConflict: 'id' });
     const token = randomUUID();
     await this.db.from('tokens').insert({ token, user_id: userId });
     await this.db
       .from('device_codes')
-      .update({ user_id: userId, token })
+      .update({ user_id: userId, token, used_at: new Date().toISOString() })
       .eq('device_code', device.device_code);
     return token;
   }
@@ -59,12 +59,13 @@ export class SupabaseStore implements Store {
   async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
     const { data } = await this.db
       .from('device_codes')
-      .select('token')
+      .select('token, expires_at')
       .eq('device_code', deviceCode)
       .maybeSingle();
     if (!data) {
       return 'unknown';
     }
+    if (new Date(data.expires_at as string).getTime() < Date.now()) return 'unknown';
     return data.token ? { token: data.token as string } : 'pending';
   }
 

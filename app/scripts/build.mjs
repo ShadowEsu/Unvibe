@@ -48,4 +48,12 @@ for (const name of ['bar', 'widget', 'companion']) {
     cpSync(`src/renderer/${name}/${name}.${ext}`, `dist/renderer/${name}/${name}.${ext}`);
   }
 }
+mkdirSync('dist/assets', { recursive: true });
+for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
+  try {
+    cpSync(`build/${f}`, `dist/assets/${f}`);
+  } catch {
+    /* optional until icons exist */
+  }
+}
 console.log('build ok');

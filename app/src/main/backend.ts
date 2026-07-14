@@ -3,9 +3,29 @@ import type { LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
 
 export const BACKEND = process.env.UNVIBE_BACKEND ?? 'http://localhost:8787';
+const REQUEST_TIMEOUT_MS = 20_000;
+
+/** Network access stays in the main process. Bound requests so an unavailable backend never
+ * leaves the widget or account controls waiting indefinitely. */
+async function request(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'TimeoutError') {
+      throw new Error('Unvibe could not reach the service in time. Check your connection and try again.');
+    }
+    throw new Error('Unvibe could not reach the service. You can keep learning locally and sync later.');
+  }
+}
 
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
+    if (res.status === 429) throw new Error('Too many requests. Please wait a moment and try again.');
+    if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
+    if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
+    throw new Error(`The service could not complete that request (${res.status}).`);
+  }
   return (await res.json()) as T;
 }
 
@@ -15,8 +35,24 @@ export interface Account {
   email: string;
 }
 
+export interface DeviceStart { deviceCode: string; userCode: string; verificationUri: string; interval: number; }
+
+export async function startDeviceAuth(): Promise<DeviceStart> {
+  return json<DeviceStart>(await request(`${BACKEND}/api/v1/auth/device`, { method: 'POST' }));
+}
+
+export async function redeemDeviceAuth(deviceCode: string): Promise<{ token: string } | null> {
+  const res = await request(`${BACKEND}/api/v1/auth/token`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deviceCode }) });
+  if (res.status === 202) return null;
+  return json<{ token: string }>(res);
+}
+
+export async function accountInfo(token: string): Promise<{ userId: string; email?: string }> {
+  return json<{ userId: string; email?: string }>(await request(`${BACKEND}/api/v1/account`, { headers: { authorization: `Bearer ${token}` } }));
+}
+
 export async function signIn(email: string): Promise<Account> {
-  const res = await fetch(`${BACKEND}/api/v1/auth/signin`, {
+  const res = await request(`${BACKEND}/api/v1/auth/signin`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -26,27 +62,27 @@ export async function signIn(email: string): Promise<Account> {
 }
 
 export async function deleteAccount(token: string): Promise<void> {
-  const res = await fetch(`${BACKEND}/api/v1/account`, {
+  const res = await request(`${BACKEND}/api/v1/account`, {
     method: 'DELETE',
     headers: { authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`delete failed (${res.status})`);
+  await json<{ ok: boolean }>(res);
 }
 
 /** Best-effort event sync. Returns the ids the backend accepted (for outbox clearing). */
 export async function pushEvents(token: string, events: LocalEvent[]): Promise<string[]> {
   if (events.length === 0) return [];
-  const res = await fetch(`${BACKEND}/api/v1/events`, {
+  const res = await request(`${BACKEND}/api/v1/events`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify({ events }),
   });
-  if (!res.ok) throw new Error(`sync failed (${res.status})`);
+  await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);
 }
 
 export async function fetchQuestion(payload: ReviewRequestPayload): Promise<ComprehensionQuestion> {
-  const res = await fetch(`${BACKEND}/api/v1/comprehension`, {
+  const res = await request(`${BACKEND}/api/v1/comprehension`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),

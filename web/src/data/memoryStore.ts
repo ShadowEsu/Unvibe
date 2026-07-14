@@ -51,15 +51,16 @@ export class MemoryStore implements Store {
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
-  async approveDeviceCode(userCode: string, _email?: string): Promise<string | null> {
+  async approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null> {
     const entry = [...this.data.devices.values()].find((d) => d.userCode === userCode.toUpperCase());
     if (!entry) {
       return null;
     }
-    const userId = entry.userId ?? randomUUID();
+    if (entry.userId && entry.userId !== userId) return null;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
+    this.data.users.set(userId, { email });
     this.data.tokens.set(token, userId);
     return token; // also usable as a browser session
   }

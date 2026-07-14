@@ -19,7 +19,7 @@ type Account = { userId: string; email: string } | null;
 interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
   widgetOpacityInactive: number; inactiveBehavior: string;
-  launchAtLogin: boolean; notifications: boolean;
+  launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
 }
 
@@ -125,22 +125,20 @@ function fmtTime(iso: string): string {
 }
 
 function SignInForm({ onDone }: { onDone: (email: string) => void }) {
-  const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [code, setCode] = useState('');
+  useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
   const submit = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.signIn(email)) as { ok: boolean; email?: string; error?: string };
-    setBusy(false);
-    if (r.ok && r.email) onDone(r.email); else setErr(r.error ?? 'Sign-in failed.');
+    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; error?: string };
+    if (r.ok && r.userCode) setCode(r.userCode); else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
   return (
     <div className="signin">
-      <input className="field" type="email" placeholder="you@example.com" value={email}
-        onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && email && submit()} />
-      <button className="field-btn" disabled={busy || !email} onClick={submit}>{busy ? 'Signing in…' : 'Continue'}</button>
+      <button className="field-btn" disabled={busy} onClick={submit}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
       {err && <div className="field-err">{err}</div>}
-      <div className="field-note">Passwordless while in beta — we email you a link later. No password to forget.</div>
+      <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
     </div>
   );
 }
@@ -173,18 +171,29 @@ function PermRow({ compact }: { compact?: boolean }) {
   );
 }
 
-function Onboarding({ shortcut, onDone }: { shortcut: string; onDone: () => void }) {
+function Choice({ selected, title, detail, onClick }: { selected: boolean; title: string; detail: string; onClick: () => void }) {
+  return <button className={`ob__choice${selected ? ' selected' : ''}`} aria-pressed={selected} onClick={onClick}><span className="ob__choice-check">✓</span><span><b>{title}</b><small>{detail}</small></span></button>;
+}
+
+function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: string; account: Account; onDone: () => void; onSignedIn: () => void }) {
   const [step, setStep] = useState(0);
   const [fired, setFired] = useState(false);
+  const [position, setPosition] = useState('bottom-center');
+  const [level, setLevel] = useState('intermediate');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   useEffect(() => { window.unvibe.onShortcutFired(() => setFired(true)); }, []);
-  const steps = ['Welcome', 'What it does', 'Permission', 'Your shortcut', 'Done'];
+  const steps = ['Welcome', 'Account', 'How it works', 'Permission', 'Shortcut', 'Overlay', 'Select code', 'Your level', 'First explanation', 'Done'];
 
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
+  const back = () => setStep((s) => Math.max(s - 1, 0));
   const finish = () => { void window.unvibe.completeOnboarding(); onDone(); };
+
+  const nav = (continueLabel = 'Continue', disabled = false) => <div className="ob__actions"><button className="ob__skip" disabled={step === 0} onClick={back}>Back</button><button className="field-btn inline" disabled={disabled} onClick={next}>{continueLabel}</button></div>;
 
   return (
     <div className="ob">
       <div className="ob__card">
+        <div className="ob__progress"><span>Step {step + 1} of {steps.length}</span><span>{steps[step]}</span></div>
         <div className="ob__dots">{steps.map((_, i) => <span key={i} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
 
         {step === 0 && (
@@ -192,51 +201,90 @@ function Onboarding({ shortcut, onDone }: { shortcut: string; onDone: () => void
             <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
             <h2 className="ob__title">Welcome to Unvibe</h2>
             <p className="ob__sub">A quiet teacher that sits beside your editor and explains the code you are shipping — at your level, wherever you work.</p>
-            <button className="field-btn" onClick={next}>Get started</button>
+            {nav('Get started')}
           </>
         )}
 
         {step === 1 && (
           <>
-            <h2 className="ob__title">How it works</h2>
-            <ul className="ob__list">
-              <li><b>Select code</b> in Cursor, VS Code, a terminal, or a browser.</li>
-              <li><b>Press {prettyAccel(shortcut)}</b> — a floating explanation appears beside your work.</li>
-              <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress.</li>
-            </ul>
-            <button className="field-btn" onClick={next}>Next</button>
+            <h2 className="ob__title">Keep it on this Mac—or sync it</h2>
+            <p className="ob__sub">An account syncs your learning across devices. Local-only keeps every record on this Mac.</p>
+            {account ? <div className="ob__status">✓ Signed in as {account.email}</div> : <SignInForm onDone={() => onSignedIn()} />}
+            {nav(account ? 'Continue' : 'Keep it local')}
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2 className="ob__title">One permission</h2>
-            <PermRow />
-            <div className="ob__actions">
-              <button className="ob__skip" onClick={next}>I'll do this later</button>
-              <button className="field-btn inline" onClick={next}>Continue</button>
-            </div>
+            <h2 className="ob__title">A quieter way to learn code</h2>
+            <ul className="ob__list">
+              <li><b>Select code</b> in Cursor, VS Code, a terminal, or a browser.</li>
+              <li><b>Press {prettyAccel(shortcut)}</b> — a floating explanation appears beside your work.</li>
+              <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress.</li>
+            </ul>
+            {nav()}
           </>
         )}
 
         {step === 3 && (
           <>
-            <h2 className="ob__title">Try your shortcut</h2>
-            <p className="ob__sub">Press <span className="kbd-lg">{prettyAccel(shortcut)}</span> now. A floating widget should appear — that is where explanations live. You can change this shortcut any time in Settings.</p>
-            <div className={`ob__test ${fired ? 'ok' : ''}`}>{fired ? '✓ Detected — the overlay works.' : 'Waiting for the shortcut…'}</div>
-            <div className="ob__actions">
-              <button className="ob__skip" onClick={next}>Skip</button>
-              <button className="field-btn inline" disabled={!fired} onClick={next}>Continue</button>
-            </div>
+            <h2 className="ob__title">One permission</h2>
+            <PermRow />
+            {nav('Continue')}
           </>
         )}
 
         {step === 4 && (
           <>
+            <h2 className="ob__title">Try your shortcut</h2>
+            <p className="ob__sub">Press <span className="kbd-lg">{prettyAccel(shortcut)}</span> now. A floating widget should appear — that is where explanations live. You can change this shortcut any time in Settings.</p>
+            <div className={`ob__test ${fired ? 'ok' : ''}`}>{fired ? '✓ Detected — the overlay works.' : 'Waiting for the shortcut…'}</div>
+            {nav('Continue', !fired)}
+          </>
+        )}
+
+        {step === 5 && (
+          <>
+            <h2 className="ob__title">Put the overlay where it helps</h2>
+            <p className="ob__sub">You can drag and pin explanations later. This only chooses where the small activation bar begins.</p>
+            <div className="ob__choices"><Choice selected={position === 'bottom-center'} title="Bottom center" detail="Quiet and within reach" onClick={() => { setPosition('bottom-center'); void window.unvibe.setSettings({ barPosition: 'bottom-center' }); }} /><Choice selected={position === 'top-right'} title="Top right" detail="Closer to the menu bar" onClick={() => { setPosition('top-right'); void window.unvibe.setSettings({ barPosition: 'top-right' }); }} /></div>
+            {nav()}
+          </>
+        )}
+
+        {step === 6 && (
+          <>
+            <h2 className="ob__title">Start with a small selection</h2>
+            <p className="ob__sub">Highlight a function, a condition, or a confusing line. Unvibe only uses the exact filtered snippet you choose.</p>
+            <div className="ob__demo"><span>const</span> eligible = <b>user.age</b> {'>'}= 18</div>
+            {nav('I understand')}
+          </>
+        )}
+
+        {step === 7 && (
+          <>
+            <h2 className="ob__title">Choose how deep to go</h2>
+            <p className="ob__sub">Every explanation can change level later.</p>
+            <div className="ob__choices"><Choice selected={level === 'new'} title="New" detail="Start with the idea" onClick={() => setLevel('new')} /><Choice selected={level === 'intermediate'} title="Intermediate" detail="Practical detail and trade-offs" onClick={() => setLevel('intermediate')} /><Choice selected={level === 'expert'} title="Expert" detail="Implementation nuance" onClick={() => setLevel('expert')} /></div>
+            {nav()}
+          </>
+        )}
+
+        {step === 8 && (
+          <>
+            <h2 className="ob__title">Your first explanation lives beside your work</h2>
+            <div className="ob__widget"><div><b>Why this condition?</b><span>The check keeps underage users out of an adult-only flow.</span></div><small>{level} · Save · Test me</small></div>
+            <div className="ob__theme"><span>Preview</span><button className={theme === 'light' ? 'on' : ''} onClick={() => { setTheme('light'); document.documentElement.dataset.theme = 'light'; void window.unvibe.setSettings({ theme: 'light' }); }}>Light</button><button className={theme === 'dark' ? 'on' : ''} onClick={() => { setTheme('dark'); document.documentElement.dataset.theme = 'dark'; void window.unvibe.setSettings({ theme: 'dark' }); }}>Dark</button></div>
+            {nav()}
+          </>
+        )}
+
+        {step === 9 && (
+          <>
             <div className="ob__mark"><LogoMark size={44} stroke={1.7} /></div>
             <h2 className="ob__title">You're set</h2>
             <p className="ob__sub">Select code anywhere and press {prettyAccel(shortcut)}. Your progress collects in this dashboard.</p>
-            <button className="field-btn" onClick={finish}>Enter Unvibe</button>
+            <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
           </>
         )}
       </div>
@@ -345,7 +393,7 @@ function Explainer({ page }: { page: PageDef }) {
           <div className="feature" key={f.t}><div className="fh"><Icon d={f.icon} /><span className="t">{f.t}</span></div><div className="d">{f.d}</div></div>
         ))}
       </div>
-      <div className="stub"><b>Nothing here yet.</b> This is where your {page.id.toLowerCase()} will live. Review some code with <b>⌥ Space</b> and it starts filling in on its own.</div>
+      <div className="stub"><b>Nothing here yet.</b> This is where your {page.id.toLowerCase()} will live. Review some code with <b>⌘U</b> and it starts filling in on its own.</div>
     </>
   );
 }
@@ -354,8 +402,9 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <button className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} onClick={onClick}><span className="knob" /></button>;
 }
 
-function AccountPanel({ account, onChange }: { account: Account; onChange: () => void }) {
+function AccountPanel({ account, onChange, onDeleted }: { account: Account; onChange: () => void; onDeleted: () => void }) {
   const [confirming, setConfirming] = useState(false);
+  const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   if (!account) {
@@ -371,7 +420,7 @@ function AccountPanel({ account, onChange }: { account: Account; onChange: () =>
     setBusy(true); setErr('');
     const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string };
     setBusy(false);
-    if (r.ok) onChange(); else setErr(r.error ?? 'Could not delete the account.');
+    if (r.ok) onDeleted(); else setErr(r.error ?? 'Could not delete the account.');
   };
   return (
     <>
@@ -382,7 +431,8 @@ function AccountPanel({ account, onChange }: { account: Account; onChange: () =>
         <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this Mac and on our servers. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
-            <button className="act danger" disabled={busy} onClick={del}>{busy ? 'Deleting…' : 'Yes, delete everything'}</button>
+            <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
+            <button className="act danger" disabled={busy || phrase !== 'DELETE'} onClick={del}>{busy ? 'Deleting…' : 'Delete everything'}</button>
             <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
           </div>
         )}
@@ -392,9 +442,9 @@ function AccountPanel({ account, onChange }: { account: Account; onChange: () =>
   );
 }
 
-function Settings({ info, account, settings, onAccountChange, onSettings, onClose }: {
+function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted }: {
   info: { version: string }; account: Account; settings: Settings;
-  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void;
+  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void;
 }) {
   const [tab, setTab] = useState('General');
   const [recording, setRecording] = useState(false);
@@ -435,6 +485,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
                 <button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button>
               </div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
+              <div className="setrow"><div><div className="sl">App appearance</div><div className="sd">Choose light, dark, or follow your Mac automatically.</div></div><select className="sel-input" value={settings.theme} onChange={(e) => onSettings({ theme: e.target.value as Settings['theme'] })}><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
             </>
           )}
 
@@ -481,7 +532,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             </>
           )}
 
-          {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} />}
+          {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} />}
           {tab === 'Data' && (
             <div className="setrow" style={{ display: 'block' }}><div className="sl">Your data</div><div className="sd">Reviews and progress live in a file on this Mac. Deleting your account (under Account) erases them everywhere.</div></div>
           )}
@@ -495,7 +546,7 @@ function App() {
   const [page, setPage] = useState<PageId>('Home');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState('');
-  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌘⌥U' });
+  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌘U' });
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -524,6 +575,12 @@ function App() {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
+  useEffect(() => {
+    const preference = settings?.theme ?? 'system';
+    const dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  }, [settings?.theme]);
+
   const applySettings = async (patch: Partial<Settings>): Promise<string | undefined> => {
     const r = (await window.unvibe.setSettings(patch)) as { settings: Settings; shortcutError?: string };
     setSettings(r.settings);
@@ -536,7 +593,7 @@ function App() {
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
-    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+Alt+U'} onDone={async () => { const { acct } = await refresh(); setGate(acct ? 'app' : 'login'); }} /></>);
+    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} account={account} onSignedIn={async () => { await refresh(); }} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);
@@ -564,6 +621,7 @@ function App() {
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
+          onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} />
       )}
       {toast && <div className="toast">{toast}</div>}

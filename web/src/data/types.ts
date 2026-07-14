@@ -50,7 +50,7 @@ export interface Store {
 
   // Device auth
   createDeviceCode(baseUrl: string): Promise<DeviceCode>;
-  approveDeviceCode(userCode: string, email?: string): Promise<string | null>; // returns token for browser, or null
+  approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null>;
   redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'>;
   userForToken(token: string): Promise<string | null>;
 

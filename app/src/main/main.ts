@@ -18,8 +18,9 @@ import {
 } from 'electron';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 import { createBar, createCompanion, createWidget, positionBar } from './windows';
-import { captureSelection, frontmostApp } from './selection';
+import { captureSelection, frontmostApp, startFrontmostWatch } from './selection';
 import {
   initWidget,
   runReview,
@@ -31,7 +32,7 @@ import {
 import { store } from './store';
 import { settings, type Settings } from './settings';
 import { flush } from './sync';
-import { signIn, deleteAccount } from './backend';
+import { signIn, deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo } from './backend';
 import { setBar, notify } from './notify';
 import { computeProfile, computeFeed } from '../core/learning';
 
@@ -50,6 +51,7 @@ const isMac = process.platform === 'darwin';
 let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
+let devicePoll: NodeJS.Timeout | null = null;
 const sessions = new Map<number, ReviewSession>();
 const normalBounds = new Map<number, Electron.Rectangle>();
 
@@ -72,8 +74,20 @@ function broadcastShortcut(): void {
   if (companion && !companion.isDestroyed()) companion.webContents.send('shortcut:fired');
 }
 
+function asset(...parts: string[]): string {
+  return path.join(__dirname, '..', 'assets', ...parts);
+}
+
 async function startReview(): Promise<void> {
   broadcastShortcut();
+  if (isMac && !accessibilityGranted(false)) {
+    accessibilityGranted(true);
+    if (!accessibilityGranted(false)) {
+      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+      openCompanion();
+      notify('Turn on Accessibility for Unvibe so selection works');
+    }
+  }
   const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
   const win = createWidget();
   const session: ReviewSession = {
@@ -107,14 +121,23 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
   return BrowserWindow.fromWebContents(e.sender);
 }
 
+app.setName('Unvibe');
+
 app.whenReady().then(() => {
   store();
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
   void flush();
+  startFrontmostWatch();
 
-  tray = new Tray(nativeImage.createEmpty());
-  tray.setTitle('◆');
+  const dockIcon = nativeImage.createFromPath(asset('icon.png'));
+  if (isMac && !dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
+
+  let trayImage = nativeImage.createFromPath(asset('trayTemplate.png'));
+  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
+  else if (isMac) trayImage.setTemplateImage(true);
+  tray = new Tray(trayImage);
+  tray.setIgnoreDoubleClickEvents(true);
   tray.setToolTip('Unvibe');
   tray.setContextMenu(
     Menu.buildFromTemplate([
@@ -128,6 +151,7 @@ app.whenReady().then(() => {
   bar = createBar();
   setBar(bar);
   registerShortcut(s.shortcut);
+  if (!s.onboarded) openCompanion();
 
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
@@ -140,14 +164,13 @@ app.whenReady().then(() => {
     const session = sessions.get(e.sender.id);
     if (!win || !session) return;
     initWidget(win, session);
-    if (session.code) void runReview(win, session, { level: session.level });
   });
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
     const session = sessions.get(e.sender.id);
     if (win && session) void runReview(win, session, opts);
   });
-  ipcMain.on('widget:useClipboard', (e, opts: RequestOpts) => {
+  ipcMain.on('widget:useClipboard', (e) => {
     const win = widgetOf(e);
     const session = sessions.get(e.sender.id);
     if (!win || !session) return;
@@ -155,7 +178,13 @@ app.whenReady().then(() => {
     session.code = text.length > 0 ? text : null;
     session.recorded = false;
     initWidget(win, session);
-    if (session.code) void runReview(win, session, opts);
+  });
+  ipcMain.on('widget:cancel', (e) => {
+    const win = widgetOf(e);
+    const session = sessions.get(e.sender.id);
+    if (!win || !session) return;
+    session.abort?.abort();
+    win.webContents.send('review:event', { type: 'cancelled' });
   });
   ipcMain.on('widget:testMe', (e) => {
     const win = widgetOf(e);
@@ -238,6 +267,27 @@ app.whenReady().then(() => {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-in failed.' };
     }
+  });
+  ipcMain.handle('account:startDevice', async () => {
+    try {
+      const device = await startDeviceAuth();
+      void shell.openExternal(`${device.verificationUri}?code=${encodeURIComponent(device.userCode)}`);
+      if (devicePoll) clearInterval(devicePoll);
+      const expires = Date.now() + 10 * 60_000;
+      devicePoll = setInterval(() => void (async () => {
+        if (Date.now() > expires) { if (devicePoll) clearInterval(devicePoll); devicePoll = null; companion?.webContents.send('account:device', { ok: false, error: 'Sign-in timed out. Start again.' }); return; }
+        try {
+          const redeemed = await redeemDeviceAuth(device.deviceCode);
+          if (!redeemed) return;
+          const account = await accountInfo(redeemed.token);
+          store().setAccount(account.userId, account.email ?? 'Signed-in user', redeemed.token);
+          if (devicePoll) clearInterval(devicePoll); devicePoll = null;
+          void flush();
+          companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user' });
+        } catch { /* polling retries until expiry */ }
+      })(), Math.max(2, device.interval) * 1000);
+      return { ok: true, userCode: device.userCode, verificationUri: device.verificationUri };
+    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
   ipcMain.handle('account:signOut', () => {
     store().signOut();

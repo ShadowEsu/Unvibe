@@ -4,7 +4,7 @@ import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 
-type Phase = 'boot' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
+type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
 interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded';
@@ -154,7 +154,9 @@ function Widget() {
       switch (ev.type) {
         case 'init':
           setMeta({ sourceApp: ev.sourceApp, lines: ev.lines, language: ev.language });
-          if (!ev.hasCode) setPhase('empty');
+          setText('');
+          setQuiz(null);
+          setPhase(ev.hasCode ? 'ready' : 'empty');
           break;
         case 'status':
           setText('');
@@ -179,6 +181,11 @@ function Widget() {
           setError(ev.message ?? 'Something went wrong.');
           setPhase('error');
           setQuiz((q) => (q && q.phase !== 'graded' ? null : q));
+          break;
+        case 'cancelled':
+          setText('');
+          setQuiz(null);
+          setPhase('ready');
           break;
         case 'question':
           setQuiz({ phase: 'answering', question: ev.question, options: ev.options, conceptLabel: ev.conceptLabel });
@@ -221,7 +228,7 @@ function Widget() {
 
   const pick = (l: ExplanationLevel) => {
     setLevel(l);
-    window.unvibe.request({ level: l });
+    if (phase === 'done') window.unvibe.request({ level: l });
   };
 
   const toggleCollapse = () => {
@@ -258,7 +265,7 @@ function Widget() {
         </button>
       </div>
 
-      {!collapsed && (phase === 'streaming' || phase === 'done' || phase === 'boot') && (
+      {!collapsed && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
         <div className="levels">
           {LEVELS.map((l) => (
             <button key={l.id} className={`lvl${l.id === level ? ' on' : ''}`} onClick={() => pick(l.id)}>
@@ -276,11 +283,24 @@ function Widget() {
             </div>
           )}
 
+          {phase === 'ready' && (
+            <div className="state ready-state">
+              <div className="big">Ready to explain</div>
+              <div className="detected">
+                <span>{meta.language && meta.language !== 'plaintext' ? meta.language : 'Code selection'}</span>
+                <span>{meta.lines ?? 0} lines</span>
+                {meta.sourceApp && <span>{meta.sourceApp}</span>}
+              </div>
+              <div className="sub">Pick a depth above. Unvibe will explain the role, choices, pitfalls, and what changes if this code is removed.</div>
+              <button className="btn" onClick={() => request({})}>Explain this code</button>
+            </div>
+          )}
+
           {phase === 'empty' && (
             <div className="state">
               <div className="big">Nothing captured</div>
               <div className="sub">
-                Select some code first, then press ⌥ Space. Or explain what you copied last:
+                Select some code first, then press ⌘U. Or explain what you copied last:
               </div>
               <button className="btn" onClick={() => window.unvibe.useClipboard({ level })}>
                 Use clipboard contents
@@ -334,7 +354,7 @@ function Widget() {
 
           {(phase === 'streaming' || phase === 'done') && !quiz && (
             <div className="body" ref={bodyRef}>
-              {renderRich(text, phase === 'streaming')}
+              {text ? renderRich(text, phase === 'streaming') : <div className="skeleton" aria-label="Generating explanation"><i /><i /><i /></div>}
             </div>
           )}
 
@@ -400,6 +420,7 @@ function Widget() {
           {(phase === 'streaming' || phase === 'done') && !quiz && (
             <div className="foot">
               <div className="chips">
+                {phase === 'streaming' && <button className="chip" onClick={() => window.unvibe.cancel()}>Stop generating</button>}
                 <button className="chip" disabled={phase === 'streaming'} onClick={() => window.unvibe.closeWidget()}>
                   Got it ✓
                 </button>

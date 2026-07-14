@@ -12,6 +12,7 @@ const api = {
   // widget review
   widgetReady: () => ipcRenderer.send('widget:ready'),
   request: (opts: unknown) => ipcRenderer.send('widget:request', opts),
+  cancel: () => ipcRenderer.send('widget:cancel'),
   useClipboard: (opts: unknown) => ipcRenderer.send('widget:useClipboard', opts),
   testMe: () => ipcRenderer.send('widget:testMe'),
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),
@@ -42,6 +43,8 @@ const api = {
   // account
   account: () => ipcRenderer.invoke('account:get'),
   signIn: (email: string) => ipcRenderer.invoke('account:signIn', email),
+  startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
+  onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
 };

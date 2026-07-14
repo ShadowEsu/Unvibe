@@ -3,10 +3,14 @@ import { getStore } from '@/data/store';
 export const runtime = 'nodejs';
 
 /**
- * In-app passwordless sign-in for the desktop app. Dev/beta only: creates or returns a user
- * for the given email and issues a bearer token. Production must add real verification.
+ * Development-only convenience sign-in. It must never become production authentication:
+ * production builds require the configured verified device/auth flow before issuing a token.
  */
 export async function POST(req: Request): Promise<Response> {
+  const enabled = process.env.NODE_ENV !== 'production' || process.env.UNCODE_ALLOW_DEV_EMAIL_AUTH === 'true';
+  if (!enabled) {
+    return Response.json({ error: 'Cloud sign-in is not configured for this build. Use local-only mode or configure verified authentication.' }, { status: 501 });
+  }
   const body = (await req.json().catch(() => ({}))) as { email?: string };
   const email = (body.email ?? '').trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {

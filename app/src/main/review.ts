@@ -14,7 +14,7 @@ import { store } from './store';
 import { flush } from './sync';
 
 export interface WidgetEvent {
-  type: 'init' | 'status' | 'consent' | 'blocked' | 'token' | 'done' | 'error' | 'question' | 'graded';
+  type: 'init' | 'status' | 'consent' | 'blocked' | 'token' | 'done' | 'error' | 'cancelled' | 'question' | 'graded';
   text?: string;
   message?: string;
   model?: string;
@@ -116,6 +116,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   session.abort?.abort();
   const abort = new AbortController();
   session.abort = abort;
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; abort.abort(); }, 30_000);
 
   send(win, { type: 'status', message: 'thinking' });
   try {
@@ -141,9 +143,15 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       }
     }
   } catch (err) {
-    if (abort.signal.aborted) return;
+    if (abort.signal.aborted) {
+      if (timedOut) send(win, { type: 'error', message: 'The explanation took too long. Please try again.' });
+      return;
+    }
     send(win, { type: 'error', message: `Could not reach the Unvibe service at ${BACKEND}. Is it running?` });
     void err;
+  } finally {
+    clearTimeout(timeout);
+    if (session.abort === abort) session.abort = null;
   }
 }
 

@@ -148,6 +148,13 @@ code.inline {
 .state .big { font-size: 15px; font-weight: 600; }
 .state .sub { font-size: 12.5px; color: var(--muted); max-width: 300px; line-height: 1.5; }
 .state .findings { text-align: left; font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); border: 1px dashed var(--danger-line); border-radius: 8px; padding: 8px 12px; max-width: 320px; }
+.ready-state { justify-content: center; }
+.detected { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.detected span { font-family: -apple-system, sans-serif; font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
+.skeleton { display: grid; gap: 10px; padding: 6px 0; }
+.skeleton i { display: block; height: 11px; border-radius: 999px; background: linear-gradient(90deg, var(--chip-bg), var(--line), var(--chip-bg)); background-size: 200% 100%; animation: shimmer 1.25s ease-in-out infinite; }
+.skeleton i:nth-child(2) { width: 84%; animation-delay: .12s; }.skeleton i:nth-child(3) { width: 62%; animation-delay: .24s; }
+@keyframes shimmer { to { background-position: -200% 0; } }
 .btn {
   background: var(--fill);
   color: var(--on-fill);
@@ -218,3 +225,7 @@ code.inline {
 .verdict.ok::before { content: '✓ '; }
 .verdict.no::before { content: '↻ '; }
 .quiz__why { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor, .skeleton i { animation: none; }
+}

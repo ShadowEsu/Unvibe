@@ -10,7 +10,9 @@
     "dev": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
-    "dist": "npm run build && electron-builder --mac"
+    "dist": "npm run build && electron-builder --mac dir",
+    "dist:dmg": "npm run build && electron-builder --mac dmg",
+    "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -31,14 +33,19 @@
     "copyright": "Copyright © 2026 Unvibe",
     "files": ["dist/**/*", "package.json"],
     "directories": { "output": "release", "buildResources": "build" },
+    "icon": "build/icon.icns",
     "mac": {
+      "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
-      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "target": [{ "target": "dir", "arch": ["arm64"] }],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "identity": null,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
+        "CFBundleDisplayName": "Unvibe",
+        "CFBundleName": "Unvibe",
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
         "LSUIElement": false
       }

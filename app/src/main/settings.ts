@@ -8,16 +8,18 @@ import path from 'node:path';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
+export type ThemePreference = 'system' | 'light' | 'dark';
 
 export interface Settings {
   onboarded: boolean;
-  /** Electron accelerator. Default avoids ⌥Space (which types a non-breaking space). */
+  /** Electron accelerator. Default is ⌘U. */
   shortcut: string;
   barPosition: BarPosition;
   /** Opacity of an unfocused, unpinned widget (0.35–1). */
   widgetOpacityInactive: number;
   inactiveBehavior: InactiveBehavior;
   launchAtLogin: boolean;
+  theme: ThemePreference;
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
@@ -25,11 +27,12 @@ export interface Settings {
 
 const DEFAULTS: Settings = {
   onboarded: false,
-  shortcut: 'CommandOrControl+Alt+U',
+  shortcut: 'CommandOrControl+U',
   barPosition: 'bottom-center',
   widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
+  theme: 'system',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
 };
