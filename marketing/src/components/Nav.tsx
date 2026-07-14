@@ -17,7 +17,7 @@ interface NavLink {
 const links: NavLink[] = [
   { label: "Product", href: "#product", id: "product" },
   { label: "How it works", href: "#how-it-works", id: "how-it-works" },
-  { label: "Depth", href: "#learn", id: "learn" },
+  { label: "Download", href: "#download", id: "download" },
   { label: "Privacy", href: "#privacy", id: "privacy" },
   { label: "FAQ", href: "#faq", id: "faq" },
 ];
@@ -103,8 +103,8 @@ export function Nav() {
           <Button href="#demo" variant="ghost" size="sm">
             Watch demo
           </Button>
-          <Button href="#waitlist" size="sm">
-            Join waitlist
+          <Button href="#download" size="sm">
+            Download free
           </Button>
         </div>
 
@@ -160,8 +160,8 @@ export function Nav() {
               <Button href="#demo" variant="secondary" onClick={() => setOpen(false)}>
                 Watch demo
               </Button>
-              <Button href="#waitlist" onClick={() => setOpen(false)}>
-                Join waitlist
+              <Button href="#download" onClick={() => setOpen(false)}>
+                Download free
               </Button>
             </div>
           </div>

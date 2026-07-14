@@ -33,8 +33,8 @@ export default function Home() {
       <DepthDemo />
       <Assessment />
       <Privacy />
-      <Waitlist />
       <Download />
+      <Waitlist />
       <Faq />
       <FinalCta />
     </>

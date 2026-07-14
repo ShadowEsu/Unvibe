@@ -20,7 +20,7 @@ export function Hero() {
             className="mb-4 inline-flex items-center gap-2 rounded-pill border border-line bg-surface px-3 py-1 text-fluid-sm text-fg-muted"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-green" aria-hidden="true" />
-            Completely free · Mac private beta
+            Completely free · Mac &amp; Windows · v1.0.0
           </motion.p>
 
           <motion.h1
@@ -81,8 +81,12 @@ export function Hero() {
             }}
             className="mt-7 flex flex-wrap items-center gap-3"
           >
-            <Button href="#waitlist" size="lg">
-              Join free waitlist
+            <Button
+              href="#download"
+              size="lg"
+              onClick={() => track("download_clicked", { source: "hero" })}
+            >
+              Download free
             </Button>
             <Button
               href="#demo"

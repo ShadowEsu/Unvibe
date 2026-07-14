@@ -38,3 +38,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*
+
+# Large installer binaries (deployed via Vercel CLI, not git)
+/public/downloads/*.dmg
+/public/downloads/*.exe

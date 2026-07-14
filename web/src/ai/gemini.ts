@@ -15,7 +15,7 @@ export class GeminiProvider implements Provider {
 
   constructor(
     private readonly apiKey: string,
-    private readonly model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+    private readonly model = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash',
     private readonly maxTokens = Number(
       process.env.AI_MAX_TOKENS || process.env.UNCODE_MAX_TOKENS || 2048,
     ),
