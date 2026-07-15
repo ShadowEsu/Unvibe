@@ -15,13 +15,13 @@ const guarantees = [
   },
   {
     Icon: ShieldCheck,
-    title: "You preview what leaves",
-    body: "See exactly what would be transmitted, and grant cloud analysis per repository. It is off until you say so.",
+    title: "You choose what to review",
+    body: "Unvibe starts from the selection you ask it to explain. It does not record your screen or read code in the background.",
   },
   {
     Icon: Ban,
-    title: "Never trained on your code",
-    body: "We use a provider setting that does not train on submitted data, and analytics never contain code contents.",
+    title: "No repository upload",
+    body: "The product sends review context, not an entire repository. Read the policy for the exact current limits and controls.",
   },
 ];
 
@@ -33,8 +33,8 @@ export function Privacy() {
     <Section
       id="privacy"
       eyebrow="Privacy"
-      title="Your code stays yours. By design, not by promise."
-      subtitle="Unvibe builds context locally and filters secrets before any request. The whole repository is never uploaded, and cloud analysis is consent-gated per repo."
+      title="Your code remains under your control."
+      subtitle="You decide what to review. Before a request leaves your Mac, Unvibe scans the selection for common secrets."
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <motion.div
@@ -91,10 +91,10 @@ export function Privacy() {
         >
           <div className="flex items-center justify-between border-b border-line bg-surface-2/70 px-5 py-3.5">
             <span className="text-fluid-sm font-medium text-fg">
-              Transmission preview
+              What Unvibe reviews
             </span>
             <span className="font-mono text-[0.68rem] text-fg-faint">
-              before any request
+              selection-first
             </span>
           </div>
           <div className="grid gap-0 sm:grid-cols-2">
@@ -130,8 +130,7 @@ export function Privacy() {
             </div>
           </div>
           <p className="border-t border-line px-5 py-3.5 text-fluid-sm text-fg-muted">
-            Add your own rules with a{" "}
-            <code className="font-mono text-primary">.unvibeignore</code> file.
+            Exact behavior and current limitations are documented in the privacy policy.
           </p>
         </motion.div>
       </div>

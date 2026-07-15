@@ -28,7 +28,7 @@ export function Faq() {
       narrow
     >
       <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
-        {faqItems.map((item) => {
+        {faqItems.filter((item) => ["what-is-it", "editors", "sent", "free", "beta"].includes(item.id)).map((item) => {
           const isOpen = open === item.id;
           return (
             <div key={item.id}>

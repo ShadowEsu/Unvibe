@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0613c887-2a49-4934-9ef4-cc76de7c1357" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/marketing/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/scripts/upload-release-assets.sh" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/scripts/upload-release-assets.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/app/api/download/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/app/api/download/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/app/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/app/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/app/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/BrandLogos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/BrandLogos.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/Footer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/Footer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/Nav.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/Nav.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/Section.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/Section.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Assessment.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Assessment.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/DemoSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/DemoSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/DepthDemo.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/DepthDemo.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Download.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Download.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Faq.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Faq.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Features.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Features.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/FinalCta.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/FinalCta.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Hero.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Hero.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/HowItWorks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/HowItWorks.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/LanguageExplorer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/LanguageExplorer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/LearningEngine.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/LearningEngine.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/OpeningStrip.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/OpeningStrip.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Privacy.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Privacy.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Problem.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Problem.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/StudentStories.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/StudentStories.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/StudyFromProjects.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/StudyFromProjects.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/Waitlist.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/Waitlist.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/components/sections/WorksWhere.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/components/sections/WorksWhere.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/lib/downloads.ts" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/lib/downloads.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/src/lib/motion.ts" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/src/lib/motion.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marketing/tailwind.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/marketing/tailwind.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/web/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/web/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/web/package.json" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="606" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.7266952712966002" />
+      <entry key="MS500" value="3.628072928414565" />
+      <entry key="S2" value="4.58589246408304" />
+      <entry key="S5" value="4.832651022376419" />
+      <entry key="S10" value="5.205916357096868" />
+      <entry key="S30" value="9.362592651795557" />
+      <entry key="S60" value="13.626211276788885" />
+      <entry key="M2" value="17.137348378347106" />
+      <entry key="M5" value="20.191245774457414" />
+      <entry key="M10" value="21.718256745340756" />
+      <entry key="M15" value="22.36373693219854" />
+      <entry key="M30" value="23.11340099235086" />
+      <entry key="H1" value="23.53714333714873" />
+      <entry key="H2" value="23.76333711169602" />
+      <entry key="H4" value="23.880313959975076" />
+      <entry key="D1" value="23.97986015007056" />
+      <entry key="W1" value="23.997118118604437" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.5788772637600044" />
+      <entry key="MS500" value="3.5115190500160547" />
+      <entry key="S2" value="4.540833509324127" />
+      <entry key="S5" value="4.812861809455272" />
+      <entry key="S10" value="5.195529389822255" />
+      <entry key="S30" value="9.358218303687408" />
+      <entry key="S60" value="13.623578614113573" />
+      <entry key="M2" value="17.135839063446593" />
+      <entry key="M5" value="20.190522703576057" />
+      <entry key="M10" value="21.71783699941369" />
+      <entry key="M15" value="22.363436211661156" />
+      <entry key="M30" value="23.113237037733025" />
+      <entry key="H1" value="23.537057211477357" />
+      <entry key="H2" value="23.763292901080685" />
+      <entry key="H4" value="23.8802915526737" />
+      <entry key="D1" value="23.979856372238967" />
+      <entry key="W1" value="23.99711757783639" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 0,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3GWCnNyDtfdyCoZXElTZzH3fkg6" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "marketing",
+    "javascript.preferred.runtime.type.id": "node",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/Users/prestonjaysusanto/Unvibe",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.26222.58" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="0613c887-2a49-4934-9ef4-cc76de7c1357" name="Changes" comment="" />
+      <created>1784078105509</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1784078105509</updated>
+      <workItem from="1784078106535" duration="2037000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

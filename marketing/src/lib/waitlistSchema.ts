@@ -43,8 +43,8 @@ export const waitlistSchema = z.object({
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email"),
-  tool: z.enum(tools, { message: "Pick where you work" }),
-  experience: z.enum(experiences, { message: "Pick your experience" }),
+  tool: z.enum(tools).optional(),
+  experience: z.enum(experiences).optional(),
   message: z
     .string()
     .trim()

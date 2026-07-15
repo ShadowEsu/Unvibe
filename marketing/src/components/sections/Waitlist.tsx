@@ -8,14 +8,7 @@ import { Check, Copy, Loader2, PartyPopper } from "lucide-react";
 import { Section } from "../Section";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
-import {
-  experienceLabels,
-  experiences,
-  toolLabels,
-  tools,
-  waitlistSchema,
-  type WaitlistInput,
-} from "@/lib/waitlistSchema";
+import { waitlistSchema, type WaitlistInput } from "@/lib/waitlistSchema";
 
 type Status = "idle" | "submitting" | "success" | "duplicate" | "error";
 
@@ -34,15 +27,12 @@ export function Waitlist() {
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistSchema),
     defaultValues: { email: "", message: "", referredBy: "" },
   });
 
-  const tool = watch("tool");
-  const experience = watch("experience");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -117,9 +107,9 @@ export function Waitlist() {
   return (
     <Section
       id="waitlist"
-      eyebrow="Free waitlist"
-      title="Get Unvibe free on Mac."
-      subtitle="Completely free during beta. No credit card. No pricing page. Join the list and we email you when the Mac build is ready."
+      eyebrow="Private beta"
+      title="Join the private beta."
+      subtitle="Mac first. We’ll email you when an invite is ready."
       narrow
     >
       <div className="rounded-card border border-line bg-surface p-6 sm:p-8">
@@ -190,60 +180,6 @@ export function Waitlist() {
                 />
               </Field>
 
-              <Field
-                label="Where do you write code?"
-                error={errors.tool?.message}
-              >
-                <div className="flex flex-wrap gap-2">
-                  {tools.map((t) => (
-                    <ChoiceChip
-                      key={t}
-                      active={tool === t}
-                      onClick={() => {
-                        setValue("tool", t, { shouldValidate: true });
-                        markStarted();
-                      }}
-                    >
-                      {toolLabels[t]}
-                    </ChoiceChip>
-                  ))}
-                </div>
-              </Field>
-
-              <Field
-                label="How would you describe yourself?"
-                error={errors.experience?.message}
-              >
-                <div className="flex flex-wrap gap-2">
-                  {experiences.map((ex) => (
-                    <ChoiceChip
-                      key={ex}
-                      active={experience === ex}
-                      onClick={() => {
-                        setValue("experience", ex, { shouldValidate: true });
-                        markStarted();
-                      }}
-                    >
-                      {experienceLabels[ex]}
-                    </ChoiceChip>
-                  ))}
-                </div>
-              </Field>
-
-              <Field
-                label="Anything you want us to know?"
-                htmlFor="message"
-                optional
-                error={errors.message?.message}
-              >
-                <textarea
-                  id="message"
-                  rows={3}
-                  placeholder="What do you want Unvibe to help you understand?"
-                  {...register("message")}
-                  className={cn(inputClass(Boolean(errors.message)), "resize-none")}
-                />
-              </Field>
 
               {status === "error" && (
                 <p
@@ -265,12 +201,12 @@ export function Waitlist() {
                     Joining
                   </>
                 ) : (
-                  "Join free — no credit card"
+                  "Join the private beta"
                 )}
               </button>
 
               <p className="text-center text-fluid-sm text-fg-faint">
-                Free for everyone in beta. By joining you agree to our{" "}
+                By joining, you agree to our{" "}
                 <a href="/terms" className="underline underline-offset-2 hover:text-fg">
                   terms
                 </a>{" "}
@@ -324,31 +260,5 @@ function Field({
         </p>
       )}
     </div>
-  );
-}
-
-function ChoiceChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "rounded-pill border px-4 py-2 text-fluid-sm font-medium transition-all duration-200",
-        active
-          ? "border-primary bg-primary text-on-primary shadow-sm"
-          : "border-line text-fg-muted hover:border-line-strong hover:text-fg"
-      )}
-    >
-      {children}
-    </button>
   );
 }

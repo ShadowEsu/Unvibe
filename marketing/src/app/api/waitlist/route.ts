@@ -37,8 +37,8 @@ const dataFile = path.join(dataDir, "waitlist.json");
 
 interface StoredEntry {
   email: string;
-  tool: string;
-  experience: string;
+  tool?: string;
+  experience?: string;
   message?: string;
   referredBy?: string;
   referralCode: string;
@@ -163,8 +163,8 @@ export async function POST(req: Request) {
       // Fire and forget — do not block the signup response.
       void notifyFounder({
         email: entry.email,
-        tool: entry.tool,
-        experience: entry.experience,
+        tool: entry.tool ?? "Not provided",
+        experience: entry.experience ?? "Not provided",
         message: entry.message,
         referralCode,
         duplicate: false,
