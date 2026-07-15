@@ -59,6 +59,7 @@ export function StudyFromProjects() {
       eyebrow="Study from projects"
       title="Turn a codebase you use into a course you can follow."
       subtitle="Point Unvibe at a project and it proposes a short curriculum grounded in that project's real files — so you learn the concepts that actually show up in your work."
+      variant="editorial"
     >
       <div className="mb-6 flex flex-wrap gap-2">
         {projects.map((p) => (

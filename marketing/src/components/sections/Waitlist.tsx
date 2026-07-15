@@ -122,6 +122,7 @@ export function Waitlist() {
       title="Get Unvibe free on Mac."
       subtitle="Completely free during beta. No credit card. No pricing page. Join the list and we email you when the Mac build is ready."
       narrow
+      variant="compact"
     >
       <div className="rounded-card border border-line bg-surface p-6 sm:p-8">
         <AnimatePresence mode="wait">

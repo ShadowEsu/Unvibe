@@ -61,6 +61,7 @@ export function ProjectMap() {
       eyebrow="Context that scales"
       title="From one line to the whole repository."
       subtitle="Understanding a change often means understanding what surrounds it. Choose how wide to look — Unvibe builds context locally and only sends what you approve."
+      variant="editorial"
     >
       <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
         {/* Nested hierarchy visual */}

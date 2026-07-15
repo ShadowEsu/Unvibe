@@ -64,9 +64,11 @@ export function ProductGallery() {
 
   return (
     <Section
+      id="gallery"
       eyebrow="The companion app"
       title="A calm home for everything you have learned."
       subtitle="Beyond the overlay, a Mac companion keeps your progress, notebook, and concept library in one calm place."
+      variant="editorial"
     >
       <div className="mb-5 flex items-center justify-between">
         <div

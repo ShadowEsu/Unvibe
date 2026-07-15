@@ -11,18 +11,17 @@ interface SectionProps {
   subtitle?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
-  /** Center the heading block. */
   centered?: boolean;
-  /** Constrain body width to prose measure. */
   narrow?: boolean;
   as?: "section" | "div";
+  /** Visual rhythm variant */
+  variant?: "standard" | "compact" | "editorial" | "full";
+  /** Surface background tint */
+  surface?: "default" | "brand" | "alt" | "warm";
+  /** Show divider below */
+  divider?: boolean;
 }
 
-/**
- * Reusable section wrapper. Provides consistent vertical rhythm, an optional heading
- * block (eyebrow / title / subtitle) with a single scroll-triggered entrance, and a
- * landmark id for the nav's active-section tracking.
- */
 export function Section({
   id,
   eyebrow,
@@ -33,56 +32,81 @@ export function Section({
   centered = false,
   narrow = false,
   as = "section",
+  variant = "standard",
+  surface = "default",
+  divider = false,
 }: SectionProps) {
   const Tag = as === "section" ? motion.section : motion.div;
   const hasHeading = eyebrow || title || subtitle;
 
+  const containerClass =
+    variant === "full" ? "container-full" : narrow ? "container-narrow" : "container-page";
+
+  const sectionClass = cn(
+    "scroll-mt-24",
+    variant === "compact" && "section-compact",
+    variant === "standard" && "section-standard",
+    variant === "editorial" && "section-editorial",
+    variant === "full" && "section-standard",
+    surface === "brand" && "surface-brand",
+    surface === "alt" && "surface-alt",
+    surface === "warm" && "surface-warm",
+    divider && "section-divider",
+    className
+  );
+
   return (
     <Tag
       id={id}
-      className={cn(
-        "container-page scroll-mt-24 py-20 sm:py-28",
-        className
-      )}
+      className={sectionClass}
       initial="hidden"
       whileInView="visible"
       viewport={inViewOnce}
       variants={stagger}
     >
-      {hasHeading && (
-        <div
-          className={cn(
-            "mb-12 max-w-2xl",
-            centered && "mx-auto text-center"
-          )}
-        >
-          {eyebrow && (
-            <motion.p
-              variants={fadeUp}
-              className="mb-3 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary"
-            >
-              {eyebrow}
-            </motion.p>
-          )}
-          {title && (
-            <motion.h2
-              variants={fadeUp}
-              className="text-balance text-fluid-2xl font-semibold text-fg"
-            >
-              {title}
-            </motion.h2>
-          )}
-          {subtitle && (
-            <motion.p
-              variants={fadeUp}
-              className="mt-4 text-pretty text-fluid-lg leading-relaxed text-fg-muted"
-            >
-              {subtitle}
-            </motion.p>
-          )}
-        </div>
-      )}
-      <div className={cn(narrow && "mx-auto max-w-prose")}>{children}</div>
+      <div className={containerClass}>
+        {hasHeading && (
+          <div
+            className={cn(
+              "mb-10 max-w-2xl",
+              centered && "mx-auto text-center",
+              variant === "editorial" && "mb-14 max-w-3xl",
+              variant === "editorial" && centered && "mx-auto text-center"
+            )}
+          >
+            {eyebrow && (
+              <motion.p
+                variants={fadeUp}
+                className="mb-4 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary"
+              >
+                {eyebrow}
+              </motion.p>
+            )}
+            {title && (
+              <motion.h2
+                variants={fadeUp}
+                className={cn(
+                  "text-balance font-semibold text-fg",
+                  variant === "editorial"
+                    ? "font-display text-fluid-3xl font-book tracking-tight"
+                    : "text-fluid-2xl"
+                )}
+              >
+                {title}
+              </motion.h2>
+            )}
+            {subtitle && (
+              <motion.p
+                variants={fadeUp}
+                className="mt-4 text-pretty text-fluid-lg leading-relaxed text-fg-muted"
+              >
+                {subtitle}
+              </motion.p>
+            )}
+          </div>
+        )}
+        {children}
+      </div>
     </Tag>
   );
 }

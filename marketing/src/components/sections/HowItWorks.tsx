@@ -5,13 +5,6 @@ import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { MousePointerClick, Sliders, BookOpen, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/*
-  Scroll-driven three-step explainer. A tall track holds a sticky visual that transforms
-  as you move through Select -> Choose depth -> Learn beside your work. Progress is read
-  from useScroll and mapped to a discrete step, so it degrades gracefully: with reduced
-  motion or no JS the steps simply stack and remain readable.
-*/
-
 const steps = [
   {
     id: "select",
@@ -48,20 +41,25 @@ export function HowItWorks() {
   });
 
   return (
-    <section id="how-it-works" className="scroll-mt-24">
-      <div className="container-page pt-20 sm:pt-28">
-        <p className="mb-3 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary">
+    <section id="how-it-works" className="scroll-mt-24 section-editorial">
+      <div className="container-page">
+        <p className="mb-4 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary">
           How it works
         </p>
-        <h2 className="max-w-2xl text-balance text-fluid-2xl font-semibold text-fg">
-          Three quiet steps, right where you are.
+        <h2 className="max-w-2xl text-balance font-display text-fluid-3xl font-book leading-[1.08] tracking-tight text-fg">
+          Three quiet steps,
+          <br />
+          <span className="text-primary">right where you are.</span>
         </h2>
+        <p className="mt-4 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted">
+          No context switch. No new window. Just select, choose, and learn.
+        </p>
       </div>
 
-      <div ref={trackRef} className="container-page relative lg:h-[280vh]">
+      <div ref={trackRef} className="container-page relative mt-8 lg:h-[280vh]">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           {/* Steps list */}
-          <div className="flex flex-col gap-6 py-12 lg:gap-[70vh] lg:py-[24vh]">
+          <div className="flex flex-col gap-6 py-8 lg:gap-[70vh] lg:py-[24vh]">
             {steps.map((s, i) => {
               const active = i === step;
               return (
@@ -73,12 +71,12 @@ export function HowItWorks() {
                     active ? "opacity-100" : "lg:opacity-40"
                   )}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <span
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-full border text-fluid-sm font-medium transition-colors duration-300",
+                        "flex h-10 w-10 items-center justify-center rounded-full border text-fluid-sm font-medium transition-all duration-300",
                         active
-                          ? "border-primary bg-primary text-on-primary"
+                          ? "border-primary bg-primary text-on-primary shadow-soft"
                           : "border-line text-fg-faint"
                       )}
                     >
@@ -88,7 +86,7 @@ export function HowItWorks() {
                       {s.title}
                     </h3>
                   </div>
-                  <p className="mt-3 max-w-md text-pretty text-fluid-base leading-relaxed text-fg-muted lg:pl-12">
+                  <p className="mt-3 max-w-md text-pretty text-fluid-base leading-relaxed text-fg-muted lg:pl-14">
                     {s.body}
                   </p>
                 </div>
@@ -98,15 +96,15 @@ export function HowItWorks() {
 
           {/* Sticky visual */}
           <div className="hidden lg:block">
-            <div className="sticky top-[18vh] flex h-[64vh] items-center">
+            <div className="sticky top-[20vh] flex h-[60vh] items-center">
               <StepVisual step={step} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile visual, stacked under the steps */}
-      <div className="container-page pb-12 lg:hidden">
+      {/* Mobile visual */}
+      <div className="container-page pb-8 lg:hidden">
         <StepVisual step={step} />
       </div>
     </section>
@@ -117,8 +115,8 @@ function StepVisual({ step }: { step: number }) {
   const StepIcon = steps[step].Icon;
   return (
     <div className="w-full overflow-hidden rounded-card border border-line bg-surface shadow-lift">
-      <div className="flex items-center gap-2 border-b border-line bg-surface-2/70 px-4 py-2.5">
-        <StepIcon size={15} className="text-primary" aria-hidden="true" />
+      <div className="flex items-center gap-2 border-b border-line bg-surface-2/70 px-4 py-3">
+        <StepIcon size={16} className="text-primary" aria-hidden="true" />
         <span className="text-fluid-sm font-medium text-fg">
           {steps[step].title}
         </span>
@@ -194,7 +192,7 @@ function StepVisual({ step }: { step: number }) {
                 <Check size={13} aria-hidden="true" />
               </span>
               <span className="text-fluid-sm text-fg">
-                Saved · reduce understood
+                Saved &middot; reduce understood
               </span>
             </div>
           </div>

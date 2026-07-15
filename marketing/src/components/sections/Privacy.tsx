@@ -35,6 +35,8 @@ export function Privacy() {
       eyebrow="Privacy"
       title="Your code stays yours. By design, not by promise."
       subtitle="Unvibe builds context locally and filters secrets before any request. The whole repository is never uploaded, and cloud analysis is consent-gated per repo."
+      variant="editorial"
+      surface="brand"
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div className="grid gap-3">

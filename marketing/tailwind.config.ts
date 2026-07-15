@@ -34,6 +34,11 @@ const config: Config = {
         sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
       },
+      fontWeight: {
+        book: "400",
+        medium: "500",
+        semibold: "600",
+      },
       fontSize: {
         "fluid-sm": "clamp(0.85rem, 0.82rem + 0.15vw, 0.95rem)",
         "fluid-base": "clamp(0.95rem, 0.9rem + 0.25vw, 1.075rem)",

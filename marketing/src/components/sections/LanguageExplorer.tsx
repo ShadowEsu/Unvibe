@@ -37,10 +37,11 @@ export function LanguageExplorer() {
 
   return (
     <Section
-      id="learn"
-      eyebrow="Learn"
+      id="languages"
+      eyebrow="Languages"
       title="Explain across the languages you actually touch."
       subtitle="Seventeen languages and counting, from the front end to the database. Search for one, or filter by where it lives in your stack."
+      variant="editorial"
     >
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">

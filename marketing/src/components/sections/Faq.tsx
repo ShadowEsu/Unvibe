@@ -26,6 +26,7 @@ export function Faq() {
       title="Straight answers."
       subtitle="What Unvibe does, what it does not, and how it treats your code — no hedging."
       narrow
+      variant="compact"
     >
       <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
         {faqItems.map((item) => {

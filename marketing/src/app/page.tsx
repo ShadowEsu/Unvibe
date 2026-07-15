@@ -1,16 +1,27 @@
 import dynamic from "next/dynamic";
-import { HeroVideo } from "@/components/sections/HeroVideo";
 import { Hero } from "@/components/sections/Hero";
-import { BrandLogos } from "@/components/BrandLogos";
-import { OpeningStrip } from "@/components/sections/OpeningStrip";
 import { Problem } from "@/components/sections/Problem";
 import { HowItWorks } from "@/components/sections/HowItWorks";
+import { WorksWhere } from "@/components/sections/WorksWhere";
 import { DepthDemo } from "@/components/sections/DepthDemo";
+import { ProjectMap } from "@/components/sections/ProjectMap";
+import { StudyFromProjects } from "@/components/sections/StudyFromProjects";
+import { LearningEngine } from "@/components/sections/LearningEngine";
 import { Privacy } from "@/components/sections/Privacy";
 import { Waitlist } from "@/components/sections/Waitlist";
 import { Faq } from "@/components/sections/Faq";
 import { FinalCta } from "@/components/sections/FinalCta";
 import { FaqJsonLd } from "@/components/JsonLd";
+
+const LanguageExplorer = dynamic(
+  () => import("@/components/sections/LanguageExplorer").then((m) => m.LanguageExplorer),
+  { loading: () => <SectionSkeleton /> }
+);
+
+const ProductGallery = dynamic(
+  () => import("@/components/sections/ProductGallery").then((m) => m.ProductGallery),
+  { loading: () => <SectionSkeleton /> }
+);
 
 const Assessment = dynamic(
   () => import("@/components/sections/Assessment").then((m) => m.Assessment),
@@ -18,21 +29,25 @@ const Assessment = dynamic(
 );
 
 /**
- * Tight launch page for investors and builders.
- * Video + product images + logos first, then problem, mechanism, proof, waitlist.
+ * Narrative-driven launch page.
+ * Each section builds toward the next, demonstrating the product
+ * before asking for a signup.
  */
 export default function Home() {
   return (
     <>
       <FaqJsonLd />
-      <HeroVideo />
       <Hero />
-      <BrandLogos />
-      <OpeningStrip />
       <Problem />
       <HowItWorks />
+      <WorksWhere />
       <DepthDemo />
+      <ProjectMap />
+      <StudyFromProjects />
+      <LanguageExplorer />
+      <LearningEngine />
       <Assessment />
+      <ProductGallery />
       <Privacy />
       <Waitlist />
       <Faq />

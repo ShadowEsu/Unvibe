@@ -39,9 +39,11 @@ const concepts = [
 export function LearningEngine() {
   return (
     <Section
+      id="learning-engine"
       eyebrow="The learning engine"
       title="It notices what you understand, not just what you clicked."
       subtitle="Unvibe reads quiet signals from how you engage and turns them into a concept profile — so it can build on what stuck and gently revisit what did not."
+      variant="editorial"
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div className="grid gap-3 sm:grid-cols-2">

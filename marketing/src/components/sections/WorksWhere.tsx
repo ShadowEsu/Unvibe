@@ -67,6 +67,7 @@ export function WorksWhere() {
       eyebrow="Works where you do"
       title="One companion, every place code shows up."
       subtitle="Because Unvibe reads what you select on your Mac, it meets you in the tools you already use instead of trapping you in one editor."
+      variant="editorial"
     >
       <div
         role="tablist"

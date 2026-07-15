@@ -26,6 +26,7 @@ export function DepthDemo() {
       eyebrow="One snippet, five depths"
       title="From first day to staff engineer, on the same line of code."
       subtitle="Drag the depth from New to Expert and watch the explanation change. Nothing about the code moves — only how much it assumes you already know."
+      variant="editorial"
     >
       {/* Example selector */}
       <div className="mb-4 flex flex-wrap gap-1.5">
