@@ -61,7 +61,7 @@
   gap: 10px;
   margin-bottom: 28px;
   opacity: 0;
-  animation: aFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.02s both;
+  animation: aFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.02s both;
 }
 
 .activate-brand__mark {
@@ -88,7 +88,7 @@
   box-shadow: var(--a-shadow);
   padding: 32px 28px 28px;
   opacity: 0;
-  animation: aFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+  animation: aFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both;
 }
 
 .activate-kicker {
@@ -143,12 +143,12 @@
   border-radius: 12px;
   background: color-mix(in srgb, var(--a-bg) 65%, transparent);
   opacity: 0;
-  animation: aFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: aFadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.activate-step:nth-child(1) { animation-delay: 0.16s; }
-.activate-step:nth-child(2) { animation-delay: 0.22s; }
-.activate-step:nth-child(3) { animation-delay: 0.28s; }
+.activate-step:nth-child(1) { animation-delay: 0.06s; }
+.activate-step:nth-child(2) { animation-delay: 0.1s; }
+.activate-step:nth-child(3) { animation-delay: 0.14s; }
 
 .activate-step__n {
   flex: 0 0 22px;
@@ -272,7 +272,7 @@
   text-align: center;
   padding: 12px 4px 4px;
   opacity: 0;
-  animation: aFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: aFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .activate-success__icon {
@@ -307,12 +307,12 @@
   color: var(--a-faint);
   text-align: center;
   opacity: 0;
-  animation: aFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+  animation: aFadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
 }
 
 .activate-section {
   opacity: 0;
-  animation: aFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  animation: aFadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
 .activate-divider {
