@@ -1,0 +1,204 @@
+{
+  "vendor": {
+    "opencode": {
+      "version": "0.1.0"
+    }
+  },
+  "model": {
+    "default": "deepseek/deepseek-v4-flash",
+    "router": {
+      "architect": "deepseek/deepseek-v4-flash",
+      "implementer": "deepseek/deepseek-v4-flash",
+      "test-engineer": "deepseek/deepseek-chat",
+      "security-reviewer": "deepseek/deepseek-v4-flash",
+      "product-designer": "deepseek/deepseek-v4-flash",
+      "researcher": "deepseek/deepseek-chat",
+      "integration-reviewer": "deepseek/deepseek-v4-flash"
+    }
+  },
+  "skills": [
+    ".opencode/skills",
+    ".agents/skills"
+  ],
+  "agent": {
+    "architect": {
+      "prompt": ".opencode/agents/architect.md",
+      "skills": [
+        "requirements-discovery",
+        "product-brainstorming",
+        "architecture-analysis",
+        "implementation-planning",
+        "current-documentation-research"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "bash": { "allow": ["npm run typecheck", "npm test", "npm run build", "git *", "cat *", "ls *"] },
+        "edit": false,
+        "write": false,
+        "apply_patch": false
+      }
+    },
+    "implementer": {
+      "prompt": ".opencode/agents/implementer.md",
+      "skills": [
+        "implementation-planning",
+        "test-driven-development",
+        "frontend-implementation",
+        "desktop-electron-development",
+        "backend-and-sync",
+        "verification-before-completion"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "edit": true,
+        "write": true,
+        "apply_patch": true,
+        "bash": { "allow": ["npm run typecheck", "npm test", "npm run build", "git add *", "git commit *", "git diff *"] }
+      }
+    },
+    "test-engineer": {
+      "prompt": ".opencode/agents/test-engineer.md",
+      "skills": [
+        "test-driven-development",
+        "systematic-debugging",
+        "performance-investigation",
+        "accessibility-review",
+        "verification-before-completion"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "edit": { "allow": ["*.test.ts", "*.test.tsx", "*.spec.ts", "test/**", "__tests__/**"] },
+        "write": { "allow": ["*.test.ts", "*.test.tsx", "*.spec.ts", "test/**", "__tests__/**"] },
+        "bash": { "allow": ["npm run typecheck", "npm test", "npm run build", "node --test *"] }
+      }
+    },
+    "security-reviewer": {
+      "prompt": ".opencode/agents/security-reviewer.md",
+      "skills": [
+        "security-and-privacy-review",
+        "backend-and-sync",
+        "code-review"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "edit": false,
+        "write": false,
+        "apply_patch": false,
+        "bash": { "allow": ["npm run typecheck", "npm test", "git diff *", "cat *", "ls *"] }
+      }
+    },
+    "product-designer": {
+      "prompt": ".opencode/agents/product-designer.md",
+      "skills": [
+        "product-design-critique",
+        "accessibility-review",
+        "frontend-implementation"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "edit": { "allow": ["*.css", "*.tsx", "*.html"] },
+        "write": { "allow": ["*.css", "*.tsx", "*.html", "*.md"] },
+        "bash": { "allow": ["npm run typecheck", "npm run build", "cat *", "ls *"] }
+      }
+    },
+    "researcher": {
+      "prompt": ".opencode/agents/researcher.md",
+      "skills": [
+        "current-documentation-research",
+        "competitor-research"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "edit": false,
+        "write": { "allow": ["docs/research/**", "docs/agent-system/**"] },
+        "bash": { "allow": ["cat *", "ls *", "git log *"] }
+      }
+    },
+    "integration-reviewer": {
+      "prompt": ".opencode/agents/integration-reviewer.md",
+      "skills": [
+        "code-review",
+        "verification-before-completion",
+        "pull-request-handoff",
+        "integration-review"
+      ],
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "webfetch": true,
+        "skill": true,
+        "todowrite": true,
+        "edit": false,
+        "write": { "allow": ["docs/**"] },
+        "bash": { "allow": ["npm run typecheck", "npm test", "npm run build", "git *", "cat *", "ls *"] }
+      }
+    }
+  },
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      }
+    },
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": true,
+      "oauth": true,
+      "headers": {
+        "X-MCP-Readonly": "false",
+        "X-MCP-Toolsets": "context,repos,issues,pull_requests,users"
+      }
+    }
+  },
+  "permissions": {
+    "tools": {
+      "read": { "default": true },
+      "grep": { "default": true },
+      "glob": { "default": true },
+      "webfetch": { "default": true },
+      "skill": { "default": true },
+      "todowrite": { "default": true },
+      "bash": {
+        "default": { "allow": ["npm run typecheck", "npm test", "npm run build", "npm run lint", "cat *", "ls *", "git status", "git diff", "git log *"] }
+      },
+      "edit": { "default": false },
+      "write": { "default": false },
+      "apply_patch": { "default": false }
+    }
+  }
+}
