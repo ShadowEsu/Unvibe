@@ -4,9 +4,9 @@ import { withSessionCookie } from '@/lib/auth';
 export const runtime = 'nodejs';
 
 /**
- * Sign in with email. Creates a session cookie for the web dashboard.
- * In dev, creates an account if one doesn't exist (passwordless convenience).
- * Production should gate behind UNCODE_ALLOW_DEV_EMAIL_AUTH or use device flow.
+ * Create a new account with email. In dev MemoryStore this is passwordless;
+ * in production the Store's signUp method enforces the account-not-exists check.
+ * Sets a session cookie for the web dashboard on success.
  */
 export async function POST(req: Request): Promise<Response> {
   const enabled = process.env.NODE_ENV !== 'production' || process.env.UNCODE_ALLOW_DEV_EMAIL_AUTH === 'true';
@@ -18,6 +18,9 @@ export async function POST(req: Request): Promise<Response> {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return Response.json({ error: 'a valid email is required' }, { status: 400 });
   }
-  const account = await getStore().signIn(email);
-  return withSessionCookie(Response.json(account), account.token, req);
+  const result = await getStore().signUp(email);
+  if (!result) {
+    return Response.json({ error: 'An account with this email already exists. Sign in instead.' }, { status: 409 });
+  }
+  return withSessionCookie(Response.json(result), result.token, req);
 }

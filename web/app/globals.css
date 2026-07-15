@@ -77,6 +77,30 @@ a {
 .nav a:hover {
   color: var(--fg);
 }
+.nav__spacer {
+  flex: 1;
+}
+.nav__signup {
+  background: var(--fill-active);
+  color: var(--on-fill) !important;
+  border-radius: 6px;
+  padding: 5px 12px !important;
+  font-weight: 500;
+}
+.nav-btn {
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 14px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.nav-btn:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
 
 h1 {
   font-size: 22px;
@@ -179,4 +203,31 @@ h1 {
 }
 .mono {
   font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ---- auth pages (login / signup) ---- */
+.auth-page {
+  max-width: 400px;
+  margin: 48px auto;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-error {
+  color: #c62828;
+  font-size: 14px;
+  margin: 4px 0;
+}
+.auth-alt {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--fg-muted);
+  text-align: center;
+}
+.auth-alt a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

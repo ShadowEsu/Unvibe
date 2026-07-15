@@ -132,6 +132,10 @@ function renderRich(raw: string, streaming: boolean): ReactNode[] {
 
 /* ---------------------------------- app ---------------------------------- */
 
+function prettyAccel(accel: string): string {
+  return accel.replace('CommandOrControl', '⌘').replace('Control', '⌃').replace('Shift', '⇧').replace('Alt', '⌥');
+}
+
 function Widget() {
   const [phase, setPhase] = useState<Phase>('boot');
   const [meta, setMeta] = useState<{ sourceApp?: string | null; lines?: number; language?: string }>({});
@@ -144,6 +148,7 @@ function Widget() {
   const [collapsed, setCollapsed] = useState(false);
   const [ask, setAsk] = useState('');
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [shortcut, setShortcut] = useState('⌘U');
   const bodyRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef(level);
   levelRef.current = level;
@@ -200,6 +205,7 @@ function Widget() {
       window.unvibe.collapse(v);
     });
     window.unvibe.widgetReady();
+    window.unvibe.appInfo().then((i) => setShortcut(prettyAccel(i.shortcut)));
   }, []);
 
   // Autoscroll while streaming.
@@ -254,13 +260,13 @@ function Widget() {
     <div className="card">
       <div className="head">
         {src}
-        <button className={pinned ? 'on' : ''} title="Pin above everything" onClick={() => { setPinned(!pinned); window.unvibe.pin(!pinned); }}>
+        <button className={pinned ? 'on' : ''} aria-label="Pin above everything" onClick={() => { setPinned(!pinned); window.unvibe.pin(!pinned); }}>
           ⌖
         </button>
-        <button title="Collapse (Esc)" onClick={toggleCollapse}>
+        <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
           {collapsed ? '▾' : '▴'}
         </button>
-        <button title="Close (⌘W)" onClick={() => window.unvibe.closeWidget()}>
+        <button aria-label="Close widget" onClick={() => window.unvibe.closeWidget()}>
           ✕
         </button>
       </div>
@@ -300,7 +306,7 @@ function Widget() {
             <div className="state">
               <div className="big">Nothing captured</div>
               <div className="sub">
-                Select some code first, then press ⌘U. Or explain what you copied last:
+                Select some code first, then press {shortcut}. Or explain what you copied last:
               </div>
               <button className="btn" onClick={() => window.unvibe.useClipboard({ level })}>
                 Use clipboard contents
@@ -353,7 +359,7 @@ function Widget() {
           )}
 
           {(phase === 'streaming' || phase === 'done') && !quiz && (
-            <div className="body" ref={bodyRef}>
+            <div className="body" ref={bodyRef} aria-live="polite" aria-atomic="false">
               {text ? renderRich(text, phase === 'streaming') : <div className="skeleton" aria-label="Generating explanation"><i /><i /><i /></div>}
             </div>
           )}

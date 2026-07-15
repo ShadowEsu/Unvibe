@@ -36,6 +36,9 @@ const api = {
   promptAccessibility: () => ipcRenderer.invoke('perms:promptAccessibility'),
   openAccessibility: () => ipcRenderer.invoke('perms:openAccessibility'),
 
+  // privacy
+  openPrivacy: () => ipcRenderer.invoke('app:openPrivacy'),
+
   // onboarding
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
@@ -43,6 +46,7 @@ const api = {
   // account
   account: () => ipcRenderer.invoke('account:get'),
   signIn: (email: string) => ipcRenderer.invoke('account:signIn', email),
+  signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
   onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
   signOut: () => ipcRenderer.invoke('account:signOut'),

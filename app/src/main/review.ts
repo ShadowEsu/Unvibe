@@ -13,25 +13,17 @@ import { BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
 import { flush } from './sync';
 
-export interface WidgetEvent {
-  type: 'init' | 'status' | 'consent' | 'blocked' | 'token' | 'done' | 'error' | 'cancelled' | 'question' | 'graded';
-  text?: string;
-  message?: string;
-  model?: string;
-  mock?: boolean;
-  findings?: SecretFinding[];
-  sourceApp?: string | null;
-  lines?: number;
-  language?: string;
-  hasCode?: boolean;
-  // comprehension
-  question?: string;
-  options?: string[];
-  conceptLabel?: string;
-  correct?: boolean;
-  answerIndex?: number;
-  rationale?: string;
-}
+export type WidgetEvent =
+  | { type: 'init'; hasCode: boolean; sourceApp?: string | null; lines?: number; language?: string }
+  | { type: 'status'; message: string }
+  | { type: 'consent'; findings: SecretFinding[] }
+  | { type: 'blocked'; findings: SecretFinding[] }
+  | { type: 'token'; text: string }
+  | { type: 'done'; model: string; mock: boolean }
+  | { type: 'error'; message: string }
+  | { type: 'cancelled' }
+  | { type: 'question'; question: string; options: string[]; conceptLabel: string }
+  | { type: 'graded'; correct: boolean; answerIndex: number; rationale: string };
 
 export interface ReviewSession {
   reviewId: string;

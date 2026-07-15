@@ -150,17 +150,44 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [mode, setMode] = useState<'device' | 'email'>('device');
   useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
-  const submit = async () => {
+  const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; error?: string };
     if (r.ok && r.userCode) setCode(r.userCode); else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
+  const submitEmail = async (action: 'signIn' | 'signUp') => {
+    setBusy(true); setErr(''); setCode('');
+    const fn = action === 'signIn' ? window.unvibe.signIn : window.unvibe.signUp;
+    const r = (await fn(email.trim())) as { ok: boolean; email?: string; error?: string };
+    setBusy(false);
+    if (r.ok && r.email) onDone(r.email); else setErr(r.error ?? 'Could not connect.');
+  };
   return (
     <div className="signin">
-      <button className="field-btn" disabled={busy} onClick={submit}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
-      {err && <div className="field-err">{err}</div>}
-      <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
+      <div className="signin__tabs">
+        <button className={`signin__tab${mode === 'device' ? ' on' : ''}`} onClick={() => setMode('device')}>Browser</button>
+        <button className={`signin__tab${mode === 'email' ? ' on' : ''}`} onClick={() => setMode('email')}>Email</button>
+      </div>
+      {mode === 'device' ? (
+        <>
+          <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
+          {err && <div className="field-err">{err}</div>}
+          <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
+        </>
+      ) : (
+        <>
+          <input className="field" type="email" autoComplete="email" placeholder="you@school.edu" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address" />
+          {err && <div className="field-err">{err}</div>}
+          <div className="signin__email-actions">
+            <button className="field-btn" disabled={busy || !email.trim()} onClick={() => submitEmail('signIn')}>{busy ? 'Connecting…' : 'Sign in'}</button>
+            <button className="field-btn ghost" disabled={busy || !email.trim()} onClick={() => submitEmail('signUp')}>{busy ? 'Connecting…' : 'Create account'}</button>
+          </div>
+          <div className="field-note">Enter your email to sign in or create an account. No password needed — we send a verification link.</div>
+        </>
+      )}
     </div>
   );
 }
@@ -319,13 +346,18 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
 function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => void; onSkip: () => void }) {
   return (
     <div className="login">
+      <div className="login__bg" />
       <FadeIn animKey="login" stagger className="login__card">
-        <div className="login__mark"><LogoMark size={54} stroke={1.7} /></div>
-        <div className="login__brand">unvibe</div>
+        <div className="login__mark"><LogoMark size={48} stroke={1.6} /></div>
+        <div className="login__brand">Unvibe</div>
         <h2 className="login__tag">Understand everything you ship.</h2>
-        <p className="login__sub">Sign in to sync your learning across devices — or keep everything on this Mac for now.</p>
+        <div className="login__features">
+          <div className="login__feature"><span className="lf-icon">⌘</span><span>Select code anywhere</span></div>
+          <div className="login__feature"><span className="lf-icon">▸</span><span>Press your shortcut</span></div>
+          <div className="login__feature"><span className="lf-icon">✓</span><span>Understand and keep it</span></div>
+        </div>
         <SignInForm onDone={onSignedIn} />
-        <button className="login__skip" onClick={onSkip}>Keep it local for now</button>
+        <button className="login__skip" onClick={onSkip}>Keep it local for now →</button>
       </FadeIn>
     </div>
   );
@@ -407,7 +439,7 @@ function Progress({ profile }: { profile: Profile | null }) {
   );
 }
 
-function Explainer({ page }: { page: PageDef }) {
+function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
   return (
     <>
       <div className="topline"><h1>{page.id}<span className="d2">fills in as you review</span></h1></div>
@@ -417,7 +449,11 @@ function Explainer({ page }: { page: PageDef }) {
           <div className="feature" key={f.t}><div className="fh"><Icon d={f.icon} /><span className="t">{f.t}</span></div><div className="d">{f.d}</div></div>
         ))}
       </div>
-      <div className="stub"><b>Nothing here yet.</b> This is where your {page.id.toLowerCase()} will live. Review some code with <b>⌘U</b> and it starts filling in on its own.</div>
+      <div className="stub">
+        <div className="stub__icon"><svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v14 M3 10h14 M6 6l8 8 M14 6l-8 8" /></svg></div>
+        <div className="stub__text"><b>Your {page.id.toLowerCase()} will appear here.</b> Review code with <b>{shortcut}</b> and each concept, track, and highlight builds itself from what you learn.</div>
+        <button className="stub__cta" onClick={() => window.unvibe.companionReview()}>Review some code</button>
+      </div>
     </>
   );
 }
@@ -490,7 +526,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   }, [onSettings]);
 
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="mside">
           <div className="mh">SETTINGS</div>
@@ -553,6 +589,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <>
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your Mac. Always on.</div></div><button className="act" disabled>On</button></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
+              <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
             </>
           )}
 
@@ -639,7 +676,7 @@ function App() {
             <FadeIn animKey={page} stagger>
               {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
                 : page === 'Progress' ? <Progress profile={profile} />
-                : <Explainer page={PAGES[page]} />}
+                : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>
         </main>
@@ -650,7 +687,7 @@ function App() {
           onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} />
       )}
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
     </>
   );
 }

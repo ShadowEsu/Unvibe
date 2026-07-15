@@ -36,7 +36,12 @@ export interface ReviewRequestPayload {
   variant?: 'default' | 'different';
 }
 
-/** Server -> app streaming events (one JSON object per SSE `data:` line). */
+/**
+ * Server -> app streaming events (one JSON object per SSE `data:` line).
+ * This is the WIRE format from the backend. The app also generates local
+ * events (consent, blocked, status, question, graded) — those are defined
+ * in WidgetEvent (review.ts) and are never part of the SSE stream.
+ */
 export type StreamEvent =
   | { type: 'token'; text: string }
   | { type: 'done'; model: string; mock: boolean }

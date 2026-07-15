@@ -95,6 +95,21 @@ export class SupabaseStore implements Store {
     return { token, userId, email: normalized };
   }
 
+  async signUp(email: string): Promise<Account | null> {
+    const normalized = email.trim().toLowerCase();
+    const { data: existing } = await this.db
+      .from('users')
+      .select('id')
+      .eq('email', normalized)
+      .maybeSingle();
+    if (existing) return null;
+    const userId = randomUUID();
+    await this.db.from('users').insert({ id: userId, email: normalized });
+    const token = randomUUID();
+    await this.db.from('tokens').insert({ token, user_id: userId });
+    return { token, userId, email: normalized };
+  }
+
   async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
     const { data } = await this.db
       .from('users')

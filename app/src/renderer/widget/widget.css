@@ -39,8 +39,8 @@ body {
   border-radius: 14px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
   overflow: hidden;
+  transition: opacity 0.35s ease, border-color 0.35s ease, background 0.35s ease;
 }
-
 /* ---- header ---- */
 .head {
   -webkit-app-region: drag;
@@ -181,7 +181,6 @@ code.inline {
 }
 .chip:hover { background: var(--chip-bg); }
 .chip:disabled { color: var(--muted); cursor: default; }
-.chip .soon { font-size: 9px; color: var(--muted); margin-left: 4px; }
 .askrow { display: flex; gap: 6px; }
 .askrow input {
   flex: 1;

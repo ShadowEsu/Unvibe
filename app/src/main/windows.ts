@@ -6,6 +6,7 @@ const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
+let widgetCount = 0;
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -120,7 +121,7 @@ export function createWidget(): BrowserWindow {
         y: Math.min(Math.max(cursor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
       };
   // Nudge so a second widget doesn't perfectly overlap the first.
-  const stagger = BrowserWindow.getAllWindows().length * 26;
+  const stagger = widgetCount++ * 26;
   const bounds = clampToVisibleArea({
     ...initialBounds,
     x: initialBounds.x + (saved ? stagger : 0),

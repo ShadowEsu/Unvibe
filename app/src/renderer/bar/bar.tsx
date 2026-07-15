@@ -2,14 +2,20 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 
+function prettyAccel(accel: string): string {
+  return accel.replace('CommandOrControl', '⌘').replace('Control', '⌃').replace('Shift', '⇧').replace('Alt', '⌥');
+}
+
 function Bar() {
   const [note, setNote] = useState('');
+  const [shortcut, setShortcut] = useState('⌘U');
 
   useEffect(() => {
     window.unvibe.onBarNotify((msg) => {
       setNote(msg);
       setTimeout(() => setNote(''), 5000);
     });
+    window.unvibe.appInfo().then((i) => setShortcut(prettyAccel(i.shortcut)));
   }, []);
 
   return (
@@ -22,13 +28,13 @@ function Bar() {
           <>
             <span className="brand">Unvibe</span>
             <span className="hint">
-              Review selection<span className="kbd">⌘U</span>
+              Review selection<span className="kbd">{shortcut}</span>
             </span>
           </>
         )}
       </span>
-      <button title="Review selection" onClick={() => window.unvibe.reviewSelection()}>▸</button>
-      <button title="Open Unvibe" onClick={() => window.unvibe.openCompanion()}>⌂</button>
+      <button aria-label="Review selection" onClick={() => window.unvibe.reviewSelection()}>▸</button>
+      <button aria-label="Open Unvibe" onClick={() => window.unvibe.openCompanion()}>⌂</button>
     </div>
   );
 }

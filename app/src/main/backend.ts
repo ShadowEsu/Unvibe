@@ -94,6 +94,17 @@ export async function signIn(email: string): Promise<Account> {
   return json<Account>(res);
 }
 
+export async function signUp(email: string): Promise<Account> {
+  const res = await request(`${BACKEND}/api/v1/auth/signup`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (res.status === 400) throw new Error('Please enter a valid email address.');
+  if (res.status === 409) throw new Error('An account with this email already exists. Sign in instead.');
+  return json<Account>(res);
+}
+
 export async function deleteAccount(token: string): Promise<void> {
   const res = await request(`${BACKEND}/api/v1/account`, {
     method: 'DELETE',

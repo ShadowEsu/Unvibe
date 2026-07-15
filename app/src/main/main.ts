@@ -21,6 +21,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { createBar, createCompanion, createWidget, positionBar } from './windows';
 import { captureSelection, frontmostApp, startFrontmostWatch } from './selection';
+import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
   runReview,
@@ -32,7 +33,7 @@ import {
 import { store } from './store';
 import { settings, type Settings } from './settings';
 import { flush } from './sync';
-import { signIn, deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo } from './backend';
+import { signIn, signUp, deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo } from './backend';
 import { setBar, notify } from './notify';
 import { computeProfile, computeFeed } from '../core/learning';
 
@@ -175,13 +176,14 @@ app.whenReady().then(() => {
     const session = sessions.get(e.sender.id);
     if (win && session) void runReview(win, session, opts);
   });
-  ipcMain.on('widget:useClipboard', (e) => {
+  ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
     const session = sessions.get(e.sender.id);
     if (!win || !session) return;
     const text = clipboard.readText();
     session.code = text.length > 0 ? text : null;
     session.recorded = false;
+    if (opts?.level) session.level = opts.level;
     initWidget(win, session);
   });
   ipcMain.on('widget:cancel', (e) => {
@@ -249,6 +251,12 @@ app.whenReady().then(() => {
     return { settings: settings().all() };
   });
 
+  // --- external links ---
+  ipcMain.handle('app:openPrivacy', () => {
+    void shell.openExternal('https://unvibe.app/privacy');
+    return { ok: true };
+  });
+
   // --- permissions ---
   ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));
   ipcMain.handle('perms:promptAccessibility', () => ({ granted: accessibilityGranted(true) }));
@@ -271,6 +279,16 @@ app.whenReady().then(() => {
       return { ok: true, email: acct.email };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-in failed.' };
+    }
+  });
+  ipcMain.handle('account:signUp', async (_e, email: string) => {
+    try {
+      const acct = await signUp(email);
+      store().setAccount(acct.userId, acct.email, acct.token);
+      void flush();
+      return { ok: true, email: acct.email };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed.' };
     }
   });
   ipcMain.handle('account:startDevice', async () => {

@@ -92,6 +92,17 @@ export class MemoryStore implements Store {
     return { token, userId, email: normalized };
   }
 
+  async signUp(email: string): Promise<Account | null> {
+    const normalized = email.trim().toLowerCase();
+    const existing = [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0];
+    if (existing) return null;
+    const userId = randomUUID();
+    this.data.users.set(userId, { email: normalized });
+    const token = randomUUID();
+    this.data.tokens.set(token, userId);
+    return { token, userId, email: normalized };
+  }
+
   async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
     return { userId, email: this.data.users.get(userId)?.email };
   }

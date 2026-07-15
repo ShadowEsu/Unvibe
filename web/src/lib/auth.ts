@@ -18,3 +18,16 @@ export function baseUrlFrom(req: Request): string {
 export function unauthorized(): Response {
   return Response.json({ error: 'unauthorized' }, { status: 401 });
 }
+
+/** Set the session cookie on a response. Uses HttpOnly for security, no Secure in local dev. */
+export function withSessionCookie(res: Response, token: string, req: Request): Response {
+  const isHttps = new URL(req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';
+  const cookie =
+    `uncode_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000` +
+    (isHttps ? '; Secure' : '');
+  return new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: { ...Object.fromEntries(res.headers), 'set-cookie': cookie },
+  });
+}
