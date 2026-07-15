@@ -1,0 +1,254 @@
+# Unvibe Autonomous Night Lab
+#
+# Runs 7 missions overnight (LA time, PDT offsets). Each mission inspects a
+# different part of the repository, runs appropriate checks, and creates PRs
+# for safe, low-risk improvements.
+#
+# Model configuration
+#   Use GitHub Variables (Settings → Secrets and variables → Variables) to set:
+#     OPENCODE_NIGHT_MODEL   — main work model (default: deepseek/deepseek-chat)
+#     OPENCODE_REVIEW_MODEL  — review/architecture model (default: deepseek/deepseek-chat)
+#     OPENCODE_SMALL_MODEL   — cheap model for routine work (default: deepseek/deepseek-chat)
+#
+# Emergency disable
+#   Set repository variable NIGHT_LAB_ENABLED to anything other than "true" to
+#   prevent scheduled runs. Manual workflow_dispatch still works.
+
+name: Unvibe Autonomous Night Lab
+
+on:
+  schedule:
+    # LA (PDT = UTC-7). DST: when clocks spring forward (March) these shift 1h
+    # earlier UTC; when they fall back (November) they shift 1h later UTC.
+    # The UTC times below are correct for PDT (summer). For PST (winter),
+    # all times shift +1h UTC.
+    - cron: "17 10 * * *"   # 03:17 LA (PDT) — repository-health
+    - cron: "17 11 * * *"   # 04:17 LA (PDT) — backend-and-sync
+    - cron: "17 12 * * *"   # 05:17 LA (PDT) — desktop-overlay
+    - cron: "17 13 * * *"   # 06:17 LA (PDT) — ai-learning-engine
+    - cron: "17 14 * * *"   # 07:17 LA (PDT) — competitor-research-and-v2
+    - cron: "17 15 * * *"   # 08:17 LA (PDT) — product-design-and-accessibility
+    - cron: "17 16 * * *"   # 09:17 LA (PDT) — integration-review-and-morning-summary
+  workflow_dispatch:
+    inputs:
+      mission:
+        description: Night lab mission to run
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - repository-health
+          - backend-and-sync
+          - desktop-overlay
+          - ai-learning-engine
+          - competitor-research-and-v2
+          - product-design-and-accessibility
+          - integration-review-and-morning-summary
+
+# Prevent overlapping runs. Only one night-lab run at a time.
+concurrency:
+  group: unvibe-night-lab
+  cancel-in-progress: false
+
+# Minimum permissions for read-only work; write permissions granted only when
+# the mission creates a PR.
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
+  issues: read
+
+env:
+  # Model configuration — override via GitHub Variables
+  OPENCODE_NIGHT_MODEL: ${{ vars.OPENCODE_NIGHT_MODEL || 'deepseek/deepseek-chat' }}
+  OPENCODE_REVIEW_MODEL: ${{ vars.OPENCODE_REVIEW_MODEL || 'deepseek/deepseek-chat' }}
+  OPENCODE_SMALL_MODEL: ${{ vars.OPENCODE_SMALL_MODEL || 'deepseek/deepseek-chat' }}
+
+jobs:
+  mission-router:
+    name: Route mission
+    runs-on: ubuntu-latest
+    outputs:
+      mission: ${{ steps.determine-mission.outputs.mission }}
+      enabled: ${{ steps.check-enabled.outputs.enabled }}
+    steps:
+      - name: Check emergency disable
+        id: check-enabled
+        run: |
+          ENABLED="${{ vars.NIGHT_LAB_ENABLED }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual dispatch always allowed
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ "${ENABLED}" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Night lab is disabled (NIGHT_LAB_ENABLED != true). Skipping."
+          fi
+
+      - name: Determine mission
+        id: determine-mission
+        if: steps.check-enabled.outputs.enabled == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mission=${{ github.event.inputs.mission }}" >> "$GITHUB_OUTPUT"
+          else
+            HOUR=$(date -u +%H)
+            case "$HOUR" in
+              10) echo "mission=repository-health" ;;
+              11) echo "mission=backend-and-sync" ;;
+              12) echo "mission=desktop-overlay" ;;
+              13) echo "mission=ai-learning-engine" ;;
+              14) echo "mission=competitor-research-and-v2" ;;
+              15) echo "mission=product-design-and-accessibility" ;;
+              16) echo "mission=integration-review-and-morning-summary" ;;
+              *)  echo "mission=auto" ;;
+            esac >> "$GITHUB_OUTPUT"
+          fi
+
+  opencode-run:
+    name: ${{ needs.mission-router.outputs.mission }}
+    needs: [mission-router]
+    if: needs.mission-router.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm install
+        working-directory: .
+
+      - name: Run OpenCode Night Lab
+        uses: anomalyco/opencode/github@latest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          model: ${{ env.OPENCODE_NIGHT_MODEL }}
+          agent: build
+          use_github_token: true
+          prompt: |
+            Load the "unvibe-night-lab" skill.
+
+            You are running the autonomous Night Lab for Unvibe. Your assigned mission is:
+
+            **${{ needs.mission-router.outputs.mission }}**
+
+            ## Mission context
+            - Repository root: /github/workspace
+            - Default branch: main
+            - Current time: ${{ github.event.repository.updated_at }}
+            - Models available:
+              - Night model: ${{ env.OPENCODE_NIGHT_MODEL }}
+              - Review model: ${{ env.OPENCODE_REVIEW_MODEL }}
+              - Small model: ${{ env.OPENCODE_SMALL_MODEL }}
+
+            ## Branching rules
+            - Create a branch named `opencode/nightly-${{ needs.mission-router.outputs.mission }}-<short-description>`
+            - Open a PR targeting `main`
+            - Never merge
+            - Never push to `main` directly
+
+            ## Before you start
+            1. Check whether an open PR already exists for this mission tonight
+            2. If so, review it and update the morning summary instead of duplicating
+            3. Check `NIGHT_LAB_ALLOW_CODE_CHANGES` and `NIGHT_LAB_ALLOW_RESEARCH` (repo variables)
+            4. Check `NIGHT_LAB_MAX_RISK` (values: low, medium; default: low)
+            5. Respect these limits — do not exceed them
+
+            ## Mission-specific instructions
+
+            ### repository-health
+            - Install all dependencies (npm install in each package)
+            - Run `npm run typecheck` in each package
+            - Run `npm test` in app/, extension/, marketing/
+            - Run `npm run build` in app/, web/, marketing/
+            - Inspect `git log --oneline -10` for recent changes
+            - Examine build warnings, skipped tests, unhandled errors
+            - If everything passes, update the health report in docs/automation/nightly/
+            - If a safe, low-risk defect is found, fix it and add one regression test
+            - Do not perform broad dependency upgrades
+            - Do not manufacture changes when everything passes
+
+            ### backend-and-sync
+            - Inspect web/src/ for auth, account, sync, storage
+            - Inspect app/src/main/ for backend client, store, sync
+            - Verify private keys/supabase keys never reach renderer code
+            - Check retry, backoff, idempotency logic
+            - Static inspection only (no database credentials available)
+            - Improve test fixtures or document manual staging verification steps
+            - Never run destructive production database commands
+
+            ### desktop-overlay
+            - Inspect app/src/main/ (Electron main process, IPC, windows)
+            - Inspect app/src/preload/ (preload bridge)
+            - Inspect app/src/renderer/ (widget, bar, companion components)
+            - Test cross-platform logic (geometry, state, settings)
+            - macOS behavior must be labelled "unverified on Linux runner"
+            - Fix contained low-risk issues only
+            - Do not perform a full overlay redesign
+
+            ### ai-learning-engine
+            - Inspect app/src/core/ (protocol, learning, secret filter, SSE)
+            - Inspect web/src/ai/ (prompt templates, providers, streaming)
+            - Review explanation levels, comprehension questions
+            - Review concept extraction and mastery logic
+            - Improve one measurable behavior per run
+            - Never claim Unvibe knows exactly what a user understands
+            - Never use arbitrary hardcoded mastery percentages
+            - Label mock-AI results clearly
+
+            ### competitor-research-and-v2
+            - Choose one focused research question (code explanation tools, desktop overlays, developer education, etc.)
+            - Research using public sources only
+            - Write report to docs/research/automated/YYYY-MM-DD-<topic>.md
+            - Follow the research template in the skill
+            - Never copy proprietary text, assets, designs, or code
+
+            ### product-design-and-accessibility
+            - Choose one contained flow (onboarding, permissions, settings, login, a specific companion page)
+            - Audit hierarchy, spacing, typography, color, keyboard, screen-reader, reduced-motion
+            - Fix one contained issue
+            - Preserve the black-and-white design system
+            - Add missing states (loading, empty, error, offline) if absent
+            - No full redesign
+
+            ### integration-review-and-morning-summary
+            - Inspect every branch opened by the night lab tonight
+            - Inspect every report created tonight
+            - Identify overlapping files, incompatible recommendations, missing verification
+            - Identify risky code and macOS testing requirements
+            - Recommend review/merge order plus deferred changes
+            - Rerun safe repository-level checks
+            - Write morning summary to docs/automation/nightly/YYYY-MM-DD-summary.md
+            - Summary must be readable in under 5 minutes
+
+            ## After completing the mission
+            1. If changes were made, open a PR with the required PR template
+            2. If no changes were needed, update the report file explaining why
+            3. Verify the branch only contains intended changes
+            4. Log any required founder decisions
+
+            ## Safety rules
+            - Never merge PRs
+            - Never modify .github/workflows/ files
+            - Never commit API keys, .env files, or credentials
+            - Never run production database commands
+            - Never deploy or publish
