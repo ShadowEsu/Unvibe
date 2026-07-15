@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -27,6 +27,9 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<string>("");
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const closeMenuRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -60,6 +63,48 @@ export function Nav() {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  // A modal navigation should behave like a native sheet: Escape closes it,
+  // Tab stays within it, and focus returns to the button that opened it.
+  useEffect(() => {
+    if (!open) return;
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeMenuRef.current?.focus();
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !menuRef.current) return;
+      const focusable = Array.from(
+        menuRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
@@ -122,9 +167,11 @@ export function Nav() {
         <div className="flex items-center gap-2 lg:hidden">
           <ThemeToggle />
           <button
+            ref={menuTriggerRef}
             type="button"
             aria-label="Open menu"
             aria-expanded={open}
+            aria-controls="mobile-navigation"
             onClick={() => setOpen(true)}
             className="flex h-10 w-10 items-center justify-center rounded-pill border border-line text-fg transition-colors hover:bg-surface-2"
           >
@@ -134,7 +181,7 @@ export function Nav() {
       </nav>
 
       {/* Mobile sheet */}
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={() => menuTriggerRef.current?.focus()}>
         {open && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -157,11 +204,17 @@ export function Nav() {
                 duration: durations.standard,
                 ease: easing.emphatic,
               }}
+              ref={menuRef}
+              id="mobile-navigation"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
               className="absolute right-0 top-0 flex h-full w-[min(22rem,88vw)] flex-col bg-bg p-6 shadow-lift"
             >
               <div className="mb-8 flex items-center justify-between">
                 <Logo />
                 <button
+                  ref={closeMenuRef}
                   type="button"
                   aria-label="Close menu"
                   onClick={() => setOpen(false)}
