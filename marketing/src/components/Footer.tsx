@@ -10,8 +10,8 @@ const columns: FooterColumn[] = [
   {
     heading: "Product",
     links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Works where you do", href: "#works-where" },
+      { label: "How it works", href: "#demo" },
+      { label: "Context ladder", href: "#context" },
       { label: "Watch demo", href: "#demo" },
       { label: "Join waitlist", href: "#waitlist" },
     ],
@@ -19,15 +19,16 @@ const columns: FooterColumn[] = [
   {
     heading: "Learn",
     links: [
-      { label: "Languages", href: "#learn" },
       { label: "Depth levels", href: "#depth" },
-      { label: "Study from projects", href: "#study" },
-      { label: "For students", href: "#students" },
+      { label: "Try a check", href: "#assessment" },
+      { label: "Product screens", href: "#screens" },
+      { label: "Privacy controls", href: "#privacy" },
     ],
   },
   {
     heading: "Company",
     links: [
+      { label: "Pricing", href: "#pricing" },
       { label: "FAQ", href: "#faq" },
       { label: "Contact", href: "mailto:hello@unvibe.app" },
     ],

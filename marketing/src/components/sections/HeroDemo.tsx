@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Pause, Play } from "lucide-react";
+import { Check, Pause, Play, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/motion";
 import { UnvibeBar } from "../UnvibeBar";
@@ -37,22 +37,30 @@ const CHIPS = ["TypeScript", "React Hook", "State management"];
 const EXPLANATION =
   "This hook waits until typing settles, then fetches once. useEffect re-runs when query changes; debounce cancels prior timers so rapid keystrokes do not spam your API.";
 
-const TOTAL = 13500;
+const TOTAL = 11000;
 
 // Timeline keyframes in ms matching the launch storyboard.
 const T = {
-  selectIn: 600,
-  barIn: 1600,
-  chipsIn: 2200,
-  depthIn: 3600,
-  streamStart: 4500,
-  streamEnd: 9000,
-  quizIn: 9800,
-  answerIn: 11200,
-  collapseIn: 12200,
+  selectIn: 400,
+  barIn: 1050,
+  chipsIn: 1650,
+  depthIn: 2400,
+  streamStart: 3100,
+  streamEnd: 5900,
+  quizIn: 6550,
+  answerIn: 7900,
+  collapseIn: 9300,
 };
 
-const DEPTHS = ["First time", "Beginner", "Intermediate", "Advanced"];
+const DEPTHS = ["First time", "Beginner", "Intermediate", "Advanced", "Expert"];
+const STAGES = [
+  { label: "Select", at: T.selectIn },
+  { label: "Recognize", at: T.chipsIn },
+  { label: "Choose depth", at: T.depthIn },
+  { label: "Explain", at: T.streamStart + 900 },
+  { label: "Check", at: T.quizIn },
+  { label: "Save", at: T.collapseIn },
+] as const;
 
 export function HeroDemo() {
   const [elapsed, setElapsed] = useState(0);
@@ -134,7 +142,7 @@ export function HeroDemo() {
     <div
       ref={containerRef}
       className="relative"
-      role="img"
+      role="group"
       aria-label="A code selection being explained by Unvibe: concept chips appear, a depth is chosen, an explanation streams in, and a comprehension check is answered correctly."
     >
       <div className="overflow-hidden rounded-card border border-line bg-surface shadow-lift">
@@ -311,7 +319,7 @@ export function HeroDemo() {
         </div>
 
         {/* progress + controls */}
-        <div className="flex items-center gap-3 border-t border-line px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2.5 sm:px-4">
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
@@ -324,14 +332,48 @@ export function HeroDemo() {
               <Pause size={13} aria-hidden="true" />
             )}
           </button>
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
+          <button
+            type="button"
+            onClick={() => {
+              setElapsed(0);
+              setPaused(false);
+            }}
+            aria-label="Replay demo"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-fg-muted transition-colors hover:text-fg"
+          >
+            <RotateCcw size={12} aria-hidden="true" />
+          </button>
+
+          <div className="order-3 flex w-full items-center gap-1.5 sm:order-none sm:w-auto" aria-label="Demo steps">
+            {STAGES.map((stage, index) => {
+              const activeStage = e >= stage.at && (index === STAGES.length - 1 || e < STAGES[index + 1].at);
+              return (
+                <button
+                  key={stage.label}
+                  type="button"
+                  onClick={() => {
+                    setElapsed(stage.at + 20);
+                    setPaused(true);
+                  }}
+                  aria-label={`Show ${stage.label.toLowerCase()} step`}
+                  aria-pressed={activeStage}
+                  className={cn(
+                    "h-1.5 rounded-full transition-[width,background-color] duration-200",
+                    activeStage ? "w-7 bg-primary" : "w-3 bg-line-strong hover:bg-fg-faint"
+                  )}
+                />
+              );
+            })}
+          </div>
+
+          <div className="h-1 min-w-16 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div
               className="h-full rounded-full bg-primary/60 transition-[width] duration-100 ease-linear"
               style={{ width: `${progressPct}%` }}
             />
           </div>
           <span className="font-mono text-[0.62rem] text-fg-faint">
-            {reduced ? "static" : "live demo"}
+            {reduced ? "static" : paused ? "manual" : "live demo"}
           </span>
         </div>
       </div>

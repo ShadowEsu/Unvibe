@@ -178,8 +178,11 @@ export function BrandLogos({ className }: { className?: string }) {
         "mask-fade-x overflow-hidden border-y border-line bg-surface-2/40 py-5",
         className
       )}
-      aria-label="Languages and tools Unvibe is designed to work beside"
+      aria-label="Languages and tools Unvibe is designed to work beside. No partnership implied."
     >
+      <p className="container-page mb-4 text-center text-[0.7rem] font-medium uppercase tracking-[0.18em] text-fg-faint">
+        Designed to work beside the tools and languages you already use
+      </p>
       <div className="flex w-max animate-marquee gap-10 pr-10 hover:[animation-play-state:paused]">
         {[...logos, ...logos].map((logo, i) => (
           <div

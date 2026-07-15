@@ -48,6 +48,7 @@ export function Assessment() {
 
   return (
     <Section
+      id="assessment"
       eyebrow="Try it yourself"
       title="A comprehension check, no account required."
       subtitle="This is the same kind of question Unvibe asks after an explanation. Read the code, pick an answer, and see how it reads a correct or missed response."

@@ -43,7 +43,7 @@ Without Supabase configured, waitlist submissions are written to `.data/waitlist
 
 ## Waitlist storage
 
-Apply the migration in `supabase/migrations/0001_waitlist.sql` to your Supabase project
+Apply every migration in `supabase/migrations/` to your Supabase project
 (via the SQL editor or the Supabase CLI). It creates `waitlist_entries` with row-level
 security enabled and no public policies, so only the server (service role) can read or
 write it.

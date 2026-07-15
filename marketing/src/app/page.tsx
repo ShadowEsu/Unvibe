@@ -1,10 +1,11 @@
 import dynamic from "next/dynamic";
 import { Hero } from "@/components/sections/Hero";
 import { BrandLogos } from "@/components/BrandLogos";
-import { OpeningStrip } from "@/components/sections/OpeningStrip";
 import { Problem } from "@/components/sections/Problem";
-import { HowItWorks } from "@/components/sections/HowItWorks";
+import { DemoSection } from "@/components/sections/DemoSection";
 import { DepthDemo } from "@/components/sections/DepthDemo";
+import { ContextStory } from "@/components/sections/ContextStory";
+import { OpeningStrip } from "@/components/sections/OpeningStrip";
 import { Privacy } from "@/components/sections/Privacy";
 import { Pricing } from "@/components/sections/Pricing";
 import { Waitlist } from "@/components/sections/Waitlist";
@@ -28,11 +29,13 @@ export default function Home() {
       <Hero />
       <BrandLogos />
       <Problem />
-      <HowItWorks />
+      <DemoSection />
+      <DepthDemo />
+      <ContextStory />
       <Assessment />
       <OpeningStrip />
-      <Pricing />
       <Privacy />
+      <Pricing />
       <Waitlist />
       <Faq />
       <FinalCta />

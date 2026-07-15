@@ -38,11 +38,23 @@ export const experienceLabels: Record<(typeof experiences)[number], string> = {
 };
 
 export const waitlistSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .max(80, "Keep your name under 80 characters")
+    .optional()
+    .or(z.literal("")),
   email: z
     .string()
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email"),
+  role: z
+    .string()
+    .trim()
+    .max(80, "Keep your role under 80 characters")
+    .optional()
+    .or(z.literal("")),
   tool: z.enum(tools).optional(),
   experience: z.enum(experiences).optional(),
   message: z
