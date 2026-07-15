@@ -9,6 +9,7 @@ import type {
   Store,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { planLimit, type PlanId, type UsageSummary } from '@/billing/plans';
 
 interface PendingDevice {
   userCode: string;
@@ -22,6 +23,7 @@ interface MemoryData {
   tokens: Map<string, string>; // token -> userId
   devices: Map<string, PendingDevice>; // deviceCode -> pending
   users: Map<string, { email?: string }>; // userId -> profile
+  usage: Map<string, Set<string>>; // userId:month -> request ids
 }
 
 /**
@@ -35,11 +37,14 @@ export class MemoryStore implements Store {
   constructor() {
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
-      g.__uncodeData = { events: [], tokens: new Map(), devices: new Map(), users: new Map() };
+      g.__uncodeData = { events: [], tokens: new Map(), devices: new Map(), users: new Map(), usage: new Map() };
     }
     // Additive migration for a store created before `users` existed.
     if (!g.__uncodeData.users) {
       g.__uncodeData.users = new Map();
+    }
+    if (!g.__uncodeData.usage) {
+      g.__uncodeData.usage = new Map();
     }
     this.data = g.__uncodeData;
   }
@@ -109,6 +114,48 @@ export class MemoryStore implements Store {
       }
     }
     this.data.users.delete(userId);
+    for (const key of [...this.data.usage.keys()]) {
+      if (key.startsWith(`${userId}:`)) this.data.usage.delete(key);
+    }
+  }
+
+  private usageKey(userId: string): string {
+    return `${userId}:${new Date().toISOString().slice(0, 7)}`;
+  }
+
+  private summary(userId: string, planId: PlanId = 'private_beta'): UsageSummary {
+    const used = this.data.usage.get(this.usageKey(userId))?.size ?? 0;
+    const limit = planLimit(planId);
+    return {
+      planId,
+      used,
+      limit,
+      remaining: limit === null ? null : Math.max(0, limit - used),
+      periodStart: `${new Date().toISOString().slice(0, 7)}-01`,
+    };
+  }
+
+  async usage(userId: string): Promise<UsageSummary> {
+    return this.summary(userId);
+  }
+
+  async reserveExplanation(userId: string, requestId: string): Promise<UsageSummary | null> {
+    const key = this.usageKey(userId);
+    const records = this.data.usage.get(key) ?? new Set<string>();
+    const existing = records.has(requestId);
+    const limit = planLimit('private_beta');
+    if (!existing && limit !== null && records.size >= limit) return null;
+    records.add(requestId);
+    this.data.usage.set(key, records);
+    return this.summary(userId);
+  }
+
+  async completeExplanation(_userId: string, _requestId: string): Promise<void> {
+    // The dev store records a request atomically at reservation time.
+  }
+
+  async releaseExplanation(userId: string, requestId: string): Promise<void> {
+    this.data.usage.get(this.usageKey(userId))?.delete(requestId);
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {

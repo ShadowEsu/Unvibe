@@ -88,7 +88,14 @@ export const faqItems: FaqItem[] = [
     id: "free",
     question: "Is Unvibe free?",
     answer:
-      "Yes. Unvibe is completely free during the Mac beta—no credit card, no pricing page, no paid tier to join. If that changes later, we will say so clearly before anyone is charged.",
+      "Private-beta access is free while invitations are open. At launch, Pro is planned at $12 per month or $8 per month billed annually. That includes 50 cloud-generated explanations each month; learning history, saved material, and comprehension checks remain free.",
+    category: "pricing",
+  },
+  {
+    id: "team-pricing",
+    question: "How does Team pricing work?",
+    answer:
+      "Team is planned at $8 per person per month, or $6 per person per month billed annually. Each person receives 50 cloud-generated explanations per month. We will publish team administration details before offering the plan.",
     category: "pricing",
   },
   {

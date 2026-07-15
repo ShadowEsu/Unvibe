@@ -44,6 +44,8 @@ export interface Account {
   email: string;
 }
 
+export type { UsageSummary } from '@/billing/plans';
+
 /** Backend persistence + auth. Two implementations: MemoryStore (dev) and SupabaseStore (prod). */
 export interface Store {
   readonly kind: string;
@@ -58,6 +60,12 @@ export interface Store {
   signIn(email: string): Promise<Account>;
   accountInfo(userId: string): Promise<{ userId: string; email?: string }>;
   deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
+
+  // Billing/usage. Only cloud-generated explanations count; learning stays available.
+  usage(userId: string): Promise<import('@/billing/plans').UsageSummary>;
+  reserveExplanation(userId: string, requestId: string): Promise<import('@/billing/plans').UsageSummary | null>;
+  completeExplanation(userId: string, requestId: string): Promise<void>;
+  releaseExplanation(userId: string, requestId: string): Promise<void>;
 
   // Data
   upsertEvents(userId: string, events: IncomingEvent[]): Promise<void>;

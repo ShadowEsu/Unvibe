@@ -31,7 +31,7 @@ export function Hero() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-green" />
               </span>
-              Completely free · Mac &amp; Windows · v1.0.0
+              Private beta · Mac first · Windows planned
             </span>
           </motion.div>
 
@@ -59,50 +59,9 @@ export function Hero() {
             }}
             className="mt-5 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted"
           >
-            Agents ship faster than people can learn. Unvibe sits beside Cursor,
-            VS Code, and your terminal: select code, pick a depth, get a clear
-            explanation, then prove you understood it — without leaving your
-            workflow.
+            Select code, press Command+U, and get an explanation at the depth
+            you need—without leaving your workflow.
           </motion.p>
-
-          <motion.ul
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: durations.standard, delay: 0.2 }}
-            className="mt-6 space-y-3 text-fluid-sm text-fg-muted"
-          >
-            {[
-              {
-                color: "bg-primary",
-                text: "Explains selections, diffs, functions, and project structure",
-              },
-              {
-                color: "bg-blue",
-                text: "Five depths: first time through expert tradeoffs",
-              },
-              {
-                color: "bg-green",
-                text: "Free for everyone in beta. No credit card. No pricing wall.",
-              },
-            ].map((item, i) => (
-              <motion.li
-                key={item.text}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{
-                  duration: durations.standard,
-                  delay: 0.25 + i * 0.08,
-                  ease: easing.emphatic,
-                }}
-                className="flex gap-3"
-              >
-                <span
-                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${item.color}`}
-                />
-                {item.text}
-              </motion.li>
-            ))}
-          </motion.ul>
 
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -115,12 +74,12 @@ export function Hero() {
             className="mt-8 flex flex-wrap items-center gap-4"
           >
             <Button
-              href="#download"
+              href="#waitlist"
               size="lg"
               className="btn-magnetic"
-              onClick={() => track("download_clicked", { source: "hero" })}
+              onClick={() => track("waitlist_started", { source: "hero" })}
             >
-              Download free
+              Join the private beta
             </Button>
             <Button
               href="#demo"
@@ -128,9 +87,12 @@ export function Hero() {
               size="lg"
               onClick={() => track("demo_started", { source: "hero" })}
             >
-              See how it works
+              Try the demo
             </Button>
           </motion.div>
+          <p className="mt-5 text-fluid-sm text-fg-faint">
+            Free during private beta · Installer invitations are sent by email
+          </p>
         </div>
 
         <motion.div

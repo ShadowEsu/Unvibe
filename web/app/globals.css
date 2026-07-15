@@ -260,6 +260,34 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--line-strong);
 }
 
+/* ---- account usage ---- */
+.usage-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 28px 0 18px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+.usage-card__eyebrow {
+  margin: 0 0 4px;
+  color: var(--fg-faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.usage-card h2 { margin: 0; font-size: 20px; }
+.usage-card__copy { margin: 6px 0 0; color: var(--fg-muted); }
+.usage-card__note { max-width: 260px; margin: 0; color: var(--fg-muted); font-size: 13px; line-height: 1.5; }
+@media (max-width: 640px) {
+  .usage-card { flex-direction: column; gap: 12px; }
+  .usage-card__note { max-width: none; }
+}
+
 /* ---- screenshots ---- */
 .screenshots {
   padding: 48px 0;

@@ -5,6 +5,7 @@ import { Problem } from "@/components/sections/Problem";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { DepthDemo } from "@/components/sections/DepthDemo";
 import { Privacy } from "@/components/sections/Privacy";
+import { Pricing } from "@/components/sections/Pricing";
 import { Waitlist } from "@/components/sections/Waitlist";
 import { Faq } from "@/components/sections/Faq";
 import { FinalCta } from "@/components/sections/FinalCta";
@@ -28,6 +29,7 @@ export default function Home() {
       <HowItWorks />
       <Assessment />
       <OpeningStrip />
+      <Pricing />
       <Privacy />
       <Waitlist />
       <Faq />
