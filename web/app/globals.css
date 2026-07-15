@@ -170,7 +170,7 @@ img { max-width: 100%; display: block; }
   display: flex;
   gap: 24px;
   width: max-content;
-  animation: scrollLogos 18s linear infinite;
+  animation: scrollLogos 8s linear infinite;
 }
 .lang-marquee:hover .lang-marquee__track {
   animation-play-state: paused;
