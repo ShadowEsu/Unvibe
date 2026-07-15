@@ -8,20 +8,34 @@ type BillingInterval = "monthly" | "annual";
 
 const plans = [
   {
+    name: "Free",
+    monthly: 0,
+    annual: 0,
+    description: "Install Unvibe and learn alongside your work with no subscription.",
+    points: ["50 AI explanations each month", "Study, progress, snippets, and notebook", "Local-only mode is always available"],
+    featured: false,
+    href: "#download",
+    cta: "Download free",
+  },
+  {
     name: "Pro",
     monthly: 12,
     annual: 8,
-    description: "For one developer who wants a focused explanation allowance.",
-    points: ["50 AI explanations each month", "All learning tools stay free", "Five explanation depths"],
-    featured: false,
+    description: "For an individual who wants more room for focused explanations.",
+    points: ["250 AI explanations each month", "Everything in Free", "Pro learning modes as they leave beta"],
+    featured: true,
+    href: "#waitlist",
+    cta: "Join the Pro waitlist",
   },
   {
     name: "Team",
     monthly: 8,
     annual: 6,
-    description: "For teams that want the same calm learning layer, per person.",
-    points: ["50 AI explanations per person, monthly", "All learning tools stay free", "Team billing when available"],
-    featured: true,
+    description: "For teams that want individual learning with a shared path forward.",
+    points: ["200 AI explanations per person, monthly", "Everything in Pro", "Team controls when they are ready"],
+    featured: false,
+    href: "#waitlist",
+    cta: "Join the Team waitlist",
   },
 ] as const;
 
@@ -62,7 +76,7 @@ export function Pricing() {
         </div>
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-4xl gap-5 md:grid-cols-2">
+      <div className="mx-auto mt-8 grid max-w-5xl gap-5 md:grid-cols-3">
         {plans.map((plan) => {
           const price = annual ? plan.annual : plan.monthly;
           return (
@@ -74,16 +88,16 @@ export function Pricing() {
             >
               {plan.featured && (
                 <span className="absolute right-6 top-6 rounded-pill bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
-                  Best for teams
+                  Most flexible
                 </span>
               )}
               <h3 className="text-fluid-xl font-semibold text-fg">{plan.name}</h3>
               <p className="mt-2 min-h-12 max-w-sm text-fluid-sm leading-relaxed text-fg-muted">{plan.description}</p>
               <p className="mt-6 flex items-end gap-1 text-fg">
                 <span className="text-4xl font-semibold tracking-tight">${price}</span>
-                <span className="mb-1 text-fluid-sm text-fg-muted">/ person / month</span>
+                <span className="mb-1 text-fluid-sm text-fg-muted">{plan.name === "Free" ? "to start" : "/ person / month"}</span>
               </p>
-              {annual && <p className="mt-1 text-fluid-sm text-fg-muted">Billed annually at ${price * 12} per person.</p>}
+              {annual && plan.name !== "Free" && <p className="mt-1 text-fluid-sm text-fg-muted">Billed annually at ${price * 12} per person.</p>}
               <ul className="mt-7 space-y-3">
                 {plan.points.map((point) => (
                   <li key={point} className="flex gap-3 text-fluid-sm text-fg-muted">
@@ -92,8 +106,8 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
-              <Button href="#waitlist" className="mt-8 w-full">
-                Join the private beta
+              <Button href={plan.href} className="mt-8 w-full">
+                {plan.cta}
               </Button>
             </article>
           );
@@ -101,7 +115,7 @@ export function Pricing() {
       </div>
 
       <p className="mx-auto mt-7 max-w-2xl text-center text-fluid-sm leading-relaxed text-fg-faint">
-        Private-beta access is free while invitations are open. Professional plans for larger organizations are planned; we will publish their limits and pricing before offering them.
+        Free mode does not require a Pro subscription. Paid plans are shown for clarity while billing and team administration are still being prepared for launch.
       </p>
     </section>
   );

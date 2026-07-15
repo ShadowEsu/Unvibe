@@ -88,14 +88,14 @@ export const faqItems: FaqItem[] = [
     id: "free",
     question: "Is Unvibe free?",
     answer:
-      "Private-beta access is free while invitations are open. At launch, Pro is planned at $12 per month or $8 per month billed annually. That includes 50 cloud-generated explanations each month; learning history, saved material, and comprehension checks remain free.",
+      "Free mode is available without a Pro subscription and includes 50 cloud-generated explanations each month. Progress, saved material, comprehension checks, and the core learning tools remain available in Free. Pro is planned at $12 per month or $8 per month billed annually, with 250 explanations each month.",
     category: "pricing",
   },
   {
     id: "team-pricing",
     question: "How does Team pricing work?",
     answer:
-      "Team is planned at $8 per person per month, or $6 per person per month billed annually. Each person receives 50 cloud-generated explanations per month. We will publish team administration details before offering the plan.",
+      "Team is planned at $8 per person per month, or $6 per person per month billed annually. Each person receives 200 cloud-generated explanations per month. We will publish team administration details before offering the plan.",
     category: "pricing",
   },
   {
