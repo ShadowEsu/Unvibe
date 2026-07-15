@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import { Hero } from "@/components/sections/Hero";
+import { BrandLogos } from "@/components/BrandLogos";
 import { OpeningStrip } from "@/components/sections/OpeningStrip";
 import { Problem } from "@/components/sections/Problem";
 import { HowItWorks } from "@/components/sections/HowItWorks";
@@ -25,6 +26,7 @@ export default function Home() {
       <FaqJsonLd />
 
       <Hero />
+      <BrandLogos />
       <Problem />
       <HowItWorks />
       <Assessment />
