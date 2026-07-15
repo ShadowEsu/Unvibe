@@ -34,8 +34,12 @@ function loadAppEnv(): void {
 
 loadAppEnv();
 
-// 8787 is commonly taken by other local services; Unvibe web often runs on 8788 in parallel.
-export const BACKEND = process.env.UNVIBE_BACKEND ?? 'http://localhost:8788';
+/** The desktop and `web/` development servers share this documented default. */
+export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return env.UNVIBE_BACKEND || 'http://localhost:8787';
+}
+
+export const BACKEND = resolveBackendUrl();
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /** Network access stays in the main process. Bound requests so an unavailable backend never
