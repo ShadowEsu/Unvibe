@@ -1,8 +1,14 @@
+import type { UsageSummary } from '@/billing/plans';
+
 export interface IncomingEvent {
   id: string;
   ts: string;
   scope: string;
   level: string;
+  /** Kept with the event so a second device can render the same learning history. */
+  lines?: number;
+  language?: string;
+  sourceApp?: string;
   file?: string;
   outcome: 'reviewed' | 'understood' | 'needs_review';
   concept?: string;
@@ -38,11 +44,20 @@ export interface DeviceCode {
   interval: number;
 }
 
-export interface Account {
+export interface SessionTokens {
   token: string;
+  refreshToken: string;
+  expiresAt: string;
+}
+
+export interface Account extends SessionTokens {
   userId: string;
   email: string;
 }
+
+export type DeviceRedemption = SessionTokens | 'pending' | 'unknown';
+
+export type { UsageSummary } from '@/billing/plans';
 
 /** Backend persistence + auth. Two implementations: MemoryStore (dev) and SupabaseStore (prod). */
 export interface Store {
@@ -51,8 +66,16 @@ export interface Store {
   // Device auth
   createDeviceCode(baseUrl: string): Promise<DeviceCode>;
   approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null>;
-  redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'>;
+  redeemDeviceCode(deviceCode: string): Promise<DeviceRedemption>;
   userForToken(token: string): Promise<string | null>;
+  refreshSession(refreshToken: string): Promise<SessionTokens | null>;
+  revokeToken(token: string): Promise<void>;
+
+  // Cloud explanation allowance. Reservations are keyed by the caller-provided request UUID so
+  // network retries cannot consume the allowance twice.
+  usage(userId: string): Promise<UsageSummary>;
+  reserveExplanation(userId: string, requestId: string): Promise<UsageSummary | null>;
+  releaseExplanation(userId: string, requestId: string): Promise<void>;
 
   // Direct (in-app) auth. Passwordless in dev; production would add verification.
   signIn(email: string): Promise<Account>;

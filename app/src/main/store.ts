@@ -11,8 +11,9 @@ import type { LocalEvent, Outcome } from '../core/learning';
 interface AccountData {
   userId: string;
   email: string;
-  tokenEnc: string; // base64; encrypted if `tokenEncrypted`, else plain utf8 base64
-  tokenEncrypted: boolean;
+  tokenEnc: string; // base64-encrypted with Electron safeStorage
+  refreshTokenEnc: string;
+  expiresAt: string;
 }
 
 interface Data {
@@ -32,6 +33,11 @@ class Store {
       this.data = JSON.parse(readFileSync(this.file, 'utf8')) as Data;
       this.data.events ??= [];
       this.data.outbox ??= [];
+      // Never retain credentials written by pre-safeStorage builds. Learning history stays local.
+      if ((this.data.account as (AccountData & { tokenEncrypted?: boolean }) | undefined)?.tokenEncrypted === false) {
+        delete this.data.account;
+        this.save();
+      }
     } catch {
       // fresh install
     }
@@ -84,14 +90,35 @@ class Store {
     this.save();
   }
 
-  // ---- account ----
-  setAccount(userId: string, email: string, token: string): void {
-    const canEncrypt = safeStorage.isEncryptionAvailable();
-    const tokenEnc = canEncrypt
-      ? safeStorage.encryptString(token).toString('base64')
-      : Buffer.from(token, 'utf8').toString('base64');
-    this.data.account = { userId, email, tokenEnc, tokenEncrypted: canEncrypt };
+  /**
+   * A remote event never enters the outbox. If the same event is pending locally, preserve the
+   * local version until it has been acknowledged; that prevents a stale pull from undoing an
+   * offline comprehension result.
+   */
+  mergeRemote(events: LocalEvent[]): void {
+    const pending = new Set(this.data.outbox);
+    for (const remote of events) {
+      const index = this.data.events.findIndex((event) => event.id === remote.id);
+      if (index < 0) this.data.events.push(remote);
+      else if (!pending.has(remote.id)) this.data.events[index] = remote;
+    }
+    this.data.events.sort((a, b) => a.ts.localeCompare(b.ts));
     this.save();
+  }
+
+  // ---- account ----
+  setAccount(userId: string, email: string, token: string, refreshToken: string, expiresAt: string): boolean {
+    if (!safeStorage.isEncryptionAvailable()) return false;
+    const protect = (value: string) => safeStorage.encryptString(value).toString('base64');
+    this.data.account = {
+      userId,
+      email,
+      tokenEnc: protect(token),
+      refreshTokenEnc: protect(refreshToken),
+      expiresAt,
+    };
+    this.save();
+    return true;
   }
 
   account(): { userId: string; email: string } | null {
@@ -105,10 +132,25 @@ class Store {
     if (!a) return null;
     try {
       const buf = Buffer.from(a.tokenEnc, 'base64');
-      return a.tokenEncrypted ? safeStorage.decryptString(buf) : buf.toString('utf8');
+      return safeStorage.decryptString(buf);
     } catch {
       return null;
     }
+  }
+
+  refreshToken(): string | null {
+    const a = this.data.account;
+    if (!a?.refreshTokenEnc) return null;
+    try {
+      const buf = Buffer.from(a.refreshTokenEnc, 'base64');
+      return safeStorage.decryptString(buf);
+    } catch {
+      return null;
+    }
+  }
+
+  tokenExpiresAt(): string | null {
+    return this.data.account?.expiresAt ?? null;
   }
 
   signOut(): void {

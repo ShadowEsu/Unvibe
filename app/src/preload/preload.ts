@@ -26,6 +26,9 @@ const api = {
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
   feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
+  syncStatus: () => ipcRenderer.invoke('sync:status'),
+  syncNow: () => ipcRenderer.invoke('sync:now'),
+  onSyncUpdated: (cb: (status: unknown) => void) => ipcRenderer.on('sync:updated', (_e, status) => cb(status)),
 
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
@@ -45,8 +48,6 @@ const api = {
 
   // account
   account: () => ipcRenderer.invoke('account:get'),
-  signIn: (email: string) => ipcRenderer.invoke('account:signIn', email),
-  signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
   onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
   signOut: () => ipcRenderer.invoke('account:signOut'),

@@ -62,8 +62,13 @@ async function json<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export interface Account {
+export interface SessionTokens {
   token: string;
+  refreshToken: string;
+  expiresAt: string;
+}
+
+export interface Account extends SessionTokens {
   userId: string;
   email: string;
 }
@@ -74,10 +79,26 @@ export async function startDeviceAuth(): Promise<DeviceStart> {
   return json<DeviceStart>(await request(`${BACKEND}/api/v1/auth/device`, { method: 'POST' }));
 }
 
-export async function redeemDeviceAuth(deviceCode: string): Promise<{ token: string } | null> {
+export async function redeemDeviceAuth(deviceCode: string): Promise<SessionTokens | null> {
   const res = await request(`${BACKEND}/api/v1/auth/token`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deviceCode }) });
   if (res.status === 202) return null;
-  return json<{ token: string }>(res);
+  return json<SessionTokens>(res);
+}
+
+/** Refresh tokens are only ever held by the Electron main process and encrypted at rest. */
+export async function refreshSession(refreshToken: string): Promise<SessionTokens> {
+  return json<SessionTokens>(await request(`${BACKEND}/api/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  }));
+}
+
+export async function signOut(token: string): Promise<void> {
+  await json<{ ok: boolean }>(await request(`${BACKEND}/api/v1/auth/logout`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+  }));
 }
 
 export async function accountInfo(token: string): Promise<{ userId: string; email?: string }> {
@@ -123,6 +144,15 @@ export async function pushEvents(token: string, events: LocalEvent[]): Promise<s
   });
   await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);
+}
+
+/** The backend is a mirror: pull after each successful push so another device's learning is visible. */
+export async function pullEvents(token: string): Promise<LocalEvent[]> {
+  const res = await request(`${BACKEND}/api/v1/events?limit=500`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const body = await json<{ events: Array<LocalEvent & { userId?: string }> }>(res);
+  return body.events.map(({ userId: _userId, ...event }) => event);
 }
 
 export async function fetchQuestion(payload: ReviewRequestPayload): Promise<ComprehensionQuestion> {

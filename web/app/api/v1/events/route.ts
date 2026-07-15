@@ -4,6 +4,15 @@ import type { IncomingEvent } from '@/data/types';
 
 export const runtime = 'nodejs';
 
+/** Pull is intentionally on the same resource as push; ids are stable idempotency keys. */
+export async function GET(req: Request): Promise<Response> {
+  const userId = await userFromRequest(req);
+  if (!userId) return unauthorized();
+  const requested = Number(new URL(req.url).searchParams.get('limit') ?? '500');
+  const limit = Math.min(Math.max(Number.isFinite(requested) ? requested : 500, 1), 500);
+  return Response.json({ events: await getStore().history(userId, limit) });
+}
+
 export async function POST(req: Request): Promise<Response> {
   const userId = await userFromRequest(req);
   if (!userId) {

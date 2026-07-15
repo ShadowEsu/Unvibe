@@ -16,6 +16,7 @@ interface Profile {
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 type Account = { userId: string; email: string } | null;
+type SyncState = { state: 'idle' | 'syncing' | 'waiting' | 'error'; pending: number; message: string };
 interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
   widgetOpacityInactive: number; inactiveBehavior: string;
@@ -150,44 +151,17 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [mode, setMode] = useState<'device' | 'email'>('device');
   useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
   const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; error?: string };
     if (r.ok && r.userCode) setCode(r.userCode); else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
-  const submitEmail = async (action: 'signIn' | 'signUp') => {
-    setBusy(true); setErr(''); setCode('');
-    const fn = action === 'signIn' ? window.unvibe.signIn : window.unvibe.signUp;
-    const r = (await fn(email.trim())) as { ok: boolean; email?: string; error?: string };
-    setBusy(false);
-    if (r.ok && r.email) onDone(r.email); else setErr(r.error ?? 'Could not connect.');
-  };
   return (
     <div className="signin">
-      <div className="signin__tabs">
-        <button className={`signin__tab${mode === 'device' ? ' on' : ''}`} onClick={() => setMode('device')}>Browser</button>
-        <button className={`signin__tab${mode === 'email' ? ' on' : ''}`} onClick={() => setMode('email')}>Email</button>
-      </div>
-      {mode === 'device' ? (
-        <>
-          <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
-          {err && <div className="field-err">{err}</div>}
-          <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
-        </>
-      ) : (
-        <>
-          <input className="field" type="email" autoComplete="email" placeholder="you@school.edu" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address" />
-          {err && <div className="field-err">{err}</div>}
-          <div className="signin__email-actions">
-            <button className="field-btn" disabled={busy || !email.trim()} onClick={() => submitEmail('signIn')}>{busy ? 'Connecting…' : 'Sign in'}</button>
-            <button className="field-btn ghost" disabled={busy || !email.trim()} onClick={() => submitEmail('signUp')}>{busy ? 'Connecting…' : 'Create account'}</button>
-          </div>
-          <div className="field-note">Enter your email to sign in or create an account. No password needed — we send a verification link.</div>
-        </>
-      )}
+      <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
+      {err && <div className="field-err">{err}</div>}
+      <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
     </div>
   );
 }
@@ -462,7 +436,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <button className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} onClick={onClick}><span className="knob" /></button>;
 }
 
-function AccountPanel({ account, onChange, onDeleted }: { account: Account; onChange: () => void; onDeleted: () => void }) {
+function AccountPanel({ account, sync, onSyncNow, onChange, onDeleted }: { account: Account; sync: SyncState; onSyncNow: () => void; onChange: () => void; onDeleted: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
@@ -486,6 +460,10 @@ function AccountPanel({ account, onChange, onDeleted }: { account: Account; onCh
     <>
       <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
         <button className="act" onClick={async () => { await window.unvibe.signOut(); onChange(); }}>Sign out</button></div>
+      <div className="setrow">
+        <div><div className="sl">Cloud sync</div><div className="sd">{sync.message}{sync.pending > 0 ? ` ${sync.pending} item${sync.pending === 1 ? '' : 's'} waiting.` : ''}</div></div>
+        <button className="act" disabled={sync.state === 'syncing'} onClick={onSyncNow}>{sync.state === 'syncing' ? 'Syncing…' : 'Sync now'}</button>
+      </div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl" style={{ color: '#a1291f' }}>Delete account</div>
         <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this Mac and on our servers. This cannot be undone.</div>
@@ -502,9 +480,9 @@ function AccountPanel({ account, onChange, onDeleted }: { account: Account; onCh
   );
 }
 
-function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted }: {
+function Settings({ info, account, sync, onSyncNow, settings, onAccountChange, onSettings, onClose, onAccountDeleted }: {
   info: { version: string }; account: Account; settings: Settings;
-  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void;
+  sync: SyncState; onSyncNow: () => void; onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void;
 }) {
   const [tab, setTab] = useState('General');
   const [recording, setRecording] = useState(false);
@@ -593,7 +571,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             </>
           )}
 
-          {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} />}
+          {tab === 'Account' && <AccountPanel account={account} sync={sync} onSyncNow={onSyncNow} onChange={onAccountChange} onDeleted={onAccountDeleted} />}
           {tab === 'Data' && (
             <div className="setrow" style={{ display: 'block' }}><div className="sl">Your data</div><div className="sd">Reviews and progress live in a file on this Mac. Deleting your account (under Account) erases them everywhere.</div></div>
           )}
@@ -611,17 +589,19 @@ function App() {
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [sync, setSync] = useState<SyncState>({ state: 'idle', pending: 0, message: 'Up to date' });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
 
   const refresh = async () => {
-    const [acct, prof, fd, st] = await Promise.all([
+    const [acct, prof, fd, st, syncState] = await Promise.all([
       window.unvibe.account() as Promise<Account>,
       window.unvibe.profile() as Promise<Profile>,
       window.unvibe.feed(8) as Promise<FeedItem[]>,
       window.unvibe.getSettings() as Promise<Settings>,
+      window.unvibe.syncStatus() as Promise<SyncState>,
     ]);
-    setAccount(acct); setProfile(prof); setFeed(fd); setSettings(st);
+    setAccount(acct); setProfile(prof); setFeed(fd); setSettings(st); setSync(syncState);
     return { acct, st };
   };
 
@@ -633,6 +613,7 @@ function App() {
     })();
     const onFocus = () => void refresh();
     window.addEventListener('focus', onFocus);
+    window.unvibe.onSyncUpdated(() => void refresh());
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
@@ -684,6 +665,7 @@ function App() {
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
+          sync={sync} onSyncNow={() => { void window.unvibe.syncNow().then(() => void refresh()); }}
           onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} />
       )}

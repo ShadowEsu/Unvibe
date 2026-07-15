@@ -32,8 +32,8 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
-import { flush } from './sync';
-import { signIn, signUp, deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo } from './backend';
+import { flush, syncStatus } from './sync';
+import { deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo, refreshSession, signOut } from './backend';
 import { setBar, notify } from './notify';
 import { computeProfile, computeFeed } from '../core/learning';
 
@@ -118,6 +118,27 @@ function registerShortcut(accel: string): boolean {
   }
 }
 
+/** Refresh at launch so access tokens are short lived without making a returning user sign in again. */
+async function restoreCloudSession(): Promise<void> {
+  const refreshToken = store().refreshToken();
+  if (!refreshToken) return;
+  try {
+    const session = await refreshSession(refreshToken);
+    const account = await accountInfo(session.token);
+    if (!store().setAccount(account.userId, account.email ?? 'Signed-in user', session.token, session.refreshToken, session.expiresAt)) {
+      store().signOut();
+    }
+  } catch {
+    // An expired or revoked remote session must not remain usable locally.
+    store().signOut();
+  }
+}
+
+async function syncNow(): Promise<void> {
+  await flush();
+  companion?.webContents.send('sync:updated', syncStatus());
+}
+
 function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(e.sender);
 }
@@ -128,7 +149,7 @@ app.whenReady().then(() => {
   store();
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
-  void flush();
+  void restoreCloudSession().finally(() => void syncNow());
   startFrontmostWatch();
 
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
@@ -233,6 +254,8 @@ app.whenReady().then(() => {
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
+  ipcMain.handle('sync:status', () => syncStatus());
+  ipcMain.handle('sync:now', () => syncNow());
 
   // --- settings ---
   ipcMain.handle('settings:get', () => settings().all());
@@ -271,26 +294,6 @@ app.whenReady().then(() => {
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
-  ipcMain.handle('account:signIn', async (_e, email: string) => {
-    try {
-      const acct = await signIn(email);
-      store().setAccount(acct.userId, acct.email, acct.token);
-      void flush();
-      return { ok: true, email: acct.email };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Sign-in failed.' };
-    }
-  });
-  ipcMain.handle('account:signUp', async (_e, email: string) => {
-    try {
-      const acct = await signUp(email);
-      store().setAccount(acct.userId, acct.email, acct.token);
-      void flush();
-      return { ok: true, email: acct.email };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed.' };
-    }
-  });
   ipcMain.handle('account:startDevice', async () => {
     try {
       const device = await startDeviceAuth();
@@ -303,18 +306,38 @@ app.whenReady().then(() => {
           const redeemed = await redeemDeviceAuth(device.deviceCode);
           if (!redeemed) return;
           const account = await accountInfo(redeemed.token);
-          store().setAccount(account.userId, account.email ?? 'Signed-in user', redeemed.token);
+          const stored = store().setAccount(
+            account.userId,
+            account.email ?? 'Signed-in user',
+            redeemed.token,
+            redeemed.refreshToken,
+            redeemed.expiresAt,
+          );
+          if (!stored) {
+            if (devicePoll) clearInterval(devicePoll); devicePoll = null;
+            companion?.webContents.send('account:device', { ok: false, error: 'Secure macOS credential storage is unavailable. Unlock your keychain and try again.' });
+            return;
+          }
           if (devicePoll) clearInterval(devicePoll); devicePoll = null;
-          void flush();
+          void syncNow();
           companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user' });
         } catch { /* polling retries until expiry */ }
       })(), Math.max(2, device.interval) * 1000);
       return { ok: true, userCode: device.userCode, verificationUri: device.verificationUri };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
-  ipcMain.handle('account:signOut', () => {
+  ipcMain.handle('account:signOut', async () => {
+    const token = store().token();
+    let warning: string | undefined;
+    if (token) {
+      try {
+        await signOut(token);
+      } catch {
+        warning = 'Signed out on this Mac. The cloud session could not be revoked while offline and will expire automatically.';
+      }
+    }
     store().signOut();
-    return { ok: true };
+    return { ok: true, warning };
   });
   ipcMain.handle('account:delete', async () => {
     const token = store().token();
@@ -328,7 +351,7 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('browser-window-focus', () => void flush());
+app.on('browser-window-focus', () => void syncNow());
 app.on('will-quit', () => globalShortcut.unregisterAll());
 app.on('window-all-closed', () => {
   /* keep the agent alive — this is a menu-bar utility */
