@@ -10,6 +10,7 @@ import type {
   Store,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { planLimit, type PlanId, type UsageSummary } from '@/billing/plans';
 
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
@@ -110,7 +111,65 @@ export class SupabaseStore implements Store {
     await this.db.from('tokens').delete().eq('user_id', userId);
     await this.db.from('device_codes').delete().eq('user_id', userId);
     await this.db.from('consent_log').delete().eq('user_id', userId);
+    await this.db.from('ai_usage').delete().eq('user_id', userId);
+    await this.db.from('subscriptions').delete().eq('user_id', userId);
     await this.db.from('users').delete().eq('id', userId);
+  }
+
+  private periodStart(): string {
+    return `${new Date().toISOString().slice(0, 7)}-01`;
+  }
+
+  private async activePlan(userId: string): Promise<PlanId> {
+    const { data, error } = await this.db
+      .from('subscriptions')
+      .select('plan_id')
+      .eq('user_id', userId)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .maybeSingle();
+    if (error) throw new Error('Could not load subscription status.');
+    const planId = data?.plan_id;
+    return planId === 'pro' || planId === 'team' || planId === 'professional' ? planId : 'private_beta';
+  }
+
+  async usage(userId: string): Promise<UsageSummary> {
+    const planId = await this.activePlan(userId);
+    const limit = planLimit(planId);
+    const { count, error } = await this.db
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('period_start', this.periodStart())
+      .eq('status', 'completed');
+    if (error) throw new Error('Could not load explanation usage.');
+    const used = count ?? 0;
+    return { planId, used, limit, remaining: limit === null ? null : Math.max(0, limit - used), periodStart: this.periodStart() };
+  }
+
+  async reserveExplanation(userId: string, requestId: string): Promise<UsageSummary | null> {
+    const planId = await this.activePlan(userId);
+    const limit = planLimit(planId);
+    if (limit === null) return this.usage(userId);
+    const { data, error } = await this.db.rpc('reserve_explanation_usage', {
+      p_user_id: userId,
+      p_request_id: requestId,
+      p_limit: limit,
+    });
+    if (error) throw new Error('Could not reserve explanation usage.');
+    const record = Array.isArray(data) ? data[0] : null;
+    if (!record || !record.allowed) return null;
+    const used = Number(record.used_count);
+    return { planId, used, limit, remaining: Math.max(0, limit - used), periodStart: this.periodStart() };
+  }
+
+  async completeExplanation(userId: string, requestId: string): Promise<void> {
+    const { error } = await this.db.rpc('complete_explanation_usage', { p_user_id: userId, p_request_id: requestId });
+    if (error) throw new Error('Could not record explanation usage.');
+  }
+
+  async releaseExplanation(userId: string, requestId: string): Promise<void> {
+    const { error } = await this.db.rpc('release_explanation_usage', { p_user_id: userId, p_request_id: requestId });
+    if (error) throw new Error('Could not release explanation usage.');
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {

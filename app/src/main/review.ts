@@ -123,12 +123,21 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   try {
     const res = await fetch(`${BACKEND}/api/v1/reviews`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        authorization: store().token() ? `Bearer ${store().token()}` : '',
+        'x-uncode-request-id': session.reviewId,
+      },
       body: JSON.stringify(payloadFor(code, opts.level, opts)),
       signal: abort.signal,
     });
     if (!res.ok || !res.body) {
-      send(win, { type: 'error', message: `Backend error (${res.status}).` });
+      const message = res.status === 401
+        ? 'Sign in to generate an explanation. Learning you have already saved remains available.'
+        : res.status === 429
+          ? 'You have used this month\'s explanation allowance. Learning, saved material, and checks remain free.'
+          : `Backend error (${res.status}).`;
+      send(win, { type: 'error', message });
       return;
     }
     const reader = res.body.getReader();
