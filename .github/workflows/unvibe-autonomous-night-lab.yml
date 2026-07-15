@@ -6,8 +6,8 @@
 #
 # Model configuration
 #   Use GitHub Variables (Settings → Secrets and variables → Variables) to set:
-#     OPENCODE_NIGHT_MODEL   — main work model (default: deepseek/deepseek-chat)
-#     OPENCODE_REVIEW_MODEL  — review/architecture model (default: deepseek/deepseek-chat)
+#     OPENCODE_NIGHT_MODEL   — main work model (default: deepseek/deepseek-v4-flash)
+#     OPENCODE_REVIEW_MODEL  — review/architecture model (default: deepseek/deepseek-v4-flash)
 #     OPENCODE_SMALL_MODEL   — cheap model for routine work (default: deepseek/deepseek-chat)
 #
 # Emergency disable
@@ -61,10 +61,10 @@ permissions:
 
 env:
   # Model configuration — override via GitHub Variables
-  # Model defaults: OpenCode Zen (opencode/ prefix) or DeepSeek (deepseek/ prefix)
-  OPENCODE_NIGHT_MODEL: ${{ vars.OPENCODE_NIGHT_MODEL || 'opencode/qwen-3-coder-480b' }}
-  OPENCODE_REVIEW_MODEL: ${{ vars.OPENCODE_REVIEW_MODEL || 'opencode/qwen-3-coder-480b' }}
-  OPENCODE_SMALL_MODEL: ${{ vars.OPENCODE_SMALL_MODEL || 'opencode/qwen-3-coder-480b' }}
+  # Default: DeepSeek V4 Flash (cheapest ~$0.07/night). Override via repo Variables.
+  OPENCODE_NIGHT_MODEL: ${{ vars.OPENCODE_NIGHT_MODEL || 'deepseek/deepseek-v4-flash' }}
+  OPENCODE_REVIEW_MODEL: ${{ vars.OPENCODE_REVIEW_MODEL || 'deepseek/deepseek-v4-flash' }}
+  OPENCODE_SMALL_MODEL: ${{ vars.OPENCODE_SMALL_MODEL || 'deepseek/deepseek-chat' }}
 
 jobs:
   mission-router:
@@ -139,10 +139,6 @@ jobs:
       - name: Run OpenCode Night Lab
         uses: anomalyco/opencode/github@latest
         env:
-          # Primary: OpenCode API (recommended — no external provider needed)
-          # Get your key at https://opencode.ai/auth
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          # Fallback: DeepSeek (set if you prefer direct DeepSeek billing)
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
         with:
