@@ -135,7 +135,7 @@ const config: Config = {
         "slide-up-fade":
           "slide-up-fade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both",
         "caret-blink": "caret-blink 1s steps(1) infinite",
-        marquee: "marquee 40s linear infinite",
+        marquee: "marquee 16s linear infinite",
         shimmer: "shimmer 1.6s linear infinite",
         float: "float 3s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
