@@ -1,11 +1,17 @@
 # Night Lab — Provider setup
 
-## Current provider: DeepSeek
+## Current provider: OpenCode Zen (recommended)
 
-DeepSeek is configured as the default AI provider for the Night Lab. It offers
-competitive pricing, large context windows, and strong coding ability.
+OpenCode Zen is OpenCode's own curated model service. It requires no separate
+AI provider account. Get your key at https://opencode.ai/auth
 
-OpenCode supports DeepSeek natively. The provider identifier is `deepseek`.
+The provider identifier prefix is `opencode/`.
+
+## Alternative: DeepSeek
+
+DeepSeek is a fallback option with competitive pricing, large context windows,
+and strong coding ability. To use it, set `DEEPSEEK_API_KEY` instead of
+`OPENCODE_API_KEY` and use `deepseek/deepseek-chat` model identifiers.
 
 ## GitHub secrets required
 
@@ -13,7 +19,13 @@ OpenCode supports DeepSeek natively. The provider identifier is `deepseek`.
 
 | Secret name | Value |
 |-------------|-------|
-| `DEEPSEEK_API_KEY` | Your DeepSeek platform API key |
+| `OPENCODE_API_KEY` | Your OpenCode API key from https://opencode.ai/auth |
+
+### Fallback (alternative API key)
+
+| Secret name | Value |
+|-------------|-------|
+| `DEEPSEEK_API_KEY` | Your DeepSeek platform API key (if not using OpenCode Zen) |
 
 ### Required for OpenCode GitHub Action authentication
 
