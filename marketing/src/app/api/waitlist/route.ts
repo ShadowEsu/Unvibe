@@ -36,7 +36,9 @@ const dataDir = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDir, "waitlist.json");
 
 interface StoredEntry {
+  name?: string;
   email: string;
+  role?: string;
   tool?: string;
   experience?: string;
   message?: string;
@@ -64,10 +66,14 @@ async function writeLocal(entries: StoredEntry[]): Promise<void> {
 async function saveToSupabase(entry: StoredEntry): Promise<{
   used: boolean;
   duplicate: boolean;
+  unavailable: boolean;
 }> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return { used: false, duplicate: false };
+  const production = process.env.NODE_ENV === "production";
+  if (!url || !key) {
+    return { used: false, duplicate: false, unavailable: production };
+  }
 
   try {
     const { createClient } = await import("@supabase/supabase-js");
@@ -76,7 +82,9 @@ async function saveToSupabase(entry: StoredEntry): Promise<{
     });
 
     const { error } = await supabase.from("waitlist_entries").insert({
+      name: entry.name || null,
       email: entry.email,
+      role: entry.role || null,
       tool: entry.tool,
       experience: entry.experience,
       message: entry.message || null,
@@ -88,15 +96,16 @@ async function saveToSupabase(entry: StoredEntry): Promise<{
     });
 
     if (error) {
-      if (error.code === "23505") return { used: true, duplicate: true };
-      // Table missing or schema not ready — fall back to local file.
+      if (error.code === "23505") {
+        return { used: true, duplicate: true, unavailable: false };
+      }
       console.warn("supabase waitlist insert skipped", error.code, error.message);
-      return { used: false, duplicate: false };
+      return { used: false, duplicate: false, unavailable: production };
     }
-    return { used: true, duplicate: false };
+    return { used: true, duplicate: false, unavailable: false };
   } catch (err) {
     console.warn("supabase waitlist unavailable", err);
-    return { used: false, duplicate: false };
+    return { used: false, duplicate: false, unavailable: production };
   }
 }
 
@@ -138,7 +147,9 @@ export async function POST(req: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   const referralCode = referralCodeFor(email);
   const entry: StoredEntry = {
+    name: parsed.data.name || undefined,
     email,
+    role: parsed.data.role || undefined,
     tool: parsed.data.tool,
     experience: parsed.data.experience,
     message: parsed.data.message || undefined,
@@ -154,6 +165,13 @@ export async function POST(req: Request) {
     const supa = await saveToSupabase(entry);
     let duplicate = supa.duplicate;
 
+    if (supa.unavailable) {
+      return NextResponse.json(
+        { error: "The beta waitlist is temporarily unavailable. Please try again shortly." },
+        { status: 503 }
+      );
+    }
+
     if (!supa.used) {
       const local = await saveLocal(entry);
       duplicate = local.duplicate;
@@ -162,7 +180,9 @@ export async function POST(req: Request) {
     if (!duplicate) {
       // Fire and forget — do not block the signup response.
       void notifyFounder({
+        name: entry.name,
         email: entry.email,
+        role: entry.role,
         tool: entry.tool ?? "Not provided",
         experience: entry.experience ?? "Not provided",
         message: entry.message,

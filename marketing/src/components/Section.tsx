@@ -85,7 +85,12 @@ export function Section({
           )}
         </div>
       )}
-      <div className={cn(narrow && "mx-auto max-w-prose")}>{children}</div>
+      <motion.div
+        variants={fadeUp}
+        className={cn(narrow && "mx-auto max-w-prose")}
+      >
+        {children}
+      </motion.div>
     </Tag>
   );
 }

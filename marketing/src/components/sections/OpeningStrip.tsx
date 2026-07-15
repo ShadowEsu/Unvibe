@@ -12,7 +12,7 @@ const shots = [
 
 export function OpeningStrip() {
   return (
-    <section className="container-page py-14 sm:py-20" aria-label="Product screens">
+    <section id="screens" className="container-page scroll-mt-24 py-14 sm:py-20" aria-label="Product screens">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="mb-3 inline-flex items-center gap-2 rounded-pill border border-primary/20 bg-primary-soft px-3.5 py-1 text-fluid-sm font-medium tracking-wide text-primary">

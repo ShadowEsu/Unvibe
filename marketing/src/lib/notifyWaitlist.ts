@@ -25,7 +25,9 @@ async function appendInbox(entry: Record<string, string>): Promise<void> {
 }
 
 export async function notifyFounder(entry: {
+  name?: string;
   email: string;
+  role?: string;
   tool: string;
   experience: string;
   message?: string;
@@ -41,7 +43,9 @@ export async function notifyFounder(entry: {
   const record = {
     at: new Date().toISOString(),
     to,
+    name: entry.name || "",
     email: entry.email,
+    role: entry.role || "",
     tool: entry.tool,
     experience: entry.experience,
     message: entry.message || "",
@@ -59,8 +63,9 @@ export async function notifyFounder(entry: {
       _subject: `Unvibe waitlist: ${entry.email}`,
       _template: "table",
       _captcha: "false",
-      name: "Unvibe Waitlist",
+      name: entry.name || "Unvibe Waitlist",
       email: entry.email,
+      role: entry.role || "(not provided)",
       tool: entry.tool,
       experience: entry.experience,
       message: entry.message || "(none)",

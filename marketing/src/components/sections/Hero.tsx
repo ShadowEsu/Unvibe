@@ -9,11 +9,9 @@ import { track } from "@/lib/analytics";
 export function Hero() {
   return (
     <section className="container-page relative overflow-hidden pb-16 pt-10 sm:pb-24 sm:pt-16">
-      {/* Background glow effects */}
+      {/* Restrained selection tint — the product UI remains the focal point. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgb(var(--primary)/0.14),_transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgb(var(--blue)/0.10),_transparent_45%)]" />
-        <div className="absolute bottom-0 left-1/2 -z-10 h-64 w-[60rem] -translate-x-1/2 bg-[radial-gradient(ellipse,_rgb(var(--primary)/0.06),_transparent_70%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,_rgb(var(--primary)/0.07),_transparent_42%,_rgb(var(--blue)/0.04))]" />
       </div>
 
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
@@ -26,12 +24,9 @@ export function Hero() {
               ease: easing.emphatic,
             }}
           >
-            <span className="mb-5 inline-flex items-center gap-2 rounded-pill border border-line bg-surface/80 px-4 py-1.5 text-fluid-sm text-fg-muted backdrop-blur-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green" />
-              </span>
-              Private beta · Mac first · Windows planned
+            <span className="mb-5 inline-flex items-center gap-2 rounded-pill border border-line bg-surface/85 px-4 py-1.5 text-fluid-sm text-fg-muted backdrop-blur-sm">
+              <span className="h-2 w-2 rounded-full bg-green" aria-hidden="true" />
+              Mac first · Private beta
             </span>
           </motion.div>
 
@@ -45,8 +40,7 @@ export function Hero() {
             }}
             className="max-w-xl text-balance text-fluid-4xl font-semibold tracking-tight text-fg sm:text-fluid-5xl"
           >
-            Understand the code{" "}
-            <span className="text-gradient-primary">AI writes</span>.
+            Understand the code <span className="text-primary">AI writes</span>.
           </motion.h1>
 
           <motion.p
@@ -59,8 +53,8 @@ export function Hero() {
             }}
             className="mt-5 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted"
           >
-            Select code, press Command+U, and get an explanation at the depth
-            you need—without leaving your workflow.
+            Select any code, choose your depth, and learn what it does without
+            leaving your workflow.
           </motion.p>
 
           <motion.div
@@ -87,11 +81,11 @@ export function Hero() {
               size="lg"
               onClick={() => track("demo_started", { source: "hero" })}
             >
-              Try the demo
+              Watch how it works
             </Button>
           </motion.div>
           <p className="mt-5 text-fluid-sm text-fg-faint">
-            Free during private beta · Installer invitations are sent by email
+            Mac first · Early beta · No credit card
           </p>
         </div>
 

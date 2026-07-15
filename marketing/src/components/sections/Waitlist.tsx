@@ -30,7 +30,7 @@ export function Waitlist() {
     formState: { errors },
   } = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistSchema),
-    defaultValues: { email: "", message: "", referredBy: "" },
+    defaultValues: { name: "", email: "", role: "", message: "", referredBy: "" },
   });
 
 
@@ -112,13 +112,15 @@ export function Waitlist() {
       subtitle="Mac first. We’ll email you when an invite is ready."
       narrow
     >
-      <div className="rounded-card border border-line bg-surface p-6 sm:p-8">
+      <div className="rounded-card border border-line bg-surface p-6 sm:p-9">
         <AnimatePresence mode="wait">
           {status === "success" || status === "duplicate" ? (
             <motion.div
               key="success"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.28, ease: [0.2, 0, 0.2, 1] }}
               className="text-center"
             >
               <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green/15 text-green">
@@ -161,13 +163,51 @@ export function Waitlist() {
           ) : (
             <motion.form
               key="form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{
+                opacity: status === "submitting" ? 0.64 : 1,
+                y: status === "submitting" ? -2 : 0,
+              }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.24, ease: [0.2, 0, 0.2, 1] }}
               onSubmit={handleSubmit(onSubmit)}
               onChange={markStarted}
               noValidate
+              aria-busy={status === "submitting"}
               className="space-y-7"
             >
+              <div>
+                <p className="text-fluid-sm font-medium text-fg">A few quick details</p>
+                <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
+                  This takes less than a minute and helps us invite a useful mix of early testers.
+                </p>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="First name" htmlFor="name" error={errors.name?.message} optional>
+                  <input
+                    id="name"
+                    type="text"
+                    autoComplete="given-name"
+                    placeholder="Preston"
+                    aria-invalid={Boolean(errors.name)}
+                    {...register("name")}
+                    className={inputClass(Boolean(errors.name))}
+                  />
+                </Field>
+                <Field label="Role or position" htmlFor="role" error={errors.role?.message} optional>
+                  <input
+                    id="role"
+                    type="text"
+                    autoComplete="organization-title"
+                    placeholder="Software engineer"
+                    aria-invalid={Boolean(errors.role)}
+                    {...register("role")}
+                    className={inputClass(Boolean(errors.role))}
+                  />
+                </Field>
+              </div>
+
               <Field label="Email" htmlFor="email" error={errors.email?.message}>
                 <input
                   id="email"
@@ -179,7 +219,6 @@ export function Waitlist() {
                   className={inputClass(Boolean(errors.email))}
                 />
               </Field>
-
 
               {status === "error" && (
                 <p
