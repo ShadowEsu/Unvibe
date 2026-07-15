@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { GraduationCap, Rocket, Compass, Briefcase } from "lucide-react";
 import { Section } from "../Section";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, stagger } from "@/lib/motion";
 
 const stories = [
   {
@@ -44,26 +44,34 @@ export function StudentStories() {
       title="For anyone learning faster than they are understanding."
       subtitle="Not testimonials — the real situations Unvibe was built for. If one of these is you, the waitlist is open."
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-10%" }}
+        className="grid gap-5 sm:grid-cols-2"
+      >
         {stories.map((s) => (
           <motion.div
             key={s.who}
             variants={fadeUp}
-            className="flex flex-col rounded-card border border-line bg-surface p-6"
+            className="card-hover flex flex-col rounded-card border border-line bg-surface p-7"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
-              <s.Icon size={20} aria-hidden="true" />
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <s.Icon size={21} aria-hidden="true" />
             </span>
-            <h3 className="mt-4 text-fluid-lg font-semibold text-fg">{s.who}</h3>
-            <p className="mt-2 text-fluid-base leading-relaxed text-fg-muted">
+            <h3 className="mt-5 text-fluid-lg font-semibold text-fg">
+              {s.who}
+            </h3>
+            <p className="mt-2.5 text-fluid-base leading-relaxed text-fg-muted">
               {s.situation}
             </p>
-            <p className="mt-3 border-t border-line pt-3 text-fluid-base leading-relaxed text-fg">
+            <p className="mt-4 border-t border-line pt-4 text-fluid-base leading-relaxed text-fg">
               {s.help}
             </p>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
     </Section>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Apple, Monitor } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { track } from "@/lib/analytics";
 import {
   DOWNLOAD_ASSETS,
@@ -18,6 +18,29 @@ function detectPreferred(): DownloadPlatform {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes("windows")) return "windows";
   return "mac";
+}
+
+function useCountUp(target: number, duration = 1500) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-10%" });
+  const animated = useRef(false);
+
+  useEffect(() => {
+    if (!inView || animated.current || target <= 0) return;
+    animated.current = true;
+    const start = performance.now();
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [inView, target, duration]);
+
+  return { count, ref };
 }
 
 export function Download() {
@@ -54,31 +77,33 @@ export function Download() {
     });
   };
 
+  const totalCount = useCountUp(stats?.total ?? 0);
+
   return (
-    <section id="download" className="container-page py-16 sm:py-20">
+    <section id="download" className="container-page py-20 sm:py-28">
       <div className="mx-auto max-w-3xl text-center">
-        <p className="text-fluid-sm font-medium uppercase tracking-[0.14em] text-primary">
+        <span className="mb-4 inline-flex items-center gap-2 rounded-pill border border-primary/20 bg-primary-soft px-3.5 py-1 text-fluid-sm font-medium tracking-wide text-primary">
           Free download · v{DOWNLOAD_VERSION}
-        </p>
-        <h2 className="mt-3 text-balance text-fluid-3xl font-semibold tracking-tight text-fg">
+        </span>
+        <h2 className="mt-4 text-balance text-fluid-3xl font-semibold tracking-tight text-fg">
           Download Unvibe free
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted">
+        <p className="mx-auto mt-5 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted">
           The desktop learning layer for AI-written code. Completely free for Mac
           and Windows — no account required to install.
         </p>
 
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: durations.standard, ease: easing.emphatic }}
-          className="mx-auto mt-8 max-w-md"
+          transition={{ duration: durations.standardSlow, ease: easing.emphatic }}
+          className="mx-auto mt-10 max-w-md"
         >
           <a
             href={trackedDownloadPath(preferred)}
             onClick={() => onDownload(preferred, "primary")}
-            className="flex h-[3.5rem] w-full items-center justify-center gap-2 rounded-pill bg-primary px-8 text-fluid-base font-semibold text-on-primary shadow-soft transition-colors hover:bg-primary-strong"
+            className="btn-magnetic flex h-[3.75rem] w-full items-center justify-center gap-2.5 rounded-pill bg-primary px-8 text-fluid-base font-semibold text-on-primary shadow-soft transition-colors hover:bg-primary-strong"
           >
             {preferred === "mac" ? (
               <Apple className="h-5 w-5" aria-hidden="true" />
@@ -92,7 +117,7 @@ export function Download() {
           </p>
         </motion.div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
           {(Object.keys(DOWNLOAD_ASSETS) as DownloadPlatform[]).map(
             (platform) => {
               const asset = DOWNLOAD_ASSETS[platform];
@@ -101,23 +126,31 @@ export function Download() {
                 platform === "mac" ? stats?.mac : stats?.windows;
               const isPreferred = platform === preferred;
               return (
-                <a
+                <motion.a
                   key={platform}
                   href={trackedDownloadPath(platform)}
                   onClick={() => onDownload(platform, "card")}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{
+                    duration: durations.standardSlow,
+                    ease: easing.emphatic,
+                    delay: platform === "mac" ? 0 : 0.1,
+                  }}
                   className={cn(
-                    "group rounded-card border bg-surface p-6 text-left transition-colors",
+                    "card-hover group rounded-card border bg-surface p-6 text-left transition-colors",
                     isPreferred
                       ? "border-primary/40 shadow-soft"
                       : "border-line hover:border-line-strong hover:bg-surface-2"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-bg">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-bg">
                       <Icon className="h-5 w-5 text-fg" aria-hidden="true" />
                     </div>
                     {typeof count === "number" && count > 0 ? (
-                      <span className="rounded-pill border border-line bg-bg px-2.5 py-1 text-[0.7rem] text-fg-faint">
+                      <span className="rounded-pill border border-line bg-bg px-3 py-1 text-[0.72rem] text-fg-faint">
                         {count.toLocaleString()} downloads
                       </span>
                     ) : null}
@@ -131,22 +164,24 @@ export function Download() {
                   <p className="mt-5 text-fluid-sm font-medium text-primary group-hover:underline">
                     Get the free installer →
                   </p>
-                </a>
+                </motion.a>
               );
             }
           )}
         </div>
 
-        {stats && stats.total > 0 ? (
-          <p className="mt-8 text-fluid-sm text-fg-faint">
-            {stats.total.toLocaleString()} free downloads so far
-          </p>
-        ) : (
-          <p className="mt-8 text-fluid-sm text-fg-faint">
-            Unsigned beta: on Mac, right-click → Open the first time. On Windows,
-            choose More info → Run anyway if SmartScreen appears.
-          </p>
-        )}
+        <div ref={totalCount.ref} className="mt-10">
+          {stats && stats.total > 0 ? (
+            <p className="text-fluid-lg font-semibold text-fg">
+              {totalCount.count.toLocaleString()} free downloads and counting
+            </p>
+          ) : (
+            <p className="text-fluid-sm text-fg-faint">
+              Unsigned beta: on Mac, right-click → Open the first time. On Windows,
+              choose More info → Run anyway if SmartScreen appears.
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );

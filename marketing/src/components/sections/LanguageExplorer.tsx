@@ -38,7 +38,7 @@ export function LanguageExplorer() {
   return (
     <Section
       id="learn"
-      eyebrow="Learn"
+      eyebrow="Languages"
       title="Explain across the languages you actually touch."
       subtitle="Seventeen languages and counting, from the front end to the database. Search for one, or filter by where it lives in your stack."
     >

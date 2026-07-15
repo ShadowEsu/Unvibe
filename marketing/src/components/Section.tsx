@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { fadeUp, inViewOnce, stagger } from "@/lib/motion";
+import { fadeUp, inViewOnce, stagger, staggerFast } from "@/lib/motion";
 
 interface SectionProps {
   id?: string;
@@ -16,6 +16,8 @@ interface SectionProps {
   /** Constrain body width to prose measure. */
   narrow?: boolean;
   as?: "section" | "div";
+  /** Use faster stagger for dense grids. */
+  fastStagger?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ export function Section({
   centered = false,
   narrow = false,
   as = "section",
+  fastStagger = false,
 }: SectionProps) {
   const Tag = as === "section" ? motion.section : motion.div;
   const hasHeading = eyebrow || title || subtitle;
@@ -41,25 +44,25 @@ export function Section({
     <Tag
       id={id}
       className={cn(
-        "container-page scroll-mt-24 py-20 sm:py-28",
+        "container-page scroll-mt-24 py-24 sm:py-32",
         className
       )}
       initial="hidden"
       whileInView="visible"
       viewport={inViewOnce}
-      variants={stagger}
+      variants={fastStagger ? staggerFast : stagger}
     >
       {hasHeading && (
         <div
           className={cn(
-            "mb-12 max-w-2xl",
+            "mb-14 max-w-2xl",
             centered && "mx-auto text-center"
           )}
         >
           {eyebrow && (
             <motion.p
               variants={fadeUp}
-              className="mb-3 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary"
+              className="mb-4 inline-flex items-center gap-2 rounded-pill border border-primary/20 bg-primary-soft px-3.5 py-1 text-fluid-sm font-medium tracking-wide text-primary"
             >
               {eyebrow}
             </motion.p>
@@ -67,7 +70,7 @@ export function Section({
           {title && (
             <motion.h2
               variants={fadeUp}
-              className="text-balance text-fluid-2xl font-semibold text-fg"
+              className="text-balance text-fluid-2xl font-semibold tracking-tight text-fg"
             >
               {title}
             </motion.h2>
@@ -75,7 +78,7 @@ export function Section({
           {subtitle && (
             <motion.p
               variants={fadeUp}
-              className="mt-4 text-pretty text-fluid-lg leading-relaxed text-fg-muted"
+              className="mt-5 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted"
             >
               {subtitle}
             </motion.p>

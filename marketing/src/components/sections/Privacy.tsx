@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ShieldCheck, EyeOff, Check, Ban, ArrowUpRight } from "lucide-react";
 import { Section } from "../Section";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, stagger } from "@/lib/motion";
 import { track } from "@/lib/analytics";
 
 const guarantees = [
@@ -37,21 +37,27 @@ export function Privacy() {
       subtitle="Unvibe builds context locally and filters secrets before any request. The whole repository is never uploaded, and cloud analysis is consent-gated per repo."
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <div className="grid gap-3">
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-10%" }}
+          className="grid gap-4"
+        >
           {guarantees.map((g) => (
             <motion.div
               key={g.title}
               variants={fadeUp}
-              className="flex gap-4 rounded-card border border-line bg-surface p-5"
+              className="card-hover flex gap-4 rounded-card border border-line bg-surface p-6"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                <g.Icon size={20} aria-hidden="true" />
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                <g.Icon size={21} aria-hidden="true" />
               </span>
               <div>
                 <h3 className="text-fluid-base font-semibold text-fg">
                   {g.title}
                 </h3>
-                <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
+                <p className="mt-1.5 text-fluid-sm leading-relaxed text-fg-muted">
                   {g.body}
                 </p>
               </div>
@@ -62,7 +68,7 @@ export function Privacy() {
             <Link
               href="/privacy"
               onClick={() => track("privacy_opened", { target: "privacy" })}
-              className="inline-flex items-center gap-1 text-fluid-sm font-medium text-primary hover:underline"
+              className="hover-underline inline-flex items-center gap-1 text-fluid-sm font-medium text-primary"
             >
               Read the privacy policy
               <ArrowUpRight size={15} aria-hidden="true" />
@@ -70,24 +76,24 @@ export function Privacy() {
             <Link
               href="/data-controls"
               onClick={() => track("privacy_opened", { target: "data-controls" })}
-              className="inline-flex items-center gap-1 text-fluid-sm font-medium text-primary hover:underline"
+              className="hover-underline inline-flex items-center gap-1 text-fluid-sm font-medium text-primary"
             >
               Data controls
               <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           </div>
-        </div>
+        </motion.div>
 
         {/* Transmission preview visual */}
         <motion.div
           variants={fadeUp}
           className="overflow-hidden rounded-card border border-line bg-surface"
         >
-          <div className="flex items-center justify-between border-b border-line bg-surface-2/70 px-5 py-3">
+          <div className="flex items-center justify-between border-b border-line bg-surface-2/70 px-5 py-3.5">
             <span className="text-fluid-sm font-medium text-fg">
               Transmission preview
             </span>
-            <span className="font-mono text-[0.66rem] text-fg-faint">
+            <span className="font-mono text-[0.68rem] text-fg-faint">
               before any request
             </span>
           </div>
@@ -100,7 +106,7 @@ export function Privacy() {
                 {included.map((item) => (
                   <li
                     key={item}
-                    className="rounded-lg bg-green/8 px-3 py-2 font-mono text-[0.74rem] text-fg"
+                    className="rounded-lg bg-green/8 px-3 py-2 font-mono text-[0.76rem] text-fg"
                   >
                     {item}
                   </li>
@@ -115,7 +121,7 @@ export function Privacy() {
                 {blocked.map((item) => (
                   <li
                     key={item}
-                    className="rounded-lg bg-red/8 px-3 py-2 font-mono text-[0.74rem] text-fg-muted line-through decoration-red/50"
+                    className="rounded-lg bg-red/8 px-3 py-2 font-mono text-[0.76rem] text-fg-muted line-through decoration-red/50"
                   >
                     {item}
                   </li>
@@ -123,8 +129,9 @@ export function Privacy() {
               </ul>
             </div>
           </div>
-          <p className="border-t border-line px-5 py-3 text-fluid-sm text-fg-muted">
-            Add your own rules with a <code className="font-mono text-primary">.unvibeignore</code> file.
+          <p className="border-t border-line px-5 py-3.5 text-fluid-sm text-fg-muted">
+            Add your own rules with a{" "}
+            <code className="font-mono text-primary">.unvibeignore</code> file.
           </p>
         </motion.div>
       </div>

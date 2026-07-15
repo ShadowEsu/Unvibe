@@ -7,6 +7,7 @@ import { Section } from "../Section";
 import { CodeCard } from "../CodeCard";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
+import { durations, easing } from "@/lib/motion";
 import { examples, depthLabels, type Depth } from "@/lib/examples";
 
 const steps = [
@@ -58,7 +59,6 @@ export function DemoSection() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-    // advance intentionally not in deps; it is stable enough for this timeline.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoplay, step, atEnd]);
 
@@ -71,18 +71,18 @@ export function DemoSection() {
     >
       <div className="rounded-card border border-line bg-surface p-4 sm:p-6">
         {/* Step rail */}
-        <div className="mb-5 flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
           {steps.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">
               <button
                 onClick={() => setStep(i)}
                 className={cn(
-                  "flex items-center gap-2 whitespace-nowrap rounded-pill px-3 py-1.5 text-fluid-sm transition-colors",
+                  "flex items-center gap-2 whitespace-nowrap rounded-pill px-3.5 py-2 text-fluid-sm font-medium transition-all duration-200",
                   i === step
-                    ? "bg-primary text-on-primary"
+                    ? "bg-primary text-on-primary shadow-sm"
                     : i < step
                       ? "text-fg"
-                      : "text-fg-faint"
+                      : "text-fg-faint hover:text-fg"
                 )}
               >
                 <span
@@ -114,12 +114,12 @@ export function DemoSection() {
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-3 flex flex-wrap gap-1.5"
+                className="mt-4 flex flex-wrap gap-1.5"
               >
                 {example.concepts.map((c) => (
                   <span
                     key={c}
-                    className="rounded-pill border border-line bg-surface-2 px-2 py-0.5 font-mono text-[0.66rem] text-fg-muted"
+                    className="rounded-pill border border-line bg-surface-2 px-2.5 py-0.5 font-mono text-[0.68rem] text-fg-muted"
                   >
                     {c}
                   </span>
@@ -129,14 +129,14 @@ export function DemoSection() {
           </div>
 
           {/* Right: widget */}
-          <div className="min-h-[18rem] rounded-card border border-line bg-surface-2/40 p-5">
+          <div className="min-h-[18rem] rounded-card border border-line bg-surface-2/40 p-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={step}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: durations.standardFast, ease: easing.calm }}
               >
                 {step === 0 && (
                   <Placeholder text="Select the debounce helper and trigger Unvibe with a keystroke." />
@@ -146,13 +146,13 @@ export function DemoSection() {
                 )}
                 {step === 2 && (
                   <div>
-                    <p className="mb-3 text-fluid-sm text-fg-muted">Choose a depth</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <p className="mb-4 text-fluid-sm text-fg-muted">Choose a depth</p>
+                    <div className="flex flex-wrap gap-2">
                       {(["beginner", "intermediate", "advanced"] as Depth[]).map((d) => (
                         <span
                           key={d}
                           className={cn(
-                            "rounded-pill px-3 py-1 text-fluid-sm",
+                            "rounded-pill px-3.5 py-1.5 text-fluid-sm font-medium",
                             d === DEPTH
                               ? "bg-primary text-on-primary"
                               : "border border-line text-fg-faint"
@@ -166,10 +166,10 @@ export function DemoSection() {
                 )}
                 {step === 3 && (
                   <div>
-                    <span className="rounded-pill bg-primary-soft px-2.5 py-0.5 text-fluid-sm font-medium text-primary">
+                    <span className="rounded-pill bg-primary-soft px-3 py-1 text-fluid-sm font-medium text-primary">
                       {depthLabels[DEPTH]}
                     </span>
-                    <p className="mt-3 text-fluid-base leading-relaxed text-fg">
+                    <p className="mt-4 text-fluid-base leading-relaxed text-fg">
                       {example.explanations[DEPTH]}
                     </p>
                   </div>
@@ -179,15 +179,15 @@ export function DemoSection() {
                     <p className="text-fluid-sm font-medium text-fg-muted">
                       Quick check
                     </p>
-                    <p className="mt-1 text-fluid-base text-fg">
+                    <p className="mt-2 text-fluid-base text-fg">
                       {example.comprehension.question}
                     </p>
-                    <div className="mt-3 flex flex-col gap-2">
+                    <div className="mt-4 flex flex-col gap-2.5">
                       {example.comprehension.options.map((opt, i) => (
                         <span
                           key={opt}
                           className={cn(
-                            "flex items-center justify-between rounded-xl border px-3 py-2 text-fluid-sm",
+                            "flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-fluid-sm",
                             i === example.comprehension.answerIndex
                               ? "border-green/50 bg-green/10 text-green"
                               : "border-line text-fg-muted"
@@ -203,9 +203,9 @@ export function DemoSection() {
                   </div>
                 )}
                 {step === 5 && (
-                  <div className="flex flex-col items-start gap-3">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green/15 text-green">
-                      <Check size={24} aria-hidden="true" />
+                  <div className="flex flex-col items-start gap-3.5">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-green/15 text-green">
+                      <Check size={26} aria-hidden="true" />
                     </span>
                     <p className="text-fluid-lg font-medium text-fg">
                       Saved to your notebook
@@ -222,11 +222,11 @@ export function DemoSection() {
         </div>
 
         {/* Controls */}
-        <div className="mt-5 flex items-center justify-between">
+        <div className="mt-6 flex items-center justify-between">
           <button
             onClick={() => setAutoplay((a) => !a)}
             disabled={atEnd}
-            className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-fluid-sm text-fg hover:bg-surface-2 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2.5 text-fluid-sm text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
           >
             {autoplay ? (
               <>
@@ -242,14 +242,14 @@ export function DemoSection() {
           {atEnd ? (
             <button
               onClick={reset}
-              className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-fluid-sm text-fg hover:bg-surface-2"
+              className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2.5 text-fluid-sm text-fg transition-colors hover:bg-surface-2"
             >
               <RotateCcw size={15} aria-hidden="true" /> Replay
             </button>
           ) : (
             <button
               onClick={advance}
-              className="inline-flex items-center gap-2 rounded-pill bg-primary px-5 py-2 text-fluid-sm font-medium text-on-primary hover:bg-primary-strong"
+              className="inline-flex items-center gap-2 rounded-pill bg-primary px-6 py-2.5 text-fluid-sm font-medium text-on-primary transition-colors hover:bg-primary-strong"
             >
               Next <ChevronRight size={15} aria-hidden="true" />
             </button>

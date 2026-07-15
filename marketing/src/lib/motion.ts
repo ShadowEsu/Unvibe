@@ -27,11 +27,12 @@ export const easing = {
   calm: [0.2, 0, 0.2, 1] as [number, number, number, number],
   emphatic: [0.16, 1, 0.3, 1] as [number, number, number, number],
   out: [0, 0, 0.2, 1] as [number, number, number, number],
+  spring: [0.34, 1.56, 0.64, 1] as [number, number, number, number],
 } as const;
 
 /** Standard entrance used across sections. */
 export const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
@@ -47,16 +48,60 @@ export const fadeIn = {
   },
 } as const;
 
+/** Scale entrance for cards and modals. */
+export const scaleIn = {
+  hidden: { opacity: 0, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: durations.standard, ease: easing.emphatic },
+  },
+} as const;
+
+/** Slide from left. */
+export const slideInLeft = {
+  hidden: { opacity: 0, x: -24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: durations.standardSlow, ease: easing.emphatic },
+  },
+} as const;
+
+/** Slide from right. */
+export const slideInRight = {
+  hidden: { opacity: 0, x: 24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: durations.standardSlow, ease: easing.emphatic },
+  },
+} as const;
+
 /** Parent that reveals children in sequence. */
 export const stagger = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+    transition: { staggerChildren: 0.1, delayChildren: 0.05 },
+  },
+} as const;
+
+/** Faster stagger for tight grids. */
+export const staggerFast = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.06, delayChildren: 0.03 },
   },
 } as const;
 
 /** Viewport config so entrances play once, slightly early. */
-export const inViewOnce = { once: true, margin: "-12% 0px -12% 0px" } as const;
+export const inViewOnce = { once: true, margin: "-10% 0px -10% 0px" } as const;
+
+/** Viewport config for larger sections. */
+export const inViewLarge = {
+  once: true,
+  margin: "-15% 0px -15% 0px",
+} as const;
 
 /**
  * Returns true when the user prefers reduced motion.
@@ -65,4 +110,17 @@ export const inViewOnce = { once: true, margin: "-12% 0px -12% 0px" } as const;
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * Count-up hook values: given a target number and duration, returns
+ * the current value that animates from 0 to target.
+ */
+export function countUpConfig(target: number, duration = 1.2) {
+  return {
+    initial: { opacity: 0, y: 8 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: inViewOnce,
+    transition: { duration, ease: easing.emphatic },
+  } as const;
 }

@@ -37,7 +37,7 @@ export function Faq() {
                   onClick={() => toggle(item.id)}
                   aria-expanded={isOpen}
                   aria-controls={`faq-${item.id}`}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surface-2/60"
+                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-surface-2/60"
                 >
                   <span className="text-fluid-base font-medium text-fg">
                     {item.question}
@@ -46,7 +46,7 @@ export function Faq() {
                     size={18}
                     aria-hidden="true"
                     className={cn(
-                      "shrink-0 text-fg-faint transition-transform duration-standard",
+                      "shrink-0 text-fg-faint transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                       isOpen && "rotate-45 text-primary"
                     )}
                   />
@@ -60,10 +60,10 @@ export function Faq() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.28, ease: [0.2, 0, 0.2, 1] }}
+                    transition={{ duration: 0.3, ease: [0.2, 0, 0.2, 1] }}
                     className="overflow-hidden"
                   >
-                    <p className="px-5 pb-5 text-pretty text-fluid-base leading-relaxed text-fg-muted">
+                    <p className="px-6 pb-6 text-pretty text-fluid-base leading-relaxed text-fg-muted">
                       {item.answer}
                     </p>
                   </motion.div>

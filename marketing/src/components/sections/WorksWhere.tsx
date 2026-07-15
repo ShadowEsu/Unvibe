@@ -71,7 +71,7 @@ export function WorksWhere() {
       <div
         role="tablist"
         aria-label="Where Unvibe works"
-        className="mb-6 flex flex-wrap gap-2"
+        className="mb-7 flex flex-wrap gap-2"
       >
         {surfaces.map((s) => {
           const isActive = s.id === active;
@@ -84,7 +84,7 @@ export function WorksWhere() {
               aria-controls={`panel-${s.id}`}
               onClick={() => setActive(s.id)}
               className={cn(
-                "relative rounded-pill px-4 py-2 text-fluid-sm transition-colors duration-micro",
+                "relative rounded-pill px-5 py-2.5 text-fluid-sm font-medium transition-colors duration-micro",
                 isActive ? "text-on-primary" : "text-fg-muted hover:text-fg"
               )}
             >
@@ -108,26 +108,26 @@ export function WorksWhere() {
             role="tabpanel"
             id={`panel-${current.id}`}
             aria-labelledby={`tab-${current.id}`}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: durations.standardFast, ease: easing.calm }}
-            className="grid gap-6 p-5 sm:grid-cols-2 sm:items-center sm:p-7"
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: durations.standard, ease: easing.calm }}
+            className="grid gap-6 p-6 sm:grid-cols-2 sm:items-center sm:p-8"
           >
             <div>
               <p className="text-fluid-sm font-medium text-primary">
                 {current.context}
               </p>
-              <p className="mt-2 text-pretty text-fluid-lg leading-relaxed text-fg">
+              <p className="mt-3 text-pretty text-fluid-lg leading-relaxed text-fg">
                 {current.detail}
               </p>
             </div>
-            <div className="overflow-hidden rounded-xl border border-line bg-surface-2/60 p-4 font-mono text-[0.78rem] leading-relaxed text-fg-muted">
+            <div className="overflow-hidden rounded-xl border border-line bg-surface-2/60 p-5 font-mono text-[0.8rem] leading-relaxed text-fg-muted">
               {current.sample.split("\n").map((line, i) => (
                 <div
                   key={i}
                   className={cn(
-                    "-mx-2 whitespace-pre-wrap rounded px-2",
+                    "-mx-2 whitespace-pre-wrap rounded-lg px-2",
                     line.startsWith("+") && "bg-green/10 text-green",
                     line.startsWith("-") && "bg-red/10 text-red"
                   )}

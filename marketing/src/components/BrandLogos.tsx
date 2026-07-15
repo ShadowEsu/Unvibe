@@ -175,19 +175,23 @@ export function BrandLogos({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "mask-fade-x overflow-hidden border-y border-line bg-surface/60 py-4",
+        "mask-fade-x overflow-hidden border-y border-line bg-surface-2/40 py-5",
         className
       )}
       aria-label="Languages and tools Unvibe is designed to work beside"
     >
-      <div className="flex w-max animate-marquee gap-8 pr-8 hover:[animation-play-state:paused]">
+      <div className="flex w-max animate-marquee gap-10 pr-10 hover:[animation-play-state:paused]">
         {[...logos, ...logos].map((logo, i) => (
           <div
             key={`${logo.name}-${i}`}
-            className="flex items-center gap-2 text-fg-muted transition-colors hover:text-fg"
+            className="flex items-center gap-2.5 text-fg-muted transition-colors duration-200 hover:text-fg"
           >
-            <span className={cn("opacity-90", logo.tone)}>{logo.mark}</span>
-            <span className="text-fluid-sm font-medium tracking-tight">{logo.name}</span>
+            <span className={cn("opacity-80 transition-opacity hover:opacity-100", logo.tone)}>
+              {logo.mark}
+            </span>
+            <span className="text-fluid-sm font-medium tracking-tight">
+              {logo.name}
+            </span>
           </div>
         ))}
       </div>

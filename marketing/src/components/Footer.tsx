@@ -46,8 +46,8 @@ const columns: FooterColumn[] = [
 export function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-line bg-surface-2/60">
-      <div className="container-page py-16">
+    <footer className="border-t border-line bg-surface-2/40">
+      <div className="container-page py-16 sm:py-20">
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:grid-cols-6">
           <div className="col-span-2 max-w-xs">
             <Logo />
@@ -60,7 +60,7 @@ export function Footer() {
               <h3 className="font-sans text-fluid-sm font-semibold tracking-tight text-fg">
                 {col.heading}
               </h3>
-              <ul className="mt-4 space-y-2.5">
+              <ul className="mt-4 space-y-3">
                 {col.links.map((link) => {
                   const external = link.href.startsWith("mailto:");
                   const internal = link.href.startsWith("/");
@@ -69,14 +69,14 @@ export function Footer() {
                       {internal && !external ? (
                         <Link
                           href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
+                          className="hover-underline text-fluid-sm text-fg-muted transition-colors hover:text-fg"
                         >
                           {link.label}
                         </Link>
                       ) : (
                         <a
                           href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
+                          className="hover-underline text-fluid-sm text-fg-muted transition-colors hover:text-fg"
                         >
                           {link.label}
                         </a>
@@ -89,13 +89,16 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {year} Unvibe. Mac first. Made for people who want to understand their code.</p>
+        <div className="mt-14 flex flex-col gap-3 border-t border-line pt-8 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            &copy; {year} Unvibe. Mac first. Made for people who want to
+            understand their code.
+          </p>
           <p>
             Questions?{" "}
             <a
               href="mailto:hello@unvibe.app"
-              className="text-fg-muted underline underline-offset-2 hover:text-fg"
+              className="hover-underline text-fg-muted"
             >
               hello@unvibe.app
             </a>

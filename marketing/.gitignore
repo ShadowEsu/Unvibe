@@ -42,3 +42,6 @@ next-env.d.ts
 # Large installer binaries (deployed via Vercel CLI, not git)
 /public/downloads/*.dmg
 /public/downloads/*.exe
+
+# Installers are hosted on Vercel Blob, not in the repo
+/public/downloads/

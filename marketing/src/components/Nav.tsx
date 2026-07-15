@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { Button } from "./Button";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
+import { durations, easing } from "@/lib/motion";
 
 interface NavLink {
   label: string;
@@ -65,9 +67,9 @@ export function Nav() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 transition-colors duration-standard",
+        "sticky top-0 z-40 transition-all duration-300",
         scrolled
-          ? "border-b border-line bg-bg/80 backdrop-blur-md"
+          ? "border-b border-line/60 bg-bg/80 shadow-[0_1px_3px_rgb(0,0,0,0.04)] backdrop-blur-xl"
           : "border-b border-transparent bg-transparent"
       )}
     >
@@ -86,12 +88,22 @@ export function Nav() {
                 href={link.href}
                 aria-current={active === link.id ? "true" : undefined}
                 className={cn(
-                  "rounded-pill px-3 py-2 text-fluid-sm transition-colors duration-micro",
+                  "relative rounded-pill px-3 py-2 text-fluid-sm transition-colors duration-micro",
                   active === link.id
                     ? "text-fg"
                     : "text-fg-muted hover:text-fg"
                 )}
               >
+                {active === link.id && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    className="absolute inset-0 -z-10 rounded-pill bg-surface-2"
+                    transition={{
+                      duration: durations.standard,
+                      ease: easing.emphatic,
+                    }}
+                  />
+                )}
                 {link.label}
               </a>
             </li>
@@ -103,7 +115,7 @@ export function Nav() {
           <Button href="#demo" variant="ghost" size="sm">
             Watch demo
           </Button>
-          <Button href="#download" size="sm">
+          <Button href="#download" size="sm" className="btn-magnetic">
             Download free
           </Button>
         </div>
@@ -115,7 +127,7 @@ export function Nav() {
             aria-label="Open menu"
             aria-expanded={open}
             onClick={() => setOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-pill border border-line text-fg"
+            className="flex h-10 w-10 items-center justify-center rounded-pill border border-line text-fg transition-colors hover:bg-surface-2"
           >
             <Menu size={18} aria-hidden="true" />
           </button>
@@ -123,50 +135,80 @@ export function Nav() {
       </nav>
 
       {/* Mobile sheet */}
-      {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close menu"
-            className="absolute inset-0 bg-fg/30 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 top-0 flex h-full w-[min(20rem,86vw)] flex-col bg-bg p-6 shadow-lift">
-            <div className="mb-8 flex items-center justify-between">
-              <Logo />
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-pill border border-line text-fg"
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            </div>
-            <ul className="flex flex-col gap-1">
-              {links.map((link) => (
-                <li key={link.id}>
-                  <a
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block rounded-xl px-3 py-3 text-fluid-lg text-fg hover:bg-surface-2"
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 lg:hidden"
+          >
+            <button
+              type="button"
+              aria-label="Close menu"
+              className="absolute inset-0 bg-fg/30 backdrop-blur-sm"
+              onClick={() => setOpen(false)}
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{
+                duration: durations.standard,
+                ease: easing.emphatic,
+              }}
+              className="absolute right-0 top-0 flex h-full w-[min(22rem,88vw)] flex-col bg-bg p-6 shadow-lift"
+            >
+              <div className="mb-8 flex items-center justify-between">
+                <Logo />
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-pill border border-line text-fg transition-colors hover:bg-surface-2"
+                >
+                  <X size={18} aria-hidden="true" />
+                </button>
+              </div>
+              <ul className="flex flex-col gap-1">
+                {links.map((link, i) => (
+                  <motion.li
+                    key={link.id}
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      delay: 0.08 + i * 0.04,
+                      duration: durations.standardFast,
+                      ease: easing.emphatic,
+                    }}
                   >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-auto flex flex-col gap-3 pt-6">
-              <Button href="#demo" variant="secondary" onClick={() => setOpen(false)}>
-                Watch demo
-              </Button>
-              <Button href="#download" onClick={() => setOpen(false)}>
-                Download free
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                    <a
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                      className="block rounded-xl px-3 py-3 text-fluid-lg text-fg transition-colors hover:bg-surface-2"
+                    >
+                      {link.label}
+                    </a>
+                  </motion.li>
+                ))}
+              </ul>
+              <div className="mt-auto flex flex-col gap-3 pt-6">
+                <Button
+                  href="#demo"
+                  variant="secondary"
+                  onClick={() => setOpen(false)}
+                >
+                  Watch demo
+                </Button>
+                <Button href="#download" onClick={() => setOpen(false)}>
+                  Download free
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

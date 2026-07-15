@@ -22,13 +22,13 @@ export function DepthDemo() {
 
   return (
     <Section
-      id="learn"
+      id="depth"
       eyebrow="One snippet, five depths"
       title="From first day to staff engineer, on the same line of code."
       subtitle="Drag the depth from New to Expert and watch the explanation change. Nothing about the code moves — only how much it assumes you already know."
     >
       {/* Example selector */}
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      <div className="mb-6 flex flex-wrap gap-2">
         {examples.map((ex) => (
           <button
             key={ex.id}
@@ -38,10 +38,10 @@ export function DepthDemo() {
             }}
             aria-pressed={ex.id === exampleId}
             className={cn(
-              "rounded-pill border px-3 py-1.5 text-fluid-sm transition-colors duration-micro",
+              "rounded-pill border px-4 py-2 text-fluid-sm font-medium transition-all duration-200",
               ex.id === exampleId
-                ? "border-primary bg-primary-soft text-primary"
-                : "border-line text-fg-muted hover:text-fg"
+                ? "border-primary bg-primary text-on-primary shadow-glow"
+                : "border-line text-fg-muted hover:border-line-strong hover:text-fg"
             )}
           >
             {ex.chip}
@@ -56,11 +56,11 @@ export function DepthDemo() {
             language={example.language}
             filename={`${example.id}.${extFor(example.language)}`}
           />
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-4 flex flex-wrap gap-1.5">
             {example.concepts.map((c) => (
               <span
                 key={c}
-                className="rounded-pill border border-line bg-surface-2 px-2 py-0.5 font-mono text-[0.66rem] text-fg-muted"
+                className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 font-mono text-[0.68rem] text-fg-muted"
               >
                 {c}
               </span>
@@ -73,7 +73,7 @@ export function DepthDemo() {
           <div
             role="radiogroup"
             aria-label="Explanation depth"
-            className="mb-4 grid grid-cols-5 gap-1 rounded-pill border border-line bg-surface p-1"
+            className="mb-5 grid grid-cols-5 gap-1 rounded-pill border border-line bg-surface p-1"
           >
             {depthOrder.map((d) => (
               <button
@@ -85,9 +85,9 @@ export function DepthDemo() {
                   track("depth_changed", { depth: d, example: example.id });
                 }}
                 className={cn(
-                  "rounded-pill px-1 py-1.5 text-[0.68rem] font-medium transition-colors duration-micro sm:text-fluid-sm",
+                  "rounded-pill px-1 py-2 text-[0.68rem] font-medium transition-all duration-200 sm:text-fluid-sm",
                   depth === d
-                    ? "bg-primary text-on-primary"
+                    ? "bg-primary text-on-primary shadow-sm"
                     : "text-fg-muted hover:text-fg"
                 )}
               >
@@ -97,9 +97,9 @@ export function DepthDemo() {
             ))}
           </div>
 
-          <div className="flex-1 rounded-card border border-line bg-surface p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="rounded-pill bg-primary-soft px-2.5 py-0.5 text-fluid-sm font-medium text-primary">
+          <div className="flex-1 rounded-card border border-line bg-surface p-6">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="rounded-pill bg-primary-soft px-3 py-1 text-fluid-sm font-medium text-primary">
                 {depthLabels[depth]}
               </span>
               <span className="text-fluid-sm text-fg-faint">explanation</span>
@@ -107,10 +107,10 @@ export function DepthDemo() {
             <AnimatePresence mode="wait">
               <motion.p
                 key={`${example.id}-${depth}`}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: durations.standardFast, ease: easing.calm }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: durations.standard, ease: easing.calm }}
                 className="text-pretty text-fluid-base leading-relaxed text-fg"
               >
                 {example.explanations[depth]}

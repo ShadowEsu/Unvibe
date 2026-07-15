@@ -8,8 +8,6 @@ import { CodeCard } from "../CodeCard";
 import { cn } from "@/lib/utils";
 import { examples } from "@/lib/examples";
 
-// A short, self-contained quiz drawn from the curated examples. No signup, no scoring
-// stored — it just demonstrates the comprehension-check experience.
 const quiz = ["debounce", "sql-join", "useeffect"]
   .map((id) => examples.find((e) => e.id === id))
   .filter((e): e is (typeof examples)[number] => Boolean(e));
@@ -57,25 +55,30 @@ export function Assessment() {
     >
       <div className="rounded-card border border-line bg-surface p-6 sm:p-8">
         {done ? (
-          <div className="text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center"
+          >
             <p className="text-fluid-2xl font-semibold text-fg">
               {correctCount} / {quiz.length}
             </p>
-            <p className="mt-2 text-fluid-base text-fg-muted">
+            <p className="mt-3 text-fluid-base text-fg-muted">
               {correctCount === quiz.length
                 ? "Every one. This is exactly the loop Unvibe keeps running as you work."
                 : "Nice — and this is the point: the misses are where real understanding gets built."}
             </p>
             <button
               onClick={restart}
-              className="mt-6 inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-fluid-sm text-fg hover:bg-surface-2"
+              className="mt-7 inline-flex items-center gap-2 rounded-pill border border-line px-5 py-2.5 text-fluid-sm text-fg transition-colors hover:bg-surface-2"
             >
               <RotateCcw size={15} aria-hidden="true" /> Try again
             </button>
-          </div>
+          </motion.div>
         ) : (
           <div>
-            <div className="mb-4 flex items-center justify-between text-fluid-sm text-fg-faint">
+            <div className="mb-5 flex items-center justify-between text-fluid-sm text-fg-faint">
               <span>
                 Question {index + 1} of {quiz.length}
               </span>
@@ -86,14 +89,14 @@ export function Assessment() {
               code={item.code}
               language={item.language}
               showLineNumbers={false}
-              className="mb-5"
+              className="mb-6"
             />
 
-            <p className="mb-4 text-fluid-lg font-medium text-fg">
+            <p className="mb-5 text-fluid-lg font-medium text-fg">
               {item.comprehension.question}
             </p>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               {item.comprehension.options.map((opt, i) => {
                 const isAnswer = i === item.comprehension.answerIndex;
                 const isPicked = selected === i;
@@ -103,7 +106,7 @@ export function Assessment() {
                     onClick={() => handleSelect(i)}
                     disabled={answered}
                     className={cn(
-                      "flex items-center justify-between rounded-xl border px-4 py-3 text-left text-fluid-base transition-colors duration-micro",
+                      "flex items-center justify-between rounded-xl border px-4 py-3.5 text-left text-fluid-base transition-all duration-200",
                       !answered && "border-line hover:border-line-strong hover:bg-surface-2",
                       answered && isAnswer && "border-green/50 bg-green/10 text-green",
                       answered &&
@@ -131,18 +134,18 @@ export function Assessment() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 rounded-xl border border-line bg-surface-2/60 p-4">
+                  <div className="mt-5 rounded-xl border border-line bg-surface-2/60 p-5">
                     <p className="text-fluid-sm font-medium text-fg">
                       {isCorrect ? "Correct." : "Not quite."}
                     </p>
-                    <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
+                    <p className="mt-1.5 text-fluid-sm leading-relaxed text-fg-muted">
                       {item.comprehension.explanation}
                     </p>
                   </div>
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-5 flex justify-end">
                     <button
                       onClick={next}
-                      className="rounded-pill bg-primary px-5 py-2 text-fluid-sm font-medium text-on-primary hover:bg-primary-strong"
+                      className="rounded-pill bg-primary px-6 py-2.5 text-fluid-sm font-medium text-on-primary transition-colors hover:bg-primary-strong"
                     >
                       {index + 1 >= quiz.length ? "See result" : "Next question"}
                     </button>

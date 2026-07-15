@@ -44,7 +44,6 @@ export function Waitlist() {
   const tool = watch("tool");
   const experience = watch("experience");
 
-  // Pick up referral and UTM parameters from the URL when present.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
@@ -128,33 +127,33 @@ export function Waitlist() {
           {status === "success" || status === "duplicate" ? (
             <motion.div
               key="success"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-center"
             >
-              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green/15 text-green">
-                <PartyPopper size={26} aria-hidden="true" />
+              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green/15 text-green">
+                <PartyPopper size={28} aria-hidden="true" />
               </span>
-              <h3 className="mt-4 text-fluid-xl font-semibold text-fg">
+              <h3 className="mt-5 text-fluid-xl font-semibold text-fg">
                 {status === "duplicate"
                   ? "You are already on the list"
                   : "You are on the list"}
               </h3>
-              <p className="mx-auto mt-2 max-w-md text-fluid-base text-fg-muted">
+              <p className="mx-auto mt-3 max-w-md text-fluid-base text-fg-muted">
                 {status === "duplicate"
                   ? "Good news — we already had your spot saved. Here is your referral link either way."
                   : "We will email your invite when the Mac beta opens. Share your link to move up the list."}
               </p>
 
               {shareUrl && (
-                <div className="mx-auto mt-6 flex max-w-md items-center gap-2 rounded-pill border border-line bg-surface-2/60 p-1.5 pl-4">
+                <div className="mx-auto mt-7 flex max-w-md items-center gap-2 rounded-pill border border-line bg-surface-2/60 p-1.5 pl-5">
                   <span className="flex-1 truncate text-left font-mono text-fluid-sm text-fg-muted">
                     {shareUrl}
                   </span>
                   <button
                     type="button"
                     onClick={copyReferral}
-                    className="flex items-center gap-1.5 rounded-pill bg-primary px-4 py-2 text-fluid-sm font-medium text-on-primary hover:bg-primary-strong"
+                    className="flex items-center gap-1.5 rounded-pill bg-primary px-5 py-2.5 text-fluid-sm font-medium text-on-primary transition-colors hover:bg-primary-strong"
                   >
                     {copied ? (
                       <>
@@ -177,7 +176,7 @@ export function Waitlist() {
               onSubmit={handleSubmit(onSubmit)}
               onChange={markStarted}
               noValidate
-              className="space-y-6"
+              className="space-y-7"
             >
               <Field label="Email" htmlFor="email" error={errors.email?.message}>
                 <input
@@ -258,7 +257,7 @@ export function Waitlist() {
               <button
                 type="submit"
                 disabled={status === "submitting"}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-pill bg-primary text-fluid-base font-medium text-on-primary transition-colors hover:bg-primary-strong disabled:opacity-60"
+                className="btn-magnetic flex h-13 w-full items-center justify-center gap-2 rounded-pill bg-primary text-fluid-base font-medium text-on-primary transition-colors hover:bg-primary-strong disabled:opacity-60"
               >
                 {status === "submitting" ? (
                   <>
@@ -291,8 +290,8 @@ export function Waitlist() {
 
 function inputClass(hasError: boolean): string {
   return cn(
-    "w-full rounded-xl border bg-bg px-4 py-3 text-fluid-base text-fg placeholder:text-fg-faint focus:border-primary focus-visible:outline-none",
-    hasError ? "border-red/60" : "border-line"
+    "w-full rounded-xl border bg-bg px-4 py-3.5 text-fluid-base text-fg placeholder:text-fg-faint transition-colors focus:border-primary focus-visible:outline-none",
+    hasError ? "border-red/60" : "border-line hover:border-line-strong"
   );
 }
 
@@ -313,7 +312,7 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="mb-2 flex items-center gap-2 text-fluid-sm font-medium text-fg"
+        className="mb-2.5 flex items-center gap-2 text-fluid-sm font-medium text-fg"
       >
         {label}
         {optional && <span className="text-fg-faint">(optional)</span>}
@@ -343,10 +342,10 @@ function ChoiceChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-pill border px-4 py-2 text-fluid-sm transition-colors duration-micro",
+        "rounded-pill border px-4 py-2 text-fluid-sm font-medium transition-all duration-200",
         active
-          ? "border-primary bg-primary-soft text-primary"
-          : "border-line text-fg-muted hover:text-fg"
+          ? "border-primary bg-primary text-on-primary shadow-sm"
+          : "border-line text-fg-muted hover:border-line-strong hover:text-fg"
       )}
     >
       {children}
