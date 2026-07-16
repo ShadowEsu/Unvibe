@@ -33,4 +33,5 @@ it("documents every marketing-specific environment variable", async () => {
     .filter((name) => name !== "NODE_ENV" && !documented.has(name))
     .sort();
   assert.deepEqual(missing, [], `Add undocumented variables to marketing/.env.example: ${missing.join(", ")}`);
+  assert.match(example, /^NEXT_PUBLIC_SITE_URL=https:\/\/unvibe\.site$/m);
 });

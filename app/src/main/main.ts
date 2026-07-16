@@ -292,7 +292,7 @@ app.whenReady().then(() => {
 
   // --- external links ---
   ipcMain.handle('app:openPrivacy', () => {
-    void shell.openExternal('https://unvibe.app/privacy');
+    void shell.openExternal('https://unvibe.site/privacy');
     return { ok: true };
   });
 
