@@ -1,13 +1,12 @@
 import { getStore } from '@/data/store';
 
-/** Resolve the user id from a Bearer token, or null. */
+/** Resolve the user id from a Bearer token or the HttpOnly browser session cookie. */
 export async function userFromRequest(req: Request): Promise<string | null> {
   const header = req.headers.get('authorization') ?? '';
   const match = /^Bearer\s+(.+)$/i.exec(header);
-  if (!match) {
-    return null;
-  }
-  return getStore().userForToken(match[1].trim());
+  const cookieToken = /(?:^|;\s*)uncode_session=([^;]+)/.exec(req.headers.get('cookie') ?? '')?.[1];
+  const token = match?.[1].trim() ?? (cookieToken ? decodeURIComponent(cookieToken) : null);
+  return token ? getStore().userForToken(token) : null;
 }
 
 export function baseUrlFrom(req: Request): string {

@@ -27,9 +27,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             Uncode
           </Link>
           <Link href="/">Home</Link>
-          <Link href="/history">History</Link>
-          <Link href="/projects">Projects</Link>
-          <Link href="/profile">Profile</Link>
+          <Link href="/history" className="nav__secondary">History</Link>
+          <Link href="/projects" className="nav__secondary">Projects</Link>
+          <Link href="/plan">Plan</Link>
+          <Link href="/profile" className="nav__secondary">Profile</Link>
           <span className="nav__spacer" />
           {userId ? (
             <SignOutBtn />

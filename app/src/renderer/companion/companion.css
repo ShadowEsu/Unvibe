@@ -494,6 +494,14 @@ h1 { font-size: 32px; font-weight: 680; letter-spacing: -0.055em; }
 .login { animation: fadeIn 0.4s ease both; }
 .ob { animation: fadeIn 0.35s ease both; }
 
+/* ================= plan + usage ================= */
+.plan-view .page-head { max-width: 760px; }.plan-view .page-head h1 { max-width: 680px; margin: 7px 0 10px; font-size: clamp(34px, 5vw, 58px); line-height: .98; letter-spacing: -.055em; }.plan-view .page-head p { max-width: 650px; color: var(--muted); line-height: 1.65; }.plan-view .eyebrow { color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+.plan-message { margin: 18px 0; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--ink); }.plan-message.quiet { border-color: var(--line-strong); background: var(--panel-soft); color: var(--muted); }
+.plan-current { display: flex; align-items: center; gap: 32px; margin-top: 24px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }.plan-current > div { display: grid; gap: 3px; text-transform: capitalize; }.plan-current span { color: var(--muted); font-size: 11px; }.plan-current .soft-btn { margin-left: auto; }
+.plan-usage { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }.plan-usage > div { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); text-transform: capitalize; }.plan-usage span { color: var(--muted); font-size: 11px; }.plan-usage progress { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.plan-toggle { display: flex; width: max-content; margin: 28px auto 14px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; }.plan-toggle button { min-width: 100px; border: 0; border-radius: 5px; padding: 8px 14px; background: transparent; color: var(--muted); cursor: pointer; }.plan-toggle button.on { background: var(--accent); color: var(--on-accent); }
+.plan-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }.plan-options article { display: flex; flex-direction: column; min-width: 0; padding: 20px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); }.plan-options article.featured { border: 2px solid var(--accent); }.plan-options article > b { min-height: 34px; color: var(--accent); font-size: 11px; text-transform: uppercase; }.plan-options h2 { margin: 4px 0 8px; font-size: 25px; letter-spacing: -.04em; }.plan-options p { flex: 1; min-height: 58px; color: var(--muted); font-size: 12px; line-height: 1.5; }.plan-options button { width: 100%; min-height: 40px; }.plan-team-inputs { display: grid; grid-template-columns: 1fr 58px; gap: 6px; margin-bottom: 8px; }.plan-team-inputs input { width: 100%; min-width: 0; height: 38px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel-soft); color: var(--ink); padding: 7px 8px; }
+
 /* ================= toast ================= */
 .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); background: var(--accent-strong); color: var(--on-accent); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 18px; font-family: var(--font-sans); font-size: 13px; z-index: 60; box-shadow: 4px 4px 0 rgba(33, 23, 47, .18); }
 
@@ -517,7 +525,7 @@ h1 { font-size: 32px; font-weight: 680; letter-spacing: -0.055em; }
 }
 
 @media (max-width: 760px) {
-  .side { width: 76px; padding-left: 8px; padding-right: 8px; }.brand .name, .brand .badge, .nav button { font-size: 0; }.nav button svg { margin: 0; width: 19px; height: 19px; }.promo, .sync-state { display: none; }.page { padding: 32px 24px 52px; }.rail { width: 230px; }.tiles { grid-template-columns: repeat(2, 1fr); }.modal { width: min(94vw, 760px); }.modal .mside { width: 160px; }.delete-confirm { max-width: 150px; }
+  .side { width: 76px; padding-left: 8px; padding-right: 8px; }.brand .name, .brand .badge, .nav button { font-size: 0; }.nav button svg { margin: 0; width: 19px; height: 19px; }.promo, .sync-state { display: none; }.page { padding: 32px 24px 52px; }.rail { width: 230px; }.tiles { grid-template-columns: repeat(2, 1fr); }.modal { width: min(94vw, 760px); }.modal .mside { width: 160px; }.delete-confirm { max-width: 150px; }.plan-options { grid-template-columns: 1fr; }.plan-usage { grid-template-columns: 1fr; }.plan-current { align-items: stretch; flex-direction: column; gap: 10px; }.plan-current .soft-btn { margin-left: 0; }
 }
 
 @media (max-width: 560px) {

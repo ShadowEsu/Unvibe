@@ -54,6 +54,11 @@ const api = {
   onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
+
+  // plans + usage (network stays in the main process)
+  billingOverview: () => ipcRenderer.invoke('billing:overview'),
+  startBillingCheckout: (input: unknown) => ipcRenderer.invoke('billing:checkout', input),
+  openBillingPortal: (workspaceId: string) => ipcRenderer.invoke('billing:portal', workspaceId),
 };
 
 contextBridge.exposeInMainWorld('unvibe', api);

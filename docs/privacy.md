@@ -13,6 +13,9 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
 - Raw selected code is used for the model request but is not included in the learning event sent
   to the persistence API. Synced learning records contain metadata such as timestamp, local date,
   timezone, level, line count, language, source app, outcome, project, and concept.
+- Billing analytics are restricted to enumerated lifecycle events, plan/interval identifiers,
+  seat counts, and aggregate usage. Source code, repository contents, prompts, explanations, and
+  invitation tokens are not written to analytics or billing audit metadata.
 - Real-provider endpoints require a valid server-side bearer session. The mock provider remains
   available without an account for local development.
 - Desktop account tokens are persisted only through Electron `safeStorage`. If OS-backed

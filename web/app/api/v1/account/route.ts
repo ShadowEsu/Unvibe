@@ -1,5 +1,6 @@
 import { getStore } from '@/data/store';
 import { userFromRequest, unauthorized } from '@/lib/auth';
+import { getBillingStore } from '@/billing/store';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +19,15 @@ export async function DELETE(req: Request): Promise<Response> {
   if (!userId) {
     return unauthorized();
   }
+  const billing = getBillingStore();
+  const workspaces = await billing.listWorkspaces(userId);
+  for (const workspace of workspaces) {
+    const overview = await billing.overview(userId, workspace.id);
+    if (overview.canManageBilling && overview.subscription.stripeSubscriptionId && overview.subscription.status !== 'canceled') {
+      return Response.json({ error: 'active_subscription', message: 'Cancel the active subscription in Manage billing before deleting this account.' }, { status: 409 });
+    }
+  }
+  await billing.deleteUserBilling(userId);
   await getStore().deleteAccount(userId);
   return Response.json({ ok: true });
 }

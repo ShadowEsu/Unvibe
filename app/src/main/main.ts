@@ -41,6 +41,9 @@ import {
   startDeviceAuth,
   redeemDeviceAuth,
   accountInfo,
+  billingOverview,
+  startBillingCheckout,
+  startBillingPortal,
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
@@ -307,6 +310,24 @@ app.whenReady().then(() => {
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
+  ipcMain.handle('billing:overview', async () => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in to view your plan and cloud usage.' };
+    try { return { ok: true, data: await billingOverview(token) }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load plan.' }; }
+  });
+  ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }) => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in before starting checkout.' };
+    try { const url = await startBillingCheckout(token, input); await shell.openExternal(url); return { ok: true }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Checkout could not start.' }; }
+  });
+  ipcMain.handle('billing:portal', async (_e, workspaceId: string) => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in before managing billing.' };
+    try { const url = await startBillingPortal(token, workspaceId); await shell.openExternal(url); return { ok: true }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Billing could not open.' }; }
+  });
   ipcMain.handle('account:signIn', async (_e, email: string) => {
     try {
       const acct = await signIn(email);

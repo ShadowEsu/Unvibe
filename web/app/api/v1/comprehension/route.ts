@@ -3,12 +3,14 @@ import { parseQuestion } from '@/ai/comprehension';
 import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
+import { reserveMeteredAction } from '@/billing/enforce';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
   const provider = selectProvider();
-  if (aiRequestRequiresSession(provider.mock) && !(await userFromRequest(req))) {
+  const userId = await userFromRequest(req);
+  if (aiRequestRequiresSession(provider.mock) && !userId) {
     return unauthorized();
   }
   const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
@@ -17,6 +19,10 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (JSON.stringify(payload.context).length > 120_000) {
     return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
+  }
+  if (!provider.mock && userId) {
+    const denied = await reserveMeteredAction(userId, 'project_question', req);
+    if (denied) return denied;
   }
   const { system, user } = buildComprehensionPrompt(payload);
   const text = await provider.complete(system, user);

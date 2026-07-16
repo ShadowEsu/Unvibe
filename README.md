@@ -39,6 +39,8 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 ```
 - No keys needed for dev: a **mock AI provider** and an **in-memory dev store** are used.
 - `ANTHROPIC_API_KEY` → real explanations. `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` → real DB.
+- Free/Pro/Teams billing is server-authoritative and remains disabled until Stripe test-mode
+  values are configured. See [`docs/billing.md`](docs/billing.md).
 - The extension talks to this origin (`uncode.backendUrl`, default `http://localhost:8787`).
   Run **Uncode: Sign In** in the editor to connect and sync your learning to the dashboard.
 

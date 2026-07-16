@@ -22,6 +22,7 @@ import { ContextLadder } from "@/components/redesign/ContextLadder";
 import { PageIntro } from "@/components/redesign/PageIntro";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
 import { Reveal } from "@/components/redesign/Reveal";
+import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { faqItems } from "@/data/faq";
 
 const tools = ["Cursor", "VS Code", "Terminal", "Claude Code", "GitHub"];
@@ -184,25 +185,13 @@ export default function Home() {
       </section>
 
       <section className="pricing-field" id="pricing">
-        <Reveal className="container-page pricing-layout">
+        <Reveal className="container-page">
           <div className="pricing-copy">
             <p className="section-number">08 / PRICING</p>
-            <h2>One plan.<br /><em>Completely free.</em></h2>
-            <p>Unvibe costs nothing to use. The AI explanation model is included, so you never need to bring an API key, configure billing, or enter a credit card.</p>
+            <h2>Start free. <em>Upgrade when your projects grow.</em></h2>
+            <p>Use Unvibe for free to understand code in context. Upgrade for larger repositories, persistent project understanding, higher usage, and collaborative team workspaces.</p>
           </div>
-          <article className="pricing-card">
-            <div className="pricing-name"><span className="brand-pixel" /><strong>Unvibe Free</strong><small>For coders who want to understand what they ship.</small></div>
-            <div className="price"><sup>$</sup><strong>0</strong><span>/ month</span></div>
-            <ul>
-              <li><Check size={16} />AI explanations included</li>
-              <li><Check size={16} />Five explanation depths</li>
-              <li><Check size={16} />Project-aware learning history</li>
-              <li><Check size={16} />Local secret filtering</li>
-              <li><Check size={16} />No API key or credit card</li>
-            </ul>
-            <Button href="#waitlist" size="lg" className="pricing-button">Join for free <ArrowRight size={18} /></Button>
-            <p>Free means $0. No surprise charge at signup.</p>
-          </article>
+          <PricingPlans />
         </Reveal>
       </section>
 
@@ -216,7 +205,7 @@ export default function Home() {
             <p>Clear expectations now make for a better beta later.</p>
           </div>
           <div className="faq-list">
-            {faqItems.filter((item) => ["what-is-it", "editors", "sent", "free", "accuracy"].includes(item.id)).map((item, index) => (
+            {faqItems.filter((item) => ["free", "teams-solo", "team-login", "pro-annual", "teams-annual", "cancel"].includes(item.id)).map((item, index) => (
               <details key={item.id} open={index === 0}>
                 <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true" /></summary>
                 <p>{item.answer}</p>

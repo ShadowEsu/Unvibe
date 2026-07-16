@@ -86,9 +86,39 @@ export const faqItems: FaqItem[] = [
   },
   {
     id: "free",
-    question: "Is Unvibe free?",
+    question: "Is Free actually usable?",
     answer:
-      "Yes. Unvibe is free: $0 per month, with no credit card, API key, or separate AI bill required.",
+      "Yes. Free includes the main code-explanation experience with usage and project limits. It is intended to let you experience the real product before paying. No credit card or separate AI API key is required.",
+    category: "pricing",
+  },
+  {
+    id: "teams-solo",
+    question: "Can I use Teams by myself?",
+    answer: "Teams requires at least two paid seats because it is designed for collaborative workspaces. Individual users should choose Pro.",
+    category: "pricing",
+  },
+  {
+    id: "team-login",
+    question: "Does everyone on a team share one login?",
+    answer: "No. Every member receives a separate account with their own identity, permissions, settings, and activity.",
+    category: "pricing",
+  },
+  {
+    id: "pro-annual",
+    question: "Is Pro cheaper annually?",
+    answer: "Pro is currently $8 per month on either billing interval. Annual Pro is billed as $96 once per year.",
+    category: "pricing",
+  },
+  {
+    id: "teams-annual",
+    question: "How does annual Teams billing work?",
+    answer: "Annual Teams costs $72 per member per year, equivalent to $6 per member per month. A minimum of two seats is required.",
+    category: "pricing",
+  },
+  {
+    id: "cancel",
+    question: "What happens if I cancel?",
+    answer: "Paid access continues until the end of the current billing period unless otherwise stated during cancellation. Your saved content is handled according to the product retention policy.",
     category: "pricing",
   },
   {
@@ -109,7 +139,7 @@ export const faqItems: FaqItem[] = [
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "The first release focuses on individual learners and builders. Educator and team workflows may come later; they are not the launch surface.",
+      "Yes. Teams provides shared workspaces with separate member accounts, member invitations, roles, centralized billing, and shared project knowledge. Teams requires at least two paid seats.",
     category: "platform",
   },
   {

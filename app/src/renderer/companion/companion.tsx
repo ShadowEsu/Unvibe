@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 
-type PageId = 'Home' | 'Progress' | 'Projects' | 'Study' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
+type PageId = 'Home' | 'Progress' | 'Plan' | 'Projects' | 'Study' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -27,6 +27,13 @@ interface Settings {
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
 }
+interface BillingOverview {
+  workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
+  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string };
+  usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
+  canManageBilling: boolean;
+  hasBillingAccount: boolean;
+}
 
 const IC = {
   home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
@@ -44,9 +51,10 @@ const IC = {
   check: 'M4 10l4 4 8-9',
   clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
   map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
+  plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
 };
 
-const PAGES: Record<Exclude<PageId, 'Home' | 'Progress'>, PageDef> = {
+const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
     { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
     { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
@@ -92,7 +100,7 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress'>, PageDef> = {
 };
 
 const NAV: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home }, { id: 'Progress', icon: IC.progress },
+  { id: 'Home', icon: IC.home }, { id: 'Progress', icon: IC.progress }, { id: 'Plan', icon: IC.plan },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
@@ -412,6 +420,55 @@ function Progress({ profile }: { profile: Profile | null }) {
   );
 }
 
+function Plan() {
+  const [overview, setOverview] = useState<BillingOverview | null>(null);
+  const [available, setAvailable] = useState(false);
+  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [seats, setSeats] = useState(2);
+  const [teamName, setTeamName] = useState('My team');
+  const [message, setMessage] = useState('Loading plan…');
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean }; error?: string };
+    if (!result.ok || !result.data) { setMessage(result.error ?? 'Could not load plan.'); return; }
+    setOverview(result.data.overview); setAvailable(result.data.checkoutAvailable); setSeats(Math.max(2, result.data.overview.subscription.seats)); setMessage('');
+  };
+  useEffect(() => { void load(); }, []);
+
+  const checkout = async (plan: 'pro' | 'teams') => {
+    setBusy(true); setMessage('');
+    const input = plan === 'pro' ? { plan, interval, seats: 1 } : { plan, interval, seats, ...(overview?.workspace.type === 'team' ? { workspaceId: overview.workspace.id } : { workspaceName: teamName }) };
+    const result = await window.unvibe.startBillingCheckout(input) as { ok: boolean; error?: string };
+    if (!result.ok) setMessage(result.error ?? 'Checkout could not start.');
+    setBusy(false);
+  };
+
+  const portal = async () => {
+    if (!overview) return;
+    setBusy(true);
+    const result = await window.unvibe.openBillingPortal(overview.workspace.id) as { ok: boolean; error?: string };
+    if (!result.ok) setMessage(result.error ?? 'Billing could not open.');
+    setBusy(false);
+  };
+
+  return <div className="plan-view">
+    <div className="page-head"><div><div className="eyebrow">Plan & usage</div><h1>Start free. Grow when your projects do.</h1><p>Your AI model access is included. You never need to paste in your own provider API key.</p></div></div>
+    {message && <div className="plan-message" role="status">{message}</div>}
+    {overview && <>
+      <div className="plan-current"><div><span>Current plan</span><strong>{overview.subscription.plan}</strong></div><div><span>Interval</span><strong>{overview.subscription.interval ?? 'no billing'}</strong></div><div><span>Status</span><strong>{overview.subscription.plan === 'free' ? 'ready' : overview.subscription.status.replaceAll('_', ' ')}</strong></div><div><span>Renews</span><strong>{overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString() : 'not applicable'}</strong></div><div><span>Workspace</span><strong>{overview.workspace.name}</strong></div>{overview.canManageBilling && overview.hasBillingAccount && <button className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>}</div>
+      <div className="plan-usage">{overview.usage.slice(0, 3).map((line) => <div key={line.kind}><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong><progress value={line.used} max={line.limit} /></div>)}</div>
+      <div className="plan-toggle"><button className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')}>Monthly</button><button className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')}>Annual</button></div>
+      {!available && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
+      <div className="plan-options">
+        <article><b>Free</b><h2>$0</h2><p>30 explanations · one active project · no card</p><button className="soft-btn" disabled>Included</button></article>
+        <article className="featured"><b>Pro · best for individuals</b><h2>{interval === 'monthly' ? '$8/month' : '$96/year'}</h2><p>{interval === 'monthly' ? 'One personal account' : 'Equivalent to $8/month — no false discount'}</p><button className="primary-btn" onClick={() => void checkout('pro')} disabled={busy || !available}>Upgrade to Pro</button></article>
+        <article><b>Teams · 2+ members</b><h2>{interval === 'monthly' ? '$8/member' : '$6/member/month'}</h2><p>{interval === 'monthly' ? `$${seats * 8}/month total` : `$${seats * 72}/year total · save 25%`}</p><div className="plan-team-inputs"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><input aria-label="Seats" type="number" min={2} max={500} value={seats} onChange={(event) => setSeats(Number(event.target.value))} /></div><button className="primary-btn" onClick={() => void checkout('teams')} disabled={busy || !available || seats < 2}>Start a team</button></article>
+      </div>
+    </>}
+  </div>;
+}
+
 function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
   return (
     <>
@@ -660,7 +717,7 @@ function App() {
             <span>{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
             {sync.pending > 0 && <small>{sync.pending} pending</small>}
           </button>
-          <div className="promo"><div className="t">Free during private <em>beta</em></div><div className="d">Cloud explanations are included for beta accounts. You never need to provide your own model API key.</div></div>
+          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">30 explanations each month. Your AI model access is included—no provider API key needed.</div></div>
           <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
@@ -668,6 +725,7 @@ function App() {
             <FadeIn animKey={page} stagger>
               {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
                 : page === 'Progress' ? <Progress profile={profile} />
+                : page === 'Plan' ? <Plan />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>

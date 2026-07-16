@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: "%s · Unvibe",
   },
   description:
-    "Unvibe is a free Mac desktop learning layer that explains selected code, diffs, and repositories beside Cursor, VS Code, and your terminal—so you understand what AI shipped.",
+    "Unvibe is a Mac desktop learning layer with a meaningful free plan that explains selected code, diffs, and repositories—so you understand what AI shipped.",
   openGraph: {
     type: "website",
     url: siteUrl,
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Unvibe — Make AI-Written Code Yours",
     description:
-      "Free desktop learning layer for AI-written code. Select, explain, check understanding.",
+      "Start free with a desktop learning layer for AI-written code. Select, explain, check understanding.",
     images: ["/opengraph-image"],
   },
   robots: { index: true, follow: true },
@@ -61,7 +61,7 @@ const softwareJsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS",
   description:
-    "A free desktop AI learning layer that explains selected code beside the tools where you already build.",
+    "A desktop AI learning layer with a free plan that explains selected code beside the tools where you already build.",
   offers: {
     "@type": "Offer",
     price: "0",

@@ -64,13 +64,44 @@ async function request(url: string, init: RequestInit): Promise<Response> {
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
-    if (res.status === 429) throw new Error('Too many requests. Please wait a moment and try again.');
+    if (res.status === 429) throw new Error(body.message ?? 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
     throw new Error(`The service could not complete that request (${res.status}).`);
   }
   return (await res.json()) as T;
+}
+
+export interface BillingUsageLine { kind: string; used: number; limit: number; remaining: number; resetsAt: string }
+export interface BillingOverview {
+  workspace: { id: string; name: string; type: 'personal' | 'team'; role: 'owner' | 'admin' | 'member' };
+  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };
+  usage: BillingUsageLine[];
+  occupiedSeats: number;
+  pendingInvitations: number;
+  minimumBillableSeats: number;
+  canManageBilling: boolean;
+  hasBillingAccount: boolean;
+}
+
+export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean }> {
+  return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
+}
+
+export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
+  const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/checkout`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(input),
+  }));
+  return result.url;
+}
+
+export async function startBillingPortal(token: string, workspaceId: string): Promise<string> {
+  const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/portal`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ workspaceId }),
+  }));
+  return result.url;
 }
 
 export interface Account {

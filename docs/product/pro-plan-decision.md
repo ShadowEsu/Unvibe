@@ -1,6 +1,7 @@
 # Pro plan decision record
 
-Status: billing disabled; no product/price/webhook/entitlement infrastructure is approved for private beta.
+Status: superseded for product engineering by the Free/Pro/Teams implementation in
+`docs/billing.md`; production billing remains disabled pending verification and approval.
 
 ## Recommended beta decision
 

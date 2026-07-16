@@ -141,9 +141,12 @@ export class SupabaseStore implements Store {
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {
+    const { data: workspaceId, error: workspaceError } = await this.db.rpc('ensure_personal_workspace', { p_user_id: userId });
+    this.requireSuccess(workspaceError, 'ensure event workspace');
     const rows = events.map((e) => ({
       id: e.id,
       user_id: userId,
+      workspace_id: workspaceId,
       ts: e.ts,
       event_type: e.eventType ?? 'explanation_completed',
       local_date: e.localDate ?? e.ts.slice(0, 10),
