@@ -55,8 +55,8 @@ export const waitlistSchema = z.object({
     .max(80, "Keep your role under 80 characters")
     .optional()
     .or(z.literal("")),
-  tool: z.enum(tools).optional(),
-  experience: z.enum(experiences).optional(),
+  tool: z.union([z.enum(tools), z.literal("")]).optional(),
+  experience: z.union([z.enum(experiences), z.literal("")]).optional(),
   message: z
     .string()
     .trim()

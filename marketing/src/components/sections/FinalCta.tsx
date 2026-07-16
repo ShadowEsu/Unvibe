@@ -14,10 +14,6 @@ export function FinalCta() {
         transition={{ duration: durations.story, ease: easing.emphatic }}
         className="relative overflow-hidden rounded-card border border-line bg-surface px-8 py-16 text-center sm:px-16 sm:py-20"
       >
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgb(var(--primary)/0.14),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgb(var(--blue)/0.10),_transparent_50%)]"
-          aria-hidden="true"
-        />
         <div className="relative mx-auto max-w-2xl">
           <h2 className="text-balance text-fluid-3xl font-semibold tracking-tight text-fg">
             Ship with AI. Learn what you shipped.
@@ -35,7 +31,7 @@ export function FinalCta() {
             </Button>
           </div>
           <p className="mt-6 text-fluid-sm text-fg-faint">
-            Mac first · Windows planned · No credit card during private beta
+            Mac first · Invitation-only beta · No credit card
           </p>
         </div>
       </motion.div>

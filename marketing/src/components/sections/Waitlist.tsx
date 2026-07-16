@@ -8,9 +8,16 @@ import { Check, Copy, Loader2, PartyPopper } from "lucide-react";
 import { Section } from "../Section";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
-import { waitlistSchema, type WaitlistInput } from "@/lib/waitlistSchema";
+import {
+  experienceLabels,
+  experiences,
+  toolLabels,
+  tools,
+  waitlistSchema,
+  type WaitlistInput,
+} from "@/lib/waitlistSchema";
 
-type Status = "idle" | "submitting" | "success" | "duplicate" | "error";
+type Status = "idle" | "submitting" | "success" | "duplicate" | "error" | "offline";
 
 interface SuccessData {
   referralCode: string;
@@ -54,6 +61,10 @@ export function Waitlist() {
   };
 
   const onSubmit = async (values: WaitlistInput) => {
+    if (!navigator.onLine) {
+      setStatus("offline");
+      return;
+    }
     setStatus("submitting");
     try {
       const res = await fetch("/api/waitlist", {
@@ -220,14 +231,55 @@ export function Waitlist() {
                 />
               </Field>
 
-              {status === "error" && (
+              {(status === "error" || status === "offline") && (
                 <p
                   role="alert"
                   className="rounded-xl border border-red/40 bg-red/10 px-4 py-3 text-fluid-sm text-red"
                 >
-                  Something went wrong. Please check your connection and try again.
+                  {status === "offline"
+                    ? "You appear to be offline. Reconnect, then try again."
+                    : "We could not save your entry. Please try again shortly."}
                 </p>
               )}
+
+              <fieldset className="border-t border-line pt-6">
+                <legend className="text-fluid-sm font-medium text-fg">
+                  A little more context <span className="font-normal text-fg-faint">(optional)</span>
+                </legend>
+                <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
+                  This helps us shape the first round of invites. It will not affect whether you can join.
+                </p>
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <Field label="Main coding tool" htmlFor="tool">
+                    <select id="tool" {...register("tool")} className={inputClass(false)}>
+                      <option value="">Choose a tool</option>
+                      {tools.map((tool) => (
+                        <option key={tool} value={tool}>{toolLabels[tool]}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Experience level" htmlFor="experience">
+                    <select id="experience" {...register("experience")} className={inputClass(false)}>
+                      <option value="">Choose a level</option>
+                      {experiences.map((experience) => (
+                        <option key={experience} value={experience}>{experienceLabels[experience]}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+                <div className="mt-5">
+                  <Field label="Why would you like to try Unvibe?" htmlFor="message" error={errors.message?.message}>
+                    <textarea
+                      id="message"
+                      rows={3}
+                      placeholder="I want to be able to review the code my agent ships."
+                      aria-invalid={Boolean(errors.message)}
+                      {...register("message")}
+                      className={`${inputClass(Boolean(errors.message))} resize-y`}
+                    />
+                  </Field>
+                </div>
+              </fieldset>
 
               <button
                 type="submit"

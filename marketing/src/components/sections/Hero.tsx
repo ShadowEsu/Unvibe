@@ -9,11 +9,6 @@ import { track } from "@/lib/analytics";
 export function Hero() {
   return (
     <section className="container-page relative overflow-hidden pb-16 pt-10 sm:pb-24 sm:pt-16">
-      {/* Restrained selection tint — the product UI remains the focal point. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem]">
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,_rgb(var(--primary)/0.07),_transparent_42%,_rgb(var(--blue)/0.04))]" />
-      </div>
-
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
         <div>
           <motion.div
@@ -24,7 +19,7 @@ export function Hero() {
               ease: easing.emphatic,
             }}
           >
-            <span className="mb-5 inline-flex items-center gap-2 rounded-pill border border-line bg-surface/85 px-4 py-1.5 text-fluid-sm text-fg-muted backdrop-blur-sm">
+            <span className="mb-5 inline-flex items-center gap-2 rounded-pill border border-line bg-surface px-4 py-1.5 text-fluid-sm text-fg-muted shadow-soft">
               <span className="h-2 w-2 rounded-full bg-green" aria-hidden="true" />
               Mac first · Private beta
             </span>

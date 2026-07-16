@@ -25,7 +25,12 @@ const guarantees = [
   },
 ];
 
-const included = ["Your selected snippet", "The scope you approved", "Shallow project structure"];
+const included = [
+  "Selected code",
+  "Surrounding function",
+  "Language and relevant imports",
+  "Only the project context you approve",
+];
 const blocked = [".env and .env.*", "*.pem · *.key · id_rsa", "node_modules / build output", "High-entropy secrets"];
 
 export function Privacy() {
@@ -100,7 +105,7 @@ export function Privacy() {
           <div className="grid gap-0 sm:grid-cols-2">
             <div className="border-b border-line p-5 sm:border-b-0 sm:border-r">
               <p className="mb-3 flex items-center gap-2 text-fluid-sm font-medium text-green">
-                <Check size={15} aria-hidden="true" /> Sent
+                <Check size={15} aria-hidden="true" /> May be included
               </p>
               <ul className="space-y-2">
                 {included.map((item) => (

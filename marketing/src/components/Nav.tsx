@@ -17,9 +17,9 @@ interface NavLink {
 }
 
 const links: NavLink[] = [
-  { label: "Product", href: "#product", id: "product" },
-  { label: "How it works", href: "#demo", id: "demo" },
-  { label: "Learn", href: "#depth", id: "depth" },
+  { label: "Product", href: "#demo", id: "demo" },
+  { label: "Context", href: "#context", id: "context" },
+  { label: "Learn", href: "#study", id: "study" },
   { label: "Privacy", href: "#privacy", id: "privacy" },
   { label: "FAQ", href: "#faq", id: "faq" },
 ];
@@ -158,7 +158,7 @@ export function Nav() {
         <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle />
           <Button href="#demo" variant="ghost" size="sm">
-            Watch demo
+            See how it works
           </Button>
           <Button href="#waitlist" size="sm" className="btn-magnetic">
             Join beta
@@ -252,7 +252,7 @@ export function Nav() {
                   variant="secondary"
                   onClick={() => setOpen(false)}
                 >
-                  Watch demo
+                  See how it works
                 </Button>
                 <Button href="#waitlist" onClick={() => setOpen(false)}>
                   Join the private beta
