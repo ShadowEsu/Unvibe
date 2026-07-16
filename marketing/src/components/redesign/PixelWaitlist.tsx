@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Loader2, Send } from "lucide-react";
 import { track } from "@/lib/analytics";
+import { Reveal } from "@/components/redesign/Reveal";
 import {
   experienceLabels,
   experiences,
@@ -82,9 +83,9 @@ export function PixelWaitlist() {
   return (
     <section className="waitlist-field" id="waitlist">
       <div className="waitlist-pixels" aria-hidden="true" />
-      <div className="container-page waitlist-layout">
+      <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
-          <p className="section-number light">08 / PRIVATE BETA</p>
+          <p className="section-number light">09 / PRIVATE BETA</p>
           <h2>Learn a little from the code <em>you ship every day.</em></h2>
           <p>Join the Mac beta list. The AI explanation model is included at no charge to you during beta—no API key, billing setup, or credit card required.</p>
           <ul>
@@ -92,7 +93,7 @@ export function PixelWaitlist() {
             <li><Check size={16} />No API setup</li>
             <li><Check size={16} />Clear privacy policy and terms</li>
           </ul>
-          <p className="beta-clarity">Beta access is not a promise of permanent unlimited free use. If pricing changes later, you will be told before choosing or being charged.</p>
+          <p className="beta-clarity">Unvibe is free. Joining the private beta never requires a credit card or a paid API account.</p>
         </div>
 
         <div className="waitlist-card">
@@ -136,7 +137,7 @@ export function PixelWaitlist() {
             </div>
           )}
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

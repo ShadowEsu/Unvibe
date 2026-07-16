@@ -88,7 +88,7 @@ export const faqItems: FaqItem[] = [
     id: "free",
     question: "Is Unvibe free?",
     answer:
-      "There is no charge or credit card during the current private Mac beta. That is not a permanent or unlimited-use promise; if a paid plan is introduced later, we will explain it before anyone chooses or is charged.",
+      "Yes. Unvibe is free: $0 per month, with no credit card, API key, or separate AI bill required.",
     category: "pricing",
   },
   {

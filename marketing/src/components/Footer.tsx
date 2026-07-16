@@ -14,6 +14,7 @@ const columns: FooterColumn[] = [
       { label: "Explanation levels", href: "#learn" },
       { label: "Context ladder", href: "#context" },
       { label: "Watch demo", href: "#demo" },
+      { label: "Pricing", href: "#pricing" },
       { label: "Join private beta", href: "#waitlist" },
     ],
   },

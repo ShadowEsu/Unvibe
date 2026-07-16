@@ -66,7 +66,7 @@ const softwareJsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "No charge during the current private beta. No credit card.",
+    description: "Free at $0 per month. No API key or credit card required.",
   },
 };
 

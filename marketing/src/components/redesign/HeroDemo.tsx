@@ -1,16 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
-
-const scenes = [
-  { label: "Select", note: "You choose the code worth understanding." },
-  { label: "Activate", note: "Unvibe opens beside the work already in progress." },
-  { label: "Set depth", note: "Beginner keeps the language clear and concrete." },
-  { label: "Explain", note: "The explanation connects behavior to project context." },
-  { label: "Check", note: "One question reveals what is clear and what needs another pass." },
-  { label: "Save", note: "Keep the concept with the project that taught it." },
-] as const;
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, Pause, Play, RotateCcw } from "lucide-react";
 
 const code = [
   "export function useSyncedDraft(id: string) {",
@@ -23,18 +14,48 @@ const code = [
   "}",
 ];
 
+const explanation =
+  "This hook keeps the editor draft aligned with the active document. Whenever id changes, useEffect reads that document's cached draft and updates React state.";
+
+const TOTAL = 9_000;
+const timeline = {
+  select: 350,
+  activate: 950,
+  depth: 1_450,
+  streamStart: 1_850,
+  streamEnd: 4_650,
+  context: 4_900,
+  check: 6_050,
+  answer: 6_850,
+  save: 7_550,
+};
+
+function stageLabel(elapsed: number): string {
+  if (elapsed < timeline.select) return "Detecting change";
+  if (elapsed < timeline.activate) return "Selecting code";
+  if (elapsed < timeline.streamStart) return "Choosing depth";
+  if (elapsed < timeline.context) return "Explaining";
+  if (elapsed < timeline.check) return "Connecting context";
+  if (elapsed < timeline.answer) return "Checking understanding";
+  if (elapsed < timeline.save) return "Answering";
+  return "Saved to project";
+}
+
 export function HeroDemo() {
-  const [scene, setScene] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [elapsed, setElapsed] = useState(0);
+  const [paused, setPaused] = useState(false);
   const [visible, setVisible] = useState(true);
-  const [reduced, setReduced] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<number | null>(null);
+  const lastFrameRef = useRef<number | null>(null);
+  const accumulatedRef = useRef(0);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => {
-      setReduced(media.matches);
-      if (media.matches) setPlaying(false);
+      setReducedMotion(media.matches);
+      if (media.matches) setPaused(true);
     };
     update();
     media.addEventListener("change", update);
@@ -42,32 +63,62 @@ export function HeroDemo() {
   }, []);
 
   useEffect(() => {
-    if (!root.current) return;
+    const element = rootRef.current;
+    if (!element) return;
     const observer = new IntersectionObserver(
       ([entry]) => setVisible(entry.isIntersecting),
       { threshold: 0.2 }
     );
-    observer.observe(root.current);
+    observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!playing || !visible || reduced) return;
-    const timer = window.setInterval(() => {
-      setScene((current) => (current + 1) % scenes.length);
-    }, 2600);
-    return () => window.clearInterval(timer);
-  }, [playing, visible, reduced]);
+  const tick = useCallback((now: number) => {
+    if (lastFrameRef.current === null) lastFrameRef.current = now;
+    const delta = Math.min(now - lastFrameRef.current, 80);
+    lastFrameRef.current = now;
+    accumulatedRef.current += delta;
+    if (accumulatedRef.current >= 32) {
+      const step = accumulatedRef.current;
+      accumulatedRef.current = 0;
+      setElapsed((current) => (current + step) % TOTAL);
+    }
+    frameRef.current = window.requestAnimationFrame(tick);
+  }, []);
 
-  const move = (direction: number) => {
-    setScene((current) => (current + direction + scenes.length) % scenes.length);
+  useEffect(() => {
+    if (paused || reducedMotion || !visible) {
+      lastFrameRef.current = null;
+      accumulatedRef.current = 0;
+      return;
+    }
+    frameRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
+      lastFrameRef.current = null;
+      accumulatedRef.current = 0;
+    };
+  }, [paused, reducedMotion, tick, visible]);
+
+  const current = reducedMotion ? timeline.save + 250 : elapsed;
+  const selected = current >= timeline.select;
+  const activated = current >= timeline.activate;
+  const depthVisible = current >= timeline.depth;
+  const contextVisible = current >= timeline.context;
+  const checkVisible = current >= timeline.check;
+  const answered = current >= timeline.answer;
+  const saved = current >= timeline.save;
+  const streamProgress = Math.max(0, Math.min(1, (current - timeline.streamStart) / (timeline.streamEnd - timeline.streamStart)));
+  const streamedExplanation = explanation.slice(0, Math.floor(explanation.length * streamProgress));
+  const streaming = current >= timeline.streamStart && current < timeline.streamEnd && !reducedMotion;
+
+  const jumpToExplanation = () => {
+    setElapsed(timeline.streamStart);
+    if (!reducedMotion) setPaused(false);
   };
 
-  const selected = scene >= 1;
-  const explained = scene >= 3;
-
   return (
-    <div ref={root} className="demo-shell" aria-label="Interactive Unvibe product demonstration">
+    <div ref={rootRef} className="demo-shell" aria-label="Animated Unvibe code explanation demonstration">
       <div className="demo-toolbar">
         <div className="window-dots" aria-hidden="true"><i /><i /><i /></div>
         <span className="demo-file"><span className="pixel-file" aria-hidden="true" />useSyncedDraft.ts</span>
@@ -75,59 +126,66 @@ export function HeroDemo() {
       </div>
 
       <div className="demo-grid">
-        <div className="code-pane" aria-label="Code sample">
-          <div className="code-meta"><span>TypeScript</span><span>React hook</span><span>State sync</span></div>
-          <pre>
-            <code>
-              {code.map((line, index) => (
-                <span
-                  key={line}
-                  className={selected && index >= 2 && index <= 5 ? "is-selected" : ""}
-                >
-                  <b>{String(index + 1).padStart(2, "0")}</b>{line}
-                </span>
-              ))}
-            </code>
-          </pre>
-          <button className={`activate-chip ${scene >= 2 ? "is-active" : ""}`} type="button" onClick={() => setScene(3)}>
-            <span className="brand-pixel" aria-hidden="true" /> Explain selection
+        <div className="code-pane" aria-label="TypeScript code sample">
+          <div className="code-meta"><span>TypeScript</span><span>React hook</span><span>Editor state</span></div>
+          <pre><code>{code.map((line, index) => (
+            <span key={line} className={selected && index >= 2 && index <= 5 ? "is-selected" : ""}>
+              <b>{String(index + 1).padStart(2, "0")}</b>{line}
+            </span>
+          ))}</code></pre>
+          <button className={`activate-chip ${activated ? "is-active" : ""}`} type="button" onClick={jumpToExplanation}>
+            <span className="brand-pixel" aria-hidden="true" />{activated ? "Explaining selection" : "Explain selection"}
           </button>
         </div>
 
-        <div className={`explain-pane ${explained ? "is-open" : ""}`} aria-live="polite">
-          <div className="explain-topline"><span>BEGINNER</span><span>{scene + 1}/6</span></div>
-          <div className="pixel-track" aria-hidden="true">
-            {scenes.map((_, index) => <i key={index} className={index <= scene ? "is-on" : ""} />)}
+        <div className={`explain-pane ${activated ? "is-open" : ""}`}>
+          <div className="explain-topline"><span>BEGINNER</span><span>{stageLabel(current)}</span></div>
+          <div className="pixel-track" aria-hidden="true"><i className={selected ? "is-on" : ""} /><i className={activated ? "is-on" : ""} /><i className={depthVisible ? "is-on" : ""} /><i className={contextVisible ? "is-on" : ""} /><i className={checkVisible ? "is-on" : ""} /><i className={saved ? "is-on" : ""} /></div>
+
+          <div className={`demo-recognition ${activated ? "is-visible" : ""}`}>
+            <span>useEffect</span><span>cache lookup</span><span>state sync</span>
           </div>
-          <p className="explain-kicker">{scenes[scene].label}</p>
-          <h3>{explained ? "Keeps a draft in sync with the selected item." : "Select a few lines to begin."}</h3>
-          <p>{scenes[scene].note}</p>
-          {explained && (
-            <div className="concept-row">
-              <span>useEffect</span><span>dependency array</span><span className="developing">developing</span>
+          <div className={`demo-depth ${depthVisible ? "is-visible" : ""}`}>
+            <span>First time</span><span className="active">Beginner</span><span>Intermediate</span><span>Advanced</span>
+          </div>
+
+          <div className="demo-explain-copy">
+            <p className="explain-kicker">What this code actually does</p>
+            <h3>Keeps the right draft attached to the right document.</h3>
+            <p className="streamed-copy" aria-hidden="true">
+              {streamedExplanation}{streaming && <i className="stream-caret" />}
+            </p>
+            <span className="sr-only">{explanation}</span>
+          </div>
+
+          {contextVisible && (
+            <div className="explanation-points">
+              <span><strong>Trigger</strong><small><code>id</code> changes</small></span>
+              <span><strong>Behavior</strong><small>Load cache → update state</small></span>
+              <span><strong>Impact</strong><small>No draft leaks between documents</small></span>
             </div>
           )}
-          <div className="demo-action-row">
-            <span>{scene >= 4 ? "Check: why is id a dependency?" : "Context: hook → editor state"}</span>
-            <button type="button" onClick={() => setScene(5)}>{scene === 5 ? "Saved ✓" : "Save"}</button>
-          </div>
+
+          {checkVisible && !saved && (
+            <div className="demo-check">
+              <strong>Quick check: why is <code>id</code> a dependency?</strong>
+              <div><span>For styling</span><span className={answered ? "correct" : ""}>{answered && <Check size={12} />}To reload on document change</span></div>
+            </div>
+          )}
+
+          {saved && (
+            <div className="demo-saved"><Check size={16} /><span><strong>Concept saved</strong><small>Effect dependencies · this project</small></span></div>
+          )}
         </div>
       </div>
 
       <div className="demo-controls">
-        <button type="button" onClick={() => move(-1)} aria-label="Previous demonstration step"><ChevronLeft size={17} /></button>
-        <button
-          type="button"
-          onClick={() => setPlaying((value) => !value)}
-          aria-label={playing ? "Pause demonstration" : "Play demonstration"}
-          aria-pressed={playing}
-        >
-          {playing ? <Pause size={15} /> : <Play size={15} />}
-          <span>{playing ? "Pause" : "Play"}</span>
+        <button type="button" onClick={() => setPaused((value) => !value)} aria-label={paused ? "Play demonstration" : "Pause demonstration"} aria-pressed={!paused}>
+          {paused ? <Play size={15} /> : <Pause size={15} />}<span>{paused ? "Play" : "Pause"}</span>
         </button>
-        <span className="demo-step-label">{scenes[scene].label}</span>
-        <button type="button" onClick={() => { setScene(0); setPlaying(!reduced); }} aria-label="Replay demonstration"><RotateCcw size={15} /><span>Replay</span></button>
-        <button type="button" onClick={() => move(1)} aria-label="Next demonstration step"><ChevronRight size={17} /></button>
+        <div className="demo-progress" aria-hidden="true"><i style={{ width: `${(current / TOTAL) * 100}%` }} /></div>
+        <span className="demo-step-label">{stageLabel(current)}</span>
+        <button type="button" onClick={() => { setElapsed(0); if (!reducedMotion) setPaused(false); }} aria-label="Replay demonstration"><RotateCcw size={15} /><span>Replay</span></button>
       </div>
     </div>
   );

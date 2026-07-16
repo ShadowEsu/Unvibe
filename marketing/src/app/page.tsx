@@ -19,7 +19,9 @@ import { FaqJsonLd } from "@/components/JsonLd";
 import { HeroDemo } from "@/components/redesign/HeroDemo";
 import { LevelLab } from "@/components/redesign/LevelLab";
 import { ContextLadder } from "@/components/redesign/ContextLadder";
+import { PageIntro } from "@/components/redesign/PageIntro";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
+import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 
 const tools = ["Cursor", "VS Code", "Terminal", "Claude Code", "GitHub"];
@@ -28,11 +30,12 @@ export default function Home() {
   return (
     <>
       <FaqJsonLd />
+      <PageIntro />
 
       <section className="pixel-hero" id="product">
         <div className="hero-pixels hero-pixels-left" aria-hidden="true" />
         <div className="hero-pixels hero-pixels-right" aria-hidden="true" />
-        <div className="container-page pixel-hero-inner">
+        <Reveal className="container-page pixel-hero-inner">
           <p className="pixel-eyebrow"><span className="brand-pixel" aria-hidden="true" />A learning layer for AI-generated code</p>
           <h1>Don&apos;t feel guilty about vibe coding. <em>Make the code yours.</em></h1>
           <p className="hero-positioning">AI writes the code. <strong>Unvibe helps you understand it.</strong></p>
@@ -43,11 +46,11 @@ export default function Home() {
           </div>
           <p className="hero-micro">Mac first <i /> Early beta <i /> Free to join <i /> No credit card</p>
           <div id="demo" className="hero-demo-wrap"><HeroDemo /></div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="problem-field" id="why">
-        <div className="container-page">
+        <Reveal className="container-page">
           <p className="section-number light">01 / THE PROBLEM</p>
           <div className="center-intro light-copy">
             <h2>Your agent finished the feature.<br /><em>Could you explain it tomorrow?</em></h2>
@@ -79,11 +82,11 @@ export default function Home() {
               </div>
             </article>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="how-field" id="how-it-works">
-        <div className="container-page">
+        <Reveal className="container-page">
           <p className="section-number">02 / ONE QUIET LOOP</p>
           <div className="center-intro">
             <h2>From generated to <em>genuinely understood.</em></h2>
@@ -94,33 +97,33 @@ export default function Home() {
             <article><span>02</span><Brain /><h3>Choose your level</h3><p>Start plain, go deep, or switch level whenever the explanation misses.</p><div className="step-art depth-art"><i /><i /><i /><i /><i /></div></article>
             <article><span>03</span><Code2 /><h3>Understand. Continue.</h3><p>Ask a follow-up, test yourself, save the concept, and get back to the project.</p><div className="step-art continue-art"><i /><ArrowRight /></div></article>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="level-field" id="learn">
-        <div className="container-page">
+        <Reveal className="container-page">
           <p className="section-number">03 / YOUR DEPTH</p>
           <div className="split-intro">
             <h2>The same code.<br /><em>Five ways in.</em></h2>
             <p>Good explanations meet you where you are. Change the level to compare language, execution flow, architecture, and tradeoffs.</p>
           </div>
           <LevelLab />
-        </div>
+        </Reveal>
       </section>
 
       <section className="context-field" id="context">
-        <div className="container-page">
+        <Reveal className="container-page">
           <p className="section-number light">04 / THE WHOLE THREAD</p>
           <div className="center-intro light-copy">
             <h2>A line rarely makes sense <em>by itself.</em></h2>
             <p>Move outward from expression to architecture, then turn the missing context into something learnable.</p>
           </div>
           <ContextLadder />
-        </div>
+        </Reveal>
       </section>
 
       <section className="tools-field" id="tools">
-        <div className="container-page">
+        <Reveal className="container-page">
           <p className="section-number">05 / STAY IN FLOW</p>
           <div className="center-intro">
             <h2>Beside the tools.<br /><em>Not another place to work.</em></h2>
@@ -131,11 +134,11 @@ export default function Home() {
             {tools.map((tool, index) => <div className={`tool-node tool-${index + 1}`} key={tool}><TerminalSquare size={17} /><span>{tool}</span></div>)}
           </div>
           <p className="disclosure">Tool names describe intended workflows, not partnerships or endorsements. Specific integrations may be in development.</p>
-        </div>
+        </Reveal>
       </section>
 
       <section className="curriculum-field" id="curriculum">
-        <div className="container-page curriculum-grid">
+        <Reveal className="container-page curriculum-grid">
           <div>
             <p className="section-number light">06 / LEARN FROM REAL WORK</p>
             <h2>Your project becomes <em>the curriculum.</em></h2>
@@ -158,11 +161,11 @@ export default function Home() {
               <article className="planned-card"><small>LEARNING EVIDENCE</small><strong>Developing</strong><span>Coming during beta</span></article>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="privacy-field" id="privacy">
-        <div className="container-page privacy-layout">
+        <Reveal className="container-page privacy-layout">
           <div className="privacy-copy">
             <p className="section-number">07 / PRIVATE BY DESIGN</p>
             <h2>Your code deserves <em>a careful boundary.</em></h2>
@@ -177,15 +180,38 @@ export default function Home() {
             <div><LockKeyhole /><span>Approved request</span><small>Filtered context only</small></div>
           </div>
           <p className="privacy-note">Per-repository payload preview and consent controls are in development. No secret filter can guarantee it catches every sensitive value.</p>
-        </div>
+        </Reveal>
+      </section>
+
+      <section className="pricing-field" id="pricing">
+        <Reveal className="container-page pricing-layout">
+          <div className="pricing-copy">
+            <p className="section-number">08 / PRICING</p>
+            <h2>One plan.<br /><em>Completely free.</em></h2>
+            <p>Unvibe costs nothing to use. The AI explanation model is included, so you never need to bring an API key, configure billing, or enter a credit card.</p>
+          </div>
+          <article className="pricing-card">
+            <div className="pricing-name"><span className="brand-pixel" /><strong>Unvibe Free</strong><small>For coders who want to understand what they ship.</small></div>
+            <div className="price"><sup>$</sup><strong>0</strong><span>/ month</span></div>
+            <ul>
+              <li><Check size={16} />AI explanations included</li>
+              <li><Check size={16} />Five explanation depths</li>
+              <li><Check size={16} />Project-aware learning history</li>
+              <li><Check size={16} />Local secret filtering</li>
+              <li><Check size={16} />No API key or credit card</li>
+            </ul>
+            <Button href="#waitlist" size="lg" className="pricing-button">Join for free <ArrowRight size={18} /></Button>
+            <p>Free means $0. No surprise charge at signup.</p>
+          </article>
+        </Reveal>
       </section>
 
       <PixelWaitlist />
 
       <section className="faq-field" id="faq">
-        <div className="container-page faq-layout">
+        <Reveal className="container-page faq-layout">
           <div className="faq-heading">
-            <p className="section-number">09 / QUICK ANSWERS</p>
+            <p className="section-number">10 / QUICK ANSWERS</p>
             <h2>Before you <em>join.</em></h2>
             <p>Clear expectations now make for a better beta later.</p>
           </div>
@@ -197,17 +223,17 @@ export default function Home() {
               </details>
             ))}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="final-field">
         <div className="final-pixels" aria-hidden="true" />
-        <div className="container-narrow">
+        <Reveal className="container-narrow">
           <p className="pixel-eyebrow"><span className="brand-pixel" />KEEP THE SPEED. KEEP THE UNDERSTANDING.</p>
           <h2>AI can write the code.<br /><em>Make sure it becomes yours.</em></h2>
           <Button href="#waitlist" size="lg" className="beta-button">Join the private beta <ArrowRight size={18} /></Button>
           <p>Mac first · Free to join · Privacy and terms always available</p>
-        </div>
+        </Reveal>
       </section>
     </>
   );
