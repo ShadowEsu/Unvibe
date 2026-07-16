@@ -15,13 +15,13 @@ const guarantees = [
   },
   {
     Icon: ShieldCheck,
-    title: "You preview what leaves",
-    body: "See exactly what would be transmitted, and grant cloud analysis per repository. It is off until you say so.",
+    title: "Cloud use starts with your action",
+    body: "Unvibe builds limited context only when you ask for a review. Full payload preview and per-repository controls are still being completed.",
   },
   {
     Icon: Ban,
-    title: "Never trained on your code",
-    body: "We use a provider setting that does not train on submitted data, and analytics never contain code contents.",
+    title: "Provider terms stay visible",
+    body: "Unvibe does not build a training dataset from your code. The exact provider, retention, and data-use terms will be disclosed before cloud beta access.",
   },
 ];
 
@@ -80,17 +80,17 @@ export function Privacy() {
           </div>
         </div>
 
-        {/* Transmission preview visual */}
+        {/* Illustrative filtering scope; not a capture of a live request. */}
         <motion.div
           variants={fadeUp}
           className="overflow-hidden rounded-card border border-line bg-surface"
         >
           <div className="flex items-center justify-between border-b border-line bg-surface-2/70 px-5 py-3">
             <span className="text-fluid-sm font-medium text-fg">
-              Transmission preview
+              Filtering scope
             </span>
             <span className="font-mono text-[0.66rem] text-fg-faint">
-              before any request
+              illustrative
             </span>
           </div>
           <div className="grid gap-0 sm:grid-cols-2">

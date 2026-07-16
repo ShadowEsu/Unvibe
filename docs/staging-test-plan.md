@@ -3,6 +3,9 @@
 Run only after the environment checklist is complete. Use two disposable staging identities and
 record masked IDs, timestamps, and request outcomes.
 
+Start with `docs/release/staging-setup.md` and the guarded `npm run verify:staging` command. The
+steps below extend the automated database/deletion checks with packaged-app and provider behavior.
+
 1. Apply migrations; verify all user-owned tables and RLS policies with user A, user B, and anon.
 2. Complete verified device login, restart the packaged app, and confirm encrypted session restore.
 3. Generate a real streamed explanation, cancel one, complete a quiz, and verify mock is false.

@@ -30,7 +30,7 @@ export function FinalCta() {
             </Button>
           </div>
           <p className="mt-5 text-fluid-sm text-fg-faint">
-            Mac first &middot; No credit card &middot; Completely free during beta
+            Mac first &middot; No credit card &middot; No charge during private beta
           </p>
         </div>
       </div>

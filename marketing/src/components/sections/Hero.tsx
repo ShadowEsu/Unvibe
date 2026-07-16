@@ -78,7 +78,7 @@ export function Hero() {
               transition={{ delay: 0.3, duration: durations.standard }}
               className="mt-4 text-fluid-sm text-fg-faint"
             >
-              Mac first &middot; No credit card &middot; Completely free during beta
+              Mac first &middot; No credit card &middot; No charge during private beta
             </motion.p>
           </div>
 

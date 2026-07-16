@@ -120,7 +120,7 @@ export function Waitlist() {
       id="waitlist"
       eyebrow="Free waitlist"
       title="Get Unvibe free on Mac."
-      subtitle="Completely free during beta. No credit card. No pricing page. Join the list and we email you when the Mac build is ready."
+      subtitle="No charge during the current private beta. No credit card. Join the list and we email you when the Mac build is ready."
       narrow
       variant="compact"
     >

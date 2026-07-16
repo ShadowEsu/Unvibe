@@ -8,6 +8,12 @@ out/
 *.vsix
 .next/
 build/
+!app/build/
+app/build/*
+!app/build/icon.icns
+!app/build/icon.png
+!app/build/trayTemplate.png
+!app/build/entitlements.mac.plist
 *.tsbuildinfo
 
 # Env & secrets (never commit)
@@ -15,11 +21,13 @@ build/
 .env.*
 web/env.local
 !.env.example
+!.env.staging.example
 *.pem
 *.key
 
 # Logs & OS
 *.log
+.release/
 .DS_Store
 
 # Editor

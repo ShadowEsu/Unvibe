@@ -18,6 +18,7 @@ let status: SyncStatus = { phase: 'local', pending: 0 };
 let inFlight: Promise<void> | null = null;
 let retryTimer: NodeJS.Timeout | null = null;
 let retryAttempt = 0;
+let syncAbort: AbortController | null = null;
 
 function publish(next: SyncStatus): void {
   status = next;
@@ -55,6 +56,7 @@ async function runSync(): Promise<void> {
     return;
   }
 
+  syncAbort = new AbortController();
   publish({ phase: 'syncing', pending: store().pendingCount(), lastSyncedAt: status.lastSyncedAt });
   try {
     const pending = store().pending();
@@ -62,14 +64,23 @@ async function runSync(): Promise<void> {
       const accepted = await pushEvents(token, pending);
       store().markSynced(accepted);
     }
-    const remote = await pullEvents(token);
+    const remote = await pullEvents(token, (loaded) => {
+      publish({
+        phase: 'syncing',
+        pending: store().pendingCount(),
+        lastSyncedAt: status.lastSyncedAt,
+        message: `Restoring ${loaded} learning records…`,
+      });
+    }, syncAbort.signal);
     store().mergeRemote(remote);
     retryAttempt = 0;
     clearRetry();
     publish({ phase: 'synced', pending: store().pendingCount(), lastSyncedAt: new Date().toISOString() });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Sync failed.';
-    if (/session has expired/i.test(message)) {
+    if (/sync cancelled/i.test(message)) {
+      publish({ phase: 'local', pending: store().pendingCount(), message });
+    } else if (/session has expired/i.test(message)) {
       clearRetry();
       publish({ phase: 'auth_required', pending: store().pendingCount(), message });
     } else if (/could not reach/i.test(message)) {
@@ -77,6 +88,8 @@ async function runSync(): Promise<void> {
     } else {
       scheduleRetry(message, 'error');
     }
+  } finally {
+    syncAbort = null;
   }
 }
 
@@ -93,6 +106,8 @@ export async function retrySync(): Promise<void> {
 }
 
 export function stopSync(): void {
+  syncAbort?.abort();
+  syncAbort = null;
   clearRetry();
   listeners.clear();
 }

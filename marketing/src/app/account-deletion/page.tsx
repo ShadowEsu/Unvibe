@@ -32,11 +32,11 @@ export default function AccountDeletionPage() {
 
       <LegalSection heading="Timeline">
         <ul className="list-disc space-y-2 pl-5">
-          <li>Local data is removed immediately.</li>
-          <li>Backend data is removed immediately from the primary database.</li>
+          <li>After a successful request, the app wipes its local learning store.</li>
+          <li>Associated rows are removed from the primary application database.</li>
           <li>
-            Encrypted backups may persist for a short rotation window before they age
-            out.
+            Backup and operational-log timelines depend on the final infrastructure and
+            will be published after they are verified.
           </li>
           <li>
             Code already sent to the AI provider during past reviews is governed by that

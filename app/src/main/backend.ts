@@ -35,8 +35,10 @@ function loadAppEnv(): void {
 loadAppEnv();
 
 /** The desktop and `web/` development servers share this documented default. */
-export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env): string {
-  return env.UNVIBE_BACKEND || 'http://localhost:8787';
+const BAKED_RELEASE_BACKEND = process.env.UNVIBE_RELEASE_BACKEND || '';
+
+export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env, baked = BAKED_RELEASE_BACKEND): string {
+  return baked || env.UNVIBE_BACKEND || 'http://localhost:8787';
 }
 
 export const BACKEND = resolveBackendUrl();
@@ -46,8 +48,13 @@ const REQUEST_TIMEOUT_MS = 20_000;
  * leaves the widget or account controls waiting indefinitely. */
 async function request(url: string, init: RequestInit): Promise<Response> {
   try {
-    return await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+    return await fetch(url, { ...init, signal });
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Sync cancelled.');
+    }
     if (error instanceof DOMException && error.name === 'TimeoutError') {
       throw new Error('Unvibe could not reach the service in time. Check your connection and try again.');
     }
@@ -137,11 +144,37 @@ export async function pushEvents(token: string, events: LocalEvent[]): Promise<s
   return events.map((e) => e.id);
 }
 
-export async function pullEvents(token: string): Promise<LocalEvent[]> {
-  const res = await request(`${BACKEND}/api/v1/history?limit=500`, {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return json<LocalEvent[]>(res);
+interface HistoryPage {
+  events: LocalEvent[];
+  nextCursor?: string;
+}
+
+/** Pull every remote event using stable cursors. Pages are requested sequentially so retries
+ * and reconnects cannot apply a later page before its predecessor. Duplicate ids are folded. */
+export async function pullEvents(
+  token: string,
+  onProgress?: (loaded: number) => void,
+  signal?: AbortSignal,
+): Promise<LocalEvent[]> {
+  const byId = new Map<string, LocalEvent>();
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const params = new URLSearchParams({ limit: '200' });
+    if (cursor) params.set('cursor', cursor);
+    const res = await request(`${BACKEND}/api/v1/history?${params}`, {
+      headers: { authorization: `Bearer ${token}` },
+      signal,
+    });
+    const payload = await json<HistoryPage | LocalEvent[]>(res);
+    const page = Array.isArray(payload) ? { events: payload } : payload;
+    for (const event of page.events) byId.set(event.id, event);
+    onProgress?.(byId.size);
+    cursor = page.nextCursor;
+    if (cursor && seenCursors.has(cursor)) throw new Error('The service returned a repeated history cursor.');
+    if (cursor) seenCursors.add(cursor);
+  } while (cursor);
+  return [...byId.values()].sort((a, b) => a.ts.localeCompare(b.ts) || a.id.localeCompare(b.id));
 }
 
 export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null): Promise<ComprehensionQuestion> {

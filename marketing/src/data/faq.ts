@@ -81,14 +81,14 @@ export const faqItems: FaqItem[] = [
     id: "training",
     question: "Will my private code be used for training?",
     answer:
-      "We configure the model provider so API inputs are not used for training by default, and Unvibe does not train models on your private repositories. Confirm provider terms in Privacy if you need the contractual detail.",
+      "Unvibe does not build its own training dataset from your repositories. Before cloud beta access, we will name the configured provider and disclose its applicable retention and data-use terms; do not treat a secret filter as a guarantee that every sensitive value will be found.",
     category: "privacy",
   },
   {
     id: "free",
     question: "Is Unvibe free?",
     answer:
-      "Yes. Unvibe is completely free during the Mac beta—no credit card, no pricing page, no paid tier to join. If that changes later, we will say so clearly before anyone is charged.",
+      "There is no charge or credit card during the current private Mac beta. That is not a permanent or unlimited-use promise; if a paid plan is introduced later, we will explain it before anyone chooses or is charged.",
     category: "pricing",
   },
   {

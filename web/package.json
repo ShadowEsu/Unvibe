@@ -9,6 +9,9 @@
     "start": "next start -p 8787",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts"
+    ,"verify:staging": "node --import tsx scripts/verify-staging.ts"
+    ,"test:rls:staging": "node --import tsx scripts/rls-staging.ts"
+    ,"test:deletion:staging": "node --import tsx scripts/account-deletion-staging.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.110.6",

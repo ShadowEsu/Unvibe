@@ -4,12 +4,15 @@ import type {
   Account,
   DeviceCode,
   EventRecord,
+  HistoryPage,
   IncomingEvent,
   ProfileSummary,
   ProjectSummary,
+  SkillRecord,
   Store,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { decodeHistoryCursor, nextHistoryCursor } from './pagination';
 
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
@@ -41,46 +44,22 @@ export class SupabaseStore implements Store {
   }
 
   async approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null> {
-    const { data: device, error: lookupError } = await this.db
-      .from('device_codes')
-      .select('device_code, user_id')
-      .eq('user_code', userCode.toUpperCase())
-      .is('used_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-    this.requireSuccess(lookupError, 'look up device code');
-    if (!device) {
-      return null;
-    }
-    const boundUserId = device.user_id as string | null;
-    if (boundUserId && boundUserId !== userId) return null;
-    const { error: userError } = await this.db
-      .from('users')
-      .upsert({ id: userId, email: email ?? null }, { onConflict: 'id' });
-    this.requireSuccess(userError, 'upsert user');
-    const token = randomUUID();
-    const { error: tokenError } = await this.db.from('tokens').insert({ token, user_id: userId });
-    this.requireSuccess(tokenError, 'create device session');
-    const { error: deviceError } = await this.db
-      .from('device_codes')
-      .update({ user_id: userId, token, used_at: new Date().toISOString() })
-      .eq('device_code', device.device_code);
-    this.requireSuccess(deviceError, 'approve device code');
-    return token;
+    const { data, error } = await this.db.rpc('approve_device_code', {
+      p_user_code: userCode.toUpperCase(),
+      p_user_id: userId,
+      p_email: email ?? null,
+    });
+    this.requireSuccess(error, 'approve device code');
+    return typeof data === 'string' ? data : null;
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
-    const { data, error } = await this.db
-      .from('device_codes')
-      .select('token, expires_at')
-      .eq('device_code', deviceCode)
-      .maybeSingle();
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
+    const { data, error } = await this.db.rpc('redeem_device_code', { p_device_code: deviceCode });
     this.requireSuccess(error, 'redeem device code');
-    if (!data) {
-      return 'unknown';
-    }
-    if (new Date(data.expires_at as string).getTime() < Date.now()) return 'unknown';
-    return data.token ? { token: data.token as string } : 'pending';
+    const row = Array.isArray(data) ? data[0] as { redeemed_token?: unknown; redemption_status?: unknown } | undefined : undefined;
+    const status = row?.redemption_status;
+    if (status === 'approved' && typeof row?.redeemed_token === 'string') return { token: row.redeemed_token };
+    return status === 'pending' || status === 'expired' || status === 'used' ? status : 'unknown';
   }
 
   async userForToken(token: string): Promise<string | null> {
@@ -182,6 +161,29 @@ export class SupabaseStore implements Store {
     }));
     const { error } = await this.db.from('events').upsert(rows, { onConflict: 'id' });
     this.requireSuccess(error, 'upsert events');
+    const { error: skillsError } = await this.db.rpc('rebuild_user_skills', { p_user_id: userId });
+    this.requireSuccess(skillsError, 'rebuild skills');
+  }
+
+  private mapEvent(r: Record<string, unknown>): EventRecord {
+    return {
+      id: String(r.id),
+      userId: String(r.user_id),
+      ts: String(r.ts),
+      eventType: 'explanation_completed',
+      localDate: typeof r.local_date === 'string' ? r.local_date : undefined,
+      timezone: typeof r.timezone === 'string' ? r.timezone : undefined,
+      scope: String(r.scope),
+      level: String(r.level),
+      file: typeof r.file === 'string' ? r.file : undefined,
+      outcome: r.outcome as EventRecord['outcome'],
+      concept: typeof r.concept === 'string' ? r.concept : undefined,
+      conceptLabel: typeof r.concept_label === 'string' ? r.concept_label : undefined,
+      project: typeof r.project === 'string' ? r.project : undefined,
+      lines: typeof r.lines === 'number' ? r.lines : 0,
+      language: typeof r.language === 'string' ? r.language : undefined,
+      sourceApp: typeof r.source_app === 'string' ? r.source_app : undefined,
+    };
   }
 
   private async eventsFor(userId: string): Promise<EventRecord[]> {
@@ -191,24 +193,7 @@ export class SupabaseStore implements Store {
       .eq('user_id', userId)
       .order('ts', { ascending: true });
     this.requireSuccess(error, 'load events');
-    return (data ?? []).map((r) => ({
-      id: r.id,
-      userId: r.user_id,
-      ts: r.ts,
-      eventType: r.event_type ?? 'explanation_completed',
-      localDate: r.local_date ?? undefined,
-      timezone: r.timezone ?? undefined,
-      scope: r.scope,
-      level: r.level,
-      file: r.file ?? undefined,
-      outcome: r.outcome,
-      concept: r.concept ?? undefined,
-      conceptLabel: r.concept_label ?? undefined,
-      project: r.project ?? undefined,
-      lines: r.lines ?? 0,
-      language: r.language ?? undefined,
-      sourceApp: r.source_app ?? undefined,
-    }));
+    return (data ?? []).map((r) => this.mapEvent(r as Record<string, unknown>));
   }
 
   async profile(userId: string): Promise<ProfileSummary> {
@@ -216,11 +201,49 @@ export class SupabaseStore implements Store {
   }
 
   async history(userId: string, limit: number): Promise<EventRecord[]> {
-    const events = await this.eventsFor(userId);
-    return events.slice(-limit).reverse();
+    return (await this.historyPage(userId, limit)).events;
+  }
+
+  async historyPage(userId: string, limit: number, cursor?: string): Promise<HistoryPage> {
+    const decoded = decodeHistoryCursor(cursor);
+    if (cursor && !decoded) throw new Error('Invalid history cursor.');
+    const { data, error } = await this.db.rpc('history_page', {
+      p_user_id: userId,
+      p_limit: limit,
+      p_cursor_ts: decoded?.ts ?? null,
+      p_cursor_id: decoded?.id ?? null,
+    });
+    this.requireSuccess(error, 'load history page');
+    const events = (Array.isArray(data) ? data : []).map((row) => this.mapEvent(row as Record<string, unknown>));
+    return { events, nextCursor: nextHistoryCursor(events, limit) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {
     return computeProjects(await this.eventsFor(userId));
+  }
+
+  async skills(userId: string): Promise<SkillRecord[]> {
+    const { data, error } = await this.db.from('skills').select('*').eq('user_id', userId).order('last_encountered_at', { ascending: false });
+    this.requireSuccess(error, 'load skills');
+    return (data ?? []).map((row) => ({
+      id: String(row.id),
+      userId: String(row.user_id),
+      normalizedName: String(row.normalized_name),
+      displayName: String(row.display_name),
+      category: row.category ?? undefined,
+      language: row.language ?? undefined,
+      framework: row.framework ?? undefined,
+      firstEncounteredAt: String(row.first_encountered_at),
+      lastEncounteredAt: String(row.last_encountered_at),
+      lastReviewedAt: String(row.last_reviewed_at),
+      encounterCount: Number(row.encounter_count),
+      reviewCount: Number(row.review_count),
+      successfulChecks: Number(row.successful_checks),
+      unsuccessfulChecks: Number(row.unsuccessful_checks),
+      evidenceState: row.evidence_state as SkillRecord['evidenceState'],
+      nextReviewDate: row.next_review_date ?? undefined,
+      relatedProjects: Array.isArray(row.related_projects) ? row.related_projects : [],
+      relatedEventIds: Array.isArray(row.related_event_ids) ? row.related_event_ids : [],
+    }));
   }
 }

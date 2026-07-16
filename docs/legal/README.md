@@ -15,3 +15,9 @@ Contents:
 - `ai-limitations-disclaimer.md`
 - `subscription-cancellation-policy.md`
 - `contact-support.md`
+- `product-data-flow.md` — engineering source-to-destination map
+- `data-inventory.md` — fields, purpose, location, and sensitivity
+- `retention-matrix.md` — decisions counsel/operations must finalize
+- `account-deletion-flow.md` — implemented deletion sequence and verification gaps
+- `ai-provider-disclosure.md` — provider facts that must be confirmed before publication
+- `legal-review-checklist.md` — approval evidence and launch blockers

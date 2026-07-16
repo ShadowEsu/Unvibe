@@ -1,0 +1,10 @@
+{
+  "name": "unvibe-workspace",
+  "private": true,
+  "scripts": {
+    "verify:beta": "node scripts/verify-beta.mjs",
+    "verify:staging": "npm --prefix web run verify:staging",
+    "test:rls:staging": "npm --prefix web run test:rls:staging",
+    "test:deletion:staging": "npm --prefix web run test:deletion:staging"
+  }
+}

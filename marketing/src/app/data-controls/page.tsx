@@ -18,8 +18,8 @@ export default function DataControlsPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong>Learning events</strong> (reviews, outcomes, concepts, streaks) live
-            on your device and, if you are signed in, sync to our backend. Removed
-            immediately from primary storage when you delete them or your account.
+            on your device and, if you are signed in, sync to our backend. A successful
+            account deletion removes the associated primary database rows.
           </li>
           <li>
             <strong>Account data</strong> (email, tokens) is stored on the backend until
@@ -40,17 +40,17 @@ export default function DataControlsPage() {
 
       <LegalSection heading="Retention">
         <p>
-          Learning and account data are kept until you remove them, then deleted
-          immediately from primary storage. Encrypted backups may persist for a short
-          rotation window before aging out. Analytics logs are metadata only and exclude
-          the contents of your code.
+          Learning and account data are kept until you remove them. Primary-record,
+          backup, provider, and operational-log timelines will be finalized before the
+          external beta; this page does not promise deletion from systems we have not
+          yet verified.
         </p>
       </LegalSection>
 
       <LegalSection heading="Exclusions and consent">
         <p>
-          Cloud analysis is off until you grant consent per repository, and you can
-          preview exactly what would be sent first. Default exclusions cover{" "}
+          Cloud analysis begins only after an explicit review action. Full payload preview
+          and per-repository consent controls are still being completed. Default exclusions cover{" "}
           <code className="font-mono">.env</code> files, keys,{" "}
           <code className="font-mono">node_modules</code>, and build output, and you can
           add your own rules in a <code className="font-mono">.unvibeignore</code> file.
@@ -67,10 +67,11 @@ export default function DataControlsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="No training on your code">
+      <LegalSection heading="AI provider use">
         <p>
-          We use a provider configuration that does not train on submitted data, and we
-          do not train models on your private code.
+          Unvibe does not build its own training dataset from your code. The configured
+          AI provider, retention window, and applicable data-use terms will be disclosed
+          and reviewed before cloud beta access is enabled.
         </p>
       </LegalSection>
     </LegalLayout>

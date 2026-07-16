@@ -67,7 +67,7 @@ const softwareJsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "Completely free during beta. No credit card.",
+    description: "No charge during the current private beta. No credit card.",
   },
 };
 

@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { cpSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 
 const testsOnly = process.argv.includes('--tests');
+const releaseBackend = process.env.UNVIBE_BACKEND?.trim() ?? '';
 
 if (testsOnly) {
   rmSync('dist-test', { recursive: true, force: true });
@@ -14,6 +15,7 @@ if (testsOnly) {
     platform: 'node',
     format: 'cjs',
     target: 'node20',
+    define: { 'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify('') },
   });
   process.exit(0);
 }
@@ -30,6 +32,7 @@ await build({
   format: 'cjs',
   target: 'node20',
   external: ['electron'],
+  define: { 'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(releaseBackend) },
 });
 
 // Renderers (browser/iife) + static html/css

@@ -12,6 +12,8 @@
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
     "dist": "npm run build && electron-builder --mac dir",
     "dist:dmg": "npm run build && electron-builder --mac dmg",
+    "package:local": "node scripts/package-local.mjs",
+    "verify:package": "node scripts/verify-package.mjs",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },
   "dependencies": {
@@ -50,6 +52,6 @@
         "LSUIElement": false
       }
     },
-    "dmg": { "sign": false }
+    "dmg": { "sign": false, "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}" }
   }
 }

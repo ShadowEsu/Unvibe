@@ -6,15 +6,20 @@ import type {
   IncomingEvent,
   ProfileSummary,
   ProjectSummary,
+  HistoryPage,
+  SkillRecord,
   Store,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { compareHistoryDescending, decodeHistoryCursor, isAfterCursor, nextHistoryCursor } from './pagination';
+import { computeSkills } from './skills';
 
 interface PendingDevice {
   userCode: string;
   userId?: string;
   token?: string;
   createdAt: number;
+  redeemedAt?: number;
 }
 
 const DEVICE_CODE_TTL_MS = 10 * 60_000;
@@ -62,6 +67,7 @@ export class MemoryStore implements Store {
       return null;
     }
     if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return null;
+    if (entry.redeemedAt) return null;
     if (entry.userId && entry.userId !== userId) return null;
     if (entry.token) return entry.token;
     const token = randomUUID();
@@ -72,15 +78,17 @@ export class MemoryStore implements Store {
     return token; // also usable as a browser session
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
       return 'unknown';
     }
-    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return 'unknown';
+    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return 'expired';
     if (!entry.token) {
       return 'pending';
     }
+    if (entry.redeemedAt) return 'used';
+    entry.redeemedAt = this.now();
     return { token: entry.token };
   }
 
@@ -165,10 +173,23 @@ export class MemoryStore implements Store {
   }
 
   async history(userId: string, limit: number): Promise<EventRecord[]> {
-    return this.eventsFor(userId).slice(-limit).reverse();
+    return (await this.historyPage(userId, limit)).events;
+  }
+
+  async historyPage(userId: string, limit: number, cursor?: string): Promise<HistoryPage> {
+    const decoded = decodeHistoryCursor(cursor);
+    if (cursor && !decoded) throw new Error('Invalid history cursor.');
+    const sorted = this.eventsFor(userId).sort(compareHistoryDescending);
+    const eligible = decoded ? sorted.filter((event) => isAfterCursor(event, decoded)) : sorted;
+    const events = eligible.slice(0, limit);
+    return { events, nextCursor: nextHistoryCursor(events, limit) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {
     return computeProjects(this.eventsFor(userId));
+  }
+
+  async skills(userId: string): Promise<SkillRecord[]> {
+    return computeSkills(userId, this.eventsFor(userId));
   }
 }

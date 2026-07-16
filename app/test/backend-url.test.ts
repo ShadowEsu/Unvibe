@@ -9,3 +9,10 @@ test('uses the documented web development port by default', () => {
 test('respects an explicit backend override', () => {
   assert.equal(resolveBackendUrl({ UNVIBE_BACKEND: 'https://staging.example.test' }), 'https://staging.example.test');
 });
+
+test('a packaged backend cannot be overridden at runtime', () => {
+  assert.equal(
+    resolveBackendUrl({ UNVIBE_BACKEND: 'http://localhost:8787' }, 'https://approved-staging.example.test'),
+    'https://approved-staging.example.test',
+  );
+});
