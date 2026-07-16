@@ -197,21 +197,25 @@ packaged app, signing/notarization, billing, accessibility, and performance benc
 
 ## 20. Commits created
 
-**Working and tested.** Checkpoint created:
+**Working and tested.** Checkpoints created:
 
 - `fix critical beta persistence and auth blockers`
+- `docs: record honest beta readiness`
 
 Documentation/report finalization is a separate checkpoint so the implementation remains easy to
 review or revert.
 
 ## 21. Commit SHAs
 
-**Working and tested.** Implementation checkpoint: `27e4719`.
+**Working and tested.** Implementation checkpoint: `27e4719`. Documentation checkpoint:
+`9f53d1b`. This push-status update is the branch HEAD; its SHA is available from Git after the
+report is written (a file cannot contain the final hash of its own commit).
 
 ## 22. Push status
 
-**Partially implemented.** Push is pending final documentation commit and final diff verification.
-The target is `origin/codex/beta-core`; `main` will not be pushed or modified.
+**Working and tested.** The branch was successfully created and pushed to
+`origin/codex/beta-core`. `main` was not pushed or modified. Existing ignored workspace directories
+`app/.tools-bin/` and `web/.vercel/` were preserved and were not committed.
 
 ## 23. Remaining blockers
 
