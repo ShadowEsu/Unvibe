@@ -22,9 +22,10 @@ export function PricingPlans() {
   return (
     <div className="pricing-plans">
       <div className="marketing-billing-toggle" aria-label="Billing interval">
-        <button className={!annual ? 'active' : ''} onClick={() => chooseInterval('monthly')} aria-pressed={!annual}>Monthly</button>
-        <button className={annual ? 'active' : ''} onClick={() => chooseInterval('annual')} aria-pressed={annual}>Annual</button>
+        <button type="button" className={!annual ? 'active' : ''} onClick={() => chooseInterval('monthly')} aria-pressed={!annual}>Monthly</button>
+        <button type="button" className={annual ? 'active' : ''} onClick={() => chooseInterval('annual')} aria-pressed={annual}>Annual <span>Save 25% on Teams</span></button>
       </div>
+      <p className="annual-savings-note"><strong>Annual Teams saves 25%:</strong> $6/member/month, billed as $72/member/year. Pro remains $8/month, billed as $96/year.</p>
       <div className="marketing-plan-grid">
         <PlanCard plan="free" interval={interval} name="Free" eyebrow="Learn how your code works." price="$0" detail="No card required" features={cards.free} cta="Start for free" />
         <PlanCard plan="pro" interval={interval} name="Pro" eyebrow="Best for individuals" price={annual ? '$96/year' : '$8/month'} detail={annual ? 'Equivalent to $8/month · billed once yearly' : 'For one personal account · billed monthly'} features={cards.pro} cta="Upgrade to Pro" featured />

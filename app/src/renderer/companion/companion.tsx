@@ -36,6 +36,12 @@ interface BillingOverview {
   hasBillingAccount: boolean;
 }
 
+const PLAN_FEATURES = {
+  free: ['30 explanations each month', 'One active project', 'Saved learning history', 'No card required'],
+  pro: ['More AI usage', 'Up to 10 active projects', 'Deeper cross-file context', 'Personal learning history'],
+  teams: ['Everything in Pro', 'Shared team workspace', 'Roles and permissions', 'Centralized billing'],
+} as const;
+
 const IC = {
   home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
   progress: 'M4 16V9 M10 16V4 M16 16v-6',
@@ -506,12 +512,15 @@ function Plan() {
     {overview && <>
       <div className="plan-current"><div><span>Current plan</span><strong>{overview.subscription.plan}</strong></div><div><span>Interval</span><strong>{overview.subscription.interval ?? 'no billing'}</strong></div><div><span>Status</span><strong>{overview.subscription.plan === 'free' ? 'ready' : overview.subscription.status.replaceAll('_', ' ')}</strong></div><div><span>Renews</span><strong>{overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString() : 'not applicable'}</strong></div><div><span>Workspace</span><strong>{overview.workspace.name}</strong></div>{overview.canManageBilling && overview.hasBillingAccount && <button className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>}</div>
       <div className="plan-usage">{overview.usage.slice(0, 3).map((line) => <div key={line.kind}><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong><progress value={line.used} max={line.limit} /></div>)}</div>
-      <div className="plan-toggle"><button className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')}>Monthly</button><button className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')}>Annual</button></div>
+      <div className="plan-billing-control">
+        <div className="plan-toggle" aria-label="Billing interval"><button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25% on Teams</span></button></div>
+        <p><strong>Annual Teams:</strong> $6/member/month, billed as $72/member/year. <span>Pro stays $8/month, billed as $96/year.</span></p>
+      </div>
       {!available && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
       <div className="plan-options">
-        <article><b>Free · learn how your code works</b><h2>$0</h2><p>30 explanations/month · one active project · saved learning history · no card</p><button className="soft-btn" disabled>Included</button></article>
-        <article className="featured"><b>Pro · best for individuals</b><h2>{interval === 'monthly' ? '$8/month' : '$96/year'}</h2><p>{interval === 'monthly' ? 'More AI usage, 10 active projects, and deeper cross-file context.' : 'Equivalent to $8/month, billed once yearly. No annual Pro discount is claimed.'}</p><button className="primary-btn" onClick={() => void checkout('pro')} disabled={busy || !available}>Upgrade to Pro</button></article>
-        <article><b>Teams · for 2+ members</b><h2>{interval === 'monthly' ? '$8/member/month' : '$6/member/month'}</h2><p>{interval === 'monthly' ? `${seats} paid seats · $${seats * 8}/month total · 2-seat minimum` : `${seats} paid seats · $${seats * 72}/year total · billed annually · save 25%`}</p><div className="plan-team-inputs"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><input aria-label="Seats" type="number" min={2} max={500} value={seats} onChange={(event) => setSeats(Number(event.target.value))} /></div><button className="primary-btn" onClick={() => void checkout('teams')} disabled={busy || !available || seats < 2}>Start a team</button></article>
+        <article><b>Free · learn how your code works</b><h2>$0</h2><p className="plan-price-note">Always free</p><ul className="plan-feature-list">{PLAN_FEATURES.free.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="soft-btn" disabled>Included</button></article>
+        <article className="featured"><b>Pro · best for individuals</b><h2>{interval === 'monthly' ? '$8/month' : '$96/year'}</h2><p className="plan-price-note">{interval === 'monthly' ? 'One personal account · billed monthly' : 'Equivalent to $8/month · billed once yearly'}</p><ul className="plan-feature-list">{PLAN_FEATURES.pro.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="primary-btn" onClick={() => void checkout('pro')} disabled={busy || !available}>Upgrade to Pro</button></article>
+        <article><b>Teams · for 2+ members</b><h2>{interval === 'monthly' ? '$8/member/month' : '$6/member/month'}</h2><p className="plan-price-note">{interval === 'monthly' ? `${seats} paid seats · $${seats * 8}/month total` : `${seats} paid seats · $${seats * 72}/year total`} <span className={interval === 'annual' ? 'annual-save' : ''}>{interval === 'annual' ? 'Save 25%' : '2-seat minimum'}</span></p><ul className="plan-feature-list">{PLAN_FEATURES.teams.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><div className="plan-team-inputs"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><input aria-label="Seats" type="number" min={2} max={500} value={seats} onChange={(event) => setSeats(Number(event.target.value))} /></div><button className="primary-btn" onClick={() => void checkout('teams')} disabled={busy || !available || seats < 2}>Start a team</button></article>
       </div>
     </>}
   </div>;
