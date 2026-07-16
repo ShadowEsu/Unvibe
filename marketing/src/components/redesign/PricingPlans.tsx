@@ -28,7 +28,7 @@ export function PricingPlans() {
       <div className="marketing-plan-grid">
         <PlanCard plan="free" interval={interval} name="Free" eyebrow="Learn how your code works." price="$0" detail="No card required" features={cards.free} cta="Start for free" />
         <PlanCard plan="pro" interval={interval} name="Pro" eyebrow="Best for individuals" price={annual ? '$96/year' : '$8/month'} detail={annual ? 'Equivalent to $8/month · billed once yearly' : 'For one personal account · billed monthly'} features={cards.pro} cta="Upgrade to Pro" featured />
-        <PlanCard plan="teams" interval={interval} name="Teams" eyebrow="For 2+ members" price={annual ? '$6/member/month' : '$8/member/month'} detail={annual ? '$72/member/year · $144/year minimum' : '2-seat minimum · $16/month minimum'} savings={annual ? 'Save 25% with annual billing' : undefined} features={cards.teams} cta="Start a team" />
+        <PlanCard plan="teams" interval={interval} name="Teams" eyebrow="For 2+ members" price={annual ? '$6/member/month' : '$8/member/month'} detail={annual ? 'Billed annually · $72/member/year · $144/year minimum' : '2-seat minimum · $16/month minimum'} savings={annual ? 'Save 25% with annual billing' : undefined} features={cards.teams} cta="Start a team" />
       </div>
       <p className="pricing-disclosure">Every team member uses a separate account. Private code is filtered locally before approved context is sent; no plan requires you to bring an AI API key.</p>
     </div>

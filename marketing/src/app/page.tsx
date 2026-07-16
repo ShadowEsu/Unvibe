@@ -1,13 +1,18 @@
 import {
   ArrowDown,
   ArrowRight,
+  BarChart3,
   Brain,
+  BookOpen,
   Check,
+  CircleHelp,
   Code2,
+  CreditCard,
   Eye,
   FileCode2,
   FolderGit2,
   GraduationCap,
+  History as HistoryIcon,
   LockKeyhole,
   MousePointer2,
   ShieldCheck,
@@ -26,6 +31,14 @@ import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { faqItems } from "@/data/faq";
 
 const tools = ["Cursor", "VS Code", "Terminal", "Claude Code", "GitHub"];
+
+const companionDestinations = [
+  { icon: BookOpen, title: "Study", detail: "A short review queue formed from concepts you have actually met in your code." },
+  { icon: HistoryIcon, title: "History", detail: "A private, chronological trail of explanations and checks you chose to keep." },
+  { icon: CircleHelp, title: "Quiz", detail: "Fresh comprehension checks inside real explanations, where the code context is present." },
+  { icon: BarChart3, title: "Progress", detail: "Cautious evidence, streaks, and learning signals—never made-up mastery scores." },
+  { icon: CreditCard, title: "Plan", detail: "Usage, reset dates, and the Free, Pro, or Teams space that fits your work." },
+];
 
 export default function Home() {
   return (
@@ -165,10 +178,26 @@ export default function Home() {
         </Reveal>
       </section>
 
+      <section className="companion-field" id="companion">
+        <Reveal className="container-page">
+          <p className="section-number">07 / KEEP THE THREAD</p>
+          <div className="center-intro">
+            <h2>Five places to keep <em>learning moving.</em></h2>
+            <p>The desktop companion turns each real review into a path back to understanding—without pretending you have completed a course you never took.</p>
+          </div>
+          <div className="companion-grid">
+            {companionDestinations.map(({ icon: Icon, title, detail }, index) => <article key={title}>
+              <span>{String(index + 1).padStart(2, "0")}</span><Icon size={22} /><h3>{title}</h3><p>{detail}</p>
+            </article>)}
+          </div>
+          <p className="companion-note">Your sixth destination is Plan: start free, see what resets, and only upgrade when your projects need more room.</p>
+        </Reveal>
+      </section>
+
       <section className="privacy-field" id="privacy">
         <Reveal className="container-page privacy-layout">
           <div className="privacy-copy">
-            <p className="section-number">07 / PRIVATE BY DESIGN</p>
+            <p className="section-number">08 / PRIVATE BY DESIGN</p>
             <h2>Your code deserves <em>a careful boundary.</em></h2>
             <p>Unvibe&apos;s desktop agent owns network requests. It filters likely secrets locally before approved context can be sent for an explanation.</p>
             <div className="legal-links"><a href="/privacy">Privacy policy</a><a href="/terms">Terms of service</a><a href="/data-controls">Data controls</a></div>
@@ -187,7 +216,7 @@ export default function Home() {
       <section className="pricing-field" id="pricing">
         <Reveal className="container-page">
           <div className="pricing-copy">
-            <p className="section-number">08 / PRICING</p>
+            <p className="section-number">09 / PRICING</p>
             <h2>Start free. <em>Upgrade when your projects grow.</em></h2>
             <p>Use Unvibe for free to understand code in context. Upgrade for larger repositories, persistent project understanding, higher usage, and collaborative team workspaces.</p>
           </div>
@@ -200,7 +229,7 @@ export default function Home() {
       <section className="faq-field" id="faq">
         <Reveal className="container-page faq-layout">
           <div className="faq-heading">
-            <p className="section-number">10 / QUICK ANSWERS</p>
+            <p className="section-number">11 / QUICK ANSWERS</p>
             <h2>Before you <em>join.</em></h2>
             <p>Clear expectations now make for a better beta later.</p>
           </div>

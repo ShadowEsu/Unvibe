@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 
-type PageId = 'Home' | 'Progress' | 'Plan' | 'Projects' | 'Study' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
+type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -16,6 +16,7 @@ interface Profile {
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
+interface LearningItem extends FeedItem { concept?: string; level: string; lines: number }
 interface SyncStatus {
   phase: 'local' | 'syncing' | 'synced' | 'offline' | 'auth_required' | 'error';
   pending: number; lastSyncedAt?: string; nextRetryAt?: string; message?: string;
@@ -40,6 +41,8 @@ const IC = {
   progress: 'M4 16V9 M10 16V4 M16 16v-6',
   projects: 'M3 6a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
   study: 'M4 4h9a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H4z M4 4v9',
+  history: 'M10 3a7 7 0 1 0 7 7 M10 6v4l3 2',
+  quiz: 'M10 3a7 7 0 1 0 7 7 M8.2 8.1a2 2 0 1 1 3.4 1.4c-.8.7-1.6 1.1-1.6 2.3 M10 15h.01',
   concepts: 'M10 3l2.1 4.9L17 10l-4.9 2.1L10 17l-2.1-4.9L3 10l4.9-2.1z',
   notebook: 'M5 3h9a1 1 0 0 1 1 1v13l-3-2-3 2-3-2V4a1 1 0 0 1 1-1z M8 7h5 M8 10h5',
   briefings: 'M5 3h10v14H5z M8 7h4 M8 10h4 M8 13h2',
@@ -54,7 +57,7 @@ const IC = {
   plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
 };
 
-const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan'>, PageDef> = {
+const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'History' | 'Quiz'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
     { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
     { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
@@ -100,7 +103,12 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan'>, PageDef> = {
 };
 
 const NAV: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home }, { id: 'Progress', icon: IC.progress }, { id: 'Plan', icon: IC.plan },
+  { id: 'Home', icon: IC.home },
+  { id: 'Study', icon: IC.study },
+  { id: 'History', icon: IC.history },
+  { id: 'Quiz', icon: IC.quiz },
+  { id: 'Progress', icon: IC.progress },
+  { id: 'Plan', icon: IC.plan },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
@@ -420,6 +428,46 @@ function Progress({ profile }: { profile: Profile | null }) {
   );
 }
 
+function outcomeName(outcome: string): string {
+  return outcome === 'understood' ? 'Understood' : outcome === 'needs_review' ? 'To revisit' : 'Reviewed';
+}
+
+function Study({ items, shortcut, onReview }: { items: LearningItem[]; shortcut: string; onReview: () => void }) {
+  const revisit = items.filter((item) => item.outcome === 'needs_review');
+  const recent = items.filter((item) => item.outcome !== 'needs_review').slice(0, 3);
+  const queue = revisit.length > 0 ? revisit : recent;
+  return <>
+    <div className="topline"><h1>Study</h1></div>
+    <p className="lead">A small, evidence-based queue from the code you have already reviewed. It grows only when you use Unvibe—no generic course pretending to know your project.</p>
+    {queue.length === 0 ? <LearningEmpty title="Your study queue is waiting for its first review." detail={`Select code and press ${shortcut}. When you mark a concept to revisit, it will appear here.`} onReview={onReview} /> : <>
+      <div className="learning-summary"><div><strong>{revisit.length}</strong><span>ready to revisit</span></div><div><strong>{items.length}</strong><span>reviews in your recent history</span></div><p>Start with the items that asked for another pass. A fresh explanation can generate the next real comprehension check.</p></div>
+      <div className="learning-list">{queue.slice(0, 6).map((item) => <article className="learning-card" key={item.id}><div><span className="learning-kicker">{item.outcome === 'needs_review' ? 'REVIEW QUEUE' : 'RECENT CONCEPT'}</span><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div><button className="soft-btn" onClick={onReview}>Open a fresh explanation</button></article>)}</div>
+    </>}
+  </>;
+}
+
+function History({ items, onReview }: { items: LearningItem[]; onReview: () => void }) {
+  return <>
+    <div className="topline"><h1>History</h1></div>
+    <p className="lead">Your actual trail of explanations and checks. It stays on this Mac first, then syncs when you sign in—never a fabricated activity feed.</p>
+    {items.length === 0 ? <LearningEmpty title="No history yet." detail="Your explanations will appear here after you select code and open a review." onReview={onReview} /> : <div className="history-list">{items.map((item) => <article className="history-row" key={item.id}><time dateTime={item.ts}>{new Date(item.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {fmtTime(item.ts)}</time><div><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div><span className={`tag tag--${item.outcome}`}>{outcomeName(item.outcome)}</span></article>)}</div>}
+  </>;
+}
+
+function Quiz({ items, onReview }: { items: LearningItem[]; onReview: () => void }) {
+  const candidates = items.filter((item) => item.outcome === 'needs_review');
+  return <>
+    <div className="topline"><h1>Quiz</h1></div>
+    <p className="lead">Comprehension checks happen inside a fresh explanation, where Unvibe has the exact code and context to ask a fair question. This queue simply chooses what is worth revisiting.</p>
+    <div className="quiz-callout"><span className="quiz-icon"><Icon d={IC.quiz} /></span><div><span className="learning-kicker">HOW QUIZZES WORK</span><h2>Explain a selection, then choose “Test me.”</h2><p>Your result updates the same learning history, concept evidence, and review queue shown everywhere else.</p></div><button className="primary-btn" onClick={onReview}>Start a code check</button></div>
+    {candidates.length > 0 ? <section className="quiz-queue"><div className="ph"><span className="t">Ready to revisit</span><span className="m">{candidates.length} item{candidates.length === 1 ? '' : 's'}</span></div>{candidates.slice(0, 5).map((item) => <div className="quiz-row" key={item.id}><div><strong>{item.title}</strong><span>{item.meta || `${item.lines} lines`}</span></div><button className="soft-btn" onClick={onReview}>Practice it</button></div>)}</section> : <LearningEmpty title="Nothing needs a quiz yet." detail="When an explanation is marked for another look, it will appear here. You can always start a fresh code check now." onReview={onReview} />}
+  </>;
+}
+
+function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
+  return <div className="learning-empty"><div className="stub__icon"><Icon d={IC.spark} /></div><h2>{title}</h2><p>{detail}</p><button className="primary-btn" onClick={onReview}>Explain some code</button></div>;
+}
+
 function Plan() {
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [available, setAvailable] = useState(false);
@@ -461,9 +509,9 @@ function Plan() {
       <div className="plan-toggle"><button className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')}>Monthly</button><button className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')}>Annual</button></div>
       {!available && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
       <div className="plan-options">
-        <article><b>Free</b><h2>$0</h2><p>30 explanations · one active project · no card</p><button className="soft-btn" disabled>Included</button></article>
-        <article className="featured"><b>Pro · best for individuals</b><h2>{interval === 'monthly' ? '$8/month' : '$96/year'}</h2><p>{interval === 'monthly' ? 'One personal account' : 'Equivalent to $8/month — no false discount'}</p><button className="primary-btn" onClick={() => void checkout('pro')} disabled={busy || !available}>Upgrade to Pro</button></article>
-        <article><b>Teams · 2+ members</b><h2>{interval === 'monthly' ? '$8/member' : '$6/member/month'}</h2><p>{interval === 'monthly' ? `$${seats * 8}/month total` : `$${seats * 72}/year total · save 25%`}</p><div className="plan-team-inputs"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><input aria-label="Seats" type="number" min={2} max={500} value={seats} onChange={(event) => setSeats(Number(event.target.value))} /></div><button className="primary-btn" onClick={() => void checkout('teams')} disabled={busy || !available || seats < 2}>Start a team</button></article>
+        <article><b>Free · learn how your code works</b><h2>$0</h2><p>30 explanations/month · one active project · saved learning history · no card</p><button className="soft-btn" disabled>Included</button></article>
+        <article className="featured"><b>Pro · best for individuals</b><h2>{interval === 'monthly' ? '$8/month' : '$96/year'}</h2><p>{interval === 'monthly' ? 'More AI usage, 10 active projects, and deeper cross-file context.' : 'Equivalent to $8/month, billed once yearly. No annual Pro discount is claimed.'}</p><button className="primary-btn" onClick={() => void checkout('pro')} disabled={busy || !available}>Upgrade to Pro</button></article>
+        <article><b>Teams · for 2+ members</b><h2>{interval === 'monthly' ? '$8/member/month' : '$6/member/month'}</h2><p>{interval === 'monthly' ? `${seats} paid seats · $${seats * 8}/month total · 2-seat minimum` : `${seats} paid seats · $${seats * 72}/year total · billed annually · save 25%`}</p><div className="plan-team-inputs"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><input aria-label="Seats" type="number" min={2} max={500} value={seats} onChange={(event) => setSeats(Number(event.target.value))} /></div><button className="primary-btn" onClick={() => void checkout('teams')} disabled={busy || !available || seats < 2}>Start a team</button></article>
       </div>
     </>}
   </div>;
@@ -647,19 +695,21 @@ function App() {
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [history, setHistory] = useState<LearningItem[]>([]);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
 
   const refresh = async () => {
-    const [acct, prof, fd, st, syncState] = await Promise.all([
+    const [acct, prof, fd, hist, st, syncState] = await Promise.all([
       window.unvibe.account() as Promise<Account>,
       window.unvibe.profile() as Promise<Profile>,
       window.unvibe.feed(8) as Promise<FeedItem[]>,
+      window.unvibe.history(100) as Promise<LearningItem[]>,
       window.unvibe.getSettings() as Promise<Settings>,
       window.unvibe.syncStatus() as Promise<SyncStatus>,
     ]);
-    setAccount(acct); setProfile(prof); setFeed(fd); setSettings(st); setSync(syncState);
+    setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setSettings(st); setSync(syncState);
     return { acct, st };
   };
 
@@ -724,6 +774,9 @@ function App() {
           <div className="page">
             <FadeIn animKey={page} stagger>
               {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
+                : page === 'Study' ? <Study items={history} shortcut={shortcutLabel} onReview={() => window.unvibe.companionReview()} />
+                : page === 'History' ? <History items={history} onReview={() => window.unvibe.companionReview()} />
+                : page === 'Quiz' ? <Quiz items={history} onReview={() => window.unvibe.companionReview()} />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}

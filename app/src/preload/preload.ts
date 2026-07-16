@@ -26,6 +26,7 @@ const api = {
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
   feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
+  history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
   onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),

@@ -58,6 +58,13 @@ export interface FeedItem {
   outcome: Outcome;
 }
 
+/** A privacy-safe event summary for learning views. It deliberately excludes code contents. */
+export interface LearningItem extends FeedItem {
+  concept?: string;
+  level: string;
+  lines: number;
+}
+
 export const HEAT_DAYS = 182;
 
 function dayKey(iso: string): string {
@@ -186,8 +193,12 @@ const OUTCOME_LABEL: Record<Outcome, string> = {
 };
 
 export function computeFeed(events: LocalEvent[], limit: number): FeedItem[] {
+  return computeLearningItems(events, limit).map(({ id, ts, title, meta, outcome }) => ({ id, ts, title, meta, outcome }));
+}
+
+export function computeLearningItems(events: LocalEvent[], limit: number): LearningItem[] {
   return [...events]
-    .reverse()
+    .sort((a, b) => b.ts.localeCompare(a.ts))
     .slice(0, limit)
     .map((e) => ({
       id: e.id,
@@ -195,5 +206,8 @@ export function computeFeed(events: LocalEvent[], limit: number): FeedItem[] {
       title: e.conceptLabel ?? `${e.lines} lines of ${e.language ?? 'code'}`,
       meta: [e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
       outcome: e.outcome,
+      concept: e.conceptLabel ?? e.concept,
+      level: e.level,
+      lines: e.lines,
     }));
 }

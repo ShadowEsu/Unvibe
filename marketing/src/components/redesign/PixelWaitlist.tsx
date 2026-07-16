@@ -85,7 +85,7 @@ export function PixelWaitlist() {
       <div className="waitlist-pixels" aria-hidden="true" />
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
-          <p className="section-number light">09 / PRIVATE BETA</p>
+          <p className="section-number light">10 / PRIVATE BETA</p>
           <h2>Learn a little from the code <em>you ship every day.</em></h2>
           <p>Join the Mac beta list. The AI explanation model is included at no charge to you during beta—no API key, billing setup, or credit card required.</p>
           <ul>

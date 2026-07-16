@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -59,4 +59,14 @@ test('computeFeed returns most-recent first', () => {
   const feed = computeFeed(events, 5);
   assert.equal(feed[0].id, 'b');
   assert.equal(feed.length, 2);
+});
+
+test('computeLearningItems gives learning views safe summaries without code contents', () => {
+  const items = computeLearningItems([
+    ev({ id: 'earlier', ts: '2026-07-11T08:00:00Z', lines: 6, language: 'TypeScript' }),
+    ev({ id: 'latest', ts: '2026-07-11T09:00:00Z', concept: 'closures', conceptLabel: 'Closures', level: 'advanced', lines: 12, outcome: 'needs_review' }),
+  ], 10);
+  assert.deepEqual(items[0], {
+    id: 'latest', ts: '2026-07-11T09:00:00Z', title: 'Closures', meta: 'To revisit', outcome: 'needs_review', concept: 'Closures', level: 'advanced', lines: 12,
+  });
 });

@@ -47,7 +47,7 @@ import {
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
-import { computeProfile, computeFeed, localDayKey } from '../core/learning';
+import { computeProfile, computeFeed, computeLearningItems, localDayKey } from '../core/learning';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -267,6 +267,7 @@ app.whenReady().then(() => {
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
+  ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('sync:status', () => syncStatus());
   ipcMain.handle('sync:retry', async () => {
     await retrySync();
