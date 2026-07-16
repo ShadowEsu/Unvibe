@@ -128,11 +128,15 @@ async function startReview(): Promise<void> {
     onRecorded: () => notify('Added to your learning history'),
     onUnderstood: () => notify('Nice — concept understood'),
   };
-  sessions.set(win.webContents.id, session);
+  // Electron destroys both the BrowserWindow and its webContents before the `closed`
+  // callback runs, so retain the stable ids needed for cleanup while they are valid.
+  const webContentsId = win.webContents.id;
+  const windowId = win.id;
+  sessions.set(webContentsId, session);
   win.on('closed', () => {
     session.abort?.abort();
-    sessions.delete(win.webContents.id);
-    normalBounds.delete(win.id);
+    sessions.delete(webContentsId);
+    normalBounds.delete(windowId);
   });
 }
 

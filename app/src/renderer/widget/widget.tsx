@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { LogoMark } from '../shared/logo';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
@@ -259,6 +260,7 @@ function Widget() {
   return (
     <div className="card">
       <div className="head">
+        <span className="head__mark" aria-hidden="true"><LogoMark size={14} stroke={2} /></span>
         {src}
         <button className={pinned ? 'on' : ''} aria-label="Pin above everything" onClick={() => { setPinned(!pinned); window.unvibe.pin(!pinned); }}>
           ⌖

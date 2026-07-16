@@ -179,7 +179,7 @@ export function createCompanion(): BrowserWindow {
     minWidth: 980,
     minHeight: 620,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: '#f4f1ec',
+    backgroundColor: '#faf7f0',
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
