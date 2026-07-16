@@ -99,6 +99,8 @@ The audit gate records exact advisory source IDs and fails on any new or critica
 
 Billing remains disabled. No production billing, real charge, production data mutation, main-branch push, force-push, secret exposure, or legal approval occurred.
 
+Engineering checkpoint: `f3358bc` (`feat: prepare private beta release candidate`). The branch push is performed after this report update; the final operator handoff must record the pushed HEAD returned by Git.
+
 ## Honest verdict
 
 The branch is materially closer to a stable beta and all safe local preparation is complete. It is **not ready for real external distribution** until the owner/credential-dependent blockers above have passing evidence. The release index is `docs/release/README.md`; the go/no-go artifact is `docs/release/release-checklist.md`.
