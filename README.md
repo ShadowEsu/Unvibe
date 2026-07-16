@@ -19,8 +19,8 @@ cd marketing
 npm install
 npm run dev          # http://localhost:3000 — waitlist + product storytelling
 ```
-See [`marketing/README.md`](marketing/README.md) for env vars, Supabase waitlist migration,
-and Vercel deploy steps. This site is separate from the product backend in `web/`.
+See [`marketing/README.md`](marketing/README.md) for the Vercel Blob waitlist configuration,
+email notifications, and deploy steps. This site is separate from the product backend in `web/`.
 
 ## Run the desktop app (dev)
 ```
