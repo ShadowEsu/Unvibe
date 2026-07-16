@@ -1,60 +1,43 @@
-# Privacy & context-handling policy (MVP)
+# Privacy and context handling — engineering status
 
-Uncode may process private repos, credentials, proprietary source, student projects, and
-sensitive config. Core principle: **the user sees exactly what will be transmitted before any
-cloud analysis, and secrets are filtered locally before they can leave the machine.**
+This file describes implemented behavior and remaining work. It is not the public Privacy Policy.
+Legal drafts in `docs/legal/` still require attorney and founder approval.
 
-## Local vs remote boundary
-- **Local (always):** file reading, diff parsing, context construction, secret filtering,
-  exclusion checks. Nothing leaves without passing these.
-- **Remote (consent-gated):** the filtered explanation request to the model provider.
+## Implemented now
 
-## Default exclusions (never sent)
-- Secrets/config: `.env`, `.env.*`, `*.pem`, `*.key`, `id_rsa*`, `*.p12`, `*.keystore`,
-  `credentials`, `*.secret`.
-- Dependency/build/output: `node_modules/`, `dist/`, `build/`, `out/`, `.next/`, `target/`,
-  `vendor/`, `.venv/`, `__pycache__/`.
-- Binaries & large generated: images, archives, media, `*.min.*`, lockfiles over a size cap,
-  files above a byte threshold.
-- Also honored: `.gitignore` and product-specific **`.unvibeignore`**.
+- The Electron main process owns network requests; sandboxed renderers have no Node or network
+  access.
+- The desktop sends the selected snippet only after the local secret scanner runs. Known keys,
+  tokens, private-key headers, and dangerous secret assignments hard-block transmission. Suspect
+  high-entropy values require an explicit confirmation.
+- Raw selected code is used for the model request but is not included in the learning event sent
+  to the persistence API. Synced learning records contain metadata such as timestamp, local date,
+  timezone, level, line count, language, source app, outcome, project, and concept.
+- Real-provider endpoints require a valid server-side bearer session. The mock provider remains
+  available without an account for local development.
+- Desktop account tokens are persisted only through Electron `safeStorage`. If OS-backed
+  encryption is unavailable, account mode fails closed and local-only use remains available.
+- Sign-out revokes the current server token. Opaque sessions expire after 30 days. Account
+  deletion removes server records and sessions, then clears local learning and closes widgets.
+- `.env`, private keys, build output, dependencies, and common credential files are excluded from
+  version control. The committed secret-filter tests contain fake key patterns only.
 
-## Secret scanning (pre-send, blocking)
-Before any remote request the exact payload is scanned with: known-provider patterns
-(AWS keys, Google API keys, Slack/GitHub tokens, JWTs, private-key headers), high-entropy
-string detection, and `KEY=`/`SECRET=`/`TOKEN=` assignment heuristics. A hit **blocks** the
-request and shows the file + line; the user may redact or add to `.unvibeignore`.
+## Not implemented or not verified
 
-## Context limits
-Hard cap on characters/tokens sent per request; oversized context is truncated with a visible
-notice. Only the constructed context (selection + enclosing scope + imports + diff + shallow
-structure) is sent — never the whole repo.
+- Full per-repository consent and a preview of the exact complete payload are not implemented in
+  the desktop selection flow. The current consent screen appears only when the secret scan finds a
+  suspect value.
+- The desktop does not index repositories in the background and currently has no repository
+  disconnect UI because repository indexing is not a beta feature.
+- Supabase RLS, deletion cascades, managed encryption, and User A/User B isolation have been
+  reviewed in migrations but not proven against a staging project in this run.
+- Provider retention and model-training promises depend on the selected provider contract and
+  deployment settings; they must be verified before public legal copy makes those claims.
+- No production telemetry or incident-response pipeline was configured or tested.
 
-## Storage & retention
-- **Transmitted:** filtered context for the duration of the request.
-- **Stored (backend):** metadata + structured explanation payloads + citations + mastery.
-  **Source code is not stored** beyond what a citation quotes (short snippets, filtered).
-- **Deletion:** delete account (cascades) and per-repository disconnect (removes repo data).
+## Required before inviting external beta users
 
-## Consent & permissions
-- Cloud analysis is **off until the user grants per-repo consent**, after viewing the
-  transmission preview. Consent + revocations recorded in `consent_log`.
-
-## Logging & telemetry
-- Metadata-only logs (event type, latency, token counts). **Never** log code or secrets.
-- Telemetry is **opt-in**.
-
-## Model-provider settings
-- Use a provider/config that does **not train on submitted data** (Anthropic API does not
-  train on API inputs by default). Documented and asserted in code config.
-
-## Encryption
-- TLS in transit; AES-256 at rest (Supabase).
-
-## Incident-response expectation (MVP-level)
-On suspected secret leak: revoke affected tokens guidance to user, purge stored request
-artifacts, document scope. Full IR runbook is post-MVP.
-
-## Test coverage (see test strategy)
-`.env` exclusion · token detection (true/false positives) · ignored directories · telemetry
-disabled by default · delete-account flow · repository disconnect · transmission-preview
-matches what is actually sent.
+Run the staging RLS/deletion matrix, verify provider data-use settings, add the complete context
+preview and consent record if repository context is enabled, and have the public Terms and Privacy
+Policy approved. Do not describe the product as local-only: filtered selected code is transmitted
+to the configured backend/model provider for cloud explanations.
