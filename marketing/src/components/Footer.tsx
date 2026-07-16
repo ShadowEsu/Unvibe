@@ -11,18 +11,19 @@ const columns: FooterColumn[] = [
     heading: "Product",
     links: [
       { label: "How it works", href: "#how-it-works" },
-      { label: "Works where you do", href: "#works-where" },
+      { label: "Explanation levels", href: "#learn" },
+      { label: "Context ladder", href: "#context" },
       { label: "Watch demo", href: "#demo" },
-      { label: "Join waitlist", href: "#waitlist" },
+      { label: "Join private beta", href: "#waitlist" },
     ],
   },
   {
-    heading: "Learn",
+    heading: "Explore",
     links: [
-      { label: "Languages", href: "#learn" },
-      { label: "Depth levels", href: "#depth" },
-      { label: "Study from projects", href: "#study" },
-      { label: "For students", href: "#students" },
+      { label: "How it works", href: "#how-it-works" },
+      { label: "Project curriculum", href: "#curriculum" },
+      { label: "Works beside tools", href: "#tools" },
+      { label: "Privacy", href: "#privacy" },
     ],
   },
   {
@@ -52,7 +53,7 @@ export function Footer() {
           <div className="col-span-2 max-w-xs">
             <Logo />
             <p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">
-              AI can write the code. Unvibe helps you understand it.
+              Don&apos;t feel guilty about vibe coding. Make the code yours.
             </p>
           </div>
           {columns.map((col) => (
@@ -90,7 +91,7 @@ export function Footer() {
         </div>
 
         <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {year} Unvibe. Mac first. Made for people who want to understand their code.</p>
+          <p>&copy; {year} Unvibe. Mac first. AI writes it; you learn it.</p>
           <p>
             Questions?{" "}
             <a

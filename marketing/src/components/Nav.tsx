@@ -15,9 +15,9 @@ interface NavLink {
 }
 
 const links: NavLink[] = [
+  { label: "Product", href: "#product", id: "product" },
   { label: "How it works", href: "#how-it-works", id: "how-it-works" },
-  { label: "Depth", href: "#learn", id: "learn" },
-  { label: "Gallery", href: "#gallery", id: "gallery" },
+  { label: "Learn", href: "#learn", id: "learn" },
   { label: "Privacy", href: "#privacy", id: "privacy" },
   { label: "FAQ", href: "#faq", id: "faq" },
 ];
@@ -63,14 +63,14 @@ export function Nav() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 transition-all duration-standard",
+        "sticky top-0 z-40 border-b transition-all duration-standard",
         scrolled
-          ? "border-b border-line bg-bg/85 backdrop-blur-lg"
-          : "border-b border-transparent bg-transparent"
+          ? "border-line bg-bg/92 backdrop-blur-lg"
+          : "border-line/70 bg-bg/82 backdrop-blur-md"
       )}
     >
       <nav
-        className="container-page flex h-14 items-center justify-between gap-4 sm:h-16"
+        className={cn("container-page flex items-center justify-between gap-4 transition-all duration-standard", scrolled ? "h-[3.25rem] sm:h-14" : "h-14 sm:h-16")}
         aria-label="Primary"
       >
         <Link href="/" className="rounded-md shrink-0" aria-label="Unvibe home">
@@ -98,11 +98,8 @@ export function Nav() {
 
         <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle />
-          <Button href="#demo" variant="ghost" size="sm">
-            Watch demo
-          </Button>
-          <Button href="#waitlist" size="sm">
-            Join beta
+          <Button href="#waitlist" size="sm" className="min-h-10 px-5">
+            Join private beta
           </Button>
         </div>
 
@@ -154,11 +151,8 @@ export function Nav() {
               ))}
             </ul>
             <div className="mt-auto flex flex-col gap-3 pt-6">
-              <Button href="#demo" variant="secondary" onClick={() => setOpen(false)}>
-                Watch demo
-              </Button>
               <Button href="#waitlist" onClick={() => setOpen(false)}>
-                Join free beta
+                Join private beta
               </Button>
             </div>
           </div>

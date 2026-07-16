@@ -4,7 +4,6 @@ import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { Announcement } from "@/components/Announcement";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -30,7 +29,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.app";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe — Understand the Code AI Writes",
+    default: "Unvibe — Make AI-Written Code Yours",
     template: "%s · Unvibe",
   },
   description:
@@ -38,18 +37,18 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe — Understand the Code AI Writes",
+    title: "Unvibe — Make AI-Written Code Yours",
     description:
-      "Free desktop learning layer for AI-written code. Select, explain, check understanding—beside tools you already use.",
+      "Don't feel guilty about vibe coding. Select AI-written code, choose an explanation depth, and make the code yours.",
     siteName: "Unvibe",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Unvibe" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Unvibe — make AI-written code yours" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe — Understand the Code AI Writes",
+    title: "Unvibe — Make AI-Written Code Yours",
     description:
       "Free desktop learning layer for AI-written code. Select, explain, check understanding.",
-    images: ["/og.png"],
+    images: ["/opengraph-image"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -112,8 +111,7 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          <Announcement />
-          <Nav />
+            <Nav />
           <main id="main">{children}</main>
           <Footer />
         </Providers>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { waitlistSchema } from "@/lib/waitlistSchema";
+import { waitlistDetailsSchema, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 
 export const runtime = "nodejs";
@@ -36,9 +36,11 @@ const dataDir = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDir, "waitlist.json");
 
 interface StoredEntry {
+  firstName: string;
+  lastName: string;
   email: string;
-  tool: string;
-  experience: string;
+  tool?: string;
+  experience?: string;
   message?: string;
   referredBy?: string;
   referralCode: string;
@@ -77,9 +79,13 @@ async function saveToSupabase(entry: StoredEntry): Promise<{
 
     const { error } = await supabase.from("waitlist_entries").insert({
       email: entry.email,
-      tool: entry.tool,
-      experience: entry.experience,
-      message: entry.message || null,
+      tool: entry.tool ?? "not-provided",
+      experience: entry.experience ?? "not-provided",
+      message: JSON.stringify({
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        note: entry.message || null,
+      }),
       referred_by: entry.referredBy || null,
       referral_code: entry.referralCode,
       utm_source: entry.utmSource || null,
@@ -138,10 +144,9 @@ export async function POST(req: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   const referralCode = referralCodeFor(email);
   const entry: StoredEntry = {
+    firstName: parsed.data.firstName,
+    lastName: parsed.data.lastName,
     email,
-    tool: parsed.data.tool,
-    experience: parsed.data.experience,
-    message: parsed.data.message || undefined,
     referredBy: parsed.data.referredBy || undefined,
     referralCode,
     utmSource: parsed.data.utmSource || undefined,
@@ -163,6 +168,8 @@ export async function POST(req: Request) {
       // Fire and forget — do not block the signup response.
       void notifyFounder({
         email: entry.email,
+        firstName: entry.firstName,
+        lastName: entry.lastName,
         tool: entry.tool,
         experience: entry.experience,
         message: entry.message,
@@ -178,5 +185,59 @@ export async function POST(req: Request) {
       { error: "Could not save your entry. Please try again." },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(req: Request) {
+  const ip = clientIp(req);
+  if (rateLimited(ip)) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+  }
+
+  const parsed = waitlistDetailsSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Validation failed" }, { status: 422 });
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  try {
+    if (url && key) {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(url, key, { auth: { persistSession: false } });
+      const { data: existing, error: readError } = await supabase
+        .from("waitlist_entries")
+        .select("message")
+        .eq("email", email)
+        .maybeSingle();
+      if (readError) throw readError;
+      let name = { firstName: "", lastName: "" };
+      try {
+        const stored = JSON.parse(existing?.message ?? "{}") as Partial<typeof name>;
+        name = { firstName: stored.firstName ?? "", lastName: stored.lastName ?? "" };
+      } catch {
+        // Older entries may contain a plain-text message rather than structured signup data.
+      }
+      const { error } = await supabase.from("waitlist_entries").update({
+        tool: parsed.data.tool ?? "not-provided",
+        experience: parsed.data.experience ?? "not-provided",
+        message: JSON.stringify({ ...name, note: parsed.data.message || null }),
+      }).eq("email", email);
+      if (error) throw error;
+    } else {
+      const entries = await readLocal();
+      const entry = entries.find((item) => item.email === email);
+      if (!entry) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
+      entry.tool = parsed.data.tool;
+      entry.experience = parsed.data.experience;
+      entry.message = parsed.data.message || undefined;
+      await writeLocal(entries);
+    }
+    return NextResponse.json({ updated: true });
+  } catch (error) {
+    console.error("waitlist details error", error);
+    return NextResponse.json({ error: "Could not save details" }, { status: 500 });
   }
 }

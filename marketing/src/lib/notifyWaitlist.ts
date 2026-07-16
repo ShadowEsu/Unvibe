@@ -26,8 +26,10 @@ async function appendInbox(entry: Record<string, string>): Promise<void> {
 
 export async function notifyFounder(entry: {
   email: string;
-  tool: string;
-  experience: string;
+  firstName: string;
+  lastName: string;
+  tool?: string;
+  experience?: string;
   message?: string;
   referralCode: string;
   duplicate: boolean;
@@ -42,8 +44,10 @@ export async function notifyFounder(entry: {
     at: new Date().toISOString(),
     to,
     email: entry.email,
-    tool: entry.tool,
-    experience: entry.experience,
+    firstName: entry.firstName,
+    lastName: entry.lastName,
+    tool: entry.tool ?? "not provided",
+    experience: entry.experience ?? "not provided",
     message: entry.message || "",
     referralCode: entry.referralCode,
   };
@@ -60,9 +64,11 @@ export async function notifyFounder(entry: {
       _template: "table",
       _captcha: "false",
       name: "Unvibe Waitlist",
+      firstName: entry.firstName,
+      lastName: entry.lastName,
       email: entry.email,
-      tool: entry.tool,
-      experience: entry.experience,
+      tool: entry.tool ?? "not provided",
+      experience: entry.experience ?? "not provided",
       message: entry.message || "(none)",
       referralCode: entry.referralCode,
     });
