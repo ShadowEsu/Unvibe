@@ -35,7 +35,7 @@ export function Hero() {
             }}
             className="max-w-xl text-balance text-fluid-4xl font-semibold tracking-tight text-fg sm:text-fluid-5xl"
           >
-            Understand the code <span className="text-primary">AI writes</span>.
+            Vibe code <span className="text-primary">without the guilt</span>.
           </motion.h1>
 
           <motion.p
@@ -48,8 +48,8 @@ export function Hero() {
             }}
             className="mt-5 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted"
           >
-            Select any code, choose your depth, and learn what it does without
-            leaving your workflow.
+            Let AI help you move faster. Unvibe helps you understand what ships —
+            in the depth you need, without leaving your workflow.
           </motion.p>
 
           <motion.div

@@ -23,29 +23,33 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.app";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe — Understand the Code AI Writes",
+    default: "Unvibe — Vibe Code Without the Guilt",
     template: "%s · Unvibe",
   },
   description:
-    "Unvibe is a Mac desktop learning layer for understanding AI-written code. Select code, choose an explanation depth, and learn beside the tools where you build.",
+    "Vibe code without the guilt. Unvibe helps you understand AI-written code in the depth you need, beside the tools where you build.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe — Understand the Code AI Writes",
+    title: "Unvibe — Vibe Code Without the Guilt",
     description:
-      "A private beta for understanding AI-written code. Select, explain, check understanding—beside the tools where you build.",
+      "Vibe code without the guilt. Select code, choose a depth, and understand what ships — beside the tools where you build.",
     siteName: "Unvibe",
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "Unvibe" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe — Understand the Code AI Writes",
+    title: "Unvibe — Vibe Code Without the Guilt",
     description:
-      "A private beta for understanding AI-written code. Select, explain, check understanding.",
+      "Vibe code without the guilt. Select, explain, and understand what ships.",
     images: ["/og.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: "/icon.png", type: "image/png", sizes: "1024x1024" }],
+  },
 };
 
 const softwareJsonLd = {
@@ -55,7 +59,7 @@ const softwareJsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS",
   description:
-    "A Mac desktop learning layer that explains selected code beside the tools where you already build.",
+    "A Mac desktop learning layer for understanding AI-written code beside the tools where you build.",
 };
 
 export const viewport: Viewport = {

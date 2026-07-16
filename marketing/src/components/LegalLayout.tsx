@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { Logo } from "./Logo";
 
 interface LegalLayoutProps {
   title: string;
@@ -16,6 +17,9 @@ interface LegalLayoutProps {
 export function LegalLayout({ title, updated, intro, children }: LegalLayoutProps) {
   return (
     <article className="container-page max-w-prose py-16 sm:py-24">
+      <Link href="/" className="mb-12 inline-flex rounded-md" aria-label="Unvibe home">
+        <Logo />
+      </Link>
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-2 text-fluid-sm text-fg-muted transition-colors hover:text-fg"

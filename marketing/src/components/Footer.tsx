@@ -52,7 +52,7 @@ export function Footer() {
           <div className="col-span-2 max-w-xs">
             <Logo />
             <p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">
-              AI can write the code. Unvibe helps you understand it.
+              Vibe code without the guilt. Unvibe helps you understand what ships.
             </p>
           </div>
           {columns.map((col) => (
