@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
+import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 
 export interface WaitlistNotificationRecord {
   status: "sent" | "failed";
@@ -29,7 +30,7 @@ export interface WaitlistAdminEntry extends WaitlistEntry {
   id: string;
 }
 
-const BLOB_PATH = "waitlist/entries.json";
+const BLOB_PATH = "waitlist/entries.v1.enc";
 const MAX_WRITE_ATTEMPTS = 5;
 const dataDir = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDir, "waitlist.json");
@@ -38,23 +39,29 @@ function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
+function storageSecret(): string {
+  const secret = process.env.WAITLIST_ADMIN_TOKEN?.trim();
+  if (!secret) throw new Error("Waitlist encryption is not configured");
+  return secret;
+}
+
 async function readBlob(): Promise<{ entries: WaitlistEntry[]; etag?: string }> {
-  const result = await get(BLOB_PATH, { access: "private", useCache: false });
+  const result = await get(BLOB_PATH, { access: "public", useCache: false });
   if (!result) return { entries: [] };
   if (result.statusCode !== 200) throw new Error("Waitlist storage returned an unexpected response");
   const body = await new Response(result.stream).text();
-  const parsed: unknown = JSON.parse(body);
+  const parsed: unknown = decryptWaitlistJson(body, storageSecret());
   if (!Array.isArray(parsed)) throw new Error("Waitlist storage contains invalid data");
   return { entries: parsed as WaitlistEntry[], etag: result.blob.etag };
 }
 
 async function writeBlob(entries: WaitlistEntry[], etag?: string): Promise<void> {
-  await put(BLOB_PATH, JSON.stringify(entries), {
-    access: "private",
+  await put(BLOB_PATH, encryptWaitlistJson(entries, storageSecret()), {
+    access: "public",
     addRandomSuffix: false,
     allowOverwrite: Boolean(etag),
     cacheControlMaxAge: 60,
-    contentType: "application/json",
+    contentType: "application/octet-stream",
     ...(etag ? { ifMatch: etag } : {}),
   });
 }
