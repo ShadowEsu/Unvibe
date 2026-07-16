@@ -479,8 +479,10 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 .admin-table th { padding: .9rem 1rem; border-bottom: 1px solid rgb(var(--line-strong)); color: rgb(var(--fg-faint)); font: 700 .65rem var(--font-mono); text-transform: uppercase; letter-spacing: .06em; }
 .admin-table td { padding: 1rem; border-bottom: 1px solid rgb(var(--line)); color: rgb(var(--fg-muted)); font-size: .78rem; vertical-align: top; }
 .admin-table tr:last-child td { border-bottom: 0; }.admin-table td strong, .admin-table td a { color: rgb(var(--fg)); }.admin-table td small { display: block; margin-top: .3rem; color: rgb(var(--fg-faint)); }
-.status-sent, .status-pending { display: inline-block; padding: .3rem .45rem; font: 700 .62rem var(--font-mono); text-transform: uppercase; }
-.status-sent { background: rgb(var(--green) / .12); color: rgb(var(--green)); }.status-pending { background: rgb(var(--orange) / .12); color: rgb(var(--orange)); }
+.status-sent, .status-pending, .status-failed { display: inline-block; padding: .3rem .45rem; font: 700 .62rem var(--font-mono); text-transform: uppercase; }
+.status-sent { background: rgb(var(--green) / .12); color: rgb(var(--green)); }.status-pending { background: rgb(var(--orange) / .12); color: rgb(var(--orange)); }.status-failed { background: rgb(var(--red) / .12); color: rgb(var(--red)); }
+.admin-retry { display: flex; align-items: center; gap: .3rem; margin-top: .45rem; border: 0; background: transparent; padding: 0; color: rgb(var(--purple)); font: 700 .68rem var(--font-mono); text-decoration: underline; cursor: pointer; }
+.admin-retry:disabled { cursor: wait; opacity: .65; }
 
 @media (max-width: 680px) {
   .admin-heading { align-items: start; flex-direction: column; }.admin-actions { width: 100%; }.admin-actions button { flex: 1; justify-content: center; }

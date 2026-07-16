@@ -39,8 +39,10 @@ describe("notifyFounder", () => {
     const previousKey = process.env.RESEND_API_KEY;
     delete process.env.RESEND_API_KEY;
     let requestUrl = "";
-    global.fetch = async (input) => {
+    let requestHeaders: HeadersInit | undefined;
+    global.fetch = async (input, options) => {
       requestUrl = String(input);
+      requestHeaders = options?.headers;
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     };
     try {
@@ -48,6 +50,26 @@ describe("notifyFounder", () => {
       assert.equal(result.status, "sent");
       assert.equal(result.provider, "formsubmit");
       assert.match(requestUrl, /^https:\/\/formsubmit\.co\/ajax\//);
+      assert.equal((requestHeaders as Record<string, string>).Origin, "https://unvibe.site");
+    } finally {
+      global.fetch = originalFetch;
+      if (previousKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = previousKey;
+    }
+  });
+
+  it("does not report an unactivated FormSubmit endpoint as sent", async () => {
+    const originalFetch = global.fetch;
+    const previousKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    global.fetch = async () => new Response(JSON.stringify({
+      success: "false",
+      message: "This form needs Activation.",
+    }), { status: 200 });
+    try {
+      const result = await notifyFounder(entry);
+      assert.equal(result.status, "failed");
+      assert.equal(result.provider, "formsubmit");
     } finally {
       global.fetch = originalFetch;
       if (previousKey === undefined) delete process.env.RESEND_API_KEY;

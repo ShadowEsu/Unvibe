@@ -158,13 +158,17 @@ export async function recordWaitlistNotification(
   notification: WaitlistNotificationRecord
 ): Promise<void> {
   if (blobConfigured()) {
-    await updateBlob((entries) => {
-      const entry = entries.find((item) => item.email === email);
-      if (!entry) return { changed: false, result: false };
-      entry.notification = notification;
-      return { changed: true, result: true };
-    });
-    return;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const updated = await updateBlob((entries) => {
+        const entry = entries.find((item) => item.email === email);
+        if (!entry) return { changed: false, result: false };
+        entry.notification = notification;
+        return { changed: true, result: true };
+      });
+      if (updated) return;
+      await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+    }
+    throw new Error("Waitlist entry was not visible while recording notification status");
   }
 
   const entries = await readLocal();

@@ -73,11 +73,21 @@ async function sendWithFormSubmit(entry: FounderNotificationInput, to: string): 
   });
   const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      Origin: "https://unvibe.site",
+      Referer: "https://unvibe.site/",
+      "User-Agent": "Mozilla/5.0 (compatible; UnvibeWaitlist/1.0)",
+    },
     body,
     signal: AbortSignal.timeout(8_000),
   });
-  if (!response.ok) throw new Error(`FormSubmit notification failed: ${response.status}`);
+  const data = (await response.json().catch(() => ({}))) as { success?: boolean | string; message?: string };
+  const accepted = data.success === true || data.success === "true";
+  if (!response.ok || !accepted) {
+    throw new Error(`FormSubmit notification failed: ${response.status} ${data.message ?? ""}`.trim());
+  }
   return { status: "sent", provider: "formsubmit", at: new Date().toISOString() };
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isWaitlistAdminAuthorized } from "@/lib/adminAuth";
-import { listWaitlistEntries } from "@/lib/waitlistStore";
+import { notifyFounder } from "@/lib/notifyWaitlist";
+import { listWaitlistEntries, recordWaitlistNotification } from "@/lib/waitlistStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,5 +56,35 @@ export async function GET(request: Request) {
       { error: "Could not load waitlist" },
       { status: 500, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } }
     );
+  }
+}
+
+export async function POST(request: Request) {
+  const ip = clientIp(request);
+  if (tooManyFailedAttempts(ip)) {
+    return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+  }
+  if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
+  if (typeof body?.email !== "string") {
+    return NextResponse.json({ error: "Email is required" }, { status: 422 });
+  }
+
+  try {
+    const entry = (await listWaitlistEntries()).find((item) => item.email === body.email);
+    if (!entry) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
+    const notification = await notifyFounder({ ...entry, duplicate: false });
+    await recordWaitlistNotification(entry.email, notification);
+    return NextResponse.json(
+      { notification },
+      { headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } }
+    );
+  } catch (error) {
+    console.error("waitlist notification retry failed", error);
+    return NextResponse.json({ error: "Could not retry notification" }, { status: 500 });
   }
 }

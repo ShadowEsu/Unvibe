@@ -12,6 +12,8 @@ export function AdminWaitlist() {
   const [entries, setEntries] = useState<WaitlistAdminEntry[]>([]);
   const [state, setState] = useState<ViewState>("locked");
   const [refreshing, setRefreshing] = useState(false);
+  const [retrying, setRetrying] = useState("");
+  const [retryError, setRetryError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
   const notified = useMemo(
@@ -79,6 +81,31 @@ export function AdminWaitlist() {
     URL.revokeObjectURL(url);
   };
 
+  const retryNotification = async (email: string) => {
+    setRetrying(email);
+    setRetryError("");
+    try {
+      const response = await fetch("/api/waitlist/admin", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) throw new Error("retry failed");
+      const data = (await response.json()) as { notification: { status: "sent" | "failed" } };
+      await load(token, true);
+      if (data.notification.status === "failed") {
+        setRetryError("Email delivery is still unavailable. Check provider activation and try again.");
+      }
+    } catch {
+      setRetryError("The notification retry could not be completed.");
+    } finally {
+      setRetrying("");
+    }
+  };
+
   return (
     <main className="admin-shell">
       <div className="admin-topbar">
@@ -127,6 +154,7 @@ export function AdminWaitlist() {
             <article><small>Email notifications sent</small><strong>{notified}</strong></article>
             <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : "—"}</strong></article>
           </div>
+          {retryError && <p className="admin-error" role="alert">{retryError}</p>}
           {entries.length === 0 ? (
             <div className="admin-empty"><p>No signups yet.</p><span>The first completed waitlist form will appear here.</span></div>
           ) : (
@@ -139,7 +167,7 @@ export function AdminWaitlist() {
                     <td><strong>{[entry.firstName, entry.lastName].filter(Boolean).join(" ") || "Name unavailable"}</strong></td>
                     <td><a href={`mailto:${entry.email}`}>{entry.email}</a></td>
                     <td><span>{entry.tool || "Tool not provided"}</span><small>{entry.experience || entry.message || "No optional details"}</small></td>
-                    <td><span className={entry.notification?.status === "sent" ? "status-sent" : "status-pending"}>{entry.notification?.status === "sent" ? `Sent · ${entry.notification.provider}` : "Not recorded"}</span></td>
+                    <td><span className={entry.notification?.status === "sent" ? "status-sent" : entry.notification?.status === "failed" ? "status-failed" : "status-pending"}>{entry.notification?.status === "sent" ? `Sent · ${entry.notification.provider}` : entry.notification?.status === "failed" ? `Failed · ${entry.notification.provider}` : "Not recorded"}</span>{entry.notification?.status !== "sent" && <button type="button" className="admin-retry" onClick={() => void retryNotification(entry.email)} disabled={retrying === entry.email}>{retrying === entry.email ? <><Loader2 className="spin" size={12} />Retrying</> : "Retry email"}</button>}</td>
                   </tr>
                 ))}</tbody>
               </table>
