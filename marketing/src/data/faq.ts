@@ -86,16 +86,16 @@ export const faqItems: FaqItem[] = [
   },
   {
     id: "free",
-    question: "How do I get access?",
+    question: "Do I need my own AI API key?",
     answer:
-      "Unvibe is currently invitation-only. Join the private beta and we will email you when a Mac invite is ready. There is no public download yet.",
+      "No. During the private beta, Unvibe covers the AI model. You do not need an API key, a model account, or a separate usage bill. Access is invitation-only and there is no public download yet.",
     category: "pricing",
   },
   {
     id: "team-pricing",
     question: "Can my team use Unvibe?",
     answer:
-      "The private beta is focused on individual builders. Team workflows are not part of the current release, but you can tell us about your use case in the waitlist form.",
+      "The private beta is focused on individual builders. Team workflows are not part of the current release.",
     category: "pricing",
   },
   {
@@ -109,7 +109,7 @@ export const faqItems: FaqItem[] = [
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Not yet. Unvibe is Mac-first. You can still join the waitlist from Windows and note your platform in the optional message so we know demand.",
+      "Not yet. Unvibe is Mac-first. You can still join the waitlist from Windows, but invitations currently target macOS.",
     category: "platform",
   },
   {

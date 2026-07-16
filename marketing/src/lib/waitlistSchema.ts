@@ -5,64 +5,22 @@ import { z } from "zod";
  * stays identical on both sides.
  */
 
-export const tools = [
-  "cursor",
-  "vscode",
-  "claude-code",
-  "github",
-  "other",
-] as const;
-
-export const experiences = [
-  "just-starting",
-  "student",
-  "beginner-builder",
-  "intermediate",
-  "experienced",
-] as const;
-
-export const toolLabels: Record<(typeof tools)[number], string> = {
-  cursor: "Cursor",
-  vscode: "VS Code",
-  "claude-code": "Claude Code",
-  github: "GitHub",
-  other: "Other",
-};
-
-export const experienceLabels: Record<(typeof experiences)[number], string> = {
-  "just-starting": "Just starting",
-  student: "Student",
-  "beginner-builder": "Beginner builder",
-  intermediate: "Intermediate developer",
-  experienced: "Experienced developer",
-};
-
 export const waitlistSchema = z.object({
-  name: z
+  firstName: z
     .string()
     .trim()
-    .max(80, "Keep your name under 80 characters")
-    .optional()
-    .or(z.literal("")),
+    .min(1, "First name is required")
+    .max(80, "Keep your first name under 80 characters"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Last name is required")
+    .max(80, "Keep your last name under 80 characters"),
   email: z
     .string()
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email"),
-  role: z
-    .string()
-    .trim()
-    .max(80, "Keep your role under 80 characters")
-    .optional()
-    .or(z.literal("")),
-  tool: z.union([z.enum(tools), z.literal("")]).optional(),
-  experience: z.union([z.enum(experiences), z.literal("")]).optional(),
-  message: z
-    .string()
-    .trim()
-    .max(500, "Keep it under 500 characters")
-    .optional()
-    .or(z.literal("")),
   referredBy: z.string().trim().max(32).optional().or(z.literal("")),
   utmSource: z.string().trim().max(64).optional().or(z.literal("")),
   utmMedium: z.string().trim().max(64).optional().or(z.literal("")),

@@ -5,12 +5,9 @@ import { waitlistSchema } from "./waitlistSchema";
 describe("waitlistSchema", () => {
   it("accepts a complete valid payload", () => {
     const parsed = waitlistSchema.safeParse({
-      name: "Preston",
+      firstName: "Preston",
+      lastName: "Susanto",
       email: " Student@Example.com ",
-      role: "Founder",
-      tool: "cursor",
-      experience: "student",
-      message: "Help me understand React hooks",
       referredBy: "abc12345",
       utmSource: "twitter",
       utmMedium: "social",
@@ -19,34 +16,31 @@ describe("waitlistSchema", () => {
     assert.equal(parsed.success, true);
     if (parsed.success) {
       assert.equal(parsed.data.email, "Student@Example.com");
-      assert.equal(parsed.data.name, "Preston");
-      assert.equal(parsed.data.role, "Founder");
-      assert.equal(parsed.data.tool, "cursor");
+      assert.equal(parsed.data.firstName, "Preston");
+      assert.equal(parsed.data.lastName, "Susanto");
     }
   });
 
   it("rejects invalid email", () => {
     const parsed = waitlistSchema.safeParse({
       email: "not-an-email",
-      tool: "cursor",
-      experience: "student",
     });
     assert.equal(parsed.success, false);
   });
 
-  it("rejects unknown tool", () => {
+  it("requires a last name", () => {
     const parsed = waitlistSchema.safeParse({
       email: "a@b.com",
-      tool: "notepad",
-      experience: "student",
+      firstName: "Preston",
     });
     assert.equal(parsed.success, false);
   });
 
-  it("keeps optional personal details short", () => {
+  it("keeps names short", () => {
     const parsed = waitlistSchema.safeParse({
       email: "a@b.com",
-      name: "n".repeat(81),
+      firstName: "n".repeat(81),
+      lastName: "Susanto",
     });
     assert.equal(parsed.success, false);
   });

@@ -80,7 +80,7 @@ export function Hero() {
             </Button>
           </motion.div>
           <p className="mt-5 text-fluid-sm text-fg-faint">
-            Mac first · Early beta · No credit card
+            Five minutes a day · Five explanation depths · No API key during private beta
           </p>
         </div>
 

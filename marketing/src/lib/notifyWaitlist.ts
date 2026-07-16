@@ -27,10 +27,6 @@ async function appendInbox(entry: Record<string, string>): Promise<void> {
 export async function notifyFounder(entry: {
   name?: string;
   email: string;
-  role?: string;
-  tool: string;
-  experience: string;
-  message?: string;
   referralCode: string;
   duplicate: boolean;
 }): Promise<void> {
@@ -45,10 +41,6 @@ export async function notifyFounder(entry: {
     to,
     name: entry.name || "",
     email: entry.email,
-    role: entry.role || "",
-    tool: entry.tool,
-    experience: entry.experience,
-    message: entry.message || "",
     referralCode: entry.referralCode,
   };
 
@@ -65,10 +57,6 @@ export async function notifyFounder(entry: {
       _captcha: "false",
       name: entry.name || "Unvibe Waitlist",
       email: entry.email,
-      role: entry.role || "(not provided)",
-      tool: entry.tool,
-      experience: entry.experience,
-      message: entry.message || "(none)",
       referralCode: entry.referralCode,
     });
 

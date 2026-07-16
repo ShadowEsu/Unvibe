@@ -8,14 +8,7 @@ import { Check, Copy, Loader2, PartyPopper } from "lucide-react";
 import { Section } from "../Section";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
-import {
-  experienceLabels,
-  experiences,
-  toolLabels,
-  tools,
-  waitlistSchema,
-  type WaitlistInput,
-} from "@/lib/waitlistSchema";
+import { waitlistSchema, type WaitlistInput } from "@/lib/waitlistSchema";
 
 type Status = "idle" | "submitting" | "success" | "duplicate" | "error" | "offline";
 
@@ -37,7 +30,7 @@ export function Waitlist() {
     formState: { errors },
   } = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistSchema),
-    defaultValues: { name: "", email: "", role: "", message: "", referredBy: "" },
+    defaultValues: { firstName: "", lastName: "", email: "", referredBy: "" },
   });
 
 
@@ -90,8 +83,6 @@ export function Waitlist() {
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", {
         duplicate: Boolean(data.duplicate),
-        tool: values.tool,
-        experience: values.experience,
       });
     } catch {
       setStatus("error");
@@ -120,7 +111,7 @@ export function Waitlist() {
       id="waitlist"
       eyebrow="Private beta"
       title="Join the private beta."
-      subtitle="Mac first. We’ll email you when an invite is ready."
+      subtitle="Mac first. No API key, model account, or usage bill during the private beta. We’ll email you when an invite is ready."
       narrow
     >
       <div className="rounded-card border border-line bg-surface p-6 sm:p-9">
@@ -190,31 +181,31 @@ export function Waitlist() {
               <div>
                 <p className="text-fluid-sm font-medium text-fg">A few quick details</p>
                 <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
-                  This takes less than a minute and helps us invite a useful mix of early testers.
+                  Three details, then you&apos;re in. Your learning can begin with the code you touched today.
                 </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="First name" htmlFor="name" error={errors.name?.message} optional>
+                <Field label="First name" htmlFor="firstName" error={errors.firstName?.message}>
                   <input
-                    id="name"
+                    id="firstName"
                     type="text"
                     autoComplete="given-name"
                     placeholder="Preston"
-                    aria-invalid={Boolean(errors.name)}
-                    {...register("name")}
-                    className={inputClass(Boolean(errors.name))}
+                    aria-invalid={Boolean(errors.firstName)}
+                    {...register("firstName")}
+                    className={inputClass(Boolean(errors.firstName))}
                   />
                 </Field>
-                <Field label="Role or position" htmlFor="role" error={errors.role?.message} optional>
+                <Field label="Last name" htmlFor="lastName" error={errors.lastName?.message}>
                   <input
-                    id="role"
+                    id="lastName"
                     type="text"
-                    autoComplete="organization-title"
-                    placeholder="Software engineer"
-                    aria-invalid={Boolean(errors.role)}
-                    {...register("role")}
-                    className={inputClass(Boolean(errors.role))}
+                    autoComplete="family-name"
+                    placeholder="Lee"
+                    aria-invalid={Boolean(errors.lastName)}
+                    {...register("lastName")}
+                    className={inputClass(Boolean(errors.lastName))}
                   />
                 </Field>
               </div>
@@ -242,49 +233,10 @@ export function Waitlist() {
                 </p>
               )}
 
-              <fieldset className="border-t border-line pt-6">
-                <legend className="text-fluid-sm font-medium text-fg">
-                  A little more context <span className="font-normal text-fg-faint">(optional)</span>
-                </legend>
-                <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
-                  This helps us shape the first round of invites. It will not affect whether you can join.
-                </p>
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                  <Field label="Main coding tool" htmlFor="tool">
-                    <select id="tool" {...register("tool")} className={inputClass(false)}>
-                      <option value="">Choose a tool</option>
-                      {tools.map((tool) => (
-                        <option key={tool} value={tool}>{toolLabels[tool]}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Experience level" htmlFor="experience">
-                    <select id="experience" {...register("experience")} className={inputClass(false)}>
-                      <option value="">Choose a level</option>
-                      {experiences.map((experience) => (
-                        <option key={experience} value={experience}>{experienceLabels[experience]}</option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-                <div className="mt-5">
-                  <Field label="Why would you like to try Unvibe?" htmlFor="message" error={errors.message?.message}>
-                    <textarea
-                      id="message"
-                      rows={3}
-                      placeholder="I want to be able to review the code my agent ships."
-                      aria-invalid={Boolean(errors.message)}
-                      {...register("message")}
-                      className={`${inputClass(Boolean(errors.message))} resize-y`}
-                    />
-                  </Field>
-                </div>
-              </fieldset>
-
               <button
                 type="submit"
                 disabled={status === "submitting"}
-                className="btn-magnetic flex h-13 w-full items-center justify-center gap-2 rounded-pill bg-primary text-fluid-base font-medium text-on-primary transition-colors hover:bg-primary-strong disabled:opacity-60"
+                className="btn-magnetic flex h-16 w-full items-center justify-center gap-2 rounded-pill bg-primary text-fluid-lg font-semibold text-on-primary transition-colors hover:bg-primary-strong disabled:opacity-60"
               >
                 {status === "submitting" ? (
                   <>
@@ -296,6 +248,9 @@ export function Waitlist() {
                 )}
               </button>
 
+              <p className="text-center text-fluid-sm text-fg-faint">
+                Unvibe covers the AI model during the private beta. Your code remains protected by local secret filtering and your review consent.
+              </p>
               <p className="text-center text-fluid-sm text-fg-faint">
                 By joining, you agree to our{" "}
                 <a href="/terms" className="underline underline-offset-2 hover:text-fg">

@@ -38,10 +38,6 @@ const dataFile = path.join(dataDir, "waitlist.json");
 interface StoredEntry {
   name?: string;
   email: string;
-  role?: string;
-  tool?: string;
-  experience?: string;
-  message?: string;
   referredBy?: string;
   referralCode: string;
   utmSource?: string;
@@ -84,10 +80,6 @@ async function saveToSupabase(entry: StoredEntry): Promise<{
     const { error } = await supabase.from("waitlist_entries").insert({
       name: entry.name || null,
       email: entry.email,
-      role: entry.role || null,
-      tool: entry.tool,
-      experience: entry.experience,
-      message: entry.message || null,
       referred_by: entry.referredBy || null,
       referral_code: entry.referralCode,
       utm_source: entry.utmSource || null,
@@ -147,12 +139,8 @@ export async function POST(req: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   const referralCode = referralCodeFor(email);
   const entry: StoredEntry = {
-    name: parsed.data.name || undefined,
+    name: `${parsed.data.firstName} ${parsed.data.lastName}`,
     email,
-    role: parsed.data.role || undefined,
-    tool: parsed.data.tool || undefined,
-    experience: parsed.data.experience || undefined,
-    message: parsed.data.message || undefined,
     referredBy: parsed.data.referredBy || undefined,
     referralCode,
     utmSource: parsed.data.utmSource || undefined,
@@ -182,10 +170,6 @@ export async function POST(req: Request) {
       void notifyFounder({
         name: entry.name,
         email: entry.email,
-        role: entry.role,
-        tool: entry.tool ?? "Not provided",
-        experience: entry.experience ?? "Not provided",
-        message: entry.message,
         referralCode,
         duplicate: false,
       });

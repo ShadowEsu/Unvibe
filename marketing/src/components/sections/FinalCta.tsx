@@ -20,7 +20,7 @@ export function FinalCta() {
           </h2>
           <p className="mx-auto mt-5 max-w-lg text-pretty text-fluid-lg leading-relaxed text-fg-muted">
             Join the private beta for a quieter way to understand the code you
-            ship. We&apos;ll email you when a Mac invite is ready.
+            ship. No API key or model account required — Unvibe covers it during beta.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
             <Button href="#waitlist" size="lg" className="btn-magnetic">
@@ -31,7 +31,7 @@ export function FinalCta() {
             </Button>
           </div>
           <p className="mt-6 text-fluid-sm text-fg-faint">
-            Mac first · Invitation-only beta · No credit card
+            Mac first · Invitation-only beta · Free during beta · Privacy built in
           </p>
         </div>
       </motion.div>
