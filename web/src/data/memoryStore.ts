@@ -17,9 +17,12 @@ interface PendingDevice {
   createdAt: number;
 }
 
+const DEVICE_CODE_TTL_MS = 10 * 60_000;
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60_000;
+
 interface MemoryData {
   events: EventRecord[];
-  tokens: Map<string, string>; // token -> userId
+  tokens: Map<string, { userId: string; expiresAt: number } | string>; // string = pre-expiry dev record
   devices: Map<string, PendingDevice>; // deviceCode -> pending
   users: Map<string, { email?: string }>; // userId -> profile
 }
@@ -31,8 +34,10 @@ interface MemoryData {
 export class MemoryStore implements Store {
   readonly kind = 'memory (dev)';
   private readonly data: MemoryData;
+  private readonly now: () => number;
 
-  constructor() {
+  constructor(now: () => number = Date.now) {
+    this.now = now;
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
       g.__uncodeData = { events: [], tokens: new Map(), devices: new Map(), users: new Map() };
@@ -47,7 +52,7 @@ export class MemoryStore implements Store {
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
     const userCode = randomUUID().slice(0, 8).toUpperCase();
-    this.data.devices.set(deviceCode, { userCode, createdAt: Date.now() });
+    this.data.devices.set(deviceCode, { userCode, createdAt: this.now() });
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
@@ -56,12 +61,14 @@ export class MemoryStore implements Store {
     if (!entry) {
       return null;
     }
+    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return null;
     if (entry.userId && entry.userId !== userId) return null;
+    if (entry.token) return entry.token;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
     this.data.users.set(userId, { email });
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, expiresAt: this.now() + SESSION_TTL_MS });
     return token; // also usable as a browser session
   }
 
@@ -70,6 +77,7 @@ export class MemoryStore implements Store {
     if (!entry) {
       return 'unknown';
     }
+    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return 'unknown';
     if (!entry.token) {
       return 'pending';
     }
@@ -77,7 +85,18 @@ export class MemoryStore implements Store {
   }
 
   async userForToken(token: string): Promise<string | null> {
-    return this.data.tokens.get(token) ?? null;
+    const record = this.data.tokens.get(token);
+    if (!record) return null;
+    if (typeof record === 'string') return record;
+    if (record.expiresAt <= this.now()) {
+      this.data.tokens.delete(token);
+      return null;
+    }
+    return record.userId;
+  }
+
+  async revokeToken(token: string): Promise<void> {
+    this.data.tokens.delete(token);
   }
 
   async signIn(email: string): Promise<Account> {
@@ -88,7 +107,7 @@ export class MemoryStore implements Store {
       this.data.users.set(userId, { email: normalized });
     }
     const token = randomUUID();
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, expiresAt: this.now() + SESSION_TTL_MS });
     return { token, userId, email: normalized };
   }
 
@@ -99,7 +118,7 @@ export class MemoryStore implements Store {
     const userId = randomUUID();
     this.data.users.set(userId, { email: normalized });
     const token = randomUUID();
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, expiresAt: this.now() + SESSION_TTL_MS });
     return { token, userId, email: normalized };
   }
 
@@ -109,8 +128,9 @@ export class MemoryStore implements Store {
 
   async deleteAccount(userId: string): Promise<void> {
     this.data.events = this.data.events.filter((e) => e.userId !== userId);
-    for (const [token, uid] of [...this.data.tokens.entries()]) {
-      if (uid === userId) {
+    for (const [token, record] of [...this.data.tokens.entries()]) {
+      const owner = typeof record === 'string' ? record : record.userId;
+      if (owner === userId) {
         this.data.tokens.delete(token);
       }
     }

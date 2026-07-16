@@ -5,10 +5,15 @@
  */
 
 export type Outcome = 'reviewed' | 'understood' | 'needs_review';
+export type ActivityType = 'explanation_completed';
+export type SkillState = 'New' | 'Developing' | 'Familiar' | 'Strong' | 'Needs review' | 'Insufficient evidence';
 
 export interface LocalEvent {
   id: string;
   ts: string; // ISO
+  eventType?: ActivityType; // optional only for records created before activity metadata existed
+  localDate?: string; // YYYY-MM-DD at the time of the activity
+  timezone?: string; // IANA timezone captured at the time of the activity
   scope: string;
   level: string;
   outcome: Outcome;
@@ -33,7 +38,10 @@ export interface Profile {
   linesUnderstood: number;
   linesReviewed: number;
   conceptsSeen: number;
-  conceptsMastered: number;
+  conceptsDeveloping: number;
+  conceptsFamiliar: number;
+  conceptsStrong: number;
+  conceptsNeedReview: number;
   streak: number;
   bestStreak: number;
   usage: Usage[];
@@ -54,6 +62,17 @@ export const HEAT_DAYS = 182;
 
 function dayKey(iso: string): string {
   return iso.slice(0, 10);
+}
+
+export function localDayKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function eventDay(event: LocalEvent): string {
+  return event.localDate ?? dayKey(event.ts);
 }
 
 function shift(key: string, delta: number): string {
@@ -99,11 +118,14 @@ function bucket(app?: string): string {
 }
 
 export function computeProfile(events: LocalEvent[], todayKey: string): Profile {
-  const days = new Set(events.map((e) => dayKey(e.ts)));
+  const days = new Set(events.map(eventDay));
 
-  const conceptLatest = new Map<string, string>();
+  const conceptEvents = new Map<string, LocalEvent[]>();
   for (const e of events) {
-    if (e.concept) conceptLatest.set(e.concept, e.outcome); // events assumed chronological
+    if (!e.concept) continue;
+    const evidence = conceptEvents.get(e.concept) ?? [];
+    evidence.push(e);
+    conceptEvents.set(e.concept, evidence);
   }
 
   const usageCounts = new Map<string, number>();
@@ -118,7 +140,7 @@ export function computeProfile(events: LocalEvent[], todayKey: string): Profile 
     .slice(0, 4);
 
   const perDay = new Map<string, number>();
-  for (const e of events) perDay.set(dayKey(e.ts), (perDay.get(dayKey(e.ts)) ?? 0) + 1);
+  for (const e of events) perDay.set(eventDay(e), (perDay.get(eventDay(e)) ?? 0) + 1);
   const heat: number[] = [];
   for (let i = HEAT_DAYS - 1; i >= 0; i--) {
     const c = perDay.get(shift(todayKey, -i)) ?? 0;
@@ -131,14 +153,30 @@ export function computeProfile(events: LocalEvent[], todayKey: string): Profile 
     needsReview: events.filter((e) => e.outcome === 'needs_review').length,
     linesReviewed: events.reduce((a, e) => a + e.lines, 0),
     linesUnderstood: events.filter((e) => e.outcome === 'understood').reduce((a, e) => a + e.lines, 0),
-    conceptsSeen: conceptLatest.size,
-    conceptsMastered: [...conceptLatest.values()].filter((o) => o === 'understood').length,
+    conceptsSeen: conceptEvents.size,
+    conceptsDeveloping: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Developing').length,
+    conceptsFamiliar: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Familiar').length,
+    conceptsStrong: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Strong').length,
+    conceptsNeedReview: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Needs review').length,
     streak: currentStreak(days, todayKey),
     bestStreak: bestStreak(days),
     usage,
     heat,
     lastActive: events.length ? events[events.length - 1].ts : undefined,
   };
+}
+
+/** Cautious evidence label: one correct check is developing, never “mastered.” */
+export function deriveSkillState(events: LocalEvent[]): SkillState {
+  if (events.length === 0) return 'Insufficient evidence';
+  const chronological = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
+  const latest = chronological[chronological.length - 1];
+  if (latest.outcome === 'needs_review') return 'Needs review';
+  const correct = chronological.filter((event) => event.outcome === 'understood').length;
+  if (correct >= 3) return 'Strong';
+  if (correct >= 2) return 'Familiar';
+  if (correct === 1) return 'Developing';
+  return latest.outcome === 'reviewed' ? 'New' : 'Insufficient evidence';
 }
 
 const OUTCOME_LABEL: Record<Outcome, string> = {

@@ -117,6 +117,14 @@ export async function deleteAccount(token: string): Promise<void> {
   await json<{ ok: boolean }>(res);
 }
 
+export async function signOut(token: string): Promise<void> {
+  const res = await request(`${BACKEND}/api/v1/auth/signout`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  await json<{ ok: boolean }>(res);
+}
+
 /** Best-effort event sync. Returns the ids the backend accepted (for outbox clearing). */
 export async function pushEvents(token: string, events: LocalEvent[]): Promise<string[]> {
   if (events.length === 0) return [];
@@ -129,10 +137,20 @@ export async function pushEvents(token: string, events: LocalEvent[]): Promise<s
   return events.map((e) => e.id);
 }
 
-export async function fetchQuestion(payload: ReviewRequestPayload): Promise<ComprehensionQuestion> {
+export async function pullEvents(token: string): Promise<LocalEvent[]> {
+  const res = await request(`${BACKEND}/api/v1/history?limit=500`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return json<LocalEvent[]>(res);
+}
+
+export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null): Promise<ComprehensionQuestion> {
   const res = await request(`${BACKEND}/api/v1/comprehension`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   });
   return json<ComprehensionQuestion>(res);

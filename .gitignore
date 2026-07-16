@@ -8,6 +8,7 @@ out/
 *.vsix
 .next/
 build/
+*.tsbuildinfo
 
 # Env & secrets (never commit)
 .env

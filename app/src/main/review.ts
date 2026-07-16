@@ -8,7 +8,7 @@ import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter'
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
-import type { LocalEvent } from '../core/learning';
+import { localDayKey, type LocalEvent } from '../core/learning';
 import { BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
 import { flush } from './sync';
@@ -69,12 +69,16 @@ export function initWidget(win: BrowserWindow, session: ReviewSession): void {
   });
 }
 
-function recordReview(session: ReviewSession): void {
+function recordReview(win: BrowserWindow, session: ReviewSession): void {
   if (session.recorded || !session.code) return;
   session.recorded = true;
+  const now = new Date();
   const ev: LocalEvent = {
     id: session.reviewId,
-    ts: new Date().toISOString(),
+    ts: now.toISOString(),
+    eventType: 'explanation_completed',
+    localDate: localDayKey(now),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     scope: 'selection',
     level: session.level,
     outcome: 'reviewed',
@@ -82,7 +86,13 @@ function recordReview(session: ReviewSession): void {
     language: guessLanguage(session.code),
     sourceApp: session.sourceApp ?? undefined,
   };
-  store().recordReview(ev);
+  try {
+    store().recordReview(ev);
+  } catch (error) {
+    session.recorded = false;
+    send(win, { type: 'error', message: error instanceof Error ? error.message : 'The explanation could not be saved locally.' });
+    return;
+  }
   session.onRecorded?.();
   void flush();
 }
@@ -115,12 +125,20 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   try {
     const res = await fetch(`${BACKEND}/api/v1/reviews`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(store().token() ? { authorization: `Bearer ${store().token()}` } : {}),
+      },
       body: JSON.stringify(payloadFor(code, opts.level, opts)),
       signal: abort.signal,
     });
     if (!res.ok || !res.body) {
-      send(win, { type: 'error', message: `Backend error (${res.status}).` });
+      const message = res.status === 401
+        ? 'Sign in to use cloud explanations, or continue with local learning history.'
+        : res.status === 429
+          ? 'Too many requests. Wait a moment, then try again.'
+          : `The explanation service could not complete that request (${res.status}).`;
+      send(win, { type: 'error', message });
       return;
     }
     const reader = res.body.getReader();
@@ -131,7 +149,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       if (done) break;
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
         send(win, ev as WidgetEvent);
-        if (ev.type === 'done') recordReview(session);
+        if (ev.type === 'done') recordReview(win, session);
       }
     }
   } catch (err) {
@@ -150,7 +168,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
 export async function startComprehension(win: BrowserWindow, session: ReviewSession): Promise<void> {
   if (!session.code) return;
   try {
-    const q = await fetchQuestion(payloadFor(session.code, session.level));
+    const q = await fetchQuestion(payloadFor(session.code, session.level), store().token());
     session.pendingAnswer = {
       answerIndex: q.answerIndex,
       concept: q.concept,
@@ -168,7 +186,12 @@ export function gradeComprehension(win: BrowserWindow, session: ReviewSession, c
   const a = session.pendingAnswer;
   if (!a) return;
   const correct = choice === a.answerIndex;
-  store().setOutcome(session.reviewId, correct ? 'understood' : 'needs_review', a.concept, a.conceptLabel);
+  try {
+    store().setOutcome(session.reviewId, correct ? 'understood' : 'needs_review', a.concept, a.conceptLabel);
+  } catch (error) {
+    send(win, { type: 'error', message: error instanceof Error ? error.message : 'The check result could not be saved locally.' });
+    return;
+  }
   if (correct) session.onUnderstood?.();
   void flush();
   send(win, { type: 'graded', correct, answerIndex: a.answerIndex, rationale: a.rationale });

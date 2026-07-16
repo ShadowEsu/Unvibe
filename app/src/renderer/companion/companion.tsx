@@ -10,11 +10,16 @@ interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] 
 interface Profile {
   reviews: number; understood: number; needsReview: number;
   linesUnderstood: number; linesReviewed: number;
-  conceptsSeen: number; conceptsMastered: number;
+  conceptsSeen: number; conceptsDeveloping: number; conceptsFamiliar: number;
+  conceptsStrong: number; conceptsNeedReview: number;
   streak: number; bestStreak: number;
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
+interface SyncStatus {
+  phase: 'local' | 'syncing' | 'synced' | 'offline' | 'auth_required' | 'error';
+  pending: number; lastSyncedAt?: string; nextRetryAt?: string; message?: string;
+}
 type Account = { userId: string; email: string } | null;
 interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
@@ -58,7 +63,7 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress'>, PageDef> = {
     { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
     { icon: IC.layers, t: 'Examples from your repos', d: 'Real snippets where the idea shows up in code you have touched.' },
     { icon: IC.spark, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
-    { icon: IC.check, t: 'A quick check', d: 'One question to prove it landed and mark the concept mastered.' },
+    { icon: IC.check, t: 'A quick check', d: 'One question adds evidence without pretending Unvibe knows exactly what you understand.' },
   ] },
   Notebook: { id: 'Notebook', icon: IC.notebook, lead: 'The keeper for anything worth a second look — explanations, diagrams, and the back-and-forth you had with Unvibe.', features: [
     { icon: IC.notebook, t: 'Saved explanations', d: 'Star an explanation in any widget and it lands here, searchable.' },
@@ -78,25 +83,20 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress'>, PageDef> = {
     { icon: IC.layers, t: 'Reference you keep', d: 'The pages you return to, gathered in one calm place.' },
     { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
   ] },
-  Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — milestones you have hit, ideas you have mastered, and everything you have reviewed.', features: [
+  Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
     { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first week-long streak.' },
-    { icon: IC.check, t: 'Mastery map', d: 'Concepts sorted by how solid they are, from seen to second-nature.' },
+    { icon: IC.check, t: 'Evidence map', d: 'Concepts use cautious labels such as developing, familiar, strong, or needs review.' },
     { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
-    { icon: IC.layers, t: 'Yours to share', d: 'Turn a mastered track into a clean certificate when you want to.' },
+    { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
   ] },
 };
 
 const NAV: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home }, { id: 'Progress', icon: IC.progress }, { id: 'Projects', icon: IC.projects },
-  { id: 'Study', icon: IC.study }, { id: 'Concepts', icon: IC.concepts }, { id: 'Notebook', icon: IC.notebook },
-  { id: 'Briefings', icon: IC.briefings }, { id: 'Library', icon: IC.library }, { id: 'Profile', icon: IC.profile },
+  { id: 'Home', icon: IC.home }, { id: 'Progress', icon: IC.progress },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
-  { id: 'Bring your team', icon: 'M8 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M2.5 17c.6-2.8 2.7-4.2 5.5-4.2 M14 7v6 M11 10h6', toast: 'Team spaces are on the way.' },
-  { id: 'Refer a friend', icon: 'M3 8h14v9H3z M3 8l2-4h10l2 4 M10 8v9', toast: 'Referrals open once Unvibe leaves beta.' },
   { id: 'Settings', icon: 'M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M10 2.8l1 2.2 2.4-.6 1.2 2-1.7 1.8.8 2.3-2.2 1-.1 2.5H9.6l-.1-2.5-2.2-1 .8-2.3-1.7-1.8 1.2-2 2.4.6z', toast: '' },
-  { id: 'Help', icon: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M7.8 7.5A2.3 2.3 0 0 1 12.2 8c0 1.5-2.2 1.7-2.2 3 M10 14h.01', toast: 'Docs are being written.' },
 ];
 
 function Icon({ d }: { d: string }) {
@@ -150,44 +150,17 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [mode, setMode] = useState<'device' | 'email'>('device');
   useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
   const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; error?: string };
     if (r.ok && r.userCode) setCode(r.userCode); else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
-  const submitEmail = async (action: 'signIn' | 'signUp') => {
-    setBusy(true); setErr(''); setCode('');
-    const fn = action === 'signIn' ? window.unvibe.signIn : window.unvibe.signUp;
-    const r = (await fn(email.trim())) as { ok: boolean; email?: string; error?: string };
-    setBusy(false);
-    if (r.ok && r.email) onDone(r.email); else setErr(r.error ?? 'Could not connect.');
-  };
   return (
     <div className="signin">
-      <div className="signin__tabs">
-        <button className={`signin__tab${mode === 'device' ? ' on' : ''}`} onClick={() => setMode('device')}>Browser</button>
-        <button className={`signin__tab${mode === 'email' ? ' on' : ''}`} onClick={() => setMode('email')}>Email</button>
-      </div>
-      {mode === 'device' ? (
-        <>
-          <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
-          {err && <div className="field-err">{err}</div>}
-          <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
-        </>
-      ) : (
-        <>
-          <input className="field" type="email" autoComplete="email" placeholder="you@school.edu" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address" />
-          {err && <div className="field-err">{err}</div>}
-          <div className="signin__email-actions">
-            <button className="field-btn" disabled={busy || !email.trim()} onClick={() => submitEmail('signIn')}>{busy ? 'Connecting…' : 'Sign in'}</button>
-            <button className="field-btn ghost" disabled={busy || !email.trim()} onClick={() => submitEmail('signUp')}>{busy ? 'Connecting…' : 'Create account'}</button>
-          </div>
-          <div className="field-note">Enter your email to sign in or create an account. No password needed — we send a verification link.</div>
-        </>
-      )}
+      <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
+      {err && <div className="field-err">{err}</div>}
+      <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
     </div>
   );
 }
@@ -392,7 +365,7 @@ function Home({ user, shortcut, profile, feed }: { user: string; shortcut: strin
         <div className="rail">
           <div className="stats">
             <div className="stat"><span className="v">{profile?.linesUnderstood ?? 0}</span><span className="l">lines understood</span></div>
-            <div className="stat"><span className="v">{profile?.conceptsMastered ?? 0}</span><span className="l">concepts mastered</span></div>
+            <div className="stat"><span className="v">{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</span><span className="l">concepts familiar or strong</span></div>
             <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
           </div>
           <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
@@ -411,7 +384,7 @@ function Progress({ profile }: { profile: Profile | null }) {
       <p className="lead">The honest measure of what you have understood — not lines typed, but lines you could explain to someone else.</p>
       <div className="tiles">
         <div className="tile"><div className="v">{profile?.linesUnderstood ?? 0}</div><div className="l">lines understood</div><div className="note">of {profile?.linesReviewed ?? 0} reviewed</div></div>
-        <div className="tile"><div className="v">{profile?.conceptsMastered ?? 0}</div><div className="l">concepts mastered</div><div className="note">{profile?.conceptsSeen ?? 0} seen</div></div>
+        <div className="tile"><div className="v">{profile?.conceptsDeveloping ?? 0}</div><div className="l">concepts developing</div><div className="note">{profile?.conceptsSeen ?? 0} encountered · {profile?.conceptsNeedReview ?? 0} to revisit</div></div>
         <div className="tile"><div className="v">{profile?.reviews ?? 0}</div><div className="l">reviews done</div><div className="note">{profile?.needsReview ?? 0} to revisit</div></div>
         <div className="tile"><div className="v">{profile?.streak ?? 0}</div><div className="l">day streak</div><div className="note">best: {profile?.bestStreak ?? 0} days</div></div>
       </div>
@@ -462,7 +435,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <button className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} onClick={onClick}><span className="knob" /></button>;
 }
 
-function AccountPanel({ account, onChange, onDeleted }: { account: Account; onChange: () => void; onDeleted: () => void }) {
+function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: () => void; onNotice: (message: string) => void }) {
   const [confirming, setConfirming] = useState(false);
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
@@ -485,7 +458,13 @@ function AccountPanel({ account, onChange, onDeleted }: { account: Account; onCh
   return (
     <>
       <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
-        <button className="act" onClick={async () => { await window.unvibe.signOut(); onChange(); }}>Sign out</button></div>
+        <button className="act" onClick={async () => {
+          const result = (await window.unvibe.signOut()) as { ok: boolean; error?: string; warning?: string };
+          onChange();
+          onNotice(result.ok
+            ? result.warning ? `Signed out locally. ${result.warning}` : 'Signed out securely.'
+            : result.error ?? 'Sign-out could not be saved on this Mac.');
+        }}>Sign out</button></div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl" style={{ color: '#a1291f' }}>Delete account</div>
         <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this Mac and on our servers. This cannot be undone.</div>
@@ -502,9 +481,9 @@ function AccountPanel({ account, onChange, onDeleted }: { account: Account; onCh
   );
 }
 
-function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted }: {
+function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice }: {
   info: { version: string }; account: Account; settings: Settings;
-  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void;
+  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void; onNotice: (message: string) => void;
 }) {
   const [tab, setTab] = useState('General');
   const [recording, setRecording] = useState(false);
@@ -593,7 +572,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             </>
           )}
 
-          {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} />}
+          {tab === 'Account' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
           {tab === 'Data' && (
             <div className="setrow" style={{ display: 'block' }}><div className="sl">Your data</div><div className="sd">Reviews and progress live in a file on this Mac. Deleting your account (under Account) erases them everywhere.</div></div>
           )}
@@ -611,17 +590,19 @@ function App() {
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
 
   const refresh = async () => {
-    const [acct, prof, fd, st] = await Promise.all([
+    const [acct, prof, fd, st, syncState] = await Promise.all([
       window.unvibe.account() as Promise<Account>,
       window.unvibe.profile() as Promise<Profile>,
       window.unvibe.feed(8) as Promise<FeedItem[]>,
       window.unvibe.getSettings() as Promise<Settings>,
+      window.unvibe.syncStatus() as Promise<SyncStatus>,
     ]);
-    setAccount(acct); setProfile(prof); setFeed(fd); setSettings(st);
+    setAccount(acct); setProfile(prof); setFeed(fd); setSettings(st); setSync(syncState);
     return { acct, st };
   };
 
@@ -632,6 +613,7 @@ function App() {
       setGate(!st.onboarded ? 'onboarding' : acct ? 'app' : 'login');
     })();
     const onFocus = () => void refresh();
+    window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
@@ -668,7 +650,17 @@ function App() {
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
-          <div className="promo"><div className="t">Free while in <em>beta</em></div><div className="d">Everything is unlocked while Unvibe grows up alongside you.</div><button onClick={() => flash('The roadmap is coming together.')}>See the roadmap</button></div>
+          <button
+            className={`sync-state sync-state--${sync.phase}`}
+            aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
+            onClick={() => void window.unvibe.retrySync()}
+            disabled={sync.phase === 'syncing' || sync.phase === 'local'}
+          >
+            <span className="sync-state__dot" />
+            <span>{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
+            {sync.pending > 0 && <small>{sync.pending} pending</small>}
+          </button>
+          <div className="promo"><div className="t">Free during private <em>beta</em></div><div className="d">Cloud explanations are included for beta accounts. You never need to provide your own model API key.</div></div>
           <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
@@ -685,7 +677,7 @@ function App() {
         <Settings info={info} account={account} settings={settings}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
           onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
-          onSettings={applySettings} onClose={() => setSettingsOpen(false)} />
+          onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
     </>

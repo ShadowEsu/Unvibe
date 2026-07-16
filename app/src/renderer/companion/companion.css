@@ -89,6 +89,20 @@ button:not(:disabled):active { transform: translateY(1px); }
 
 .side .spacer { flex: 1; min-height: 20px; }
 
+.sync-state {
+  width: calc(100% - 4px); margin: 0 2px 10px; padding: 9px 11px;
+  display: flex; align-items: center; gap: 8px; text-align: left;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--paper);
+  color: var(--muted); font-size: 12px; cursor: pointer;
+}
+.sync-state:disabled { cursor: default; opacity: .85; }
+.sync-state__dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.sync-state small { margin-left: auto; font-size: 10px; color: inherit; }
+.sync-state--offline, .sync-state--error, .sync-state--auth_required { color: #8a342b; }
+.sync-state--syncing .sync-state__dot { animation: sync-pulse 1s ease-in-out infinite; }
+@keyframes sync-pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .sync-state--syncing .sync-state__dot { animation: none; } }
+
 .promo { background: var(--accent-soft); border-radius: 13px; padding: 15px; margin: 0 2px 14px; }
 .promo .t { font-weight: 600; font-size: 15px; margin-bottom: 5px; }
 .promo .t em { color: var(--accent); font-style: italic; }
@@ -464,7 +478,7 @@ h1 { font-size: 30px; font-weight: 500; letter-spacing: -0.01em; }
 }
 
 @media (max-width: 760px) {
-  .side { width: 76px; padding-left: 8px; padding-right: 8px; }.brand .name, .brand .badge, .nav button { font-size: 0; }.nav button svg { margin: 0; width: 19px; height: 19px; }.promo { display: none; }.page { padding: 32px 24px 52px; }.rail { width: 230px; }.tiles { grid-template-columns: repeat(2, 1fr); }.modal { width: min(94vw, 760px); }.modal .mside { width: 160px; }.delete-confirm { max-width: 150px; }
+  .side { width: 76px; padding-left: 8px; padding-right: 8px; }.brand .name, .brand .badge, .nav button { font-size: 0; }.nav button svg { margin: 0; width: 19px; height: 19px; }.promo, .sync-state { display: none; }.page { padding: 32px 24px 52px; }.rail { width: 230px; }.tiles { grid-template-columns: repeat(2, 1fr); }.modal { width: min(94vw, 760px); }.modal .mside { width: 160px; }.delete-confirm { max-width: 150px; }
 }
 
 @media (max-width: 560px) {

@@ -1,6 +1,9 @@
 export interface IncomingEvent {
   id: string;
   ts: string;
+  eventType?: 'explanation_completed';
+  localDate?: string;
+  timezone?: string;
   scope: string;
   level: string;
   file?: string;
@@ -8,6 +11,9 @@ export interface IncomingEvent {
   concept?: string;
   conceptLabel?: string;
   project?: string;
+  lines?: number;
+  language?: string;
+  sourceApp?: string;
 }
 
 export interface EventRecord extends IncomingEvent {
@@ -20,6 +26,8 @@ export interface ProfileSummary {
   needsReview: number;
   conceptsSeen: number;
   conceptsUnderstood: number;
+  conceptsFamiliar: number;
+  conceptsStrong: number;
   conceptsNeedReview: number;
   currentStreakDays: number;
   lastActive?: string;
@@ -53,6 +61,7 @@ export interface Store {
   approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null>;
   redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'>;
   userForToken(token: string): Promise<string | null>;
+  revokeToken(token: string): Promise<void>;
 
   // Direct (in-app) auth. Passwordless in dev; production would add verification.
   signIn(email: string): Promise<Account>;

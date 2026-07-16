@@ -32,10 +32,19 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
-import { flush } from './sync';
-import { signIn, signUp, deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo } from './backend';
+import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
+import {
+  signIn,
+  signUp,
+  signOut as revokeSession,
+  deleteAccount,
+  startDeviceAuth,
+  redeemDeviceAuth,
+  accountInfo,
+  type Account as BackendAccount,
+} from './backend';
 import { setBar, notify } from './notify';
-import { computeProfile, computeFeed } from '../core/learning';
+import { computeProfile, computeFeed, localDayKey } from '../core/learning';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -46,7 +55,7 @@ function firstName(): Promise<string> {
   });
 }
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+const todayKey = () => localDayKey(new Date());
 const isMac = process.platform === 'darwin';
 
 let tray: Tray | null = null;
@@ -55,6 +64,24 @@ let companion: BrowserWindow | null = null;
 let devicePoll: NodeJS.Timeout | null = null;
 const sessions = new Map<number, ReviewSession>();
 const normalBounds = new Map<number, Electron.Rectangle>();
+
+onSyncStatus((status) => {
+  if (companion && !companion.isDestroyed()) companion.webContents.send('sync:status', status);
+});
+
+async function persistAccount(account: BackendAccount): Promise<void> {
+  try {
+    store().setAccount(account.userId, account.email, account.token);
+  } catch (error) {
+    try {
+      await revokeSession(account.token);
+    } catch {
+      // The original secure-storage error is more actionable; the server will still expire
+      // an unreachable orphan session according to its session policy.
+    }
+    throw error;
+  }
+}
 
 function accessibilityGranted(prompt = false): boolean {
   if (!isMac) return true;
@@ -233,6 +260,11 @@ app.whenReady().then(() => {
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
+  ipcMain.handle('sync:status', () => syncStatus());
+  ipcMain.handle('sync:retry', async () => {
+    await retrySync();
+    return syncStatus();
+  });
 
   // --- settings ---
   ipcMain.handle('settings:get', () => settings().all());
@@ -274,7 +306,7 @@ app.whenReady().then(() => {
   ipcMain.handle('account:signIn', async (_e, email: string) => {
     try {
       const acct = await signIn(email);
-      store().setAccount(acct.userId, acct.email, acct.token);
+      await persistAccount(acct);
       void flush();
       return { ok: true, email: acct.email };
     } catch (err) {
@@ -284,7 +316,7 @@ app.whenReady().then(() => {
   ipcMain.handle('account:signUp', async (_e, email: string) => {
     try {
       const acct = await signUp(email);
-      store().setAccount(acct.userId, acct.email, acct.token);
+      await persistAccount(acct);
       void flush();
       return { ok: true, email: acct.email };
     } catch (err) {
@@ -303,7 +335,11 @@ app.whenReady().then(() => {
           const redeemed = await redeemDeviceAuth(device.deviceCode);
           if (!redeemed) return;
           const account = await accountInfo(redeemed.token);
-          store().setAccount(account.userId, account.email ?? 'Signed-in user', redeemed.token);
+          await persistAccount({
+            userId: account.userId,
+            email: account.email ?? 'Signed-in user',
+            token: redeemed.token,
+          });
           if (devicePoll) clearInterval(devicePoll); devicePoll = null;
           void flush();
           companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user' });
@@ -312,9 +348,22 @@ app.whenReady().then(() => {
       return { ok: true, userCode: device.userCode, verificationUri: device.verificationUri };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
-  ipcMain.handle('account:signOut', () => {
-    store().signOut();
-    return { ok: true };
+  ipcMain.handle('account:signOut', async () => {
+    const token = store().token();
+    let warning: string | undefined;
+    if (token) {
+      try {
+        await revokeSession(token);
+      } catch (err) {
+        warning = err instanceof Error ? err.message : 'The remote session could not be revoked.';
+      }
+    }
+    try {
+      store().signOut();
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Local sign-out could not be saved.', warning };
+    }
+    return { ok: true, warning };
   });
   ipcMain.handle('account:delete', async () => {
     const token = store().token();
@@ -323,13 +372,27 @@ app.whenReady().then(() => {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Delete failed.' };
     }
-    store().wipeEverything();
+    try {
+      store().wipeEverything();
+    } catch (err) {
+      return {
+        ok: false,
+        error: `The remote account was deleted, but local cleanup failed. ${err instanceof Error ? err.message : ''}`.trim(),
+      };
+    }
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (sessions.has(win.webContents.id) && !win.isDestroyed()) win.close();
+    }
+    sessions.clear();
     return { ok: true };
   });
 });
 
 app.on('browser-window-focus', () => void flush());
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('will-quit', () => {
+  stopSync();
+  globalShortcut.unregisterAll();
+});
 app.on('window-all-closed', () => {
   /* keep the agent alive — this is a menu-bar utility */
 });

@@ -4,14 +4,16 @@
  * token is encrypted at rest with Electron safeStorage when the OS keychain is available.
  */
 import { app, safeStorage } from 'electron';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { LocalEvent, Outcome } from '../core/learning';
+import { openToken, sealToken } from '../core/tokenVault';
+import { mergeRemoteEvents } from '../core/syncModel';
 
 interface AccountData {
   userId: string;
   email: string;
-  tokenEnc: string; // base64; encrypted if `tokenEncrypted`, else plain utf8 base64
+  tokenEnc: string; // base64-encoded safeStorage ciphertext
   tokenEncrypted: boolean;
 }
 
@@ -19,6 +21,7 @@ interface Data {
   events: LocalEvent[];
   outbox: string[]; // event ids awaiting sync
   account?: AccountData;
+  syncOwnerId?: string; // keeps a signed-out outbox bound to the account that created it
 }
 
 class Store {
@@ -28,21 +31,32 @@ class Store {
   constructor() {
     const dir = app.getPath('userData');
     this.file = path.join(dir, 'unvibe-store.json');
+    let loaded: Data;
     try {
-      this.data = JSON.parse(readFileSync(this.file, 'utf8')) as Data;
-      this.data.events ??= [];
-      this.data.outbox ??= [];
+      loaded = JSON.parse(readFileSync(this.file, 'utf8')) as Data;
     } catch {
-      // fresh install
+      return; // fresh install or unreadable legacy data
+    }
+    this.data = loaded;
+    this.data.events ??= [];
+    this.data.outbox ??= [];
+    if (this.data.account && !this.data.syncOwnerId) this.data.syncOwnerId = this.data.account.userId;
+    // Versions before 0.1.0 could persist a reversible base64 token when the keychain was
+    // unavailable. Fail closed and require sign-in again instead of retaining that token.
+    if (this.data.account && !this.data.account.tokenEncrypted) {
+      delete this.data.account;
+      this.save();
     }
   }
 
   private save(): void {
     try {
       mkdirSync(path.dirname(this.file), { recursive: true });
-      writeFileSync(this.file, JSON.stringify(this.data), { mode: 0o600 });
-    } catch {
-      // best-effort; a failed write must never break a review
+      const temporary = `${this.file}.tmp`;
+      writeFileSync(temporary, JSON.stringify(this.data), { mode: 0o600 });
+      renameSync(temporary, this.file);
+    } catch (error) {
+      throw new Error('Unvibe could not save learning data on this Mac. Check disk space and file permissions, then try again.', { cause: error });
     }
   }
 
@@ -78,6 +92,18 @@ class Store {
     return this.data.events.filter((e) => ids.has(e.id));
   }
 
+  pendingCount(): number {
+    return this.data.outbox.length;
+  }
+
+  /** Merge the remote mirror without replacing a newer local event still waiting to upload. */
+  mergeRemote(events: LocalEvent[]): number {
+    const result = mergeRemoteEvents(this.data.events, this.data.outbox, events);
+    this.data.events = result.events;
+    this.save();
+    return result.merged;
+  }
+
   markSynced(ids: string[]): void {
     const done = new Set(ids);
     this.data.outbox = this.data.outbox.filter((id) => !done.has(id));
@@ -86,11 +112,13 @@ class Store {
 
   // ---- account ----
   setAccount(userId: string, email: string, token: string): void {
-    const canEncrypt = safeStorage.isEncryptionAvailable();
-    const tokenEnc = canEncrypt
-      ? safeStorage.encryptString(token).toString('base64')
-      : Buffer.from(token, 'utf8').toString('base64');
-    this.data.account = { userId, email, tokenEnc, tokenEncrypted: canEncrypt };
+    const tokenEnc = sealToken(token, safeStorage);
+    if (this.data.syncOwnerId && this.data.syncOwnerId !== userId) {
+      // Never upload one account's queued activity into a different account.
+      this.data.outbox = [];
+    }
+    this.data.syncOwnerId = userId;
+    this.data.account = { userId, email, tokenEnc, tokenEncrypted: true };
     this.save();
   }
 
@@ -104,17 +132,16 @@ class Store {
     const a = this.data.account;
     if (!a) return null;
     try {
-      const buf = Buffer.from(a.tokenEnc, 'base64');
-      return a.tokenEncrypted ? safeStorage.decryptString(buf) : buf.toString('utf8');
+      if (!a.tokenEncrypted) return null;
+      return openToken(a.tokenEnc, safeStorage);
     } catch {
       return null;
     }
   }
 
   signOut(): void {
-    // Keep local learning — it's the user's. Only drop identity + queued sync.
+    // Keep local learning and its identity-bound outbox so the same account can resume later.
     delete this.data.account;
-    this.data.outbox = [];
     this.save();
   }
 
