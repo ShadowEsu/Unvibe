@@ -16,9 +16,15 @@ import {
 } from "@/lib/waitlistSchema";
 
 type Status = "idle" | "submitting" | "success" | "duplicate" | "error";
+type WaitlistResponse = {
+  duplicate?: boolean;
+  error?: string;
+  code?: "waitlist_storage_setup_required" | "waitlist_storage_unavailable" | "waitlist_save_failed";
+};
 
 export function PixelWaitlist() {
   const [status, setStatus] = useState<Status>("idle");
+  const [submitError, setSubmitError] = useState("");
   const [savedEmail, setSavedEmail] = useState("");
   const [detailsStatus, setDetailsStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [tool, setTool] = useState<(typeof tools)[number] | "">("");
@@ -47,18 +53,24 @@ export function PixelWaitlist() {
 
   const submit = async (values: WaitlistInput) => {
     setStatus("submitting");
+    setSubmitError("");
     try {
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...values, ...tracking }),
       });
-      const data = (await response.json().catch(() => ({}))) as { duplicate?: boolean };
-      if (!response.ok) throw new Error("signup failed");
+      const data = (await response.json().catch(() => ({}))) as WaitlistResponse;
+      if (!response.ok) {
+        setSubmitError(data.error || "We couldn't save your spot. Please try again.");
+        setStatus("error");
+        return;
+      }
       setSavedEmail(values.email.trim().toLowerCase());
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate) });
     } catch {
+      setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
     }
   };
@@ -111,7 +123,7 @@ export function PixelWaitlist() {
               <Field label="Email" error={errors.email?.message}>
                 <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
               </Field>
-              {status === "error" && <p className="form-error" role="alert">We couldn&apos;t save your spot. Check your connection and try again.</p>}
+              {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
               <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
                 {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the private beta <Send size={17} /></>}
               </button>

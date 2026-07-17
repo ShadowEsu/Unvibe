@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { waitlistDetailsSchema, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
+import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
   recordWaitlistNotification,
   saveWaitlistEntry,
@@ -74,7 +75,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ duplicate: stored.duplicate, saved: true });
   } catch (error) {
     console.error("waitlist signup failed", error);
-    return NextResponse.json({ error: "Could not save your entry. Please try again." }, { status: 500 });
+    const failure = publicWaitlistFailure(error);
+    return NextResponse.json(failure, { status: failure.status });
   }
 }
 
