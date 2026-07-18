@@ -99,13 +99,13 @@ export function PixelWaitlist() {
         <div className="waitlist-copy">
           <p className="section-number light">10 / PRIVATE BETA</p>
           <h2>Learn a little from the code <em>you ship every day.</em></h2>
-          <p>Join the Mac beta list. The AI explanation model is included at no charge to you during beta—no API key, billing setup, or credit card required.</p>
+          <p>Join the Mac beta list with no credit card required. Start with Free, then choose Pro only when you want higher limits and deeper project context.</p>
           <ul>
             <li><Check size={16} />Private, invite-only access</li>
             <li><Check size={16} />No API setup</li>
             <li><Check size={16} />Clear privacy policy and terms</li>
           </ul>
-          <p className="beta-clarity">Unvibe is free. Joining the private beta never requires a credit card or a paid API account.</p>
+          <p className="beta-clarity">Joining the private beta is free. Free and Pro are separate product plans, and annual Pro saves 25%.</p>
         </div>
 
         <div className="waitlist-card">

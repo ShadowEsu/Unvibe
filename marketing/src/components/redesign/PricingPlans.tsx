@@ -43,6 +43,24 @@ export function PricingPlans() {
         <PlanCard plan="free" interval={interval} name="Free" eyebrow="Learn the code in front of you." price="$0" detail="No card required" features={cards.free} cta="Start for free" />
         <PlanCard plan="pro" interval={interval} name="Pro" eyebrow="Understand the change around it." price={annual ? '$72/year' : '$8/month'} detail={annual ? 'About $6/month · billed once yearly' : 'For one personal account · billed monthly'} features={cards.pro} cta="Upgrade to Pro" featured />
       </div>
+      <div className="pricing-perks" aria-label="Plan benefits">
+        <section>
+          <p>FREE INCLUDES</p>
+          <ul>
+            <li>50 explanations each month</li>
+            <li>Selected-code explanations and core levels</li>
+            <li>Study queue, saved explanations, and progress</li>
+          </ul>
+        </section>
+        <section>
+          <p>PRO ADDS</p>
+          <ul>
+            <li>100 explanations each month</li>
+            <li>Git diffs, agent briefs, and nearby-file context</li>
+            <li>Since-last-understood compares and Expert depth</li>
+          </ul>
+        </section>
+      </div>
       <p className="pricing-disclosure">Free covers selected code and your study queue. Pro adds git diffs, agent briefs, nearby files, and since-last-understood compares. Private code is filtered locally before approved context is sent.</p>
     </div>
   );

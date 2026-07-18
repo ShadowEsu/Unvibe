@@ -250,7 +250,7 @@ export default function Home() {
           <p className="pixel-eyebrow"><span className="brand-pixel" />KEEP THE SPEED. KEEP THE UNDERSTANDING.</p>
           <h2>AI can write the code.<br /><em>Make sure it becomes yours.</em></h2>
           <Button href="#waitlist" size="lg" className="beta-button">Join the private beta <ArrowRight size={18} /></Button>
-          <p>Mac first · Free to join · Privacy and terms always available</p>
+          <p>Mac first · Free to join · Free, Pro, and annual pricing available · Privacy and terms always available</p>
         </Reveal>
       </section>
     </>
