@@ -153,7 +153,7 @@ export function Nav() {
             </ul>
             <div className="mt-auto flex flex-col gap-3 pt-6">
               <Button href="#waitlist" onClick={() => setOpen(false)}>
-                Join private beta
+                Join waitlist
               </Button>
             </div>
           </div>
