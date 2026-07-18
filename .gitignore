@@ -32,3 +32,10 @@ web/env.local
 
 # Editor
 .vscode-test/
+
+# Scratch PDF/slide builds (canonical copies live in docs/investors/)
+tmp/
+output/
+*.inspect.ndjson
+app/.tools-bin/
+web/.vercel/
