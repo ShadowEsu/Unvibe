@@ -105,9 +105,9 @@ export const faqItems: FaqItem[] = [
   },
   {
     id: "beta",
-    question: "When will the beta launch?",
+    question: "How do I get the product?",
     answer:
-      "A private beta for Mac is opening soon. Join the waitlist and we will email you when invites begin. We will not invent a date here before it is firm.",
+      "Join the waitlist on this site, then email preston@unvibe.site and ask for private beta access. Access is invite-only while we keep the beta controlled.",
     category: "pricing",
   },
   {

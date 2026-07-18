@@ -98,20 +98,20 @@ export function PixelWaitlist() {
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
           <p className="section-number light">10 / PRIVATE BETA</p>
-          <h2>Learn a little from the code <em>you ship every day.</em></h2>
-          <p>Join the Mac beta list with no credit card required. Start with Free, then choose Pro only when you want higher limits and deeper project context.</p>
+          <h2>The product is ready. <em>Access is invite-only.</em></h2>
+          <p>Join the waitlist so we know you&apos;re interested. If you want the Mac app, email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll get it to you.</p>
           <ul>
-            <li><Check size={16} />Private, invite-only access</li>
-            <li><Check size={16} />No API setup</li>
-            <li><Check size={16} />Clear privacy policy and terms</li>
+            <li><Check size={16} />Private Mac beta — product ready</li>
+            <li><Check size={16} />Waitlist first, then invite access</li>
+            <li><Check size={16} />No credit card to join the list</li>
           </ul>
-          <p className="beta-clarity">Joining the private beta is free. Free and Pro are separate product plans, and annual Pro saves 25%.</p>
+          <p className="beta-clarity">Want the product now? Email preston@unvibe.site after you join the waitlist.</p>
         </div>
 
         <div className="waitlist-card">
           {!complete ? (
             <form onSubmit={handleSubmit(submit)} noValidate>
-              <div className="form-heading"><span className="brand-pixel" /><strong>Join the private beta</strong><small>Three quick details. That&apos;s all.</small></div>
+              <div className="form-heading"><span className="brand-pixel" /><strong>Join the waitlist</strong><small>Three quick details. That&apos;s all.</small></div>
               <div className="name-row">
                 <Field label="First name" error={errors.firstName?.message}>
                   <input autoComplete="given-name" aria-invalid={Boolean(errors.firstName)} {...register("firstName")} />
@@ -125,7 +125,7 @@ export function PixelWaitlist() {
               </Field>
               {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
               <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
-                {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the private beta <Send size={17} /></>}
+                {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
               </button>
               <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
             </form>
@@ -134,7 +134,7 @@ export function PixelWaitlist() {
               <span className="success-pixel"><Check /></span>
               <p className="pixel-label">SPOT SAVED</p>
               <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
-              <p>We&apos;ll email you when a Mac beta invite is ready. Want to help shape the beta? These next details are optional.</p>
+              <p>Want the product? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll send access. Optional details below help us prioritize invites.</p>
               {detailsStatus === "saved" ? (
                 <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>
               ) : (

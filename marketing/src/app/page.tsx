@@ -55,10 +55,10 @@ export default function Home() {
           <p className="hero-positioning">AI writes the code. <strong>Unvibe helps you understand it.</strong></p>
           <p className="hero-support">Select code, choose your explanation depth, and learn how it works without leaving your workflow.</p>
           <div className="hero-actions">
-            <Button href="#waitlist" size="lg" className="beta-button">Join the private beta <ArrowRight size={18} /></Button>
+            <Button href="#waitlist" size="lg" className="beta-button">Join the waitlist <ArrowRight size={18} /></Button>
             <Button href="#demo" size="lg" variant="secondary">See Unvibe in action <ArrowDown size={17} /></Button>
           </div>
-          <p className="hero-micro">Mac first <i /> Early beta <i /> Free to join <i /> No credit card</p>
+          <p className="hero-micro">Private Mac beta <i /> Product ready <i /> Invite access <i /> No credit card to join</p>
           <div id="demo" className="hero-demo-wrap"><HeroDemo /></div>
         </Reveal>
       </section>
@@ -230,11 +230,11 @@ export default function Home() {
         <Reveal className="container-page faq-layout">
           <div className="faq-heading">
             <p className="section-number">11 / QUICK ANSWERS</p>
-            <h2>Before you <em>join.</em></h2>
-            <p>Clear expectations now make for a better beta later.</p>
+            <h2>Before you <em>request access.</em></h2>
+            <p>Private beta is ready. Join the waitlist, then email if you want the product.</p>
           </div>
           <div className="faq-list">
-            {faqItems.filter((item) => ["free", "pro-annual", "cancel"].includes(item.id)).map((item, index) => (
+            {faqItems.filter((item) => ["free", "pro-annual", "beta", "cancel"].includes(item.id)).map((item, index) => (
               <details key={item.id} open={index === 0}>
                 <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true" /></summary>
                 <p>{item.answer}</p>
@@ -247,10 +247,13 @@ export default function Home() {
       <section className="final-field">
         <div className="final-pixels" aria-hidden="true" />
         <Reveal className="container-narrow">
-          <p className="pixel-eyebrow"><span className="brand-pixel" />KEEP THE SPEED. KEEP THE UNDERSTANDING.</p>
+          <p className="pixel-eyebrow"><span className="brand-pixel" />PRIVATE BETA · READY NOW</p>
           <h2>AI can write the code.<br /><em>Make sure it becomes yours.</em></h2>
-          <Button href="#waitlist" size="lg" className="beta-button">Join the private beta <ArrowRight size={18} /></Button>
-          <p>Mac first · Free to join · Free, Pro, and annual pricing available · Privacy and terms always available</p>
+          <div className="hero-actions" style={{ justifyContent: "center" }}>
+            <Button href="#waitlist" size="lg" className="beta-button">Join the waitlist <ArrowRight size={18} /></Button>
+            <Button href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access" size="lg" variant="secondary">Email for access</Button>
+          </div>
+          <p>Mac · Invite-only · Waitlist first · Want the product? Email preston@unvibe.site</p>
         </Reveal>
       </section>
     </>

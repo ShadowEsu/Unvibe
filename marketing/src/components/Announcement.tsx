@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 const STORAGE_KEY = "unvibe_announcement_dismissed";
-const MESSAGE = "Mac private beta opening soon — join free, then choose Free or Pro when you are ready.";
+const MESSAGE = "Private Mac beta is open — join the waitlist, then email preston@unvibe.site if you want access.";
 
 /**
  * Slim announcement bar. Dismissible, and the dismissal persists in localStorage so it

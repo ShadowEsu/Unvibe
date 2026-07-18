@@ -100,7 +100,7 @@ export function Nav() {
         <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle />
           <Button href="#waitlist" size="sm" className="min-h-10 px-5">
-            Join private beta
+            Join waitlist
           </Button>
         </div>
 
