@@ -32,7 +32,7 @@ chmodSync(pythonShim, 0o700);
 try {
   for (const [command, args] of [
     [process.execPath, ['scripts/build.mjs']],
-    [join('node_modules', '.bin', 'electron-builder'), ['--mac', 'dmg', '--arm64']],
+    [join('node_modules', '.bin', 'electron-builder'), ['--mac', 'dir', '--arm64']],
   ]) {
     const result = spawnSync(command, args, {
       stdio: 'inherit',
@@ -46,6 +46,28 @@ try {
     if (result.status !== 0) process.exitCode = result.status ?? 1;
     if (process.exitCode) break;
   }
+
+  // electron-builder intentionally skips signing when identity is null. Re-sign the
+  // local tester bundle ad hoc so macOS can verify its sealed resources. This is
+  // not a substitute for Developer ID signing or Apple notarization.
+  if (!process.exitCode) {
+    const appPath = join('release', 'mac-arm64', 'Unvibe.app');
+    const sign = spawnSync('codesign', ['--force', '--deep', '--sign', '-', appPath], { stdio: 'inherit' });
+    if (sign.status !== 0) process.exitCode = sign.status ?? 1;
+  }
+
+  if (!process.exitCode) {
+    const result = spawnSync(join('node_modules', '.bin', 'electron-builder'), ['--mac', 'dmg', '--arm64', '--prepackaged', join('release', 'mac-arm64')], {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        PATH: `${toolDirectory}:${process.env.PATH ?? ''}`,
+        UNVIBE_BACKEND: backend,
+        CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+      },
+    });
+    if (result.status !== 0) process.exitCode = result.status ?? 1;
+  }
 } finally {
   rmSync(toolDirectory, { recursive: true, force: true });
 }
@@ -56,5 +78,5 @@ if (!artifact) fail('electron-builder completed without a DMG artifact.');
 const checksum = spawnSync('shasum', ['-a', '256', join('release', artifact)], { encoding: 'utf8' });
 if (checksum.status !== 0) fail('could not generate SHA-256 checksum.');
 writeFileSync(join('release', `${artifact}.sha256`), checksum.stdout, { mode: 0o600 });
-console.log(`Unsigned staging package: release/${artifact}`);
+console.log(`Ad-hoc-signed staging package: release/${artifact}`);
 console.log(`Checksum: release/${artifact}.sha256`);
