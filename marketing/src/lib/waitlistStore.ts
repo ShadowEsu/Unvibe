@@ -1,12 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import {
-  BlobNotFoundError,
-  BlobPreconditionFailedError,
-  get,
-  head,
-  put,
-} from "@vercel/blob";
+import { list, put } from "@vercel/blob";
+import { createHash } from "node:crypto";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 
 export interface WaitlistNotificationRecord {
@@ -36,10 +31,9 @@ export interface WaitlistAdminEntry extends WaitlistEntry {
   id: string;
 }
 
-/** v2 avoids a public-CDN cached 404 left behind after resetting entries.v1.enc */
-const BLOB_PATH = "waitlist/entries.v2.enc";
-const LEGACY_BLOB_PATH = "waitlist/entries.v1.enc";
-const MAX_WRITE_ATTEMPTS = 5;
+const ENTRY_PREFIX = "waitlist/item/";
+const LEGACY_BLOB_PATH = "waitlist/entries.v2.enc";
+const LEGACY_BLOB_PATH_V1 = "waitlist/entries.v1.enc";
 const dataDir = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDir, "waitlist.json");
 
@@ -59,91 +53,89 @@ function storageSecret(): string {
   return secret;
 }
 
-function decryptEntries(body: string): WaitlistEntry[] {
-  try {
-    const parsed: unknown = decryptWaitlistJson(body, storageSecret());
-    if (!Array.isArray(parsed)) throw new Error("Waitlist storage contains invalid data");
-    return parsed as WaitlistEntry[];
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Waitlist storage could not be decrypted with WAITLIST_ADMIN_TOKEN. ` +
-        `If you rotated that token, reset the blob at ${BLOB_PATH}. (${message})`,
-    );
-  }
+function entryPath(email: string): string {
+  const digest = createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 32);
+  return `${ENTRY_PREFIX}${digest}.enc`;
 }
 
-async function readBlobPath(pathname: string): Promise<{ entries: WaitlistEntry[]; etag?: string; exists: boolean }> {
-  const token = blobToken();
-  let meta: { url: string; etag?: string };
-  try {
-    meta = await head(pathname, { token });
-  } catch (error) {
-    if (error instanceof BlobNotFoundError) return { entries: [], exists: false };
-    // Older SDK / edge cases may throw a generic error for missing blobs.
-    if (error instanceof Error && /not found|404/i.test(error.message)) {
-      return { entries: [], exists: false };
-    }
-    throw error;
-  }
-
-  // Prefer the download URL so edge/CDN HTML caches cannot return a stale encrypted payload.
-  const downloadUrl = new URL(meta.url);
-  downloadUrl.searchParams.set("download", "1");
-  const response = await fetch(downloadUrl, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-    cache: "no-store",
-  });
-  if (response.status === 404) return { entries: [], exists: false };
-  if (!response.ok) {
-    // Fallback to SDK get if the download URL is unavailable.
-    const result = await get(pathname, {
-      access: "public",
-      token,
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-    });
-    if (!result) return { entries: [], exists: true };
-    if (result.statusCode !== 200 || !result.stream) {
-      throw new Error("Waitlist storage returned an unexpected response");
-    }
-    const fallbackBody = await new Response(result.stream).text();
-    if (!fallbackBody.trim()) return { entries: [], exists: true, etag: result.blob.etag || meta.etag };
-    return { entries: decryptEntries(fallbackBody), etag: result.blob.etag || meta.etag, exists: true };
-  }
-  const body = await response.text();
-  if (!body.trim()) return { entries: [], exists: true, etag: meta.etag || response.headers.get("etag") || undefined };
-  return {
-    entries: decryptEntries(body),
-    etag: meta.etag || response.headers.get("etag") || undefined,
-    exists: true,
-  };
+function decryptEntry(body: string): WaitlistEntry {
+  const parsed: unknown = decryptWaitlistJson(body, storageSecret());
+  if (!parsed || typeof parsed !== "object") throw new Error("Waitlist storage contains invalid data");
+  return parsed as WaitlistEntry;
 }
 
-async function readBlob(): Promise<{ entries: WaitlistEntry[]; etag?: string }> {
-  const current = await readBlobPath(BLOB_PATH);
-  if (current.exists) return { entries: current.entries, etag: current.etag };
-
-  // One-time rescue from the legacy path if v2 has not been created yet.
-  const legacy = await readBlobPath(LEGACY_BLOB_PATH);
-  if (!legacy.exists || legacy.entries.length === 0) return { entries: [] };
-  await writeBlob(legacy.entries);
-  return { entries: legacy.entries };
-}
-
-async function writeBlob(entries: WaitlistEntry[], etag?: string): Promise<void> {
-  await put(BLOB_PATH, encryptWaitlistJson(entries, storageSecret()), {
+async function putEntry(entry: WaitlistEntry): Promise<void> {
+  await put(entryPath(entry.email), encryptWaitlistJson(entry, storageSecret()), {
     access: "public",
     addRandomSuffix: false,
     allowOverwrite: true,
     cacheControlMaxAge: 60,
     contentType: "application/octet-stream",
     token: blobToken(),
-    ...(etag ? { ifMatch: etag } : {}),
   });
+}
+
+async function readEntryBlob(url: string): Promise<WaitlistEntry | null> {
+  const downloadUrl = new URL(url);
+  downloadUrl.searchParams.set("download", "1");
+  const response = await fetch(downloadUrl, {
+    headers: {
+      Authorization: `Bearer ${blobToken()}`,
+      "Cache-Control": "no-cache",
+    },
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Waitlist storage returned an unexpected response");
+  const body = await response.text();
+  if (!body.trim()) return null;
+  return decryptEntry(body);
+}
+
+async function listEntryBlobs(): Promise<WaitlistEntry[]> {
+  const token = blobToken();
+  const entries: WaitlistEntry[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: ENTRY_PREFIX, cursor, limit: 1000, token });
+    for (const blob of page.blobs) {
+      if (!blob.pathname.endsWith(".enc")) continue;
+      const entry = await readEntryBlob(blob.url);
+      if (entry) entries.push(entry);
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+  return entries;
+}
+
+async function migrateLegacyIfNeeded(): Promise<void> {
+  const token = blobToken();
+  const existing = await list({ prefix: ENTRY_PREFIX, limit: 1, token });
+  if (existing.blobs.length > 0) return;
+
+  for (const legacyPath of [LEGACY_BLOB_PATH, LEGACY_BLOB_PATH_V1]) {
+    const listed = await list({ prefix: legacyPath, limit: 5, token });
+    const found = listed.blobs.find((blob) => blob.pathname === legacyPath);
+    if (!found) continue;
+    const downloadUrl = new URL(found.url);
+    downloadUrl.searchParams.set("download", "1");
+    const response = await fetch(downloadUrl, {
+      headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" },
+      cache: "no-store",
+    });
+    if (!response.ok) continue;
+    const body = await response.text();
+    try {
+      const parsed: unknown = decryptWaitlistJson(body, storageSecret());
+      if (!Array.isArray(parsed)) continue;
+      for (const item of parsed as WaitlistEntry[]) {
+        if (item?.email) await putEntry(item);
+      }
+      return;
+    } catch {
+      // Ignore undecryptable legacy blobs and continue.
+    }
+  }
 }
 
 async function readLocal(): Promise<WaitlistEntry[]> {
@@ -160,42 +152,17 @@ async function writeLocal(entries: WaitlistEntry[]): Promise<void> {
   await fs.writeFile(dataFile, JSON.stringify(entries, null, 2), "utf8");
 }
 
-function isRetryableWrite(error: unknown): boolean {
-  return (
-    error instanceof BlobPreconditionFailedError ||
-    (error instanceof Error && /already exists|precondition|conflict/i.test(error.message))
-  );
-}
-
-async function updateBlob(
-  mutate: (entries: WaitlistEntry[]) => { changed: boolean; result: boolean },
-): Promise<boolean> {
-  for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt += 1) {
-    const current = await readBlob();
-    const outcome = mutate(current.entries);
-    if (!outcome.changed) return outcome.result;
-    try {
-      await writeBlob(current.entries, current.etag);
-      return outcome.result;
-    } catch (error) {
-      if (!isRetryableWrite(error) || attempt === MAX_WRITE_ATTEMPTS - 1) throw error;
-    }
-  }
-  throw new Error("Waitlist storage could not resolve a concurrent update");
-}
-
 export async function saveWaitlistEntry(
   entry: WaitlistEntry,
 ): Promise<{ duplicate: boolean; storage: "blob" | "local" }> {
   if (blobConfigured()) {
-    const inserted = await updateBlob((entries) => {
-      if (entries.some((item) => item.email === entry.email)) {
-        return { changed: false, result: false };
-      }
-      entries.push(entry);
-      return { changed: true, result: true };
-    });
-    return { duplicate: !inserted, storage: "blob" };
+    await migrateLegacyIfNeeded();
+    const pathName = entryPath(entry.email);
+    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
+    const exists = listed.blobs.some((blob) => blob.pathname === pathName);
+    if (exists) return { duplicate: true, storage: "blob" };
+    await putEntry(entry);
+    return { duplicate: false, storage: "blob" };
   }
 
   if (process.env.NODE_ENV === "production") {
@@ -215,14 +182,18 @@ export async function updateWaitlistDetails(
   details: { tool?: string; experience?: string; message?: string },
 ): Promise<boolean> {
   if (blobConfigured()) {
-    return updateBlob((entries) => {
-      const entry = entries.find((item) => item.email === email);
-      if (!entry) return { changed: false, result: false };
-      entry.tool = details.tool;
-      entry.experience = details.experience;
-      entry.message = details.message || undefined;
-      return { changed: true, result: true };
-    });
+    await migrateLegacyIfNeeded();
+    const pathName = entryPath(email);
+    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
+    const found = listed.blobs.find((blob) => blob.pathname === pathName);
+    if (!found) return false;
+    const current = await readEntryBlob(found.url);
+    if (!current) return false;
+    current.tool = details.tool;
+    current.experience = details.experience;
+    current.message = details.message || undefined;
+    await putEntry(current);
+    return true;
   }
 
   const entries = await readLocal();
@@ -240,15 +211,23 @@ export async function recordWaitlistNotification(
   notification: WaitlistNotificationRecord,
 ): Promise<void> {
   if (blobConfigured()) {
+    await migrateLegacyIfNeeded();
+    const pathName = entryPath(email);
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      const updated = await updateBlob((entries) => {
-        const entry = entries.find((item) => item.email === email);
-        if (!entry) return { changed: false, result: false };
-        entry.notification = notification;
-        return { changed: true, result: true };
-      });
-      if (updated) return;
-      await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+      const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
+      const found = listed.blobs.find((blob) => blob.pathname === pathName);
+      if (!found) {
+        await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+        continue;
+      }
+      const current = await readEntryBlob(found.url);
+      if (!current) {
+        await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+        continue;
+      }
+      current.notification = notification;
+      await putEntry(current);
+      return;
     }
     throw new Error("Waitlist entry was not visible while recording notification status");
   }
@@ -264,8 +243,15 @@ export async function listWaitlistEntries(limit = 500): Promise<WaitlistAdminEnt
   if (!blobConfigured() && process.env.NODE_ENV === "production") {
     throw new Error("Durable waitlist storage is not configured");
   }
-  const entries = blobConfigured() ? (await readBlob()).entries : await readLocal();
-  return entries
+  if (blobConfigured()) {
+    await migrateLegacyIfNeeded();
+    const entries = await listEntryBlobs();
+    return entries
+      .map((entry) => ({ ...entry, id: entry.referralCode }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+  return (await readLocal())
     .map((entry) => ({ ...entry, id: entry.referralCode }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
