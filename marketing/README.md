@@ -34,7 +34,7 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 |---|---|
 | `BLOB_READ_WRITE_TOKEN` | Server-only Vercel Blob credential for durable production waitlist storage. |
 | `WAITLIST_ADMIN_TOKEN` | Long random server-only secret for admin access and waitlist encryption. |
-| `WAITLIST_NOTIFY_EMAIL` | Founder inbox that receives signup notifications. |
+| `WAITLIST_NOTIFY_EMAIL` | Legacy configuration only. Signup notifications are intentionally locked to `preston@unvibe.site`. |
 | `RESEND_API_KEY` | Recommended server-only Resend credential for reliable signup email. |
 | `WAITLIST_FROM_EMAIL` | Verified sender used by Resend. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL for metadata, sitemap, robots, referral links. |

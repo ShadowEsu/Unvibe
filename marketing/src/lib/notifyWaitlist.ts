@@ -24,8 +24,9 @@ function escapeHtml(value: string): string {
   );
 }
 
+/** Every signup alert is intentionally delivered to the monitored founder inbox. */
 function notifyTo(): string {
-  return process.env.WAITLIST_NOTIFY_EMAIL?.trim() || FOUNDER_EMAIL;
+  return FOUNDER_EMAIL;
 }
 
 function emailHtml(entry: FounderNotificationInput): string {

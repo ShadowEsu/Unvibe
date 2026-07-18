@@ -11,12 +11,12 @@ const entry: FounderNotificationInput = {
 };
 
 describe("notifyFounder", () => {
-  it("uses Resend with an idempotency key when configured", async () => {
+  it("uses Resend with an idempotency key and always alerts the founder inbox", async () => {
     const originalFetch = global.fetch;
     const previousKey = process.env.RESEND_API_KEY;
     const previousTo = process.env.WAITLIST_NOTIFY_EMAIL;
     process.env.RESEND_API_KEY = "re_test";
-    process.env.WAITLIST_NOTIFY_EMAIL = "preston@unvibe.site";
+    process.env.WAITLIST_NOTIFY_EMAIL = "someone-else@example.com";
     let request: { url: string; options?: RequestInit } | undefined;
     global.fetch = async (input, options) => {
       request = { url: String(input), options };
