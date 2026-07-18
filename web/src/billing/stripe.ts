@@ -22,9 +22,7 @@ export function stripeIsConfigured(): boolean {
     process.env.STRIPE_SECRET_KEY?.trim() &&
       process.env.STRIPE_WEBHOOK_SECRET?.trim() &&
       process.env.STRIPE_PRICE_PRO_MONTHLY?.trim() &&
-      process.env.STRIPE_PRICE_PRO_ANNUAL?.trim() &&
-      process.env.STRIPE_PRICE_TEAMS_MONTHLY?.trim() &&
-      process.env.STRIPE_PRICE_TEAMS_ANNUAL?.trim(),
+      process.env.STRIPE_PRICE_PRO_ANNUAL?.trim(),
   );
 }
 

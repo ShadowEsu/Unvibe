@@ -7,9 +7,10 @@ approved companion mockups (Jul 13 2026), cropped into light/dark halves.
 
 | File | Use |
 |---|---|
-| `logo.svg` | Hexagon U mark from the desktop app. |
-| `icon.png` | App icon. |
+| `logo.svg` | Hexagon U mark — brand purple `#6f45d2` with baked 45° shadow. |
+| `icon.png` | App / tab icon (same mark). |
 | `icon-1024.png` | High-resolution app icon. |
+| `/favicon.ico`, `/apple-touch-icon.png` | Browser tab + home-screen icons (generated from the mark). |
 
 The header/footer `Logo` component redraws the mark inline as SVG with `currentColor`.
 

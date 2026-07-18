@@ -20,7 +20,6 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
   const [workspaces, setWorkspaces] = useState(initialWorkspaces);
   const [interval, setInterval] = useState<BillingInterval>('monthly');
   const [teamSeats, setTeamSeats] = useState(Math.max(2, initialOverview.subscription.seats));
-  const [teamName, setTeamName] = useState('My team');
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -75,14 +74,11 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
       .finally(() => { setBusy(false); window.history.replaceState({}, '', '/plan'); });
   }, []);
 
-  const checkout = async (plan: 'pro' | 'teams') => {
+  const checkout = async () => {
     setBusy(true); setNotice('');
     try {
-      void fetch('/api/v1/billing/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event: 'upgrade_prompt.clicked', workspaceId: overview.workspace.id, plan, interval }) });
-      const body = plan === 'pro'
-        ? { plan, interval, seats: 1 }
-        : { plan, interval, seats: teamSeats, ...(overview.workspace.type === 'team' ? { workspaceId: overview.workspace.id } : { workspaceName: teamName }) };
-      const data = await requestJson<{ url: string }>('/api/v1/billing/checkout', { method: 'POST', body: JSON.stringify(body) });
+      void fetch('/api/v1/billing/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event: 'upgrade_prompt.clicked', workspaceId: overview.workspace.id, plan: 'pro', interval }) });
+      const data = await requestJson<{ url: string }>('/api/v1/billing/checkout', { method: 'POST', body: JSON.stringify({ plan: 'pro', interval, seats: 1 }) });
       window.location.assign(data.url);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Checkout could not start.'); setBusy(false); }
   };
@@ -140,8 +136,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
   };
 
   const priceLabel = useMemo(() => ({
-    pro: interval === 'monthly' ? '$8/month' : '$96/year',
-    teams: interval === 'monthly' ? '$8/member/month' : '$6/member/month',
+    pro: interval === 'monthly' ? '$8/month' : '$72/year',
   }), [interval]);
 
   return (
@@ -152,7 +147,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
       </header>
 
       {notice && <p className="plan-notice" role="status">{notice}</p>}
-      {!checkoutAvailable && <p className="plan-notice plan-notice--quiet">Checkout is safely disabled until the server has Stripe test-mode keys, four trusted price IDs, and a webhook secret.</p>}
+      {!checkoutAvailable && <p className="plan-notice plan-notice--quiet">Checkout is safely disabled until the server has Stripe test-mode keys, Pro price IDs, and a webhook secret.</p>}
 
       <section className="current-plan">
         <div><span>Current plan</span><strong>{overview.subscription.plan === 'teams' ? 'Teams' : overview.subscription.plan === 'pro' ? 'Pro' : 'Free'}</strong></div>
@@ -168,11 +163,10 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
         <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong></div><progress value={line.used} max={line.limit} /><small>Resets {new Date(line.resetsAt).toLocaleDateString()}</small></div>)}</div>
       </section>
 
-      <section className="pricing-controls-wrap" aria-label="Billing interval"><div className="pricing-controls"><button type="button" className={interval === 'monthly' ? 'active' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'active' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25% on Teams</span></button></div><p><strong>Annual Teams saves 25%:</strong> $6/member/month, billed as $72/member/year. Pro remains $8/month, billed as $96/year.</p></section>
-      <section className="plan-grid">
-        <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>30 AI explanations/month</li><li>1 active project</li><li>25 dictionary items</li><li>20 saved items</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
-        <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'Equivalent to $8/month · billed annually' : 'One personal account · billed monthly'}</small><ul><li>1,000 AI explanations/month</li><li>Up to 10 active projects</li><li>Expanded learning library</li><li>Local secret filtering before remote requests</li></ul><button className="btn btn--primary" onClick={() => void checkout('pro')} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Choose Pro</button></article>
-        <article className="plan-card"><p>Teams</p><h2>{priceLabel.teams}</h2><small>{interval === 'annual' ? 'Save 25% · $72/member/year' : '2-seat minimum · $16/month minimum'}</small><ul><li>Shared team workspace</li><li>Owner, admin, and member roles</li><li>Usage scales with paid seats</li><li>Pending invites reserve seats</li></ul><div className="team-checkout"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><label>Seats<input type="number" min={2} max={500} value={teamSeats} onChange={(event) => setTeamSeats(Number(event.target.value))} /></label></div><p className="team-total">{interval === 'monthly' ? `${money.format(8 * teamSeats)}/month` : `${money.format(72 * teamSeats)}/year`} total</p><button className="btn btn--primary" onClick={() => void checkout('teams')} disabled={busy || !checkoutAvailable}>Choose Teams</button></article>
+      <section className="pricing-controls-wrap" aria-label="Billing interval"><div className="pricing-controls"><button type="button" className={interval === 'monthly' ? 'active' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'active' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div><p><strong>Pro annual saves 25%:</strong> about $6/month, billed as $72/year. Monthly Pro is $8/month.</p></section>
+      <section className="plan-grid plan-grid--two">
+        <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>50 AI explanations/month</li><li>1 active project</li><li>Core explanation levels</li><li>Selected-code explanations</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
+        <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6/month · billed $72/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>100 AI explanations/month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Upgrade to Pro</button></article>
       </section>
 
       {overview.workspace.type === 'team' && <section className="team-panel">

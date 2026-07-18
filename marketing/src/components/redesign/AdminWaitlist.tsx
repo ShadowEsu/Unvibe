@@ -35,6 +35,10 @@ export function AdminWaitlist() {
         setState("unauthorized");
         return;
       }
+      if (response.status === 429) {
+        setState("error");
+        return;
+      }
       if (!response.ok) throw new Error("load failed");
       const data = (await response.json()) as { entries: WaitlistAdminEntry[]; generatedAt: string };
       setEntries(data.entries);
@@ -131,7 +135,9 @@ export function AdminWaitlist() {
           </label>
           {(state === "unauthorized" || state === "error") && (
             <p className="admin-error" role="alert">
-              {state === "unauthorized" ? "That access key is not valid." : "The waitlist could not be loaded. Try again."}
+              {state === "unauthorized"
+                ? "That access key is not valid. Use the WAITLIST_ADMIN_TOKEN from Vercel for this site."
+                : "The waitlist could not be loaded. Confirm WAITLIST_ADMIN_TOKEN and BLOB_READ_WRITE_TOKEN are set on this deployment, then redeploy. If you rotated the admin token, the encrypted waitlist file may need a reset."}
             </p>
           )}
           <button type="button" onClick={() => void load(token)} disabled={state === "loading" || !token.trim()}>

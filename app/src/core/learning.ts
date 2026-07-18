@@ -63,6 +63,10 @@ export interface LearningItem extends FeedItem {
   concept?: string;
   level: string;
   lines: number;
+  file?: string;
+  project?: string;
+  scope?: string;
+  dueLabel?: string;
 }
 
 export const HEAT_DAYS = 182;
@@ -203,11 +207,63 @@ export function computeLearningItems(events: LocalEvent[], limit: number): Learn
     .map((e) => ({
       id: e.id,
       ts: e.ts,
-      title: e.conceptLabel ?? `${e.lines} lines of ${e.language ?? 'code'}`,
-      meta: [e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
+      title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${e.lines} lines of ${e.language ?? 'code'}`),
+      meta: [e.scope && e.scope !== 'selection' ? e.scope : undefined, e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
       outcome: e.outcome,
       concept: e.conceptLabel ?? e.concept,
       level: e.level,
       lines: e.lines,
+      file: e.file,
+      project: e.project,
+      scope: e.scope,
     }));
+}
+
+function pathTitle(file: string): string {
+  const parts = file.split(/[/\\]/);
+  return parts[parts.length - 1] || file;
+}
+
+/**
+ * Spaced review queue: needs_review first, then understood items past 1/3/7 day intervals.
+ */
+export function computeReviewQueue(events: LocalEvent[], now = new Date(), limit = 20): LearningItem[] {
+  const nowMs = now.getTime();
+  const intervalsDays = [1, 3, 7, 14];
+
+  const needs = events
+    .filter((e) => e.outcome === 'needs_review')
+    .sort((a, b) => b.ts.localeCompare(a.ts));
+
+  const understood = events
+    .filter((e) => e.outcome === 'understood')
+    .sort((a, b) => a.ts.localeCompare(b.ts));
+
+  const dueUnderstood: Array<LocalEvent & { dueLabel: string }> = [];
+  for (const e of understood) {
+    const ageDays = Math.floor((nowMs - new Date(e.ts).getTime()) / 86_400_000);
+    const hits = intervalsDays.filter((d) => ageDays >= d);
+    if (hits.length === 0) continue;
+    dueUnderstood.push({ ...e, dueLabel: `${hits[hits.length - 1]}d revisit` });
+  }
+  dueUnderstood.sort((a, b) => a.ts.localeCompare(b.ts));
+
+  const merged = [...needs.map((e) => ({ ...e, dueLabel: 'Needs review' as string })), ...dueUnderstood]
+    .slice(0, limit);
+
+  // Preserve queue order (needs_review first); do not re-sort by recency.
+  return merged.map((e) => ({
+    id: e.id,
+    ts: e.ts,
+    title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${e.lines} lines of ${e.language ?? 'code'}`),
+    meta: [e.scope && e.scope !== 'selection' ? e.scope : undefined, e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
+    outcome: e.outcome,
+    concept: e.conceptLabel ?? e.concept,
+    level: e.level,
+    lines: e.lines,
+    file: e.file,
+    project: e.project,
+    scope: e.scope,
+    dueLabel: e.dueLabel,
+  }));
 }

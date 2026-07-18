@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import {
+  FOUNDER_EMAIL,
+  SUPPORT_EMAIL,
+  founderMailto,
+  supportMailto,
+} from "@/lib/contact";
 
 interface FooterColumn {
   heading: string;
@@ -31,7 +37,8 @@ const columns: FooterColumn[] = [
     heading: "Company",
     links: [
       { label: "FAQ", href: "#faq" },
-      { label: "Contact", href: "mailto:hello@unvibe.app" },
+      { label: "Support", href: supportMailto },
+      { label: "Preston", href: founderMailto },
     ],
   },
   {
@@ -94,12 +101,19 @@ export function Footer() {
         <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {year} Unvibe. Mac first. AI writes it; you learn it.</p>
           <p>
-            Questions?{" "}
+            Support:{" "}
             <a
-              href="mailto:hello@unvibe.app"
+              href={supportMailto}
               className="text-fg-muted underline underline-offset-2 hover:text-fg"
             >
-              hello@unvibe.app
+              {SUPPORT_EMAIL}
+            </a>
+            {" · "}
+            <a
+              href={founderMailto}
+              className="text-fg-muted underline underline-offset-2 hover:text-fg"
+            >
+              {FOUNDER_EMAIL}
             </a>
           </p>
         </div>

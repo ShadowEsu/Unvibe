@@ -33,13 +33,26 @@
     "appId": "com.unvibe.app",
     "productName": "Unvibe",
     "copyright": "Copyright © 2026 Unvibe",
-    "files": ["dist/**/*", "package.json"],
-    "directories": { "output": "release", "buildResources": "build" },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
     "icon": "build/icon.icns",
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
-      "target": [{ "target": "dir", "arch": ["arm64"] }],
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "identity": null,
@@ -52,6 +65,9 @@
         "LSUIElement": false
       }
     },
-    "dmg": { "sign": false, "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}" }
+    "dmg": {
+      "sign": false,
+      "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}"
+    }
   }
 }

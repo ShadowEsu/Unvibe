@@ -11,7 +11,9 @@ import {
   normalizedSeats,
   planLimit,
   priceFor,
+  proAnnualSavingsPercent,
   teamsAnnualSavingsPercent,
+  TEAMS_CHECKOUT_ENABLED,
 } from '../src/billing/plans';
 import { syncStripeSubscription } from '../src/billing/webhooks';
 import { publicBillingOverview } from '../src/billing/presentation';
@@ -20,12 +22,17 @@ import { stripePriceId } from '../src/billing/stripe';
 test('pricing math matches every published total', () => {
   assert.equal(priceFor('free', 'monthly', 1), 0);
   assert.equal(priceFor('pro', 'monthly', 1), 800);
-  assert.equal(priceFor('pro', 'annual', 1), 9_600);
+  assert.equal(priceFor('pro', 'annual', 1), 7_200);
   assert.equal(priceFor('teams', 'monthly', 2), 1_600);
   assert.equal(priceFor('teams', 'monthly', 5), 4_000);
   assert.equal(priceFor('teams', 'annual', 2), 14_400);
   assert.equal(priceFor('teams', 'annual', 5), 36_000);
+  assert.equal(proAnnualSavingsPercent(), 25);
   assert.equal(teamsAnnualSavingsPercent(), 25);
+});
+
+test('Teams checkout stays paused for private launch', () => {
+  assert.equal(TEAMS_CHECKOUT_ENABLED, false);
 });
 
 test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
@@ -37,9 +44,9 @@ test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
 });
 
 test('Pro and Teams entitlements use configured allowance scaling', () => {
-  assert.equal(planLimit('pro', 'ai_explanation'), 1_000);
+  assert.equal(planLimit('pro', 'ai_explanation'), 100);
   assert.equal(planLimit('pro', 'indexed_project'), 10);
-  assert.equal(planLimit('teams', 'ai_explanation', 2), 2_000);
+  assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
   assert.equal(planLimit('teams', 'project_question', 5), 2_500);
   assert.equal(planLimit('teams', 'indexed_project', 5), 10);
 });
@@ -71,7 +78,7 @@ test('inactive, canceled, unpaid, and expired grace subscriptions fall back to F
   assert.equal(effectivePlan('pro', 'grace_period', '2020-01-01T00:00:00.000Z'), 'free');
 });
 
-test('existing users receive one stable Free workspace and 30 monthly explanations', async () => {
+test('existing users receive one stable Free workspace and 50 monthly explanations', async () => {
   const userId = randomUUID();
   const store = new MemoryBillingStore(() => new Date('2026-07-16T12:00:00.000Z'));
   const first = await store.ensurePersonalWorkspace(userId);
@@ -79,10 +86,10 @@ test('existing users receive one stable Free workspace and 30 monthly explanatio
   assert.equal(first.id, second.id);
   const overview = await store.overview(userId);
   assert.equal(overview.subscription.plan, 'free');
-  for (let index = 0; index < 30; index += 1) assert.equal((await store.reserveUsage(userId, 'ai_explanation')).allowed, true);
+  for (let index = 0; index < 50; index += 1) assert.equal((await store.reserveUsage(userId, 'ai_explanation')).allowed, true);
   const denied = await store.reserveUsage(userId, 'ai_explanation');
   assert.equal(denied.allowed, false);
-  assert.equal(denied.line.used, 30);
+  assert.equal(denied.line.used, 50);
   assert.equal(denied.line.remaining, 0);
 });
 

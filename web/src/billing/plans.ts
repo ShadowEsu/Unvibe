@@ -9,7 +9,7 @@ import type {
 } from './types';
 
 const FREE_LIMITS: PlanLimits = {
-  aiExplanations: 30,
+  aiExplanations: 50,
   activeProjects: 1,
   dictionaryItems: 25,
   savedItems: 20,
@@ -17,7 +17,7 @@ const FREE_LIMITS: PlanLimits = {
 };
 
 const PRO_LIMITS: PlanLimits = {
-  aiExplanations: 1_000,
+  aiExplanations: 100,
   activeProjects: 10,
   dictionaryItems: 1_000,
   savedItems: 1_000,
@@ -28,24 +28,30 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: 'free',
     name: 'Free',
-    description: 'A real daily learning loop for individual coders.',
+    description: 'Learn how your code works — for trying Unvibe and smaller projects.',
     monthlyUnitAmount: 0,
     annualUnitAmount: 0,
     minimumSeats: 1,
     workspaceType: 'personal',
     limits: FREE_LIMITS,
-    features: ['30 AI explanations/month', '1 active project', '25 dictionary items', '20 saved items'],
+    features: ['50 AI explanations/month', '1 active project', 'Core explanation levels', 'Selected-code explanations'],
   },
   pro: {
     id: 'pro',
     name: 'Pro',
-    description: 'More room for one coder working across projects.',
+    description: 'Understand the complete project around your selection.',
     monthlyUnitAmount: 800,
-    annualUnitAmount: 9_600,
+    annualUnitAmount: 7_200,
     minimumSeats: 1,
     workspaceType: 'personal',
     limits: PRO_LIMITS,
-    features: ['1,000 AI explanations/month', 'Up to 10 active projects', 'Expanded learning library'],
+    features: [
+      '100 AI explanations/month',
+      'Git diff + agent change briefs',
+      'Nearby-file context',
+      'Since-last-understood compares',
+      'Expert explanations',
+    ],
   },
   teams: {
     id: 'teams',
@@ -56,9 +62,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     minimumSeats: 2,
     workspaceType: 'team',
     limits: PRO_LIMITS,
-    features: ['1,000 AI explanations/member/month', 'Shared workspaces', 'Owner and admin controls'],
+    features: ['100 AI explanations/member/month', 'Shared workspaces', 'Owner and admin controls', 'All Pro understanding features'],
   },
 };
+
+/** New Teams checkouts are paused. Existing Teams subscriptions still enforce and sync. */
+export const TEAMS_CHECKOUT_ENABLED = false;
 
 export const BILLABLE_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
   'trialing',
@@ -93,9 +102,17 @@ export function priceFor(plan: PlanId, interval: BillingInterval, seats: number)
   return unit * quantity;
 }
 
+export function annualSavingsPercent(plan: Exclude<PlanId, 'free'>): number {
+  const monthlyAnnualized = PLANS[plan].monthlyUnitAmount * 12;
+  return Math.round((1 - PLANS[plan].annualUnitAmount / monthlyAnnualized) * 100);
+}
+
 export function teamsAnnualSavingsPercent(): number {
-  const monthlyAnnualized = PLANS.teams.monthlyUnitAmount * 12;
-  return Math.round((1 - PLANS.teams.annualUnitAmount / monthlyAnnualized) * 100);
+  return annualSavingsPercent('teams');
+}
+
+export function proAnnualSavingsPercent(): number {
+  return annualSavingsPercent('pro');
 }
 
 export function canManageBilling(role: WorkspaceRole): boolean {

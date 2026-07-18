@@ -26,4 +26,4 @@ authenticated requests return HTTP 401).
 If you never created an account, all your data already lives only on your device. Deleting it is
 as simple as removing the app's data folder (also exposed via Settings → Data).
 
-Contact for deletion help: [support@DOMAIN].
+Contact for deletion help: support@unvibe.site or preston@unvibe.site.

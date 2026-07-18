@@ -8,9 +8,22 @@ import { track } from '@/lib/analytics';
 type Interval = 'monthly' | 'annual';
 
 const cards = {
-  free: ['Core code explanations', 'One active project', 'Basic project summaries', '30 AI explanations each month', 'No credit card required'],
-  pro: ['More AI usage', 'Up to 10 repositories', 'Cross-file explanations', 'Persistent project memory', 'Larger project support', 'Personal learning history'],
-  teams: ['Everything in Pro', 'Shared workspaces', 'Separate member accounts', 'Shared repositories and knowledge', 'Centralized billing', 'Roles and permissions'],
+  free: [
+    '50 explanations each month',
+    'Selected-code explanations',
+    'Core explanation levels',
+    'Spaced study / revisit queue',
+    'Saved explanations and progress',
+    'No credit card required',
+  ],
+  pro: [
+    '100 explanations each month',
+    'Git diff explanations',
+    'Agent change briefs',
+    'Nearby-file context',
+    'Since-last-understood compares',
+    'Expert explanations',
+  ],
 };
 
 export function PricingPlans() {
@@ -23,20 +36,19 @@ export function PricingPlans() {
     <div className="pricing-plans">
       <div className="marketing-billing-toggle" aria-label="Billing interval">
         <button type="button" className={!annual ? 'active' : ''} onClick={() => chooseInterval('monthly')} aria-pressed={!annual}>Monthly</button>
-        <button type="button" className={annual ? 'active' : ''} onClick={() => chooseInterval('annual')} aria-pressed={annual}>Annual <span>Save 25% on Teams</span></button>
+        <button type="button" className={annual ? 'active' : ''} onClick={() => chooseInterval('annual')} aria-pressed={annual}>Annual <span>Save 25%</span></button>
       </div>
-      <p className="annual-savings-note"><strong>Annual Teams saves 25%:</strong> $6/member/month, billed as $72/member/year. Pro remains $8/month, billed as $96/year.</p>
-      <div className="marketing-plan-grid">
-        <PlanCard plan="free" interval={interval} name="Free" eyebrow="Learn how your code works." price="$0" detail="No card required" features={cards.free} cta="Start for free" />
-        <PlanCard plan="pro" interval={interval} name="Pro" eyebrow="Best for individuals" price={annual ? '$96/year' : '$8/month'} detail={annual ? 'Equivalent to $8/month · billed once yearly' : 'For one personal account · billed monthly'} features={cards.pro} cta="Upgrade to Pro" featured />
-        <PlanCard plan="teams" interval={interval} name="Teams" eyebrow="For 2+ members" price={annual ? '$6/member/month' : '$8/member/month'} detail={annual ? 'Billed annually · $72/member/year · $144/year minimum' : '2-seat minimum · $16/month minimum'} savings={annual ? 'Save 25% with annual billing' : undefined} features={cards.teams} cta="Start a team" />
+      <p className="annual-savings-note"><strong>Pro annual:</strong> $72/year — about $6/month. Save 25% vs monthly.</p>
+      <div className="marketing-plan-grid marketing-plan-grid--two">
+        <PlanCard plan="free" interval={interval} name="Free" eyebrow="Learn the code in front of you." price="$0" detail="No card required" features={cards.free} cta="Start for free" />
+        <PlanCard plan="pro" interval={interval} name="Pro" eyebrow="Understand the change around it." price={annual ? '$72/year' : '$8/month'} detail={annual ? 'About $6/month · billed once yearly' : 'For one personal account · billed monthly'} features={cards.pro} cta="Upgrade to Pro" featured />
       </div>
-      <p className="pricing-disclosure">Every team member uses a separate account. Private code is filtered locally before approved context is sent; no plan requires you to bring an AI API key.</p>
+      <p className="pricing-disclosure">Free covers selected code and your study queue. Pro adds git diffs, agent briefs, nearby files, and since-last-understood compares. Private code is filtered locally before approved context is sent.</p>
     </div>
   );
 }
 
-function PlanCard({ plan, interval, name, eyebrow, price, detail, savings, features, cta, featured = false }: { plan: 'free' | 'pro' | 'teams'; interval: Interval; name: string; eyebrow: string; price: string; detail: string; savings?: string; features: string[]; cta: string; featured?: boolean }) {
+function PlanCard({ plan, interval, name, eyebrow, price, detail, savings, features, cta, featured = false }: { plan: 'free' | 'pro'; interval: Interval; name: string; eyebrow: string; price: string; detail: string; savings?: string; features: string[]; cta: string; featured?: boolean }) {
   return <article className={`marketing-plan-card${featured ? ' featured' : ''}`}>
     <span className="plan-badge">{eyebrow}</span><h3>{name}</h3><strong className="marketing-plan-price">{price}</strong><small>{detail}</small>{savings && <b className="savings-badge">{savings}</b>}
     <ul>{features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>

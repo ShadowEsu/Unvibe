@@ -14,8 +14,8 @@ remote project, or approve legal language.
 
 - Central plan definitions and limits: Free 30 explanations/1 project/25 dictionary/20 saved;
   Pro 1,000 explanations/10 projects; Teams usage scales by purchased seats.
-- Exact price math: Pro $8/month or $96/year with no false savings; Teams $8/member/month or
-  $72/member/year with a two-seat minimum and 25% annual savings.
+- Exact price math: Pro $8/month or $72/year with 25% annual savings; Teams plan math retained
+  server-side but not offered in current product surfaces.
 - Personal and team workspaces, owner/admin/member roles, separate member identities, secure
   hashed invitations, invitation expiry/revocation, and pending-invite seat reservation.
 - Server-only Stripe Checkout, Customer Portal, quantity updates with prorations, signed raw-body
@@ -63,7 +63,7 @@ Prices use licensed quantity. Full setup and event subscriptions are in `docs/bi
 - Marketing: 10/10 tests passed; strict typecheck passed; production build passed.
 - Electron app: 19/19 tests passed; strict typecheck passed; production build passed.
 - `git diff --check`: passed.
-- Exact totals confirmed in tests: $8/month, $96/year, $16/$40 monthly Teams totals at 2/5 seats,
+- Exact totals confirmed in tests: $8/month, $72/year, $16/$40 monthly Teams totals at 2/5 seats,
   and $144/$360 annual Teams totals at 2/5 seats.
 - Covered: Free/Pro/Teams entitlements, seat minimums, invite reservation, roles, unauthorized
   access, workspace separation, activation/cancellation/downgrade preservation, failed-payment
@@ -75,7 +75,7 @@ Prices use licensed quantity. Full setup and event subscriptions are in `docs/bi
 Using isolated memory storage, mock AI, dev email auth, and blank Stripe variables:
 
 - Marketing desktop: page content, no error overlay, no captured console errors, all three pricing
-  cards, monthly/annual toggle, Pro $96/year without savings, Teams $72/member/year and $144 minimum
+  cards, monthly/annual toggle, Pro $72/year with 25% savings, Teams checkout hidden from surfaces
   with 25% savings.
 - Dashboard desktop: sign-up, authenticated navigation, Free personal workspace, all five usage
   lines and resets, monthly/annual prices, two-seat Teams minimum, and honest disabled-checkout state.

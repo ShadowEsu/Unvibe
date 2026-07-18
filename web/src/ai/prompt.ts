@@ -64,7 +64,7 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   }
 
   if (ctx.enclosing && scope === 'selection') {
-    parts.push('\n## Surrounding code (context, ±20 lines)\n```\n' + ctx.enclosing + '\n```');
+    parts.push('\n## Nearby imported files\n' + ctx.enclosing);
   }
   if (ctx.code) {
     const heading = scope === 'selection' ? 'Selected code' : 'File';
@@ -104,8 +104,10 @@ function taskForScope(scope: ReviewRequestPayload['scope']): string {
     case 'project':
       return 'Give an architecture-level overview: the main parts, how they fit together, the entry points, and where a newcomer should start reading. Cite the directories/files you reference.';
     case 'diff':
-      return 'Explain what changed and why, and how data flows through the change. End with one sentence on what would break if the change were reverted.';
+      return 'Explain what changed and why, and how data flows through the change. End with one sentence on what would break if the change were reverted. If this looks like an AI-agent edit, call out intent and risks clearly.';
+    case 'file':
+      return 'Explain what changed versus the prior version when both are present. Focus on behavior shifts, risks, and what the reader should re-learn.';
     default:
-      return 'Explain what this code does and why, at the requested level. End with one sentence on what would break if it were removed or changed.';
+      return 'Explain what this code does and why, at the requested level. Use nearby files/imports when provided. End with one sentence on what would break if it were removed or changed.';
   }
 }

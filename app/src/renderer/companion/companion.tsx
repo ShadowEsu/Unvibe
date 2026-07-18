@@ -16,7 +16,10 @@ interface Profile {
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
-interface LearningItem extends FeedItem { concept?: string; level: string; lines: number }
+interface LearningItem extends FeedItem {
+  concept?: string; level: string; lines: number;
+  file?: string; project?: string; scope?: string; dueLabel?: string;
+}
 interface SyncStatus {
   phase: 'local' | 'syncing' | 'synced' | 'offline' | 'auth_required' | 'error';
   pending: number; lastSyncedAt?: string; nextRetryAt?: string; message?: string;
@@ -27,6 +30,8 @@ interface Settings {
   widgetOpacityInactive: number; inactiveBehavior: string;
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
+  useOwnAi: boolean;
+  aiProvider: 'gemini' | 'anthropic';
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
@@ -37,9 +42,8 @@ interface BillingOverview {
 }
 
 const PLAN_FEATURES = {
-  free: ['30 explanations each month', 'One active project', 'Saved learning history', 'No card required'],
-  pro: ['More AI usage', 'Up to 10 active projects', 'Deeper cross-file context', 'Personal learning history'],
-  teams: ['Everything in Pro', 'Shared team workspace', 'Roles and permissions', 'Centralized billing'],
+  free: ['50 explanations each month', '1 active project', 'Core explanation levels', 'Selected-code explanations', 'No credit card required'],
+  pro: ['100 explanations each month', 'Git diff + agent change briefs', 'Nearby-file context', 'Since-last-understood compares', 'Expert explanations'],
 } as const;
 
 const IC = {
@@ -226,7 +230,8 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
   const [level, setLevel] = useState('intermediate');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   useEffect(() => { window.unvibe.onShortcutFired(() => setFired(true)); }, []);
-  const steps = ['Welcome', 'Account', 'How it works', 'Permission', 'Shortcut', 'Overlay', 'Select code', 'Your level', 'First explanation', 'Done'];
+  // Product tour first; account / "keep it local" is near the end so local users still learn the loop.
+  const steps = ['Welcome', 'How it works', 'Permission', 'Shortcut', 'Overlay', 'Select code', 'Your level', 'First explanation', 'Account', 'Done'];
 
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
@@ -252,26 +257,17 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
 
           {step === 1 && (
             <>
-              <h2 className="ob__title">Keep it on this Mac—or sync it</h2>
-              <p className="ob__sub">An account syncs your learning across devices. Local-only keeps every record on this Mac.</p>
-              {account ? <div className="ob__status">✓ Signed in as {account.email}</div> : <SignInForm onDone={() => onSignedIn()} />}
-              {nav(account ? 'Continue' : 'Keep it local')}
-            </>
-          )}
-
-          {step === 2 && (
-            <>
               <h2 className="ob__title">A quieter way to learn code</h2>
               <ul className="ob__list">
                 <li><b>Select code</b> in Cursor, VS Code, a terminal, or a browser.</li>
                 <li><b>Press {prettyAccel(shortcut)}</b> — a floating explanation appears beside your work.</li>
-                <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress.</li>
+                <li><b>Keep what you learn</b> — every review builds your streak, concepts, and progress on this Mac.</li>
               </ul>
               {nav()}
             </>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <>
               <h2 className="ob__title">One permission</h2>
               <PermRow />
@@ -279,7 +275,7 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
             </>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <>
               <h2 className="ob__title">Try your shortcut</h2>
               <p className="ob__sub">Press <span className="kbd-lg">{prettyAccel(shortcut)}</span> now. A floating widget should appear — that is where explanations live. You can change this shortcut any time in Settings.</p>
@@ -288,16 +284,16 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
             </>
           )}
 
-          {step === 5 && (
+          {step === 4 && (
             <>
               <h2 className="ob__title">Put the overlay where it helps</h2>
-              <p className="ob__sub">You can drag and pin explanations later. This only chooses where the small activation bar begins.</p>
+              <p className="ob__sub">You can drag explanations later. This only chooses where the small activation bar begins.</p>
               <div className="ob__choices"><Choice selected={position === 'bottom-center'} title="Bottom center" detail="Quiet and within reach" onClick={() => { setPosition('bottom-center'); void window.unvibe.setSettings({ barPosition: 'bottom-center' }); }} /><Choice selected={position === 'top-right'} title="Top right" detail="Closer to the menu bar" onClick={() => { setPosition('top-right'); void window.unvibe.setSettings({ barPosition: 'top-right' }); }} /></div>
               {nav()}
             </>
           )}
 
-          {step === 6 && (
+          {step === 5 && (
             <>
               <h2 className="ob__title">Start with a small selection</h2>
               <p className="ob__sub">Highlight a function, a condition, or a confusing line. Unvibe only uses the exact filtered snippet you choose.</p>
@@ -306,7 +302,7 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
             </>
           )}
 
-          {step === 7 && (
+          {step === 6 && (
             <>
               <h2 className="ob__title">Choose how deep to go</h2>
               <p className="ob__sub">Every explanation can change level later.</p>
@@ -315,7 +311,7 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
             </>
           )}
 
-          {step === 8 && (
+          {step === 7 && (
             <>
               <h2 className="ob__title">Your first explanation lives beside your work</h2>
               <div className="ob__widget"><div><b>Why this condition?</b><span>The check keeps underage users out of an adult-only flow.</span></div><small>{level} · Save · Test me</small></div>
@@ -324,11 +320,20 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
             </>
           )}
 
+          {step === 8 && (
+            <>
+              <h2 className="ob__title">Keep it on this Mac—or sync it</h2>
+              <p className="ob__sub">An account syncs your learning across devices. Local-only keeps every record on this Mac — you already know how the product works either way.</p>
+              {account ? <div className="ob__status">✓ Signed in as {account.email}</div> : <SignInForm onDone={() => onSignedIn()} />}
+              {nav(account ? 'Continue' : 'Keep it local')}
+            </>
+          )}
+
           {step === 9 && (
             <>
               <div className="ob__mark"><LogoMark size={44} stroke={1.7} /></div>
               <h2 className="ob__title">You're set</h2>
-              <p className="ob__sub">Select code anywhere and press {prettyAccel(shortcut)}. Your progress collects in this dashboard.</p>
+              <p className="ob__sub">Select code anywhere and press {prettyAccel(shortcut)}. Your progress collects here — kept on this Mac until you choose to sync.</p>
               <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
             </>
           )}
@@ -338,7 +343,7 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
   );
 }
 
-function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => void; onSkip: () => void }) {
+function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: string) => void; onSkip: () => void; shortcut: string }) {
   return (
     <div className="login">
       <div className="login__bg" />
@@ -347,9 +352,10 @@ function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => vo
         <div className="login__brand">Unvibe</div>
         <h2 className="login__tag">Understand everything you ship.</h2>
         <div className="login__features">
-          <div className="login__feature"><span className="lf-icon">⌘</span><span>Select code anywhere</span></div>
-          <div className="login__feature"><span className="lf-icon">▸</span><span>Press your shortcut</span></div>
-          <div className="login__feature"><span className="lf-icon">✓</span><span>Understand and keep it</span></div>
+          <div className="login__feature"><span className="lf-icon">1</span><span>Select code anywhere</span></div>
+          <div className="login__feature"><span className="lf-icon">2</span><span>Press {prettyAccel(shortcut)}</span></div>
+          <div className="login__feature"><span className="lf-icon">3</span><span>Read the explanation beside your work</span></div>
+          <div className="login__feature"><span className="lf-icon">4</span><span>Save it on this Mac — sync later if you want</span></div>
         </div>
         <SignInForm onDone={onSignedIn} />
         <button className="login__skip" onClick={onSkip}>Keep it local for now →</button>
@@ -358,16 +364,62 @@ function LoginScreen({ onSignedIn, onSkip }: { onSignedIn: (email: string) => vo
   );
 }
 
-function Home({ user, shortcut, profile, feed }: { user: string; shortcut: string; profile: Profile | null; feed: FeedItem[] }) {
+function UsageChip({ usage, onPlan, compact = false }: {
+  usage: { used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null;
+  onPlan: () => void;
+  compact?: boolean;
+}) {
+  if (!usage) return null;
+  const low = usage.remaining <= 5;
+  const out = usage.remaining <= 0;
+  const planLabel = usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
+  return (
+    <button
+      type="button"
+      className={`usage-chip${compact ? ' usage-chip--side' : ''}${out ? ' usage-chip--out' : low ? ' usage-chip--low' : ''}`}
+      onClick={onPlan}
+      title={`${planLabel} · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}
+    >
+      <span>{out ? '0 left' : `${usage.remaining} left`}</span>
+      <small>{usage.used}/{usage.limit} · {planLabel}</small>
+    </button>
+  );
+}
+
+function Home({ shortcut, profile, feed, usage, onPlan }: {
+  shortcut: string;
+  profile: Profile | null;
+  feed: FeedItem[];
+  usage: { used: number; limit: number; remaining: number; resetsAt: string } | null;
+  onPlan: () => void;
+}) {
   return (
     <>
-      <div className="topline"><h1>Hello again, {user}</h1><div className="avatar">{user[0]?.toUpperCase() ?? 'U'}</div></div>
+      <div className="topline">
+        <h1>Keep it local.</h1>
+        <div className="topline__right">
+          <UsageChip usage={usage} onPlan={onPlan} />
+          <div className="avatar" aria-hidden="true">U</div>
+        </div>
+      </div>
+      {usage && usage.remaining <= 0 && (
+        <div className="limit-banner" role="status">
+          <div>
+            <strong>You have reached your monthly explanation limit.</strong>
+            <p>Your saved history and projects remain available. Allowance resets on {new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.</p>
+          </div>
+          <button type="button" className="primary-btn" onClick={onPlan}>Upgrade to Pro</button>
+        </div>
+      )}
       <div className="cols">
         <div className="main-col">
           <div className="hero">
             <h2>Understand everything you ship.</h2>
             <p>Highlight code in any app and Unvibe explains it right where you are working — pitched to how much you already know, and quiet until you ask.</p>
-            <div className="row"><button onClick={() => window.unvibe.companionReview()}>Explain some code</button><span className="kbd">or press {shortcut} anywhere</span></div>
+            <div className="row">
+              <button onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
+              <span className="kbd">or press {shortcut} anywhere</span>
+            </div>
           </div>
           <div className="feed-label">LATELY</div>
           {feed.length === 0 ? (
@@ -438,16 +490,17 @@ function outcomeName(outcome: string): string {
   return outcome === 'understood' ? 'Understood' : outcome === 'needs_review' ? 'To revisit' : 'Reviewed';
 }
 
-function Study({ items, shortcut, onReview }: { items: LearningItem[]; shortcut: string; onReview: () => void }) {
-  const revisit = items.filter((item) => item.outcome === 'needs_review');
-  const recent = items.filter((item) => item.outcome !== 'needs_review').slice(0, 3);
-  const queue = revisit.length > 0 ? revisit : recent;
+function Study({ queue, shortcut, onReview, onOpen }: {
+  queue: LearningItem[]; shortcut: string; onReview: () => void;
+  onOpen: (item: LearningItem) => void | Promise<void>;
+}) {
+  const revisit = queue.filter((item) => item.outcome === 'needs_review').length;
   return <>
     <div className="topline"><h1>Study</h1></div>
-    <p className="lead">A small, evidence-based queue from the code you have already reviewed. It grows only when you use Unvibe—no generic course pretending to know your project.</p>
-    {queue.length === 0 ? <LearningEmpty title="Your study queue is waiting for its first review." detail={`Select code and press ${shortcut}. When you mark a concept to revisit, it will appear here.`} onReview={onReview} /> : <>
-      <div className="learning-summary"><div><strong>{revisit.length}</strong><span>ready to revisit</span></div><div><strong>{items.length}</strong><span>reviews in your recent history</span></div><p>Start with the items that asked for another pass. A fresh explanation can generate the next real comprehension check.</p></div>
-      <div className="learning-list">{queue.slice(0, 6).map((item) => <article className="learning-card" key={item.id}><div><span className="learning-kicker">{item.outcome === 'needs_review' ? 'REVIEW QUEUE' : 'RECENT CONCEPT'}</span><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div><button className="soft-btn" onClick={onReview}>Open a fresh explanation</button></article>)}</div>
+    <p className="lead">Spaced revisit queue from your real history — needs-review first, then understood items due at 1 / 3 / 7 / 14 days.</p>
+    {queue.length === 0 ? <LearningEmpty title="Your study queue is waiting for its first review." detail={`Select code and press ${shortcut}. Tap Got it or finish “Test me” so items can return here on a spaced schedule.`} onReview={onReview} /> : <>
+      <div className="learning-summary"><div><strong>{revisit}</strong><span>needs review</span></div><div><strong>{queue.length}</strong><span>due now</span></div><p>Open an item to re-read the file with Pro nearby context when available, or start a fresh capture.</p></div>
+      <div className="learning-list">{queue.slice(0, 8).map((item) => <article className="learning-card" key={item.id}><div><span className="learning-kicker">{item.dueLabel ?? 'DUE'}</span><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div><button className="soft-btn" onClick={() => onOpen(item)}>Open</button></article>)}</div>
     </>}
   </>;
 }
@@ -460,13 +513,15 @@ function History({ items, onReview }: { items: LearningItem[]; onReview: () => v
   </>;
 }
 
-function Quiz({ items, onReview }: { items: LearningItem[]; onReview: () => void }) {
-  const candidates = items.filter((item) => item.outcome === 'needs_review');
+function Quiz({ queue, onReview, onOpen }: {
+  queue: LearningItem[]; onReview: () => void; onOpen: (item: LearningItem) => void | Promise<void>;
+}) {
+  const candidates = queue.filter((item) => item.outcome === 'needs_review' || Boolean(item.dueLabel));
   return <>
     <div className="topline"><h1>Quiz</h1></div>
-    <p className="lead">Comprehension checks happen inside a fresh explanation, where Unvibe has the exact code and context to ask a fair question. This queue simply chooses what is worth revisiting.</p>
-    <div className="quiz-callout"><span className="quiz-icon"><Icon d={IC.quiz} /></span><div><span className="learning-kicker">HOW QUIZZES WORK</span><h2>Explain a selection, then choose “Test me.”</h2><p>Your result updates the same learning history, concept evidence, and review queue shown everywhere else.</p></div><button className="primary-btn" onClick={onReview}>Start a code check</button></div>
-    {candidates.length > 0 ? <section className="quiz-queue"><div className="ph"><span className="t">Ready to revisit</span><span className="m">{candidates.length} item{candidates.length === 1 ? '' : 's'}</span></div>{candidates.slice(0, 5).map((item) => <div className="quiz-row" key={item.id}><div><strong>{item.title}</strong><span>{item.meta || `${item.lines} lines`}</span></div><button className="soft-btn" onClick={onReview}>Practice it</button></div>)}</section> : <LearningEmpty title="Nothing needs a quiz yet." detail="When an explanation is marked for another look, it will appear here. You can always start a fresh code check now." onReview={onReview} />}
+    <p className="lead">Comprehension checks happen inside an explanation. This spaced queue chooses what is worth revisiting.</p>
+    <div className="quiz-callout"><span className="quiz-icon"><Icon d={IC.quiz} /></span><div><span className="learning-kicker">HOW QUIZZES WORK</span><h2>Open a due item, then choose “Test me.”</h2><p>Your result updates history, concept evidence, and this queue.</p></div><button className="primary-btn" onClick={onReview}>Start a code check</button></div>
+    {candidates.length > 0 ? <section className="quiz-queue"><div className="ph"><span className="t">Ready to revisit</span><span className="m">{candidates.length} item{candidates.length === 1 ? '' : 's'}</span></div>{candidates.slice(0, 6).map((item) => <div className="quiz-row" key={item.id}><div><strong>{item.title}</strong><span>{item.dueLabel ? `${item.dueLabel} · ` : ''}{item.meta || `${item.lines} lines`}</span></div><button className="soft-btn" onClick={() => onOpen(item)}>Practice it</button></div>)}</section> : <LearningEmpty title="Nothing needs a quiz yet." detail="When an explanation is marked for another look, or a spaced revisit comes due, it will appear here." onReview={onReview} />}
   </>;
 }
 
@@ -478,22 +533,19 @@ function Plan() {
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [available, setAvailable] = useState(false);
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
-  const [seats, setSeats] = useState(2);
-  const [teamName, setTeamName] = useState('My team');
   const [message, setMessage] = useState('Loading plan…');
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean }; error?: string };
     if (!result.ok || !result.data) { setMessage(result.error ?? 'Could not load plan.'); return; }
-    setOverview(result.data.overview); setAvailable(result.data.checkoutAvailable); setSeats(Math.max(2, result.data.overview.subscription.seats)); setMessage('');
+    setOverview(result.data.overview); setAvailable(result.data.checkoutAvailable); setMessage('');
   };
   useEffect(() => { void load(); }, []);
 
-  const checkout = async (plan: 'pro' | 'teams') => {
+  const checkout = async () => {
     setBusy(true); setMessage('');
-    const input = plan === 'pro' ? { plan, interval, seats: 1 } : { plan, interval, seats, ...(overview?.workspace.type === 'team' ? { workspaceId: overview.workspace.id } : { workspaceName: teamName }) };
-    const result = await window.unvibe.startBillingCheckout(input) as { ok: boolean; error?: string };
+    const result = await window.unvibe.startBillingCheckout({ plan: 'pro', interval, seats: 1 }) as { ok: boolean; error?: string };
     if (!result.ok) setMessage(result.error ?? 'Checkout could not start.');
     setBusy(false);
   };
@@ -513,14 +565,13 @@ function Plan() {
       <div className="plan-current"><div><span>Current plan</span><strong>{overview.subscription.plan}</strong></div><div><span>Interval</span><strong>{overview.subscription.interval ?? 'no billing'}</strong></div><div><span>Status</span><strong>{overview.subscription.plan === 'free' ? 'ready' : overview.subscription.status.replaceAll('_', ' ')}</strong></div><div><span>Renews</span><strong>{overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString() : 'not applicable'}</strong></div><div><span>Workspace</span><strong>{overview.workspace.name}</strong></div>{overview.canManageBilling && overview.hasBillingAccount && <button className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>}</div>
       <div className="plan-usage">{overview.usage.slice(0, 3).map((line) => <div key={line.kind}><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong><progress value={line.used} max={line.limit} /></div>)}</div>
       <div className="plan-billing-control">
-        <div className="plan-toggle" aria-label="Billing interval"><button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25% on Teams</span></button></div>
-        <p><strong>Annual Teams:</strong> $6/member/month, billed as $72/member/year. <span>Pro stays $8/month, billed as $96/year.</span></p>
+        <div className="plan-toggle" aria-label="Billing interval"><button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div>
+        <p><strong>Pro annual:</strong> $72/year — about $6/month. Save 25% vs $8/month billed monthly.</p>
       </div>
       {!available && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
-      <div className="plan-options">
-        <article><b>Free · learn how your code works</b><h2>$0</h2><p className="plan-price-note">Always free</p><ul className="plan-feature-list">{PLAN_FEATURES.free.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="soft-btn" disabled>Included</button></article>
-        <article className="featured"><b>Pro · best for individuals</b><h2>{interval === 'monthly' ? '$8/month' : '$96/year'}</h2><p className="plan-price-note">{interval === 'monthly' ? 'One personal account · billed monthly' : 'Equivalent to $8/month · billed once yearly'}</p><ul className="plan-feature-list">{PLAN_FEATURES.pro.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="primary-btn" onClick={() => void checkout('pro')} disabled={busy || !available}>Upgrade to Pro</button></article>
-        <article><b>Teams · for 2+ members</b><h2>{interval === 'monthly' ? '$8/member/month' : '$6/member/month'}</h2><p className="plan-price-note">{interval === 'monthly' ? `${seats} paid seats · $${seats * 8}/month total` : `${seats} paid seats · $${seats * 72}/year total`} <span className={interval === 'annual' ? 'annual-save' : ''}>{interval === 'annual' ? 'Save 25%' : '2-seat minimum'}</span></p><ul className="plan-feature-list">{PLAN_FEATURES.teams.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><div className="plan-team-inputs"><input aria-label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} disabled={overview.workspace.type === 'team'} /><input aria-label="Seats" type="number" min={2} max={500} value={seats} onChange={(event) => setSeats(Number(event.target.value))} /></div><button className="primary-btn" onClick={() => void checkout('teams')} disabled={busy || !available || seats < 2}>Start a team</button></article>
+      <div className="plan-options plan-options--two">
+        <article><b>Free · understand the code in front of you</b><h2>$0</h2><p className="plan-price-note">No credit card required</p><ul className="plan-feature-list">{PLAN_FEATURES.free.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="soft-btn" disabled>Included</button></article>
+        <article className="featured"><b>Pro · understand the complete project</b><h2>{interval === 'monthly' ? '$8/month' : '$72/year'}</h2><p className="plan-price-note">{interval === 'monthly' ? 'Best for individuals · billed monthly' : 'About $6/month · billed $72/year · save 25%'}</p><ul className="plan-feature-list">{PLAN_FEATURES.pro.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="primary-btn" onClick={() => void checkout()} disabled={busy || !available}>Upgrade to Pro</button></article>
       </div>
     </>}
   </div>;
@@ -595,6 +646,116 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
   );
 }
 
+function AiSettingsPanel({ settings, onSettings, onNotice }: {
+  settings: Settings;
+  onSettings: (patch: Partial<Settings>) => Promise<string | undefined>;
+  onNotice: (message: string) => void;
+}) {
+  const [keyDraft, setKeyDraft] = useState('');
+  const [hint, setHint] = useState<string | null>(null);
+  const [present, setPresent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [costs, setCosts] = useState<Array<{ level: string; samples: Array<{ lines: number; label: string }> }> | null>(null);
+  const provider = settings.aiProvider ?? 'gemini';
+
+  const refresh = async () => {
+    const status = await window.unvibe.aiKeyStatus() as { ok: boolean; data?: { present: boolean; hint: string | null } };
+    if (status.ok && status.data) { setPresent(status.data.present); setHint(status.data.hint); }
+    const overview = await window.unvibe.aiCostOverview(provider) as { ok: boolean; data?: Array<{ level: string; samples: Array<{ lines: number; label: string }> }> };
+    if (overview.ok && overview.data) setCosts(overview.data);
+  };
+  useEffect(() => { void refresh(); }, [provider]);
+
+  const saveKey = async () => {
+    setBusy(true); setErr('');
+    const r = await window.unvibe.aiSetKey(keyDraft) as { ok: boolean; error?: string };
+    setBusy(false);
+    if (!r.ok) { setErr(r.error ?? 'Could not save key.'); return; }
+    setKeyDraft('');
+    onNotice('API key saved on this Mac only.');
+    await refresh();
+  };
+  const clearKey = async () => {
+    setBusy(true);
+    await window.unvibe.aiClearKey();
+    setBusy(false);
+    onNotice('Local API key removed.');
+    await refresh();
+  };
+
+  return (
+    <>
+      <div className="setrow" style={{ display: 'block' }}>
+        <div className="sl">Your own AI key</div>
+        <div className="sd" style={{ marginBottom: 12 }}>
+          Recommended for local use. The key stays encrypted on this Mac and is never sent to Unvibe.
+          When your monthly plan runs out, Unvibe can keep explaining with this key automatically.
+        </div>
+        <div className="ai-key-row">
+          <input
+            className="field"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={present ? `Key on file (${hint})` : 'Paste Gemini or Anthropic API key'}
+            value={keyDraft}
+            onChange={(e) => setKeyDraft(e.target.value)}
+          />
+          <button className="act" disabled={busy || !keyDraft.trim()} onClick={() => void saveKey()}>{busy ? 'Saving…' : 'Save key'}</button>
+          {present && <button className="act" disabled={busy} onClick={() => void clearKey()}>Remove</button>}
+        </div>
+        {err && <div className="field-err">{err}</div>}
+      </div>
+      <div className="setrow">
+        <div>
+          <div className="sl">Use my own AI</div>
+          <div className="sd">Always call your provider from this Mac instead of Unvibe cloud AI.</div>
+        </div>
+        <Toggle on={Boolean(settings.useOwnAi)} onClick={() => void onSettings({ useOwnAi: !settings.useOwnAi })} />
+      </div>
+      <div className="setrow">
+        <div>
+          <div className="sl">Provider</div>
+          <div className="sd">Gemini Flash is cheapest for local. Anthropic is stronger and costs more.</div>
+        </div>
+        <select
+          className="sel-input"
+          value={provider}
+          onChange={(e) => void onSettings({ aiProvider: e.target.value as 'gemini' | 'anthropic' })}
+        >
+          <option value="gemini">Gemini 2.5 Flash (recommended)</option>
+          <option value="anthropic">Anthropic Claude Sonnet</option>
+        </select>
+      </div>
+      <div className="setrow" style={{ display: 'block' }}>
+        <div className="sl">Rough cost per explanation</div>
+        <div className="sd" style={{ marginBottom: 10 }}>
+          Estimates only (list prices). Actual bills depend on your provider account. More lines and deeper modes cost more.
+        </div>
+        {costs ? (
+          <div className="cost-table" role="table" aria-label="Estimated cost by mode and lines">
+            <div className="cost-row head" role="row">
+              <span>Mode</span><span>~50 lines</span><span>~200 lines</span><span>~500 lines</span>
+            </div>
+            {costs.map((row) => (
+              <div className="cost-row" role="row" key={row.level}>
+                <span>{row.level}</span>
+                {row.samples.map((s) => <span key={s.lines}>{s.label}</span>)}
+              </div>
+            ))}
+          </div>
+        ) : <div className="sd">Loading estimates…</div>}
+        <p className="cost-note">
+          {provider === 'gemini'
+            ? 'Gemini Flash is usually fractions of a cent per selection — good for daily local use.'
+            : 'Claude Sonnet is typically a few cents per denser explanation — better when you want deeper tradeoff analysis.'}
+        </p>
+      </div>
+    </>
+  );
+}
+
 function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice }: {
   info: { version: string }; account: Account; settings: Settings;
   onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void; onNotice: (message: string) => void;
@@ -623,13 +784,15 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="mside">
           <div className="mh">SETTINGS</div>
-          {['General', 'Overlay', 'Notifications', 'Permissions', 'Privacy'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
+          {['General', 'AI', 'Overlay', 'Notifications', 'Permissions', 'Privacy'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
           <div className="mh" style={{ paddingTop: 18 }}>ACCOUNT</div>
           {['Account', 'Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
           <div className="ver">Unvibe v{info.version}</div>
         </div>
         <div className="mbody">
           <h2>{tab}</h2>
+
+          {tab === 'AI' && <AiSettingsPanel settings={settings} onSettings={onSettings} onNotice={onNotice} />}
 
           {tab === 'General' && (
             <>
@@ -683,6 +846,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your Mac. Always on.</div></div><button className="act" disabled>On</button></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
+              <div className="setrow"><div><div className="sl">Support</div><div className="sd">support@unvibe.site · preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</button></div>
             </>
           )}
 
@@ -705,20 +869,27 @@ function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [history, setHistory] = useState<LearningItem[]>([]);
+  const [queue, setQueue] = useState<LearningItem[]>([]);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
+  const [usageLine, setUsageLine] = useState<{ used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null>(null);
 
   const refresh = async () => {
-    const [acct, prof, fd, hist, st, syncState] = await Promise.all([
+    const [acct, prof, fd, hist, st, syncState, usage, q] = await Promise.all([
       window.unvibe.account() as Promise<Account>,
       window.unvibe.profile() as Promise<Profile>,
       window.unvibe.feed(8) as Promise<FeedItem[]>,
       window.unvibe.history(100) as Promise<LearningItem[]>,
       window.unvibe.getSettings() as Promise<Settings>,
       window.unvibe.syncStatus() as Promise<SyncStatus>,
+      window.unvibe.usageGet() as Promise<{ ok: boolean; data?: { used: number; limit: number; remaining: number; resetsAt: string; plan: string } }>,
+      window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
     ]);
-    setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setSettings(st); setSync(syncState);
+    setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
+    setUsageLine(usage.ok && usage.data
+      ? { used: usage.data.used, limit: usage.data.limit, remaining: usage.data.remaining, resetsAt: usage.data.resetsAt, plan: usage.data.plan }
+      : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local' });
     return { acct, st };
   };
 
@@ -755,7 +926,7 @@ function App() {
     return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} account={account} onSignedIn={async () => { await refresh(); }} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
-    return (<><div className="titlebar" /><LoginScreen onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);
+    return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);
   }
 
   return (
@@ -764,6 +935,7 @@ function App() {
       <div className="layout">
         <aside className="side fade-in fade-in--side">
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
           <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
           <button
@@ -776,16 +948,22 @@ function App() {
             <span>{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
             {sync.pending > 0 && <small>{sync.pending} pending</small>}
           </button>
-          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">30 explanations each month. Your AI model access is included—no provider API key needed.</div></div>
+          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free · 100 on Pro. AI access included—no provider API key needed.</div></div>
           <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
           <div className="page">
             <FadeIn animKey={page} stagger>
-              {page === 'Home' ? <Home user={info.user} shortcut={shortcutLabel} profile={profile} feed={feed} />
-                : page === 'Study' ? <Study items={history} shortcut={shortcutLabel} onReview={() => window.unvibe.companionReview()} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} />
+                : page === 'Study' ? <Study queue={queue} shortcut={shortcutLabel} onReview={() => window.unvibe.companionReview()} onOpen={async (item) => {
+                  const r = await window.unvibe.reopenLearningItem(item) as { ok?: boolean; cancelled?: boolean; error?: string };
+                  if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that file.');
+                }} />
                 : page === 'History' ? <History items={history} onReview={() => window.unvibe.companionReview()} />
-                : page === 'Quiz' ? <Quiz items={history} onReview={() => window.unvibe.companionReview()} />
+                : page === 'Quiz' ? <Quiz queue={queue} onReview={() => window.unvibe.companionReview()} onOpen={async (item) => {
+                  const r = await window.unvibe.reopenLearningItem(item) as { ok?: boolean; cancelled?: boolean; error?: string };
+                  if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that file.');
+                }} />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}

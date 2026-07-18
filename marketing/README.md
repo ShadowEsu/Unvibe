@@ -52,9 +52,9 @@ long random value. Entries are AES-256-GCM encrypted before upload and the admin
 bearer-token protected. The old `supabase/migrations/0001_waitlist.sql` is retained for history,
 but the current marketing storage adapter does not use it.
 
-Configure Resend for reliable founder notifications. If `RESEND_API_KEY` is absent, the app
-falls back to FormSubmit; FormSubmit requires one-time inbox activation and failed deliveries
-remain visible and retryable in `/waitlist-admin`.
+Configure Resend for founder notifications (`WAITLIST_NOTIFY_EMAIL`, default `preston@unvibe.site`).
+Failed deliveries remain visible and retryable in `/waitlist-admin`. Signups are still saved when
+email delivery fails.
 
 ## Analytics events
 
@@ -69,7 +69,7 @@ third-party script, no cookies, no code contents):
 
 1. Import the repository into Vercel and set the project root to `marketing/`.
 2. Connect a Vercel Blob store and add the remaining environment variables above.
-3. Configure either Resend or activate the FormSubmit fallback, then submit a disposable test entry.
+3. Configure Resend, then submit a disposable test entry.
 4. Confirm the entry appears in `/waitlist-admin` and the founder notification is marked sent.
 5. Vercel auto-detects Next.js; the default build (`next build`) is used.
 6. Point your domain and set `NEXT_PUBLIC_SITE_URL` to match.

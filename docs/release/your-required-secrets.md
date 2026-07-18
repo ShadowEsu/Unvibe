@@ -48,9 +48,9 @@ required value is missing.
 | `STRIPE_SECRET_KEY` | Server-only Stripe key. Use an `sk_test_...` key first; never expose it in client code. |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret from the exact deployed `/api/v1/billing/webhook` endpoint. |
 | `STRIPE_PRICE_PRO_MONTHLY` | Trusted Stripe Price ID for Pro: `$8/month`. |
-| `STRIPE_PRICE_PRO_ANNUAL` | Trusted Stripe Price ID for Pro: `$96/year` (equivalent to `$8/month`). |
-| `STRIPE_PRICE_TEAMS_MONTHLY` | Trusted Stripe Price ID for Teams: `$8/member/month`, two-seat minimum. |
-| `STRIPE_PRICE_TEAMS_ANNUAL` | Trusted Stripe Price ID for Teams: `$72/member/year` (`$6/member/month`, 25% below monthly annualized). |
+| `STRIPE_PRICE_PRO_ANNUAL` | Trusted Stripe Price ID for Pro: `$72/year` (about `$6/month`, 25% savings). |
+| `STRIPE_PRICE_TEAMS_MONTHLY` | Optional. Only if Teams checkout is re-enabled. |
+| `STRIPE_PRICE_TEAMS_ANNUAL` | Optional. Only if Teams checkout is re-enabled. |
 
 Do not enable live billing until you have completed a real test checkout,
 verified signed webhooks (including cancellation and failed payment), tested

@@ -9,13 +9,25 @@ const api = {
   appInfo: (): Promise<{ version: string; user: string; shortcut: string }> => ipcRenderer.invoke('app:info'),
   onBarNotify: (cb: (msg: string) => void) => ipcRenderer.on('bar:notify', (_e, m) => cb(m)),
 
-  // widget review
+  // widget review (single panel + tabs)
   widgetReady: () => ipcRenderer.send('widget:ready'),
+  setActiveTab: (tabId: string) => ipcRenderer.send('widget:setActiveTab', tabId),
+  addTab: (tabId: string) => ipcRenderer.send('widget:addTab', tabId),
+  closeTab: (tabId: string) => ipcRenderer.send('widget:closeTab', tabId),
   request: (opts: unknown) => ipcRenderer.send('widget:request', opts),
   cancel: () => ipcRenderer.send('widget:cancel'),
   useClipboard: (opts: unknown) => ipcRenderer.send('widget:useClipboard', opts),
+  pickFile: (opts?: unknown): Promise<{ ok: boolean; cancelled?: boolean; error?: string }> =>
+    ipcRenderer.invoke('widget:pickFile', opts),
+  usePaste: (opts: unknown) => ipcRenderer.send('widget:usePaste', opts),
+  explainDiff: (opts?: unknown) => ipcRenderer.invoke('review:explainDiff', opts),
+  explainCompare: (opts?: unknown) => ipcRenderer.invoke('review:explainCompare', opts),
+  pickProjectRoot: () => ipcRenderer.invoke('project:pickRoot'),
+  reviewQueue: (limit: number) => ipcRenderer.invoke('learning:queue', limit),
+  reopenLearningItem: (item: unknown) => ipcRenderer.invoke('review:reopenItem', item),
   testMe: () => ipcRenderer.send('widget:testMe'),
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),
+  gotIt: () => ipcRenderer.send('widget:gotIt'),
   pin: (pinned: boolean) => ipcRenderer.send('widget:pin', pinned),
   collapse: (collapsed: boolean) => ipcRenderer.send('widget:collapse', collapsed),
   closeWidget: () => ipcRenderer.send('widget:close'),
@@ -58,6 +70,11 @@ const api = {
 
   // plans + usage (network stays in the main process)
   billingOverview: () => ipcRenderer.invoke('billing:overview'),
+  usageGet: () => ipcRenderer.invoke('usage:get'),
+  aiKeyStatus: () => ipcRenderer.invoke('ai:keyStatus'),
+  aiSetKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
+  aiClearKey: () => ipcRenderer.invoke('ai:clearKey'),
+  aiCostOverview: (provider?: 'gemini' | 'anthropic') => ipcRenderer.invoke('ai:costOverview', provider),
   startBillingCheckout: (input: unknown) => ipcRenderer.invoke('billing:checkout', input),
   openBillingPortal: (workspaceId: string) => ipcRenderer.invoke('billing:portal', workspaceId),
 };

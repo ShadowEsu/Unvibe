@@ -17,11 +17,20 @@ interface AccountData {
   tokenEncrypted: boolean;
 }
 
+interface FileSnapshot {
+  file: string;
+  project?: string;
+  text: string;
+  savedAt: string;
+}
+
 interface Data {
   events: LocalEvent[];
   outbox: string[]; // event ids awaiting sync
   account?: AccountData;
   syncOwnerId?: string; // keeps a signed-out outbox bound to the account that created it
+  /** Local-only code snapshots for Pro "since last understood" — never synced. */
+  snapshots?: FileSnapshot[];
 }
 
 class Store {
@@ -40,6 +49,7 @@ class Store {
     this.data = loaded;
     this.data.events ??= [];
     this.data.outbox ??= [];
+    this.data.snapshots ??= [];
     if (this.data.account && !this.data.syncOwnerId) this.data.syncOwnerId = this.data.account.userId;
     // Versions before 0.1.0 could persist a reversible base64 token when the keychain was
     // unavailable. Fail closed and require sign-in again instead of retaining that token.
@@ -146,7 +156,22 @@ class Store {
   }
 
   wipeEverything(): void {
-    this.data = { events: [], outbox: [] };
+    this.data = { events: [], outbox: [], snapshots: [] };
+    this.save();
+  }
+
+  fileSnapshot(file: string, project?: string): FileSnapshot | undefined {
+    return (this.data.snapshots ?? []).find((s) => s.file === file && s.project === project);
+  }
+
+  saveFileSnapshot(file: string, project: string | undefined, text: string): void {
+    const snapshots = this.data.snapshots ?? [];
+    const next: FileSnapshot = { file, project, text, savedAt: new Date().toISOString() };
+    const idx = snapshots.findIndex((s) => s.file === file && s.project === project);
+    if (idx >= 0) snapshots[idx] = next;
+    else snapshots.push(next);
+    // Cap local snapshot cache.
+    this.data.snapshots = snapshots.slice(-40);
     this.save();
   }
 }

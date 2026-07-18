@@ -92,27 +92,9 @@ export const faqItems: FaqItem[] = [
     category: "pricing",
   },
   {
-    id: "teams-solo",
-    question: "Can I use Teams by myself?",
-    answer: "Teams requires at least two paid seats because it is designed for collaborative workspaces. Individual users should choose Pro.",
-    category: "pricing",
-  },
-  {
-    id: "team-login",
-    question: "Does everyone on a team share one login?",
-    answer: "No. Every member receives a separate account with their own identity, permissions, settings, and activity.",
-    category: "pricing",
-  },
-  {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: "Pro is currently $8 per month on either billing interval. Annual Pro is billed as $96 once per year.",
-    category: "pricing",
-  },
-  {
-    id: "teams-annual",
-    question: "How does annual Teams billing work?",
-    answer: "Annual Teams costs $72 per member per year, equivalent to $6 per member per month. A minimum of two seats is required.",
+    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year — about $6 per month, a 25% savings versus paying monthly.",
     category: "pricing",
   },
   {
@@ -139,7 +121,7 @@ export const faqItems: FaqItem[] = [
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "Yes. Teams provides shared workspaces with separate member accounts, member invitations, roles, centralized billing, and shared project knowledge. Teams requires at least two paid seats.",
+      "Right now Unvibe is Free and Pro for individuals. Shared team workspaces are paused; each person can use their own Pro account. Join the waitlist if you want to hear when Teams returns.",
     category: "platform",
   },
   {

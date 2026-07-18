@@ -9,6 +9,7 @@ import path from 'node:path';
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
+export type AiProviderPreference = 'gemini' | 'anthropic';
 
 export interface Settings {
   onboarded: boolean;
@@ -23,6 +24,12 @@ export interface Settings {
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
+  /** Prefer the user's own local API key instead of Unvibe cloud AI. */
+  useOwnAi: boolean;
+  /** Provider for local BYOK calls. Recommended: gemini for local/low cost. */
+  aiProvider: AiProviderPreference;
+  /** Last folder used for git-diff / nearby-file Pro features. */
+  lastProjectRoot?: string;
 }
 
 const DEFAULTS: Settings = {
@@ -35,6 +42,8 @@ const DEFAULTS: Settings = {
   theme: 'system',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
+  useOwnAi: false,
+  aiProvider: 'gemini',
 };
 
 class SettingsStore {

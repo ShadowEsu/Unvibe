@@ -37,7 +37,7 @@ const companionDestinations = [
   { icon: HistoryIcon, title: "History", detail: "A private, chronological trail of explanations and checks you chose to keep." },
   { icon: CircleHelp, title: "Quiz", detail: "Fresh comprehension checks inside real explanations, where the code context is present." },
   { icon: BarChart3, title: "Progress", detail: "Cautious evidence, streaks, and learning signals—never made-up mastery scores." },
-  { icon: CreditCard, title: "Plan", detail: "Usage, reset dates, and the Free, Pro, or Teams space that fits your work." },
+  { icon: CreditCard, title: "Plan", detail: "Usage, reset dates, and the Free or Pro space that fits your work." },
 ];
 
 export default function Home() {
@@ -218,7 +218,7 @@ export default function Home() {
           <div className="pricing-copy">
             <p className="section-number">09 / PRICING</p>
             <h2>Start free. <em>Upgrade when your projects grow.</em></h2>
-            <p>Use Unvibe for free to understand code in context. Upgrade for larger repositories, persistent project understanding, higher usage, and collaborative team workspaces.</p>
+            <p>Free helps you understand a selection — 50 explanations each month, plus your spaced study queue. Pro adds git diffs, agent briefs, nearby files, and since-last-understood compares — 100 explanations each month.</p>
           </div>
           <PricingPlans />
         </Reveal>
@@ -234,7 +234,7 @@ export default function Home() {
             <p>Clear expectations now make for a better beta later.</p>
           </div>
           <div className="faq-list">
-            {faqItems.filter((item) => ["free", "teams-solo", "team-login", "pro-annual", "teams-annual", "cancel"].includes(item.id)).map((item, index) => (
+            {faqItems.filter((item) => ["free", "pro-annual", "cancel"].includes(item.id)).map((item, index) => (
               <details key={item.id} open={index === 0}>
                 <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true" /></summary>
                 <p>{item.answer}</p>

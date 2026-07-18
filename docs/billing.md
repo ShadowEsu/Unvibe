@@ -9,10 +9,9 @@ does not activate production billing.
 `plan_entitlements` database table is the persistent, editable source used by atomic Supabase
 usage reservations; the migration seeds it to the same initial values:
 
-- Free: $0; 30 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
-- Pro: $8/month or $96/year for one personal account; 1,000 explanations/month; 10 projects.
-- Teams: $8/member/month or $72/member/year; 2-seat minimum. Explanation and project-question
-  allowances scale with purchased seats.
+- Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
+- Pro: $8/month or $72/year (about $6/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
+- Teams checkout is paused (`TEAMS_CHECKOUT_ENABLED = false` in `web/src/billing/plans.ts`). Product surfaces offer Free and Pro only. Backend Teams plan math remains for any existing workspace support.
 
 The server always chooses a trusted Stripe price ID. Browser-supplied amounts, price IDs,
 customer IDs, subscription IDs, and entitlements are ignored. The database also rejects Pro on
@@ -32,9 +31,8 @@ privileges are also restricted to `service_role`.
 
 ## Stripe test-mode setup
 
-1. Create four recurring Stripe Prices in test mode: Pro monthly ($8), Pro annual ($96), Teams
-   monthly ($8/unit/month), and Teams annual ($72/unit/year).
-2. Set the six server-only values in `web/.env.example`: secret key, webhook secret, and four
+1. Create two recurring Stripe Prices in test mode: Pro monthly ($8) and Pro annual ($72).
+2. Set the server-only values in `web/.env.example`: secret key, webhook secret, and both Pro
    price IDs. Set `PUBLIC_APP_URL` to the dashboard HTTPS origin outside local development.
 3. Register `POST /api/v1/billing/webhook` and subscribe to:
    `checkout.session.completed`, `customer.subscription.created`,
@@ -79,8 +77,7 @@ Then verify with test credentials:
 - Successful, failed, past-due/grace, renewed, cancel-at-period-end, deleted, and reactivated states.
 - Invitation acceptance with the right/wrong email; owner/admin/member permission boundaries.
 - User A cannot read or mutate User B workspaces using staging isolation scripts.
-- Published totals: $8/mo, $96/yr, $16/mo at 2 Teams seats, $40/mo at 5, $144/yr at 2,
-  and $360/yr at 5.
+- Published totals: $8/mo Pro, $72/yr Pro (25% annual savings). Legacy Teams seat math remains in tests.
 
 ## Known launch boundary
 

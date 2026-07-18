@@ -6,7 +6,10 @@ const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
-let widgetCount = 0;
+const DEFAULT_WIDGET_W = 340;
+const DEFAULT_WIDGET_H = 440;
+/** One shared review panel — ⌘U reuses this instead of stacking windows. */
+let panelWin: BrowserWindow | null = null;
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -18,7 +21,7 @@ const secureWebPrefs = () => ({
 /** Renderers are local files; deny any attempt to open new windows or navigate away. */
 function lockNavigation(win: BrowserWindow): void {
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/.test(url)) void shell.openExternal(url);
+    if (/^https?:/.test(url) || /^mailto:/i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
@@ -42,13 +45,15 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
   }
 }
 
+/** Compact landscape aisle: play · logo · home. */
+const BAR_W = 168;
+const BAR_H = 44;
+
 export function createBar(): BrowserWindow {
-  const width = 248;
-  const height = 44;
-  const { x, y } = barBounds(settings().all().barPosition, width, height);
+  const { x, y } = barBounds(settings().all().barPosition, BAR_W, BAR_H);
   const win = new BrowserWindow({
-    width,
-    height,
+    width: BAR_W,
+    height: BAR_H,
     x,
     y,
     frame: false,
@@ -59,6 +64,7 @@ export function createBar(): BrowserWindow {
     skipTaskbar: true,
     hasShadow: false,
     alwaysOnTop: true,
+    show: false,
     webPreferences: secureWebPrefs(),
   });
   win.setAlwaysOnTop(true, 'screen-saver');
@@ -73,6 +79,18 @@ export function positionBar(win: BrowserWindow): void {
   const b = win.getBounds();
   const { x, y } = barBounds(settings().all().barPosition, b.width, b.height);
   win.setBounds({ ...b, x, y });
+}
+
+/** Quiet aisle — only show while a review is active. */
+export function showBar(win: BrowserWindow | null): void {
+  if (!win || win.isDestroyed()) return;
+  positionBar(win);
+  if (!win.isVisible()) win.showInactive();
+}
+
+export function hideBar(win: BrowserWindow | null): void {
+  if (!win || win.isDestroyed()) return;
+  win.hide();
 }
 
 function snap(win: BrowserWindow): void {
@@ -103,34 +121,36 @@ function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
   };
 }
 
-export function createWidget(): BrowserWindow {
-  const s = settings().all();
+function defaultWidgetBounds(): Electron.Rectangle {
   const cursor = screen.getCursorScreenPoint();
   const { workArea } = screen.getDisplayNearestPoint(cursor);
-  const w = 440;
-  const h = 560;
+  const w = DEFAULT_WIDGET_W;
+  const h = DEFAULT_WIDGET_H;
+  return {
+    width: w,
+    height: h,
+    x: Math.min(Math.max(cursor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
+    y: Math.min(Math.max(cursor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
+  };
+}
 
-  // Restore the last-used size/position; else place near the cursor.
-  const saved = s.lastWidgetBounds;
-  const initialBounds = saved
-    ? { ...saved }
-    : {
-        width: w,
-        height: h,
-        x: Math.min(Math.max(cursor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
-        y: Math.min(Math.max(cursor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
-      };
-  // Nudge so a second widget doesn't perfectly overlap the first.
-  const stagger = widgetCount++ * 26;
-  const bounds = clampToVisibleArea({
-    ...initialBounds,
-    x: initialBounds.x + (saved ? stagger : 0),
-    y: initialBounds.y + (saved ? stagger : 0),
-  });
+/** Restore user size/position, but migrate the old stock 440×560 default to the shorter panel. */
+function resolveWidgetBounds(): Electron.Rectangle {
+  const saved = settings().all().lastWidgetBounds;
+  if (!saved) return defaultWidgetBounds();
+  const stockOld =
+    (saved.width === 440 && saved.height === 560) ||
+    (saved.width === 360 && saved.height === 480);
+  if (stockOld) {
+    return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
+  }
+  return { ...saved };
+}
 
+function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
-    ...bounds,
-    minWidth: 340,
+    ...clampToVisibleArea(bounds),
+    minWidth: 300,
     minHeight: 200,
     frame: false,
     transparent: true,
@@ -157,19 +177,44 @@ export function createWidget(): BrowserWindow {
     if (win.isDestroyed()) return;
     const behavior = settings().all().inactiveBehavior;
     if (behavior === 'dim') win.setOpacity(settings().all().widgetOpacityInactive);
-    // 'stay' leaves it fully opaque; 'collapse' is handled in the renderer via IPC.
     if (behavior === 'collapse') win.webContents.send('widget:autocollapse', true);
   });
   win.on('focus', () => {
     if (win.isDestroyed()) return;
     win.setOpacity(1);
-    if (settings().all().inactiveBehavior === 'collapse') win.webContents.send('widget:autocollapse', false);
+    if (settings().all().inactiveBehavior === 'collapse') {
+      win.webContents.send('widget:autocollapse', false);
+    }
   });
 
   lockNavigation(win);
   win.once('ready-to-show', () => win.showInactive());
   void win.loadFile(page('widget'));
   return win;
+}
+
+/** Prefer the existing review panel; create only when needed. */
+export function getOrCreateWidget(): BrowserWindow {
+  if (panelWin && !panelWin.isDestroyed()) {
+    if (panelWin.isMinimized()) panelWin.restore();
+    panelWin.showInactive();
+    panelWin.focus();
+    return panelWin;
+  }
+  panelWin = buildWidgetWindow(resolveWidgetBounds());
+  panelWin.on('closed', () => {
+    panelWin = null;
+  });
+  return panelWin;
+}
+
+/** @deprecated use getOrCreateWidget — kept for any stray callers */
+export function createWidget(): BrowserWindow {
+  return getOrCreateWidget();
+}
+
+export function currentWidget(): BrowserWindow | null {
+  return panelWin && !panelWin.isDestroyed() ? panelWin : null;
 }
 
 export function createCompanion(): BrowserWindow {
@@ -180,6 +225,7 @@ export function createCompanion(): BrowserWindow {
     minHeight: 620,
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#faf7f0',
+    skipTaskbar: false,
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
