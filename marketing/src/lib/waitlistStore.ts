@@ -75,8 +75,9 @@ function decryptEntries(body: string): WaitlistEntry[] {
 
 async function readBlobPath(pathname: string): Promise<{ entries: WaitlistEntry[]; etag?: string; exists: boolean }> {
   const token = blobToken();
+  let meta: { url: string; etag?: string };
   try {
-    await head(pathname, { token });
+    meta = await head(pathname, { token });
   } catch (error) {
     if (error instanceof BlobNotFoundError) return { entries: [], exists: false };
     // Older SDK / edge cases may throw a generic error for missing blobs.
@@ -86,18 +87,40 @@ async function readBlobPath(pathname: string): Promise<{ entries: WaitlistEntry[
     throw error;
   }
 
-  const result = await get(pathname, {
-    access: "public",
-    token,
-    headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+  // Prefer the download URL so edge/CDN HTML caches cannot return a stale encrypted payload.
+  const downloadUrl = new URL(meta.url);
+  downloadUrl.searchParams.set("download", "1");
+  const response = await fetch(downloadUrl, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+    cache: "no-store",
   });
-  if (!result) return { entries: [], exists: true };
-  if (result.statusCode !== 200 || !result.stream) {
-    throw new Error("Waitlist storage returned an unexpected response");
+  if (response.status === 404) return { entries: [], exists: false };
+  if (!response.ok) {
+    // Fallback to SDK get if the download URL is unavailable.
+    const result = await get(pathname, {
+      access: "public",
+      token,
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    });
+    if (!result) return { entries: [], exists: true };
+    if (result.statusCode !== 200 || !result.stream) {
+      throw new Error("Waitlist storage returned an unexpected response");
+    }
+    const fallbackBody = await new Response(result.stream).text();
+    if (!fallbackBody.trim()) return { entries: [], exists: true, etag: result.blob.etag || meta.etag };
+    return { entries: decryptEntries(fallbackBody), etag: result.blob.etag || meta.etag, exists: true };
   }
-  const body = await new Response(result.stream).text();
-  if (!body.trim()) return { entries: [], exists: true, etag: result.blob.etag };
-  return { entries: decryptEntries(body), etag: result.blob.etag, exists: true };
+  const body = await response.text();
+  if (!body.trim()) return { entries: [], exists: true, etag: meta.etag || response.headers.get("etag") || undefined };
+  return {
+    entries: decryptEntries(body),
+    etag: meta.etag || response.headers.get("etag") || undefined,
+    exists: true,
+  };
 }
 
 async function readBlob(): Promise<{ entries: WaitlistEntry[]; etag?: string }> {
