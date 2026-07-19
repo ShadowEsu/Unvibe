@@ -24,6 +24,15 @@ const materials = [
   },
 ];
 
+function YCombinatorMark() {
+  return (
+    <svg className="h-12 w-12 shrink-0 shadow-[4px_4px_0_rgba(242,101,34,0.32)]" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+      <rect width="80" height="80" rx="10" fill="#F26522" />
+      <path d="M40.2 46.5 54.8 22.2h-8.4L40.2 34.8 33.6 22.2h-8.4L40.2 46.5Zm-3.4 2.8h6.8V58h-6.8V49.3Z" fill="#fff" />
+    </svg>
+  );
+}
+
 export default function InvestorsPage() {
   return (
     <main className="min-h-screen bg-[#171323] text-[#f7f4ff]">
@@ -36,12 +45,18 @@ export default function InvestorsPage() {
           <p className="mb-8 flex items-center gap-2 font-mono text-xs font-bold tracking-[0.2em] text-[#bda4ff]"><Sparkles size={15} /> UNVIBE / INVESTORS</p>
           <div className="grid gap-12 lg:grid-cols-[1.35fr_.65fr] lg:items-end">
             <div>
-              <p className="mb-5 font-mono text-xs font-bold tracking-[0.18em] text-[#a886ff]">ANGEL INVESTOR PAGE</p>
+              <div className="mb-7 flex flex-wrap items-center gap-3">
+                <YCombinatorMark />
+                <div>
+                  <p className="font-mono text-xs font-bold tracking-[0.18em] text-[#a886ff]">ANGEL INVESTOR PAGE</p>
+                  <p className="mt-1 text-sm font-semibold text-[#F26522]">APPLYING TO Y COMBINATOR · FALL 2026</p>
+                </div>
+              </div>
               <h1 className="max-w-4xl text-balance text-5xl font-semibold leading-[.96] tracking-[-0.065em] sm:text-7xl lg:text-8xl">
                 Let&apos;s make AI-written code <span className="font-serif font-normal italic text-[#a886ff]">understandable.</span>
               </h1>
               <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[#c2b9d2] sm:text-xl">
-                Unvibe is building the desktop learning layer for people who build with AI. We are open to conversations with angels and early-stage investors who believe people should understand the software they ship.
+                Unvibe is building the desktop learning layer for people who build with AI. We are applying to Y Combinator&apos;s Fall 2026 batch and are open to conversations with angels and early-stage investors who believe people should understand the software they ship.
               </p>
             </div>
             <aside className="border-l border-[#8e75b8]/50 pl-6 sm:pl-8">
