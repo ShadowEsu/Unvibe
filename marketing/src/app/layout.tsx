@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { Announcement } from "@/components/Announcement";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -118,7 +119,8 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-            <Nav />
+          <Announcement />
+          <Nav />
           <main id="main">{children}</main>
           <Footer />
         </Providers>
