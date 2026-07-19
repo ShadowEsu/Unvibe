@@ -57,9 +57,7 @@ export function Announcement() {
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
           <YCombinatorMark className="h-12 w-12 shrink-0 shadow-[4px_4px_0_rgba(242,101,34,0.35)] sm:h-14 sm:w-14 md:h-16 md:w-16" />
           <p className="max-w-3xl text-balance text-[1.35rem] font-semibold leading-[1.15] tracking-tight text-white sm:text-[1.75rem] md:text-[2.15rem]">
-            Applying for{" "}
-            <span className="text-[#F26522]">Y Combinator</span> Fall 2026
-            batch
+            Applying for <span className="text-[#F26522]">Y Combinator</span> Fall 2026 — wish me luck 🍀
           </p>
         </div>
         <p className="max-w-2xl text-pretty text-[0.95rem] font-medium leading-snug text-white/80 sm:text-[1.05rem] md:text-[1.15rem]">
