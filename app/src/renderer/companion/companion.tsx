@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
+import { RichText } from '../shared/richText';
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -19,7 +20,16 @@ interface FeedItem { id: string; ts: string; title: string; meta: string; outcom
 interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
+  language?: string; code?: string; explanation?: string;
 }
+
+const STUDY_LEVELS = [
+  { id: 'new', label: 'New' },
+  { id: 'beginner', label: 'Beginner' },
+  { id: 'intermediate', label: 'Intermediate' },
+  { id: 'advanced', label: 'Advanced' },
+  { id: 'expert', label: 'Expert' },
+] as const;
 interface SyncStatus {
   phase: 'local' | 'syncing' | 'synced' | 'offline' | 'auth_required' | 'error';
   pending: number; lastSyncedAt?: string; nextRetryAt?: string; message?: string;
@@ -31,7 +41,7 @@ interface Settings {
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
   useOwnAi: boolean;
-  aiProvider: 'gemini' | 'anthropic';
+  aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
@@ -184,9 +194,9 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   };
   return (
     <div className="signin">
-      <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for secure sign-in…' : 'Sign in securely'}</button>
+      <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for Google sign-in…' : 'Continue with Google'}</button>
       {err && <div className="field-err">{err}</div>}
-      <div className="field-note">{code ? `A secure browser window is open. Enter code ${code} after signing in.` : 'We open your browser so Supabase can verify your account. This app never sees your password.'}</div>
+      <div className="field-note">{code ? `Browser open — sign in with Google, then approve code ${code}.` : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}</div>
     </div>
   );
 }
@@ -207,7 +217,7 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
-      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, Unvibe falls back to explaining whatever you last copied.</div>
+      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, Unvibe falls back to explaining whatever you last copied. If the toggle is already on, quit Unvibe fully and reopen it — macOS only applies the grant to the next launch.</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
@@ -286,9 +296,14 @@ function Onboarding({ shortcut, account, onDone, onSignedIn }: { shortcut: strin
 
           {step === 4 && (
             <>
-              <h2 className="ob__title">Put the overlay where it helps</h2>
-              <p className="ob__sub">You can drag explanations later. This only chooses where the small activation bar begins.</p>
-              <div className="ob__choices"><Choice selected={position === 'bottom-center'} title="Bottom center" detail="Quiet and within reach" onClick={() => { setPosition('bottom-center'); void window.unvibe.setSettings({ barPosition: 'bottom-center' }); }} /><Choice selected={position === 'top-right'} title="Top right" detail="Closer to the menu bar" onClick={() => { setPosition('top-right'); void window.unvibe.setSettings({ barPosition: 'top-right' }); }} /></div>
+              <h2 className="ob__title">Put the bar where it helps</h2>
+              <p className="ob__sub">Default is bottom center. Pick another corner anytime — same choices live in Settings → Overlay.</p>
+              <div className="ob__choices">
+                <Choice selected={position === 'bottom-center'} title="Bottom center" detail="Quiet and within reach (default)" onClick={() => { setPosition('bottom-center'); void window.unvibe.setSettings({ barPosition: 'bottom-center' }); }} />
+                <Choice selected={position === 'top-center'} title="Top center" detail="Above your editor, still centered" onClick={() => { setPosition('top-center'); void window.unvibe.setSettings({ barPosition: 'top-center' }); }} />
+                <Choice selected={position === 'top-right'} title="Top right" detail="Closer to the menu bar" onClick={() => { setPosition('top-right'); void window.unvibe.setSettings({ barPosition: 'top-right' }); }} />
+                <Choice selected={position === 'bottom-right'} title="Bottom right" detail="Out of the way on wide screens" onClick={() => { setPosition('bottom-right'); void window.unvibe.setSettings({ barPosition: 'bottom-right' }); }} />
+              </div>
               {nav()}
             </>
           )}
@@ -397,10 +412,6 @@ function Home({ shortcut, profile, feed, usage, onPlan }: {
     <>
       <div className="topline">
         <h1>Keep it local.</h1>
-        <div className="topline__right">
-          <UsageChip usage={usage} onPlan={onPlan} />
-          <div className="avatar" aria-hidden="true">U</div>
-        </div>
       </div>
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
@@ -490,38 +501,294 @@ function outcomeName(outcome: string): string {
   return outcome === 'understood' ? 'Understood' : outcome === 'needs_review' ? 'To revisit' : 'Reviewed';
 }
 
-function Study({ queue, shortcut, onReview, onOpen }: {
-  queue: LearningItem[]; shortcut: string; onReview: () => void;
-  onOpen: (item: LearningItem) => void | Promise<void>;
+function LessonCode({ code, language }: { code: string; language?: string }) {
+  return (
+    <div className="lesson-code">
+      <div className="lesson-code__bar"><span>{language || 'code'}</span><span>{code.split('\n').length} lines</span></div>
+      <pre><code>{code}</code></pre>
+    </div>
+  );
+}
+
+function Study({ history, queue, shortcut, onReview, onRestudy, onRefresh }: {
+  history: LearningItem[]; queue: LearningItem[]; shortcut: string; onReview: () => void;
+  onRestudy: (item: LearningItem, level: string) => void | Promise<void>;
+  onRefresh: () => void | Promise<void>;
 }) {
+  const lessons = history.filter((item) => Boolean(item.code));
+  const [selectedId, setSelectedId] = useState<string | null>(lessons[0]?.id ?? queue[0]?.id ?? null);
+  const selected = history.find((item) => item.id === selectedId) ?? queue.find((item) => item.id === selectedId) ?? null;
+  const [level, setLevel] = useState(selected?.level || 'intermediate');
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [askLeft, setAskLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    void window.unvibe.studyAskStatus().then((s) => {
+      const status = s as { remaining: number };
+      setAskLeft(status.remaining);
+    });
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (selected?.level) setLevel(selected.level);
+  }, [selected?.id, selected?.level]);
+
+  const ask = async () => {
+    if (!selected) return;
+    setBusy(true); setError(''); setAnswer('');
+    const result = await window.unvibe.studyAsk({ eventId: selected.id, question }) as { ok: boolean; answer?: string; error?: string; remaining?: number };
+    setBusy(false);
+    if (result.remaining !== undefined) setAskLeft(result.remaining);
+    if (!result.ok) { setError(result.error ?? 'Could not ask.'); return; }
+    setAnswer(result.answer ?? '');
+    setQuestion('');
+    void onRefresh();
+  };
+
   const revisit = queue.filter((item) => item.outcome === 'needs_review').length;
+  const catalog = lessons.length > 0 ? lessons : queue;
+
   return <>
     <div className="topline"><h1>Study</h1></div>
-    <p className="lead">Spaced revisit queue from your real history — needs-review first, then understood items due at 1 / 3 / 7 / 14 days.</p>
-    {queue.length === 0 ? <LearningEmpty title="Your study queue is waiting for its first review." detail={`Select code and press ${shortcut}. Tap Got it or finish “Test me” so items can return here on a spaced schedule.`} onReview={onReview} /> : <>
-      <div className="learning-summary"><div><strong>{revisit}</strong><span>needs review</span></div><div><strong>{queue.length}</strong><span>due now</span></div><p>Open an item to re-read the file with Pro nearby context when available, or start a fresh capture.</p></div>
-      <div className="learning-list">{queue.slice(0, 8).map((item) => <article className="learning-card" key={item.id}><div><span className="learning-kicker">{item.dueLabel ?? 'DUE'}</span><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div><button className="soft-btn" onClick={() => onOpen(item)}>Open</button></article>)}</div>
-    </>}
+    <p className="lead">Everything you have already reviewed stays here. Re-open the code, pick a level again, and ask a short follow-up when you get stuck.</p>
+    {catalog.length === 0 ? <LearningEmpty title="Your study shelf is empty." detail={`Select code and press ${shortcut}. After an explanation finishes, the code and teaching text land here for later study.`} onReview={onReview} /> : (
+      <div className="study-layout">
+        <aside className="study-rail">
+          <div className="learning-summary study-summary">
+            <div><strong>{revisit}</strong><span>needs review</span></div>
+            <div><strong>{catalog.length}</strong><span>saved lessons</span></div>
+          </div>
+          <div className="learning-list">
+            {catalog.slice(0, 40).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`learning-card learning-card--pick ${item.id === selectedId ? 'on' : ''}`}
+                onClick={() => { setSelectedId(item.id); setAnswer(''); setError(''); }}
+              >
+                <div>
+                  <span className="learning-kicker">{item.dueLabel ?? item.level}</span>
+                  <h2>{item.title}</h2>
+                  <p>{item.meta || `${item.lines} lines · ${item.level}`}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </aside>
+        <section className="study-pane">
+          {!selected ? <p className="muted">Pick a lesson from the left.</p> : <>
+            <div className="study-pane__head">
+              <div>
+                <span className="learning-kicker">{outcomeName(selected.outcome)}</span>
+                <h2>{selected.title}</h2>
+                <p>{selected.meta || `${selected.lines} lines · ${selected.level}`}</p>
+              </div>
+            </div>
+            {selected.code ? <LessonCode code={selected.code} language={selected.language} /> : <p className="muted">No saved code on this item yet — restudy will try to reopen the file.</p>}
+            {selected.explanation ? <div className="lesson-explain"><span className="learning-kicker">Last explanation</span><RichText className="lesson-explain__body" text={selected.explanation} /></div> : null}
+            <div className="study-levels">
+              <span className="learning-kicker">Restudy level</span>
+              <div className="level-row">
+                {STUDY_LEVELS.map((opt) => (
+                  <button key={opt.id} type="button" className={level === opt.id ? 'on' : ''} onClick={() => setLevel(opt.id)}>{opt.label}</button>
+                ))}
+              </div>
+              <button className="primary-btn" type="button" onClick={() => void onRestudy(selected, level)}>Explain again at this level</button>
+            </div>
+            <div className="study-assistant">
+              <div className="study-assistant__head">
+                <span className="learning-kicker">Study assistant</span>
+                <span className="muted">{askLeft === null ? '' : `${askLeft} questions left today`}</span>
+              </div>
+              <p className="muted">Ask about this lesson only — short clarifying questions work best.</p>
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                rows={3}
+                placeholder="e.g. Why does this return early here?"
+                disabled={busy || !selected.code}
+              />
+              <button className="soft-btn" type="button" disabled={busy || !question.trim() || !selected.code} onClick={() => void ask()}>
+                {busy ? 'Thinking…' : 'Ask'}
+              </button>
+              {error ? <p className="form-error">{error}</p> : null}
+              {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><div className="lesson-explain__body">{answer}</div></div> : null}
+            </div>
+          </>}
+        </section>
+      </div>
+    )}
   </>;
 }
 
 function History({ items, onReview }: { items: LearningItem[]; onReview: () => void }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = items.find((item) => item.id === openId) ?? null;
   return <>
     <div className="topline"><h1>History</h1></div>
-    <p className="lead">Your actual trail of explanations and checks. It stays on this Mac first, then syncs when you sign in—never a fabricated activity feed.</p>
-    {items.length === 0 ? <LearningEmpty title="No history yet." detail="Your explanations will appear here after you select code and open a review." onReview={onReview} /> : <div className="history-list">{items.map((item) => <article className="history-row" key={item.id}><time dateTime={item.ts}>{new Date(item.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {fmtTime(item.ts)}</time><div><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div><span className={`tag tag--${item.outcome}`}>{outcomeName(item.outcome)}</span></article>)}</div>}
+    <p className="lead">Each entry keeps the code you were taught and the explanation Unvibe gave — on this Mac first, synced as metadata when you sign in.</p>
+    {items.length === 0 ? <LearningEmpty title="No history yet." detail="Your explanations will appear here after you select code and open a review." onReview={onReview} /> : (
+      <div className="history-split">
+        <div className="history-list">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`history-row history-row--btn ${item.id === openId ? 'on' : ''}`}
+              onClick={() => setOpenId(item.id === openId ? null : item.id)}
+            >
+              <time dateTime={item.ts}>{new Date(item.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {fmtTime(item.ts)}</time>
+              <div><h2>{item.title}</h2><p>{item.meta || `${item.lines} lines · ${item.level}`}</p></div>
+              <span className={`tag tag--${item.outcome}`}>{outcomeName(item.outcome)}</span>
+            </button>
+          ))}
+        </div>
+        {open ? (
+          <aside className="history-detail">
+            <span className="learning-kicker">{open.level} · {outcomeName(open.outcome)}</span>
+            <h2>{open.title}</h2>
+            <p className="muted">{open.file || open.project || 'Saved lesson'}</p>
+            {open.code ? <LessonCode code={open.code} language={open.language} /> : <p className="muted">Code was not saved for this older entry. New reviews keep the snippet here.</p>}
+            {open.explanation ? <div className="lesson-explain"><span className="learning-kicker">Explanation</span><RichText className="lesson-explain__body" text={open.explanation} /></div> : <p className="muted">No explanation text on file yet for this one.</p>}
+          </aside>
+        ) : <aside className="history-detail history-detail--empty"><p className="muted">Select a row to read the code and explanation.</p></aside>}
+      </div>
+    )}
   </>;
 }
 
-function Quiz({ queue, onReview, onOpen }: {
-  queue: LearningItem[]; onReview: () => void; onOpen: (item: LearningItem) => void | Promise<void>;
+function Quiz({ history, queue, onReview, onRefresh }: {
+  history: LearningItem[]; queue: LearningItem[]; onReview: () => void; onRefresh: () => void | Promise<void>;
 }) {
-  const candidates = queue.filter((item) => item.outcome === 'needs_review' || Boolean(item.dueLabel));
+  const candidates = [
+    ...queue.filter((item) => item.code),
+    ...history.filter((item) => item.code && !queue.some((q) => q.id === item.id)),
+  ];
+  const [selectedId, setSelectedId] = useState<string | null>(candidates[0]?.id ?? null);
+  const selected = candidates.find((item) => item.id === selectedId) ?? null;
+  const [card, setCard] = useState<{ question: string; options: string[]; conceptLabel: string; key: number } | null>(null);
+  const [result, setResult] = useState<{ correct: boolean; rationale: string; answerIndex?: number } | null>(null);
+  const [wrongPicks, setWrongPicks] = useState<number[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [left, setLeft] = useState<number | null>(null);
+  const [cardKey, setCardKey] = useState(0);
+
+  useEffect(() => {
+    void window.unvibe.quizStatus().then((s) => setLeft((s as { remaining: number }).remaining));
+  }, []);
+
+  const start = async (item: LearningItem) => {
+    setSelectedId(item.id);
+    setBusy(true); setError(''); setCard(null); setResult(null); setWrongPicks([]);
+    const r = await window.unvibe.quizStart(item.id) as {
+      ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number;
+    };
+    setBusy(false);
+    if (r.remaining !== undefined) setLeft(r.remaining);
+    if (!r.ok || !r.question || !r.options) { setError(r.error ?? 'Could not start quiz.'); return; }
+    const nextKey = cardKey + 1;
+    setCardKey(nextKey);
+    setCard({ question: r.question, options: r.options, conceptLabel: r.conceptLabel ?? item.title, key: nextKey });
+  };
+
+  const answer = async (choice: number) => {
+    if (!selected || result?.correct || wrongPicks.includes(choice)) return;
+    setBusy(true); setError('');
+    const r = await window.unvibe.quizAnswer({ eventId: selected.id, choice }) as {
+      ok: boolean; correct?: boolean; rationale?: string; answerIndex?: number; error?: string;
+    };
+    setBusy(false);
+    if (!r.ok) { setError(r.error ?? 'Could not grade.'); return; }
+    if (!r.correct) {
+      setWrongPicks((prev) => (prev.includes(choice) ? prev : [...prev, choice]));
+      setResult({ correct: false, rationale: r.rationale ?? 'Sorry — wrong. Pick another option.' });
+      return;
+    }
+    setResult({
+      correct: true,
+      rationale: r.rationale ?? 'You got it.',
+      answerIndex: r.answerIndex ?? choice,
+    });
+    void onRefresh();
+  };
+
   return <>
     <div className="topline"><h1>Quiz</h1></div>
-    <p className="lead">Comprehension checks happen inside an explanation. This spaced queue chooses what is worth revisiting.</p>
-    <div className="quiz-callout"><span className="quiz-icon"><Icon d={IC.quiz} /></span><div><span className="learning-kicker">HOW QUIZZES WORK</span><h2>Open a due item, then choose “Test me.”</h2><p>Your result updates history, concept evidence, and this queue.</p></div><button className="primary-btn" onClick={onReview}>Start a code check</button></div>
-    {candidates.length > 0 ? <section className="quiz-queue"><div className="ph"><span className="t">Ready to revisit</span><span className="m">{candidates.length} item{candidates.length === 1 ? '' : 's'}</span></div>{candidates.slice(0, 6).map((item) => <div className="quiz-row" key={item.id}><div><strong>{item.title}</strong><span>{item.dueLabel ? `${item.dueLabel} · ` : ''}{item.meta || `${item.lines} lines`}</span></div><button className="soft-btn" onClick={() => onOpen(item)}>Practice it</button></div>)}</section> : <LearningEmpty title="Nothing needs a quiz yet." detail="When an explanation is marked for another look, or a spaced revisit comes due, it will appear here." onReview={onReview} />}
+    <p className="lead">AI quiz cards from lessons you already saved — pick a topic, answer in place, and your understanding updates immediately.</p>
+    {candidates.length === 0 ? <LearningEmpty title="Nothing to quiz yet." detail="Finish an explanation so Unvibe can keep the code locally. Then quiz cards can be built from that lesson." onReview={onReview} /> : (
+      <div className="quiz-layout">
+        <div className="quiz-callout">
+          <span className="quiz-icon"><Icon d={IC.quiz} /></span>
+          <div>
+            <span className="learning-kicker">QUIZ CARDS</span>
+            <h2>Practice what you already reviewed</h2>
+            <p>{left === null ? 'Daily quiz cards are limited.' : `${left} quiz cards left today.`} Results update History and Study.</p>
+          </div>
+        </div>
+        <div className="quiz-split">
+          <section className="quiz-queue">
+            <div className="ph"><span className="t">Lessons</span><span className="m">{candidates.length}</span></div>
+            {candidates.slice(0, 20).map((item) => (
+              <div className={`quiz-row ${item.id === selectedId ? 'on' : ''}`} key={item.id}>
+                <div><strong>{item.title}</strong><span>{item.dueLabel ? `${item.dueLabel} · ` : ''}{item.meta || `${item.lines} lines`}</span></div>
+                <button className="soft-btn" type="button" disabled={busy} onClick={() => void start(item)}>
+                  {busy && item.id === selectedId ? 'Building…' : 'Quiz me'}
+                </button>
+              </div>
+            ))}
+          </section>
+          <section className="quiz-card-pane">
+            {error ? <p className="form-error">{error}</p> : null}
+            {!card && !error ? <p className="muted">Choose a lesson to generate a quiz card.</p> : null}
+            {card ? (
+              <div className="quiz-card" key={card.key}>
+                <span className="learning-kicker">{card.conceptLabel || 'Check'}</span>
+                <h2>{card.question}</h2>
+                {selected?.code ? <LessonCode code={selected.code.slice(0, 2_400)} language={selected.language} /> : null}
+                <div className="quiz-options">
+                  {card.options.map((opt, idx) => {
+                    const isWrong = wrongPicks.includes(idx);
+                    const isCorrect = Boolean(result?.correct && result.answerIndex === idx);
+                    let cls = '';
+                    if (isCorrect) cls = 'correct';
+                    else if (isWrong) cls = 'wrong';
+                    else if (result?.correct) cls = 'dimmed';
+                    return (
+                      <button
+                        key={`${card.key}-${idx}`}
+                        type="button"
+                        className={cls}
+                        disabled={busy || isWrong || Boolean(result?.correct)}
+                        onClick={() => void answer(idx)}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                {result ? (
+                  <div
+                    className={`quiz-result ${result.correct ? 'ok' : 'bad'}`}
+                    key={result.correct ? 'ok' : `try-${wrongPicks.join('-')}`}
+                  >
+                    <span className="quiz-result__eyebrow">{result.correct ? 'Nice work' : 'Keep going'}</span>
+                    <strong>{result.correct ? 'Congrats!' : 'Sorry — wrong'}</strong>
+                    <p>{result.rationale || (result.correct ? 'You got it. That one sticks a little better now.' : 'No stress — pick another option. The card stays open.')}</p>
+                    {result.correct ? (
+                      <button className="soft-btn" type="button" onClick={() => selected && void start(selected)}>Another card</button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </div>
+    )}
   </>;
 }
 
@@ -657,11 +924,15 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [costs, setCosts] = useState<Array<{ level: string; samples: Array<{ lines: number; label: string }> }> | null>(null);
+  const [providers, setProviders] = useState<Array<{ id: Settings['aiProvider']; label: string; blurb: string; model?: string }>>([]);
   const provider = settings.aiProvider ?? 'gemini';
+  const selected = providers.find((m) => m.id === provider);
 
   const refresh = async () => {
     const status = await window.unvibe.aiKeyStatus() as { ok: boolean; data?: { present: boolean; hint: string | null } };
     if (status.ok && status.data) { setPresent(status.data.present); setHint(status.data.hint); }
+    const catalog = await window.unvibe.aiModels() as { ok: boolean; data?: Array<{ id: Settings['aiProvider']; label: string; blurb: string; model?: string }> };
+    if (catalog.ok && catalog.data) setProviders(catalog.data);
     const overview = await window.unvibe.aiCostOverview(provider) as { ok: boolean; data?: Array<{ level: string; samples: Array<{ lines: number; label: string }> }> };
     if (overview.ok && overview.data) setCosts(overview.data);
   };
@@ -669,10 +940,11 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
 
   const saveKey = async () => {
     setBusy(true); setErr('');
-    const r = await window.unvibe.aiSetKey(keyDraft) as { ok: boolean; error?: string };
+    const r = await window.unvibe.aiSetKey(keyDraft) as { ok: boolean; error?: string; provider?: Settings['aiProvider'] };
     setBusy(false);
     if (!r.ok) { setErr(r.error ?? 'Could not save key.'); return; }
     setKeyDraft('');
+    if (r.provider) await onSettings({ aiProvider: r.provider });
     onNotice('API key saved on this Mac only.');
     await refresh();
   };
@@ -687,10 +959,9 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
   return (
     <>
       <div className="setrow" style={{ display: 'block' }}>
-        <div className="sl">Your own AI key</div>
+        <div className="sl">Your own API key</div>
         <div className="sd" style={{ marginBottom: 12 }}>
-          Recommended for local use. The key stays encrypted on this Mac and is never sent to Unvibe.
-          When your monthly plan runs out, Unvibe can keep explaining with this key automatically.
+          Works with Gemini, OpenAI, Anthropic, Grok, DeepSeek, or Kimi. The key stays encrypted on this Mac and is never sent to Unvibe.
         </div>
         <div className="ai-key-row">
           <input
@@ -698,7 +969,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
             type="password"
             autoComplete="off"
             spellCheck={false}
-            placeholder={present ? `Key on file (${hint})` : 'Paste Gemini or Anthropic API key'}
+            placeholder={present ? `Key on file (${hint})` : 'Paste any supported API key'}
             value={keyDraft}
             onChange={(e) => setKeyDraft(e.target.value)}
           />
@@ -717,21 +988,29 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <div className="setrow">
         <div>
           <div className="sl">Provider</div>
-          <div className="sd">Gemini Flash is cheapest for local. Anthropic is stronger and costs more.</div>
+          <div className="sd">Each option uses a cheap default model. Cost estimates update below.</div>
         </div>
         <select
           className="sel-input"
           value={provider}
-          onChange={(e) => void onSettings({ aiProvider: e.target.value as 'gemini' | 'anthropic' })}
+          onChange={(e) => void onSettings({ aiProvider: e.target.value as Settings['aiProvider'] })}
         >
-          <option value="gemini">Gemini 2.5 Flash (recommended)</option>
-          <option value="anthropic">Anthropic Claude Sonnet</option>
+          {(providers.length ? providers : [
+            { id: 'gemini' as const, label: 'Gemini' },
+            { id: 'openai' as const, label: 'OpenAI' },
+            { id: 'anthropic' as const, label: 'Anthropic' },
+            { id: 'deepseek' as const, label: 'DeepSeek' },
+            { id: 'grok' as const, label: 'Grok' },
+            { id: 'kimi' as const, label: 'Kimi' },
+          ]).map((m) => (
+            <option key={m.id} value={m.id}>{m.label}{m.id === 'gemini' ? ' (cheapest)' : ''}</option>
+          ))}
         </select>
       </div>
       <div className="setrow" style={{ display: 'block' }}>
-        <div className="sl">Rough cost per explanation</div>
+        <div className="sl">Rough cost per explanation · {selected?.label ?? provider}{selected?.model ? ` · ${selected.model}` : ''}</div>
         <div className="sd" style={{ marginBottom: 10 }}>
-          Estimates only (list prices). Actual bills depend on your provider account. More lines and deeper modes cost more.
+          Estimates update when you change the provider. List prices only — your provider bill may differ.
         </div>
         {costs ? (
           <div className="cost-table" role="table" aria-label="Estimated cost by mode and lines">
@@ -747,9 +1026,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
           </div>
         ) : <div className="sd">Loading estimates…</div>}
         <p className="cost-note">
-          {provider === 'gemini'
-            ? 'Gemini Flash is usually fractions of a cent per selection — good for daily local use.'
-            : 'Claude Sonnet is typically a few cents per denser explanation — better when you want deeper tradeoff analysis.'}
+          {selected?.blurb ?? 'Pick a provider and paste its API key. We keep the cheap default models.'}
         </p>
       </div>
     </>
@@ -905,10 +1182,19 @@ function App() {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
+  const [themeIsDark, setThemeIsDark] = useState(false);
   useEffect(() => {
     const preference = settings?.theme ?? 'system';
-    const dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const dark = preference === 'dark' || (preference === 'system' && media.matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      setThemeIsDark(dark);
+    };
+    apply();
+    if (preference !== 'system') return;
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
   }, [settings?.theme]);
 
   const applySettings = async (patch: Partial<Settings>): Promise<string | undefined> => {
@@ -952,18 +1238,41 @@ function App() {
           <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
+          <div className="content-tools">
+            <button
+              type="button"
+              className="theme-toggle"
+              aria-label={themeIsDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={themeIsDark ? 'Light mode' : 'Dark mode'}
+              onClick={() => void applySettings({ theme: themeIsDark ? 'light' : 'dark' })}
+            >
+              {themeIsDark ? '☀' : '☾'}
+            </button>
+            <span className="topline__logo" aria-hidden="true">
+              <LogoMark size={22} stroke={1.8} />
+            </span>
+          </div>
           <div className="page">
             <FadeIn animKey={page} stagger>
               {page === 'Home' ? <Home shortcut={shortcutLabel} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} />
-                : page === 'Study' ? <Study queue={queue} shortcut={shortcutLabel} onReview={() => window.unvibe.companionReview()} onOpen={async (item) => {
-                  const r = await window.unvibe.reopenLearningItem(item) as { ok?: boolean; cancelled?: boolean; error?: string };
-                  if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that file.');
-                }} />
+                : page === 'Study' ? <Study
+                  history={history}
+                  queue={queue}
+                  shortcut={shortcutLabel}
+                  onReview={() => window.unvibe.companionReview()}
+                  onRefresh={() => void refresh()}
+                  onRestudy={async (item, level) => {
+                    const r = await window.unvibe.reopenLearningItem({ ...item, level }) as { ok?: boolean; cancelled?: boolean; error?: string };
+                    if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that lesson.');
+                  }}
+                />
                 : page === 'History' ? <History items={history} onReview={() => window.unvibe.companionReview()} />
-                : page === 'Quiz' ? <Quiz queue={queue} onReview={() => window.unvibe.companionReview()} onOpen={async (item) => {
-                  const r = await window.unvibe.reopenLearningItem(item) as { ok?: boolean; cancelled?: boolean; error?: string };
-                  if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that file.');
-                }} />
+                : page === 'Quiz' ? <Quiz
+                  history={history}
+                  queue={queue}
+                  onReview={() => window.unvibe.companionReview()}
+                  onRefresh={() => void refresh()}
+                />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}

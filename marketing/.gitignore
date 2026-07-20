@@ -28,7 +28,7 @@ yarn-error.log*
 # local env files
 .env*.local
 
-# local waitlist fallback store
+# local waitlist / site-stats fallback store
 /.data/
 
 # vercel

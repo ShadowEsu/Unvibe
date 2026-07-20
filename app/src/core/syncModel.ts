@@ -19,7 +19,13 @@ export function mergeRemoteEvents(
       events.push(event);
       merged += 1;
     } else if (!pending.has(event.id)) {
-      events[idx] = event;
+      const previous = events[idx]!;
+      // Keep on-device lesson bodies when the cloud mirror has none.
+      events[idx] = {
+        ...event,
+        code: previous.code ?? event.code,
+        explanation: previous.explanation ?? event.explanation,
+      };
       merged += 1;
     }
   }

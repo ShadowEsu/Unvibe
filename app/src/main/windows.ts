@@ -6,8 +6,9 @@ const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
-const DEFAULT_WIDGET_W = 340;
-const DEFAULT_WIDGET_H = 440;
+/** Compact AI Container — small enough not to intimidate on first open. */
+const DEFAULT_WIDGET_W = 300;
+const DEFAULT_WIDGET_H = 360;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 
@@ -140,22 +141,52 @@ function resolveWidgetBounds(): Electron.Rectangle {
   if (!saved) return defaultWidgetBounds();
   const stockOld =
     (saved.width === 440 && saved.height === 560) ||
-    (saved.width === 360 && saved.height === 480);
+    (saved.width === 360 && saved.height === 480) ||
+    (saved.width === 340 && saved.height === 440);
   if (stockOld) {
     return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
   }
   return { ...saved };
 }
 
+/** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
+export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+const WIDGET_MIN_W = 280;
+const WIDGET_MIN_H = 240;
+
+export function applyWidgetResize(
+  start: Electron.Rectangle,
+  edge: WidgetResizeEdge,
+  dx: number,
+  dy: number,
+): Electron.Rectangle {
+  let { x, y, width, height } = start;
+  if (edge.includes('e')) width = Math.max(WIDGET_MIN_W, start.width + dx);
+  if (edge.includes('s')) height = Math.max(WIDGET_MIN_H, start.height + dy);
+  if (edge.includes('w')) {
+    width = Math.max(WIDGET_MIN_W, start.width - dx);
+    x = start.x + (start.width - width);
+  }
+  if (edge.includes('n')) {
+    height = Math.max(WIDGET_MIN_H, start.height - dy);
+    y = start.y + (start.height - height);
+  }
+  return { x, y, width, height };
+}
+
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
-    minWidth: 300,
-    minHeight: 200,
+    minWidth: WIDGET_MIN_W,
+    minHeight: WIDGET_MIN_H,
     frame: false,
     transparent: true,
-    resizable: true,
+    // System resize hits a thick invisible rim outside the card. Resize is handled
+    // from the visible border grips in the renderer instead.
+    resizable: false,
     hasShadow: false,
+    roundedCorners: false,
     skipTaskbar: true,
     alwaysOnTop: true,
     show: false,

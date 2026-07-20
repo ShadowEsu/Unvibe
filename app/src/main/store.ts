@@ -31,7 +31,12 @@ interface Data {
   syncOwnerId?: string; // keeps a signed-out outbox bound to the account that created it
   /** Local-only code snapshots for Pro "since last understood" — never synced. */
   snapshots?: FileSnapshot[];
+  /** Daily counters for companion Study assistant / Quiz cards (local only). */
+  dailyUsage?: { day: string; studyAsks: number; quizzes: number };
 }
+
+export const STUDY_ASK_DAILY_LIMIT = 20;
+export const QUIZ_DAILY_LIMIT = 30;
 
 class Store {
   private data: Data = { events: [], outbox: [] };
@@ -87,6 +92,59 @@ class Store {
     if (conceptLabel) ev.conceptLabel = conceptLabel;
     this.queue(id);
     this.save();
+  }
+
+  /** Update on-device lesson body without forcing a cloud re-upload of code. */
+  updateLesson(id: string, patch: { code?: string; explanation?: string; level?: string }): void {
+    const ev = this.data.events.find((e) => e.id === id);
+    if (!ev) return;
+    if (patch.code !== undefined) ev.code = patch.code.slice(0, 40_000);
+    if (patch.explanation !== undefined) ev.explanation = patch.explanation.slice(0, 60_000);
+    if (patch.level) ev.level = patch.level;
+    this.save();
+  }
+
+  eventById(id: string): LocalEvent | undefined {
+    return this.data.events.find((e) => e.id === id);
+  }
+
+  private todayUsage(): { day: string; studyAsks: number; quizzes: number } {
+    const day = new Date().toLocaleDateString('en-CA');
+    const current = this.data.dailyUsage;
+    if (!current || current.day !== day) {
+      this.data.dailyUsage = { day, studyAsks: 0, quizzes: 0 };
+    }
+    return this.data.dailyUsage!;
+  }
+
+  studyAskUsage(): { used: number; limit: number; remaining: number } {
+    const u = this.todayUsage();
+    return { used: u.studyAsks, limit: STUDY_ASK_DAILY_LIMIT, remaining: Math.max(0, STUDY_ASK_DAILY_LIMIT - u.studyAsks) };
+  }
+
+  quizUsage(): { used: number; limit: number; remaining: number } {
+    const u = this.todayUsage();
+    return { used: u.quizzes, limit: QUIZ_DAILY_LIMIT, remaining: Math.max(0, QUIZ_DAILY_LIMIT - u.quizzes) };
+  }
+
+  consumeStudyAsk(): { ok: true; remaining: number } | { ok: false; remaining: number; error: string } {
+    const u = this.todayUsage();
+    if (u.studyAsks >= STUDY_ASK_DAILY_LIMIT) {
+      return { ok: false, remaining: 0, error: `Daily study assistant limit reached (${STUDY_ASK_DAILY_LIMIT}). Resets tomorrow.` };
+    }
+    u.studyAsks += 1;
+    this.save();
+    return { ok: true, remaining: STUDY_ASK_DAILY_LIMIT - u.studyAsks };
+  }
+
+  consumeQuiz(): { ok: true; remaining: number } | { ok: false; remaining: number; error: string } {
+    const u = this.todayUsage();
+    if (u.quizzes >= QUIZ_DAILY_LIMIT) {
+      return { ok: false, remaining: 0, error: `Daily quiz limit reached (${QUIZ_DAILY_LIMIT}). Resets tomorrow.` };
+    }
+    u.quizzes += 1;
+    this.save();
+    return { ok: true, remaining: QUIZ_DAILY_LIMIT - u.quizzes };
   }
 
   private queue(id: string): void {

@@ -32,6 +32,9 @@ const api = {
   collapse: (collapsed: boolean) => ipcRenderer.send('widget:collapse', collapsed),
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
+  widgetResizeStart: (edge: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') =>
+    ipcRenderer.send('widget:resizeStart', edge),
+  widgetResizeEnd: () => ipcRenderer.send('widget:resizeEnd'),
   onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
   onAutocollapse: (cb: (v: boolean) => void) => ipcRenderer.on('widget:autocollapse', (_e, v) => cb(v)),
 
@@ -39,6 +42,12 @@ const api = {
   profile: () => ipcRenderer.invoke('learning:profile'),
   feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
   history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
+  learningItem: (id: string) => ipcRenderer.invoke('learning:item', id),
+  studyAskStatus: () => ipcRenderer.invoke('study:askStatus'),
+  studyAsk: (input: { eventId: string; question: string }) => ipcRenderer.invoke('study:ask', input),
+  quizStatus: () => ipcRenderer.invoke('quiz:status'),
+  quizStart: (eventId: string) => ipcRenderer.invoke('quiz:start', eventId),
+  quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
   onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),
@@ -74,7 +83,8 @@ const api = {
   aiKeyStatus: () => ipcRenderer.invoke('ai:keyStatus'),
   aiSetKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
   aiClearKey: () => ipcRenderer.invoke('ai:clearKey'),
-  aiCostOverview: (provider?: 'gemini' | 'anthropic') => ipcRenderer.invoke('ai:costOverview', provider),
+  aiModels: () => ipcRenderer.invoke('ai:models'),
+  aiCostOverview: (model?: string) => ipcRenderer.invoke('ai:costOverview', model),
   startBillingCheckout: (input: unknown) => ipcRenderer.invoke('billing:checkout', input),
   openBillingPortal: (workspaceId: string) => ipcRenderer.invoke('billing:portal', workspaceId),
 };

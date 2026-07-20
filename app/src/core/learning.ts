@@ -24,6 +24,10 @@ export interface LocalEvent {
   project?: string;
   concept?: string;
   conceptLabel?: string;
+  /** Local-only teaching content — never synced to the cloud. */
+  code?: string;
+  /** Local-only explanation text — never synced to the cloud. */
+  explanation?: string;
 }
 
 export interface Usage {
@@ -58,7 +62,7 @@ export interface FeedItem {
   outcome: Outcome;
 }
 
-/** A privacy-safe event summary for learning views. It deliberately excludes code contents. */
+/** Learning view item. Code/explanation stay on-device when present. */
 export interface LearningItem extends FeedItem {
   concept?: string;
   level: string;
@@ -67,6 +71,15 @@ export interface LearningItem extends FeedItem {
   project?: string;
   scope?: string;
   dueLabel?: string;
+  language?: string;
+  code?: string;
+  explanation?: string;
+}
+
+/** Strip local-only lesson bodies before any remote sync. */
+export function forSync(event: LocalEvent): LocalEvent {
+  const { code: _code, explanation: _explanation, ...rest } = event;
+  return rest;
 }
 
 export const HEAT_DAYS = 182;
@@ -204,19 +217,27 @@ export function computeLearningItems(events: LocalEvent[], limit: number): Learn
   return [...events]
     .sort((a, b) => b.ts.localeCompare(a.ts))
     .slice(0, limit)
-    .map((e) => ({
-      id: e.id,
-      ts: e.ts,
-      title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${e.lines} lines of ${e.language ?? 'code'}`),
-      meta: [e.scope && e.scope !== 'selection' ? e.scope : undefined, e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
-      outcome: e.outcome,
-      concept: e.conceptLabel ?? e.concept,
-      level: e.level,
-      lines: e.lines,
-      file: e.file,
-      project: e.project,
-      scope: e.scope,
-    }));
+    .map((e) => toLearningItem(e));
+}
+
+function toLearningItem(e: LocalEvent, dueLabel?: string): LearningItem {
+  return {
+    id: e.id,
+    ts: e.ts,
+    title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${e.lines} lines of ${e.language ?? 'code'}`),
+    meta: [e.scope && e.scope !== 'selection' ? e.scope : undefined, e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
+    outcome: e.outcome,
+    concept: e.conceptLabel ?? e.concept,
+    level: e.level,
+    lines: e.lines,
+    file: e.file,
+    project: e.project,
+    scope: e.scope,
+    language: e.language,
+    code: e.code,
+    explanation: e.explanation,
+    ...(dueLabel ? { dueLabel } : {}),
+  };
 }
 
 function pathTitle(file: string): string {
@@ -252,18 +273,5 @@ export function computeReviewQueue(events: LocalEvent[], now = new Date(), limit
     .slice(0, limit);
 
   // Preserve queue order (needs_review first); do not re-sort by recency.
-  return merged.map((e) => ({
-    id: e.id,
-    ts: e.ts,
-    title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${e.lines} lines of ${e.language ?? 'code'}`),
-    meta: [e.scope && e.scope !== 'selection' ? e.scope : undefined, e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
-    outcome: e.outcome,
-    concept: e.conceptLabel ?? e.concept,
-    level: e.level,
-    lines: e.lines,
-    file: e.file,
-    project: e.project,
-    scope: e.scope,
-    dueLabel: e.dueLabel,
-  }));
+  return merged.map((e) => toLearningItem(e, e.dueLabel));
 }

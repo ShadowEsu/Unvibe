@@ -14,6 +14,7 @@ import {
   globalShortcut,
   ipcMain,
   nativeImage,
+  screen,
   shell,
   systemPreferences,
 } from 'electron';
@@ -22,6 +23,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
+  applyWidgetResize,
   createBar,
   createCompanion,
   currentWidget,
@@ -29,6 +31,7 @@ import {
   hideBar,
   positionBar,
   showBar,
+  type WidgetResizeEdge,
 } from './windows';
 import { captureSelection, frontmostApp, startFrontmostWatch } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
@@ -62,7 +65,13 @@ import { setBar, notify } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
 import { resolveAppUsage } from './usage';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
-import { costOverview } from './localAi';
+import {
+  costOverview,
+  guessProviderFromKey,
+  listLocalAiProviders,
+  normalizeLocalAiProvider,
+  type LocalAiProviderId,
+} from './localAi';
 import {
   buildComparePayload,
   buildDiffPayload,
@@ -70,6 +79,7 @@ import {
   isProPlan,
   resolveRepoRoot,
 } from './contextBuilder';
+import { answerQuizCard, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -220,6 +230,9 @@ function accessibilityGranted(prompt = false): boolean {
   return systemPreferences.isTrustedAccessibilityClient(prompt);
 }
 
+/** At most one Accessibility Settings open per session from the shortcut path. */
+let accessibilitySettingsOpenedThisSession = false;
+
 function openCompanion(): void {
   if (companion && !companion.isDestroyed()) {
     companion.show();
@@ -240,13 +253,12 @@ function asset(...parts: string[]): string {
 
 async function startReview(): Promise<void> {
   broadcastShortcut();
-  if (isMac && !accessibilityGranted(false)) {
-    accessibilityGranted(true);
-    if (!accessibilityGranted(false)) {
-      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
-      openCompanion();
-      notify('Turn on Accessibility for Unvibe so selection works');
-    }
+  // ⌘U must only raise the aisle + explanation panel — never System Settings.
+  // Never call isTrustedAccessibilityClient(true) here: prompt=true re-opens the
+  // macOS permission UI even when the user already toggled Accessibility on.
+  if (isMac && !accessibilityGranted(false) && !accessibilitySettingsOpenedThisSession) {
+    accessibilitySettingsOpenedThisSession = true;
+    notify('Enable Accessibility for Unvibe in System Settings, then quit and reopen Unvibe');
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
@@ -285,7 +297,12 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 app.setName('Unvibe');
 
 app.whenReady().then(() => {
+  const fresh = settings().takeFreshStart();
   store();
+  if (fresh) {
+    // New DMG / revision cohort: empty shelf, signed out, onboarding, full Free allotment (50).
+    store().wipeEverything();
+  }
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
   void flush();
@@ -487,18 +504,64 @@ app.whenReady().then(() => {
   ipcMain.on('widget:collapse', (e, collapsed: boolean) => {
     const win = widgetOf(e);
     if (!win) return;
+    endWidgetResize();
     if (collapsed) {
       normalBounds.set(win.id, win.getBounds());
-      win.setResizable(false);
       win.setBounds({ ...win.getBounds(), height: 52 });
     } else {
       const prev = normalBounds.get(win.id);
-      win.setResizable(true);
       if (prev) win.setBounds(prev);
     }
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
+
+  // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
+  let resizeTick: ReturnType<typeof setInterval> | null = null;
+  let resizeSession: {
+    win: BrowserWindow;
+    edge: WidgetResizeEdge;
+    startBounds: Electron.Rectangle;
+    startCursor: Electron.Point;
+  } | null = null;
+  const endWidgetResize = () => {
+    if (resizeTick) {
+      clearInterval(resizeTick);
+      resizeTick = null;
+    }
+    if (resizeSession && !resizeSession.win.isDestroyed()) {
+      settings().set({ lastWidgetBounds: resizeSession.win.getBounds() });
+    }
+    resizeSession = null;
+  };
+  ipcMain.on('widget:resizeStart', (e, edge: WidgetResizeEdge) => {
+    const win = widgetOf(e);
+    if (!win || win.isDestroyed()) return;
+    const ok: WidgetResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    if (!ok.includes(edge)) return;
+    endWidgetResize();
+    resizeSession = {
+      win,
+      edge,
+      startBounds: win.getBounds(),
+      startCursor: screen.getCursorScreenPoint(),
+    };
+    resizeTick = setInterval(() => {
+      if (!resizeSession || resizeSession.win.isDestroyed()) {
+        endWidgetResize();
+        return;
+      }
+      const cur = screen.getCursorScreenPoint();
+      const next = applyWidgetResize(
+        resizeSession.startBounds,
+        resizeSession.edge,
+        cur.x - resizeSession.startCursor.x,
+        cur.y - resizeSession.startCursor.y,
+      );
+      resizeSession.win.setBounds(next, false);
+    }, 16);
+  });
+  ipcMain.on('widget:resizeEnd', () => endWidgetResize());
 
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
@@ -510,6 +573,16 @@ app.whenReady().then(() => {
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
+  ipcMain.handle('learning:item', (_e, id: string) => {
+    const event = store().eventById(id);
+    if (!event) return null;
+    return computeLearningItems([event], 1)[0] ?? null;
+  });
+  ipcMain.handle('study:askStatus', () => studyAskStatus());
+  ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string }) => askStudyAssistant(input));
+  ipcMain.handle('quiz:status', () => quizCardStatus());
+  ipcMain.handle('quiz:start', (_e, eventId: string) => startQuizCard(eventId));
+  ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
 
   ipcMain.handle('project:pickRoot', async () => {
     const picked = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -567,11 +640,37 @@ app.whenReady().then(() => {
     );
   });
 
-  ipcMain.handle('review:reopenItem', async (_e, item: { file?: string; project?: string; level?: string }) => {
+  ipcMain.handle('review:reopenItem', async (_e, item: { id?: string; file?: string; project?: string; level?: string }) => {
     const win = getOrCreateWidget();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, (item.level as ExplanationLevel) || 'intermediate');
+    const level = (item.level as ExplanationLevel) || 'intermediate';
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, level);
+    session.level = level;
     tabSessions.set(activeTabId, session);
+    const saved = item.id ? store().eventById(item.id) : undefined;
+    const savedCode = saved?.code?.trim();
+
+    const openFromCode = async (code: string, filePath?: string, repoRoot?: string | null) => {
+      if (code.length > MAX_PICK_BYTES) return { ok: false as const, error: 'That lesson is too large to reopen here.' };
+      const usage = await resolveAppUsage();
+      const built = await buildSelectionPayload({
+        code,
+        level: session.level,
+        filePath,
+        repoRoot: repoRoot ?? undefined,
+        withNearby: isProPlan(usage.plan),
+      });
+      applyBuiltReview(session, built);
+      session.sourceApp = 'Study';
+      session.reviewId = randomUUID();
+      initWidget(win, session, { autoStart: true });
+      void runReview(win, session, { level: session.level });
+      return { ok: true as const };
+    };
+
+    if (!item.file && savedCode) {
+      return openFromCode(savedCode, saved?.file);
+    }
     if (!item.file) {
       beginCaptureOnActiveTab(win, null, null);
       return { ok: true };
@@ -582,31 +681,22 @@ app.whenReady().then(() => {
         properties: ['openDirectory'],
         title: `Locate project “${item.project}”`,
       });
-      if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+      if (picked.canceled || !picked.filePaths[0]) {
+        if (savedCode) return openFromCode(savedCode, item.file);
+        return { ok: false, cancelled: true };
+      }
       root = await resolveRepoRoot(picked.filePaths[0]);
       if (!root || (item.project && path.basename(root) !== item.project)) {
+        if (savedCode) return openFromCode(savedCode, item.file);
         return { ok: false, error: `That folder does not look like the “${item.project}” project.` };
       }
     }
     const abs = root ? path.join(root, item.file) : item.file;
     try {
       const text = await readFile(abs, 'utf8');
-      if (text.length > MAX_PICK_BYTES) return { ok: false, error: 'That file is too large to reopen here.' };
-      const usage = await resolveAppUsage();
-      const built = await buildSelectionPayload({
-        code: text,
-        level: session.level,
-        filePath: abs,
-        repoRoot: root,
-        withNearby: isProPlan(usage.plan),
-      });
-      applyBuiltReview(session, built);
-      session.sourceApp = 'Study';
-      session.reviewId = randomUUID();
-      initWidget(win, session, { autoStart: true });
-      void runReview(win, session, { level: session.level });
-      return { ok: true };
+      return openFromCode(text, abs, root);
     } catch {
+      if (savedCode) return openFromCode(savedCode, item.file, root);
       return { ok: false, error: 'Could not reopen that file. Open Study again and locate the project folder when prompted.' };
     }
   });
@@ -665,13 +755,21 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));
   ipcMain.handle('ai:setKey', (_e, key: string) => {
-    try { writeAiKey(String(key ?? '')); return { ok: true, data: aiKeyStatus() }; }
-    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not save the API key.' }; }
+    try {
+      const trimmed = String(key ?? '');
+      writeAiKey(trimmed);
+      const guessed = guessProviderFromKey(trimmed);
+      if (guessed) settings().set({ aiProvider: guessed });
+      return { ok: true, data: aiKeyStatus(), provider: settings().all().aiProvider };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Could not save the API key.' };
+    }
   });
   ipcMain.handle('ai:clearKey', () => { clearAiKey(); return { ok: true, data: aiKeyStatus() }; });
-  ipcMain.handle('ai:costOverview', (_e, provider?: 'gemini' | 'anthropic') => {
-    const p = provider === 'anthropic' ? 'anthropic' : settings().all().aiProvider;
-    return { ok: true, data: costOverview(p) };
+  ipcMain.handle('ai:models', () => ({ ok: true, data: listLocalAiProviders() }));
+  ipcMain.handle('ai:costOverview', (_e, provider?: LocalAiProviderId) => {
+    const id = normalizeLocalAiProvider(provider ?? settings().all().aiProvider);
+    return { ok: true, data: costOverview(id) };
   });
   ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }) => {
     const token = store().token();
@@ -708,7 +806,8 @@ app.whenReady().then(() => {
   ipcMain.handle('account:startDevice', async () => {
     try {
       const device = await startDeviceAuth();
-      void shell.openExternal(`${device.verificationUri}?code=${encodeURIComponent(device.userCode)}`);
+      // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
+      void shell.openExternal(`${device.verificationUri}?user_code=${encodeURIComponent(device.userCode)}`);
       if (devicePoll) clearInterval(devicePoll);
       const expires = Date.now() + 10 * 60_000;
       devicePoll = setInterval(() => void (async () => {

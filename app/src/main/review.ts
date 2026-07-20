@@ -39,6 +39,8 @@ export interface ReviewSession {
   abort: AbortController | null;
   recorded: boolean;
   level: ExplanationLevel;
+  /** Accumulated streamed explanation for local history (on-device only). */
+  explanationText?: string;
   payload?: ReviewRequestPayload;
   file?: string;
   project?: string;
@@ -167,8 +169,28 @@ export function initWidget(
   });
 }
 
+function appendExplanation(session: ReviewSession, text: string): void {
+  session.explanationText = (session.explanationText ?? '') + text;
+}
+
 function recordReview(win: BrowserWindow, session: ReviewSession): void {
-  if (session.recorded || !session.code) return;
+  if (!session.code) return;
+  const explanation = session.explanationText?.trim() || undefined;
+  if (session.recorded) {
+    try {
+      store().updateLesson(session.reviewId, {
+        code: session.code,
+        explanation,
+        level: session.level,
+      });
+    } catch (error) {
+      send(win, session, {
+        type: 'error',
+        message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
+      });
+    }
+    return;
+  }
   session.recorded = true;
   const now = new Date();
   const ev: LocalEvent = {
@@ -185,6 +207,8 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
     sourceApp: session.sourceApp ?? undefined,
     file: session.file,
     project: session.project,
+    code: session.code.slice(0, 40_000),
+    explanation: explanation?.slice(0, 60_000),
   };
   try {
     store().recordReview(ev);
@@ -206,6 +230,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     return;
   }
   session.level = opts.level;
+  session.explanationText = '';
 
   const usageEarly = await resolveAppUsage();
   if (opts.level === 'expert' && !isProPlan(usageEarly.plan)) {
@@ -280,7 +305,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           apiKey: localKey,
           system: buildLocalSystemPrompt(payload),
           user: buildLocalUserPrompt(payload),
-          onToken: (text) => send(win, session, { type: 'token', text }),
+          onToken: (text) => {
+            appendExplanation(session, text);
+            send(win, session, { type: 'token', text });
+          },
           signal: abort.signal,
         });
         send(win, session, { type: 'done', model, mock: false });
@@ -352,6 +380,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       const { done, value } = await reader.read();
       if (done) break;
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
+        if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
         send(win, session, ev);
         if (ev.type === 'done') {
           recordReview(win, session);

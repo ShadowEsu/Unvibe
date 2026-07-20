@@ -61,10 +61,20 @@ test('computeFeed returns most-recent first', () => {
   assert.equal(feed.length, 2);
 });
 
-test('computeLearningItems gives learning views safe summaries without code contents', () => {
+test('computeLearningItems includes on-device code and explanation when present', () => {
   const items = computeLearningItems([
     ev({ id: 'earlier', ts: '2026-07-11T08:00:00Z', lines: 6, language: 'TypeScript' }),
-    ev({ id: 'latest', ts: '2026-07-11T09:00:00Z', concept: 'closures', conceptLabel: 'Closures', level: 'advanced', lines: 12, outcome: 'needs_review' }),
+    ev({
+      id: 'latest',
+      ts: '2026-07-11T09:00:00Z',
+      concept: 'closures',
+      conceptLabel: 'Closures',
+      level: 'advanced',
+      lines: 12,
+      outcome: 'needs_review',
+      code: 'const f = () => x;',
+      explanation: 'This closes over x.',
+    }),
   ], 10);
   assert.equal(items[0]!.id, 'latest');
   assert.equal(items[0]!.title, 'Closures');
@@ -72,7 +82,9 @@ test('computeLearningItems gives learning views safe summaries without code cont
   assert.equal(items[0]!.concept, 'Closures');
   assert.equal(items[0]!.level, 'advanced');
   assert.equal(items[0]!.lines, 12);
-  assert.ok(!('code' in items[0]!));
+  assert.equal(items[0]!.code, 'const f = () => x;');
+  assert.equal(items[0]!.explanation, 'This closes over x.');
+  assert.equal(items[1]!.code, undefined);
 });
 
 test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {

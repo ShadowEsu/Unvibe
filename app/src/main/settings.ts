@@ -5,13 +5,18 @@
 import { app } from 'electron';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
-export type AiProviderPreference = 'gemini' | 'anthropic';
+
+/** Bump when a release should re-show onboarding for existing installs. */
+const SETTINGS_REVISION = 3;
 
 export interface Settings {
+  /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
+  settingsRevision?: number;
   onboarded: boolean;
   /** Electron accelerator. Default is ⌘U. */
   shortcut: string;
@@ -26,13 +31,16 @@ export interface Settings {
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
   /** Prefer the user's own local API key instead of Unvibe cloud AI. */
   useOwnAi: boolean;
-  /** Provider for local BYOK calls. Recommended: gemini for local/low cost. */
-  aiProvider: AiProviderPreference;
+  /** Provider for local BYOK calls (cheap default model per provider). */
+  aiProvider: LocalAiProviderId;
+  /** @deprecated Legacy field — migrated into aiProvider. */
+  aiModel?: string;
   /** Last folder used for git-diff / nearby-file Pro features. */
   lastProjectRoot?: string;
 }
 
 const DEFAULTS: Settings = {
+  settingsRevision: SETTINGS_REVISION,
   onboarded: false,
   shortcut: 'CommandOrControl+U',
   barPosition: 'bottom-center',
@@ -43,12 +51,14 @@ const DEFAULTS: Settings = {
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
-  aiProvider: 'gemini',
+  aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
 };
 
 class SettingsStore {
   private data: Settings;
   private file: string;
+  /** True once after a SETTINGS_REVISION bump — caller should wipe local learning for a clean start. */
+  private freshStart = false;
 
   constructor() {
     this.file = path.join(app.getPath('userData'), 'unvibe-settings.json');
@@ -58,11 +68,39 @@ class SettingsStore {
     } catch {
       /* first run */
     }
-    this.data = { ...DEFAULTS, ...loaded, quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours } };
+    const needsOnboardingReset = (loaded.settingsRevision ?? 0) < SETTINGS_REVISION;
+    this.freshStart = needsOnboardingReset;
+    const aiProvider = normalizeLocalAiProvider(
+      loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
+    );
+    this.data = {
+      ...DEFAULTS,
+      ...loaded,
+      quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
+      aiProvider,
+      settingsRevision: SETTINGS_REVISION,
+      ...(needsOnboardingReset
+        ? {
+            onboarded: false,
+            // Fresh panel size for the new onboarding cohort.
+            lastWidgetBounds: undefined,
+          }
+        : {}),
+    };
+    if (needsOnboardingReset) delete this.data.lastWidgetBounds;
+    delete this.data.aiModel;
+    if (needsOnboardingReset || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
     return this.data;
+  }
+
+  /** Consume the one-shot flag set when this install was upgraded past SETTINGS_REVISION. */
+  takeFreshStart(): boolean {
+    const v = this.freshStart;
+    this.freshStart = false;
+    return v;
   }
 
   private persist(): void {
@@ -75,7 +113,18 @@ class SettingsStore {
   }
 
   set(patch: Partial<Settings>): Settings {
-    this.data = { ...this.data, ...patch, quietHours: { ...this.data.quietHours, ...patch.quietHours } };
+    const nextProvider = patch.aiProvider !== undefined
+      ? normalizeLocalAiProvider(patch.aiProvider)
+      : patch.aiModel !== undefined
+        ? normalizeLocalAiProvider(patch.aiModel)
+        : undefined;
+    this.data = {
+      ...this.data,
+      ...patch,
+      quietHours: { ...this.data.quietHours, ...patch.quietHours },
+      ...(nextProvider ? { aiProvider: nextProvider } : {}),
+    };
+    delete this.data.aiModel;
     this.persist();
     if (patch.launchAtLogin !== undefined && process.platform === 'darwin') {
       app.setLoginItemSettings({ openAtLogin: this.data.launchAtLogin });

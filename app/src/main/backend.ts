@@ -2,7 +2,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { LocalEvent } from '../core/learning';
+import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
 
 /** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
@@ -38,7 +38,16 @@ loadAppEnv();
 const BAKED_RELEASE_BACKEND = process.env.UNVIBE_RELEASE_BACKEND || '';
 
 export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env, baked = BAKED_RELEASE_BACKEND): string {
-  return baked || env.UNVIBE_BACKEND || 'http://localhost:8787';
+  // Packaged builds bake the API host (never the marketing site). Runtime UNVIBE_BACKEND
+  // still wins for local development. Ignore stale localhost overrides in userData when a
+  // release bake is present so old Application Support .env files cannot break demos.
+  const explicit = env.UNVIBE_BACKEND?.trim();
+  const bakedUrl = baked?.trim();
+  if (explicit) {
+    const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?\/?$/i.test(explicit);
+    if (!(bakedUrl && isLocal)) return explicit;
+  }
+  return bakedUrl || 'http://localhost:8787';
 }
 
 export const BACKEND = resolveBackendUrl();
@@ -172,7 +181,7 @@ export async function pushEvents(token: string, events: LocalEvent[]): Promise<s
   const res = await request(`${BACKEND}/api/v1/events`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ events }),
+    body: JSON.stringify({ events: events.map(forSync) }),
   });
   await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);

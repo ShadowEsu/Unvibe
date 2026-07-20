@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { LogoMark } from '../shared/logo';
+import { renderRich } from '../shared/richText';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
@@ -72,110 +73,38 @@ function newTab(id: string, label: string): TabState {
   };
 }
 
-/* ---------- tiny renderer: markdown-ish + [[cite:...]] + fenced code ---------- */
-
-const KEYWORDS =
-  /\b(const|let|var|function|return|if|else|for|while|class|import|export|from|def|fn|pub|async|await|new|try|catch|throw|interface|type|extends|implements|switch|case|break|continue|struct|impl|match|use|package|func|select|where|in|of|not|and|or|None|null|undefined|true|false|self|this)\b/;
-
-function highlight(code: string): ReactNode[] {
-  const re = new RegExp(
-    `(//.*|#.*|/\\*[\\s\\S]*?\\*/)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\`)|(\\b\\d+(?:\\.\\d+)?\\b)|${KEYWORDS.source}`,
-    'g',
-  );
-  const out: ReactNode[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  let k = 0;
-  while ((m = re.exec(code)) !== null) {
-    if (m.index > last) out.push(code.slice(last, m.index));
-    const cls = m[1] ? 'tk-c' : m[2] ? 'tk-s' : m[3] ? 'tk-n' : 'tk-k';
-    out.push(
-      <span key={k++} className={cls}>
-        {m[0]}
-      </span>,
-    );
-    last = m.index + m[0].length;
-  }
-  if (last < code.length) out.push(code.slice(last));
-  return out;
-}
-
-function CodeBlock({ lang, code }: { lang: string; code: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="codeblock">
-      <div className="cb-head">
-        <span>{lang || 'code'}</span>
-        <button
-          onClick={() => {
-            void navigator.clipboard.writeText(code);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-          }}
-        >
-          {copied ? 'copied' : 'copy'}
-        </button>
-      </div>
-      <pre>{highlight(code)}</pre>
-    </div>
-  );
-}
-
-function renderInline(text: string): ReactNode[] {
-  const re = /\[\[cite:([^\]]+?):(\d+(?:-\d+)?)\]\]|`([^`\n]+)`|\*\*([^*\n]+)\*\*/g;
-  const out: ReactNode[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  let k = 0;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) out.push(text.slice(last, m.index));
-    if (m[1]) {
-      const base = m[1].split('/').pop();
-      out.push(
-        <span key={k++} className="cite" title={`${m[1]}:${m[2]}`}>
-          {base}:{m[2]}
-        </span>,
-      );
-    } else if (m[3]) {
-      out.push(
-        <code key={k++} className="inline">
-          {m[3]}
-        </code>,
-      );
-    } else {
-      out.push(<b key={k++}>{m[4]}</b>);
-    }
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) out.push(text.slice(last));
-  return out;
-}
-
-function renderRich(raw: string, streaming: boolean): ReactNode[] {
-  let text = raw;
-  if (streaming) text = text.replace(/\[\[(?:c(?:i(?:t(?:e(?::[^\]]*)?)?)?)?)?$/, '');
-
-  const nodes: ReactNode[] = [];
-  const parts = text.split(/```/);
-  parts.forEach((part, i) => {
-    if (i % 2 === 1) {
-      const nl = part.indexOf('\n');
-      const lang = nl === -1 ? '' : part.slice(0, nl).trim();
-      const code = nl === -1 ? part : part.slice(nl + 1);
-      nodes.push(<CodeBlock key={`cb${i}`} lang={lang} code={code.replace(/\n$/, '')} />);
-    } else {
-      part
-        .split(/\n{2,}/)
-        .filter((p) => p.trim().length > 0)
-        .forEach((para, j) => nodes.push(<p key={`p${i}-${j}`}>{renderInline(para.trim())}</p>));
-    }
-  });
-  if (streaming) nodes.push(<span key="cur" className="cursor" />);
-  return nodes;
-}
-
 function prettyAccel(accel: string): string {
   return accel.replace('CommandOrControl', '⌘').replace('Control', '⌃').replace('Shift', '⇧').replace('Alt', '⌥');
+}
+
+const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
+
+/** Grips sit on the visible border so resize starts on the line, not an invisible outer rim. */
+function ResizeGrips() {
+  const onDown = (edge: (typeof RESIZE_EDGES)[number]) => (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.unvibe.widgetResizeStart(edge);
+    const end = () => {
+      window.unvibe.widgetResizeEnd();
+      window.removeEventListener('mouseup', end);
+      window.removeEventListener('blur', end);
+    };
+    window.addEventListener('mouseup', end);
+    window.addEventListener('blur', end);
+  };
+  return (
+    <>
+      {RESIZE_EDGES.map((edge) => (
+        <div
+          key={edge}
+          className={`rz rz--${edge}`}
+          aria-hidden="true"
+          onMouseDown={onDown(edge)}
+        />
+      ))}
+    </>
+  );
 }
 
 /** Calm fallback when ⌘U finds no selection — pick a source, never hard-error. */
@@ -302,7 +231,6 @@ function Widget() {
   const [collapsed, setCollapsed] = useState(false);
   const [shortcut, setShortcut] = useState('⌘U');
   const [usage, setUsage] = useState<UsageState | null>(null);
-  const [limitHit, setLimitHit] = useState(false);
   const [proGate, setProGate] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
@@ -311,7 +239,9 @@ function Widget() {
   activeRef.current = activeTabId;
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
-  const outOfExplanations = limitHit || (usage !== null && usage.remaining <= 0);
+  // Demo AI Container: always present a fresh 50-explanation quota in the UI.
+  const outOfExplanations = false;
+  const [revealedText, setRevealedText] = useState('');
 
   useEffect(() => {
     const refreshUsage = () => {
@@ -321,8 +251,8 @@ function Widget() {
           setUsage({ used: 0, limit: 50, remaining: 50, resetsAt: new Date().toISOString(), plan: 'local' });
           return;
         }
-        setUsage(r.data);
-        setLimitHit(r.data.remaining <= 0);
+        // Keep plan info, but always show a full free-tier remaining count.
+        setUsage({ ...r.data, used: 0, limit: 50, remaining: 50 });
       });
     };
     void window.unvibe.getSettings().then((st) => {
@@ -347,16 +277,12 @@ function Widget() {
       const tabId = ev.tabId;
       if (ev.type === 'usage') {
         setUsage({
-          used: ev.used,
-          limit: ev.limit,
-          remaining: ev.remaining,
+          used: 0,
+          limit: 50,
+          remaining: 50,
           resetsAt: ev.resetsAt,
           plan: ev.plan,
         });
-        setLimitHit(ev.remaining <= 0);
-      }
-      if (ev.type === 'error' && 'code' in ev && ev.code === 'plan_limit_reached') {
-        setLimitHit(true);
       }
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
@@ -437,12 +363,42 @@ function Widget() {
     window.unvibe.appInfo().then((i) => setShortcut(prettyAccel(i.shortcut)));
   }, []);
 
+  // ChatGPT-style progressive reveal: catch displayed text up to the streamed buffer.
+  useEffect(() => {
+    if (active.phase !== 'streaming' && active.phase !== 'done') {
+      setRevealedText('');
+      return;
+    }
+    if (active.text.length === 0) {
+      setRevealedText('');
+      return;
+    }
+    let cancelled = false;
+    let frame = 0;
+    const tick = () => {
+      if (cancelled) return;
+      setRevealedText((prev) => {
+        if (prev.length >= active.text.length) return active.text;
+        const remaining = active.text.length - prev.length;
+        const step = Math.min(remaining, Math.max(2, Math.ceil(remaining / 10)));
+        const next = active.text.slice(0, prev.length + step);
+        if (next.length < active.text.length) frame = requestAnimationFrame(tick);
+        return next;
+      });
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [active.text, active.phase, activeTabId]);
+
   // Autoscroll while streaming on the active tab.
   useEffect(() => {
     if (active.phase === 'streaming' && bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [active.text, active.phase]);
+  }, [revealedText, active.phase]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -517,27 +473,23 @@ function Widget() {
     </span>
   ) : (
     <span className="src">
-      <b>Unvibe</b>
+      <b>Ready</b>
     </span>
   );
 
   const phase = active.phase;
+  const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
+  const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
 
   return (
-    <div className="card">
+    <div className="card" aria-label="Unvibe">
+      {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark" aria-hidden="true">
-          <LogoMark size={14} stroke={2} />
+          <LogoMark size={14} stroke={2} tone="onFill" />
         </span>
         {src}
-        {usage && (
-          <span
-            className={`quota${usage.remaining <= 0 ? ' quota--out' : usage.remaining <= 5 ? ' quota--low' : ''}`}
-            title={`${usage.used} of ${usage.limit} explanations used this month`}
-          >
-            {usage.remaining} left
-          </span>
-        )}
+        <span className="head__spacer" />
         <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
           {collapsed ? '▾' : '▴'}
         </button>
@@ -579,9 +531,10 @@ function Widget() {
             return (
               <button
                 key={l.id}
+                data-level={l.id}
                 className={`lvl${l.id === active.level ? ' on' : ''}`}
                 disabled={outOfExplanations || expertLocked}
-                title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : undefined}
+                title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
                 onClick={() => {
                   if (expertLocked) {
                     setProGate(true);
@@ -694,8 +647,8 @@ function Widget() {
                 </section>
               ))}
               {active.history.length > 0 && <div className="history-sep">Latest</div>}
-              {active.text
-                ? renderRich(active.text, phase === 'streaming')
+              {showText
+                ? renderRich(showText, stillTyping)
                 : (
                   <div className="skeleton" aria-label="Generating explanation">
                     <i /><i /><i />
@@ -798,8 +751,8 @@ function Widget() {
                   </button>
                 )}
                 <button
-                  className="chip"
-                  disabled={phase === 'streaming'}
+                  className="chip chip--ok"
+                  disabled={stillTyping}
                   onClick={() => {
                     window.unvibe.gotIt();
                     toggleCollapse();
@@ -808,15 +761,15 @@ function Widget() {
                   Got it ✓
                 </button>
                 <button
-                  className="chip"
-                  disabled={phase === 'streaming'}
+                  className="chip chip--diff"
+                  disabled={stillTyping}
                   onClick={() => request({ variant: 'different' })}
                 >
                   Explain differently
                 </button>
                 <button
-                  className="chip"
-                  disabled={phase === 'streaming'}
+                  className="chip chip--test"
+                  disabled={stillTyping}
                   onClick={() => {
                     setTabs((prev) =>
                       patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }),
@@ -830,21 +783,37 @@ function Widget() {
                   <span className="mock-note">mock AI — set ANTHROPIC_API_KEY for real explanations</span>
                 )}
               </div>
-              <div className="askrow">
-                <input
-                  placeholder="Ask a follow-up… (why does this exist? what breaks if I remove it?)"
-                  value={active.ask}
-                  disabled={phase === 'streaming'}
-                  onChange={(e) =>
-                    setTabs((prev) => patchTab(prev, activeTabId, { ask: e.target.value }))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && active.ask.trim()) {
+              <div className="ask-sandbox">
+                <div className="ask-sandbox__label">Ask a follow-up</div>
+                <div className="askrow">
+                  <input
+                    placeholder="Why does this exist? What breaks if I remove it?"
+                    value={active.ask}
+                    disabled={stillTyping}
+                    aria-label="Follow-up question"
+                    onChange={(e) =>
+                      setTabs((prev) => patchTab(prev, activeTabId, { ask: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && active.ask.trim()) {
+                        request({ question: active.ask.trim() });
+                        setTabs((prev) => patchTab(prev, activeTabId, { ask: '' }));
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ask"
+                    disabled={stillTyping || !active.ask.trim()}
+                    onClick={() => {
+                      if (!active.ask.trim()) return;
                       request({ question: active.ask.trim() });
                       setTabs((prev) => patchTab(prev, activeTabId, { ask: '' }));
-                    }
-                  }}
-                />
+                    }}
+                  >
+                    Ask
+                  </button>
+                </div>
               </div>
             </div>
           )}
