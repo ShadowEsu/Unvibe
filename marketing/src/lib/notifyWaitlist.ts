@@ -44,7 +44,7 @@ function emailHtml(entry: FounderNotificationInput): string {
     )
     .join(
       "",
-    )}</table><p style="margin:24px 0 0"><a href="https://unvibe.site/waitlist-admin" style="display:inline-block;background:#6f45d2;color:#fff;text-decoration:none;padding:13px 18px;font-weight:700">Open waitlist dashboard</a></p></div></div></body></html>`;
+    )}</table><p style="margin:24px 0 0"><a href="https://unvibe.site/waitlist" style="display:inline-block;background:#6f45d2;color:#fff;text-decoration:none;padding:13px 18px;font-weight:700">Open waitlist</a></p></div></div></body></html>`;
 }
 
 async function sendWithResend(entry: FounderNotificationInput, to: string): Promise<WaitlistNotificationRecord | null> {
@@ -63,7 +63,7 @@ async function sendWithResend(entry: FounderNotificationInput, to: string): Prom
       reply_to: entry.email,
       subject: `New Unvibe waitlist signup: ${entry.firstName} ${entry.lastName}`,
       html: emailHtml(entry),
-      text: `New Unvibe waitlist signup\n\nName: ${entry.firstName} ${entry.lastName}\nEmail: ${entry.email}\nTool: ${entry.tool ?? "Not provided"}\nExperience: ${entry.experience ?? "Not provided"}\nMessage: ${entry.message || "None"}\n\nView: https://unvibe.site/waitlist-admin`,
+      text: `New Unvibe waitlist signup\n\nName: ${entry.firstName} ${entry.lastName}\nEmail: ${entry.email}\nTool: ${entry.tool ?? "Not provided"}\nExperience: ${entry.experience ?? "Not provided"}\nMessage: ${entry.message || "None"}\n\nView: https://unvibe.site/waitlist`,
     }),
     signal: AbortSignal.timeout(8_000),
   });

@@ -53,7 +53,7 @@ bearer-token protected. The old `supabase/migrations/0001_waitlist.sql` is retai
 but the current marketing storage adapter does not use it.
 
 Configure Resend for founder notifications (`WAITLIST_NOTIFY_EMAIL`, default `preston@unvibe.site`).
-Failed deliveries remain visible and retryable in `/waitlist-admin`. Signups are still saved when
+Failed deliveries remain visible and retryable in `/waitlist`. Signups are still saved when
 email delivery fails.
 
 ## Analytics events
@@ -70,7 +70,7 @@ third-party script, no cookies, no code contents):
 1. Import the repository into Vercel and set the project root to `marketing/`.
 2. Connect a Vercel Blob store and add the remaining environment variables above.
 3. Configure Resend, then submit a disposable test entry.
-4. Confirm the entry appears in `/waitlist-admin` and the founder notification is marked sent.
+4. Confirm the entry appears in `/waitlist` and the founder notification is marked sent.
 5. Vercel auto-detects Next.js; the default build (`next build`) is used.
 6. Point your domain and set `NEXT_PUBLIC_SITE_URL` to match.
 

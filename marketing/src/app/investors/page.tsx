@@ -1,107 +1,80 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
-import { ArrowUpRight, Download, FileText, Mail, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Download, FileText, Mail, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Angel Investor Page',
-  description: 'Investor materials and contact information for Unvibe.',
+  title: 'Unvibe for Investors',
+  description: 'Unvibe investor deck, Mac tester build, and founder contact.',
 };
 
-const materials = [
-  {
-    eyebrow: 'SHORT DECK',
-    title: 'Investor pitch deck',
-    description: 'A concise seven-page introduction to Unvibe, the problem, product, and opportunity.',
-    href: '/investors/unvibe-investor-deck-short.pdf',
-    label: 'Open short deck',
-  },
-  {
-    eyebrow: 'FULL DECK',
-    title: 'Full investor pitch deck',
-    description: 'The longer version for investors who want the fuller product and business context.',
-    href: '/investors/unvibe-investor-deck-full.pdf',
-    label: 'Open full deck',
-  },
-];
+const DMG_URL = process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
+  || 'https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/Unvibe-0.1.0-arm64-unsigned.dmg';
 
-function YCombinatorMark() {
-  return (
-    <svg className="h-12 w-12 shrink-0 shadow-[4px_4px_0_rgba(242,101,34,0.32)]" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-      <rect width="80" height="80" rx="10" fill="#F26522" />
-      <path d="M40.2 46.5 54.8 22.2h-8.4L40.2 34.8 33.6 22.2h-8.4L40.2 46.5Zm-3.4 2.8h6.8V58h-6.8V49.3Z" fill="#fff" />
-    </svg>
-  );
-}
+const DECK_URL = '/investors/unvibe-pitch-deck.pdf';
 
 export default function InvestorsPage() {
   return (
     <main className="min-h-screen bg-[#171323] text-[#f7f4ff]">
-      <section className="relative overflow-hidden border-b border-[#8e75b8]/35 px-6 py-20 sm:px-10 sm:py-28">
-        <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
-          <div className="absolute -left-24 top-16 h-80 w-80 rounded-full bg-[#8e63f5]/20 blur-3xl" />
-          <div className="absolute right-0 top-0 h-px w-[65%] bg-[#bda4ff]" />
+      <nav className="border-b border-[#8e75b8]/35 bg-[#120e1c] px-6 py-4 sm:px-10">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <a href="/" className="font-mono text-xs font-bold uppercase tracking-[.14em] text-[#cdbbff] hover:text-white">← Unvibe</a>
+          <a href={DECK_URL} target="_blank" rel="noreferrer" className="font-mono text-xs font-bold uppercase tracking-[.12em] text-[#a886ff] hover:text-white">Investor deck ↗</a>
         </div>
-        <div className="relative mx-auto max-w-6xl">
-          <p className="mb-8 flex items-center gap-2 font-mono text-xs font-bold tracking-[0.2em] text-[#bda4ff]"><Sparkles size={15} /> UNVIBE / INVESTORS</p>
-          <div className="grid gap-12 lg:grid-cols-[1.35fr_.65fr] lg:items-end">
+      </nav>
+
+      <section className="relative overflow-hidden px-6 py-20 sm:px-10 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
+          <div className="absolute -left-28 top-0 h-80 w-80 rounded-full bg-[#8e63f5]/20 blur-3xl" />
+          <div className="absolute right-0 top-12 h-px w-2/5 bg-[#bda4ff]" />
+        </div>
+        <div className="relative mx-auto max-w-5xl">
+          <p className="flex items-center gap-2 font-mono text-xs font-bold tracking-[.2em] text-[#bda4ff]"><Sparkles size={15} /> UNVIBE / INVESTORS</p>
+          <div className="mt-8 grid gap-12 lg:grid-cols-[1.2fr_.8fr] lg:items-end">
             <div>
-              <div className="mb-7 flex flex-wrap items-center gap-3">
-                <YCombinatorMark />
-                <div>
-                  <p className="font-mono text-xs font-bold tracking-[0.18em] text-[#a886ff]">ANGEL INVESTOR PAGE</p>
-                  <p className="mt-1 text-sm font-semibold text-[#F26522]">APPLYING TO Y COMBINATOR · FALL 2026</p>
-                </div>
-              </div>
-              <h1 className="max-w-4xl text-balance text-5xl font-semibold leading-[.96] tracking-[-0.065em] sm:text-7xl lg:text-8xl">
-                Let&apos;s make AI-written code <span className="font-serif font-normal italic text-[#a886ff]">understandable.</span>
+              <p className="font-mono text-xs font-bold tracking-[.16em] text-[#a886ff]">PRIVATE BETA · MAC-FIRST</p>
+              <h1 className="mt-5 max-w-3xl text-balance text-5xl font-semibold leading-[.94] tracking-[-.065em] sm:text-7xl">
+                AI writes the code. <span className="font-serif font-normal italic text-[#a886ff]">Unvibe makes it yours.</span>
               </h1>
-              <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[#c2b9d2] sm:text-xl">
-                Unvibe is building the desktop learning layer for people who build with AI. We are applying to Y Combinator&apos;s Fall 2026 batch and are open to conversations with angels and early-stage investors who believe people should understand the software they ship.
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#c2b9d2]">
+                A desktop learning layer for understanding AI-generated code in context — before it becomes something you cannot explain, debug, or maintain.
               </p>
             </div>
-            <aside className="border-l border-[#8e75b8]/50 pl-6 sm:pl-8">
-              <p className="font-mono text-xs font-bold tracking-[0.16em] text-[#a886ff]">FOUNDER CONTACT</p>
-              <a className="mt-4 block text-lg font-medium text-white underline decoration-[#8e63f5] decoration-2 underline-offset-4 hover:text-[#cdbbff]" href="mailto:prestonjaysusanto@gmail.com">prestonjaysusanto@gmail.com</a>
-              <a className="mt-3 block text-lg font-medium text-white underline decoration-[#8e63f5] decoration-2 underline-offset-4 hover:text-[#cdbbff]" href="mailto:preston@unvibe.site">preston@unvibe.site</a>
-              <p className="mt-6 text-sm leading-relaxed text-[#a99caf]">Open to angel investors, early-stage funds, and thoughtful operators.</p>
-            </aside>
+            <div className="border-l border-[#8e75b8]/50 pl-6 sm:pl-8">
+              <p className="font-mono text-xs font-bold tracking-[.16em] text-[#a886ff]">FOUNDER</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-.04em]">Preston Susanto</p>
+              <a href="mailto:prestonjaysusanto@gmail.com" className="mt-5 block text-sm text-[#cdbbff] underline decoration-[#8e63f5] underline-offset-4 hover:text-white">prestonjaysusanto@gmail.com</a>
+              <a href="mailto:preston@unvibe.site" className="mt-3 block text-sm text-[#cdbbff] underline decoration-[#8e63f5] underline-offset-4 hover:text-white">preston@unvibe.site</a>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-16 sm:px-10 sm:py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-9 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="font-mono text-xs font-bold tracking-[0.16em] text-[#a886ff]">INVESTOR MATERIALS</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Start with the version that fits your time.</h2>
-            </div>
-            <a href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation" className="inline-flex items-center gap-2 text-sm font-semibold text-[#cdbbff] hover:text-white"><Mail size={16} /> Start a conversation <ArrowUpRight size={15} /></a>
-          </div>
+      <section className="border-y border-[#8e75b8]/35 bg-[#120e1c] px-6 py-12 sm:px-10">
+        <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-2">
+          <a href={DECK_URL} target="_blank" rel="noreferrer" className="group border border-[#8e75b8]/60 bg-[#201a2e] p-7 shadow-[7px_7px_0_#5a3a9a] transition-transform hover:-translate-y-1">
+            <FileText className="text-[#bca1ff]" size={30} strokeWidth={1.5} />
+            <p className="mt-6 font-mono text-xs font-bold tracking-[.16em] text-[#a886ff]">14-SLIDE DECK</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em]">Investor pitch deck</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#bcb3ca]">Problem, product, market, model, and fundraise context.</p>
+            <span className="mt-7 inline-flex items-center gap-2 font-semibold text-[#cdbbff] group-hover:text-white">Open deck <ArrowUpRight size={17} /></span>
+          </a>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            {materials.map((material) => (
-              <article key={material.href} className="flex min-h-72 flex-col border border-[#8e75b8]/60 bg-[#201a2e] p-7 shadow-[8px_8px_0_#7954bb] transition-transform hover:-translate-y-1 sm:p-9">
-                <p className="font-mono text-xs font-bold tracking-[0.16em] text-[#a886ff]">{material.eyebrow}</p>
-                <FileText className="mt-10 text-[#bca1ff]" size={34} strokeWidth={1.4} />
-                <h3 className="mt-5 text-2xl font-semibold tracking-[-0.04em]">{material.title}</h3>
-                <p className="mt-3 max-w-md leading-relaxed text-[#bcb3ca]">{material.description}</p>
-                <a href={material.href} target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center gap-2 pt-9 font-semibold text-[#cdbbff] hover:text-white">{material.label} <Download size={17} /></a>
-              </article>
-            ))}
-          </div>
+          <a href={DMG_URL} className="group border border-[#a886ff] bg-[#8e63f5] p-7 shadow-[7px_7px_0_#4d3184] transition-transform hover:-translate-y-1">
+            <Download className="text-white" size={30} strokeWidth={1.5} />
+            <p className="mt-6 font-mono text-xs font-bold tracking-[.16em] text-[#e4dbff]">TESTER BUILD</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em]">Download the Mac app</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#eeeaff]">Apple Silicon DMG. Drag Unvibe to Applications, then test it with your own code.</p>
+            <span className="mt-7 inline-flex items-center gap-2 font-semibold text-white">Download DMG <Download size={17} /></span>
+          </a>
+        </div>
+      </section>
 
-          <article className="mt-8 grid overflow-hidden border border-[#8e75b8]/60 bg-[#201a2e] lg:grid-cols-[.74fr_1.26fr]">
-            <div className="p-7 sm:p-10">
-              <p className="font-mono text-xs font-bold tracking-[0.16em] text-[#a886ff]">ONE-PAGER</p>
-              <h3 className="mt-4 text-3xl font-semibold tracking-[-0.05em]">The fast overview.</h3>
-              <p className="mt-4 leading-relaxed text-[#bcb3ca]">A single-page summary of the company, product, market need, audience, business model, and current status.</p>
-              <a href="/investors/unvibe-investor-one-pager.png" target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 font-semibold text-[#cdbbff] hover:text-white">Open one-pager <Download size={17} /></a>
-            </div>
-            <a href="/investors/unvibe-investor-one-pager.png" target="_blank" rel="noreferrer" className="block bg-white p-3 sm:p-5" aria-label="Open the Unvibe investor one-pager">
-              <Image src="/investors/unvibe-investor-one-pager.png" alt="Unvibe investor one-pager" width={1103} height={1426} className="mx-auto h-auto max-h-[650px] w-auto max-w-full shadow-xl" />
-            </a>
-          </article>
+      <section className="px-6 py-14 sm:px-10 sm:py-18">
+        <div className="mx-auto grid max-w-5xl gap-8 border border-[#8e75b8]/45 bg-[#201a2e]/60 p-7 sm:grid-cols-[1fr_auto] sm:items-center sm:p-9">
+          <div>
+            <p className="flex items-center gap-2 font-mono text-xs font-bold tracking-[.16em] text-[#a886ff]"><ShieldCheck size={16} /> PRIVATE-BETA NOTE</p>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#c2b9d2]">The tester DMG is unsigned and requires macOS&apos;s normal first-open approval. Accessibility is optional and only needed for the global ⌘U selection shortcut. No AI provider key is included in the app.</p>
+          </div>
+          <a href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation" className="inline-flex items-center justify-center gap-2 border border-[#8e75b8]/65 px-5 py-3 text-sm font-semibold text-[#cdbbff] hover:border-[#cdbbff] hover:text-white"><Mail size={16} /> Contact founder</a>
         </div>
       </section>
     </main>

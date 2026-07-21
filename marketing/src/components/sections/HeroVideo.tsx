@@ -1,29 +1,68 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 import { track } from "@/lib/analytics";
-import { UnvibeBar } from "../UnvibeBar";
 
 /**
- * Top-of-page demo slot. Drop a file at public/demo.mp4 (or set NEXT_PUBLIC_DEMO_VIDEO_URL)
- * and this plays it. Until then it shows a polished poster frame ready for recording.
+ * Top-of-page demo slot. Uses the investor product recording by default.
+ * Attempts autoplay with audio; one tap enables sound if the browser blocks it.
  */
 export function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [playing, setPlaying] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [mutedFallback, setMutedFallback] = useState(false);
   const src =
-    process.env.NEXT_PUBLIC_DEMO_VIDEO_URL?.trim() || "/demo.mp4";
+    process.env.NEXT_PUBLIC_DEMO_VIDEO_URL?.trim()
+    || process.env.NEXT_PUBLIC_INVESTOR_DEMO_VIDEO_URL?.trim()
+    || "https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4";
 
-  const start = async () => {
-    track("demo_started", { source: "hero_video" });
+  useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+    let cancelled = false;
+    const run = async () => {
+      el.muted = false;
+      el.volume = 1;
+      try {
+        await el.play();
+        if (!cancelled) {
+          setBlocked(false);
+          setMutedFallback(false);
+          track("demo_started", { source: "hero_video", mode: "autoplay_audio" });
+        }
+      } catch {
+        try {
+          el.muted = true;
+          await el.play();
+          if (!cancelled) {
+            setMutedFallback(true);
+            setBlocked(true);
+            track("demo_started", { source: "hero_video", mode: "autoplay_muted" });
+          }
+        } catch {
+          if (!cancelled) setBlocked(true);
+        }
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const enableSound = async () => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = false;
+    el.volume = 1;
     try {
       await el.play();
-      setPlaying(true);
+      setBlocked(false);
+      setMutedFallback(false);
+      track("demo_started", { source: "hero_video", mode: "unmuted" });
     } catch {
-      setPlaying(false);
+      setBlocked(true);
     }
   };
 
@@ -34,40 +73,27 @@ export function HeroVideo() {
       aria-label="Product demo"
     >
       <div className="relative overflow-hidden rounded-card border border-line bg-[#0F1419] shadow-lift">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(79,70,229,0.35),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(37,99,235,0.28),_transparent_45%)]" />
-
         <video
           ref={videoRef}
           className="relative z-[1] aspect-[16/9] w-full object-cover"
-          controls={playing}
+          autoPlay
           playsInline
-          preload="metadata"
+          controls
+          preload="auto"
           poster="/og.png"
-          onEnded={() => setPlaying(false)}
         >
           <source src={src} type="video/mp4" />
         </video>
-
-        {!playing && (
+        {blocked ? (
           <button
             type="button"
-            onClick={start}
-            className="absolute inset-0 z-[2] flex flex-col items-center justify-center gap-5 bg-[#0F1419]/30 text-white transition-colors hover:bg-[#0F1419]/20"
+            onClick={() => void enableSound()}
+            className="absolute bottom-5 left-1/2 z-[2] inline-flex -translate-x-1/2 items-center gap-2 rounded-pill border border-primary bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-lift"
           >
-            <UnvibeBar tone="dark" busy hint="to explain" />
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#0F1419] shadow-lift">
-              <Play size={22} fill="currentColor" aria-hidden="true" />
-            </span>
-            <span className="text-center">
-              <span className="block text-base font-semibold tracking-tight sm:text-lg">
-                Watch Unvibe in 30 seconds
-              </span>
-              <span className="mt-1 block text-sm text-white/75">
-                Select code → choose depth → understand what shipped
-              </span>
-            </span>
+            {mutedFallback ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
+            {mutedFallback ? "Tap for sound" : "Tap to play with sound"}
           </button>
-        )}
+        ) : null}
       </div>
     </section>
   );

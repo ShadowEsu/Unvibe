@@ -43,17 +43,19 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
 export function buildUserPrompt(payload: ReviewRequestPayload): string {
   const { context: ctx, scope } = payload;
   const parts: string[] = [];
+  const projectStructure = ctx.projectStructure ?? [];
+  const imports = ctx.imports ?? [];
 
   parts.push(`# Review request: ${scope}`);
-  parts.push(`Language: ${ctx.language}`);
+  parts.push(`Language: ${ctx.language ?? 'unknown'}`);
   if (ctx.primaryFile) {
     parts.push(`Primary file: ${ctx.primaryFile}`);
   }
-  if (ctx.projectStructure.length) {
-    parts.push(`Project (top level): ${ctx.projectStructure.join(', ')}`);
+  if (projectStructure.length) {
+    parts.push(`Project (top level): ${projectStructure.join(', ')}`);
   }
-  if (ctx.imports.length) {
-    parts.push('\n## Imports\n```\n' + ctx.imports.join('\n') + '\n```');
+  if (imports.length) {
+    parts.push('\n## Imports\n```\n' + imports.join('\n') + '\n```');
   }
 
   if (ctx.diffHunks?.length) {
@@ -87,6 +89,11 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
 
 /** System + user prompt for generating one multiple-choice comprehension question as JSON. */
 export function buildComprehensionPrompt(payload: ReviewRequestPayload): { system: string; user: string } {
+  const quizInstruction = payload.quizMode === 'recall'
+    ? 'Mode: RECALL. Test whether the reader can name the responsibility or purpose of the code in their own words. Do not test surface syntax.'
+    : payload.quizMode === 'scenario'
+      ? 'Mode: SCENARIO. Ask what behaviour, data flow, or risk follows from a small concrete change. Keep the scenario strictly grounded in the supplied code.'
+      : 'Mode: QUICK CHECK. Test the central behaviour or intent of the code in one direct question.';
   const system = [
     'You are Uncode. Generate ONE multiple-choice question that tests whether the reader',
     'UNDERSTOOD the provided code (not trivia or recall). Use only the provided context.',
@@ -95,6 +102,7 @@ export function buildComprehensionPrompt(payload: ReviewRequestPayload): { syste
     '{"question": string, "options": [string, string, string, string],',
     ' "answerIndex": 0-3, "rationale": string, "concept": kebab-case-slug, "conceptLabel": string}',
     'Exactly one option must be correct. Keep options plausible and similar in length.',
+    quizInstruction,
   ].join('\n');
   const user = buildUserPrompt({ ...payload, question: undefined });
   return { system, user };

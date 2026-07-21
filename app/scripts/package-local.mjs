@@ -10,8 +10,10 @@ function fail(message) {
 
 const appEnv = process.env.APP_ENV?.trim();
 const backend = process.env.UNVIBE_BACKEND?.trim();
+const trialToken = process.env.UNVIBE_TRIAL_TOKEN?.trim();
 if (appEnv !== 'staging') fail('set APP_ENV=staging (production packaging is intentionally excluded).');
 if (!backend) fail('set UNVIBE_BACKEND to the approved HTTPS staging backend.');
+if (!trialToken || trialToken.length < 24) fail('set UNVIBE_TRIAL_TOKEN to a long opaque trial secret (not a provider API key).');
 let url;
 try { url = new URL(backend); } catch { fail('UNVIBE_BACKEND must be an absolute URL.'); }
 if (url.protocol !== 'https:') fail('UNVIBE_BACKEND must use HTTPS.');
@@ -40,6 +42,7 @@ try {
         ...process.env,
         PATH: `${toolDirectory}:${process.env.PATH ?? ''}`,
         UNVIBE_BACKEND: backend,
+        UNVIBE_TRIAL_TOKEN: trialToken,
         CSC_IDENTITY_AUTO_DISCOVERY: 'false',
       },
     });
@@ -63,6 +66,7 @@ try {
         ...process.env,
         PATH: `${toolDirectory}:${process.env.PATH ?? ''}`,
         UNVIBE_BACKEND: backend,
+        UNVIBE_TRIAL_TOKEN: trialToken,
         CSC_IDENTITY_AUTO_DISCOVERY: 'false',
       },
     });

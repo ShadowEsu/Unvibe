@@ -22,7 +22,9 @@ type WaitlistResponse = {
   code?: "waitlist_storage_setup_required" | "waitlist_storage_unavailable" | "waitlist_save_failed";
 };
 
-export function PixelWaitlist() {
+type Variant = "page" | "hero";
+
+export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const [status, setStatus] = useState<Status>("idle");
   const [submitError, setSubmitError] = useState("");
   const [savedEmail, setSavedEmail] = useState("");
@@ -49,7 +51,8 @@ export function PixelWaitlist() {
       utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
       utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
     });
-  }, []);
+    track("waitlist_started", { surface: variant });
+  }, [variant]);
 
   const submit = async (values: WaitlistInput) => {
     setStatus("submitting");
@@ -68,7 +71,7 @@ export function PixelWaitlist() {
       }
       setSavedEmail(values.email.trim().toLowerCase());
       setStatus(data.duplicate ? "duplicate" : "success");
-      track("waitlist_completed", { duplicate: Boolean(data.duplicate) });
+      track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
@@ -91,6 +94,63 @@ export function PixelWaitlist() {
   };
 
   const complete = status === "success" || status === "duplicate";
+  const form = (
+    <div className={variant === "hero" ? "hero-waitlist-card" : "waitlist-card"}>
+      {!complete ? (
+        <form onSubmit={handleSubmit(submit)} noValidate>
+          <div className="form-heading">
+            <span className="brand-pixel" />
+            <strong>Join the waitlist</strong>
+            <small>{variant === "hero" ? "Name and email. That is all." : "Three quick details. That is all."}</small>
+          </div>
+          <div className="name-row">
+            <Field label="First name" error={errors.firstName?.message}>
+              <input autoComplete="given-name" aria-invalid={Boolean(errors.firstName)} {...register("firstName")} />
+            </Field>
+            <Field label="Last name" error={errors.lastName?.message}>
+              <input autoComplete="family-name" aria-invalid={Boolean(errors.lastName)} {...register("lastName")} />
+            </Field>
+          </div>
+          <Field label="Email" error={errors.email?.message}>
+            <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
+          </Field>
+          {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
+          <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
+            {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
+          </button>
+          <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
+        </form>
+      ) : (
+        <div className="success-panel" role="status">
+          <span className="success-pixel"><Check /></span>
+          <p className="pixel-label">SPOT SAVED</p>
+          <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
+          <p>Want the product? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll send access.</p>
+          {variant === "page" && (
+            detailsStatus === "saved" ? (
+              <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>
+            ) : (
+              <div className="optional-details">
+                <label>Where do you code?<select value={tool} onChange={(event) => setTool(event.target.value as typeof tool)}><option value="">Prefer not to say</option>{tools.map((item) => <option key={item} value={item}>{toolLabels[item]}</option>)}</select></label>
+                <label>Your experience<select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)}><option value="">Prefer not to say</option>{experiences.map((item) => <option key={item} value={item}>{experienceLabels[item]}</option>)}</select></label>
+                <label>What should Unvibe help you learn?<textarea value={message} maxLength={500} rows={3} onChange={(event) => setMessage(event.target.value)} /></label>
+                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details weren&apos;t saved. Your beta spot is still safe.</p>}
+                <button type="button" className="details-button" disabled={detailsStatus === "saving"} onClick={saveDetails}>{detailsStatus === "saving" ? "Saving…" : "Save optional details"}</button>
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  if (variant === "hero") {
+    return (
+      <div className="hero-waitlist" id="waitlist">
+        {form}
+      </div>
+    );
+  }
 
   return (
     <section className="waitlist-field" id="waitlist">
@@ -107,48 +167,7 @@ export function PixelWaitlist() {
           </ul>
           <p className="beta-clarity">Want the product now? Email preston@unvibe.site after you join the waitlist.</p>
         </div>
-
-        <div className="waitlist-card">
-          {!complete ? (
-            <form onSubmit={handleSubmit(submit)} noValidate>
-              <div className="form-heading"><span className="brand-pixel" /><strong>Join the waitlist</strong><small>Three quick details. That&apos;s all.</small></div>
-              <div className="name-row">
-                <Field label="First name" error={errors.firstName?.message}>
-                  <input autoComplete="given-name" aria-invalid={Boolean(errors.firstName)} {...register("firstName")} />
-                </Field>
-                <Field label="Last name" error={errors.lastName?.message}>
-                  <input autoComplete="family-name" aria-invalid={Boolean(errors.lastName)} {...register("lastName")} />
-                </Field>
-              </div>
-              <Field label="Email" error={errors.email?.message}>
-                <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
-              </Field>
-              {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
-              <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
-                {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
-              </button>
-              <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
-            </form>
-          ) : (
-            <div className="success-panel" role="status">
-              <span className="success-pixel"><Check /></span>
-              <p className="pixel-label">SPOT SAVED</p>
-              <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
-              <p>Want the product? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll send access. Optional details below help us prioritize invites.</p>
-              {detailsStatus === "saved" ? (
-                <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>
-              ) : (
-                <div className="optional-details">
-                  <label>Where do you code?<select value={tool} onChange={(event) => setTool(event.target.value as typeof tool)}><option value="">Prefer not to say</option>{tools.map((item) => <option key={item} value={item}>{toolLabels[item]}</option>)}</select></label>
-                  <label>Your experience<select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)}><option value="">Prefer not to say</option>{experiences.map((item) => <option key={item} value={item}>{experienceLabels[item]}</option>)}</select></label>
-                  <label>What should Unvibe help you learn?<textarea value={message} maxLength={500} rows={3} onChange={(event) => setMessage(event.target.value)} /></label>
-                  {detailsStatus === "error" && <p className="form-error" role="alert">Optional details weren&apos;t saved. Your beta spot is still safe.</p>}
-                  <button type="button" className="details-button" disabled={detailsStatus === "saving"} onClick={saveDetails}>{detailsStatus === "saving" ? "Saving…" : "Save optional details"}</button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {form}
       </Reveal>
     </section>
   );

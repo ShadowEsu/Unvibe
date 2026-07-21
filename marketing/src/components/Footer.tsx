@@ -16,28 +16,29 @@ const columns: FooterColumn[] = [
   {
     heading: "Product",
     links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Explanation levels", href: "#learn" },
-      { label: "Context ladder", href: "#context" },
-      { label: "Watch demo", href: "#demo" },
-      { label: "Pricing", href: "#pricing" },
-      { label: "Join waitlist", href: "#waitlist" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Explanation levels", href: "/#learn" },
+      { label: "Context ladder", href: "/#context" },
+      { label: "Watch demo", href: "/#demo" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "Join waitlist", href: "/#waitlist" },
       { label: "Email for access", href: founderMailto },
     ],
   },
   {
     heading: "Explore",
     links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Project curriculum", href: "#curriculum" },
-      { label: "Works beside tools", href: "#tools" },
-      { label: "Privacy", href: "#privacy" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Project curriculum", href: "/#curriculum" },
+      { label: "Works beside tools", href: "/#tools" },
+      { label: "Privacy", href: "/#privacy" },
     ],
   },
   {
     heading: "Company",
     links: [
-      { label: "FAQ", href: "#faq" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Investors", href: "/investors" },
       { label: "Support", href: supportMailto },
       { label: "Preston", href: founderMailto },
     ],
@@ -73,23 +74,33 @@ export function Footer() {
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((link) => {
                   const external = link.href.startsWith("mailto:");
-                  const internal = link.href.startsWith("/");
+                  const hash = link.href.startsWith("/#") || link.href.startsWith("#");
+                  const investors = link.href === "/investors";
+                  const className = investors
+                    ? "rounded-pill px-2 py-1"
+                    : "text-fluid-sm text-fg-muted transition-colors hover:text-fg";
+                  const style = investors
+                    ? {
+                        color: "#6f45d2",
+                        backgroundColor: "rgba(111, 69, 210, 0.12)",
+                        fontFamily: "var(--font-mono), ui-monospace, monospace",
+                        fontWeight: 700,
+                        fontSize: "0.72rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const,
+                      }
+                    : undefined;
+                  const useAnchor = external || hash || !link.href.startsWith("/") || investors;
                   return (
                     <li key={link.label}>
-                      {internal && !external ? (
-                        <Link
-                          href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
-                        >
-                          {link.label}
-                        </Link>
-                      ) : (
-                        <a
-                          href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
-                        >
+                      {useAnchor ? (
+                        <a href={link.href} className={className} style={style}>
                           {link.label}
                         </a>
+                      ) : (
+                        <Link href={link.href} className={className} style={style}>
+                          {link.label}
+                        </Link>
                       )}
                     </li>
                   );

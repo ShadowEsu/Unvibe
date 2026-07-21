@@ -39,3 +39,4 @@ output/
 *.inspect.ndjson
 app/.tools-bin/
 web/.vercel/
+.local/

@@ -4,7 +4,7 @@
  */
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
-import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
+import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import type { LocalEvent } from '../core/learning';
 import { BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
@@ -155,7 +155,43 @@ export async function askStudyAssistant(input: {
   }
 }
 
-export async function startQuizCard(eventId: string): Promise<
+const QUIZ_LEVELS: ExplanationLevel[] = ['new', 'beginner', 'intermediate', 'advanced', 'expert'];
+
+/** Wrong or unproven lessons receive a more approachable check; understood lessons stretch one level. */
+export function adaptiveQuizLevel(event: Pick<LocalEvent, 'level' | 'outcome'>): ExplanationLevel {
+  const base = (QUIZ_LEVELS.includes(event.level as ExplanationLevel) ? event.level : 'intermediate') as ExplanationLevel;
+  const index = QUIZ_LEVELS.indexOf(base);
+  if (event.outcome === 'needs_review') return QUIZ_LEVELS[Math.max(0, index - 1)]!;
+  if (event.outcome === 'understood') return QUIZ_LEVELS[Math.min(QUIZ_LEVELS.length - 1, index + 1)]!;
+  return base;
+}
+
+function localLessonQuiz(event: LocalEvent, mode: QuizMode): {
+  question: string; options: string[]; answerIndex: number; rationale: string; concept: string; conceptLabel: string;
+} {
+  const label = event.conceptLabel || event.file || 'this code';
+  const lang = event.language || 'the reviewed';
+  const question = mode === 'recall'
+    ? `Which statement best captures the purpose of the lesson about ${label}?`
+    : mode === 'scenario'
+      ? `If this ${lang} code changed, which understanding from ${label} should guide your review first?`
+      : `In the lesson about ${label}, what should you be able to explain after a review?`;
+  return {
+    question,
+    options: [
+      `What this ${lang} code is doing and why it matters in context`,
+      'How to delete the entire repository safely',
+      'How to ignore types and ship without reading the change',
+      'How to turn off all error checking permanently',
+    ],
+    answerIndex: 0,
+    rationale: `You kept this lesson so you can explain ${label} in your own words.`,
+    concept: event.concept || 'lesson-check',
+    conceptLabel: event.conceptLabel || 'Lesson check',
+  };
+}
+
+export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-check'): Promise<
   | { ok: true; question: string; options: string[]; conceptLabel: string; remaining: number }
   | { ok: false; error: string; remaining?: number }
 > {
@@ -168,7 +204,15 @@ export async function startQuizCard(eventId: string): Promise<
   }
 
   try {
-    const q = await fetchQuestion(built.payload, store().token());
+    let q: {
+      question: string; options: string[]; answerIndex: number; rationale: string; concept: string; conceptLabel: string;
+    };
+    try {
+      q = await fetchQuestion({ ...built.payload, level: adaptiveQuizLevel(built.event), quizMode: mode }, store().token());
+    } catch {
+      // Keep demos usable when the cloud quiz endpoint is unavailable or requires sign-in.
+      q = localLessonQuiz(built.event, mode);
+    }
     const quota = store().consumeQuiz();
     if (!quota.ok) return { ok: false, error: quota.error, remaining: quota.remaining };
     pendingQuizzes.set(eventId, {
@@ -205,6 +249,12 @@ export function answerQuizCard(eventId: string, choice: number):
   const correct = choice === pending.answerIndex;
   // Soft mode: wrong answers stay open so the learner can try again.
   if (!correct) {
+    try {
+      store().setOutcome(eventId, 'needs_review', pending.concept, pending.conceptLabel);
+      void flush();
+    } catch {
+      // Keep grading even if the outcome write fails.
+    }
     return {
       ok: true,
       correct: false,

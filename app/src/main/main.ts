@@ -80,6 +80,7 @@ import {
   resolveRepoRoot,
 } from './contextBuilder';
 import { answerQuizCard, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
+import { integrationStatus } from './integrations';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -107,7 +108,7 @@ function makeSession(
   tabId: string,
   code: string | null,
   sourceApp: string | null,
-  level: ExplanationLevel = 'intermediate',
+  level: ExplanationLevel = settings().all().defaultExplanationLevel,
 ): ReviewSession {
   return {
     reviewId: randomUUID(),
@@ -581,7 +582,9 @@ app.whenReady().then(() => {
   ipcMain.handle('study:askStatus', () => studyAskStatus());
   ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string }) => askStudyAssistant(input));
   ipcMain.handle('quiz:status', () => quizCardStatus());
-  ipcMain.handle('quiz:start', (_e, eventId: string) => startQuizCard(eventId));
+  ipcMain.handle('quiz:start', (_e, input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) =>
+    startQuizCard(input.eventId, input.mode),
+  );
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
 
   ipcMain.handle('project:pickRoot', async () => {
@@ -708,6 +711,7 @@ app.whenReady().then(() => {
 
   // --- settings ---
   ipcMain.handle('settings:get', () => settings().all());
+  ipcMain.handle('integrations:status', () => integrationStatus());
   ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
     const before = settings().all().shortcut;
     const next = settings().set(patch);

@@ -83,7 +83,7 @@
 <body>
   <main>
     <h1>Site stats</h1>
-    <p class="lead">How many people are looking at Unvibe — today, this week, and all time. Same token as waitlist admin.</p>
+    <p class="lead">How many people are looking at Unvibe — today, this week, and all time. Unique browsers only. Today resets at midnight Pacific.</p>
 
     <section id="login" class="card">
       <label for="token">Admin token</label>
@@ -147,9 +147,9 @@
       const data = await response.json();
       const s = data.stats;
       setText("todayVisitors", String(s.today.visitors));
-      setText("todayViews", s.today.views + " page views · " + s.today.date + " UTC");
+      setText("todayViews", s.today.views + " page views · " + s.today.date + " PT");
       setText("weekVisitors", String(s.week.visitors));
-      setText("weekViews", s.week.views + " page views");
+      setText("weekViews", s.week.views + " page views · last 7 days PT");
       setText("allVisitors", String(s.allTime.visitors));
       setText("allViews", s.allTime.views + " page views");
       daysBody.innerHTML = (s.recentDays || []).map(function (day) {

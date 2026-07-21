@@ -1,19 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Loader2, LockKeyhole, RefreshCw } from "lucide-react";
+import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import type { SiteStatsSummary } from "@/lib/siteStatsStore";
 import type { WaitlistAdminEntry } from "@/lib/waitlistStore";
 
-type ViewState = "locked" | "loading" | "ready" | "unauthorized" | "error";
+type ViewState = "loading" | "ready" | "error";
 
 export function AdminWaitlist() {
-  const [token, setToken] = useState("");
   const [entries, setEntries] = useState<WaitlistAdminEntry[]>([]);
-  const [state, setState] = useState<ViewState>("locked");
+  const [siteStats, setSiteStats] = useState<SiteStatsSummary | null>(null);
+  const [state, setState] = useState<ViewState>("loading");
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState("");
+  const [deleting, setDeleting] = useState("");
   const [retryError, setRetryError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
   const notified = useMemo(
@@ -21,29 +24,27 @@ export function AdminWaitlist() {
     [entries]
   );
 
-  const load = useCallback(async (credential: string, background = false) => {
-    if (!credential.trim()) return;
+  const load = useCallback(async (background = false) => {
     if (background) setRefreshing(true);
     else setState("loading");
     try {
-      const response = await fetch("/api/waitlist/admin", {
-        headers: { Authorization: `Bearer ${credential.trim()}` },
-        cache: "no-store",
-      });
-      if (response.status === 401) {
-        window.sessionStorage.removeItem("unvibe_waitlist_admin");
-        setState("unauthorized");
-        return;
-      }
-      if (response.status === 429) {
-        setState("error");
-        return;
-      }
-      if (!response.ok) throw new Error("load failed");
-      const data = (await response.json()) as { entries: WaitlistAdminEntry[]; generatedAt: string };
+      const [waitlistResponse, statsResponse] = await Promise.all([
+        fetch("/api/waitlist/admin", { cache: "no-store" }),
+        fetch("/api/stats", { cache: "no-store" }),
+      ]);
+      if (!waitlistResponse.ok) throw new Error("load failed");
+      const data = (await waitlistResponse.json()) as {
+        entries: WaitlistAdminEntry[];
+        generatedAt: string;
+      };
       setEntries(data.entries);
       setUpdatedAt(data.generatedAt);
-      window.sessionStorage.setItem("unvibe_waitlist_admin", credential.trim());
+      if (statsResponse.ok) {
+        const statsData = (await statsResponse.json()) as { stats?: SiteStatsSummary };
+        setSiteStats(statsData.stats ?? null);
+      } else {
+        setSiteStats(null);
+      }
       setState("ready");
     } catch {
       setState("error");
@@ -53,11 +54,7 @@ export function AdminWaitlist() {
   }, []);
 
   useEffect(() => {
-    const saved = window.sessionStorage.getItem("unvibe_waitlist_admin");
-    if (saved) {
-      setToken(saved);
-      void load(saved);
-    }
+    void load();
   }, [load]);
 
   const downloadCsv = () => {
@@ -88,18 +85,16 @@ export function AdminWaitlist() {
   const retryNotification = async (email: string) => {
     setRetrying(email);
     setRetryError("");
+    setActionError("");
     try {
       const response = await fetch("/api/waitlist/admin", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("retry failed");
       const data = (await response.json()) as { notification: { status: "sent" | "failed" } };
-      await load(token, true);
+      await load(true);
       if (data.notification.status === "failed") {
         setRetryError("Email delivery is still unavailable. Check provider activation and try again.");
       }
@@ -110,6 +105,28 @@ export function AdminWaitlist() {
     }
   };
 
+  const deleteEntry = async (email: string) => {
+    const confirmed = window.confirm(`Remove ${email} from the waitlist?`);
+    if (!confirmed) return;
+    setDeleting(email);
+    setActionError("");
+    setRetryError("");
+    try {
+      const response = await fetch("/api/waitlist/admin", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) throw new Error("delete failed");
+      setEntries((current) => current.filter((entry) => entry.email !== email));
+      await load(true);
+    } catch {
+      setActionError("That signup could not be deleted. Refresh and try again.");
+    } finally {
+      setDeleting("");
+    }
+  };
+
   return (
     <main className="admin-shell">
       <div className="admin-topbar">
@@ -117,43 +134,61 @@ export function AdminWaitlist() {
         <a href="/">Back to site</a>
       </div>
 
-      {state !== "ready" ? (
+      {state === "loading" ? (
         <section className="admin-login">
-          <span className="admin-lock"><LockKeyhole /></span>
-          <p className="pixel-label">PRIVATE FOUNDER VIEW</p>
-          <h1>Open the waitlist.</h1>
-          <p>Enter the admin access key. It stays in this browser tab only.</p>
-          <label>
-            Admin access key
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter") void load(token); }}
-            />
-          </label>
-          {(state === "unauthorized" || state === "error") && (
-            <p className="admin-error" role="alert">
-              {state === "unauthorized"
-                ? "That access key is not valid. Use the WAITLIST_ADMIN_TOKEN from Vercel for this site."
-                : "The waitlist could not be loaded. Confirm WAITLIST_ADMIN_TOKEN and BLOB_READ_WRITE_TOKEN are set on this deployment, then redeploy. If you rotated the admin token, the encrypted waitlist file may need a reset."}
-            </p>
-          )}
-          <button type="button" onClick={() => void load(token)} disabled={state === "loading" || !token.trim()}>
-            {state === "loading" ? <><Loader2 className="spin" size={17} />Loading</> : "Open waitlist"}
-          </button>
+          <Loader2 className="spin" size={22} aria-label="Loading" />
+          <p>Loading signups…</p>
+        </section>
+      ) : state === "error" ? (
+        <section className="admin-login">
+          <h1>Could not load the waitlist.</h1>
+          <p className="admin-error" role="alert">Check storage on this deployment, then try again.</p>
+          <button type="button" onClick={() => void load()}>Retry</button>
         </section>
       ) : (
         <section className="admin-content">
           <div className="admin-heading">
-            <div><p className="pixel-label">PRIVATE BETA</p><h1>Waitlist</h1><p>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : ""}</p></div>
-            <div className="admin-actions">
-              <button type="button" onClick={() => void load(token, true)} disabled={refreshing}>
-                <RefreshCw className={refreshing ? "spin" : undefined} size={16} />{refreshing ? "Refreshing" : "Refresh"}
-              </button>
-              <button type="button" onClick={downloadCsv} disabled={entries.length === 0}><Download size={16} />Export CSV</button>
+            <div>
+              <p className="pixel-label">PRIVATE BETA</p>
+              <h1>Waitlist</h1>
+              <p>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : ""}</p>
             </div>
+            <div className="admin-actions">
+              <button type="button" onClick={() => void load(true)} disabled={refreshing}>
+                <RefreshCw className={refreshing ? "spin" : undefined} size={16} />
+                {refreshing ? "Refreshing" : "Refresh"}
+              </button>
+              <button type="button" onClick={downloadCsv} disabled={entries.length === 0}>
+                <Download size={16} />Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div className="admin-section-label">
+            <p className="pixel-label">Site viewers</p>
+            <span>Unique browsers only · Today resets at midnight PT</span>
+          </div>
+          <div className="admin-stats">
+            <article>
+              <small>Today</small>
+              <strong>{siteStats?.today.visitors ?? "—"}</strong>
+              <span>{siteStats ? `${siteStats.today.views} page views · ${siteStats.today.date}` : "Unavailable"}</span>
+            </article>
+            <article>
+              <small>This week</small>
+              <strong>{siteStats?.week.visitors ?? "—"}</strong>
+              <span>{siteStats ? `${siteStats.week.views} page views · last 7 days PT` : "Unavailable"}</span>
+            </article>
+            <article>
+              <small>All time</small>
+              <strong>{siteStats?.allTime.visitors ?? "—"}</strong>
+              <span>{siteStats ? `${siteStats.allTime.views} page views` : "Unavailable"}</span>
+            </article>
+          </div>
+
+          <div className="admin-section-label">
+            <p className="pixel-label">Waitlist</p>
+            <span>Signups collected from the public form</span>
           </div>
           <div className="admin-stats">
             <article><small>Total signups</small><strong>{entries.length}</strong></article>
@@ -161,21 +196,83 @@ export function AdminWaitlist() {
             <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : "—"}</strong></article>
           </div>
           {retryError && <p className="admin-error" role="alert">{retryError}</p>}
+          {actionError && <p className="admin-error" role="alert">{actionError}</p>}
           {entries.length === 0 ? (
-            <div className="admin-empty"><p>No signups yet.</p><span>The first completed waitlist form will appear here.</span></div>
+            <div className="admin-empty">
+              <p>No signups yet.</p>
+              <span>The first completed waitlist form will appear here.</span>
+            </div>
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table">
-                <thead><tr><th>Joined</th><th>Person</th><th>Email</th><th>Details</th><th>Notification</th></tr></thead>
-                <tbody>{entries.map((entry) => (
-                  <tr key={entry.id}>
-                    <td>{new Date(entry.createdAt).toLocaleString()}</td>
-                    <td><strong>{[entry.firstName, entry.lastName].filter(Boolean).join(" ") || "Name unavailable"}</strong></td>
-                    <td><a href={`mailto:${entry.email}`}>{entry.email}</a></td>
-                    <td><span>{entry.tool || "Tool not provided"}</span><small>{entry.experience || entry.message || "No optional details"}</small></td>
-                    <td><span className={entry.notification?.status === "sent" ? "status-sent" : entry.notification?.status === "failed" ? "status-failed" : "status-pending"}>{entry.notification?.status === "sent" ? `Sent · ${entry.notification.provider}` : entry.notification?.status === "failed" ? `Failed · ${entry.notification.provider}` : "Not recorded"}</span>{entry.notification?.status !== "sent" && <button type="button" className="admin-retry" onClick={() => void retryNotification(entry.email)} disabled={retrying === entry.email}>{retrying === entry.email ? <><Loader2 className="spin" size={12} />Retrying</> : "Retry email"}</button>}</td>
+                <thead>
+                  <tr>
+                    <th>Joined</th>
+                    <th>Person</th>
+                    <th>Email</th>
+                    <th>Details</th>
+                    <th>Notification</th>
+                    <th>Actions</th>
                   </tr>
-                ))}</tbody>
+                </thead>
+                <tbody>
+                  {entries.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{new Date(entry.createdAt).toLocaleString()}</td>
+                      <td>
+                        <strong>
+                          {[entry.firstName, entry.lastName].filter(Boolean).join(" ") || "Name unavailable"}
+                        </strong>
+                      </td>
+                      <td><a href={`mailto:${entry.email}`}>{entry.email}</a></td>
+                      <td>
+                        <span>{entry.tool || "Tool not provided"}</span>
+                        <small>{entry.experience || entry.message || "No optional details"}</small>
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            entry.notification?.status === "sent"
+                              ? "status-sent"
+                              : entry.notification?.status === "failed"
+                                ? "status-failed"
+                                : "status-pending"
+                          }
+                        >
+                          {entry.notification?.status === "sent"
+                            ? `Sent · ${entry.notification.provider}`
+                            : entry.notification?.status === "failed"
+                              ? `Failed · ${entry.notification.provider}`
+                              : "Not recorded"}
+                        </span>
+                        {entry.notification?.status !== "sent" && (
+                          <button
+                            type="button"
+                            className="admin-retry"
+                            onClick={() => void retryNotification(entry.email)}
+                            disabled={retrying === entry.email || deleting === entry.email}
+                          >
+                            {retrying === entry.email
+                              ? <><Loader2 className="spin" size={12} />Retrying</>
+                              : "Retry email"}
+                          </button>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="admin-delete"
+                          onClick={() => void deleteEntry(entry.email)}
+                          disabled={deleting === entry.email || retrying === entry.email}
+                        >
+                          {deleting === entry.email
+                            ? <><Loader2 className="spin" size={12} />Deleting</>
+                            : <><Trash2 size={12} />Delete</>}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}

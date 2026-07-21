@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
-import { AdminWaitlist } from "@/components/redesign/AdminWaitlist";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Waitlist admin",
-  robots: { index: false, follow: false, noarchive: true },
-};
-
-export default function WaitlistAdminPage() {
-  return <AdminWaitlist />;
+/** Legacy path — keep working bookmarks, stay undiscoverable. */
+export default function WaitlistAdminRedirect() {
+  redirect("/waitlist");
 }

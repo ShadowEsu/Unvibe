@@ -4,6 +4,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
+import { store } from './store';
+import { bakedTrialToken } from './trial';
 
 /** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
 function loadAppEnv(): void {
@@ -52,6 +54,17 @@ export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env, baked = 
 
 export const BACKEND = resolveBackendUrl();
 const REQUEST_TIMEOUT_MS = 20_000;
+
+/** Session bearer when signed in; otherwise sealed trial token + install id. */
+export function aiAuthHeaders(sessionToken?: string | null): Record<string, string> {
+  if (sessionToken) return { authorization: `Bearer ${sessionToken}` };
+  const trial = bakedTrialToken();
+  if (!trial) return {};
+  return {
+    authorization: `Bearer ${trial}`,
+    'x-unvibe-install-id': store().installId(),
+  };
+}
 
 /** Network access stays in the main process. Bound requests so an unavailable backend never
  * leaves the widget or account controls waiting indefinitely. */
@@ -225,9 +238,20 @@ export async function fetchQuestion(payload: ReviewRequestPayload, token?: strin
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...aiAuthHeaders(token),
     },
     body: JSON.stringify(payload),
   });
   return json<ComprehensionQuestion>(res);
+}
+
+export async function trialUsageOverview(): Promise<{
+  plan: 'trial';
+  usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
+} | null> {
+  const headers = aiAuthHeaders(null);
+  if (!headers.authorization) return null;
+  const res = await request(`${BACKEND}/api/v1/trial/usage`, { headers });
+  if (!res.ok) return null;
+  return json(res);
 }

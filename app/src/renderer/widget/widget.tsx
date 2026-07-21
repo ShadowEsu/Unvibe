@@ -21,8 +21,10 @@ interface Quiz {
 
 interface EntryMeta {
   sourceApp?: string | null;
+  file?: string;
   lines?: number;
   language?: string;
+  preview?: string;
 }
 
 interface HistoryEntry {
@@ -239,20 +241,15 @@ function Widget() {
   activeRef.current = activeTabId;
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
-  // Demo AI Container: always present a fresh 50-explanation quota in the UI.
-  const outOfExplanations = false;
+  const outOfExplanations = usage ? usage.remaining <= 0 : false;
   const [revealedText, setRevealedText] = useState('');
 
   useEffect(() => {
     const refreshUsage = () => {
       void window.unvibe.usageGet().then((result) => {
         const r = result as { ok?: boolean; data?: UsageState };
-        if (!r.ok || !r.data) {
-          setUsage({ used: 0, limit: 50, remaining: 50, resetsAt: new Date().toISOString(), plan: 'local' });
-          return;
-        }
-        // Keep plan info, but always show a full free-tier remaining count.
-        setUsage({ ...r.data, used: 0, limit: 50, remaining: 50 });
+        if (!r.ok || !r.data) return;
+        setUsage(r.data);
       });
     };
     void window.unvibe.getSettings().then((st) => {
@@ -277,9 +274,9 @@ function Widget() {
       const tabId = ev.tabId;
       if (ev.type === 'usage') {
         setUsage({
-          used: 0,
-          limit: 50,
-          remaining: 50,
+          used: ev.used,
+          limit: ev.limit,
+          remaining: ev.remaining,
           resetsAt: ev.resetsAt,
           plan: ev.plan,
         });
@@ -296,7 +293,13 @@ function Widget() {
             const history = archiveCurrent(tab);
             return patchTab(prev, tabId, {
               history,
-              meta: { sourceApp: ev.sourceApp, lines: ev.lines, language: ev.language },
+              meta: {
+                sourceApp: ev.sourceApp,
+                file: ev.file,
+                lines: ev.lines,
+                language: ev.language,
+                preview: ev.preview,
+              },
               text: '',
               quiz: null,
               error: '',
@@ -482,13 +485,16 @@ function Widget() {
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
 
   return (
-    <div className="card" aria-label="Unvibe">
+    <div className={`card card--${phase}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark" aria-hidden="true">
           <LogoMark size={14} stroke={2} tone="onFill" />
         </span>
-        {src}
+        <div className="head__context">
+          <span className="head__product">Unvibe</span>
+          {src}
+        </div>
         <span className="head__spacer" />
         <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
           {collapsed ? '▾' : '▴'}
@@ -525,7 +531,8 @@ function Widget() {
       )}
 
       {!collapsed && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
-        <div className="levels">
+        <div className="levels" aria-label="Explanation depth">
+          <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
             const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams';
             return (
@@ -634,6 +641,15 @@ function Widget() {
 
           {(phase === 'streaming' || phase === 'done') && !active.quiz && (
             <div className="body" ref={bodyRef} aria-live="polite" aria-atomic="false">
+              {active.meta.preview ? (
+                <section className="code-context" aria-label="Selected code context">
+                  <div className="code-context__head">
+                    <span>Selected code</span>
+                    <span>{active.meta.file || active.meta.language || 'Local selection'}</span>
+                  </div>
+                  <pre><code>{active.meta.preview}</code></pre>
+                </section>
+              ) : null}
               {active.history.map((h) => (
                 <section key={h.id} className="history-entry">
                   <div className="history-entry__meta">
@@ -651,6 +667,7 @@ function Widget() {
                 ? renderRich(showText, stillTyping)
                 : (
                   <div className="skeleton" aria-label="Generating explanation">
+                    <span>Reading your selected code…</span>
                     <i /><i /><i />
                   </div>
                 )}

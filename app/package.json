@@ -67,7 +67,26 @@
     },
     "dmg": {
       "sign": false,
-      "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}"
+      "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}",
+      "background": "build/dmg-background.png",
+      "window": {
+        "width": 780,
+        "height": 500
+      },
+      "iconSize": 88,
+      "contents": [
+        {
+          "x": 230,
+          "y": 290,
+          "type": "file"
+        },
+        {
+          "x": 550,
+          "y": 290,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   }
 }

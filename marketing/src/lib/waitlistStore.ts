@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { list, put } from "@vercel/blob";
+import { del, list, put } from "@vercel/blob";
 import { createHash } from "node:crypto";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 
@@ -34,11 +34,33 @@ export interface WaitlistAdminEntry extends WaitlistEntry {
 const ENTRY_PREFIX = "waitlist/item/";
 const LEGACY_BLOB_PATH = "waitlist/entries.v2.enc";
 const LEGACY_BLOB_PATH_V1 = "waitlist/entries.v1.enc";
-const dataDir = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDir, "waitlist.json");
+const localDataDir = path.join(process.cwd(), ".data");
+const tmpDataDir = path.join("/tmp", "unvibe-waitlist");
+
+async function resolveDataFile(): Promise<string> {
+  try {
+    await fs.mkdir(localDataDir, { recursive: true });
+    const probe = path.join(localDataDir, ".write-check");
+    await fs.writeFile(probe, "ok", "utf8");
+    await fs.unlink(probe);
+    return path.join(localDataDir, "waitlist.json");
+  } catch {
+    await fs.mkdir(tmpDataDir, { recursive: true });
+    return path.join(tmpDataDir, "waitlist.json");
+  }
+}
 
 function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
+function encryptionConfigured(): boolean {
+  return Boolean(process.env.WAITLIST_ADMIN_TOKEN?.trim());
+}
+
+/** Encrypted Blob is used only when both storage and encryption secrets exist. */
+function durableBlobReady(): boolean {
+  return blobConfigured() && encryptionConfigured();
 }
 
 function blobToken(): string {
@@ -140,6 +162,7 @@ async function migrateLegacyIfNeeded(): Promise<void> {
 
 async function readLocal(): Promise<WaitlistEntry[]> {
   try {
+    const dataFile = await resolveDataFile();
     const parsed: unknown = JSON.parse(await fs.readFile(dataFile, "utf8"));
     return Array.isArray(parsed) ? (parsed as WaitlistEntry[]) : [];
   } catch {
@@ -148,14 +171,15 @@ async function readLocal(): Promise<WaitlistEntry[]> {
 }
 
 async function writeLocal(entries: WaitlistEntry[]): Promise<void> {
-  await fs.mkdir(dataDir, { recursive: true });
+  const dataFile = await resolveDataFile();
+  await fs.mkdir(path.dirname(dataFile), { recursive: true });
   await fs.writeFile(dataFile, JSON.stringify(entries, null, 2), "utf8");
 }
 
 export async function saveWaitlistEntry(
   entry: WaitlistEntry,
 ): Promise<{ duplicate: boolean; storage: "blob" | "local" }> {
-  if (blobConfigured()) {
+  if (durableBlobReady()) {
     await migrateLegacyIfNeeded();
     const pathName = entryPath(entry.email);
     const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
@@ -163,10 +187,6 @@ export async function saveWaitlistEntry(
     if (exists) return { duplicate: true, storage: "blob" };
     await putEntry(entry);
     return { duplicate: false, storage: "blob" };
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Durable waitlist storage is not configured");
   }
 
   const entries = await readLocal();
@@ -181,7 +201,7 @@ export async function updateWaitlistDetails(
   email: string,
   details: { tool?: string; experience?: string; message?: string },
 ): Promise<boolean> {
-  if (blobConfigured()) {
+  if (durableBlobReady()) {
     await migrateLegacyIfNeeded();
     const pathName = entryPath(email);
     const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
@@ -210,7 +230,7 @@ export async function recordWaitlistNotification(
   email: string,
   notification: WaitlistNotificationRecord,
 ): Promise<void> {
-  if (blobConfigured()) {
+  if (durableBlobReady()) {
     await migrateLegacyIfNeeded();
     const pathName = entryPath(email);
     for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -240,10 +260,7 @@ export async function recordWaitlistNotification(
 }
 
 export async function listWaitlistEntries(limit = 500): Promise<WaitlistAdminEntry[]> {
-  if (!blobConfigured() && process.env.NODE_ENV === "production") {
-    throw new Error("Durable waitlist storage is not configured");
-  }
-  if (blobConfigured()) {
+  if (durableBlobReady()) {
     await migrateLegacyIfNeeded();
     const entries = await listEntryBlobs();
     return entries
@@ -255,4 +272,25 @@ export async function listWaitlistEntries(limit = 500): Promise<WaitlistAdminEnt
     .map((entry) => ({ ...entry, id: entry.referralCode }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
+}
+
+export async function deleteWaitlistEntry(email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+
+  if (durableBlobReady()) {
+    await migrateLegacyIfNeeded();
+    const pathName = entryPath(normalized);
+    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
+    const found = listed.blobs.find((blob) => blob.pathname === pathName);
+    if (!found) return false;
+    await del(found.url, { token: blobToken() });
+    return true;
+  }
+
+  const entries = await readLocal();
+  const next = entries.filter((item) => item.email.trim().toLowerCase() !== normalized);
+  if (next.length === entries.length) return false;
+  await writeLocal(next);
+  return true;
 }

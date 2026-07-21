@@ -2,6 +2,7 @@
  * Lightweight site traffic counters (page views + unique visitors).
  * Stored in Vercel Blob when configured, otherwise .data/site-stats.json locally.
  * Visitor ids are hashed before persistence — no emails or code.
+ * Day buckets use America/Los_Angeles calendar dates (reset at midnight PT).
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -26,6 +27,7 @@ export interface SiteStatsSummary {
   week: { views: number; visitors: number };
   allTime: { views: number; visitors: number };
   recentDays: Array<{ date: string; views: number; visitors: number }>;
+  timezone: "America/Los_Angeles";
 }
 
 const BLOB_PATH = "stats/site.v1.json";
@@ -34,6 +36,7 @@ const dataFile = path.join(dataDir, "site-stats.json");
 const MAX_DAY_IDS = 5_000;
 const MAX_SEEN_IDS = 50_000;
 const KEEP_DAY_DETAIL = 120;
+const STATS_TZ = "America/Los_Angeles";
 
 function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
@@ -45,8 +48,22 @@ function blobToken(): string {
   return token;
 }
 
-function dayKey(now = new Date()): string {
-  return now.toISOString().slice(0, 10);
+function pacificParts(now = new Date()): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: STATS_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value);
+  return { year: value("year"), month: value("month"), day: value("day") };
+}
+
+/** Calendar day key in Pacific time (YYYY-MM-DD). */
+export function dayKey(now = new Date()): string {
+  const { year, month, day } = pacificParts(now);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function emptyStats(): StatsFile {
@@ -137,12 +154,19 @@ async function save(data: StatsFile): Promise<void> {
   else await writeLocal(data);
 }
 
-function lastNDates(n: number, from = new Date()): string[] {
+/** Last N Pacific calendar dates, newest first. */
+export function lastNDates(n: number, from = new Date()): string[] {
+  const { year, month, day } = pacificParts(from);
+  let y = year;
+  let m = month;
+  let d = day;
   const out: string[] = [];
   for (let i = 0; i < n; i += 1) {
-    const d = new Date(from);
-    d.setUTCDate(d.getUTCDate() - i);
-    out.push(dayKey(d));
+    out.push(`${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+    const prev = new Date(Date.UTC(y, m - 1, d - 1));
+    y = prev.getUTCFullYear();
+    m = prev.getUTCMonth() + 1;
+    d = prev.getUTCDate();
   }
   return out;
 }
@@ -176,6 +200,7 @@ function summarize(data: StatsFile): SiteStatsSummary {
     },
     allTime: { views: data.totalViews, visitors: data.totalUniques },
     recentDays,
+    timezone: STATS_TZ,
   };
 }
 

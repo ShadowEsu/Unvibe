@@ -46,7 +46,7 @@ const api = {
   studyAskStatus: () => ipcRenderer.invoke('study:askStatus'),
   studyAsk: (input: { eventId: string; question: string }) => ipcRenderer.invoke('study:ask', input),
   quizStatus: () => ipcRenderer.invoke('quiz:status'),
-  quizStart: (eventId: string) => ipcRenderer.invoke('quiz:start', eventId),
+  quizStart: (input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) => ipcRenderer.invoke('quiz:start', input),
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
@@ -55,6 +55,7 @@ const api = {
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
+  integrations: () => ipcRenderer.invoke('integrations:status'),
 
   // permissions
   accessibility: () => ipcRenderer.invoke('perms:accessibility'),

@@ -54,8 +54,8 @@ export default function Home() {
           <h1>Don&apos;t feel guilty about vibe coding. <em>Make the code yours.</em></h1>
           <p className="hero-positioning">AI writes the code. <strong>Unvibe helps you understand it.</strong></p>
           <p className="hero-support">Select code, choose your explanation depth, and learn how it works without leaving your workflow.</p>
+          <PixelWaitlist variant="hero" />
           <div className="hero-actions">
-            <Button href="#waitlist" size="lg" className="beta-button">Join the waitlist <ArrowRight size={18} /></Button>
             <Button href="#demo" size="lg" variant="secondary">See Unvibe in action <ArrowDown size={17} /></Button>
           </div>
           <p className="hero-micro">Private Mac beta <i /> Product ready <i /> Invite access <i /> No credit card to join</p>
@@ -224,12 +224,10 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <PixelWaitlist />
-
       <section className="faq-field" id="faq">
         <Reveal className="container-page faq-layout">
           <div className="faq-heading">
-            <p className="section-number">11 / QUICK ANSWERS</p>
+            <p className="section-number">10 / QUICK ANSWERS</p>
             <h2>Before you <em>request access.</em></h2>
             <p>Private beta is ready. Join the waitlist, then email if you want the product.</p>
           </div>

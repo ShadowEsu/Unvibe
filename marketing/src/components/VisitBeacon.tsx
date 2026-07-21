@@ -6,7 +6,7 @@ const ANON_KEY = "unvibe_anon_id";
 
 function shouldSkip(pathname: string): boolean {
   return (
-    /\/waitlist-admin(?:\/|$)/.test(pathname) ||
+    /\/waitlist(?:-admin)?(?:\/|$)/.test(pathname) ||
     /\/stats\.html$/i.test(pathname) ||
     pathname.startsWith("/api/")
   );

@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { getSiteStats, recordSiteHit } from "./siteStatsStore";
+import { dayKey, getSiteStats, lastNDates, recordSiteHit } from "./siteStatsStore";
 
 const dataFile = path.join(process.cwd(), ".data", "site-stats.json");
 
@@ -24,10 +24,21 @@ describe("siteStatsStore", () => {
       assert.equal(stats.week.visitors, 2);
       assert.equal(stats.allTime.views, 3);
       assert.equal(stats.allTime.visitors, 2);
+      assert.equal(stats.timezone, "America/Los_Angeles");
+      assert.equal(stats.today.date, dayKey());
     } finally {
       if (previousBlob === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
       else process.env.BLOB_READ_WRITE_TOKEN = previousBlob;
       await fs.rm(dataFile, { force: true }).catch(() => undefined);
     }
+  });
+
+  it("uses Pacific calendar dates for day buckets", () => {
+    const key = dayKey(new Date("2026-07-21T07:30:00.000Z"));
+    assert.equal(key, "2026-07-21");
+    const beforeMidnightPt = dayKey(new Date("2026-07-21T06:59:00.000Z"));
+    assert.equal(beforeMidnightPt, "2026-07-20");
+    const week = lastNDates(3, new Date("2026-07-21T20:00:00.000Z"));
+    assert.deepEqual(week, ["2026-07-21", "2026-07-20", "2026-07-19"]);
   });
 });

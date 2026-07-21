@@ -31,13 +31,14 @@ function Bar() {
   }, []);
 
   return (
-    <div className={`pill${note ? ' pill--note' : ''}`} title={note || 'Unvibe'}>
+    <div className={`pill${note ? ' pill--note' : ''}`} title={note || 'Unvibe is ready'}>
       <button className="chip chip--play" aria-label="Start review" title="Start review" onClick={() => window.unvibe.reviewSelection()}>
         <PlayIcon />
       </button>
       <span className="mark" aria-hidden="true">
         <LogoMark size={15} stroke={2.1} />
       </span>
+      <span className="pill__status" aria-live="polite">{note || 'Ready to explain'}</span>
       <button className="chip chip--home" aria-label="Open home" title="Home" onClick={() => window.unvibe.openCompanion()}>
         <HomeIcon />
       </button>

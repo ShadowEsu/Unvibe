@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { isWaitlistAdminAuthorized } from "@/lib/adminAuth";
+import { isWaitlistAdminAuthorized, waitlistAdminOpenAccess } from "@/lib/adminAuth";
 import { notifyFounder } from "@/lib/notifyWaitlist";
-import { listWaitlistEntries, recordWaitlistNotification } from "@/lib/waitlistStore";
+import {
+  deleteWaitlistEntry,
+  listWaitlistEntries,
+  recordWaitlistNotification,
+} from "@/lib/waitlistStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,7 +51,12 @@ export async function GET(request: Request) {
   try {
     const entries = await listWaitlistEntries();
     return NextResponse.json(
-      { entries, total: entries.length, generatedAt: new Date().toISOString() },
+      {
+        entries,
+        total: entries.length,
+        generatedAt: new Date().toISOString(),
+        openAccess: waitlistAdminOpenAccess(),
+      },
       { headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } }
     );
   } catch (error) {
@@ -86,5 +95,33 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("waitlist notification retry failed", error);
     return NextResponse.json({ error: "Could not retry notification" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const ip = clientIp(request);
+  if (tooManyFailedAttempts(ip)) {
+    return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+  }
+  if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
+  if (typeof body?.email !== "string" || !body.email.trim()) {
+    return NextResponse.json({ error: "Email is required" }, { status: 422 });
+  }
+
+  try {
+    const deleted = await deleteWaitlistEntry(body.email);
+    if (!deleted) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
+    return NextResponse.json(
+      { deleted: true, email: body.email.trim().toLowerCase() },
+      { headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } }
+    );
+  } catch (error) {
+    console.error("waitlist delete failed", error);
+    return NextResponse.json({ error: "Could not delete signup" }, { status: 500 });
   }
 }

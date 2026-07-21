@@ -4,6 +4,7 @@
  * token is encrypted at rest with Electron safeStorage when the OS keychain is available.
  */
 import { app, safeStorage } from 'electron';
+import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { LocalEvent, Outcome } from '../core/learning';
@@ -29,6 +30,8 @@ interface Data {
   outbox: string[]; // event ids awaiting sync
   account?: AccountData;
   syncOwnerId?: string; // keeps a signed-out outbox bound to the account that created it
+  /** Stable id for sealed trial metering. Local only — never a secret. */
+  installId?: string;
   /** Local-only code snapshots for Pro "since last understood" — never synced. */
   snapshots?: FileSnapshot[];
   /** Daily counters for companion Study assistant / Quiz cards (local only). */
@@ -205,6 +208,16 @@ class Store {
     } catch {
       return null;
     }
+  }
+
+  /** Persistent anonymous install id used for sealed trial quota. */
+  installId(): string {
+    if (this.data.installId && /^[a-zA-Z0-9_-]{8,128}$/.test(this.data.installId)) {
+      return this.data.installId;
+    }
+    this.data.installId = randomUUID().replace(/-/g, '');
+    this.save();
+    return this.data.installId;
   }
 
   signOut(): void {

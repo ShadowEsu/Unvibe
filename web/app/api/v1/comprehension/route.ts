@@ -4,13 +4,15 @@ import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { reserveMeteredAction } from '@/billing/enforce';
+import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
   const provider = selectProvider();
-  const userId = await userFromRequest(req);
-  if (aiRequestRequiresSession(provider.mock) && !userId) {
+  const trialInstall = trialInstallFromRequest(req);
+  const userId = trialInstall ? null : await userFromRequest(req);
+  if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();
   }
   const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
@@ -22,6 +24,9 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (!provider.mock && userId) {
     const denied = await reserveMeteredAction(userId, 'project_question', req);
+    if (denied) return denied;
+  } else if (!provider.mock && trialInstall) {
+    const denied = await reserveTrialAction(trialInstall, 'project_question');
     if (denied) return denied;
   }
   const { system, user } = buildComprehensionPrompt(payload);

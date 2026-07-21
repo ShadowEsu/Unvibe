@@ -8,7 +8,7 @@ import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { BACKEND, fetchQuestion } from './backend';
+import { aiAuthHeaders, BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
 import { flush } from './sync';
 import { resolveAppUsage } from './usage';
@@ -18,7 +18,7 @@ import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocal
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; lines?: number; language?: string; autoStart?: boolean; mode?: string }
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
   | { type: 'status'; tabId: string; message: string }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
@@ -162,8 +162,11 @@ export function initWidget(
     type: 'init',
     hasCode: code !== null,
     sourceApp: session.sourceApp,
+    file: session.file,
     lines: code ? code.split('\n').length : 0,
     language: code ? guessLanguage(code) : undefined,
+    // Renderer-local only. The preview never leaves this process and is not persisted here.
+    preview: code ? code.slice(0, 600) : undefined,
     autoStart: Boolean(opts?.autoStart && code),
     mode: session.mode,
   });
@@ -285,7 +288,11 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
     if (usage.remaining <= 0 && !localKey) {
       const resets = new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-      const planName = usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
+      const planName =
+        usage.plan === 'pro' ? 'Pro'
+          : usage.plan === 'teams' ? 'Teams'
+            : usage.plan === 'trial' ? 'Trial'
+              : 'Free';
       send(win, session, {
         type: 'error',
         code: 'plan_limit_reached',
@@ -340,7 +347,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...aiAuthHeaders(token),
       },
       body: JSON.stringify(payload),
       signal: abort.signal,

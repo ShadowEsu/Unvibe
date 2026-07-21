@@ -6,13 +6,14 @@ import { app } from 'electron';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
+import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
-const SETTINGS_REVISION = 3;
+const SETTINGS_REVISION = 4;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -26,6 +27,8 @@ export interface Settings {
   inactiveBehavior: InactiveBehavior;
   launchAtLogin: boolean;
   theme: ThemePreference;
+  /** Starting depth for new explanations. Users can still change it in every review. */
+  defaultExplanationLevel: ExplanationLevel;
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
@@ -48,6 +51,7 @@ const DEFAULTS: Settings = {
   inactiveBehavior: 'dim',
   launchAtLogin: false,
   theme: 'system',
+  defaultExplanationLevel: 'intermediate',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
