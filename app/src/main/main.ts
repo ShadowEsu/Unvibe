@@ -36,6 +36,7 @@ import { flush } from './sync';
 import { signIn, signUp, deleteAccount, startDeviceAuth, redeemDeviceAuth, accountInfo } from './backend';
 import { setBar, notify } from './notify';
 import { computeProfile, computeFeed } from '../core/learning';
+import { trayFallbackBuffer } from '../core/trayIcon';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -118,6 +119,36 @@ function registerShortcut(accel: string): boolean {
   }
 }
 
+/**
+ * Build the menu-bar item. The tray image is loaded from the bundled template asset, but if that
+ * file is missing the loaded image is empty and `new Tray` would create an invisible, zero-width
+ * item — so we always fall back to the embedded glyph. Wrapped in try/catch so a tray failure can
+ * never abort the rest of launch (bar, companion, global shortcut).
+ */
+function createTray(): void {
+  let trayImage = nativeImage.createFromPath(asset('trayTemplate.png'));
+  if (trayImage.isEmpty()) trayImage = nativeImage.createFromBuffer(trayFallbackBuffer());
+  if (isMac) trayImage.setTemplateImage(true);
+
+  try {
+    tray = new Tray(trayImage);
+    tray.setIgnoreDoubleClickEvents(true);
+    tray.setToolTip('Unvibe');
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: 'Review selection', click: () => void startReview() },
+        { label: 'Open Unvibe', click: openCompanion },
+        { type: 'separator' },
+        { label: 'Quit Unvibe', role: 'quit' },
+      ]),
+    );
+  } catch (err) {
+    // The menu bar is unavailable (rare) — keep running so the bar/companion/shortcut still work.
+    console.error('Unvibe: could not create the menu-bar item —', err);
+    tray = null;
+  }
+}
+
 function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(e.sender);
 }
@@ -131,23 +162,14 @@ app.whenReady().then(() => {
   void flush();
   startFrontmostWatch();
 
+  // Show a Dock icon so Unvibe is a first-class app the user can find (not a hidden agent).
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
-  if (isMac && !dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
+  if (isMac) {
+    app.dock?.show();
+    if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
+  }
 
-  let trayImage = nativeImage.createFromPath(asset('trayTemplate.png'));
-  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
-  else if (isMac) trayImage.setTemplateImage(true);
-  tray = new Tray(trayImage);
-  tray.setIgnoreDoubleClickEvents(true);
-  tray.setToolTip('Unvibe');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: 'Review selection', click: () => void startReview() },
-      { label: 'Open Unvibe', click: openCompanion },
-      { type: 'separator' },
-      { label: 'Quit Unvibe', role: 'quit' },
-    ]),
-  );
+  createTray();
 
   bar = createBar();
   setBar(bar);

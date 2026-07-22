@@ -2,5 +2,5 @@ node_modules/
 dist/
 dist-test/
 release/
-build/icon.icns
+*.dmg
 .env

@@ -53,7 +53,10 @@ for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
   try {
     cpSync(`build/${f}`, `dist/assets/${f}`);
   } catch {
-    /* optional until icons exist */
+    // Don't fail the build, but surface it — a missing trayTemplate.png means an invisible
+    // menu-bar item, and a missing icon.png means no Dock icon. (The app has an embedded
+    // tray fallback, but the real assets should always ship.)
+    console.warn(`build: WARNING — missing asset build/${f}; the packaged app will look wrong.`);
   }
 }
 console.log('build ok');
