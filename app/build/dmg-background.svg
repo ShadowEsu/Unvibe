@@ -1,30 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="780" height="500" viewBox="0 0 780 500" shape-rendering="geometricPrecision">
-  <rect width="780" height="500" fill="#120d1c"/>
-  <rect x="20" y="20" width="740" height="460" rx="18" fill="#171023" stroke="#3d2a56"/>
-  <path d="M54 82h45M54 82v45M726 82h-45M726 82v45M54 418h45M54 418v-45M726 418h-45M726 418v-45" fill="none" stroke="#7b57bd" stroke-opacity=".55" stroke-width="2"/>
-  <g fill="#8f6ada" fill-opacity=".48">
-    <circle cx="112" cy="126" r="2"/><circle cx="155" cy="160" r="1.5"/><circle cx="223" cy="112" r="1.5"/><circle cx="623" cy="128" r="2"/><circle cx="680" cy="166" r="1.5"/><circle cx="712" cy="232" r="1.5"/>
-    <circle cx="94" cy="351" r="1.5"/><circle cx="169" cy="391" r="2"/><circle cx="610" cy="390" r="1.5"/><circle cx="694" cy="346" r="2"/>
-  </g>
-  <g fill="#9d76ea" opacity=".88">
-    <rect x="278" y="87" width="5" height="5"/><rect x="285" y="87" width="5" height="5"/><rect x="292" y="87" width="5" height="5"/>
-    <rect x="278" y="94" width="5" height="5"/><rect x="292" y="94" width="5" height="5"/>
-    <rect x="278" y="101" width="5" height="5"/><rect x="285" y="101" width="5" height="5"/><rect x="292" y="101" width="5" height="5"/>
-  </g>
-  <text x="420" y="112" text-anchor="middle" fill="#f5f0ff" font-family="Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="8">UNVIBE</text>
-  <text x="390" y="141" text-anchor="middle" fill="#bca4ee" font-family="Menlo, SF Mono, monospace" font-size="12" letter-spacing="2">UNDERSTAND THE CODE YOU SHIP</text>
-  <path d="M110 183H670" stroke="#3d2a56" stroke-width="1"/>
-  <rect x="113" y="196" width="235" height="159" rx="13" fill="#1d142b" stroke="#5b3d80"/>
-  <rect x="432" y="196" width="235" height="159" rx="13" fill="#1d142b" stroke="#5b3d80"/>
-  <rect x="506" y="246" width="88" height="88" rx="18" fill="#f5f2fa"/>
-  <rect x="190" y="337" width="80" height="22" rx="8" fill="#f5f2fa"/>
-  <rect x="498" y="337" width="104" height="22" rx="8" fill="#f5f2fa"/>
-  <text x="230" y="219" text-anchor="middle" fill="#a68add" font-family="Menlo, SF Mono, monospace" font-size="10" letter-spacing="1.4">01 / UNVIBE</text>
-  <text x="550" y="219" text-anchor="middle" fill="#a68add" font-family="Menlo, SF Mono, monospace" font-size="10" letter-spacing="1.4">02 / APPLICATIONS</text>
-  <path d="M361 277h58" stroke="#a68add" stroke-width="2" stroke-dasharray="7 7"/>
-  <path d="M415 271l11 6-11 6" fill="none" stroke="#a68add" stroke-width="2"/>
-  <text x="390" y="305" text-anchor="middle" fill="#c9b8e6" font-family="Menlo, SF Mono, monospace" font-size="11">drag to install</text>
-  <text x="390" y="420" text-anchor="middle" fill="#8e7d9d" font-family="Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="13">Open Unvibe from Applications, select code, then press Command + U.</text>
-  <path d="M112 447H668" stroke="#3d2a56" stroke-width="1"/>
-  <text x="390" y="466" text-anchor="middle" fill="#816497" font-family="Menlo, SF Mono, monospace" font-size="10" letter-spacing="1">DRAG · DROP · UNDERSTAND</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="500" viewBox="0 0 780 500">
+  <rect width="780" height="500" fill="#6F45D2"/>
 </svg>
