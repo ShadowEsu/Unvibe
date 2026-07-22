@@ -42,6 +42,7 @@ interface Settings {
   widgetOpacityInactive: number; inactiveBehavior: string;
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
+  glanceMode: boolean; soundMilestones: boolean; quietWhileLocked: boolean;
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
   useOwnAi: boolean;
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
@@ -1232,6 +1233,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Quiet, locally synthesized cues during setup and learning moments.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
+              <div className="setrow"><div><div className="sl">Milestone sounds</div><div className="sd">A tasteful chime for streaks and learning milestones. Turn off without muting other cues.</div></div><Toggle on={settings.soundMilestones} onClick={() => onSettings({ soundMilestones: !settings.soundMilestones })} /></div>
+              <div className="setrow"><div><div className="sl">Glance completion</div><div className="sd">When an explanation is ready, show a quiet dot on the island instead of expanding it.</div></div><Toggle on={settings.glanceMode} onClick={() => onSettings({ glanceMode: !settings.glanceMode })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet while locked</div><div className="sd">Suppress island sounds while your Mac screen is locked.</div></div><Toggle on={settings.quietWhileLocked} onClick={() => onSettings({ quietWhileLocked: !settings.quietWhileLocked })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
               {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>

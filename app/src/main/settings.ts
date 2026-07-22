@@ -42,6 +42,12 @@ export interface Settings {
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   /** When true, ⌘U and the "Explain Clipboard" menu action do nothing until unpaused. */
   paused: boolean;
+  /** Glance completion: show "Explanation ready" as a quiet dot instead of auto-expanding. */
+  glanceMode: boolean;
+  /** Milestone chimes (first explanation, streaks) — mutable without muting all sounds. */
+  soundMilestones: boolean;
+  /** Suppress island sounds while the Mac screen is locked. */
+  quietWhileLocked: boolean;
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
   /** Prefer the user's own local API key instead of Unvibe cloud AI. */
   useOwnAi: boolean;
@@ -70,6 +76,9 @@ const DEFAULTS: Settings = {
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   paused: false,
+  glanceMode: true,
+  soundMilestones: true,
+  quietWhileLocked: true,
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
 };

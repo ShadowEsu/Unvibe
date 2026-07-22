@@ -63,6 +63,7 @@ import {
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
+import { setIslandBar, setIslandState } from './island';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
 import { resolveAppUsage } from './usage';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
@@ -133,6 +134,7 @@ function clearPanelSessions(): void {
   tabSessions.clear();
   activeTabId = '1';
   panelReady = false;
+  setIslandState('idle');
 }
 
 function beginCaptureOnActiveTab(
@@ -339,11 +341,14 @@ async function startReview(): Promise<void> {
   // macOS permission UI even when the user already toggled Accessibility on.
   if (isMac && !accessibilityGranted(false) && !accessibilitySettingsOpenedThisSession) {
     accessibilitySettingsOpenedThisSession = true;
+    setIslandState('permissionRequired', { show: true });
     notify('Enable Accessibility for Unvibe in System Settings, then quit and reopen Unvibe');
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
+  setIslandState('capturingContext', { show: true });
   const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
+  if (code) setIslandState('selectionDetected');
   const existing = currentWidget();
   const win = getOrCreateWidget();
   const windowId = win.id;
@@ -404,6 +409,7 @@ app.whenReady().then(() => {
 
   bar = createBar();
   setBar(bar);
+  setIslandBar(bar);
   positionBar(bar);
   if (s.onboarded && s.barVisibility === 'always') showBar(bar);
   else hideBar(bar);

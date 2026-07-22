@@ -10,6 +10,39 @@ Append-only. Newest entry on top. Each entry: date · branch · what changed · 
 
 ---
 
+## 2026-07-22 (live session, island experience v1) · branch `claude/determined-curie-l09fo1`
+
+Implemented "Island Experience v1" — the Vibe-Island-style smoothness adapted to Unvibe's
+code-learning purpose, as **testable logic + safe wiring** (GUI can't run in this sandbox).
+
+- **`app/src/core/islandState.ts`** (pure, tested) — the state machine the redesign wanted:
+  `ProductState` (idle→selectionDetected→choosingDepth→capturing→generating→streaming→
+  explanationReady→saved→milestone→error states) → `{ presentation, narration, accent,
+  sound, glance, dwellMs }`. One source of truth; backend events map through here, never
+  resize windows directly.
+- **`app/src/core/sound.ts`** (pure, tested) — original chiptune palette
+  (capture/ready/saved/copied/milestone/warning/error) + `shouldPlaySound()` gate (master
+  toggle, milestones, quiet hours, quiet-while-locked; critical warnings bypass quiet hours).
+- **`app/src/main/island.ts`** — coordinator: resolves state → pushes `island:state` +
+  `island:sound` to the bar; `powerMonitor` lock detection for the sound gate.
+- Wired at real transitions: `main.ts` (capture / permissionRequired / idle-on-close) and a
+  single funnel in `review.ts send()` (status→generating, first token→streaming,
+  done→explanationReady, understood→saved, error→mapped). Nothing every-token-spammy.
+- **Bar renderer** now narrates island state with restrained accent borders + a **glance
+  completion dot** ("Explanation ready" stays compact instead of expanding), and synthesizes
+  the sounds via Web Audio (reusing the onboarding synth approach). Transient notices linger
+  their `dwellMs` then return to dormant.
+- **Settings**: `glanceMode`, `soundMilestones`, `quietWhileLocked` (all honest/detectable),
+  wired into the companion General tab.
+- Tests: +17 (48 total, was 31). `typecheck` + `build` + `npm test` all green. Verified the
+  new states render by screenshotting the real compiled bar in Chromium (generating / ready-
+  glance / error).
+- **Not done / needs a real Mac:** actual audio playback, `powerMonitor` behavior, and the
+  on-device feel; a native non-activating `NSPanel` (still Electron); in-widget lingering-✓
+  micro-confirmations (the island glance confirmation covers the "saved/copied" feel for now).
+
+---
+
 ## 2026-07-22 (live session, later) · branch `claude/determined-curie-l09fo1`
 
 - User asked that **all future scheduled tasks run on this branch** (`claude/determined-curie-l09fo1`).

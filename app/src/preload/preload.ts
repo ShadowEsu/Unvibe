@@ -20,6 +20,16 @@ const api = {
     ipcRenderer.on('bar:paused', listener);
     return () => ipcRenderer.removeListener('bar:paused', listener);
   },
+  onIslandState: (cb: (view: unknown) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, view: unknown) => cb(view);
+    ipcRenderer.on('island:state', listener);
+    return () => ipcRenderer.removeListener('island:state', listener);
+  },
+  onIslandSound: (cb: (event: string) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, event: string) => cb(event);
+    ipcRenderer.on('island:sound', listener);
+    return () => ipcRenderer.removeListener('island:sound', listener);
+  },
 
   // widget review (single panel + tabs)
   widgetReady: () => ipcRenderer.send('widget:ready'),

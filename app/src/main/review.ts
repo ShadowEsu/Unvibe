@@ -16,6 +16,8 @@ import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { setIslandState, currentIslandState } from './island';
+import type { ProductState } from '../core/islandState';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
@@ -60,10 +62,37 @@ export interface RequestOpts {
   consented?: boolean;
 }
 
+/** Map a widget event to the island's product state (one funnel, so the strip narrates
+ * the review without every call site knowing about the island). Returns null to leave
+ * the island unchanged (e.g. per-token — we only enter `streaming` once). */
+function islandStateFor(ev: { type: string; message?: string; code?: string }): ProductState | null {
+  switch (ev.type) {
+    case 'status':
+      // 'thinking' → generating; provider/cost status lines are just generating too.
+      return 'generating';
+    case 'token':
+      return currentIslandState() === 'streaming' ? null : 'streaming';
+    case 'done':
+      return 'explanationReady';
+    case 'understood':
+      return 'saved';
+    case 'error':
+      if (ev.code === 'pro_required') return null; // an upsell, not an error chime
+      if (ev.code && /auth/i.test(ev.code)) return 'authenticationExpired';
+      if (ev.message && /offline|connection|network/i.test(ev.message)) return 'offline';
+      if (ev.message && /out of explanations|rate|limit/i.test(ev.message)) return 'rateLimited';
+      return 'serviceError';
+    default:
+      return null;
+  }
+}
+
 function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
     win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
   }
+  const next = islandStateFor(ev as { type: string; message?: string; code?: string });
+  if (next) setIslandState(next);
 }
 
 async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise<ReviewRequestPayload> {
