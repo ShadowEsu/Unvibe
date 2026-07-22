@@ -1259,14 +1259,13 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
               <div className="settings-section-label">OVERLAY PREVIEW</div>
               <div className="setrow"><div><div className="sl">App appearance</div><div className="sd">Choose light, dark, or follow your Mac automatically.</div></div><select className="sel-input" value={settings.theme} onChange={(e) => onSettings({ theme: e.target.value as Settings['theme'] })}><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
-              <div className="setrow"><div><div className="sl">Learning strip position</div><div className="sd">Where the compact Unvibe strip lives across your Mac spaces.</div></div>
-                <select className="sel-input" value={settings.barPosition} onChange={(e) => onSettings({ barPosition: e.target.value })}>
-                  <option value="bottom-center">Bottom center</option><option value="top-center">Top center</option>
-                  <option value="top-right">Top right</option><option value="bottom-right">Bottom right</option>
-                </select>
+              <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
+                <div className="location-grid" role="group" aria-label="Island location">
+                  {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
+                </div>
               </div>
               <div className="setrow"><div><div className="sl">Learning strip visibility</div><div className="sd">Keep it ready between reviews, or only show it while you are learning.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
-              <div className="setrow"><div><div className="sl">Recent learning on hover</div><div className="sd">Expand the strip to show your latest explanation and learning totals.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
+              <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Turn this off for click-only expansion. Click and keyboard controls always work.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
                 <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>

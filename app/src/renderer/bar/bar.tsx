@@ -31,6 +31,8 @@ function Bar() {
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const expandedRef = useRef(false);
+  const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -47,26 +49,41 @@ function Bar() {
       if (noteTimer.current) clearTimeout(noteTimer.current);
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
+    const unsubscribeCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false));
     return () => {
       unsubscribe();
+      unsubscribeCollapse();
+      if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
     };
   }, []);
 
+  const setPanelExpanded = (next: boolean) => {
+    // A native transparent window resize is comparatively expensive. Only ask
+    // Electron to resize when the intended state really changed.
+    if (expandedRef.current === next) return;
+    expandedRef.current = next;
+    setExpanded(next);
+    window.unvibe.setBarExpanded(next);
+    if (next) refresh();
+  };
   const open = () => {
-    if (!hoverEnabled) return;
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
-    setExpanded(true);
-    window.unvibe.setBarExpanded(true);
-    refresh();
+    setPanelExpanded(true);
+  };
+  const openFromHover = () => {
+    if (!hoverEnabled || expandedRef.current) return;
+    if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
+    hoverOpenTimer.current = setTimeout(open, 140);
   };
   const scheduleClose = () => {
     if (!hoverEnabled) return;
+    if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
     collapseTimer.current = setTimeout(() => {
-      setExpanded(false);
-      window.unvibe.setBarExpanded(false);
-    }, 180);
+      setPanelExpanded(false);
+    }, 520);
   };
 
   const act = (action: 'review' | 'home') => {
@@ -80,8 +97,7 @@ function Bar() {
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && expanded) {
       event.preventDefault();
-      setExpanded(false);
-      window.unvibe.setBarExpanded(false);
+      setPanelExpanded(false);
     }
     if (event.key === 'Enter' && !expanded) {
       event.preventDefault();
@@ -90,8 +106,8 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={open} onMouseLeave={scheduleClose}>
-      <div className="strip__main" title={note || 'Unvibe is ready'}>
+    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
+      <div className="strip__main" title={note || 'Unvibe is ready'} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }}>
         <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
         <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
         <span className="strip__status" aria-live="polite">{confirmation || note || 'Ready to understand'}</span>

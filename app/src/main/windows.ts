@@ -11,6 +11,7 @@ const DEFAULT_WIDGET_W = 300;
 const DEFAULT_WIDGET_H = 360;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
+let barIsExpanded = false;
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -59,6 +60,7 @@ const BAR_EXPANDED_W = 410;
 const BAR_EXPANDED_H = 194;
 
 export function createBar(): BrowserWindow {
+  barIsExpanded = false;
   const { x, y } = barBounds(settings().all().barPosition, BAR_W, BAR_H);
   const win = new BrowserWindow({
     width: BAR_W,
@@ -88,6 +90,8 @@ export function createBar(): BrowserWindow {
 /** Hover expansion is a real window resize so the transparent area never blocks other apps. */
 export function resizeBar(win: BrowserWindow | null, expanded: boolean): void {
   if (!win || win.isDestroyed()) return;
+  if (barIsExpanded === expanded) return;
+  barIsExpanded = expanded;
   const width = expanded ? BAR_EXPANDED_W : BAR_W;
   const height = expanded ? BAR_EXPANDED_H : BAR_H;
   const { x, y } = barBounds(settings().all().barPosition, width, height);

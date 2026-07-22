@@ -367,7 +367,8 @@ app.whenReady().then(() => {
   ipcMain.on('bar:review', () => void startReview());
   ipcMain.on('bar:openCompanion', () => openCompanion());
   ipcMain.on('bar:setExpanded', (_e, expanded: boolean) => {
-    if (!settings().all().barHoverPreview) return;
+    // Click and keyboard expansion remain available when hover expansion is off.
+    // The renderer decides whether a pointer entering the Island requests this.
     resizeBar(bar, Boolean(expanded));
   });
   ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
@@ -779,7 +780,10 @@ app.whenReady().then(() => {
       if (next.barVisibility === 'always' && next.onboarded) showBar(bar);
       else if (!currentWidget()) hideBar(bar);
     }
-    if (patch.barHoverPreview === false) resizeBar(bar, false);
+    if (patch.barHoverPreview === false) {
+      resizeBar(bar, false);
+      if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
+    }
     return { settings: settings().all() };
   });
 

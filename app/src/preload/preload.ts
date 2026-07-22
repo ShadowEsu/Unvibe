@@ -12,6 +12,11 @@ const api = {
     ipcRenderer.on('bar:notify', listener);
     return () => ipcRenderer.removeListener('bar:notify', listener);
   },
+  onBarCollapse: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('bar:collapse', listener);
+    return () => ipcRenderer.removeListener('bar:collapse', listener);
+  },
   setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
