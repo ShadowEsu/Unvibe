@@ -14,6 +14,12 @@ const api = {
   },
   setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
+  barContextMenu: () => ipcRenderer.send('bar:contextMenu'),
+  onBarPaused: (cb: (paused: boolean) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, paused: boolean) => cb(paused);
+    ipcRenderer.on('bar:paused', listener);
+    return () => ipcRenderer.removeListener('bar:paused', listener);
+  },
 
   // widget review (single panel + tabs)
   widgetReady: () => ipcRenderer.send('widget:ready'),
@@ -74,6 +80,7 @@ const api = {
   // onboarding
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
+  onOpenSettings: (cb: () => void) => ipcRenderer.on('open:settings', () => cb()),
 
   // account
   account: () => ipcRenderer.invoke('account:get'),

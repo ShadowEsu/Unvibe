@@ -1341,6 +1341,7 @@ function App() {
     })();
     const onFocus = () => void refresh();
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
+    window.unvibe.onOpenSettings(() => setSettingsOpen(true));
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);

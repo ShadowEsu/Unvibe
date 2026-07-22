@@ -40,6 +40,8 @@ export interface Settings {
   defaultExplanationLevel: ExplanationLevel;
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
+  /** When true, ⌘U and the "Explain Clipboard" menu action do nothing until unpaused. */
+  paused: boolean;
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
   /** Prefer the user's own local API key instead of Unvibe cloud AI. */
   useOwnAi: boolean;
@@ -67,6 +69,7 @@ const DEFAULTS: Settings = {
   defaultExplanationLevel: 'intermediate',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
+  paused: false,
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
 };

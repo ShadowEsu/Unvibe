@@ -6,6 +6,8 @@ The current verified API origin is `https://unvibe-api-sigma.vercel.app`. Keep t
 
 Local tester builds use a separate ad-hoc entitlement that disables library validation because ad-hoc signatures have no Apple Team ID. Public builds do **not** use that entitlement: the release script uses `entitlements.mac.plist` and requires every component to be signed by the same Developer ID identity.
 
+`scripts/after-sign.mjs` is wired as electron-builder's `afterSign` hook so **every** packaging path — including a plain `npm run dist` / `npm run dist:dmg` — re-signs an ad-hoc bundle with `entitlements.local.plist`. Without this, `hardenedRuntime: true` plus an ad-hoc signature plus library validation is a combination macOS silently kills at launch, so the app never reaches the Dock or menu bar. The hook detects a real Developer ID signature by its Team Identifier and leaves it untouched, so notarized release builds are unaffected.
+
 To remove Gatekeeper’s “Apple could not verify” warning, the exact public build must be signed with a **Developer ID Application** certificate, submitted to Apple’s notary service, and have the returned ticket stapled to the DMG.
 
 ## One-time Apple setup

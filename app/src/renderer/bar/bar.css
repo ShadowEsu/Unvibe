@@ -10,6 +10,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -
 }
 .strip:hover, .strip--expanded { opacity: 1; border-color: rgba(167,139,250,.55); box-shadow: 0 14px 36px rgba(14,8,24,.22); }
 .strip--note { border-color: rgba(167,139,250,.7); }
+.strip--paused { opacity:.72; border-color:rgba(255,255,255,.1); }
+.strip--paused .mark { color:rgba(196,181,253,.5); }
+.strip--paused .strip__privacy i { background:#b8b0c4; box-shadow:5px 0 rgba(184,176,196,.3); }
 .strip__main { height: 34px; display:flex; align-items:center; gap:7px; padding:0 6px; -webkit-app-region:drag; }
 .strip__status { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font: 9px "SF Mono", Menlo, monospace; color:rgba(244,240,250,.8); letter-spacing:.01em; }
 .strip__privacy { display:none; align-items:center; gap:5px; color:rgba(244,240,250,.5); font:8px "SF Mono",Menlo,monospace; white-space:nowrap; }

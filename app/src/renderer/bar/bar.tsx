@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 
@@ -7,6 +7,7 @@ type Snapshot = {
   recent: { id: string; title: string; detail: string; level: string } | null;
   streak: number;
   explanations: number;
+  paused: boolean;
 };
 
 function PlayIcon() {
@@ -29,11 +30,16 @@ function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const refresh = () => void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
+  const refresh = () => void window.unvibe.barSnapshot().then((value) => {
+    const snap = value as Snapshot;
+    setSnapshot(snap);
+    setPaused(Boolean(snap.paused));
+  });
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
@@ -46,8 +52,10 @@ function Bar() {
       if (noteTimer.current) clearTimeout(noteTimer.current);
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
+    const unpaused = window.unvibe.onBarPaused((next) => setPaused(next));
     return () => {
       unsubscribe();
+      unpaused();
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
     };
@@ -68,13 +76,24 @@ function Bar() {
     }, 180);
   };
 
+  const status = note || (paused ? 'Paused' : 'Ready to understand');
+  const onContext = (e: MouseEvent) => {
+    e.preventDefault();
+    window.unvibe.barContextMenu();
+  };
+
   return (
-    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} onMouseEnter={open} onMouseLeave={scheduleClose}>
-      <div className="strip__main" title={note || 'Unvibe is ready'}>
+    <div
+      className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}${paused ? ' strip--paused' : ''}`}
+      onMouseEnter={open}
+      onMouseLeave={scheduleClose}
+      onContextMenu={onContext}
+    >
+      <div className="strip__main" title={note || (paused ? 'Unvibe is paused' : 'Unvibe is ready')}>
         <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => window.unvibe.reviewSelection()}><PlayIcon /></button>
         <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
-        <span className="strip__status" aria-live="polite">{note || 'Ready to understand'}</span>
-        <span className="strip__privacy"><i />local scan</span>
+        <span className="strip__status" aria-live="polite">{status}</span>
+        <span className="strip__privacy"><i />{paused ? 'paused' : 'local scan'}</span>
         <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => window.unvibe.openCompanion()}><HomeIcon /></button>
       </div>
       {expanded && (

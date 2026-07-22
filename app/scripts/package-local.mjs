@@ -52,18 +52,10 @@ try {
     if (process.exitCode) break;
   }
 
-  // electron-builder intentionally skips signing when identity is null. Re-sign the
-  // local tester bundle ad hoc so macOS can verify its sealed resources. This is
-  // not a substitute for Developer ID signing or Apple notarization.
-  if (!process.exitCode) {
-    const appPath = join('release', 'mac-arm64', 'Unvibe.app');
-    const sign = spawnSync('codesign', [
-      '--force', '--deep', '--options', 'runtime', '--timestamp=none',
-      '--entitlements', join('build', 'entitlements.local.plist'), '--sign', '-', appPath,
-    ], { stdio: 'inherit' });
-    if (sign.status !== 0) process.exitCode = sign.status ?? 1;
-  }
-
+  // scripts/after-sign.mjs (wired as electron-builder's afterSign hook) already re-signs
+  // the ad-hoc bundle with the local hardened-runtime entitlements during the
+  // electron-builder step above — that fix is shared with plain `npm run dist`/`dist:dmg`
+  // so every packaging path produces an app that actually launches. Nothing left to do here.
   if (!process.exitCode) {
     const result = spawnSync(process.execPath, [
       'scripts/create-custom-dmg.mjs',
