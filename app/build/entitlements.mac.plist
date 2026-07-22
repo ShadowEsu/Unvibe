@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Required for Electron under the hardened runtime (JIT). -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <!-- Outbound network to the Unvibe backend + AI provider (via backend). -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <!-- No screen recording, no input monitoring, no camera/mic entitlements — not used. -->
+</dict>
+</plist>

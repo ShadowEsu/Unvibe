@@ -8,6 +8,14 @@ out/
 *.vsix
 .next/
 build/
+# ...but app/build/ holds source assets (app + tray icons, entitlements), not build output.
+# Ignore its generated contents, then whitelist the committed source files.
+!app/build/
+app/build/*
+!app/build/icon.icns
+!app/build/icon.png
+!app/build/trayTemplate.png
+!app/build/entitlements.mac.plist
 
 # Env & secrets (never commit)
 .env
