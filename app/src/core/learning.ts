@@ -275,3 +275,63 @@ export function computeReviewQueue(events: LocalEvent[], now = new Date(), limit
   // Preserve queue order (needs_review first); do not re-sort by recency.
   return merged.map((e) => toLearningItem(e, e.dueLabel));
 }
+
+// ---- Milestones -------------------------------------------------------------
+// Tasteful learning milestones, derived only from real recorded events. A milestone
+// fires once, the moment a new event crosses its threshold — never fabricated.
+
+export type MilestoneId =
+  | 'first_explanation'
+  | 'hundred_explanations'
+  | 'ten_concepts'
+  | 'five_languages'
+  | 'streak_3'
+  | 'streak_7';
+
+export interface Milestone {
+  id: MilestoneId;
+  title: string;
+  detail: string;
+}
+
+interface Metrics {
+  explanations: number;
+  conceptsLearned: number;
+  languages: number;
+  streak: number;
+}
+
+function metrics(events: LocalEvent[], todayKey: string): Metrics {
+  const concepts = new Set<string>();
+  const languages = new Set<string>();
+  for (const e of events) {
+    if (e.outcome === 'understood' && e.concept) concepts.add(e.concept);
+    if (e.language) languages.add(e.language);
+  }
+  return {
+    explanations: events.length,
+    conceptsLearned: concepts.size,
+    languages: languages.size,
+    streak: currentStreak(new Set(events.map(eventDay)), todayKey),
+  };
+}
+
+/** Ordered so the most impressive newly-crossed milestone is last (callers can take the peak). */
+const MILESTONE_DEFS: Array<{ id: MilestoneId; met: (m: Metrics) => boolean; title: string; detail: string }> = [
+  { id: 'first_explanation', met: (m) => m.explanations >= 1, title: 'First explanation', detail: 'You understood your first piece of code.' },
+  { id: 'streak_3', met: (m) => m.streak >= 3, title: 'Three-day streak', detail: 'Three days of learning in a row.' },
+  { id: 'five_languages', met: (m) => m.languages >= 5, title: 'Five languages', detail: 'You’ve explored five programming languages.' },
+  { id: 'ten_concepts', met: (m) => m.conceptsLearned >= 10, title: 'Ten concepts', detail: 'Ten concepts with a passed check.' },
+  { id: 'streak_7', met: (m) => m.streak >= 7, title: 'Seven-day streak', detail: 'Your longest Unvibe streak yet.' },
+  { id: 'hundred_explanations', met: (m) => m.explanations >= 100, title: 'One hundred explanations', detail: 'A hundred explanations completed. Real momentum.' },
+];
+
+/**
+ * Milestones newly crossed going from `before` to `after` (i.e. met now, not met before).
+ * Pure. Returns them in MILESTONE_DEFS order; the last element is the "peak" to celebrate.
+ */
+export function milestonesCrossed(before: LocalEvent[], after: LocalEvent[], todayKey: string): Milestone[] {
+  const mb = metrics(before, todayKey);
+  const ma = metrics(after, todayKey);
+  return MILESTONE_DEFS.filter((d) => d.met(ma) && !d.met(mb)).map((d) => ({ id: d.id, title: d.title, detail: d.detail }));
+}

@@ -7,7 +7,7 @@ import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter'
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
-import { localDayKey, type LocalEvent } from '../core/learning';
+import { localDayKey, milestonesCrossed, type LocalEvent } from '../core/learning';
 import { aiAuthHeaders, BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
 import { flush } from './sync';
@@ -242,6 +242,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
     code: session.code.slice(0, 40_000),
     explanation: explanation?.slice(0, 60_000),
   };
+  const before = store().events();
   try {
     store().recordReview(ev);
   } catch (error) {
@@ -253,6 +254,14 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
     return;
   }
   session.onRecorded?.();
+  // Celebrate a real, newly-crossed milestone on the island (peak one only).
+  try {
+    const crossed = milestonesCrossed(before, store().events(), localDayKey(new Date()));
+    const peak = crossed[crossed.length - 1];
+    if (peak) setIslandState('milestone', { show: true, narration: peak.title, detail: peak.detail });
+  } catch {
+    /* milestones are a delight, never a failure path */
+  }
   void flush();
 }
 

@@ -2,6 +2,36 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
+import { SOUND_PALETTE } from '../../core/sound';
+import type { SoundEvent } from '../../core/islandState';
+
+/** Preview an island sound cue in Settings (same palette the live island uses). */
+function playCue(event: Exclude<SoundEvent, null>): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const spec = SOUND_PALETTE[event];
+  if (!spec) return;
+  try {
+    const Ctor: typeof AudioContext =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctor();
+    spec.freqs.forEach((freq, i) => {
+      const t0 = ctx.currentTime + (i * spec.stepMs) / 1000;
+      const t1 = t0 + spec.durMs / 1000;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+      gain.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      osc.type = spec.type;
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    });
+    setTimeout(() => void ctx.close(), 700);
+  } catch { /* preview sound is optional */ }
+}
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -1174,11 +1204,33 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
   );
 }
 
-function OverlayPreview({ position, dimmed }: { position: string; dimmed: number }) {
-  return <div className="settings-preview" aria-label="Live preview of the Unvibe overlay">
+function OverlayPreview({
+  position, dimmed, glanceMode = true, soundEffects = true,
+}: { position: string; dimmed: number; glanceMode?: boolean; soundEffects?: boolean }) {
+  const [demo, setDemo] = useState<{ narration: string; accent: string; glance: boolean } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const show = (narration: string, accent: string, glance: boolean, event: Exclude<SoundEvent, null>) => {
+    setDemo({ narration, accent, glance: glance && glanceMode });
+    if (soundEffects) playCue(event);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDemo(null), 2400);
+  };
+  const narration = demo?.narration ?? 'Ready to explain';
+  const accent = demo?.accent ?? 'idle';
+  return <div className="settings-preview" aria-label="Live preview of the Unvibe island">
     <div className="settings-preview__window"><span /><span /><span /></div>
-    <div className={`settings-preview__bar settings-preview__bar--${position}`}><LogoMark size={13} stroke={2} /><b>Unvibe</b><em>Ready to explain</em></div>
+    <div className={`settings-preview__bar settings-preview__bar--${position}`} data-accent={accent}>
+      <LogoMark size={13} stroke={2} />
+      {demo?.glance && <i className={`settings-preview__dot settings-preview__dot--${accent}`} />}
+      <b>Unvibe</b><em>{narration}</em>
+    </div>
     <div className="settings-preview__card" style={{ opacity: dimmed }}><span>Selected code</span><b>verifyUser()</b><small>Intermediate · Local filter on</small></div>
+    <div className="settings-preview__cues" role="group" aria-label="Preview island cues">
+      <button type="button" onClick={() => show('Explanation ready', 'success', true, 'ready')}>Ready</button>
+      <button type="button" onClick={() => show('Saved to your learning', 'success', true, 'saved')}>Saved</button>
+      <button type="button" onClick={() => show('Nice work', 'success', true, 'milestone')}>Milestone</button>
+    </div>
   </div>;
 }
 
@@ -1243,7 +1295,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Appearance' && (
             <>
-              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
+              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} glanceMode={settings.glanceMode} soundEffects={settings.soundEffects} />
               <div className="settings-section-label">OVERLAY PREVIEW</div>
               <div className="setrow"><div><div className="sl">App appearance</div><div className="sd">Choose light, dark, or follow your Mac automatically.</div></div><select className="sel-input" value={settings.theme} onChange={(e) => onSettings({ theme: e.target.value as Settings['theme'] })}><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
               <div className="setrow"><div><div className="sl">Learning strip position</div><div className="sd">Where the compact Unvibe strip lives across your Mac spaces.</div></div>

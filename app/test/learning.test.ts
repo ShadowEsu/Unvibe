@@ -102,3 +102,34 @@ test('computeReviewQueue prioritizes needs_review then spaced understood items',
   assert.equal(old!.dueLabel, '7d revisit');
   assert.ok(!queue.some((item) => item.title === 'Fresh'));
 });
+
+test('milestonesCrossed fires first_explanation only on the first event', async () => {
+  const { milestonesCrossed } = await import('../src/core/learning');
+  const e1 = ev({ ts: '2026-07-11T09:00:00Z' });
+  const crossed = milestonesCrossed([], [e1], '2026-07-11');
+  assert.ok(crossed.some((m) => m.id === 'first_explanation'));
+  // going from 1 -> 2 does not re-fire it
+  const e2 = ev({ ts: '2026-07-11T09:05:00Z' });
+  const again = milestonesCrossed([e1], [e1, e2], '2026-07-11');
+  assert.equal(again.some((m) => m.id === 'first_explanation'), false);
+});
+
+test('milestonesCrossed detects five distinct languages', async () => {
+  const { milestonesCrossed } = await import('../src/core/learning');
+  const langs = ['ts', 'py', 'go', 'rs'].map((l, i) => ev({ ts: `2026-07-11T09:0${i}:00Z`, language: l }));
+  const fifth = ev({ ts: '2026-07-11T09:09:00Z', language: 'java' });
+  const crossed = milestonesCrossed(langs, [...langs, fifth], '2026-07-11');
+  assert.ok(crossed.some((m) => m.id === 'five_languages'));
+  // a duplicate language does not cross it
+  const dup = ev({ ts: '2026-07-11T09:10:00Z', language: 'ts' });
+  assert.equal(milestonesCrossed(langs, [...langs, dup], '2026-07-11').some((m) => m.id === 'five_languages'), false);
+});
+
+test('milestonesCrossed counts only understood concepts toward ten_concepts', async () => {
+  const { milestonesCrossed } = await import('../src/core/learning');
+  const nine = Array.from({ length: 9 }, (_, i) => ev({ ts: `2026-07-11T09:${String(i).padStart(2, '0')}:00Z`, outcome: 'understood', concept: `c${i}` }));
+  const tenthReviewed = ev({ ts: '2026-07-11T09:30:00Z', outcome: 'reviewed', concept: 'c9' });
+  assert.equal(milestonesCrossed(nine, [...nine, tenthReviewed], '2026-07-11').some((m) => m.id === 'ten_concepts'), false);
+  const tenthUnderstood = ev({ ts: '2026-07-11T09:31:00Z', outcome: 'understood', concept: 'c9' });
+  assert.ok(milestonesCrossed(nine, [...nine, tenthUnderstood], '2026-07-11').some((m) => m.id === 'ten_concepts'));
+});

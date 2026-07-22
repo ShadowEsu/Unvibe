@@ -45,16 +45,20 @@ function gate(): SoundGate {
  * the state's sound if the gate allows. `show` reveals the bar first (e.g. when a
  * review begins) — transient notices don't force it visible.
  */
-export function setIslandState(state: ProductState, opts: { show?: boolean } = {}): IslandView {
+export function setIslandState(
+  state: ProductState,
+  opts: { show?: boolean; narration?: string; detail?: string } = {},
+): IslandView {
   current = state;
-  const view = resolveIsland(state);
+  const base = resolveIsland(state);
+  const view: IslandView = opts.narration ? { ...base, narration: opts.narration } : base;
   const s = settings().all();
   // Glance mode off → a "ready" success may expand instead of staying a quiet dot.
   const effectiveGlance = view.glance && s.glanceMode;
 
   if (bar && !bar.isDestroyed()) {
     if (opts.show) showBar(bar);
-    bar.webContents.send('island:state', { ...view, glance: effectiveGlance });
+    bar.webContents.send('island:state', { ...view, glance: effectiveGlance, detail: opts.detail });
     if (view.sound && shouldPlaySound(view.sound, gate())) {
       bar.webContents.send('island:sound', view.sound);
     }
