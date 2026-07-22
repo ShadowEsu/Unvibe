@@ -31,6 +31,8 @@ export async function notifyFounder(entry: {
   message?: string;
   referralCode: string;
   duplicate: boolean;
+  proGranted?: boolean;
+  proExpiresAt?: string;
 }): Promise<void> {
   if (entry.duplicate) return;
 
@@ -46,6 +48,8 @@ export async function notifyFounder(entry: {
     experience: entry.experience,
     message: entry.message || "",
     referralCode: entry.referralCode,
+    proGranted: entry.proGranted ? "yes" : "no",
+    proExpiresAt: entry.proExpiresAt || "",
   };
 
   try {
@@ -56,7 +60,9 @@ export async function notifyFounder(entry: {
 
   try {
     const body = new URLSearchParams({
-      _subject: `Unvibe waitlist: ${entry.email}`,
+      _subject: entry.proGranted
+        ? `Unvibe waitlist (PROMO): ${entry.email}`
+        : `Unvibe waitlist: ${entry.email}`,
       _template: "table",
       _captcha: "false",
       name: "Unvibe Waitlist",
@@ -65,6 +71,8 @@ export async function notifyFounder(entry: {
       experience: entry.experience,
       message: entry.message || "(none)",
       referralCode: entry.referralCode,
+      proGranted: entry.proGranted ? "Pro free for 3 months" : "No promo",
+      proExpiresAt: entry.proExpiresAt || "",
     });
 
     const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {

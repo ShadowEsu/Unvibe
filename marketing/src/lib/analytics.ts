@@ -18,7 +18,8 @@ export type AnalyticsEvent =
   | "faq_opened"
   | "referral_copied"
   | "outbound_social_clicked"
-  | "privacy_opened";
+  | "privacy_opened"
+  | "release_download_clicked";
 
 type Props = Record<string, string | number | boolean | undefined>;
 

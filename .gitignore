@@ -8,6 +8,9 @@ out/
 *.vsix
 .next/
 build/
+# app/build holds packaging resources (icon, entitlements) that must stay tracked
+!app/build/
+!app/build/**
 
 # Env & secrets (never commit)
 .env

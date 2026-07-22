@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { waitlistSchema } from "./waitlistSchema";
+import { isProPromoCode, waitlistSchema } from "./waitlistSchema";
 
 describe("waitlistSchema", () => {
   it("accepts a complete valid payload", () => {
@@ -37,5 +37,34 @@ describe("waitlistSchema", () => {
       experience: "student",
     });
     assert.equal(parsed.success, false);
+  });
+
+  it("accepts an optional promo code", () => {
+    const parsed = waitlistSchema.safeParse({
+      email: "a@b.com",
+      tool: "cursor",
+      experience: "student",
+      promoCode: "UnvibeSpecial",
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.data.promoCode, "UnvibeSpecial");
+    }
+  });
+});
+
+describe("isProPromoCode", () => {
+  it("matches the promo code regardless of case or whitespace", () => {
+    assert.equal(isProPromoCode("UnvibeSpecial"), true);
+    assert.equal(isProPromoCode("unvibespecial"), true);
+    assert.equal(isProPromoCode("  UNVIBESPECIAL  "), true);
+  });
+
+  it("rejects anything that is not the exact promo code", () => {
+    assert.equal(isProPromoCode("Unvibe"), false);
+    assert.equal(isProPromoCode(""), false);
+    assert.equal(isProPromoCode(undefined), false);
+    assert.equal(isProPromoCode(null), false);
+    assert.equal(isProPromoCode("UnvibeSpecial2"), false);
   });
 });

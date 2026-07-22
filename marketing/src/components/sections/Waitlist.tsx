@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, Loader2, PartyPopper } from "lucide-react";
+import { Check, Copy, Gift, Loader2, PartyPopper } from "lucide-react";
 import { Section } from "../Section";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
@@ -22,6 +22,8 @@ type Status = "idle" | "submitting" | "success" | "duplicate" | "error";
 interface SuccessData {
   referralCode: string;
   duplicate: boolean;
+  proGranted: boolean;
+  proMonths?: number;
 }
 
 export function Waitlist() {
@@ -38,7 +40,7 @@ export function Waitlist() {
     formState: { errors },
   } = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistSchema),
-    defaultValues: { email: "", message: "", referredBy: "" },
+    defaultValues: { email: "", message: "", referredBy: "", promoCode: "" },
   });
 
   const tool = watch("tool");
@@ -75,6 +77,8 @@ export function Waitlist() {
       const data = (await res.json().catch(() => ({}))) as {
         referralCode?: string;
         duplicate?: boolean;
+        proGranted?: boolean;
+        proMonths?: number;
         error?: string;
       };
 
@@ -86,12 +90,15 @@ export function Waitlist() {
       setResult({
         referralCode: data.referralCode ?? "",
         duplicate: Boolean(data.duplicate),
+        proGranted: Boolean(data.proGranted),
+        proMonths: data.proMonths,
       });
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", {
         duplicate: Boolean(data.duplicate),
         tool: values.tool,
         experience: values.experience,
+        proGranted: Boolean(data.proGranted),
       });
     } catch {
       setStatus("error");
@@ -146,6 +153,17 @@ export function Waitlist() {
                   ? "Good news — we already had your spot saved. Here is your referral link either way."
                   : "We will email your invite when the Mac beta opens. Share your link to move up the list."}
               </p>
+
+              {result?.proGranted && (
+                <div className="mx-auto mt-6 flex max-w-md items-start gap-3 rounded-card border border-primary/30 bg-primary-soft p-4 text-left">
+                  <Gift size={20} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
+                  <p className="text-fluid-sm text-fg">
+                    Promo code applied — you are set for{" "}
+                    <strong>Pro free for {result.proMonths ?? 3} months</strong> as soon as
+                    your invite opens.
+                  </p>
+                </div>
+              )}
 
               {shareUrl && (
                 <div className="mx-auto mt-6 flex max-w-md items-center gap-2 rounded-pill border border-line bg-surface-2/60 p-1.5 pl-4">
@@ -245,6 +263,27 @@ export function Waitlist() {
                   {...register("message")}
                   className={cn(inputClass(Boolean(errors.message)), "resize-none")}
                 />
+              </Field>
+
+              <Field
+                label="Promo code"
+                htmlFor="promoCode"
+                optional
+                error={errors.promoCode?.message}
+              >
+                <input
+                  id="promoCode"
+                  type="text"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  placeholder="Have a code? Enter it here"
+                  aria-invalid={Boolean(errors.promoCode)}
+                  {...register("promoCode")}
+                  className={inputClass(Boolean(errors.promoCode))}
+                />
+                <p className="mt-1.5 text-fluid-sm text-fg-faint">
+                  Some codes unlock Pro free for a few months on top of the free beta.
+                </p>
               </Field>
 
               {status === "error" && (

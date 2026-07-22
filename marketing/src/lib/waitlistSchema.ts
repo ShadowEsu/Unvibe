@@ -37,6 +37,17 @@ export const experienceLabels: Record<(typeof experiences)[number], string> = {
   experienced: "Experienced developer",
 };
 
+/**
+ * Promo code that unlocks 3 months of Pro for free. Compared case-insensitively
+ * and trimmed, so "unvibespecial", "UnvibeSpecial", " UnvibeSpecial " all match.
+ */
+export const PROMO_CODE_PRO_3_MONTHS = "UnvibeSpecial";
+export const PROMO_PRO_MONTHS = 3;
+
+export function isProPromoCode(code: string | undefined | null): boolean {
+  return (code ?? "").trim().toLowerCase() === PROMO_CODE_PRO_3_MONTHS.toLowerCase();
+}
+
 export const waitlistSchema = z.object({
   email: z
     .string()
@@ -51,6 +62,7 @@ export const waitlistSchema = z.object({
     .max(500, "Keep it under 500 characters")
     .optional()
     .or(z.literal("")),
+  promoCode: z.string().trim().max(64).optional().or(z.literal("")),
   referredBy: z.string().trim().max(32).optional().or(z.literal("")),
   utmSource: z.string().trim().max(64).optional().or(z.literal("")),
   utmMedium: z.string().trim().max(64).optional().or(z.literal("")),

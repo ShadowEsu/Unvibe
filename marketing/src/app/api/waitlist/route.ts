@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { waitlistSchema } from "@/lib/waitlistSchema";
+import { isProPromoCode, PROMO_PRO_MONTHS, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 
 export const runtime = "nodejs";
@@ -45,7 +45,17 @@ interface StoredEntry {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  promoCode?: string;
+  proGranted: boolean;
+  proMonths?: number;
+  proExpiresAt?: string;
   createdAt: string;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
 }
 
 async function readLocal(): Promise<StoredEntry[]> {
@@ -85,6 +95,10 @@ async function saveToSupabase(entry: StoredEntry): Promise<{
       utm_source: entry.utmSource || null,
       utm_medium: entry.utmMedium || null,
       utm_campaign: entry.utmCampaign || null,
+      promo_code: entry.promoCode || null,
+      pro_granted: entry.proGranted,
+      pro_months: entry.proMonths || null,
+      pro_expires_at: entry.proExpiresAt || null,
     });
 
     if (error) {
@@ -137,6 +151,11 @@ export async function POST(req: Request) {
 
   const email = parsed.data.email.trim().toLowerCase();
   const referralCode = referralCodeFor(email);
+  const promoCode = parsed.data.promoCode?.trim() || undefined;
+  const proGranted = isProPromoCode(promoCode);
+  const proExpiresAt = proGranted
+    ? addMonths(new Date(), PROMO_PRO_MONTHS).toISOString()
+    : undefined;
   const entry: StoredEntry = {
     email,
     tool: parsed.data.tool,
@@ -147,6 +166,10 @@ export async function POST(req: Request) {
     utmSource: parsed.data.utmSource || undefined,
     utmMedium: parsed.data.utmMedium || undefined,
     utmCampaign: parsed.data.utmCampaign || undefined,
+    promoCode,
+    proGranted,
+    proMonths: proGranted ? PROMO_PRO_MONTHS : undefined,
+    proExpiresAt,
     createdAt: new Date().toISOString(),
   };
 
@@ -168,10 +191,18 @@ export async function POST(req: Request) {
         message: entry.message,
         referralCode,
         duplicate: false,
+        proGranted: entry.proGranted,
+        proExpiresAt: entry.proExpiresAt,
       });
     }
 
-    return NextResponse.json({ referralCode, duplicate });
+    return NextResponse.json({
+      referralCode,
+      duplicate,
+      proGranted: entry.proGranted,
+      proMonths: entry.proMonths,
+      proExpiresAt: entry.proExpiresAt,
+    });
   } catch (err) {
     console.error("waitlist error", err);
     return NextResponse.json(

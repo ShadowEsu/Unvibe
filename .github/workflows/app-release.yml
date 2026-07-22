@@ -1,0 +1,71 @@
+name: Desktop app release
+
+on:
+  push:
+    tags:
+      - "app-v*.*.*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish built artifacts to a GitHub Release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platformFlag: --mac
+          - os: windows-latest
+            platformFlag: --win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build app bundle
+        run: npm run build
+
+      - name: Package (publish to release)
+        if: startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: set these repo secrets to code-sign and notarize the macOS build.
+          # Without them the app is built unsigned (identity: null in app/package.json).
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: npx electron-builder ${{ matrix.platformFlag }} --publish always
+
+      - name: Package (build only, no publish)
+        if: startsWith(github.ref, 'refs/tags/app-v') == false && inputs.publish != true
+        run: npx electron-builder ${{ matrix.platformFlag }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: unvibe-${{ matrix.os }}
+          path: |
+            app/release/*.dmg
+            app/release/*.zip
+            app/release/*.exe
+          if-no-files-found: warn
+          retention-days: 14
