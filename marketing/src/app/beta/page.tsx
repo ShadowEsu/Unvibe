@@ -7,8 +7,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const macDownload = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim();
-const windowsDownload = process.env.NEXT_PUBLIC_BETA_WINDOWS_DOWNLOAD_URL?.trim();
+// The investor release storage is the single source of truth for private-beta artifacts.
+// Keep the beta-only aliases for a deployment that needs a distinct access-controlled URL.
+const macDownload = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
+  || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim();
+const windowsDownload = process.env.NEXT_PUBLIC_BETA_WINDOWS_DOWNLOAD_URL?.trim()
+  || process.env.NEXT_PUBLIC_INVESTOR_WINDOWS_DOWNLOAD_URL?.trim();
 
 function DownloadCard({ platform, href, detail }: { platform: string; href?: string; detail: string }) {
   const content = <><Download size={22} /><span><strong>{platform}</strong><small>{detail}</small></span></>;

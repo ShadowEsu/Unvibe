@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
-import { ArrowUpRight, Download, FileText, Mail, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Download, FileText, Mail, Monitor, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Unvibe for Investors',
   description: 'Unvibe investor deck, Mac tester build, and founder contact.',
 };
 
-const CONFIGURED_DMG_URL = process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
-  || 'https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/Unvibe-0.1.0-arm64-unsigned.dmg';
-const DMG_URL = `${CONFIGURED_DMG_URL}${CONFIGURED_DMG_URL.includes('?') ? '&' : '?'}v=20260721-final`;
+const DMG_URL = process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim();
+const WINDOWS_URL = process.env.NEXT_PUBLIC_INVESTOR_WINDOWS_DOWNLOAD_URL?.trim();
 
 const DECK_URL = '/investors/unvibe-pitch-deck.pdf';
 
@@ -59,13 +58,15 @@ export default function InvestorsPage() {
             <span className="mt-7 inline-flex items-center gap-2 font-semibold text-[#cdbbff] group-hover:text-white">Open deck <ArrowUpRight size={17} /></span>
           </a>
 
-          <a href={DMG_URL} className="group border border-[#a886ff] bg-[#8e63f5] p-7 shadow-[7px_7px_0_#4d3184] transition-transform hover:-translate-y-1">
+          {DMG_URL ? <a href={DMG_URL} className="group border border-[#a886ff] bg-[#8e63f5] p-7 shadow-[7px_7px_0_#4d3184] transition-transform hover:-translate-y-1">
             <Download className="text-white" size={30} strokeWidth={1.5} />
             <p className="mt-6 font-mono text-xs font-bold tracking-[.16em] text-[#e4dbff]">TESTER BUILD</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em]">Download the Mac app</h2>
             <p className="mt-3 text-sm leading-relaxed text-[#eeeaff]">Apple Silicon DMG. Drag Unvibe to Applications, then test it with your own code.</p>
             <span className="mt-7 inline-flex items-center gap-2 font-semibold text-white">Download DMG <Download size={17} /></span>
-          </a>
+          </a> : <div className="border border-[#8e75b8]/60 bg-[#201a2e] p-7 text-[#c2b9d2]"><Download className="text-[#bca1ff]" size={30} strokeWidth={1.5} /><p className="mt-6 font-mono text-xs font-bold tracking-[.16em] text-[#a886ff]">PRIVATE BETA</p><h2 className="mt-3 text-2xl font-semibold tracking-[-.04em] text-white">New Mac build uploading</h2><p className="mt-3 text-sm leading-relaxed">The previous unsigned build has been removed from this page.</p></div>}
+
+          {WINDOWS_URL && <a href={WINDOWS_URL} className="group border border-[#8e75b8]/60 bg-[#201a2e] p-7 shadow-[7px_7px_0_#5a3a9a] transition-transform hover:-translate-y-1"><Monitor className="text-[#bca1ff]" size={30} strokeWidth={1.5} /><p className="mt-6 font-mono text-xs font-bold tracking-[.16em] text-[#a886ff]">WINDOWS PRIVATE BETA</p><h2 className="mt-3 text-2xl font-semibold tracking-[-.04em]">Download for Windows</h2><p className="mt-3 text-sm leading-relaxed text-[#bcb3ca]">64-bit portable build for private-beta testers.</p><span className="mt-7 inline-flex items-center gap-2 font-semibold text-[#cdbbff] group-hover:text-white">Download Windows build <Download size={17} /></span></a>}
         </div>
       </section>
 
