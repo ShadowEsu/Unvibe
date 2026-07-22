@@ -79,6 +79,20 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
+// Last-resort menu-bar glyph (a template "U"), embedded so the tray item can never
+// render invisibly even if build/ icons are missing. Regenerate via scripts/gen-icons.py.
+const TRAY_FALLBACK =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAApElEQVR42mNgGAUDBaSAeA4QLwBiBSzyClC5OVC1RIOlQPwfijdjkd+MJL+UFIOPImm8hEX+EpL80VGDRw2mzOBDSBpvAjEjkhwjVAwmf4gUgxciafwNxE5Ick5QMZj8QlIMDkDSCMKfoQYshLKR5QJIMZgViPejGYAN74eqJbkgOoPH0DOkFkDIgAeIy4D4MjQIPkPZZVA5igETEPNDMdPwrCkA7RJqZZrT+00AAAAASUVORK5CYII=';
+
+/** Load the menu-bar icon, falling back through disk → dock icon → embedded glyph. */
+function loadTrayImage(dockIcon: Electron.NativeImage): Electron.NativeImage {
+  let img = nativeImage.createFromPath(asset('trayTemplate.png'));
+  if (img.isEmpty() && !dockIcon.isEmpty()) img = dockIcon.resize({ width: 18, height: 18 });
+  if (img.isEmpty()) img = nativeImage.createFromDataURL(TRAY_FALLBACK);
+  if (isMac) img.setTemplateImage(true);
+  return img;
+}
+
 async function startReview(): Promise<void> {
   broadcastShortcut();
   if (isMac && !accessibilityGranted(false)) {
@@ -134,10 +148,7 @@ app.whenReady().then(() => {
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
   if (isMac && !dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
 
-  let trayImage = nativeImage.createFromPath(asset('trayTemplate.png'));
-  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
-  else if (isMac) trayImage.setTemplateImage(true);
-  tray = new Tray(trayImage);
+  tray = new Tray(loadTrayImage(dockIcon));
   tray.setIgnoreDoubleClickEvents(true);
   tray.setToolTip('Unvibe');
   tray.setContextMenu(

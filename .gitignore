@@ -8,6 +8,9 @@ out/
 *.vsix
 .next/
 build/
+# app/ ships committed icon + packaging resources under build/ (not build output)
+!app/build/
+!app/build/**
 
 # Env & secrets (never commit)
 .env

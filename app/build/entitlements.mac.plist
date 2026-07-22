@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Electron's V8 needs JIT/executable memory under the hardened runtime. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+  <!-- Outbound HTTPS to the Unvibe backend (the agent owns all network I/O). -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <!-- Reading the selection in another app is done via the Accessibility API,
+       which is gated by user consent (NSAccessibilityUsageDescription), not an
+       entitlement. No automation/apple-events entitlement is requested. -->
+</dict>
+</plist>

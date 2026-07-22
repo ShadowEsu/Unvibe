@@ -49,11 +49,20 @@ for (const name of ['bar', 'widget', 'companion']) {
   }
 }
 mkdirSync('dist/assets', { recursive: true });
-for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
+const iconAssets = ['icon.png', 'icon.icns', 'trayTemplate.png', 'trayTemplate@2x.png'];
+const missingIcons = [];
+for (const f of iconAssets) {
   try {
     cpSync(`build/${f}`, `dist/assets/${f}`);
   } catch {
-    /* optional until icons exist */
+    missingIcons.push(f);
   }
+}
+if (missingIcons.length) {
+  // The Dock/menu-bar icons live in build/. If they are missing the tray item
+  // renders invisibly, so make the gap loud instead of silent.
+  console.warn(
+    `build: missing icon assets [${missingIcons.join(', ')}] — run \`python3 scripts/gen-icons.py\``,
+  );
 }
 console.log('build ok');
