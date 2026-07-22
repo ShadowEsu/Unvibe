@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
@@ -36,6 +36,7 @@
     "files": ["dist/**/*", "package.json"],
     "directories": { "output": "release", "buildResources": "build" },
     "icon": "build/icon.png",
+    "afterSign": "scripts/afterSignHook.cjs",
     "artifactName": "Unvibe-${version}-${os}-${arch}.${ext}",
     "mac": {
       "icon": "build/icon.png",
