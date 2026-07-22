@@ -30,6 +30,7 @@ function Bar() {
   const [expanded, setExpanded] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
+  const [attached, setAttached] = useState(true);
   const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const expandedRef = useRef(false);
@@ -41,10 +42,11 @@ function Bar() {
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
-      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number };
+      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string };
       const enabled = Boolean(settings.barHoverPreview ?? true);
       setHoverEnabled(enabled);
       setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 220)));
+      setAttached(settings.barPosition === 'top-center');
     });
     const unsubscribe = window.unvibe.onBarNotify((msg) => {
       setNote(msg);
@@ -53,9 +55,11 @@ function Bar() {
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
     const unsubscribeCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false));
+    const unsubscribeSettings = window.unvibe.onBarSettings((settings) => setAttached(settings.barPosition === 'top-center'));
     return () => {
       unsubscribe();
       unsubscribeCollapse();
+      unsubscribeSettings();
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
@@ -109,7 +113,7 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }}>
         <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
         <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>

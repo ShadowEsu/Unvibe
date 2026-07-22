@@ -37,7 +37,9 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
   const { workArea } = display;
   const cx = workArea.x + Math.round((workArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
-  const top = workArea.y + 12;
+  // Top-center is the attached Island position; the other top placement keeps
+  // a small floating inset so the two modes remain visually distinct.
+  const top = position === 'top-center' ? workArea.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
   switch (position) {
     case 'top-center':

@@ -8,6 +8,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -
   color: #f4f0fa; opacity: .96; transform-origin: top center;
   transition: border-color .12s ease, opacity .12s ease, box-shadow .12s ease;
 }
+.strip--attached { width:100%; min-height:38px; margin:0; border-radius:0 0 19px 19px; border-top:0; }
+.strip--attached .strip__main { height:38px; padding:0 9px; }
+.strip--attached.strip--expanded { border-radius:0 0 21px 21px; }
 .strip:not(.strip--expanded)::before { content:""; position:absolute; width:4px; height:4px; top:7px; left:50%; border-radius:50%; background:#a78bfa; opacity:.82; animation:islandBreathe 4.8s ease-in-out infinite; }
 .strip::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:0; background-image:linear-gradient(90deg,rgba(167,139,250,.16) 1px,transparent 1px),linear-gradient(rgba(167,139,250,.16) 1px,transparent 1px); background-size:6px 6px; mask-image:linear-gradient(90deg,transparent 4%,#000 29%,#000 71%,transparent 96%); transition:opacity .16s ease; }
 .strip--expanded::after { opacity:.28; }

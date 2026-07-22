@@ -776,6 +776,7 @@ app.whenReady().then(() => {
       }
     }
     if ((patch.barPosition || patch.followActiveDisplay) && bar && !bar.isDestroyed()) positionBar(bar);
+    if (patch.barPosition && bar && !bar.isDestroyed()) bar.webContents.send('bar:settings', { barPosition: next.barPosition });
     if (patch.barVisibility && bar && !bar.isDestroyed()) {
       if (next.barVisibility === 'always' && next.onboarded) showBar(bar);
       else if (!currentWidget()) hideBar(bar);

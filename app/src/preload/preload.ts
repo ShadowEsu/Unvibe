@@ -17,6 +17,11 @@ const api = {
     ipcRenderer.on('bar:collapse', listener);
     return () => ipcRenderer.removeListener('bar:collapse', listener);
   },
+  onBarSettings: (cb: (settings: { barPosition?: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string }) => cb(settings);
+    ipcRenderer.on('bar:settings', listener);
+    return () => ipcRenderer.removeListener('bar:settings', listener);
+  },
   setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
