@@ -37,6 +37,8 @@ interface SyncStatus {
 type Account = { userId: string; email: string } | null;
 interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
+  barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
+  followActiveDisplay: boolean; soundEffects: boolean;
   widgetOpacityInactive: number; inactiveBehavior: string;
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
@@ -234,20 +236,50 @@ function Choice({ selected, title, detail, onClick }: { selected: boolean; title
   return <button className={`ob__choice${selected ? ' selected' : ''}`} aria-pressed={selected} onClick={onClick}><span className="ob__choice-check">✓</span><span><b>{title}</b><small>{detail}</small></span></button>;
 }
 
-function Onboarding({ shortcut, onDone }: { shortcut: string; onDone: () => void }) {
+function playSetupTone(kind: 'step' | 'success'): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  try {
+    const context = new AudioContext();
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.035, context.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (kind === 'success' ? 0.32 : 0.16));
+    gain.connect(context.destination);
+    const notes = kind === 'success' ? [523.25, 659.25] : [440];
+    notes.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = 'square';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      oscillator.start(context.currentTime + index * 0.09);
+      oscillator.stop(context.currentTime + 0.15 + index * 0.09);
+    });
+    setTimeout(() => void context.close(), 500);
+  } catch { /* Optional local sound; onboarding remains complete without it. */ }
+}
+
+function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soundEffects: boolean; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState('intermediate');
   const [sampleDetail, setSampleDetail] = useState<'simple' | 'technical'>('simple');
   const steps = ['Welcome', 'Try it', 'Your depth', 'Use anywhere'];
 
-  const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
+  const next = () => {
+    if (soundEffects) playSetupTone('step');
+    setStep((s) => Math.min(s + 1, steps.length - 1));
+  };
   const back = () => setStep((s) => Math.max(s - 1, 0));
-  const finish = () => { void window.unvibe.completeOnboarding(); onDone(); };
+  const finish = () => { if (soundEffects) playSetupTone('success'); void window.unvibe.completeOnboarding(); onDone(); };
 
   const nav = (continueLabel = 'Continue') => <div className="ob__actions"><button className="ob__skip" disabled={step === 0} onClick={back}>Back</button><button className="field-btn inline" onClick={next}>{continueLabel}</button></div>;
 
   return (
     <div className="ob">
+      <div className="ob__scene" aria-hidden="true">
+        <div className="ob__scene-grid" />
+        <div className="ob__scene-strip"><LogoMark size={15} stroke={2} /><span>{step === 0 ? 'ready' : step === 1 ? 'code captured' : step === 2 ? 'depth selected' : 'privacy ready'}</span><i /><i /><i /></div>
+        <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
+      </div>
       <div className="ob__card fade-in">
         <div className="ob__progress"><span>Step {step + 1} of {steps.length}</span><span>{steps[step]}</span></div>
         <div className="ob__dots">{steps.map((_, i) => <span key={i} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
@@ -1199,6 +1231,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
+              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Quiet, locally synthesized cues during setup and learning moments.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
               {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>
@@ -1209,12 +1242,15 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
               <div className="settings-section-label">OVERLAY PREVIEW</div>
               <div className="setrow"><div><div className="sl">App appearance</div><div className="sd">Choose light, dark, or follow your Mac automatically.</div></div><select className="sel-input" value={settings.theme} onChange={(e) => onSettings({ theme: e.target.value as Settings['theme'] })}><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
-              <div className="setrow"><div><div className="sl">Floating bar position</div><div className="sd">Where the small activation bar sits.</div></div>
+              <div className="setrow"><div><div className="sl">Learning strip position</div><div className="sd">Where the compact Unvibe strip lives across your Mac spaces.</div></div>
                 <select className="sel-input" value={settings.barPosition} onChange={(e) => onSettings({ barPosition: e.target.value })}>
                   <option value="bottom-center">Bottom center</option><option value="top-center">Top center</option>
                   <option value="top-right">Top right</option><option value="bottom-right">Bottom right</option>
                 </select>
               </div>
+              <div className="setrow"><div><div className="sl">Learning strip visibility</div><div className="sd">Keep it ready between reviews, or only show it while you are learning.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
+              <div className="setrow"><div><div className="sl">Recent learning on hover</div><div className="sd">Expand the strip to show your latest explanation and learning totals.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
+              <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
                 <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
                   <option value="dim">Dim</option><option value="stay">Stay solid</option><option value="collapse">Collapse</option>
@@ -1336,7 +1372,7 @@ function App() {
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
-    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onDone={async () => { await refresh(); setGate('app'); }} /></>);
+    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} soundEffects={settings?.soundEffects ?? true} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);

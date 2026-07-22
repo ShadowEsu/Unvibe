@@ -6,8 +6,9 @@ export const metadata: Metadata = {
   description: 'Unvibe investor deck, Mac tester build, and founder contact.',
 };
 
-const DMG_URL = process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
+const CONFIGURED_DMG_URL = process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
   || 'https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/Unvibe-0.1.0-arm64-unsigned.dmg';
+const DMG_URL = `${CONFIGURED_DMG_URL}${CONFIGURED_DMG_URL.includes('?') ? '&' : '?'}v=20260721-final`;
 
 const DECK_URL = '/investors/unvibe-pitch-deck.pdf';
 

@@ -30,6 +30,7 @@ import {
   getOrCreateWidget,
   hideBar,
   positionBar,
+  resizeBar,
   showBar,
   type WidgetResizeEdge,
 } from './windows';
@@ -275,7 +276,7 @@ async function startReview(): Promise<void> {
     win.on('closed', () => {
       clearPanelSessions();
       normalBounds.delete(windowId);
-      hideBar(bar);
+      if (settings().all().barVisibility === 'during-review') hideBar(bar);
     });
     return;
   }
@@ -298,12 +299,9 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 app.setName('Unvibe');
 
 app.whenReady().then(() => {
-  const fresh = settings().takeFreshStart();
+  // A UI/settings migration may re-show setup, but an app update must never erase learning.
+  settings().takeFreshStart();
   store();
-  if (fresh) {
-    // New DMG / revision cohort: empty shelf, signed out, onboarding, full Free allotment (50).
-    store().wipeEverything();
-  }
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
   void flush();
@@ -335,8 +333,20 @@ app.whenReady().then(() => {
   bar = createBar();
   setBar(bar);
   positionBar(bar);
-  // Keep the aisle hidden until ⌘U / Review — less distraction.
-  hideBar(bar);
+  if (s.onboarded && s.barVisibility === 'always') showBar(bar);
+  else hideBar(bar);
+
+  // Keep the learning strip correctly placed and above full-screen Spaces after display changes.
+  const restoreFloatingWindows = () => {
+    if (bar && !bar.isDestroyed() && bar.isVisible()) showBar(bar);
+    const panel = currentWidget();
+    if (!panel || panel.isDestroyed()) return;
+    panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    panel.moveTop();
+  };
+  screen.on('display-added', restoreFloatingWindows);
+  screen.on('display-removed', restoreFloatingWindows);
+  screen.on('display-metrics-changed', restoreFloatingWindows);
   registerShortcut(s.shortcut);
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
@@ -344,6 +354,20 @@ app.whenReady().then(() => {
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
   ipcMain.on('bar:openCompanion', () => openCompanion());
+  ipcMain.on('bar:setExpanded', (_e, expanded: boolean) => {
+    if (!settings().all().barHoverPreview) return;
+    resizeBar(bar, Boolean(expanded));
+  });
+  ipcMain.handle('bar:snapshot', () => {
+    const recent = computeLearningItems(store().events(), 1)[0];
+    const profile = computeProfile(store().events(), todayKey());
+    return {
+      shortcut: settings().all().shortcut,
+      recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
+      streak: profile.streak,
+      explanations: profile.reviews,
+    };
+  });
   ipcMain.on('companion:review', () => void startReview());
 
   // --- widget lifecycle (single panel + tabs) ---
@@ -499,8 +523,10 @@ app.whenReady().then(() => {
   ipcMain.on('widget:pin', (e, pinned: boolean) => {
     const win = widgetOf(e);
     if (!win) return;
-    win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'floating');
-    win.setVisibleOnAllWorkspaces(pinned, { visibleOnFullScreen: pinned });
+    win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'pop-up-menu');
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setHiddenInMissionControl(true);
+    win.moveTop();
   });
   ipcMain.on('widget:collapse', (e, collapsed: boolean) => {
     const win = widgetOf(e);
@@ -723,7 +749,12 @@ app.whenReady().then(() => {
         return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
       }
     }
-    if (patch.barPosition && bar && !bar.isDestroyed()) positionBar(bar);
+    if ((patch.barPosition || patch.followActiveDisplay) && bar && !bar.isDestroyed()) positionBar(bar);
+    if (patch.barVisibility && bar && !bar.isDestroyed()) {
+      if (next.barVisibility === 'always' && next.onboarded) showBar(bar);
+      else if (!currentWidget()) hideBar(bar);
+    }
+    if (patch.barHoverPreview === false) resizeBar(bar, false);
     return { settings: settings().all() };
   });
 
@@ -743,7 +774,11 @@ app.whenReady().then(() => {
   });
 
   // --- onboarding ---
-  ipcMain.handle('onboarding:complete', () => settings().set({ onboarded: true }));
+  ipcMain.handle('onboarding:complete', () => {
+    const next = settings().set({ onboarded: true });
+    if (next.barVisibility === 'always') showBar(bar);
+    return next;
+  });
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());

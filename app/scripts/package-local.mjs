@@ -19,6 +19,7 @@ try { url = new URL(backend); } catch { fail('UNVIBE_BACKEND must be an absolute
 if (url.protocol !== 'https:') fail('UNVIBE_BACKEND must use HTTPS.');
 if (['localhost', '127.0.0.1', '::1'].includes(url.hostname)) fail('development backends cannot be embedded in a package.');
 if (!existsSync('build/icon.icns')) fail('tracked build/icon.icns is missing.');
+if (!existsSync('build/entitlements.local.plist')) fail('local hardened-runtime entitlements are missing.');
 
 rmSync('release', { recursive: true, force: true });
 const toolDirectory = mkdtempSync(join(tmpdir(), 'unvibe-package-'));
@@ -55,7 +56,10 @@ try {
   // not a substitute for Developer ID signing or Apple notarization.
   if (!process.exitCode) {
     const appPath = join('release', 'mac-arm64', 'Unvibe.app');
-    const sign = spawnSync('codesign', ['--force', '--deep', '--sign', '-', appPath], { stdio: 'inherit' });
+    const sign = spawnSync('codesign', [
+      '--force', '--deep', '--options', 'runtime', '--timestamp=none',
+      '--entitlements', join('build', 'entitlements.local.plist'), '--sign', '-', appPath,
+    ], { stdio: 'inherit' });
     if (sign.status !== 0) process.exitCode = sign.status ?? 1;
   }
 

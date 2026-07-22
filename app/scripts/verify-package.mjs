@@ -30,6 +30,9 @@ const plist = spawnSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIdenti
 if (plist.stdout.trim() !== 'com.unvibe.app') fail(`unexpected bundle id: ${plist.stdout.trim() || 'missing'}.`);
 const signature = spawnSync('codesign', ['--verify', '--deep', '--strict', appPath], { encoding: 'utf8' });
 if (signature.status !== 0) fail(signature.stderr || signature.stdout || 'app bundle fails macOS code-integrity verification.');
+const details = spawnSync('codesign', ['--display', '--verbose=4', appPath], { encoding: 'utf8' });
+const signatureDetails = `${details.stdout}\n${details.stderr}`;
+if (!signatureDetails.includes('runtime')) fail('the app bundle is missing the hardened runtime flag.');
 console.log(checksum.stdout.trim());
-console.log(`Package checks passed: artifact, checksum, app bundle, bundle id, and HTTPS backend ${backendUrl.origin}.`);
+console.log(`Package checks passed: artifact, checksum, app bundle, bundle id, hardened runtime, and HTTPS backend ${backendUrl.origin}.`);
 console.log('The local package has an ad-hoc integrity signature only; Developer ID signing and Apple notarization are still required for public distribution.');

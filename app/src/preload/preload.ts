@@ -7,7 +7,13 @@ const api = {
   openCompanion: () => ipcRenderer.send('bar:openCompanion'),
   companionReview: () => ipcRenderer.send('companion:review'),
   appInfo: (): Promise<{ version: string; user: string; shortcut: string }> => ipcRenderer.invoke('app:info'),
-  onBarNotify: (cb: (msg: string) => void) => ipcRenderer.on('bar:notify', (_e, m) => cb(m)),
+  onBarNotify: (cb: (msg: string) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, message: string) => cb(message);
+    ipcRenderer.on('bar:notify', listener);
+    return () => ipcRenderer.removeListener('bar:notify', listener);
+  },
+  setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
+  barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
 
   // widget review (single panel + tabs)
   widgetReady: () => ipcRenderer.send('widget:ready'),

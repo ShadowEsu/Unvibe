@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveBackendUrl } from '../src/main/backend';
+import { resolveBackendUrl } from '../src/main/backendUrl';
 
 test('uses the documented web development port by default', () => {
   assert.equal(resolveBackendUrl({}), 'http://localhost:8787');

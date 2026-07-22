@@ -468,6 +468,8 @@ function Widget() {
     window.unvibe.closeTab(tabId);
   };
 
+  const phase = active.phase;
+  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
       <b>{active.meta.lines} lines</b>
@@ -480,7 +482,6 @@ function Widget() {
     </span>
   );
 
-  const phase = active.phase;
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
 
@@ -496,6 +497,7 @@ function Widget() {
           {src}
         </div>
         <span className="head__spacer" />
+        <span className={`head__status head__status--${phase}`}><i />{phaseLabel}</span>
         <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
           {collapsed ? '▾' : '▴'}
         </button>
@@ -572,7 +574,8 @@ function Widget() {
 
           {phase === 'ready' && (
             <div className="state ready-state">
-              <div className="big">Starting explanation…</div>
+              <div className="container-progress" aria-label="Explanation progress"><span className="on">1 · captured</span><span className="on">2 · filtered</span><span>3 · explaining</span></div>
+              <div className="big">Reading your code in context…</div>
               <div className="detected">
                 <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
                 <span>{active.meta.lines ?? 0} lines</span>
@@ -775,7 +778,7 @@ function Widget() {
                     toggleCollapse();
                   }}
                 >
-                  Got it ✓
+                  Understand ✓
                 </button>
                 <button
                   className="chip chip--diff"
@@ -799,6 +802,7 @@ function Widget() {
                 {active.mock && (
                   <span className="mock-note">mock AI — set ANTHROPIC_API_KEY for real explanations</span>
                 )}
+                {!active.mock && phase === 'done' && <span className="local-save-note">saved on this Mac</span>}
               </div>
               <div className="ask-sandbox">
                 <div className="ask-sandbox__label">Ask a follow-up</div>

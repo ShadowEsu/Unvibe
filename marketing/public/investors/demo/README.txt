@@ -1,7 +1,7 @@
 Unvibe trial Mac build (Apple Silicon)
 
 Download:
-  https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/Unvibe-0.1.0-arm64-unsigned.dmg
+  https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/Unvibe-0.1.0-arm64-unsigned.dmg?v=20260721-final
 
 Also linked from:
   https://unvibe.site/investors

@@ -157,6 +157,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   flex: 0 0 auto;
 }
 .head__spacer { flex: 1 1 auto; min-width: 4px; }
+.head__status { flex:0 0 auto; display:inline-flex; align-items:center; gap:5px; max-width:92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font:8px var(--font-mono); text-transform:uppercase; letter-spacing:.04em; }
+.head__status i { width:5px; height:5px; flex:0 0 auto; background:var(--muted); box-shadow:5px 0 color-mix(in srgb,var(--muted) 35%,transparent); }
+.head__status--streaming i,.head__status--ready i { background:var(--fill); animation:statusPulse 1.2s ease-in-out infinite; }
+.head__status--done { color:var(--fill-strong); }.head__status--done i { background:var(--fill); }
+@keyframes statusPulse { 50% { opacity:.42; transform:translateY(1px); } }
 .head__context { min-width: 0; display: flex; align-items: baseline; gap: 8px; flex: 1; }
 .head__product { color: var(--fg); font-size: 10px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; flex: 0 0 auto; }
 .head .src {
@@ -382,6 +387,8 @@ code.inline {
 .state .sub { font-size: 12.5px; color: var(--muted); max-width: 300px; line-height: 1.5; }
 .state .findings { text-align: left; font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px dashed var(--danger-line); border-radius: 8px; padding: 8px 12px; max-width: 320px; }
 .ready-state { justify-content: center; }
+.container-progress { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:4px; color:var(--muted); font:8px var(--font-mono); letter-spacing:.04em; text-transform:uppercase; }
+.container-progress span { opacity:.48; }.container-progress span.on { color:var(--fill-strong); opacity:1; }
 .empty-picker { justify-content: flex-start; padding-top: 18px; gap: 10px; }
 .empty-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px; }
 .paste-label { margin-top: 8px; font-size: 11px; font-weight: 650; color: var(--muted); letter-spacing: 0.02em; text-transform: uppercase; font-family: var(--font-mono); }
@@ -504,6 +511,8 @@ code.inline {
 .askrow .btn-ask:not(:disabled):hover { filter: brightness(1.06); transform: translateY(-1px); }
 .askrow .btn-ask:disabled { opacity: 0.45; }
 .mock-note { font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); }
+.local-save-note { margin-left:auto; align-self:center; color:var(--muted); font:9px var(--font-mono); white-space:nowrap; }
+.local-save-note::before { content:"■"; margin-right:5px; color:var(--fill); font-size:6px; }
 
 .quiz { padding: 2px; }
 .quiz__concept {

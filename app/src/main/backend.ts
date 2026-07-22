@@ -6,6 +6,9 @@ import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
 import { store } from './store';
 import { bakedTrialToken } from './trial';
+import { resolveBackendUrl } from './backendUrl';
+
+export { resolveBackendUrl } from './backendUrl';
 
 /** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
 function loadAppEnv(): void {
@@ -35,22 +38,6 @@ function loadAppEnv(): void {
 }
 
 loadAppEnv();
-
-/** The desktop and `web/` development servers share this documented default. */
-const BAKED_RELEASE_BACKEND = process.env.UNVIBE_RELEASE_BACKEND || '';
-
-export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env, baked = BAKED_RELEASE_BACKEND): string {
-  // Packaged builds bake the API host (never the marketing site). Runtime UNVIBE_BACKEND
-  // still wins for local development. Ignore stale localhost overrides in userData when a
-  // release bake is present so old Application Support .env files cannot break demos.
-  const explicit = env.UNVIBE_BACKEND?.trim();
-  const bakedUrl = baked?.trim();
-  if (explicit) {
-    const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?\/?$/i.test(explicit);
-    if (!(bakedUrl && isLocal)) return explicit;
-  }
-  return bakedUrl || 'http://localhost:8787';
-}
 
 export const BACKEND = resolveBackendUrl();
 const REQUEST_TIMEOUT_MS = 20_000;

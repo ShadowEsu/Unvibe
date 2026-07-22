@@ -9,11 +9,12 @@ import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProvid
 import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
+export type BarVisibility = 'always' | 'during-review';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
-const SETTINGS_REVISION = 4;
+const SETTINGS_REVISION = 5;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -22,6 +23,14 @@ export interface Settings {
   /** Electron accelerator. Default is ⌘U. */
   shortcut: string;
   barPosition: BarPosition;
+  /** Keep the learning strip available between reviews, or only show it during a review. */
+  barVisibility: BarVisibility;
+  /** Expand the learning strip into a small recent-learning preview on hover. */
+  barHoverPreview: boolean;
+  /** Follow the display under the pointer when positioning the learning strip. */
+  followActiveDisplay: boolean;
+  /** Locally synthesized UI cues. Never records or plays remote audio. */
+  soundEffects: boolean;
   /** Opacity of an unfocused, unpinned widget (0.35–1). */
   widgetOpacityInactive: number;
   inactiveBehavior: InactiveBehavior;
@@ -46,7 +55,11 @@ const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
   onboarded: false,
   shortcut: 'CommandOrControl+U',
-  barPosition: 'bottom-center',
+  barPosition: 'top-center',
+  barVisibility: 'always',
+  barHoverPreview: true,
+  followActiveDisplay: true,
+  soundEffects: true,
   widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
@@ -61,7 +74,7 @@ const DEFAULTS: Settings = {
 class SettingsStore {
   private data: Settings;
   private file: string;
-  /** True once after a SETTINGS_REVISION bump — caller should wipe local learning for a clean start. */
+  /** True once after a SETTINGS_REVISION bump so setup can be refreshed without deleting learning. */
   private freshStart = false;
 
   constructor() {
@@ -100,7 +113,7 @@ class SettingsStore {
     return this.data;
   }
 
-  /** Consume the one-shot flag set when this install was upgraded past SETTINGS_REVISION. */
+  /** Consume the one-shot migration flag. Learning/account data must remain untouched. */
   takeFreshStart(): boolean {
     const v = this.freshStart;
     this.freshStart = false;

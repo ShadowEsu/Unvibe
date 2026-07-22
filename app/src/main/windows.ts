@@ -29,7 +29,11 @@ function lockNavigation(win: BrowserWindow): void {
 }
 
 function barBounds(position: BarPosition, w: number, h: number): { x: number; y: number } {
-  const { workArea } = screen.getPrimaryDisplay();
+  const pointer = screen.getCursorScreenPoint();
+  const display = settings().all().followActiveDisplay
+    ? screen.getDisplayNearestPoint(pointer)
+    : screen.getPrimaryDisplay();
+  const { workArea } = display;
   const cx = workArea.x + Math.round((workArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
   const top = workArea.y + 12;
@@ -47,8 +51,10 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 }
 
 /** Compact landscape aisle: play · logo · home. */
-const BAR_W = 168;
+const BAR_W = 196;
 const BAR_H = 44;
+const BAR_EXPANDED_W = 410;
+const BAR_EXPANDED_H = 132;
 
 export function createBar(): BrowserWindow {
   const { x, y } = barBounds(settings().all().barPosition, BAR_W, BAR_H);
@@ -70,9 +76,22 @@ export function createBar(): BrowserWindow {
   });
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setHiddenInMissionControl(true);
+  win.setFullScreenable(false);
   lockNavigation(win);
   void win.loadFile(page('bar'));
   return win;
+}
+
+/** Hover expansion is a real window resize so the transparent area never blocks other apps. */
+export function resizeBar(win: BrowserWindow | null, expanded: boolean): void {
+  if (!win || win.isDestroyed()) return;
+  const width = expanded ? BAR_EXPANDED_W : BAR_W;
+  const height = expanded ? BAR_EXPANDED_H : BAR_H;
+  const { x, y } = barBounds(settings().all().barPosition, width, height);
+  win.setFocusable(expanded);
+  win.setBounds({ x, y, width, height }, process.platform === 'darwin');
+  win.moveTop();
 }
 
 /** Move the bar to a new position (called when the setting changes). */
@@ -87,6 +106,7 @@ export function showBar(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   positionBar(win);
   if (!win.isVisible()) win.showInactive();
+  win.moveTop();
 }
 
 export function hideBar(win: BrowserWindow | null): void {
@@ -192,7 +212,11 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
     show: false,
     webPreferences: secureWebPrefs(),
   });
-  win.setAlwaysOnTop(true, 'floating');
+  // pop-up-menu sits above normal windows while still behaving like an auxiliary tool panel.
+  win.setAlwaysOnTop(true, 'pop-up-menu');
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setHiddenInMissionControl(true);
+  win.setFullScreenable(false);
 
   const persist = () => {
     if (win.isDestroyed()) return;
