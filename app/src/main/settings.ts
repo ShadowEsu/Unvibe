@@ -14,7 +14,7 @@ export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
-const SETTINGS_REVISION = 5;
+const SETTINGS_REVISION = 6;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
