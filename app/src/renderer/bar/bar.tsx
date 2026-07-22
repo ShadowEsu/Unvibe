@@ -7,6 +7,13 @@ type Snapshot = {
   recent: { id: string; title: string; detail: string; level: string } | null;
   streak: number;
   explanations: number;
+  understood: number;
+  needsReview: number;
+  linesUnderstood: number;
+  conceptsSeen: number;
+  conceptsStrong: number;
+  usage: { label: string; pct: number } | null;
+  heat: number[];
 };
 
 function PlayIcon() {
@@ -33,12 +40,16 @@ function Bar() {
   const [attached, setAttached] = useState(true);
   const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [loading, setLoading] = useState(true);
   const expandedRef = useRef(false);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const refresh = () => void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
+  const refresh = () => {
+    setLoading(true);
+    void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot)).finally(() => setLoading(false));
+  };
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
@@ -55,7 +66,11 @@ function Bar() {
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
     const unsubscribeCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false));
-    const unsubscribeSettings = window.unvibe.onBarSettings((settings) => setAttached(settings.barPosition === 'top-center'));
+    const unsubscribeSettings = window.unvibe.onBarSettings((settings) => {
+      if (settings.barPosition) setAttached(settings.barPosition === 'top-center');
+      if (settings.barHoverPreview !== undefined) setHoverEnabled(settings.barHoverPreview);
+      if (settings.barHoverDelayMs !== undefined) setHoverDelayMs(settings.barHoverDelayMs);
+    });
     return () => {
       unsubscribe();
       unsubscribeCollapse();
@@ -113,8 +128,8 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
-      <div className="strip__main" title={note || 'Unvibe is ready'} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
+      <div className="strip__main" title={note || 'Unvibe is ready'}>
         <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
         <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
         <span className="strip__status" aria-live="polite">{confirmation || note || 'Ready to understand'}</span>
@@ -123,15 +138,21 @@ function Bar() {
       </div>
       {expanded && (
         <div className="strip__drawer">
-          <div className="strip__recent">
-            <span className="pixel-label">LAST LEARNING</span>
-            <strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong>
-            <small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small>
+          <div className="strip__drawer-head">
+            <div><span className="pixel-label">LEARNING PULSE</span><strong>Your understanding, right now.</strong></div>
+            {loading ? <div className="pixel-loader" aria-label="Refreshing learning stats">{Array.from({ length: 7 }, (_, index) => <i key={index} />)}</div> : <span className="strip__live"><i />local data</span>}
           </div>
-          <div className="strip__stats" aria-label="Learning summary">
-            <span><b>{snapshot?.streak ?? 0}</b> day streak</span>
-            <span><b>{snapshot?.explanations ?? 0}</b> explained</span>
+          <div className="strip__metric-grid" aria-label="Actual learning statistics">
+            <article><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
+            <article><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
+            <article><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
+            <article><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
           </div>
+          <div className="strip__learning-row">
+            <div className="strip__recent"><span className="pixel-label">LAST LEARNING</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
+            <div className="strip__concepts"><span><b>{snapshot?.conceptsSeen ?? 0}</b> concepts</span><span><b>{snapshot?.conceptsStrong ?? 0}</b> strong</span><small>{snapshot?.usage ? `${snapshot.usage.label} · ${snapshot.usage.pct}%` : 'No workflow data yet'}</small></div>
+          </div>
+          <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 DAYS</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
           <div className="strip__actions">
             <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
             <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>

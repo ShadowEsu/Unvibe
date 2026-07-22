@@ -392,6 +392,13 @@ app.whenReady().then(() => {
       recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
       streak: profile.streak,
       explanations: profile.reviews,
+      understood: profile.understood,
+      needsReview: profile.needsReview,
+      linesUnderstood: profile.linesUnderstood,
+      conceptsSeen: profile.conceptsSeen,
+      conceptsStrong: profile.conceptsStrong,
+      usage: profile.usage[0] ?? null,
+      heat: profile.heat.slice(-14),
     };
   });
   ipcMain.on('companion:review', () => void startReview());
@@ -776,7 +783,13 @@ app.whenReady().then(() => {
       }
     }
     if ((patch.barPosition || patch.followActiveDisplay) && bar && !bar.isDestroyed()) positionBar(bar);
-    if (patch.barPosition && bar && !bar.isDestroyed()) bar.webContents.send('bar:settings', { barPosition: next.barPosition });
+    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined) && bar && !bar.isDestroyed()) {
+      bar.webContents.send('bar:settings', {
+        barPosition: next.barPosition,
+        barHoverPreview: next.barHoverPreview,
+        barHoverDelayMs: next.barHoverDelayMs,
+      });
+    }
     if (patch.barVisibility && bar && !bar.isDestroyed()) {
       if (next.barVisibility === 'always' && next.onboarded) showBar(bar);
       else if (!currentWidget()) hideBar(bar);

@@ -56,10 +56,10 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 /** Compact landscape aisle: play · logo · home. */
 const BAR_W = 196;
 const BAR_H = 44;
-const BAR_EXPANDED_W = 410;
+const BAR_EXPANDED_W = 620;
 // The drawer contains recent learning, stats, and two actions. Keep transparent
 // window chrome larger than its visual card so no interactive content is clipped.
-const BAR_EXPANDED_H = 194;
+const BAR_EXPANDED_H = 368;
 
 export function createBar(): BrowserWindow {
   barIsExpanded = false;

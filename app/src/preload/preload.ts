@@ -17,8 +17,8 @@ const api = {
     ipcRenderer.on('bar:collapse', listener);
     return () => ipcRenderer.removeListener('bar:collapse', listener);
   },
-  onBarSettings: (cb: (settings: { barPosition?: string }) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string }) => cb(settings);
+  onBarSettings: (cb: (settings: { barPosition?: string; barHoverPreview?: boolean; barHoverDelayMs?: number }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barHoverPreview?: boolean; barHoverDelayMs?: number }) => cb(settings);
     ipcRenderer.on('bar:settings', listener);
     return () => ipcRenderer.removeListener('bar:settings', listener);
   },
