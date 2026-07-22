@@ -28,6 +28,28 @@ function prettyShortcut(value = 'CommandOrControl+U'): string {
   return value.replace('CommandOrControl+', '⌘').replace('Shift+', '⇧').replace('Alt+', '⌥');
 }
 
+function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel'): void {
+  if (volume <= 0) return;
+  try {
+    const context = new AudioContext();
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.075), context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+    gain.connect(context.destination);
+    const notes = opening ? [392, 523.25] : [392];
+    notes.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = style === 'pixel' ? 'square' : 'sine';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      oscillator.start(context.currentTime + index * 0.045);
+      oscillator.stop(context.currentTime + 0.11 + index * 0.045);
+    });
+    window.setTimeout(() => void context.close(), 350);
+  } catch { /* Sound is optional; pointer interaction must never depend on it. */ }
+}
+
 /**
  * The learning strip is intentionally not a Dynamic Island clone. It is a small, persistent
  * Unvibe status surface that expands into recent learning and honest local-privacy context.
@@ -38,6 +60,9 @@ function Bar() {
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [attached, setAttached] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundVolume, setSoundVolume] = useState(0.3);
+  const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
   const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,11 +78,14 @@ function Bar() {
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
-      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string };
+      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
       const enabled = Boolean(settings.barHoverPreview ?? true);
       setHoverEnabled(enabled);
       setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 220)));
       setAttached(settings.barPosition === 'top-center');
+      setSoundEnabled(settings.soundEffects ?? true);
+      setSoundVolume(settings.soundVolume ?? 0.3);
+      setSoundStyle(settings.soundStyle ?? 'soft');
     });
     const unsubscribe = window.unvibe.onBarNotify((msg) => {
       setNote(msg);
@@ -70,6 +98,9 @@ function Bar() {
       if (settings.barPosition) setAttached(settings.barPosition === 'top-center');
       if (settings.barHoverPreview !== undefined) setHoverEnabled(settings.barHoverPreview);
       if (settings.barHoverDelayMs !== undefined) setHoverDelayMs(settings.barHoverDelayMs);
+      if (settings.soundEffects !== undefined) setSoundEnabled(settings.soundEffects);
+      if (settings.soundVolume !== undefined) setSoundVolume(settings.soundVolume);
+      if (settings.soundStyle !== undefined) setSoundStyle(settings.soundStyle);
     });
     return () => {
       unsubscribe();
@@ -88,6 +119,7 @@ function Bar() {
     expandedRef.current = next;
     setExpanded(next);
     window.unvibe.setBarExpanded(next);
+    if (soundEnabled) playIslandTone(next, soundVolume, soundStyle);
     if (next) refresh();
   };
   const open = () => {

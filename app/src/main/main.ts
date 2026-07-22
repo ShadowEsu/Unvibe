@@ -783,11 +783,14 @@ app.whenReady().then(() => {
       }
     }
     if ((patch.barPosition || patch.followActiveDisplay) && bar && !bar.isDestroyed()) positionBar(bar);
-    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined) && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
         barHoverPreview: next.barHoverPreview,
         barHoverDelayMs: next.barHoverDelayMs,
+        soundEffects: next.soundEffects,
+        soundVolume: next.soundVolume,
+        soundStyle: next.soundStyle,
       });
     }
     if (patch.barVisibility && bar && !bar.isDestroyed()) {
