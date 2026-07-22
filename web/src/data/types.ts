@@ -31,6 +31,19 @@ export interface ProjectSummary {
   lastActive: string;
 }
 
+export interface UsageSummary {
+  selectionsUsed: number;
+  selectionsLimit: number;
+  asksUsed: number;
+  asksLimit: number;
+}
+
+export interface UsageResult {
+  allowed: boolean;
+  used: number;
+  limit: number;
+}
+
 export interface DeviceCode {
   deviceCode: string;
   userCode: string;
@@ -65,4 +78,8 @@ export interface Store {
   profile(userId: string): Promise<ProfileSummary>;
   history(userId: string, limit: number): Promise<EventRecord[]>;
   projects(userId: string): Promise<ProjectSummary[]>;
+
+  // Beta usage metering (see src/billing/plans.ts)
+  usage(userId: string): Promise<UsageSummary>;
+  consumeUsage(userId: string, kind: 'selection' | 'ask'): Promise<UsageResult>;
 }

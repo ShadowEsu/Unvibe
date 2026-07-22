@@ -8,8 +8,11 @@ import type {
   ProfileSummary,
   ProjectSummary,
   Store,
+  UsageResult,
+  UsageSummary,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { limitFor } from '../billing/plans';
 
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
@@ -122,6 +125,7 @@ export class SupabaseStore implements Store {
   async deleteAccount(userId: string): Promise<void> {
     // Order matters if FKs are enforced: children before the user row.
     await this.db.from('events').delete().eq('user_id', userId);
+    await this.db.from('usage_counters').delete().eq('user_id', userId);
     await this.db.from('tokens').delete().eq('user_id', userId);
     await this.db.from('device_codes').delete().eq('user_id', userId);
     await this.db.from('consent_log').delete().eq('user_id', userId);
@@ -175,5 +179,33 @@ export class SupabaseStore implements Store {
 
   async projects(userId: string): Promise<ProjectSummary[]> {
     return computeProjects(await this.eventsFor(userId));
+  }
+
+  async usage(userId: string): Promise<UsageSummary> {
+    const { data } = await this.db
+      .from('usage_counters')
+      .select('selections_used, asks_used')
+      .eq('user_id', userId)
+      .maybeSingle();
+    return {
+      selectionsUsed: (data?.selections_used as number | undefined) ?? 0,
+      selectionsLimit: limitFor('selection'),
+      asksUsed: (data?.asks_used as number | undefined) ?? 0,
+      asksLimit: limitFor('ask'),
+    };
+  }
+
+  async consumeUsage(userId: string, kind: 'selection' | 'ask'): Promise<UsageResult> {
+    const limit = limitFor(kind);
+    const { data, error } = await this.db
+      .rpc('consume_usage', { p_user_id: userId, p_kind: kind, p_limit: limit })
+      .maybeSingle();
+    const row = data as { used: number; allowed: boolean } | null;
+    if (error || !row) {
+      // Fail open rather than blocking a review on a metering hiccup.
+      console.warn('consume_usage rpc failed', error?.message);
+      return { allowed: true, used: 0, limit };
+    }
+    return { allowed: Boolean(row.allowed), used: row.used ?? 0, limit };
   }
 }

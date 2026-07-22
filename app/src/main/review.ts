@@ -113,12 +113,21 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
 
   send(win, { type: 'status', message: 'thinking' });
   try {
+    const token = store().token();
     const res = await fetch(`${BACKEND}/api/v1/reviews`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(payloadFor(code, opts.level, opts)),
       signal: abort.signal,
     });
+    if (res.status === 402) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      send(win, { type: 'error', message: body?.message ?? 'You have reached your beta usage limit.' });
+      return;
+    }
     if (!res.ok || !res.body) {
       send(win, { type: 'error', message: `Backend error (${res.status}).` });
       return;

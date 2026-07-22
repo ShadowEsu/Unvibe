@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { createHash } from "node:crypto";
 import { isProPromoCode, PROMO_PRO_MONTHS, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
+import { readLocalEntries, writeLocalEntries, type WaitlistEntry } from "@/lib/waitlistStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,46 +31,13 @@ function clientIp(req: Request): string {
   return req.headers.get("x-real-ip") ?? "local";
 }
 
-const dataDir = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDir, "waitlist.json");
-
-interface StoredEntry {
-  email: string;
-  tool: string;
-  experience: string;
-  message?: string;
-  referredBy?: string;
-  referralCode: string;
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
-  promoCode?: string;
-  proGranted: boolean;
-  proMonths?: number;
-  proExpiresAt?: string;
-  createdAt: string;
-}
-
 function addMonths(date: Date, months: number): Date {
   const result = new Date(date);
   result.setMonth(result.getMonth() + months);
   return result;
 }
 
-async function readLocal(): Promise<StoredEntry[]> {
-  try {
-    return JSON.parse(await fs.readFile(dataFile, "utf8")) as StoredEntry[];
-  } catch {
-    return [];
-  }
-}
-
-async function writeLocal(entries: StoredEntry[]): Promise<void> {
-  await fs.mkdir(dataDir, { recursive: true });
-  await fs.writeFile(dataFile, JSON.stringify(entries, null, 2), "utf8");
-}
-
-async function saveToSupabase(entry: StoredEntry): Promise<{
+async function saveToSupabase(entry: WaitlistEntry): Promise<{
   used: boolean;
   duplicate: boolean;
 }> {
@@ -114,14 +80,14 @@ async function saveToSupabase(entry: StoredEntry): Promise<{
   }
 }
 
-async function saveLocal(entry: StoredEntry): Promise<{ duplicate: boolean }> {
-  const entries = await readLocal();
+async function saveLocal(entry: WaitlistEntry): Promise<{ duplicate: boolean }> {
+  const entries = await readLocalEntries();
   const existing = entries.find((e) => e.email === entry.email);
   if (existing) {
     return { duplicate: true };
   }
   entries.push(entry);
-  await writeLocal(entries);
+  await writeLocalEntries(entries);
   return { duplicate: false };
 }
 
@@ -156,7 +122,7 @@ export async function POST(req: Request) {
   const proExpiresAt = proGranted
     ? addMonths(new Date(), PROMO_PRO_MONTHS).toISOString()
     : undefined;
-  const entry: StoredEntry = {
+  const entry: WaitlistEntry = {
     email,
     tool: parsed.data.tool,
     experience: parsed.data.experience,
