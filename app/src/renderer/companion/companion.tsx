@@ -270,14 +270,31 @@ function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soun
   };
   const back = () => setStep((s) => Math.max(s - 1, 0));
   const finish = () => { if (soundEffects) playSetupTone('success'); void window.unvibe.completeOnboarding(); onDone(); };
+  const advance = () => step === steps.length - 1 ? finish() : next();
+
+  // This is a presentation-sized first-run experience, but it should still feel
+  // quick for keyboard-first developers. Inputs retain their own native keys.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, select, textarea, button')) return;
+      if (event.key === 'ArrowRight' || event.key === 'Enter') { event.preventDefault(); advance(); }
+      if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const nav = (continueLabel = 'Continue') => <div className="ob__actions"><button className="ob__skip" disabled={step === 0} onClick={back}>Back</button><button className="field-btn inline" onClick={next}>{continueLabel}</button></div>;
 
   return (
-    <div className="ob">
+    <div className={`ob ob--scene-${step}`}>
       <div className="ob__scene" aria-hidden="true">
+        <div className="ob__ribbon ob__ribbon--one" />
+        <div className="ob__ribbon ob__ribbon--two" />
+        <div className="ob__glow" />
         <div className="ob__scene-grid" />
-        <div className="ob__scene-strip"><LogoMark size={15} stroke={2} /><span>{step === 0 ? 'ready' : step === 1 ? 'code captured' : step === 2 ? 'depth selected' : 'privacy ready'}</span><i /><i /><i /></div>
+        <div className="ob__scene-strip"><LogoMark size={15} stroke={2} /><span>{step === 0 ? 'ready to understand' : step === 1 ? 'selection captured' : step === 2 ? 'learning depth ready' : 'private by default'}</span><i /><i /><i /></div>
         <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
       </div>
       <div className="ob__card fade-in">

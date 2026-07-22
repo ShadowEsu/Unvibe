@@ -286,6 +286,9 @@ export function createCompanion(): BrowserWindow {
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
+  // Setup is intentionally a full-window moment. Once it is complete, future
+  // launches retain the normal companion size so the app stays out of the way.
+  if (!settings().all().onboarded) win.maximize();
   void win.loadFile(page('companion'));
   return win;
 }
