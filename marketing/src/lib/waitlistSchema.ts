@@ -53,7 +53,10 @@ export const waitlistSchema = z.object({
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email"),
-  referredBy: z.string().trim().max(32).optional().or(z.literal("")),
+  // A referral link supplies a short code; the on-page beta offer also accepts the
+  // referring friend's email so the server can resolve it without exposing the list.
+  referredBy: z.string().trim().max(254).optional().or(z.literal("")),
+  promoCode: z.string().trim().max(32).optional().or(z.literal("")),
   utmSource: z.string().trim().max(64).optional().or(z.literal("")),
   utmMedium: z.string().trim().max(64).optional().or(z.literal("")),
   utmCampaign: z.string().trim().max(64).optional().or(z.literal("")),

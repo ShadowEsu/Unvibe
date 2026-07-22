@@ -19,12 +19,14 @@ export interface WaitlistEntry {
   experience?: string;
   message?: string;
   referredBy?: string;
+  promoCode?: string;
   referralCode: string;
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
   createdAt: string;
   notification?: WaitlistNotificationRecord;
+  betaInviteAt?: string;
 }
 
 export interface WaitlistAdminEntry extends WaitlistEntry {
@@ -272,6 +274,38 @@ export async function listWaitlistEntries(limit = 500): Promise<WaitlistAdminEnt
     .map((entry) => ({ ...entry, id: entry.referralCode }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
+}
+
+/** Resolves a referring waitlister without ever returning their personal details. */
+export async function referralCodeForEmail(email: string): Promise<string | undefined> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return undefined;
+  const entries = await listWaitlistEntries(10_000);
+  return entries.find((entry) => entry.email.trim().toLowerCase() === normalized)?.referralCode;
+}
+
+/** Entries are marked only after Resend accepts the beta invitation, making batches safe to retry. */
+export async function markBetaInviteSent(email: string, betaInviteAt: string): Promise<void> {
+  if (durableBlobReady()) {
+    const pathName = entryPath(email);
+    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
+    const found = listed.blobs.find((blob) => blob.pathname === pathName);
+    if (!found) throw new Error("Waitlist entry was not found while recording beta invite");
+    const current = await readEntryBlob(found.url);
+    if (!current) throw new Error("Waitlist entry could not be read while recording beta invite");
+    current.betaInviteAt = betaInviteAt;
+    await putEntry(current);
+    return;
+  }
+  const entries = await readLocal();
+  const entry = entries.find((item) => item.email.trim().toLowerCase() === email.trim().toLowerCase());
+  if (!entry) throw new Error("Waitlist entry was not found while recording beta invite");
+  entry.betaInviteAt = betaInviteAt;
+  await writeLocal(entries);
+}
+
+export async function listUninvitedWaitlistEntries(): Promise<WaitlistAdminEntry[]> {
+  return (await listWaitlistEntries(10_000)).filter((entry) => !entry.betaInviteAt);
 }
 
 export async function deleteWaitlistEntry(email: string): Promise<boolean> {

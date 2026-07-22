@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Loader2, Send } from "lucide-react";
+import { Check, Copy, Gift, Loader2, Send } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { Reveal } from "@/components/redesign/Reveal";
 import {
@@ -28,6 +28,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const [status, setStatus] = useState<Status>("idle");
   const [submitError, setSubmitError] = useState("");
   const [savedEmail, setSavedEmail] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [copied, setCopied] = useState(false);
   const [detailsStatus, setDetailsStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [tool, setTool] = useState<(typeof tools)[number] | "">("");
   const [experience, setExperience] = useState<(typeof experiences)[number] | "">("");
@@ -40,7 +42,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
     formState: { errors },
   } = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistSchema),
-    defaultValues: { firstName: "", lastName: "", email: "" },
+    defaultValues: { firstName: "", lastName: "", email: "", referredBy: "", promoCode: "" },
   });
 
   useEffect(() => {
@@ -70,11 +72,24 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         return;
       }
       setSavedEmail(values.email.trim().toLowerCase());
+      setReferralCode(typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string" ? (data as WaitlistResponse & { referralCode?: string }).referralCode ?? "" : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
+    }
+  };
+
+  const copyReferral = async () => {
+    if (!referralCode) return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/?ref=${referralCode}`);
+      setCopied(true);
+      track("referral_copied");
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setSubmitError("Couldn't copy the link. You can copy it from your browser's address bar.");
     }
   };
 
@@ -118,6 +133,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
             {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
           </button>
+          {variant === "page" && (
+            <div className="referral-offer">
+              <Gift size={18} aria-hidden="true" />
+              <div><strong>Were you referred?</strong><span>Enter your friend&apos;s email and <b>UNVIBE SPECIAL</b> to have the referral verified.</span></div>
+              <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
+              <label><span>Referral code</span><input placeholder="UNVIBE SPECIAL" {...register("promoCode")} /></label>
+            </div>
+          )}
           <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
         </form>
       ) : (
@@ -126,6 +149,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <p className="pixel-label">SPOT SAVED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
           <p>Want the product? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll send access.</p>
+          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite a friend, get rewarded.</strong><span>Share your personal link. After eligible feedback and referral steps are verified, choose 3 more months of Pro or a $5 reward.</span><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (
               <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>

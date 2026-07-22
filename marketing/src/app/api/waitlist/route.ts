@@ -5,6 +5,7 @@ import { notifyFounder } from "@/lib/notifyWaitlist";
 import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
   recordWaitlistNotification,
+  referralCodeForEmail,
   saveWaitlistEntry,
   updateWaitlistDetails,
   type WaitlistEntry,
@@ -52,11 +53,17 @@ export async function POST(req: Request) {
 
   const email = parsed.data.email.trim().toLowerCase();
   const referralCode = referralCodeFor(email);
+  const referralInput = parsed.data.referredBy?.trim();
+  const referredBy = referralInput?.includes("@")
+    ? await referralCodeForEmail(referralInput)
+    : referralInput;
+  const promoCode = parsed.data.promoCode?.trim().toUpperCase();
   const entry: WaitlistEntry = {
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,
     email,
-    referredBy: parsed.data.referredBy || undefined,
+    referredBy,
+    promoCode: promoCode === "UNVIBE SPECIAL" ? promoCode : undefined,
     referralCode,
     utmSource: parsed.data.utmSource || undefined,
     utmMedium: parsed.data.utmMedium || undefined,
@@ -72,7 +79,7 @@ export async function POST(req: Request) {
         console.error("waitlist notification status write failed", error);
       });
     }
-    return NextResponse.json({ duplicate: stored.duplicate, saved: true });
+    return NextResponse.json({ duplicate: stored.duplicate, saved: true, referralCode });
   } catch (error) {
     console.error("waitlist signup failed", error);
     const failure = publicWaitlistFailure(error);
