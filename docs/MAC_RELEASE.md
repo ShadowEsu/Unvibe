@@ -36,4 +36,6 @@ npm run package:release
 
 The script refuses to proceed without a non-local HTTPS backend, installed Developer ID identity, keychain notary profile, hardened runtime resources, successful notarization, stapling, and final Gatekeeper assessment.
 
+The packaging flow uses `app/scripts/create-custom-dmg.mjs` after signing the app bundle. It asks Finder to write the background, icon positions, and window size into the DMG so the purple drag-to-Applications layout is preserved instead of opening as a blank default window.
+
 Never commit Apple credentials, the trial token, or model-provider keys. Provider credentials belong on the hosted backend only.

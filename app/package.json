@@ -14,6 +14,7 @@
     "dist:dmg": "npm run build && electron-builder --mac dmg",
     "package:local": "node scripts/package-local.mjs",
     "package:release": "node scripts/package-release.mjs",
+    "package:dmg-layout": "node scripts/create-custom-dmg.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },
@@ -68,6 +69,7 @@
     },
     "dmg": {
       "sign": false,
+      "title": "Install Unvibe",
       "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}",
       "background": "build/dmg-background.png",
       "window": {

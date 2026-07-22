@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 function fail(message) {
@@ -25,25 +25,31 @@ if (!notaryProfile) fail('set APPLE_NOTARY_PROFILE to a notarytool keychain prof
 const identities = spawnSync('security', ['find-identity', '-v', '-p', 'codesigning'], { encoding: 'utf8' });
 if (identities.status !== 0 || !identities.stdout.includes(identity)) fail('the requested Developer ID certificate is not installed in this keychain.');
 if (!existsSync('build/icon.icns') || !existsSync('build/entitlements.mac.plist')) fail('release signing resources are missing.');
+if (!existsSync('build/dmg-background.png')) fail('custom DMG background is missing.');
 
 rmSync('release', { recursive: true, force: true });
 const env = { ...process.env, UNVIBE_BACKEND: backend, UNVIBE_TRIAL_TOKEN: trialToken, CSC_IDENTITY_AUTO_DISCOVERY: 'true' };
+const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+const dmgPath = join('release', `Unvibe-${version}-arm64.dmg`);
 for (const [command, args] of [
   [process.execPath, ['scripts/build.mjs']],
   [join('node_modules', '.bin', 'electron-builder'), [
-    '--mac', 'dmg', '--arm64',
+    '--mac', 'dir', '--arm64',
     `--config.mac.identity=${identity}`,
-    '--config.dmg.sign=true',
-    '--config.dmg.artifactName=Unvibe-\${version}-\${arch}.\${ext}',
+  ]],
+  [process.execPath, [
+    'scripts/create-custom-dmg.mjs',
+    join('release', 'mac-arm64', 'Unvibe.app'),
+    dmgPath,
+    join('build', 'dmg-background.png'),
   ]],
 ]) {
   const result = spawnSync(command, args, { stdio: 'inherit', env });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-const dmg = readdirSync('release').find((name) => name.endsWith('.dmg'));
-if (!dmg) fail('electron-builder completed without a DMG.');
-const dmgPath = join('release', dmg);
+const signDmg = spawnSync('codesign', ['--force', '--timestamp', '--sign', identity, dmgPath], { stdio: 'inherit' });
+if (signDmg.status !== 0) fail('Developer ID signing the custom DMG failed.');
 const submit = spawnSync('xcrun', ['notarytool', 'submit', dmgPath, '--keychain-profile', notaryProfile, '--wait'], { stdio: 'inherit' });
 if (submit.status !== 0) fail('Apple rejected or could not notarize the DMG. Read the notary log before retrying.');
 for (const args of [['stapler', 'staple', dmgPath], ['stapler', 'validate', dmgPath]]) {
