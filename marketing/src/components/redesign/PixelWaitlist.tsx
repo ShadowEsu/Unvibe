@@ -129,18 +129,18 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <Field label="Email" error={errors.email?.message}>
             <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
           </Field>
+          <div className="referral-offer" aria-label="Referral and promo code">
+            <Gift size={18} aria-hidden="true" />
+            <div><strong>Have a referral or promo code?</strong><span>Optional. Enter the friend who referred you and <b>UNVIBE SPECIAL</b> so we can verify the benefit.</span></div>
+            <div className="referral-offer__fields">
+              <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
+              <label><span>Promo code</span><input placeholder="UNVIBE SPECIAL" {...register("promoCode")} /></label>
+            </div>
+          </div>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
           <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
             {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
           </button>
-          {variant === "page" && (
-            <div className="referral-offer">
-              <Gift size={18} aria-hidden="true" />
-              <div><strong>Were you referred?</strong><span>Enter your friend&apos;s email and <b>UNVIBE SPECIAL</b> to have the referral verified.</span></div>
-              <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
-              <label><span>Referral code</span><input placeholder="UNVIBE SPECIAL" {...register("promoCode")} /></label>
-            </div>
-          )}
           <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
         </form>
       ) : (
