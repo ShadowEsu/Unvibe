@@ -2,6 +2,8 @@ import { currentUserId } from '@/lib/session';
 import { getStore } from '@/data/store';
 import Link from 'next/link';
 import { LanguageLogos } from '@/components/LanguageLogos';
+import { AmbientLightField } from '@/components/AmbientLightField';
+import { VideoDemo } from '@/components/VideoDemo';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,19 +12,24 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="hero">
-        <div className="hero__bg" />
-        <h1 className="hero__title">
-          Understand AI-written code<sup className="hero__super">™</sup>
-        </h1>
-        <p className="hero__sub">
-          Uncode quietly reviews every change, explains it in your project context, and builds your comprehension — so you stay in control.
-        </p>
-        <div className="hero__logos">
-          <LanguageLogos />
+      <section className="hero hero--ambient">
+        <AmbientLightField variant="hero" />
+        <div className="hero__content">
+          <h1 className="hero__title">
+            Understand AI-written code<sup className="hero__super">™</sup>
+          </h1>
+          <p className="hero__sub">
+            Uncode quietly reviews every change, explains it in your project context, and builds your comprehension — so you stay in control.
+          </p>
+          <div className="hero__logos">
+            <LanguageLogos />
+          </div>
+          {userId ? <HomeStats userId={userId} /> : <SignInPrompt />}
         </div>
-        {userId ? <HomeStats userId={userId} /> : <SignInPrompt />}
       </section>
+
+      {/* Product demo. Drop public/demo/unvibe-demo.mp4 in and pass src to play it. */}
+      <VideoDemo />
 
       <section className="screenshots">
         <h2 className="section-title">See it in action</h2>

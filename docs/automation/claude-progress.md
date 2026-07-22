@@ -10,6 +10,25 @@ Append-only. Newest entry on top. Each entry: date · branch · what changed · 
 
 ---
 
+## 2026-07-22 (live session, later) · branch `claude/determined-curie-l09fo1`
+
+- User asked that **all future scheduled tasks run on this branch** (`claude/determined-curie-l09fo1`).
+  Noting it here; the actual schedule config lives outside the repo.
+- **Website demo video**: wired the homepage demo section (`web/`) to Unvibe's hosted
+  pitch-deck recording — `https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4`
+  (the same URL the `marketing/` site's HeroVideo/HeroDemo already default to), overridable
+  via `NEXT_PUBLIC_DEMO_VIDEO_URL`. There is **no committed video file** in the repo — it's
+  hosted on Vercel Blob; the sandbox can't fetch that host (egress 403) but it plays in a real
+  browser / on Vercel. Verified the `<video src=…>` element renders server-side with controls.
+- New reusable **`AmbientLightField`** hero background (underwater-light composite: base glow →
+  caustic bands → god rays → grain → vignette; CSS+SVG, no WebGL; reduced-motion static,
+  offscreen/hidden pause, mobile-lighter, `?ambientDebug=1` dev panel) + **`VideoDemo`** chaptered
+  demo section. Research doc: `docs/research/vibe-island-ambient-light.md`. typecheck + build +
+  36 web tests green. NOT verified: Safari/Firefox, Lighthouse, live vibeisland.com compare
+  (network-blocked here).
+
+---
+
 ## 2026-07-22 · branch `claude/determined-curie-l09fo1` (from `codex/design-pixel-launch-experiment`)
 
 **Primary fix — built app didn't show in Dock / menu bar on macOS.**

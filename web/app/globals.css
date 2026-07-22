@@ -158,6 +158,50 @@ img { max-width: 100%; display: block; }
 }
 .hero__logos { margin-bottom: 32px; }
 
+/* ---- ambient (underwater-light) hero variant ---- */
+.hero--ambient {
+  /* full-bleed dark band, edge to edge, regardless of .shell max-width */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-bottom: 8px;
+  padding: 104px 20px 96px;
+  border-radius: 0;
+  background: #0b0a14;
+  color: #f4f1fc;
+}
+.hero--ambient .hero__logos {
+  position: relative;
+  z-index: 1;
+}
+/* marquee blends into the dark field instead of showing as a black strip */
+.hero--ambient .lang-marquee {
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+}
+.hero--ambient .lang-logo { color: rgba(220, 213, 240, 0.7); }
+.hero--ambient .lang-logo:hover { color: #fff; }
+.hero--ambient .hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.hero--ambient .hero__title { color: #fff; }
+.hero--ambient .hero__super { color: rgba(230, 224, 250, 0.55); }
+.hero--ambient .hero__sub { color: rgba(220, 213, 240, 0.82); }
+/* keep any nested stat tiles / prompts legible on the dark field */
+.hero--ambient .sign-in-prompt__text,
+.hero--ambient .empty-state,
+.hero--ambient .stat-tile__label { color: rgba(220, 213, 240, 0.75); }
+.hero--ambient .stat-tile__value { color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .hero--ambient { scroll-behavior: auto; }
+}
+
 /* ---- language marquee ---- */
 .lang-marquee {
   overflow: hidden;
