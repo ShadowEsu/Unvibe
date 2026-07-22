@@ -331,7 +331,11 @@ app.whenReady().then(() => {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Review selection', click: () => void startReview() },
+      { label: 'Explain clipboard', click: () => void startReview() },
       { label: 'Open Unvibe', click: openCompanion },
+      { type: 'separator' },
+      { label: 'Show learning island', click: () => showBar(bar) },
+      { label: 'Hide learning island', click: () => hideBar(bar) },
       { type: 'separator' },
       { label: 'Quit Unvibe', role: 'quit' },
     ]),
@@ -365,6 +369,19 @@ app.whenReady().then(() => {
   ipcMain.on('bar:setExpanded', (_e, expanded: boolean) => {
     if (!settings().all().barHoverPreview) return;
     resizeBar(bar, Boolean(expanded));
+  });
+  ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
+    if (!bar || bar.isDestroyed()) return;
+    Menu.buildFromTemplate([
+      { label: 'Explain selected code', click: () => void startReview() },
+      { label: 'Explain clipboard', click: () => void startReview() },
+      ...(state.hasRecent ? [{ label: 'Open last explanation', click: openCompanion }] : []),
+      { type: 'separator' },
+      { label: 'Open Unvibe', click: openCompanion },
+      { label: 'Hide Island', click: () => hideBar(bar) },
+      { type: 'separator' },
+      { label: 'Quit Unvibe', role: 'quit' },
+    ]).popup({ window: bar });
   });
   ipcMain.handle('bar:snapshot', () => {
     const recent = computeLearningItems(store().events(), 1)[0];

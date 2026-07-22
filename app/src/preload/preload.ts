@@ -13,6 +13,7 @@ const api = {
     return () => ipcRenderer.removeListener('bar:notify', listener);
   },
   setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
+  barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
 
   // widget review (single panel + tabs)

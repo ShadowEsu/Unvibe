@@ -29,6 +29,7 @@ function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
+  const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,14 +69,34 @@ function Bar() {
     }, 180);
   };
 
+  const act = (action: 'review' | 'home') => {
+    const message = action === 'review' ? 'Selection capture started' : 'Opening your learning space';
+    setConfirmation(message);
+    window.setTimeout(() => setConfirmation(''), 1100);
+    if (action === 'review') window.unvibe.reviewSelection();
+    else window.unvibe.openCompanion();
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && expanded) {
+      event.preventDefault();
+      setExpanded(false);
+      window.unvibe.setBarExpanded(false);
+    }
+    if (event.key === 'Enter' && !expanded) {
+      event.preventDefault();
+      open();
+    }
+  };
+
   return (
-    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} onMouseEnter={open} onMouseLeave={scheduleClose}>
+    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={open} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
-        <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => window.unvibe.reviewSelection()}><PlayIcon /></button>
+        <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
         <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
-        <span className="strip__status" aria-live="polite">{note || 'Ready to understand'}</span>
+        <span className="strip__status" aria-live="polite">{confirmation || note || 'Ready to understand'}</span>
         <span className="strip__privacy"><i />local scan</span>
-        <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => window.unvibe.openCompanion()}><HomeIcon /></button>
+        <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
       </div>
       {expanded && (
         <div className="strip__drawer">
@@ -89,8 +110,8 @@ function Bar() {
             <span><b>{snapshot?.explanations ?? 0}</b> explained</span>
           </div>
           <div className="strip__actions">
-            <button onClick={() => window.unvibe.reviewSelection()}>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></button>
-            <button onClick={() => window.unvibe.openCompanion()}>Open learning history →</button>
+            <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
+            <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
           </div>
         </div>
       )}
