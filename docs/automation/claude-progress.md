@@ -62,5 +62,7 @@ a real macOS run to confirm.**
 4. Native Settings sections still missing controls (Island dwell/hover, Notifications
    categories, Shortcuts recorder set, Integrations repair).
 
-**Git:** committed to `claude/determined-curie-l09fo1`; PR opened into `main` (do not merge
-into main from automation — see prompt rules).
+**Git:** committed to `claude/determined-curie-l09fo1`; opened
+[PR #6](https://github.com/ShadowEsu/Unvibe/pull/6) into `codex/design-pixel-launch-experiment`
+(the real trunk — a PR into stale `main` would carry hundreds of unrelated commits). Not
+self-merged, per prompt rules.
