@@ -55,7 +55,7 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 }
 
 /** Compact landscape aisle: play · logo · home. */
-const BAR_W = 430;
+const BAR_W = 340;
 const BAR_H = 44;
 const BAR_EXPANDED_W = 620;
 // The drawer contains recent learning, stats, and two actions. Keep transparent
@@ -99,7 +99,9 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean): void {
   const height = expanded ? BAR_EXPANDED_H : BAR_H;
   const { x, y } = barBounds(settings().all().barPosition, width, height);
   win.setFocusable(expanded);
-  win.setBounds({ x, y, width, height }, process.platform === 'darwin');
+  // CSS owns the visual peel/fold. Native macOS bounds animation fighting it
+  // produced the visible jump captured in the interaction recording.
+  win.setBounds({ x, y, width, height }, false);
   win.moveTop();
 }
 

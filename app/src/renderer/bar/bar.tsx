@@ -57,6 +57,7 @@ function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel
 function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [attached, setAttached] = useState(true);
@@ -67,6 +68,8 @@ function Bar() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const expandedRef = useRef(false);
+  const closingRef = useRef(false);
+  const foldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,19 +111,38 @@ function Bar() {
       unsubscribeSettings();
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
+      if (foldTimer.current) clearTimeout(foldTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
     };
   }, []);
 
   const setPanelExpanded = (next: boolean) => {
-    // A native transparent window resize is comparatively expensive. Only ask
-    // Electron to resize when the intended state really changed.
-    if (expandedRef.current === next) return;
-    expandedRef.current = next;
-    setExpanded(next);
-    window.unvibe.setBarExpanded(next);
-    if (soundEnabled) playIslandTone(next, soundVolume, soundStyle);
-    if (next) refresh();
+    if (next) {
+      if (closingRef.current) {
+        if (foldTimer.current) clearTimeout(foldTimer.current);
+        closingRef.current = false;
+        setClosing(false);
+        return;
+      }
+      if (expandedRef.current) return;
+      expandedRef.current = true;
+      setExpanded(true);
+      window.unvibe.setBarExpanded(true);
+      if (soundEnabled) playIslandTone(true, soundVolume, soundStyle);
+      refresh();
+      return;
+    }
+    if (!expandedRef.current || closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    if (soundEnabled) playIslandTone(false, soundVolume, soundStyle);
+    foldTimer.current = setTimeout(() => {
+      closingRef.current = false;
+      expandedRef.current = false;
+      setClosing(false);
+      setExpanded(false);
+      window.unvibe.setBarExpanded(false);
+    }, 180);
   };
   const open = () => {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
@@ -137,7 +159,7 @@ function Bar() {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
     collapseTimer.current = setTimeout(() => {
       setPanelExpanded(false);
-    }, 520);
+    }, 120);
   };
 
   const act = (action: 'review' | 'home') => {
@@ -160,16 +182,15 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
         <div className="strip__wing strip__wing--left">
           <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
           <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
-          <span className="strip__status" aria-live="polite">{confirmation || note || 'Ready to understand'}</span>
         </div>
         <span className="strip__camera-gap" aria-hidden="true" />
         <div className="strip__wing strip__wing--right">
-          <span className="strip__compact-stat"><b>{snapshot?.streak ?? 0}</b>d streak</span>
+          <span className="strip__compact-stat"><b>{snapshot?.streak ?? 0}d</b> 🔥</span>
           <span className="strip__privacy"><i />local scan</span>
           <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
         </div>
