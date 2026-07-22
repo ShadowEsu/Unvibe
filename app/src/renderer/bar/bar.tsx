@@ -162,11 +162,17 @@ function Bar() {
   return (
     <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
-        <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
-        <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
-        <span className="strip__status" aria-live="polite">{confirmation || note || 'Ready to understand'}</span>
-        <span className="strip__privacy"><i />local scan</span>
-        <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
+        <div className="strip__wing strip__wing--left">
+          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
+          <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
+          <span className="strip__status" aria-live="polite">{confirmation || note || 'Ready to understand'}</span>
+        </div>
+        <span className="strip__camera-gap" aria-hidden="true" />
+        <div className="strip__wing strip__wing--right">
+          <span className="strip__compact-stat"><b>{snapshot?.streak ?? 0}</b>d streak</span>
+          <span className="strip__privacy"><i />local scan</span>
+          <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
+        </div>
       </div>
       {expanded && (
         <div className="strip__drawer">

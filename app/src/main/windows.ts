@@ -34,12 +34,13 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
   const display = settings().all().followActiveDisplay
     ? screen.getDisplayNearestPoint(pointer)
     : screen.getPrimaryDisplay();
-  const { workArea } = display;
-  const cx = workArea.x + Math.round((workArea.width - w) / 2);
+  const { workArea, bounds } = display;
+  const centerArea = position === 'top-center' ? bounds : workArea;
+  const cx = centerArea.x + Math.round((centerArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
   // Top-center is the attached Island position; the other top placement keeps
   // a small floating inset so the two modes remain visually distinct.
-  const top = position === 'top-center' ? workArea.y : workArea.y + 12;
+  const top = position === 'top-center' ? bounds.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
   switch (position) {
     case 'top-center':
@@ -54,7 +55,7 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 }
 
 /** Compact landscape aisle: play · logo · home. */
-const BAR_W = 196;
+const BAR_W = 430;
 const BAR_H = 44;
 const BAR_EXPANDED_W = 620;
 // The drawer contains recent learning, stats, and two actions. Keep transparent
