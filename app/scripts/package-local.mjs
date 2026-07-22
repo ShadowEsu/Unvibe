@@ -12,7 +12,8 @@ const appEnv = process.env.APP_ENV?.trim();
 const backend = process.env.UNVIBE_BACKEND?.trim();
 const trialToken = process.env.UNVIBE_TRIAL_TOKEN?.trim();
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
-if (appEnv !== 'staging') fail('set APP_ENV=staging (production packaging is intentionally excluded).');
+const channel = appEnv === 'beta' ? '-beta' : '';
+if (appEnv !== 'staging' && appEnv !== 'beta') fail('set APP_ENV=staging or APP_ENV=beta (production packaging is intentionally excluded).');
 if (!backend) fail('set UNVIBE_BACKEND to the approved HTTPS staging backend.');
 if (!trialToken || trialToken.length < 24) fail('set UNVIBE_TRIAL_TOKEN to a long opaque trial secret (not a provider API key).');
 let url;
@@ -68,7 +69,7 @@ try {
     const result = spawnSync(process.execPath, [
       'scripts/create-custom-dmg.mjs',
       join('release', 'mac-arm64', 'Unvibe.app'),
-      join('release', `Unvibe-${version}-arm64-unsigned.dmg`),
+      join('release', `Unvibe-${version}${channel}-arm64-unsigned.dmg`),
       join('build', 'dmg-background.png'),
     ], {
       stdio: 'inherit',

@@ -60,7 +60,7 @@ export function AdminWaitlist() {
   const downloadCsv = () => {
     const escape = (value: string | undefined) => `"${(value ?? "").replaceAll('"', '""')}"`;
     const rows = [
-      ["joined", "first_name", "last_name", "email", "tool", "experience", "message", "notification", "source"],
+      ["joined", "first_name", "last_name", "email", "tool", "experience", "message", "promo_code", "referred_by", "notification", "source"],
       ...entries.map((entry) => [
         entry.createdAt,
         entry.firstName,
@@ -69,6 +69,8 @@ export function AdminWaitlist() {
         entry.tool,
         entry.experience,
         entry.message,
+        entry.promoCode,
+        entry.referredBy,
         entry.notification?.status,
         entry.utmSource,
       ]),
@@ -193,6 +195,7 @@ export function AdminWaitlist() {
           <div className="admin-stats">
             <article><small>Total signups</small><strong>{entries.length}</strong></article>
             <article><small>Email notifications sent</small><strong>{notified}</strong></article>
+            <article><small>Promo claims</small><strong>{entries.filter((entry) => entry.promoCode).length}</strong></article>
             <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : "—"}</strong></article>
           </div>
           {retryError && <p className="admin-error" role="alert">{retryError}</p>}
@@ -211,6 +214,7 @@ export function AdminWaitlist() {
                     <th>Person</th>
                     <th>Email</th>
                     <th>Details</th>
+                    <th>Promo</th>
                     <th>Notification</th>
                     <th>Actions</th>
                   </tr>
@@ -228,6 +232,9 @@ export function AdminWaitlist() {
                       <td>
                         <span>{entry.tool || "Tool not provided"}</span>
                         <small>{entry.experience || entry.message || "No optional details"}</small>
+                      </td>
+                      <td>
+                        {entry.promoCode ? <><strong>{entry.promoCode}</strong><small>{entry.referredBy ? `Referral recorded · ${entry.referredBy}` : "No verified referrer"}</small></> : <span>—</span>}
                       </td>
                       <td>
                         <span

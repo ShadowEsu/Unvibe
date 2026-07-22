@@ -48,6 +48,7 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
+import { trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
   signIn,
@@ -265,6 +266,13 @@ async function startReview(): Promise<void> {
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
   const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
+  if (code && trialBuildEnabled()) {
+    const quota = store().consumeBetaSelectedCodePrompt();
+    if (!quota.ok) {
+      notify('Private beta limit reached: 30 selected-code prompts this month. Your saved learning is still available.');
+      return;
+    }
+  }
   const existing = currentWidget();
   const win = getOrCreateWidget();
   const windowId = win.id;

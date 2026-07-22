@@ -36,10 +36,13 @@ interface Data {
   snapshots?: FileSnapshot[];
   /** Daily counters for companion Study assistant / Quiz cards (local only). */
   dailyUsage?: { day: string; studyAsks: number; quizzes: number };
+  /** Monthly selected-code prompt counter for a sealed private-beta build. */
+  betaPromptUsage?: { month: string; selectedCodePrompts: number };
 }
 
 export const STUDY_ASK_DAILY_LIMIT = 20;
 export const QUIZ_DAILY_LIMIT = 30;
+export const BETA_SELECTED_CODE_PROMPT_LIMIT = 30;
 
 class Store {
   private data: Data = { events: [], outbox: [] };
@@ -148,6 +151,22 @@ class Store {
     u.quizzes += 1;
     this.save();
     return { ok: true, remaining: QUIZ_DAILY_LIMIT - u.quizzes };
+  }
+
+  private betaMonthUsage(now = new Date()): { month: string; selectedCodePrompts: number } {
+    const month = now.toISOString().slice(0, 7);
+    const current = this.data.betaPromptUsage;
+    if (!current || current.month !== month) this.data.betaPromptUsage = { month, selectedCodePrompts: 0 };
+    return this.data.betaPromptUsage!;
+  }
+
+  /** Private-beta selection credit. It is local-only and never contains the selected code. */
+  consumeBetaSelectedCodePrompt(): { ok: true; remaining: number } | { ok: false; remaining: number } {
+    const usage = this.betaMonthUsage();
+    if (usage.selectedCodePrompts >= BETA_SELECTED_CODE_PROMPT_LIMIT) return { ok: false, remaining: 0 };
+    usage.selectedCodePrompts += 1;
+    this.save();
+    return { ok: true, remaining: BETA_SELECTED_CODE_PROMPT_LIMIT - usage.selectedCodePrompts };
   }
 
   private queue(id: string): void {

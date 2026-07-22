@@ -9,7 +9,8 @@ import { store } from './store';
 import { trialBuildEnabled } from './trial';
 
 export const LOCAL_FREE_LIMIT = 50;
-export const TRIAL_FREE_LIMIT = 15;
+/** The sealed private beta is intentionally smaller than the normal Free allowance. */
+export const TRIAL_FREE_LIMIT = 20;
 
 export interface AppUsage {
   used: number;

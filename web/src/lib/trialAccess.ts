@@ -33,8 +33,8 @@ function trialSecret(): string | null {
 }
 
 function explanationLimit(): number {
-  const n = Number(process.env.UNVIBE_TRIAL_MONTHLY_LIMIT ?? '15');
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 15;
+  const n = Number(process.env.UNVIBE_TRIAL_MONTHLY_LIMIT ?? '20');
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 20;
 }
 
 function quizLimit(): number {

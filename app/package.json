@@ -13,6 +13,8 @@
     "dist": "npm run build && electron-builder --mac dir",
     "dist:dmg": "npm run build && electron-builder --mac dmg",
     "package:local": "node scripts/package-local.mjs",
+    "package:beta:mac": "node scripts/package-local.mjs",
+    "package:beta:win": "node scripts/package-beta-windows.mjs",
     "package:release": "node scripts/package-release.mjs",
     "package:dmg-layout": "node scripts/create-custom-dmg.mjs",
     "verify:package": "node scripts/verify-package.mjs",
@@ -90,6 +92,17 @@
           "path": "/Applications"
         }
       ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Unvibe-${version}-beta-win-${arch}-portable.${ext}"
     }
   }
 }
