@@ -51,4 +51,5 @@ trunk (`codex/design-pixel-launch-experiment`) had already fixed this (committed
    not the older lineage, to avoid wasted/duplicated work.
 4. Open the PR into `main` for this fix (link below) and keep it review-ready.
 
-**PR:** _(created this session — see repo PR list for `claude/brave-heisenberg-atsilf` → `main`)_
+**PR:** [#7 — fix(app): show Dock icon + menu-bar item reliably](https://github.com/ShadowEsu/Unvibe/pull/7)
+(`claude/brave-heisenberg-atsilf` → `main`, open for review — do not merge to main from automation).
