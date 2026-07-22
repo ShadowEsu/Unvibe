@@ -38,7 +38,9 @@ type Account = { userId: string; email: string } | null;
 interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
   barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
+  barHoverDelayMs: number;
   followActiveDisplay: boolean; soundEffects: boolean;
+  soundVolume: number; soundStyle: 'soft' | 'pixel';
   widgetOpacityInactive: number; inactiveBehavior: string;
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
@@ -236,19 +238,19 @@ function Choice({ selected, title, detail, onClick }: { selected: boolean; title
   return <button className={`ob__choice${selected ? ' selected' : ''}`} aria-pressed={selected} onClick={onClick}><span className="ob__choice-check">✓</span><span><b>{title}</b><small>{detail}</small></span></button>;
 }
 
-function playSetupTone(kind: 'step' | 'success'): void {
+function playSetupTone(kind: 'step' | 'success', volume = 0.3, style: 'soft' | 'pixel' = 'soft'): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   try {
     const context = new AudioContext();
     const gain = context.createGain();
     gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.035, context.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.11 * volume), context.currentTime + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (kind === 'success' ? 0.32 : 0.16));
     gain.connect(context.destination);
     const notes = kind === 'success' ? [523.25, 659.25] : [440];
     notes.forEach((frequency, index) => {
       const oscillator = context.createOscillator();
-      oscillator.type = 'square';
+      oscillator.type = style === 'pixel' ? 'square' : 'sine';
       oscillator.frequency.value = frequency;
       oscillator.connect(gain);
       oscillator.start(context.currentTime + index * 0.09);
@@ -258,18 +260,18 @@ function playSetupTone(kind: 'step' | 'success'): void {
   } catch { /* Optional local sound; onboarding remains complete without it. */ }
 }
 
-function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soundEffects: boolean; onDone: () => void }) {
+function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }: { shortcut: string; soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState('intermediate');
   const [sampleDetail, setSampleDetail] = useState<'simple' | 'technical'>('simple');
   const steps = ['Welcome', 'Try it', 'Your depth', 'Use anywhere'];
 
   const next = () => {
-    if (soundEffects) playSetupTone('step');
+    if (soundEffects) playSetupTone('step', soundVolume, soundStyle);
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
   const back = () => setStep((s) => Math.max(s - 1, 0));
-  const finish = () => { if (soundEffects) playSetupTone('success'); void window.unvibe.completeOnboarding(); onDone(); };
+  const finish = () => { if (soundEffects) playSetupTone('success', soundVolume, soundStyle); void window.unvibe.completeOnboarding(); onDone(); };
   const advance = () => step === steps.length - 1 ? finish() : next();
 
   // This is a presentation-sized first-run experience, but it should still feel
@@ -1234,7 +1236,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
         <div className="mside">
           <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
           <div className="mh">PREFERENCES</div>
-          {['General', 'Appearance', 'Shortcut & Capture', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Appearance' ? '◐' : t === 'Shortcut & Capture' ? '⌁' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
+          {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Island' ? '◒' : t === 'Sound & alerts' ? '♪' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
           <div className="mh" style={{ paddingTop: 18 }}>UNVIBE</div>
           {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'Integrations' ? '↗' : t === 'AI' ? '◌' : t === 'Account & Plan' ? '◈' : 'i'}</span>{t}</button>)}
           <div className="ver">Unvibe v{info.version}</div>
@@ -1247,14 +1249,10 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'General' && (
             <>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
-              <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
-              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Quiet, locally synthesized cues during setup and learning moments.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
-              <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
-              {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>
           )}
 
-          {tab === 'Appearance' && (
+          {tab === 'Island' && (
             <>
               <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
               <div className="settings-section-label">OVERLAY PREVIEW</div>
@@ -1266,6 +1264,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               </div>
               <div className="setrow"><div><div className="sl">Learning strip visibility</div><div className="sd">Keep it ready between reviews, or only show it while you are learning.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Turn this off for click-only expansion. Click and keyboard controls always work.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
+              {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
                 <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
@@ -1275,6 +1274,19 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
                 <input className="range" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
               </div>
+            </>
+          )}
+
+          {tab === 'Sound & alerts' && (
+            <>
+              <div className="settings-section-label">LOCAL SOUND</div>
+              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Short synthesized cues for setup and completed learning. Nothing is recorded or downloaded.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
+              <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this Mac.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => playSetupTone('success', settings.soundVolume, settings.soundStyle)}>Preview</button></div></div>
+              <div className="settings-section-label">NOTIFICATIONS</div>
+              <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
+              {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>
           )}
 
@@ -1388,7 +1400,7 @@ function App() {
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
-    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} soundEffects={settings?.soundEffects ?? true} onDone={async () => { await refresh(); setGate('app'); }} /></>);
+    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);

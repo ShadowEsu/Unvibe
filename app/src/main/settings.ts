@@ -27,10 +27,16 @@ export interface Settings {
   barVisibility: BarVisibility;
   /** Expand the learning strip into a small recent-learning preview on hover. */
   barHoverPreview: boolean;
+  /** Intent delay before a pointer opens the Island (120–600ms). */
+  barHoverDelayMs: number;
   /** Follow the display under the pointer when positioning the learning strip. */
   followActiveDisplay: boolean;
   /** Locally synthesized UI cues. Never records or plays remote audio. */
   soundEffects: boolean;
+  /** Local UI-sound gain (0–1). */
+  soundVolume: number;
+  /** A restrained synthesized voice; no remote audio is used. */
+  soundStyle: 'soft' | 'pixel';
   /** Opacity of an unfocused, unpinned widget (0.35–1). */
   widgetOpacityInactive: number;
   inactiveBehavior: InactiveBehavior;
@@ -58,8 +64,11 @@ const DEFAULTS: Settings = {
   barPosition: 'top-center',
   barVisibility: 'always',
   barHoverPreview: true,
+  barHoverDelayMs: 220,
   followActiveDisplay: true,
   soundEffects: true,
+  soundVolume: 0.3,
+  soundStyle: 'soft',
   widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
@@ -135,11 +144,21 @@ class SettingsStore {
       : patch.aiModel !== undefined
         ? normalizeLocalAiProvider(patch.aiModel)
         : undefined;
+    const hoverDelay = patch.barHoverDelayMs === undefined
+      ? undefined
+      : Math.min(600, Math.max(120, Math.round(patch.barHoverDelayMs / 20) * 20));
+    const soundVolume = patch.soundVolume === undefined
+      ? undefined
+      : Math.min(1, Math.max(0, patch.soundVolume));
+    const soundStyle = patch.soundStyle === 'pixel' ? 'pixel' : patch.soundStyle === 'soft' ? 'soft' : undefined;
     this.data = {
       ...this.data,
       ...patch,
       quietHours: { ...this.data.quietHours, ...patch.quietHours },
       ...(nextProvider ? { aiProvider: nextProvider } : {}),
+      ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
+      ...(soundVolume !== undefined ? { soundVolume } : {}),
+      ...(soundStyle ? { soundStyle } : {}),
     };
     delete this.data.aiModel;
     this.persist();

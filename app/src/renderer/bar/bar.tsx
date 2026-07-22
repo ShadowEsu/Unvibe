@@ -29,6 +29,7 @@ function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
+  const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const expandedRef = useRef(false);
@@ -40,8 +41,10 @@ function Bar() {
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
-      const enabled = Boolean((value as { barHoverPreview?: boolean }).barHoverPreview ?? true);
+      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number };
+      const enabled = Boolean(settings.barHoverPreview ?? true);
       setHoverEnabled(enabled);
+      setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 220)));
     });
     const unsubscribe = window.unvibe.onBarNotify((msg) => {
       setNote(msg);
@@ -75,7 +78,7 @@ function Bar() {
   const openFromHover = () => {
     if (!hoverEnabled || expandedRef.current) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
-    hoverOpenTimer.current = setTimeout(open, 140);
+    hoverOpenTimer.current = setTimeout(open, hoverDelayMs);
   };
   const scheduleClose = () => {
     if (!hoverEnabled) return;
