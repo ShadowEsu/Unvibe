@@ -37,6 +37,9 @@ function gate(): SoundGate {
     quietWhileLocked: s.quietWhileLocked,
     inQuietHours: settings().inQuietHours(),
     screenLocked,
+    // `presenting` stays false until a native macOS screen-share/recording detector exists
+    // (no clean Electron API). The gate already honors it — see core/sound.ts SoundGate.
+    presenting: false,
   };
 }
 

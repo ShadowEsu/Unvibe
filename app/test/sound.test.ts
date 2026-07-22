@@ -47,6 +47,13 @@ test('screen lock mutes everything when quietWhileLocked is on', () => {
   assert.equal(shouldPlaySound('ready', { ...locked, quietWhileLocked: false }), true);
 });
 
+test('presenting/recording mutes everything (plumbing for a native detector)', () => {
+  assert.equal(shouldPlaySound('ready', { ...on, presenting: true }), false);
+  assert.equal(shouldPlaySound('error', { ...on, presenting: true }), false);
+  // default (undefined) presenting does not mute
+  assert.equal(shouldPlaySound('ready', on), true);
+});
+
 test('every non-null palette entry has playable notes', () => {
   for (const [name, spec] of Object.entries(SOUND_PALETTE)) {
     assert.ok(spec.freqs.length > 0, `${name} needs notes`);

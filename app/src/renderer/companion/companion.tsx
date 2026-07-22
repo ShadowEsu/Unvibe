@@ -293,6 +293,7 @@ function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soun
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState('intermediate');
   const [sampleDetail, setSampleDetail] = useState<'simple' | 'technical'>('simple');
+  const [ceremony, setCeremony] = useState(false);
   const steps = ['Welcome', 'Try it', 'Your depth', 'Use anywhere'];
 
   const next = () => {
@@ -300,9 +301,33 @@ function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soun
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
   const back = () => setStep((s) => Math.max(s - 1, 0));
-  const finish = () => { if (soundEffects) playSetupTone('success'); void window.unvibe.completeOnboarding(); onDone(); };
+  // The finale: a brief ceremony with the real "ready" cue, then a live Try-it-now.
+  const finish = () => { if (soundEffects) playCue('milestone'); setCeremony(true); };
+  const complete = () => { void window.unvibe.completeOnboarding(); onDone(); };
+  const tryNow = () => { complete(); window.unvibe.reviewSelection(); };
 
   const nav = (continueLabel = 'Continue') => <div className="ob__actions"><button className="ob__skip" disabled={step === 0} onClick={back}>Back</button><button className="field-btn inline" onClick={next}>{continueLabel}</button></div>;
+
+  if (ceremony) {
+    return (
+      <div className="ob ob--ceremony">
+        <div className="ob__scene" aria-hidden="true">
+          <div className="ob__scene-grid" />
+          <div className="ob__scene-strip ob__scene-strip--ready"><LogoMark size={15} stroke={2} /><i className="ob__ready-dot" /><span>Explanation ready</span></div>
+        </div>
+        <div className="ob__card fade-in ob__ready">
+          <div className="ob__mark ob__mark--pulse"><LogoMark size={54} stroke={1.7} /></div>
+          <div className="ob__eyebrow">YOU’RE ALL SET</div>
+          <h2 className="ob__title">Unvibe is ready.</h2>
+          <p className="ob__sub">Select code in any app, then press <span className="kbd-lg">{prettyAccel(shortcut)}</span>. Unvibe wakes up right where you’re working.</p>
+          <div className="ob__actions ob__actions--center">
+            <button className="ob__skip" onClick={complete}>Not now</button>
+            <button className="field-btn inline" onClick={tryNow}>Try it now</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ob">

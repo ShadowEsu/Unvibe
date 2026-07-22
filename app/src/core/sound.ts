@@ -55,6 +55,14 @@ export interface SoundGate {
   inQuietHours: boolean;
   /** Whether the screen is currently locked. */
   screenLocked: boolean;
+  /**
+   * Whether the user is presenting / sharing / recording the screen. The gate honors this
+   * like a lock (full mute). Detecting it reliably needs native macOS support (there is no
+   * clean Electron API), so today the caller always passes false — the plumbing is here and
+   * tested so a native detector can switch it on without touching the gate. No UI toggle is
+   * exposed until the signal is real (no decorative switches).
+   */
+  presenting?: boolean;
 }
 
 /**
@@ -66,6 +74,7 @@ export function shouldPlaySound(event: SoundEvent, gate: SoundGate): boolean {
   if (event === null) return false;
   if (!gate.soundEffects) return false;
   if (gate.quietWhileLocked && gate.screenLocked) return false;
+  if (gate.presenting) return false; // never chime mid-presentation/recording
   if (event === 'milestone' && !gate.soundMilestones) return false;
 
   const critical = event === 'warning' || event === 'error';

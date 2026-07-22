@@ -968,6 +968,15 @@ h1 { font-family: var(--font-sans); font-size: 32px; font-weight: 680; letter-sp
 .ob__list li { margin-bottom: 10px; }
 .ob__list b { color: var(--ink); }
 .ob__actions { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.ob__actions--center { justify-content: center; gap: 14px; }
+/* ceremony finale */
+.ob__ready { text-align: center; }
+.ob__mark--pulse { animation: obPulse 2.4s ease-in-out infinite; }
+@keyframes obPulse { 0%,100% { transform: scale(1); opacity: .92; } 50% { transform: scale(1.05); opacity: 1; } }
+.ob__scene-strip--ready { border-color: rgba(139,219,181,.5); }
+.ob__ready-dot { width:6px; height:6px; border-radius:999px; background:#8bdbb5; box-shadow:0 0 7px rgba(139,219,181,.9); animation:obDot 1.8s ease-in-out infinite; }
+@keyframes obDot { 0%,100% { opacity:.6; } 50% { opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .ob__mark--pulse, .ob__ready-dot { animation: none; } }
 .ob__skip { background: none; border: none; color: var(--muted); font-family: -apple-system, sans-serif; font-size: 13px; cursor: pointer; }
 .ob__skip:hover { color: var(--ink); }
 .ob__skip:disabled { visibility: hidden; }

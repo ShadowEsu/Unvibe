@@ -10,6 +10,39 @@ Append-only. Newest entry on top. Each entry: date · branch · what changed · 
 
 ---
 
+## 2026-07-22 (live session, island experience v2 — full task sweep) · branch `claude/determined-curie-l09fo1`
+
+Worked the remaining island backlog as tracked tasks; all typecheck + build + tests green (52).
+
+1. **Milestone engine** — `core/learning.ts milestonesCrossed()` (pure, tested): first
+   explanation / 3- & 7-day streaks / ten understood concepts / five languages / 100
+   explanations, from real recorded data only. Wired into `review.ts recordReview` →
+   island `milestone` state + sound carrying the milestone's own title. (This is also the
+   honest "first-explanation arrival.")
+2. **Micro-confirmations** — `ConfirmButton` in the widget: Understand ✓ lingers a green ✓
+   (~700ms) before collapsing; reduced-motion follows through instantly.
+3. **Panel morph** — progressive corners, body blur-to-sharp entry, staggered foot chips
+   (secondary controls after primary); all off under reduced-motion.
+4. **Live island preview** in Settings → Appearance: reflects glance + accent live, with
+   Ready/Saved/Milestone cue buttons that synthesize the real sound palette. Verified in
+   Chromium (green glance dot + accent border on "Ready").
+5. **Onboarding ceremony** — a real "Unvibe is ready." finale with a milestone cue and a
+   **Try it now** that starts an actual review (not a fake badge — the arrival milestone
+   comes from real data via #1).
+6. **Quiet-scene gating** — extended the pure `SoundGate` with `presenting` (full mute),
+   tested; kept honest — no UI toggle shipped because macOS/Electron has no clean
+   screen-share detector. The gate is ready for a native detector to flip it on.
+
+**Explicit out-of-this-environment follow-up (not done, by necessity):** the **native
+non-activating `NSPanel`** migration. The app is Electron; a true notch-anchored,
+focus-proof `NSPanel` (and the screen-share detector for #6) need Swift + a real Mac to
+build and verify — impossible from this Linux sandbox. Everything above is the
+experiential layer that *does* translate to Electron. Beta gate: automated checks pass and
+the packaged app launches (afterSign fix); on-device audio/motion/`powerMonitor` QA still
+needs a Mac run.
+
+---
+
 ## 2026-07-22 (live session, island experience v1) · branch `claude/determined-curie-l09fo1`
 
 Implemented "Island Experience v1" — the Vibe-Island-style smoothness adapted to Unvibe's
