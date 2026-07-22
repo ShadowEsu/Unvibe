@@ -359,19 +359,29 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
 function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: string) => void; onSkip: () => void; shortcut: string }) {
   return (
     <div className="login">
-      <div className="login__bg" />
-      <FadeIn animKey="login" stagger className="login__card">
-        <div className="login__mark"><LogoMark size={48} stroke={1.6} /></div>
-        <div className="login__brand">Unvibe</div>
-        <h2 className="login__tag">Understand everything you ship.</h2>
-        <div className="login__features">
-          <div className="login__feature"><span className="lf-icon">1</span><span>Select code anywhere</span></div>
-          <div className="login__feature"><span className="lf-icon">2</span><span>Press {prettyAccel(shortcut)}</span></div>
-          <div className="login__feature"><span className="lf-icon">3</span><span>Read the explanation beside your work</span></div>
-          <div className="login__feature"><span className="lf-icon">4</span><span>Save it on this Mac — sync later if you want</span></div>
-        </div>
-        <SignInForm onDone={onSignedIn} />
-        <button className="login__skip" onClick={onSkip}>Keep it local for now →</button>
+      <div className="login__ribbon login__ribbon--one" aria-hidden="true" />
+      <div className="login__ribbon login__ribbon--two" aria-hidden="true" />
+      <div className="login__grid" aria-hidden="true" />
+      <div className="login__island" aria-hidden="true"><LogoMark size={15} stroke={2} /><span>learning follows your workflow</span><i /><i /><i /></div>
+      <FadeIn animKey="login" className="login__layout">
+        <section className="login__story">
+          <div className="login__eyebrow">YOUR PRIVATE LEARNING LAYER</div>
+          <h1>Understand the work.<br />Keep the knowledge.</h1>
+          <p>Unvibe turns the code you review into a learning history that stays useful across editors, terminals, and projects.</p>
+          <div className="login__features">
+            <div className="login__feature"><span className="lf-icon">01</span><span><b>Select anywhere</b><small>Highlight code in your current workflow.</small></span></div>
+            <div className="login__feature"><span className="lf-icon">02</span><span><b>Understand in place</b><small>Press {prettyAccel(shortcut)} for a focused explanation.</small></span></div>
+            <div className="login__feature"><span className="lf-icon">03</span><span><b>Build real memory</b><small>Save understanding, review it, and watch progress.</small></span></div>
+          </div>
+        </section>
+        <aside className="login__card">
+          <div className="login__mark"><LogoMark size={42} stroke={1.7} /></div>
+          <div className="login__brand">UNVIBE</div>
+          <h2 className="login__tag">Carry your learning forward.</h2>
+          <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
+          <SignInForm onDone={onSignedIn} />
+          <button className="login__skip" onClick={onSkip}>Keep everything local for now →</button>
+        </aside>
       </FadeIn>
     </div>
   );
