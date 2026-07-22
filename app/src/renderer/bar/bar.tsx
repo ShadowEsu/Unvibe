@@ -61,6 +61,9 @@ function Bar() {
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [attached, setAttached] = useState(true);
+  const [position, setPosition] = useState('top-center');
+  const [rotateStats, setRotateStats] = useState(true);
+  const [statIndex, setStatIndex] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(0.3);
   const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
@@ -70,6 +73,8 @@ function Bar() {
   const expandedRef = useRef(false);
   const closingRef = useRef(false);
   const foldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerInside = useRef(false);
+  const actionLockUntil = useRef(0);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,11 +86,13 @@ function Bar() {
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
-      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
+      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
       const enabled = Boolean(settings.barHoverPreview ?? true);
       setHoverEnabled(enabled);
       setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 220)));
       setAttached(settings.barPosition === 'top-center');
+      setPosition(settings.barPosition ?? 'top-center');
+      setRotateStats(settings.rotateIslandStats ?? true);
       setSoundEnabled(settings.soundEffects ?? true);
       setSoundVolume(settings.soundVolume ?? 0.3);
       setSoundStyle(settings.soundStyle ?? 'soft');
@@ -98,9 +105,10 @@ function Bar() {
     });
     const unsubscribeCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false));
     const unsubscribeSettings = window.unvibe.onBarSettings((settings) => {
-      if (settings.barPosition) setAttached(settings.barPosition === 'top-center');
+      if (settings.barPosition) { setAttached(settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
       if (settings.barHoverPreview !== undefined) setHoverEnabled(settings.barHoverPreview);
       if (settings.barHoverDelayMs !== undefined) setHoverDelayMs(settings.barHoverDelayMs);
+      if (settings.rotateIslandStats !== undefined) setRotateStats(settings.rotateIslandStats);
       if (settings.soundEffects !== undefined) setSoundEnabled(settings.soundEffects);
       if (settings.soundVolume !== undefined) setSoundVolume(settings.soundVolume);
       if (settings.soundStyle !== undefined) setSoundStyle(settings.soundStyle);
@@ -115,6 +123,12 @@ function Bar() {
       if (noteTimer.current) clearTimeout(noteTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!rotateStats) { setStatIndex(0); return; }
+    const timer = window.setInterval(() => setStatIndex((index) => (index + 1) % 3), 3000);
+    return () => window.clearInterval(timer);
+  }, [rotateStats]);
 
   const setPanelExpanded = (next: boolean) => {
     if (next) {
@@ -154,21 +168,39 @@ function Bar() {
     hoverOpenTimer.current = setTimeout(open, hoverDelayMs);
   };
   const scheduleClose = () => {
+    pointerInside.current = false;
     if (!hoverEnabled) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    const lockedFor = Math.max(0, actionLockUntil.current - Date.now());
     collapseTimer.current = setTimeout(() => {
-      setPanelExpanded(false);
-    }, 120);
+      const stillHovered = document.querySelector('.strip')?.matches(':hover') ?? false;
+      pointerInside.current = stillHovered;
+      if (!stillHovered) setPanelExpanded(false);
+    }, Math.max(120, lockedFor + 40));
   };
 
   const act = (action: 'review' | 'home') => {
+    actionLockUntil.current = Date.now() + 1400;
     const message = action === 'review' ? 'Selection capture started' : 'Opening your learning space';
     setConfirmation(message);
     window.setTimeout(() => setConfirmation(''), 1100);
     if (action === 'review') window.unvibe.reviewSelection();
     else window.unvibe.openCompanion();
   };
+
+  const enter = () => {
+    pointerInside.current = true;
+    openFromHover();
+  };
+
+  const bottom = position.startsWith('bottom');
+  const compactStats = [
+    { value: `${snapshot?.streak ?? 0}d`, emoji: '🔥' },
+    { value: `${snapshot?.linesUnderstood ?? 0}`, emoji: '📖' },
+    { value: `${snapshot?.explanations ?? 0}`, emoji: '✅' },
+  ];
+  const compactStat = compactStats[rotateStats ? statIndex : 0]!;
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && expanded) {
@@ -182,23 +214,23 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={openFromHover} onMouseLeave={scheduleClose}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
-        <div className="strip__wing strip__wing--left">
+        {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} />{expanded ? <span>Open app</span> : null}</button> : <><div className="strip__wing strip__wing--left">
           <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
           <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
         </div>
         <span className="strip__camera-gap" aria-hidden="true" />
         <div className="strip__wing strip__wing--right">
-          <span className="strip__compact-stat"><b>{snapshot?.streak ?? 0}d</b> 🔥</span>
+          <span className="strip__compact-stat" key={rotateStats ? statIndex : 0}><b>{compactStat.value}</b> {compactStat.emoji}</span>
           <span className="strip__privacy"><i />local scan</span>
           <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
-        </div>
+        </div></>}
       </div>
-      {expanded && (
+      {expanded && !bottom && (
         <div className="strip__drawer">
           <div className="strip__drawer-head">
-            <div><span className="pixel-label">LEARNING PULSE</span><strong>Your understanding, right now.</strong></div>
+            <div><span className="pixel-label">Learning pulse</span><strong>Your understanding, right now.</strong></div>
             {loading ? <div className="pixel-loader" aria-label="Refreshing learning stats">{Array.from({ length: 7 }, (_, index) => <i key={index} />)}</div> : <span className="strip__live"><i />local data</span>}
           </div>
           <div className="strip__metric-grid" aria-label="Actual learning statistics">
@@ -208,10 +240,10 @@ function Bar() {
             <article><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
           </div>
           <div className="strip__learning-row">
-            <div className="strip__recent"><span className="pixel-label">LAST LEARNING</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
+            <div className="strip__recent"><span className="pixel-label">Last learning</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
             <div className="strip__concepts"><span><b>{snapshot?.conceptsSeen ?? 0}</b> concepts</span><span><b>{snapshot?.conceptsStrong ?? 0}</b> strong</span><small>{snapshot?.usage ? `${snapshot.usage.label} · ${snapshot.usage.pct}%` : 'No workflow data yet'}</small></div>
           </div>
-          <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 DAYS</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
+          <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 days</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
           <div className="strip__actions">
             <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
             <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>

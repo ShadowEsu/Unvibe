@@ -14,7 +14,7 @@ export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
-const SETTINGS_REVISION = 6;
+const SETTINGS_REVISION = 7;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -29,6 +29,8 @@ export interface Settings {
   barHoverPreview: boolean;
   /** Intent delay before a pointer opens the Island (120–600ms). */
   barHoverDelayMs: number;
+  /** Cycle compact Island learning stats automatically. */
+  rotateIslandStats: boolean;
   /** Follow the display under the pointer when positioning the learning strip. */
   followActiveDisplay: boolean;
   /** Locally synthesized UI cues. Never records or plays remote audio. */
@@ -65,6 +67,7 @@ const DEFAULTS: Settings = {
   barVisibility: 'always',
   barHoverPreview: true,
   barHoverDelayMs: 220,
+  rotateIslandStats: true,
   followActiveDisplay: true,
   soundEffects: true,
   soundVolume: 0.3,

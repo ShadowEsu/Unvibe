@@ -782,12 +782,19 @@ app.whenReady().then(() => {
         return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
       }
     }
-    if ((patch.barPosition || patch.followActiveDisplay) && bar && !bar.isDestroyed()) positionBar(bar);
-    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+    if (patch.barPosition && bar && !bar.isDestroyed()) {
+      resizeBar(bar, false, true);
+      bar.webContents.send('bar:collapse');
+      positionBar(bar);
+    } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
+      positionBar(bar);
+    }
+    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
         barHoverPreview: next.barHoverPreview,
         barHoverDelayMs: next.barHoverDelayMs,
+        rotateIslandStats: next.rotateIslandStats,
         soundEffects: next.soundEffects,
         soundVolume: next.soundVolume,
         soundStyle: next.soundStyle,

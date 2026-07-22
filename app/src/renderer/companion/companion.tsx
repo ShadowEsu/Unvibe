@@ -39,6 +39,7 @@ interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
   barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
   barHoverDelayMs: number;
+  rotateIslandStats: boolean;
   followActiveDisplay: boolean; soundEffects: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
   widgetOpacityInactive: number; inactiveBehavior: string;
@@ -296,7 +297,11 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
         <div className="ob__ribbon ob__ribbon--two" />
         <div className="ob__glow" />
         <div className="ob__scene-grid" />
-        <div className="ob__scene-strip"><LogoMark size={15} stroke={2} /><span>{step === 0 ? 'ready to understand' : step === 1 ? 'selection captured' : step === 2 ? 'learning depth ready' : 'private by default'}</span><i /><i /><i /></div>
+        <div className="ob__scene-strip">
+          <div><b>▶</b><LogoMark size={15} stroke={2} /></div>
+          <span className="ob__scene-camera" />
+          <div><span>{step === 0 ? '1d 🔥' : step === 1 ? '142 📖' : step === 2 ? '8 ✅' : 'local'}</span><b>⌂</b></div>
+        </div>
         <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
       </div>
       <div className="ob__card fade-in">
@@ -1275,6 +1280,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Learning strip visibility</div><div className="sd">Keep it ready between reviews, or only show it while you are learning.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Turn this off for click-only expansion. Click and keyboard controls always work.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
+              <div className="setrow"><div><div className="sl">Rotate learning stats</div><div className="sd">Cycle through streak, lines understood, and completed reviews in the compact top Island.</div></div><Toggle on={settings.rotateIslandStats} onClick={() => onSettings({ rotateIslandStats: !settings.rotateIslandStats })} /></div>
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
                 <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>

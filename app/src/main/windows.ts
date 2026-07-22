@@ -55,18 +55,27 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 }
 
 /** Compact landscape aisle: play · logo · home. */
-const BAR_W = 340;
+const TOP_BAR_W = 340;
+const FLOATING_BAR_W = 196;
+const BOTTOM_BAR_W = 48;
 const BAR_H = 44;
 const BAR_EXPANDED_W = 620;
 // The drawer contains recent learning, stats, and two actions. Keep transparent
 // window chrome larger than its visual card so no interactive content is clipped.
 const BAR_EXPANDED_H = 368;
 
+function compactBarWidth(position: BarPosition): number {
+  if (position === 'top-center') return TOP_BAR_W;
+  if (position.startsWith('bottom')) return BOTTOM_BAR_W;
+  return FLOATING_BAR_W;
+}
+
 export function createBar(): BrowserWindow {
   barIsExpanded = false;
-  const { x, y } = barBounds(settings().all().barPosition, BAR_W, BAR_H);
+  const compactWidth = compactBarWidth(settings().all().barPosition);
+  const { x, y } = barBounds(settings().all().barPosition, compactWidth, BAR_H);
   const win = new BrowserWindow({
-    width: BAR_W,
+    width: compactWidth,
     height: BAR_H,
     x,
     y,
@@ -91,13 +100,15 @@ export function createBar(): BrowserWindow {
 }
 
 /** Hover expansion is a real window resize so the transparent area never blocks other apps. */
-export function resizeBar(win: BrowserWindow | null, expanded: boolean): void {
+export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = false): void {
   if (!win || win.isDestroyed()) return;
-  if (barIsExpanded === expanded) return;
+  if (barIsExpanded === expanded && !force) return;
   barIsExpanded = expanded;
-  const width = expanded ? BAR_EXPANDED_W : BAR_W;
-  const height = expanded ? BAR_EXPANDED_H : BAR_H;
-  const { x, y } = barBounds(settings().all().barPosition, width, height);
+  const position = settings().all().barPosition;
+  const bottom = position.startsWith('bottom');
+  const width = expanded ? (bottom ? 152 : BAR_EXPANDED_W) : compactBarWidth(position);
+  const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : BAR_H;
+  const { x, y } = barBounds(position, width, height);
   win.setFocusable(expanded);
   // CSS owns the visual peel/fold. Native macOS bounds animation fighting it
   // produced the visible jump captured in the interaction recording.
@@ -108,8 +119,10 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean): void {
 /** Move the bar to a new position (called when the setting changes). */
 export function positionBar(win: BrowserWindow): void {
   const b = win.getBounds();
-  const { x, y } = barBounds(settings().all().barPosition, b.width, b.height);
-  win.setBounds({ ...b, x, y });
+  const position = settings().all().barPosition;
+  const width = barIsExpanded ? b.width : compactBarWidth(position);
+  const { x, y } = barBounds(position, width, b.height);
+  win.setBounds({ ...b, width, x, y });
 }
 
 /** Quiet aisle — only show while a review is active. */
