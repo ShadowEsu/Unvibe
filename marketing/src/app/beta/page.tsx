@@ -25,12 +25,12 @@ export default function BetaDownloadsPage() {
   return (
     <main className="beta-download-page">
       <section className="beta-download-panel">
-        <div className="beta-download-brand"><Image src="/brand/icon.png" alt="Unvibe" width={52} height={52} priority /><div><p className="pixel-label">UNVIBE / PRIVATE BETA</p><h1>Unvibe Private Beta v0.1.0</h1></div></div>
+        <div className="beta-download-brand"><Image src="/brand/icon.png" alt="Unvibe" width={52} height={52} priority /><div><p className="pixel-label">UNVIBE / PRIVATE BETA</p><h1>Unvibe Private Beta v0.1.1</h1></div></div>
         <p className="beta-download-intro">The private beta includes normal Free features, up to 30 selected-code prompts, and 20 cloud AI explanations per month.</p>
         <div className="beta-download-grid">
           <DownloadCard platform="macOS · Apple Silicon" href={macDownload} detail="DMG · drag Unvibe to Applications" />
           <DownloadCard platform="Windows · 64-bit" href={windowsDownload} detail="Portable installer · Windows may ask for confirmation" />
-          {zipDownload && <DownloadCard platform="macOS ZIP" href={zipDownload} detail="Unvibe Private Beta v0.1.0.zip" />}
+          {zipDownload && <DownloadCard platform="macOS ZIP" href={zipDownload} detail="Unvibe Private Beta v0.1.1.zip" />}
         </div>
         <p className="beta-download-note"><ShieldCheck size={16} /> Your selected code is secret-filtered on your device before cloud analysis.</p>
         <p className="beta-download-support"><Monitor size={16} /> Need help installing? <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20help">Email Preston</a>.</p>
