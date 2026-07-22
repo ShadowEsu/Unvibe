@@ -1391,7 +1391,7 @@ function App() {
 
   const [themeIsDark, setThemeIsDark] = useState(false);
   useEffect(() => {
-    const preference = settings?.theme ?? 'system';
+    const preference = settings?.theme ?? 'dark';
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
       const dark = preference === 'dark' || (preference === 'system' && media.matches);

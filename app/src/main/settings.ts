@@ -19,6 +19,8 @@ const SETTINGS_REVISION = 7;
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
   settingsRevision?: number;
+  /** Internal — migrates the former system-default appearance to dark once. */
+  appearanceRevision?: number;
   onboarded: boolean;
   /** Electron accelerator. Default is ⌘U. */
   shortcut: string;
@@ -61,6 +63,7 @@ export interface Settings {
 
 const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
+  appearanceRevision: 1,
   onboarded: false,
   shortcut: 'CommandOrControl+U',
   barPosition: 'top-center',
@@ -75,7 +78,7 @@ const DEFAULTS: Settings = {
   widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
-  theme: 'system',
+  theme: 'dark',
   defaultExplanationLevel: 'intermediate',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
@@ -98,6 +101,8 @@ class SettingsStore {
       /* first run */
     }
     const needsOnboardingReset = (loaded.settingsRevision ?? 0) < SETTINGS_REVISION;
+    const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
+      (loaded.theme === undefined || loaded.theme === 'system');
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -108,6 +113,8 @@ class SettingsStore {
       quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
       aiProvider,
       settingsRevision: SETTINGS_REVISION,
+      appearanceRevision: 1,
+      ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
       ...(needsOnboardingReset
         ? {
             onboarded: false,
@@ -118,7 +125,7 @@ class SettingsStore {
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
-    if (needsOnboardingReset || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsDarkDefault || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
