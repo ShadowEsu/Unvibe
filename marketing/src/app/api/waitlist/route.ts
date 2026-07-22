@@ -63,7 +63,10 @@ export async function POST(req: Request) {
     lastName: parsed.data.lastName,
     email,
     referredBy,
-    promoCode: promoCode === "UNVIBE SPECIAL" ? promoCode : undefined,
+    // Keep every submitted code visible to the founder in admin/CSV. Eligibility
+    // for a particular offer is evaluated later, rather than silently discarding
+    // a code a waitlist member typed.
+    promoCode: promoCode || undefined,
     referralCode,
     utmSource: parsed.data.utmSource || undefined,
     utmMedium: parsed.data.utmMedium || undefined,
