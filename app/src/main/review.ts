@@ -7,7 +7,7 @@ import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter'
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
-import { localDayKey, type LocalEvent } from '../core/learning';
+import { localDayKey, milestonesCrossed, type LocalEvent } from '../core/learning';
 import { aiAuthHeaders, BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
 import { flush } from './sync';
@@ -16,6 +16,8 @@ import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { setIslandState, currentIslandState } from './island';
+import type { ProductState } from '../core/islandState';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
@@ -60,10 +62,37 @@ export interface RequestOpts {
   consented?: boolean;
 }
 
+/** Map a widget event to the island's product state (one funnel, so the strip narrates
+ * the review without every call site knowing about the island). Returns null to leave
+ * the island unchanged (e.g. per-token — we only enter `streaming` once). */
+function islandStateFor(ev: { type: string; message?: string; code?: string }): ProductState | null {
+  switch (ev.type) {
+    case 'status':
+      // 'thinking' → generating; provider/cost status lines are just generating too.
+      return 'generating';
+    case 'token':
+      return currentIslandState() === 'streaming' ? null : 'streaming';
+    case 'done':
+      return 'explanationReady';
+    case 'understood':
+      return 'saved';
+    case 'error':
+      if (ev.code === 'pro_required') return null; // an upsell, not an error chime
+      if (ev.code && /auth/i.test(ev.code)) return 'authenticationExpired';
+      if (ev.message && /offline|connection|network/i.test(ev.message)) return 'offline';
+      if (ev.message && /out of explanations|rate|limit/i.test(ev.message)) return 'rateLimited';
+      return 'serviceError';
+    default:
+      return null;
+  }
+}
+
 function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
     win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
   }
+  const next = islandStateFor(ev as { type: string; message?: string; code?: string });
+  if (next) setIslandState(next);
 }
 
 async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise<ReviewRequestPayload> {
@@ -213,6 +242,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
     code: session.code.slice(0, 40_000),
     explanation: explanation?.slice(0, 60_000),
   };
+  const before = store().events();
   try {
     store().recordReview(ev);
   } catch (error) {
@@ -224,6 +254,14 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
     return;
   }
   session.onRecorded?.();
+  // Celebrate a real, newly-crossed milestone on the island (peak one only).
+  try {
+    const crossed = milestonesCrossed(before, store().events(), localDayKey(new Date()));
+    const peak = crossed[crossed.length - 1];
+    if (peak) setIslandState('milestone', { show: true, narration: peak.title, detail: peak.detail });
+  } catch {
+    /* milestones are a delight, never a failure path */
+  }
   void flush();
 }
 

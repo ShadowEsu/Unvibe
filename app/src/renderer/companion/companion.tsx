@@ -2,6 +2,36 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
+import { SOUND_PALETTE } from '../../core/sound';
+import type { SoundEvent } from '../../core/islandState';
+
+/** Preview an island sound cue in Settings (same palette the live island uses). */
+function playCue(event: Exclude<SoundEvent, null>): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const spec = SOUND_PALETTE[event];
+  if (!spec) return;
+  try {
+    const Ctor: typeof AudioContext =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctor();
+    spec.freqs.forEach((freq, i) => {
+      const t0 = ctx.currentTime + (i * spec.stepMs) / 1000;
+      const t1 = t0 + spec.durMs / 1000;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+      gain.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      osc.type = spec.type;
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    });
+    setTimeout(() => void ctx.close(), 700);
+  } catch { /* preview sound is optional */ }
+}
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -42,6 +72,7 @@ interface Settings {
   widgetOpacityInactive: number; inactiveBehavior: string;
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
+  glanceMode: boolean; soundMilestones: boolean; quietWhileLocked: boolean;
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
   useOwnAi: boolean;
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
@@ -262,6 +293,7 @@ function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soun
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState('intermediate');
   const [sampleDetail, setSampleDetail] = useState<'simple' | 'technical'>('simple');
+  const [ceremony, setCeremony] = useState(false);
   const steps = ['Welcome', 'Try it', 'Your depth', 'Use anywhere'];
 
   const next = () => {
@@ -269,9 +301,33 @@ function Onboarding({ shortcut, soundEffects, onDone }: { shortcut: string; soun
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
   const back = () => setStep((s) => Math.max(s - 1, 0));
-  const finish = () => { if (soundEffects) playSetupTone('success'); void window.unvibe.completeOnboarding(); onDone(); };
+  // The finale: a brief ceremony with the real "ready" cue, then a live Try-it-now.
+  const finish = () => { if (soundEffects) playCue('milestone'); setCeremony(true); };
+  const complete = () => { void window.unvibe.completeOnboarding(); onDone(); };
+  const tryNow = () => { complete(); window.unvibe.reviewSelection(); };
 
   const nav = (continueLabel = 'Continue') => <div className="ob__actions"><button className="ob__skip" disabled={step === 0} onClick={back}>Back</button><button className="field-btn inline" onClick={next}>{continueLabel}</button></div>;
+
+  if (ceremony) {
+    return (
+      <div className="ob ob--ceremony">
+        <div className="ob__scene" aria-hidden="true">
+          <div className="ob__scene-grid" />
+          <div className="ob__scene-strip ob__scene-strip--ready"><LogoMark size={15} stroke={2} /><i className="ob__ready-dot" /><span>Explanation ready</span></div>
+        </div>
+        <div className="ob__card fade-in ob__ready">
+          <div className="ob__mark ob__mark--pulse"><LogoMark size={54} stroke={1.7} /></div>
+          <div className="ob__eyebrow">YOU’RE ALL SET</div>
+          <h2 className="ob__title">Unvibe is ready.</h2>
+          <p className="ob__sub">Select code in any app, then press <span className="kbd-lg">{prettyAccel(shortcut)}</span>. Unvibe wakes up right where you’re working.</p>
+          <div className="ob__actions ob__actions--center">
+            <button className="ob__skip" onClick={complete}>Not now</button>
+            <button className="field-btn inline" onClick={tryNow}>Try it now</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ob">
@@ -1173,11 +1229,33 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
   );
 }
 
-function OverlayPreview({ position, dimmed }: { position: string; dimmed: number }) {
-  return <div className="settings-preview" aria-label="Live preview of the Unvibe overlay">
+function OverlayPreview({
+  position, dimmed, glanceMode = true, soundEffects = true,
+}: { position: string; dimmed: number; glanceMode?: boolean; soundEffects?: boolean }) {
+  const [demo, setDemo] = useState<{ narration: string; accent: string; glance: boolean } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const show = (narration: string, accent: string, glance: boolean, event: Exclude<SoundEvent, null>) => {
+    setDemo({ narration, accent, glance: glance && glanceMode });
+    if (soundEffects) playCue(event);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDemo(null), 2400);
+  };
+  const narration = demo?.narration ?? 'Ready to explain';
+  const accent = demo?.accent ?? 'idle';
+  return <div className="settings-preview" aria-label="Live preview of the Unvibe island">
     <div className="settings-preview__window"><span /><span /><span /></div>
-    <div className={`settings-preview__bar settings-preview__bar--${position}`}><LogoMark size={13} stroke={2} /><b>Unvibe</b><em>Ready to explain</em></div>
+    <div className={`settings-preview__bar settings-preview__bar--${position}`} data-accent={accent}>
+      <LogoMark size={13} stroke={2} />
+      {demo?.glance && <i className={`settings-preview__dot settings-preview__dot--${accent}`} />}
+      <b>Unvibe</b><em>{narration}</em>
+    </div>
     <div className="settings-preview__card" style={{ opacity: dimmed }}><span>Selected code</span><b>verifyUser()</b><small>Intermediate · Local filter on</small></div>
+    <div className="settings-preview__cues" role="group" aria-label="Preview island cues">
+      <button type="button" onClick={() => show('Explanation ready', 'success', true, 'ready')}>Ready</button>
+      <button type="button" onClick={() => show('Saved to your learning', 'success', true, 'saved')}>Saved</button>
+      <button type="button" onClick={() => show('Nice work', 'success', true, 'milestone')}>Milestone</button>
+    </div>
   </div>;
 }
 
@@ -1232,6 +1310,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Quiet, locally synthesized cues during setup and learning moments.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
+              <div className="setrow"><div><div className="sl">Milestone sounds</div><div className="sd">A tasteful chime for streaks and learning milestones. Turn off without muting other cues.</div></div><Toggle on={settings.soundMilestones} onClick={() => onSettings({ soundMilestones: !settings.soundMilestones })} /></div>
+              <div className="setrow"><div><div className="sl">Glance completion</div><div className="sd">When an explanation is ready, show a quiet dot on the island instead of expanding it.</div></div><Toggle on={settings.glanceMode} onClick={() => onSettings({ glanceMode: !settings.glanceMode })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet while locked</div><div className="sd">Suppress island sounds while your Mac screen is locked.</div></div><Toggle on={settings.quietWhileLocked} onClick={() => onSettings({ quietWhileLocked: !settings.quietWhileLocked })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
               {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>
@@ -1239,7 +1320,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Appearance' && (
             <>
-              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
+              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} glanceMode={settings.glanceMode} soundEffects={settings.soundEffects} />
               <div className="settings-section-label">OVERLAY PREVIEW</div>
               <div className="setrow"><div><div className="sl">App appearance</div><div className="sd">Choose light, dark, or follow your Mac automatically.</div></div><select className="sel-input" value={settings.theme} onChange={(e) => onSettings({ theme: e.target.value as Settings['theme'] })}><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
               <div className="setrow"><div><div className="sl">Learning strip position</div><div className="sd">Where the compact Unvibe strip lives across your Mac spaces.</div></div>
@@ -1341,6 +1422,7 @@ function App() {
     })();
     const onFocus = () => void refresh();
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
+    window.unvibe.onOpenSettings(() => setSettingsOpen(true));
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);

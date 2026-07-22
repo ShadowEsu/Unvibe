@@ -63,6 +63,7 @@ import {
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
+import { setIslandBar, setIslandState } from './island';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
 import { resolveAppUsage } from './usage';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
@@ -133,6 +134,7 @@ function clearPanelSessions(): void {
   tabSessions.clear();
   activeTabId = '1';
   panelReady = false;
+  setIslandState('idle');
 }
 
 function beginCaptureOnActiveTab(
@@ -253,18 +255,100 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
+function isPaused(): boolean {
+  return settings().all().paused === true;
+}
+
+function setPaused(paused: boolean): void {
+  settings().set({ paused });
+  refreshTrayMenu();
+  if (bar && !bar.isDestroyed()) bar.webContents.send('bar:paused', paused);
+  notify(paused ? 'Unvibe paused — ⌘U is off until you resume' : 'Unvibe resumed — ⌘U is back on');
+}
+
+/** One source of truth for tray + right-click menus so pause state stays in sync. */
+function buildAppMenu(): Menu {
+  const paused = isPaused();
+  return Menu.buildFromTemplate([
+    { label: 'Explain selection', accelerator: 'CommandOrControl+U', enabled: !paused, click: () => void startReview() },
+    { label: 'Explain clipboard', enabled: !paused, click: () => void explainClipboard() },
+    { label: 'Open Unvibe', click: openCompanion },
+    { type: 'separator' },
+    paused
+      ? { label: 'Resume Unvibe', click: () => setPaused(false) }
+      : { label: 'Pause Unvibe', click: () => setPaused(true) },
+    { label: bar && bar.isVisible() ? 'Hide island' : 'Show island', click: toggleBar },
+    { type: 'separator' },
+    { label: 'Settings…', click: openSettings },
+    { type: 'separator' },
+    { label: 'Quit Unvibe', role: 'quit' },
+  ]);
+}
+
+function refreshTrayMenu(): void {
+  if (tray && !tray.isDestroyed()) tray.setContextMenu(buildAppMenu());
+}
+
+function toggleBar(): void {
+  if (!bar || bar.isDestroyed()) return;
+  if (bar.isVisible()) hideBar(bar);
+  else showBar(bar);
+  refreshTrayMenu();
+}
+
+function openSettings(): void {
+  openCompanion();
+  if (companion && !companion.isDestroyed()) companion.webContents.send('open:settings');
+}
+
+async function explainClipboard(): Promise<void> {
+  if (isPaused()) return;
+  const text = clipboard.readText().trim();
+  showBar(bar);
+  const existing = currentWidget();
+  const win = getOrCreateWidget();
+  if (!existing) {
+    clearPanelSessions();
+    activeTabId = '1';
+    const seed = makeSession(activeTabId, null, null);
+    tabSessions.set(activeTabId, seed);
+    const windowId = win.id;
+    win.on('closed', () => {
+      clearPanelSessions();
+      normalBounds.delete(windowId);
+      if (settings().all().barVisibility === 'during-review') hideBar(bar);
+    });
+  }
+  const session = sessionFor(activeTabId) ?? makeSession(activeTabId, null, null);
+  tabSessions.set(activeTabId, session);
+  if (!panelReady) {
+    // Renderer seeds itself on widget:ready; drop the clipboard text in when it can accept it.
+    if (text) session.code = text;
+    return;
+  }
+  if (!text) {
+    initWidget(win, session, { autoStart: false });
+    return;
+  }
+  loadCodeIntoSession(win, session, text, 'Clipboard');
+}
+
 async function startReview(): Promise<void> {
+  if (isPaused()) return;
   broadcastShortcut();
   // ⌘U must only raise the aisle + explanation panel — never System Settings.
   // Never call isTrustedAccessibilityClient(true) here: prompt=true re-opens the
   // macOS permission UI even when the user already toggled Accessibility on.
   if (isMac && !accessibilityGranted(false) && !accessibilitySettingsOpenedThisSession) {
     accessibilitySettingsOpenedThisSession = true;
+    setIslandState('permissionRequired', { show: true });
     notify('Enable Accessibility for Unvibe in System Settings, then quit and reopen Unvibe');
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
+  setIslandState('capturingContext', { show: true });
   const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
+  if (code) setIslandState('selectionDetected');
   const existing = currentWidget();
   const win = getOrCreateWidget();
   const windowId = win.id;
@@ -320,18 +404,12 @@ app.whenReady().then(() => {
   tray = new Tray(trayImage);
   tray.setIgnoreDoubleClickEvents(true);
   tray.setToolTip('Unvibe');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: 'Review selection', click: () => void startReview() },
-      { label: 'Open Unvibe', click: openCompanion },
-      { type: 'separator' },
-      { label: 'Quit Unvibe', role: 'quit' },
-    ]),
-  );
+  tray.setContextMenu(buildAppMenu());
   tray.on('click', () => openCompanion());
 
   bar = createBar();
   setBar(bar);
+  setIslandBar(bar);
   positionBar(bar);
   if (s.onboarded && s.barVisibility === 'always') showBar(bar);
   else hideBar(bar);
@@ -358,6 +436,9 @@ app.whenReady().then(() => {
     if (!settings().all().barHoverPreview) return;
     resizeBar(bar, Boolean(expanded));
   });
+  ipcMain.on('bar:contextMenu', () => {
+    if (bar && !bar.isDestroyed()) buildAppMenu().popup({ window: bar });
+  });
   ipcMain.handle('bar:snapshot', () => {
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
@@ -366,6 +447,7 @@ app.whenReady().then(() => {
       recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
       streak: profile.streak,
       explanations: profile.reviews,
+      paused: isPaused(),
     };
   });
   ipcMain.on('companion:review', () => void startReview());

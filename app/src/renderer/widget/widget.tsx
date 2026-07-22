@@ -8,6 +8,40 @@ import { renderRich } from '../shared/richText';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
+/**
+ * A button that visibly confirms success before following through: it swaps its label
+ * to a ✓, disables, lingers, then runs `onAfter`. Under Reduce Motion it follows through
+ * instantly. So the user always *sees* that the action worked before anything collapses.
+ */
+function ConfirmButton({
+  className, label, confirmLabel, disabled, onConfirm, onAfter, lingerMs = 700,
+}: {
+  className: string;
+  label: string;
+  confirmLabel: string;
+  disabled?: boolean;
+  onConfirm?: () => void;
+  onAfter?: () => void;
+  lingerMs?: number;
+}) {
+  const [done, setDone] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const click = () => {
+    if (done) return;
+    onConfirm?.();
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { onAfter?.(); return; }
+    setDone(true);
+    timer.current = setTimeout(() => { setDone(false); onAfter?.(); }, lingerMs);
+  };
+  return (
+    <button className={`${className}${done ? ' is-confirmed' : ''}`} disabled={disabled || done} onClick={click}>
+      {done ? confirmLabel : label}
+    </button>
+  );
+}
+
 interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded';
   question?: string;
@@ -770,16 +804,14 @@ function Widget() {
                     Stop generating
                   </button>
                 )}
-                <button
+                <ConfirmButton
                   className="chip chip--ok"
+                  label="Understand ✓"
+                  confirmLabel="Saved ✓"
                   disabled={stillTyping}
-                  onClick={() => {
-                    window.unvibe.gotIt();
-                    toggleCollapse();
-                  }}
-                >
-                  Understand ✓
-                </button>
+                  onConfirm={() => window.unvibe.gotIt()}
+                  onAfter={() => toggleCollapse()}
+                />
                 <button
                   className="chip chip--diff"
                   disabled={stillTyping}

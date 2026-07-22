@@ -1,12 +1,56 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
+import { SOUND_PALETTE } from '../../core/sound';
+import type { Accent, SoundEvent } from '../../core/islandState';
+
+type IslandView = {
+  state: string;
+  presentation: string;
+  narration: string;
+  accent: Accent;
+  glance: boolean;
+  dwellMs: number;
+};
+
+/** Synthesize a short island cue with the Web Audio API (original, restrained). */
+function playIslandSound(event: SoundEvent): void {
+  if (!event) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const spec = SOUND_PALETTE[event];
+  if (!spec) return;
+  try {
+    const AudioCtor: typeof AudioContext =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtor();
+    spec.freqs.forEach((freq, i) => {
+      const t0 = ctx.currentTime + (i * spec.stepMs) / 1000;
+      const t1 = t0 + spec.durMs / 1000;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+      gain.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      osc.type = spec.type;
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    });
+    const total = (spec.freqs.length * spec.stepMs + spec.durMs) / 1000 + 0.1;
+    setTimeout(() => void ctx.close(), total * 1000 + 200);
+  } catch {
+    /* audio is optional — the island still works silently */
+  }
+}
 
 type Snapshot = {
   shortcut: string;
   recent: { id: string; title: string; detail: string; level: string } | null;
   streak: number;
   explanations: number;
+  paused: boolean;
 };
 
 function PlayIcon() {
@@ -29,11 +73,18 @@ function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [island, setIsland] = useState<IslandView | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const islandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const refresh = () => void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
+  const refresh = () => void window.unvibe.barSnapshot().then((value) => {
+    const snap = value as Snapshot;
+    setSnapshot(snap);
+    setPaused(Boolean(snap.paused));
+  });
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
@@ -46,10 +97,28 @@ function Bar() {
       if (noteTimer.current) clearTimeout(noteTimer.current);
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
+    const unpaused = window.unvibe.onBarPaused((next) => setPaused(next));
+    const unstate = window.unvibe.onIslandState((view) => {
+      const v = view as IslandView;
+      setIsland(v);
+      refresh();
+      if (islandTimer.current) clearTimeout(islandTimer.current);
+      // Transient notices (ready/saved/error…) linger their dwell, then return to dormant.
+      if (v.dwellMs > 0) {
+        islandTimer.current = setTimeout(() => {
+          setIsland((cur) => (cur && cur.state === v.state ? { ...cur, state: 'idle', narration: 'Ready to understand', accent: 'idle', glance: false, dwellMs: 0 } : cur));
+        }, v.dwellMs);
+      }
+    });
+    const unsound = window.unvibe.onIslandSound((event) => playIslandSound(event as SoundEvent));
     return () => {
       unsubscribe();
+      unpaused();
+      unstate();
+      unsound();
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
+      if (islandTimer.current) clearTimeout(islandTimer.current);
     };
   }, []);
 
@@ -68,13 +137,29 @@ function Bar() {
     }, 180);
   };
 
+  const activeIsland = island && island.state !== 'idle' ? island : null;
+  const accent: Accent = activeIsland?.accent ?? 'idle';
+  const glancing = Boolean(activeIsland?.glance);
+  const status = note || activeIsland?.narration || (paused ? 'Paused' : 'Ready to understand');
+  const onContext = (e: MouseEvent) => {
+    e.preventDefault();
+    window.unvibe.barContextMenu();
+  };
+
   return (
-    <div className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} onMouseEnter={open} onMouseLeave={scheduleClose}>
-      <div className="strip__main" title={note || 'Unvibe is ready'}>
+    <div
+      className={`strip${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}${paused ? ' strip--paused' : ''}${activeIsland ? ' strip--active' : ''}`}
+      data-accent={accent}
+      onMouseEnter={open}
+      onMouseLeave={scheduleClose}
+      onContextMenu={onContext}
+    >
+      <div className="strip__main" title={activeIsland?.narration || note || (paused ? 'Unvibe is paused' : 'Unvibe is ready')}>
         <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => window.unvibe.reviewSelection()}><PlayIcon /></button>
         <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
-        <span className="strip__status" aria-live="polite">{note || 'Ready to understand'}</span>
-        <span className="strip__privacy"><i />local scan</span>
+        {glancing && <span className={`dot dot--${accent}`} aria-hidden="true" />}
+        <span className="strip__status" aria-live="polite">{status}</span>
+        <span className="strip__privacy"><i />{paused ? 'paused' : 'local scan'}</span>
         <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => window.unvibe.openCompanion()}><HomeIcon /></button>
       </div>
       {expanded && (

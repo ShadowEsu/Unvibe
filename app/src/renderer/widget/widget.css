@@ -106,6 +106,28 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   transition: opacity 0.3s ease, border-color 0.25s ease, background 0.3s ease;
 }
 .card:hover { border-color: color-mix(in srgb, var(--fill) 35%, var(--line)); }
+/* Progressive corners: the card rounds a touch more as it settles into a result. */
+.card--streaming { border-radius: 11px; }
+.card--done { border-radius: 13px; }
+
+/* Content morph: primary content fades/rises in; secondary controls follow, staggered.
+   Motion explains the state change; it is not decoration. */
+.card--streaming .body,
+.card--done .body { animation: bodyEnter 0.28s ease both; }
+@keyframes bodyEnter { from { opacity: 0; transform: translateY(4px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+
+.foot .chips > * { animation: chipStagger 0.26s ease both; }
+.foot .chips > *:nth-child(1) { animation-delay: 0.02s; }
+.foot .chips > *:nth-child(2) { animation-delay: 0.07s; }
+.foot .chips > *:nth-child(3) { animation-delay: 0.12s; }
+.foot .chips > *:nth-child(4) { animation-delay: 0.17s; }
+.foot .ask-sandbox { animation: chipStagger 0.28s ease 0.2s both; }
+@keyframes chipStagger { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card--streaming .body, .card--done .body,
+  .foot .chips > *, .foot .ask-sandbox { animation: none; }
+}
 
 /* Resize grips — exactly on the card border lines (not an invisible outer rim) */
 .rz {
@@ -464,6 +486,15 @@ code.inline {
 .chip--diff { border-color: color-mix(in srgb, var(--diff) 45%, var(--line)); color: var(--diff); }
 .chip--diff:hover:not(:disabled) { border-color: var(--diff); color: var(--diff); background: transparent; }
 .chip--ok { border-color: color-mix(in srgb, var(--fill) 40%, var(--line)); color: var(--fill-strong); }
+/* micro-confirmation: the button flashes a settled green ✓ before it follows through */
+.chip.is-confirmed {
+  color: #12855b;
+  border-color: #12855b;
+  opacity: 1;
+  animation: chipConfirm .28s ease both;
+}
+@keyframes chipConfirm { from { transform: scale(.94); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .chip.is-confirmed { animation: none; } }
 
 .ask-sandbox {
   border: 1px solid var(--line);
