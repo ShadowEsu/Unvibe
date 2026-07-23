@@ -51,8 +51,8 @@
   --accent-strong: #5737b9;
   --accent-soft: #f2ebff;
   --card-shadow: 0 12px 34px rgba(108, 68, 141, .08);
-  --surface-gradient: linear-gradient(135deg, rgba(255, 237, 220, .92), rgba(255, 250, 251, .97) 48%, rgba(237, 228, 255, .94));
-  --surface-gradient-alt: linear-gradient(135deg, rgba(255, 246, 237, .96), rgba(255, 252, 253, .98) 52%, rgba(233, 223, 255, .90));
+  --surface-gradient: linear-gradient(135deg, #ffd6ad 0%, #fff0e2 42%, #e0caff 100%);
+  --surface-gradient-alt: linear-gradient(135deg, #ffe2c5 0%, #fff6ef 46%, #d9c2ff 100%);
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -76,8 +76,8 @@ body {
 }
 :root[data-theme="light"] body {
   background:
-    radial-gradient(ellipse 72% 62% at -10% -8%, rgba(255, 183, 112, .25) 0%, rgba(255, 203, 149, .11) 38%, transparent 69%),
-    radial-gradient(ellipse 70% 60% at 106% 105%, rgba(125, 83, 219, .20) 0%, rgba(176, 142, 241, .09) 42%, transparent 72%),
+    radial-gradient(ellipse 72% 62% at -10% -8%, rgba(255, 183, 112, .52) 0%, rgba(255, 203, 149, .26) 38%, transparent 69%),
+    radial-gradient(ellipse 70% 60% at 106% 105%, rgba(125, 83, 219, .43) 0%, rgba(176, 142, 241, .20) 42%, transparent 72%),
     #fbf7fa;
 }
 button, input { font-family: inherit; }
@@ -180,7 +180,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   backdrop-filter: blur(28px) saturate(122%);
 }
 :root[data-theme="light"] .side {
-  background: linear-gradient(160deg, rgba(255, 236, 220, .72), rgba(255,255,255,.64) 45%, rgba(235, 224, 255, .70));
+  background: linear-gradient(160deg, #ffd9b8, #fff3e9 44%, #d9c3ff);
 }
 :root[data-theme="light"] .content {
   background: var(--surface-gradient);
