@@ -148,7 +148,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <span className="success-pixel"><Check /></span>
           <p className="pixel-label">SPOT SAVED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
-          <p>Want the product? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll send access.</p>
+          <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
           {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite a friend, get rewarded.</strong><span>Share your personal link. After eligible feedback and referral steps are verified, choose 3 more months of Pro or a $5 reward.</span><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (
@@ -182,14 +182,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
           <p className="section-number light">10 / PRIVATE BETA</p>
-          <h2>The product is ready. <em>Access is invite-only.</em></h2>
-          <p>Join the waitlist so we know you&apos;re interested. If you want the Mac app, email <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20access">preston@unvibe.site</a> and we&apos;ll get it to you.</p>
+          <h2>Working product. <em>Access is invite-only.</em></h2>
+          <p>Join the waitlist to request access. Invitations are being issued gradually during the private Mac beta.</p>
           <ul>
-            <li><Check size={16} />Private Mac beta — product ready</li>
-            <li><Check size={16} />Waitlist first, then invite access</li>
-            <li><Check size={16} />No credit card to join the list</li>
+            <li><Check size={16} />Private Mac beta — working product</li>
+            <li><Check size={16} />Invite-only access</li>
+            <li><Check size={16} />No credit card required</li>
           </ul>
-          <p className="beta-clarity">Want the product now? Email preston@unvibe.site after you join the waitlist.</p>
+          <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>
         </div>
         {form}
       </Reveal>

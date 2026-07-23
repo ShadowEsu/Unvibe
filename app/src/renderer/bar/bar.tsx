@@ -16,8 +16,8 @@ type Snapshot = {
   heat: number[];
 };
 
-function PlayIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.2 5.4c-.7-.4-1.5.1-1.5.9v11.4c0 .8.8 1.3 1.5.9l9.8-5.7c.7-.4.7-1.4 0-1.8L8.2 5.4z" /></svg>;
+function CodeIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
 }
 
 function HomeIcon() {
@@ -196,9 +196,9 @@ function Bar() {
 
   const bottom = position.startsWith('bottom');
   const compactStats = [
-    { value: `${snapshot?.streak ?? 0}d`, emoji: '🔥' },
-    { value: `${snapshot?.linesUnderstood ?? 0}`, emoji: '📖' },
-    { value: `${snapshot?.explanations ?? 0}`, emoji: '✅' },
+    { value: `${snapshot?.streak ?? 0}d`, label: 'streak', tone: 'streak' },
+    { value: `${snapshot?.linesUnderstood ?? 0}`, label: 'lines', tone: 'lines' },
+    { value: `${snapshot?.understood ?? 0}`, label: 'understood', tone: 'understood' },
   ];
   const compactStat = compactStats[rotateStats ? statIndex : 0]!;
 
@@ -217,12 +217,12 @@ function Bar() {
     <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
         {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} />{expanded ? <span>Open app</span> : null}</button> : <><div className="strip__wing strip__wing--left">
-          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><PlayIcon /></button>
+          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>
           <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
         </div>
         <span className="strip__camera-gap" aria-hidden="true" />
         <div className="strip__wing strip__wing--right">
-          <span className="strip__compact-stat" key={rotateStats ? statIndex : 0}><b>{compactStat.value}</b> {compactStat.emoji}</span>
+          <span className="strip__compact-stat" data-tone={compactStat.tone} key={rotateStats ? statIndex : 0}><b>{compactStat.value}</b> <span>{compactStat.label}</span></span>
           <span className="strip__privacy"><i />local scan</span>
           <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
         </div></>}
@@ -234,10 +234,10 @@ function Bar() {
             {loading ? <div className="pixel-loader" aria-label="Refreshing learning stats">{Array.from({ length: 7 }, (_, index) => <i key={index} />)}</div> : <span className="strip__live"><i />local data</span>}
           </div>
           <div className="strip__metric-grid" aria-label="Actual learning statistics">
-            <article><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
-            <article><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
-            <article><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
-            <article><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
+            <article data-tone="streak"><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
+            <article data-tone="understood"><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
+            <article data-tone="lines"><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
+            <article data-tone="revisit"><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
           </div>
           <div className="strip__learning-row">
             <div className="strip__recent"><span className="pixel-label">Last learning</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>

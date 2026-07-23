@@ -1,7 +1,8 @@
 /**
  * macOS selection capture: save clipboard → activate the user's editor if needed →
  * synthesize ⌘C via System Events → read → restore clipboard. Requires Accessibility
- * permission. Falls back to the prior clipboard so ⌘U can still auto-explain.
+ * permission. A failed capture intentionally returns null: ⌘U must never explain stale
+ * clipboard contents when the user did not select anything.
  */
 import { clipboard } from 'electron';
 import { execFile } from 'node:child_process';
@@ -58,6 +59,8 @@ async function syntheticCopy(): Promise<void> {
 
 export async function captureSelection(): Promise<string | null> {
   const previous = clipboard.readText();
+  // Empty the text pasteboard so an unchanged clipboard cannot be mistaken for a selection.
+  // The explicit “Use clipboard” action remains available in the no-selection picker.
   clipboard.writeText('');
   try {
     const front = await frontmostApp();
@@ -73,11 +76,10 @@ export async function captureSelection(): Promise<string | null> {
       await syntheticCopy();
       grabbed = clipboard.readText();
     }
-    if (grabbed.length > 0) return grabbed;
-    // Prior clipboard fallback so ⌘U still starts an explanation when AX copy misses.
-    return previous.trim().length > 0 ? previous : null;
+    if (grabbed.trim().length > 0) return grabbed;
+    return null;
   } catch {
-    return previous.trim().length > 0 ? previous : null;
+    return null;
   } finally {
     clipboard.writeText(previous);
   }

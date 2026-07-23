@@ -265,7 +265,10 @@ async function startReview(): Promise<void> {
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
-  const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
+  // captureSelection restores/focuses the app that held the selection, so read the source
+  // afterwards rather than racing the synthetic ⌘C operation.
+  const code = await captureSelection();
+  const sourceApp = await frontmostApp();
   if (code && trialBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
@@ -330,8 +333,7 @@ app.whenReady().then(() => {
   tray.setToolTip('Unvibe');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Review selection', click: () => void startReview() },
-      { label: 'Explain clipboard', click: () => void startReview() },
+      { label: 'Explain selected code', click: () => void startReview() },
       { label: 'Open Unvibe', click: openCompanion },
       { type: 'separator' },
       { label: 'Show learning island', click: () => showBar(bar) },
@@ -375,7 +377,6 @@ app.whenReady().then(() => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
       { label: 'Explain selected code', click: () => void startReview() },
-      { label: 'Explain clipboard', click: () => void startReview() },
       ...(state.hasRecent ? [{ label: 'Open last explanation', click: openCompanion }] : []),
       { type: 'separator' },
       { label: 'Open Unvibe', click: openCompanion },

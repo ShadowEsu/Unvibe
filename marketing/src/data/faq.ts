@@ -88,7 +88,7 @@ export const faqItems: FaqItem[] = [
     id: "free",
     question: "Is Free actually usable?",
     answer:
-      "Yes. Free includes the main code-explanation experience with usage and project limits. It is intended to let you experience the real product before paying. No credit card or separate AI API key is required.",
+      "Yes. Free includes the main selected-code explanation experience, saved learning, and study features. No payment card or separate AI provider key is required.",
     category: "pricing",
   },
   {
@@ -100,14 +100,14 @@ export const faqItems: FaqItem[] = [
   {
     id: "cancel",
     question: "What happens if I cancel?",
-    answer: "Paid access continues until the end of the current billing period unless otherwise stated during cancellation. Your saved content is handled according to the product retention policy.",
+    answer: "Paid access continues through the end of the billing period. Your account then returns to the Free plan, subject to the Free plan’s limits.",
     category: "pricing",
   },
   {
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "Join the waitlist on this site, then email preston@unvibe.site and ask for private beta access. Access is invite-only while we keep the beta controlled.",
+      "Join the waitlist to request access. Invitations are being issued gradually during the private Mac beta. For beta partnerships or developer-community access, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
