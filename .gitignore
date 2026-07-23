@@ -12,6 +12,7 @@ build/
 app/build/*
 !app/build/icon.icns
 !app/build/icon.png
+!app/build/icon.svg
 !app/build/trayTemplate.png
 !app/build/entitlements.mac.plist
 !app/build/dmg-background.svg

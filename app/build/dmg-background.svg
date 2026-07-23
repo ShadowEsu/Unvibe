@@ -1,3 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="780" height="500" viewBox="0 0 780 500">
-  <rect width="780" height="500" fill="#6F45D2"/>
+  <defs>
+    <radialGradient id="purple" cx="0" cy="0" r="1" gradientTransform="translate(74 16) rotate(34) scale(610 440)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6E43CB" stop-opacity=".98"/>
+      <stop offset=".42" stop-color="#6E43CB" stop-opacity=".48"/>
+      <stop offset="1" stop-color="#6E43CB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orange" cx="0" cy="0" r="1" gradientTransform="translate(755 490) rotate(-145) scale(560 390)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B96A39" stop-opacity=".9"/>
+      <stop offset=".46" stop-color="#B96A39" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#B96A39" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blue" cx="0" cy="0" r="1" gradientTransform="translate(404 224) rotate(90) scale(250 360)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2971C4" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#2971C4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="780" height="500" fill="#110A20"/>
+  <rect width="780" height="500" fill="url(#purple)"/>
+  <rect width="780" height="500" fill="url(#orange)"/>
+  <rect width="780" height="500" fill="url(#blue)"/>
 </svg>
