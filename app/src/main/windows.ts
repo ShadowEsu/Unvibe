@@ -1,15 +1,19 @@
 import { BrowserWindow, screen, shell } from 'electron';
+import process from 'node:process';
 import path from 'node:path';
 import { settings, type BarPosition } from './settings';
+import {
+  clampToVisibleArea,
+  resolveWidgetBounds,
+  snapWidget,
+  WIDGET_MIN_W,
+  WIDGET_MIN_H,
+} from './windowGeometry';
+export { applyWidgetResize, type WidgetResizeEdge } from './windowGeometry';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
-const SNAP = 18;
-/** Compact AI Container — small enough not to intimidate on first open. */
-const DEFAULT_WIDGET_W = 300;
-const DEFAULT_WIDGET_H = 360;
-/** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
 
@@ -90,10 +94,13 @@ export function createBar(): BrowserWindow {
     show: false,
     webPreferences: secureWebPrefs(),
   });
+  // macOS behavior unverified on Linux runner
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setHiddenInMissionControl(true);
-  win.setFullScreenable(false);
+  if (process.platform === 'darwin') {
+    win.setHiddenInMissionControl(true);
+    win.setFullScreenable(false);
+  }
   lockNavigation(win);
   void win.loadFile(page('bar'));
   return win;
@@ -138,90 +145,35 @@ export function hideBar(win: BrowserWindow | null): void {
   win.hide();
 }
 
-function snap(win: BrowserWindow): void {
+function snapWidgetWindow(win: BrowserWindow): void {
   const b = win.getBounds();
   const { workArea: wa } = screen.getDisplayNearestPoint({ x: b.x, y: b.y });
-  let { x, y } = b;
-  if (Math.abs(x - wa.x) < SNAP) x = wa.x;
-  if (Math.abs(x + b.width - (wa.x + wa.width)) < SNAP) x = wa.x + wa.width - b.width;
-  if (Math.abs(y - wa.y) < SNAP) y = wa.y;
-  if (Math.abs(y + b.height - (wa.y + wa.height)) < SNAP) y = wa.y + wa.height - b.height;
-  if (x !== b.x || y !== b.y) win.setBounds({ x, y, width: b.width, height: b.height });
+  const next = snapWidget(b, { x: wa.x, y: wa.y, width: wa.width, height: wa.height });
+  if (next.x !== b.x || next.y !== b.y) win.setBounds(next);
 }
 
-function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
-  const displays = screen.getAllDisplays();
-  const visible = displays.find(({ workArea }) =>
-    bounds.x < workArea.x + workArea.width && bounds.x + bounds.width > workArea.x &&
-    bounds.y < workArea.y + workArea.height && bounds.y + bounds.height > workArea.y,
-  );
-  const workArea = (visible ?? screen.getPrimaryDisplay()).workArea;
-  const width = Math.min(bounds.width, workArea.width - 24);
-  const height = Math.min(bounds.height, workArea.height - 24);
-  return {
-    width,
-    height,
-    x: Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12),
-    y: Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12),
-  };
-}
-
-function defaultWidgetBounds(): Electron.Rectangle {
-  const cursor = screen.getCursorScreenPoint();
-  const { workArea } = screen.getDisplayNearestPoint(cursor);
-  const w = DEFAULT_WIDGET_W;
-  const h = DEFAULT_WIDGET_H;
-  return {
-    width: w,
-    height: h,
-    x: Math.min(Math.max(cursor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
-    y: Math.min(Math.max(cursor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
-  };
-}
-
-/** Restore user size/position, but migrate the old stock 440×560 default to the shorter panel. */
-function resolveWidgetBounds(): Electron.Rectangle {
+function readWidgetBounds(): Electron.Rectangle {
   const saved = settings().all().lastWidgetBounds;
-  if (!saved) return defaultWidgetBounds();
-  const stockOld =
-    (saved.width === 440 && saved.height === 560) ||
-    (saved.width === 360 && saved.height === 480) ||
-    (saved.width === 340 && saved.height === 440);
-  if (stockOld) {
-    return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
-  }
-  return { ...saved };
-}
-
-/** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
-export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-
-const WIDGET_MIN_W = 280;
-const WIDGET_MIN_H = 240;
-
-export function applyWidgetResize(
-  start: Electron.Rectangle,
-  edge: WidgetResizeEdge,
-  dx: number,
-  dy: number,
-): Electron.Rectangle {
-  let { x, y, width, height } = start;
-  if (edge.includes('e')) width = Math.max(WIDGET_MIN_W, start.width + dx);
-  if (edge.includes('s')) height = Math.max(WIDGET_MIN_H, start.height + dy);
-  if (edge.includes('w')) {
-    width = Math.max(WIDGET_MIN_W, start.width - dx);
-    x = start.x + (start.width - width);
-  }
-  if (edge.includes('n')) {
-    height = Math.max(WIDGET_MIN_H, start.height - dy);
-    y = start.y + (start.height - height);
-  }
-  return { x, y, width, height };
+  const cursor = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursor);
+  return resolveWidgetBounds(saved, { x: cursor.x, y: cursor.y }, {
+    x: display.workArea.x,
+    y: display.workArea.y,
+    width: display.workArea.width,
+    height: display.workArea.height,
+  });
 }
 
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
+  const displayBounds = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y }).workArea;
+  const clamped = clampToVisibleArea(bounds, screen.getAllDisplays().map((d) => d.workArea), {
+    x: displayBounds.x,
+    y: displayBounds.y,
+    width: displayBounds.width,
+    height: displayBounds.height,
+  });
   const win = new BrowserWindow({
-    ...clampToVisibleArea(bounds),
+    ...clamped,
     minWidth: WIDGET_MIN_W,
     minHeight: WIDGET_MIN_H,
     frame: false,
@@ -237,17 +189,20 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
     webPreferences: secureWebPrefs(),
   });
   // pop-up-menu sits above normal windows while still behaving like an auxiliary tool panel.
+  // macOS behavior unverified on Linux runner
   win.setAlwaysOnTop(true, 'pop-up-menu');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setHiddenInMissionControl(true);
-  win.setFullScreenable(false);
+  if (process.platform === 'darwin') {
+    win.setHiddenInMissionControl(true);
+    win.setFullScreenable(false);
+  }
 
   const persist = () => {
     if (win.isDestroyed()) return;
     settings().set({ lastWidgetBounds: win.getBounds() });
   };
   win.on('moved', () => {
-    snap(win);
+    snapWidgetWindow(win);
     persist();
   });
   win.on('resized', persist);
@@ -280,7 +235,7 @@ export function getOrCreateWidget(): BrowserWindow {
     panelWin.focus();
     return panelWin;
   }
-  panelWin = buildWidgetWindow(resolveWidgetBounds());
+  panelWin = buildWidgetWindow(readWidgetBounds());
   panelWin.on('closed', () => {
     panelWin = null;
   });

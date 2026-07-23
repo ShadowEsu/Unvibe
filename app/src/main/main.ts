@@ -559,7 +559,7 @@ app.whenReady().then(() => {
     if (!win) return;
     win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'pop-up-menu');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    win.setHiddenInMissionControl(true);
+    if (isMac) win.setHiddenInMissionControl(true);
     win.moveTop();
   });
   ipcMain.on('widget:collapse', (e, collapsed: boolean) => {
