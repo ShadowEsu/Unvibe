@@ -9,40 +9,40 @@
 */
 
 :root {
-  --bg: 251 248 250;
-  --surface: 255 253 253;
-  --surface-2: 245 238 253;
-  --fg: 44 34 51;
-  --fg-muted: 109 93 105;
-  --fg-faint: 142 124 137;
-  --line: 231 220 229;
-  --line-strong: 216 198 216;
+  --bg: 15 10 23;
+  --surface: 24 17 34;
+  --surface-2: 35 24 49;
+  --fg: 245 240 249;
+  --fg-muted: 193 179 200;
+  --fg-faint: 150 132 158;
+  --line: 64 48 76;
+  --line-strong: 83 63 98;
 
-  --primary: 111 69 210;
-  --primary-strong: 79 42 169;
-  --primary-soft: 236 226 255;
-  --on-primary: 255 255 255;
+  --primary: 129 140 248;
+  --primary-strong: 165 180 252;
+  --primary-soft: 30 36 58;
+  --on-primary: 12 15 24;
 
-  --blue: 37 99 235;
-  --green: 5 150 105;
-  --orange: 217 119 6;
-  --red: 220 38 38;
+  --blue: 96 165 250;
+  --green: 52 211 153;
+  --orange: 251 191 36;
+  --red: 248 113 113;
 
-  --focus: 79 70 229;
+  --focus: 129 140 248;
 
-  --cream: #fbf7fa;
-  --lavender: #f2ebff;
-  --purple: #6f45d2;
-  --purple-strong: #4f2aa9;
-  --charcoal-purple: #21172f;
-  --ink: #1e172d;
-  --paper: #fffdfd;
-  --page-background: radial-gradient(ellipse 72% 62% at -10% -8%, rgba(255, 183, 112, .48) 0%, rgba(255, 203, 149, .24) 38%, transparent 69%), radial-gradient(ellipse 70% 60% at 106% 105%, rgba(125, 83, 219, .43) 0%, rgba(176, 142, 241, .19) 42%, transparent 72%), #fbf7fa;
-  --hero-background: radial-gradient(ellipse 76% 88% at -18% -12%, rgba(255, 177, 96, .62), transparent 62%), radial-gradient(ellipse 70% 78% at 109% 108%, rgba(130, 84, 220, .52), transparent 63%), linear-gradient(135deg, #ffdfc0, #fff1e5 51%, #dfc9ff);
-  --soft-field: linear-gradient(135deg, #ffd7b0, #fff1e4 50%, #dfc9ff);
-  --feature-field: linear-gradient(135deg, #ffcf9e, #ffe8d1 46%, #d4b8ff);
-  --deep-field: radial-gradient(ellipse 85% 90% at -8% -12%, rgba(123, 71, 220, .70), transparent 60%), radial-gradient(ellipse 78% 85% at 108% 112%, rgba(214, 110, 55, .58), transparent 62%), linear-gradient(135deg, #160c28, #34204b 54%, #53291e);
-  --final-field-bg: linear-gradient(135deg, #4822a5, #714bd3 50%, #b75d35);
+  --cream: #100a19;
+  --lavender: #251834;
+  --purple: #a78bfa;
+  --purple-strong: #c4b5fd;
+  --charcoal-purple: #100a19;
+  --ink: #f2eef9;
+  --paper: #181020;
+  --page-background: radial-gradient(ellipse 78% 58% at -12% -10%, rgba(112, 68, 207, .72) 0%, rgba(112, 68, 207, .26) 34%, transparent 67%), radial-gradient(ellipse 76% 66% at 105% 105%, rgba(202, 109, 57, .48) 0%, rgba(202, 109, 57, .16) 38%, transparent 70%), #100a19;
+  --hero-background: radial-gradient(ellipse 72% 82% at -12% -8%, rgba(124, 73, 220, .48), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(202, 105, 56, .34), transparent 62%), linear-gradient(135deg, #160d25, #25153d 52%, #3c211e);
+  --soft-field: linear-gradient(135deg, rgba(20, 13, 29, .98), rgba(27, 17, 39, .98) 52%, rgba(39, 22, 40, .98));
+  --feature-field: linear-gradient(135deg, #21122d, #291a3d 50%, #3c211e);
+  --deep-field: linear-gradient(135deg, #100a19, #241238 54%, #45241d);
+  --final-field-bg: linear-gradient(135deg, #2e176d, #6343c1 50%, #aa5732);
 
   --font-display: "Newsreader", "Georgia", serif;
   --font-sans: "Inter", system-ui, sans-serif;
