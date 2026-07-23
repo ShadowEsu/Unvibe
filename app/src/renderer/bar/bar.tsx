@@ -57,6 +57,7 @@ function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel
 function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [attached, setAttached] = useState(true);
@@ -74,6 +75,7 @@ function Bar() {
   const actionLockUntil = useRef(0);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = () => {
@@ -116,6 +118,7 @@ function Bar() {
       unsubscribeSettings();
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
+      if (closeAnimationTimer.current) clearTimeout(closeAnimationTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
     };
   }, []);
@@ -128,6 +131,11 @@ function Bar() {
 
   const setPanelExpanded = (next: boolean, withSound = true) => {
     if (next) {
+      if (closeAnimationTimer.current) {
+        clearTimeout(closeAnimationTimer.current);
+        closeAnimationTimer.current = null;
+      }
+      setClosing(false);
       if (expandedRef.current) return;
       expandedRef.current = true;
       setExpanded(true);
@@ -136,9 +144,15 @@ function Bar() {
       return;
     }
     if (!expandedRef.current) return;
-    expandedRef.current = false;
-    setExpanded(false);
-    window.unvibe.setBarExpanded(false);
+    if (closeAnimationTimer.current) return;
+    setClosing(true);
+    closeAnimationTimer.current = setTimeout(() => {
+      expandedRef.current = false;
+      closeAnimationTimer.current = null;
+      setClosing(false);
+      setExpanded(false);
+      window.unvibe.setBarExpanded(false);
+    }, 220);
     if (withSound && soundEnabled) playIslandTone(false, soundVolume, soundStyle);
   };
   const open = () => {
@@ -199,7 +213,7 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
         {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} />{expanded ? <span>Open app</span> : null}</button> : <><div className="strip__wing strip__wing--left">
           <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>

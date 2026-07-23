@@ -62,7 +62,7 @@ const BAR_H = 44;
 const BAR_EXPANDED_W = 620;
 // The drawer contains recent learning, stats, and two actions. Keep transparent
 // window chrome larger than its visual card so no interactive content is clipped.
-const BAR_EXPANDED_H = 368;
+const BAR_EXPANDED_H = 324;
 
 function compactBarWidth(position: BarPosition): number {
   if (position === 'top-center') return TOP_BAR_W;
@@ -110,10 +110,10 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : BAR_H;
   const { x, y } = barBounds(position, width, height);
   win.setFocusable(expanded);
-  // Keep the transparent hit area in sync with the visual surface, but let
-  // macOS interpolate the bounds. An immediate resize made the Island jump
-  // from its compact state to the full panel before the renderer could paint.
-  win.setBounds({ x, y, width, height }, true);
+  // Resize the transparent hit area before the renderer morphs the visible
+  // Island. Animating both native bounds and the CSS surface caused a visible
+  // double-step on macOS; the renderer owns the one continuous visual motion.
+  win.setBounds({ x, y, width, height }, false);
   win.moveTop();
 }
 
