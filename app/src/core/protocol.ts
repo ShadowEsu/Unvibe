@@ -6,6 +6,8 @@
 
 export type ReviewScope = 'selection' | 'file' | 'diff' | 'project';
 export type ExplanationLevel = 'new' | 'beginner' | 'intermediate' | 'advanced' | 'expert';
+/** The learning intent for a comprehension card. It affects the generated question, not the code sent. */
+export type QuizMode = 'quick-check' | 'recall' | 'scenario';
 
 export interface DiffHunk {
   file: string;
@@ -34,6 +36,7 @@ export interface ReviewRequestPayload {
   context: ReviewContext;
   question?: string;
   variant?: 'default' | 'different';
+  quizMode?: QuizMode;
 }
 
 /**

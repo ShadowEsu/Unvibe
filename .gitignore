@@ -8,26 +8,20 @@ out/
 *.vsix
 .next/
 build/
+# app/build holds packaging resources (icon, entitlements) that must stay tracked
 !app/build/
-app/build/*
-!app/build/icon.icns
-!app/build/icon.png
-!app/build/trayTemplate.png
-!app/build/entitlements.mac.plist
-*.tsbuildinfo
+!app/build/**
 
 # Env & secrets (never commit)
 .env
 .env.*
 web/env.local
 !.env.example
-!.env.staging.example
 *.pem
 *.key
 
 # Logs & OS
 *.log
-.release/
 .DS_Store
 
 # Editor

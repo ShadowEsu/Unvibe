@@ -47,4 +47,4 @@ violate these terms.
 ## 11. Governing law
 [JURISDICTION]. [ADD DISPUTE-RESOLUTION LANGUAGE.]
 
-Contact: [support@DOMAIN].
+Contact: support@unvibe.site or preston@unvibe.site.

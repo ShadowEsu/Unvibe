@@ -240,6 +240,21 @@
   cursor: not-allowed;
 }
 
+.activate-btn--google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  color: var(--a-ink);
+  border: 1px solid var(--a-line);
+}
+
+.activate-btn--google:hover:not(:disabled) {
+  filter: none;
+  background: color-mix(in srgb, var(--a-bg) 70%, #fff);
+}
+
 .activate-btn--ghost {
   margin-top: 10px;
   background: transparent;

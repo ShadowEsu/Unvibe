@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <clipPath id="icon-shape"><rect width="1024" height="1024" rx="220"/></clipPath>
+    <radialGradient id="purple" cx="0" cy="0" r="1" gradientTransform="translate(98 42) rotate(38) scale(840 700)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6E43CB"/>
+      <stop offset=".44" stop-color="#6E43CB" stop-opacity=".48"/>
+      <stop offset="1" stop-color="#6E43CB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orange" cx="0" cy="0" r="1" gradientTransform="translate(982 998) rotate(-140) scale(760 670)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B96A39" stop-opacity=".92"/>
+      <stop offset=".5" stop-color="#B96A39" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#B96A39" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blue" cx="0" cy="0" r="1" gradientTransform="translate(530 430) rotate(90) scale(430 500)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2971C4" stop-opacity=".66"/>
+      <stop offset="1" stop-color="#2971C4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g clip-path="url(#icon-shape)">
+    <rect width="1024" height="1024" fill="#110A20"/>
+    <rect width="1024" height="1024" fill="url(#purple)"/>
+    <rect width="1024" height="1024" fill="url(#orange)"/>
+    <rect width="1024" height="1024" fill="url(#blue)"/>
+  </g>
+  <g fill="none" stroke="#07040C" stroke-opacity=".3" stroke-width="2.35" stroke-linejoin="round" stroke-linecap="round" transform="translate(529 529) scale(27) translate(-12 -12)">
+    <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z"/>
+    <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4"/>
+  </g>
+  <g fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" transform="translate(512 507) scale(27) translate(-12 -12)">
+    <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z"/>
+    <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4"/>
+  </g>
+</svg>

@@ -48,4 +48,4 @@ You can delete your account and all associated data at any time from Settings â†
 
 ## Contact
 
-Questions about this policy: **hello@unvibe.app**
+Questions about this policy: **support@unvibe.site** or **preston@unvibe.site**

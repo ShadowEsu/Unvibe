@@ -10,16 +10,30 @@ import {
   Menu,
   Tray,
   clipboard,
+  dialog,
   globalShortcut,
   ipcMain,
   nativeImage,
+  screen,
   shell,
   systemPreferences,
 } from 'electron';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createBar, createCompanion, createWidget, positionBar } from './windows';
+import {
+  applyWidgetResize,
+  createBar,
+  createCompanion,
+  currentWidget,
+  getOrCreateWidget,
+  hideBar,
+  positionBar,
+  resizeBar,
+  showBar,
+  type WidgetResizeEdge,
+} from './windows';
 import { captureSelection, frontmostApp, startFrontmostWatch } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
 import {
@@ -27,11 +41,14 @@ import {
   runReview,
   startComprehension,
   gradeComprehension,
+  markUnderstood,
+  applyBuiltReview,
   type ReviewSession,
   type RequestOpts,
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
+import { trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
   signIn,
@@ -41,10 +58,31 @@ import {
   startDeviceAuth,
   redeemDeviceAuth,
   accountInfo,
+  billingOverview,
+  startBillingCheckout,
+  startBillingPortal,
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
-import { computeProfile, computeFeed, localDayKey } from '../core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
+import { resolveAppUsage } from './usage';
+import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
+import {
+  costOverview,
+  guessProviderFromKey,
+  listLocalAiProviders,
+  normalizeLocalAiProvider,
+  type LocalAiProviderId,
+} from './localAi';
+import {
+  buildComparePayload,
+  buildDiffPayload,
+  buildSelectionPayload,
+  isProPlan,
+  resolveRepoRoot,
+} from './contextBuilder';
+import { answerQuizCard, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
+import { integrationStatus } from './integrations';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -62,8 +100,115 @@ let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
 let devicePoll: NodeJS.Timeout | null = null;
-const sessions = new Map<number, ReviewSession>();
+/** Per-tab review sessions inside the single shared panel. */
+const tabSessions = new Map<string, ReviewSession>();
+let activeTabId = '1';
+let panelReady = false;
 const normalBounds = new Map<number, Electron.Rectangle>();
+
+function makeSession(
+  tabId: string,
+  code: string | null,
+  sourceApp: string | null,
+  level: ExplanationLevel = settings().all().defaultExplanationLevel,
+): ReviewSession {
+  return {
+    reviewId: randomUUID(),
+    tabId,
+    code,
+    sourceApp,
+    abort: null,
+    recorded: false,
+    level,
+    onRecorded: () => notify('Added to your learning history'),
+    onUnderstood: () => notify('Nice — concept understood'),
+  };
+}
+
+function sessionFor(tabId = activeTabId): ReviewSession | undefined {
+  return tabSessions.get(tabId);
+}
+
+function clearPanelSessions(): void {
+  for (const session of tabSessions.values()) session.abort?.abort();
+  tabSessions.clear();
+  activeTabId = '1';
+  panelReady = false;
+}
+
+function beginCaptureOnActiveTab(
+  win: BrowserWindow,
+  code: string | null,
+  sourceApp: string | null,
+): void {
+  const prev = sessionFor(activeTabId);
+  prev?.abort?.abort();
+  const session = makeSession(activeTabId, code, sourceApp, prev?.level ?? 'intermediate');
+  tabSessions.set(activeTabId, session);
+  if (!panelReady) return;
+  // No selection → calm picker UI (never auto-error / auto-run).
+  initWidget(win, session, { autoStart: Boolean(code) });
+  if (code) void runReview(win, session, { level: session.level });
+}
+
+const MAX_PICK_BYTES = 200_000;
+
+function loadCodeIntoSession(
+  win: BrowserWindow,
+  session: ReviewSession,
+  code: string,
+  sourceLabel: string | null,
+  level?: ExplanationLevel,
+  meta?: { file?: string; project?: string; sourceFilePath?: string },
+): void {
+  session.abort?.abort();
+  session.code = code;
+  session.sourceApp = sourceLabel;
+  session.recorded = false;
+  session.reviewId = randomUUID();
+  session.payload = undefined;
+  session.mode = 'selection';
+  session.file = meta?.file;
+  session.project = meta?.project;
+  session.sourceFilePath = meta?.sourceFilePath;
+  session.snapshotText = meta?.sourceFilePath ? code.slice(0, 12_000) : undefined;
+  if (level) session.level = level;
+  initWidget(win, session, { autoStart: true });
+  void runReview(win, session, { level: session.level });
+}
+
+async function requireProOrError(win: BrowserWindow, session: ReviewSession, feature: string): Promise<boolean> {
+  const usage = await resolveAppUsage();
+  if (isProPlan(usage.plan)) return true;
+  win.webContents.send('review:event', {
+    type: 'error',
+    tabId: session.tabId,
+    code: 'pro_required',
+    upgradePath: '/plan',
+    message: `${feature} is included with Unvibe Pro. Pro connects explanations across diffs, nearby files, and what you already understood.`,
+  });
+  return false;
+}
+
+async function startBuiltReview(
+  win: BrowserWindow,
+  session: ReviewSession,
+  builder: () => Promise<Parameters<typeof applyBuiltReview>[1]>,
+  sourceLabel: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const built = await builder();
+    session.abort?.abort();
+    session.sourceApp = sourceLabel;
+    session.reviewId = randomUUID();
+    applyBuiltReview(session, built);
+    initWidget(win, session, { autoStart: true });
+    void runReview(win, session, { level: session.level });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Could not start that review.' };
+  }
+}
 
 onSyncStatus((status) => {
   if (companion && !companion.isDestroyed()) companion.webContents.send('sync:status', status);
@@ -88,6 +233,9 @@ function accessibilityGranted(prompt = false): boolean {
   return systemPreferences.isTrustedAccessibilityClient(prompt);
 }
 
+/** At most one Accessibility Settings open per session from the shortcut path. */
+let accessibilitySettingsOpenedThisSession = false;
+
 function openCompanion(): void {
   if (companion && !companion.isDestroyed()) {
     companion.show();
@@ -108,32 +256,42 @@ function asset(...parts: string[]): string {
 
 async function startReview(): Promise<void> {
   broadcastShortcut();
-  if (isMac && !accessibilityGranted(false)) {
-    accessibilityGranted(true);
-    if (!accessibilityGranted(false)) {
-      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
-      openCompanion();
-      notify('Turn on Accessibility for Unvibe so selection works');
+  // ⌘U must only raise the aisle + explanation panel — never System Settings.
+  // Never call isTrustedAccessibilityClient(true) here: prompt=true re-opens the
+  // macOS permission UI even when the user already toggled Accessibility on.
+  if (isMac && !accessibilityGranted(false) && !accessibilitySettingsOpenedThisSession) {
+    accessibilitySettingsOpenedThisSession = true;
+    notify('Enable Accessibility for Unvibe in System Settings, then quit and reopen Unvibe');
+  }
+  // Aisle + review panel only appear when you invoke a review (⌘U / start).
+  showBar(bar);
+  // captureSelection restores/focuses the app that held the selection, so read the source
+  // afterwards rather than racing the synthetic ⌘C operation.
+  const code = await captureSelection();
+  const sourceApp = await frontmostApp();
+  if (code && trialBuildEnabled()) {
+    const quota = store().consumeBetaSelectedCodePrompt();
+    if (!quota.ok) {
+      notify('Private beta limit reached: 30 selected-code prompts this month. Your saved learning is still available.');
+      return;
     }
   }
-  const [code, sourceApp] = await Promise.all([captureSelection(), frontmostApp()]);
-  const win = createWidget();
-  const session: ReviewSession = {
-    reviewId: randomUUID(),
-    code,
-    sourceApp,
-    abort: null,
-    recorded: false,
-    level: 'intermediate',
-    onRecorded: () => notify('Added to your learning history'),
-    onUnderstood: () => notify('Nice — concept understood'),
-  };
-  sessions.set(win.webContents.id, session);
-  win.on('closed', () => {
-    session.abort?.abort();
-    sessions.delete(win.webContents.id);
-    normalBounds.delete(win.id);
-  });
+  const existing = currentWidget();
+  const win = getOrCreateWidget();
+  const windowId = win.id;
+  if (!existing) {
+    // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
+    clearPanelSessions();
+    activeTabId = '1';
+    tabSessions.set(activeTabId, makeSession(activeTabId, code, sourceApp));
+    win.on('closed', () => {
+      clearPanelSessions();
+      normalBounds.delete(windowId);
+      if (settings().all().barVisibility === 'during-review') hideBar(bar);
+    });
+    return;
+  }
+  beginCaptureOnActiveTab(win, code, sourceApp);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -152,6 +310,8 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 app.setName('Unvibe');
 
 app.whenReady().then(() => {
+  // A UI/settings migration may re-show setup, but an app update must never erase learning.
+  settings().takeFreshStart();
   store();
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
@@ -159,7 +319,11 @@ app.whenReady().then(() => {
   startFrontmostWatch();
 
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
-  if (isMac && !dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
+  if (isMac) {
+    // Keep Unvibe in the Dock / Cmd-Tab list (not a menu-bar-only accessory).
+    app.dock?.show();
+    if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
+  }
 
   let trayImage = nativeImage.createFromPath(asset('trayTemplate.png'));
   if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
@@ -169,88 +333,296 @@ app.whenReady().then(() => {
   tray.setToolTip('Unvibe');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Review selection', click: () => void startReview() },
+      { label: 'Explain selected code', click: () => void startReview() },
       { label: 'Open Unvibe', click: openCompanion },
+      { type: 'separator' },
+      { label: 'Show learning island', click: () => showBar(bar) },
+      { label: 'Hide learning island', click: () => hideBar(bar) },
       { type: 'separator' },
       { label: 'Quit Unvibe', role: 'quit' },
     ]),
   );
+  tray.on('click', () => openCompanion());
 
   bar = createBar();
   setBar(bar);
-  if (bar && !bar.isDestroyed()) {
-    bar.showInactive();
-    positionBar(bar);
-  }
+  positionBar(bar);
+  if (s.onboarded && s.barVisibility === 'always') showBar(bar);
+  else hideBar(bar);
+
+  // Keep the learning strip correctly placed and above full-screen Spaces after display changes.
+  const restoreFloatingWindows = () => {
+    if (bar && !bar.isDestroyed() && bar.isVisible()) showBar(bar);
+    const panel = currentWidget();
+    if (!panel || panel.isDestroyed()) return;
+    panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    panel.moveTop();
+  };
+  screen.on('display-added', restoreFloatingWindows);
+  screen.on('display-removed', restoreFloatingWindows);
+  screen.on('display-metrics-changed', restoreFloatingWindows);
   registerShortcut(s.shortcut);
-  // Always open the companion home window and keep the bottom bar visible on launch.
+  // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
 
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
   ipcMain.on('bar:openCompanion', () => openCompanion());
+  ipcMain.on('bar:setExpanded', (_e, expanded: boolean) => {
+    // Click and keyboard expansion remain available when hover expansion is off.
+    // The renderer decides whether a pointer entering the Island requests this.
+    resizeBar(bar, Boolean(expanded));
+  });
+  ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
+    if (!bar || bar.isDestroyed()) return;
+    Menu.buildFromTemplate([
+      { label: 'Explain selected code', click: () => void startReview() },
+      ...(state.hasRecent ? [{ label: 'Open last explanation', click: openCompanion }] : []),
+      { type: 'separator' },
+      { label: 'Open Unvibe', click: openCompanion },
+      { label: 'Hide Island', click: () => hideBar(bar) },
+      { type: 'separator' },
+      { label: 'Quit Unvibe', role: 'quit' },
+    ]).popup({ window: bar });
+  });
+  ipcMain.handle('bar:snapshot', () => {
+    const recent = computeLearningItems(store().events(), 1)[0];
+    const profile = computeProfile(store().events(), todayKey());
+    return {
+      shortcut: settings().all().shortcut,
+      recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
+      streak: profile.streak,
+      explanations: profile.reviews,
+      understood: profile.understood,
+      needsReview: profile.needsReview,
+      linesUnderstood: profile.linesUnderstood,
+      conceptsSeen: profile.conceptsSeen,
+      conceptsStrong: profile.conceptsStrong,
+      usage: profile.usage[0] ?? null,
+      heat: profile.heat.slice(-14),
+    };
+  });
   ipcMain.on('companion:review', () => void startReview());
 
-  // --- widget lifecycle ---
+  // --- widget lifecycle (single panel + tabs) ---
   ipcMain.on('widget:ready', (e) => {
     const win = widgetOf(e);
-    const session = sessions.get(e.sender.id);
-    if (!win || !session) return;
-    initWidget(win, session);
+    if (!win) return;
+    panelReady = true;
+    const session = sessionFor(activeTabId);
+    if (!session) return;
+    initWidget(win, session, { autoStart: Boolean(session.code) });
+    if (session.code) void runReview(win, session, { level: session.level });
+  });
+  ipcMain.on('widget:setActiveTab', (_e, tabId: string) => {
+    if (typeof tabId !== 'string' || !tabId) return;
+    activeTabId = tabId;
+    if (!tabSessions.has(tabId)) tabSessions.set(tabId, makeSession(tabId, null, null));
+  });
+  ipcMain.on('widget:addTab', (e, tabId: string) => {
+    const win = widgetOf(e);
+    if (!win || typeof tabId !== 'string' || !tabId) return;
+    activeTabId = tabId;
+    const session = makeSession(tabId, null, null);
+    tabSessions.set(tabId, session);
+    initWidget(win, session, { autoStart: false });
+  });
+  ipcMain.on('widget:closeTab', (e, tabId: string) => {
+    const win = widgetOf(e);
+    if (!win || typeof tabId !== 'string') return;
+    const closing = tabSessions.get(tabId);
+    closing?.abort?.abort();
+    tabSessions.delete(tabId);
+    if (tabSessions.size === 0) {
+      win.close();
+      return;
+    }
+    if (activeTabId === tabId) {
+      activeTabId = [...tabSessions.keys()][0]!;
+      const next = sessionFor(activeTabId);
+      if (next) initWidget(win, next, { autoStart: false });
+    }
   });
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
-    const session = sessions.get(e.sender.id);
+    const session = sessionFor(activeTabId);
     if (win && session) void runReview(win, session, opts);
   });
   ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessions.get(e.sender.id);
+    const session = sessionFor(activeTabId);
     if (!win || !session) return;
-    const text = clipboard.readText();
-    session.code = text.length > 0 ? text : null;
-    session.recorded = false;
-    if (opts?.level) session.level = opts.level;
-    initWidget(win, session);
+    const text = clipboard.readText().trim();
+    if (!text) {
+      // Stay on the calm picker — don't surface an error.
+      initWidget(win, session, { autoStart: false });
+      return;
+    }
+    loadCodeIntoSession(win, session, text, 'Clipboard', opts?.level);
+  });
+  ipcMain.handle('widget:pickFile', async (e, opts?: { level?: ExplanationLevel }) => {
+    const win = widgetOf(e);
+    const session = sessionFor(activeTabId);
+    if (!win || !session) return { ok: false as const };
+    const picked = await dialog.showOpenDialog(win, {
+      title: 'Choose a file to explain',
+      message: 'Pick a source file from your project',
+      properties: ['openFile'],
+      filters: [
+        {
+          name: 'Code',
+          extensions: [
+            'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'kt', 'swift',
+            'c', 'cc', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'md', 'json', 'css', 'scss',
+            'html', 'sql', 'sh', 'zsh', 'yml', 'yaml', 'toml',
+          ],
+        },
+        { name: 'All files', extensions: ['*'] },
+      ],
+    });
+    if (picked.canceled || !picked.filePaths[0]) return { ok: false as const, cancelled: true as const };
+    const filePath = picked.filePaths[0];
+    let text: string;
+    try {
+      const buf = await readFile(filePath);
+      if (buf.byteLength > MAX_PICK_BYTES) {
+        return { ok: false as const, error: 'That file is a bit large — pick a smaller source file (under ~200KB).' };
+      }
+      text = buf.toString('utf8').trim();
+    } catch {
+      return { ok: false as const, error: 'Could not read that file.' };
+    }
+    if (!text) return { ok: false as const, error: 'That file looks empty.' };
+    const root = await resolveRepoRoot(path.dirname(filePath));
+    const rel = root ? path.relative(root, filePath) : path.basename(filePath);
+    const usage = await resolveAppUsage();
+    try {
+      const built = await buildSelectionPayload({
+        code: text,
+        level: opts?.level ?? session.level,
+        filePath,
+        repoRoot: root,
+        withNearby: isProPlan(usage.plan),
+      });
+      session.abort?.abort();
+      session.sourceApp = path.basename(filePath);
+      session.reviewId = randomUUID();
+      applyBuiltReview(session, built);
+      session.file = rel;
+      session.project = built.project;
+      initWidget(win, session, { autoStart: true });
+      void runReview(win, session, { level: session.level });
+    } catch {
+      loadCodeIntoSession(win, session, text, path.basename(filePath), opts?.level, {
+        file: rel,
+        project: root ? path.basename(root) : undefined,
+        sourceFilePath: filePath,
+      });
+    }
+    return { ok: true as const };
+  });
+  ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {
+    const win = widgetOf(e);
+    const session = sessionFor(activeTabId);
+    if (!win || !session) return;
+    const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
+    if (!text) {
+      initWidget(win, session, { autoStart: false });
+      return;
+    }
+    loadCodeIntoSession(win, session, text, 'Pasted code', payload?.level);
   });
   ipcMain.on('widget:cancel', (e) => {
     const win = widgetOf(e);
-    const session = sessions.get(e.sender.id);
+    const session = sessionFor(activeTabId);
     if (!win || !session) return;
     session.abort?.abort();
-    win.webContents.send('review:event', { type: 'cancelled' });
+    win.webContents.send('review:event', { type: 'cancelled', tabId: session.tabId });
   });
   ipcMain.on('widget:testMe', (e) => {
     const win = widgetOf(e);
-    const session = sessions.get(e.sender.id);
+    const session = sessionFor(activeTabId);
     if (win && session) void startComprehension(win, session);
   });
   ipcMain.on('widget:answer', (e, choice: number) => {
     const win = widgetOf(e);
-    const session = sessions.get(e.sender.id);
+    const session = sessionFor(activeTabId);
     if (win && session) gradeComprehension(win, session, choice);
+  });
+  ipcMain.on('widget:gotIt', (e) => {
+    const win = widgetOf(e);
+    const session = sessionFor(activeTabId);
+    if (win && session) markUnderstood(win, session);
   });
   ipcMain.on('widget:pin', (e, pinned: boolean) => {
     const win = widgetOf(e);
     if (!win) return;
-    win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'floating');
-    win.setVisibleOnAllWorkspaces(pinned, { visibleOnFullScreen: pinned });
+    win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'pop-up-menu');
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setHiddenInMissionControl(true);
+    win.moveTop();
   });
   ipcMain.on('widget:collapse', (e, collapsed: boolean) => {
     const win = widgetOf(e);
     if (!win) return;
+    endWidgetResize();
     if (collapsed) {
       normalBounds.set(win.id, win.getBounds());
-      win.setResizable(false);
       win.setBounds({ ...win.getBounds(), height: 52 });
     } else {
       const prev = normalBounds.get(win.id);
-      win.setResizable(true);
       if (prev) win.setBounds(prev);
     }
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
+
+  // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
+  let resizeTick: ReturnType<typeof setInterval> | null = null;
+  let resizeSession: {
+    win: BrowserWindow;
+    edge: WidgetResizeEdge;
+    startBounds: Electron.Rectangle;
+    startCursor: Electron.Point;
+  } | null = null;
+  const endWidgetResize = () => {
+    if (resizeTick) {
+      clearInterval(resizeTick);
+      resizeTick = null;
+    }
+    if (resizeSession && !resizeSession.win.isDestroyed()) {
+      settings().set({ lastWidgetBounds: resizeSession.win.getBounds() });
+    }
+    resizeSession = null;
+  };
+  ipcMain.on('widget:resizeStart', (e, edge: WidgetResizeEdge) => {
+    const win = widgetOf(e);
+    if (!win || win.isDestroyed()) return;
+    const ok: WidgetResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    if (!ok.includes(edge)) return;
+    endWidgetResize();
+    resizeSession = {
+      win,
+      edge,
+      startBounds: win.getBounds(),
+      startCursor: screen.getCursorScreenPoint(),
+    };
+    resizeTick = setInterval(() => {
+      if (!resizeSession || resizeSession.win.isDestroyed()) {
+        endWidgetResize();
+        return;
+      }
+      const cur = screen.getCursorScreenPoint();
+      const next = applyWidgetResize(
+        resizeSession.startBounds,
+        resizeSession.edge,
+        cur.x - resizeSession.startCursor.x,
+        cur.y - resizeSession.startCursor.y,
+      );
+      resizeSession.win.setBounds(next, false);
+    }, 16);
+  });
+  ipcMain.on('widget:resizeEnd', () => endWidgetResize());
 
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
@@ -260,6 +632,137 @@ app.whenReady().then(() => {
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
+  ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
+  ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
+  ipcMain.handle('learning:item', (_e, id: string) => {
+    const event = store().eventById(id);
+    if (!event) return null;
+    return computeLearningItems([event], 1)[0] ?? null;
+  });
+  ipcMain.handle('study:askStatus', () => studyAskStatus());
+  ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string }) => askStudyAssistant(input));
+  ipcMain.handle('quiz:status', () => quizCardStatus());
+  ipcMain.handle('quiz:start', (_e, input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) =>
+    startQuizCard(input.eventId, input.mode),
+  );
+  ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
+
+  ipcMain.handle('project:pickRoot', async () => {
+    const picked = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+    const root = await resolveRepoRoot(picked.filePaths[0]);
+    if (!root) return { ok: false, error: 'That folder is not a git repository.' };
+    return { ok: true, root };
+  });
+
+  ipcMain.handle('review:explainDiff', async (e, opts?: { brief?: boolean; level?: ExplanationLevel }) => {
+    const win = widgetOf(e) ?? getOrCreateWidget();
+    showBar(bar);
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level ?? 'intermediate');
+    tabSessions.set(activeTabId, session);
+    if (opts?.level) session.level = opts.level;
+    let root = await resolveRepoRoot();
+    if (!root) {
+      const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
+      if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+      root = await resolveRepoRoot(picked.filePaths[0]);
+    }
+    if (!root) return { ok: false, error: 'Pick a git repository to explain changes.' };
+    const brief = Boolean(opts?.brief);
+    const feature = brief ? 'Agent change briefs' : 'Git diff explanations';
+    if (!(await requireProOrError(win, session, feature))) {
+      return { ok: false, error: 'Pro required' };
+    }
+    return startBuiltReview(
+      win,
+      session,
+      () => buildDiffPayload({ repoRoot: root!, level: session.level, mode: brief ? 'brief' : 'diff' }),
+      brief ? 'Agent brief' : 'Git diff',
+    );
+  });
+
+  ipcMain.handle('review:explainCompare', async (e, opts?: { level?: ExplanationLevel }) => {
+    const win = widgetOf(e) ?? getOrCreateWidget();
+    showBar(bar);
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level ?? 'intermediate');
+    tabSessions.set(activeTabId, session);
+    if (opts?.level) session.level = opts.level;
+    if (!(await requireProOrError(win, session, 'Since last understood'))) {
+      return { ok: false, error: 'Pro required' };
+    }
+    const picked = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      title: 'Choose a file to compare with what you last understood',
+    });
+    if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+    return startBuiltReview(
+      win,
+      session,
+      () => buildComparePayload({ filePath: picked.filePaths[0]!, level: session.level }),
+      'Compare',
+    );
+  });
+
+  ipcMain.handle('review:reopenItem', async (_e, item: { id?: string; file?: string; project?: string; level?: string }) => {
+    const win = getOrCreateWidget();
+    showBar(bar);
+    const level = (item.level as ExplanationLevel) || 'intermediate';
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, level);
+    session.level = level;
+    tabSessions.set(activeTabId, session);
+    const saved = item.id ? store().eventById(item.id) : undefined;
+    const savedCode = saved?.code?.trim();
+
+    const openFromCode = async (code: string, filePath?: string, repoRoot?: string | null) => {
+      if (code.length > MAX_PICK_BYTES) return { ok: false as const, error: 'That lesson is too large to reopen here.' };
+      const usage = await resolveAppUsage();
+      const built = await buildSelectionPayload({
+        code,
+        level: session.level,
+        filePath,
+        repoRoot: repoRoot ?? undefined,
+        withNearby: isProPlan(usage.plan),
+      });
+      applyBuiltReview(session, built);
+      session.sourceApp = 'Study';
+      session.reviewId = randomUUID();
+      initWidget(win, session, { autoStart: true });
+      void runReview(win, session, { level: session.level });
+      return { ok: true as const };
+    };
+
+    if (!item.file && savedCode) {
+      return openFromCode(savedCode, saved?.file);
+    }
+    if (!item.file) {
+      beginCaptureOnActiveTab(win, null, null);
+      return { ok: true };
+    }
+    let root = await resolveRepoRoot();
+    if (item.project && (!root || path.basename(root) !== item.project)) {
+      const picked = await dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: `Locate project “${item.project}”`,
+      });
+      if (picked.canceled || !picked.filePaths[0]) {
+        if (savedCode) return openFromCode(savedCode, item.file);
+        return { ok: false, cancelled: true };
+      }
+      root = await resolveRepoRoot(picked.filePaths[0]);
+      if (!root || (item.project && path.basename(root) !== item.project)) {
+        if (savedCode) return openFromCode(savedCode, item.file);
+        return { ok: false, error: `That folder does not look like the “${item.project}” project.` };
+      }
+    }
+    const abs = root ? path.join(root, item.file) : item.file;
+    try {
+      const text = await readFile(abs, 'utf8');
+      return openFromCode(text, abs, root);
+    } catch {
+      if (savedCode) return openFromCode(savedCode, item.file, root);
+      return { ok: false, error: 'Could not reopen that file. Open Study again and locate the project folder when prompted.' };
+    }
+  });
   ipcMain.handle('sync:status', () => syncStatus());
   ipcMain.handle('sync:retry', async () => {
     await retrySync();
@@ -268,6 +771,7 @@ app.whenReady().then(() => {
 
   // --- settings ---
   ipcMain.handle('settings:get', () => settings().all());
+  ipcMain.handle('integrations:status', () => integrationStatus());
   ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
     const before = settings().all().shortcut;
     const next = settings().set(patch);
@@ -279,13 +783,38 @@ app.whenReady().then(() => {
         return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
       }
     }
-    if (patch.barPosition && bar && !bar.isDestroyed()) positionBar(bar);
+    if (patch.barPosition && bar && !bar.isDestroyed()) {
+      resizeBar(bar, false, true);
+      bar.webContents.send('bar:collapse');
+      positionBar(bar);
+    } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
+      positionBar(bar);
+    }
+    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+      bar.webContents.send('bar:settings', {
+        barPosition: next.barPosition,
+        barHoverPreview: next.barHoverPreview,
+        barHoverDelayMs: next.barHoverDelayMs,
+        rotateIslandStats: next.rotateIslandStats,
+        soundEffects: next.soundEffects,
+        soundVolume: next.soundVolume,
+        soundStyle: next.soundStyle,
+      });
+    }
+    if (patch.barVisibility && bar && !bar.isDestroyed()) {
+      if (next.barVisibility === 'always' && next.onboarded) showBar(bar);
+      else if (!currentWidget()) hideBar(bar);
+    }
+    if (patch.barHoverPreview === false) {
+      resizeBar(bar, false);
+      if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
+    }
     return { settings: settings().all() };
   });
 
   // --- external links ---
   ipcMain.handle('app:openPrivacy', () => {
-    void shell.openExternal('https://unvibe.app/privacy');
+    void shell.openExternal('https://unvibe.site/privacy');
     return { ok: true };
   });
 
@@ -299,10 +828,54 @@ app.whenReady().then(() => {
   });
 
   // --- onboarding ---
-  ipcMain.handle('onboarding:complete', () => settings().set({ onboarded: true }));
+  ipcMain.handle('onboarding:complete', () => {
+    const next = settings().set({ onboarded: true });
+    if (next.barVisibility === 'always') showBar(bar);
+    return next;
+  });
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
+  ipcMain.handle('billing:overview', async () => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in to view your plan and cloud usage.' };
+    try { return { ok: true, data: await billingOverview(token) }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load plan.' }; }
+  });
+  ipcMain.handle('usage:get', async () => {
+    try { return { ok: true, data: await resolveAppUsage() }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load usage.' }; }
+  });
+  ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));
+  ipcMain.handle('ai:setKey', (_e, key: string) => {
+    try {
+      const trimmed = String(key ?? '');
+      writeAiKey(trimmed);
+      const guessed = guessProviderFromKey(trimmed);
+      if (guessed) settings().set({ aiProvider: guessed });
+      return { ok: true, data: aiKeyStatus(), provider: settings().all().aiProvider };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Could not save the API key.' };
+    }
+  });
+  ipcMain.handle('ai:clearKey', () => { clearAiKey(); return { ok: true, data: aiKeyStatus() }; });
+  ipcMain.handle('ai:models', () => ({ ok: true, data: listLocalAiProviders() }));
+  ipcMain.handle('ai:costOverview', (_e, provider?: LocalAiProviderId) => {
+    const id = normalizeLocalAiProvider(provider ?? settings().all().aiProvider);
+    return { ok: true, data: costOverview(id) };
+  });
+  ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }) => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in before starting checkout.' };
+    try { const url = await startBillingCheckout(token, input); await shell.openExternal(url); return { ok: true }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Checkout could not start.' }; }
+  });
+  ipcMain.handle('billing:portal', async (_e, workspaceId: string) => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in before managing billing.' };
+    try { const url = await startBillingPortal(token, workspaceId); await shell.openExternal(url); return { ok: true }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Billing could not open.' }; }
+  });
   ipcMain.handle('account:signIn', async (_e, email: string) => {
     try {
       const acct = await signIn(email);
@@ -326,7 +899,8 @@ app.whenReady().then(() => {
   ipcMain.handle('account:startDevice', async () => {
     try {
       const device = await startDeviceAuth();
-      void shell.openExternal(`${device.verificationUri}?code=${encodeURIComponent(device.userCode)}`);
+      // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
+      void shell.openExternal(`${device.verificationUri}?user_code=${encodeURIComponent(device.userCode)}`);
       if (devicePoll) clearInterval(devicePoll);
       const expires = Date.now() + 10 * 60_000;
       devicePoll = setInterval(() => void (async () => {
@@ -380,19 +954,22 @@ app.whenReady().then(() => {
         error: `The remote account was deleted, but local cleanup failed. ${err instanceof Error ? err.message : ''}`.trim(),
       };
     }
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (sessions.has(win.webContents.id) && !win.isDestroyed()) win.close();
-    }
-    sessions.clear();
+    const panel = currentWidget();
+    if (panel && !panel.isDestroyed()) panel.close();
+    clearPanelSessions();
     return { ok: true };
   });
 });
 
 app.on('browser-window-focus', () => void flush());
+app.on('activate', () => {
+  // Dock / Cmd-Tab selection — bring the home window back.
+  openCompanion();
+});
 app.on('will-quit', () => {
   stopSync();
   globalShortcut.unregisterAll();
 });
 app.on('window-all-closed', () => {
-  /* keep the agent alive — this is a menu-bar utility */
+  /* keep the agent alive — tray + dock stay until Quit */
 });

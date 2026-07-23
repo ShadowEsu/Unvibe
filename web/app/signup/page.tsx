@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +22,7 @@ export default function SignupPage() {
         setError(data.error ?? 'Sign-up failed.');
         return;
       }
-      router.push('/');
+      window.location.assign('/');
     } catch {
       setError('Could not reach the service.');
     } finally {

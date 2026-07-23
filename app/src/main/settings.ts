@@ -5,41 +5,92 @@
 import { app } from 'electron';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
+import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
+export type BarVisibility = 'always' | 'during-review';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+/** Bump when a release should re-show onboarding for existing installs. */
+const SETTINGS_REVISION = 7;
+
 export interface Settings {
+  /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
+  settingsRevision?: number;
+  /** Internal — migrates the former system-default appearance to dark once. */
+  appearanceRevision?: number;
   onboarded: boolean;
   /** Electron accelerator. Default is ⌘U. */
   shortcut: string;
   barPosition: BarPosition;
+  /** Keep the learning strip available between reviews, or only show it during a review. */
+  barVisibility: BarVisibility;
+  /** Expand the learning strip into a small recent-learning preview on hover. */
+  barHoverPreview: boolean;
+  /** Intent delay before a pointer opens the Island (120–600ms). */
+  barHoverDelayMs: number;
+  /** Cycle compact Island learning stats automatically. */
+  rotateIslandStats: boolean;
+  /** Follow the display under the pointer when positioning the learning strip. */
+  followActiveDisplay: boolean;
+  /** Locally synthesized UI cues. Never records or plays remote audio. */
+  soundEffects: boolean;
+  /** Local UI-sound gain (0–1). */
+  soundVolume: number;
+  /** A restrained synthesized voice; no remote audio is used. */
+  soundStyle: 'soft' | 'pixel';
   /** Opacity of an unfocused, unpinned widget (0.35–1). */
   widgetOpacityInactive: number;
   inactiveBehavior: InactiveBehavior;
   launchAtLogin: boolean;
   theme: ThemePreference;
+  /** Starting depth for new explanations. Users can still change it in every review. */
+  defaultExplanationLevel: ExplanationLevel;
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
+  /** Prefer the user's own local API key instead of Unvibe cloud AI. */
+  useOwnAi: boolean;
+  /** Provider for local BYOK calls (cheap default model per provider). */
+  aiProvider: LocalAiProviderId;
+  /** @deprecated Legacy field — migrated into aiProvider. */
+  aiModel?: string;
+  /** Last folder used for git-diff / nearby-file Pro features. */
+  lastProjectRoot?: string;
 }
 
 const DEFAULTS: Settings = {
+  settingsRevision: SETTINGS_REVISION,
+  appearanceRevision: 1,
   onboarded: false,
   shortcut: 'CommandOrControl+U',
-  barPosition: 'bottom-center',
+  barPosition: 'top-center',
+  barVisibility: 'always',
+  barHoverPreview: true,
+  barHoverDelayMs: 220,
+  rotateIslandStats: true,
+  followActiveDisplay: true,
+  soundEffects: true,
+  soundVolume: 0.3,
+  soundStyle: 'soft',
   widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
-  theme: 'system',
+  theme: 'dark',
+  defaultExplanationLevel: 'intermediate',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
+  useOwnAi: false,
+  aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
 };
 
 class SettingsStore {
   private data: Settings;
   private file: string;
+  /** True once after a SETTINGS_REVISION bump so setup can be refreshed without deleting learning. */
+  private freshStart = false;
 
   constructor() {
     this.file = path.join(app.getPath('userData'), 'unvibe-settings.json');
@@ -49,11 +100,43 @@ class SettingsStore {
     } catch {
       /* first run */
     }
-    this.data = { ...DEFAULTS, ...loaded, quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours } };
+    const needsOnboardingReset = (loaded.settingsRevision ?? 0) < SETTINGS_REVISION;
+    const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
+      (loaded.theme === undefined || loaded.theme === 'system');
+    this.freshStart = needsOnboardingReset;
+    const aiProvider = normalizeLocalAiProvider(
+      loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
+    );
+    this.data = {
+      ...DEFAULTS,
+      ...loaded,
+      quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
+      aiProvider,
+      settingsRevision: SETTINGS_REVISION,
+      appearanceRevision: 1,
+      ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
+      ...(needsOnboardingReset
+        ? {
+            onboarded: false,
+            // Fresh panel size for the new onboarding cohort.
+            lastWidgetBounds: undefined,
+          }
+        : {}),
+    };
+    if (needsOnboardingReset) delete this.data.lastWidgetBounds;
+    delete this.data.aiModel;
+    if (needsOnboardingReset || needsDarkDefault || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
     return this.data;
+  }
+
+  /** Consume the one-shot migration flag. Learning/account data must remain untouched. */
+  takeFreshStart(): boolean {
+    const v = this.freshStart;
+    this.freshStart = false;
+    return v;
   }
 
   private persist(): void {
@@ -66,7 +149,28 @@ class SettingsStore {
   }
 
   set(patch: Partial<Settings>): Settings {
-    this.data = { ...this.data, ...patch, quietHours: { ...this.data.quietHours, ...patch.quietHours } };
+    const nextProvider = patch.aiProvider !== undefined
+      ? normalizeLocalAiProvider(patch.aiProvider)
+      : patch.aiModel !== undefined
+        ? normalizeLocalAiProvider(patch.aiModel)
+        : undefined;
+    const hoverDelay = patch.barHoverDelayMs === undefined
+      ? undefined
+      : Math.min(600, Math.max(120, Math.round(patch.barHoverDelayMs / 20) * 20));
+    const soundVolume = patch.soundVolume === undefined
+      ? undefined
+      : Math.min(1, Math.max(0, patch.soundVolume));
+    const soundStyle = patch.soundStyle === 'pixel' ? 'pixel' : patch.soundStyle === 'soft' ? 'soft' : undefined;
+    this.data = {
+      ...this.data,
+      ...patch,
+      quietHours: { ...this.data.quietHours, ...patch.quietHours },
+      ...(nextProvider ? { aiProvider: nextProvider } : {}),
+      ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
+      ...(soundVolume !== undefined ? { soundVolume } : {}),
+      ...(soundStyle ? { soundStyle } : {}),
+    };
+    delete this.data.aiModel;
     this.persist();
     if (patch.launchAtLogin !== undefined && process.platform === 'darwin') {
       app.setLoginItemSettings({ openAtLogin: this.data.launchAtLogin });

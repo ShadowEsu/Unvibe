@@ -2,11 +2,11 @@
 
 _Last updated: [DATE]._
 
-> **Billing is NOT active.** Unvibe is currently free during beta. There is no paid subscription,
-> trial, or in-app purchase implemented. This document is a placeholder so the policy exists when
-> billing is introduced. Until then, no charges occur and there is nothing to cancel.
+> **Production billing is NOT active.** Free, Pro, and Teams subscription infrastructure is now
+> implemented in code, but live Stripe credentials and production Prices are not enabled or
+> verified. This draft requires attorney and founder approval before paid access is launched.
 
-When billing is introduced, this policy will cover (fill in before enabling payments):
+Before billing is enabled, approved policy language must cover:
 - Free plan and its limits.
 - Trial length and what happens at trial end.
 - Paid plan price, billing period, and usage limits.

@@ -51,7 +51,8 @@ export const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPr
     if ("href" in props && props.href !== undefined) {
       const { href, ...rest } = props as ButtonAsLink;
       const external = /^https?:|^mailto:/.test(href);
-      if (external) {
+      const hash = href.startsWith("/#") || href.startsWith("#");
+      if (external || hash) {
         return (
           <a
             ref={ref as React.Ref<HTMLAnchorElement>}

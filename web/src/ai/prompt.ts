@@ -24,10 +24,11 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
     'Rules:',
     '- Use ONLY the provided context. Do not invent files, symbols, or behaviour you cannot see.',
     '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
-    '- Wrap EVERY reference to specific code in a citation marker of the exact form',
-    '  [[cite:FILE:START-END]] or [[cite:FILE:LINE]], where FILE is a path shown in the context.',
-    '  Example: "the loop [[cite:src/sync.ts:20-27]] retries on failure". Never cite a file that',
-    '  is not present in the provided context.',
+    '- Prefer short paragraphs or simple markdown bullets (* item). Bold sparingly with **words**.',
+    '- When citing a real file from the context, you may use [[cite:FILE:LINE]] or [[cite:FILE:START-END]].',
+    '  The app renders these as small chips — never invent files. For clipboard/selection-only',
+    '  context, write plain words ("line 12") instead of cite markers.',
+    '- Do not emit HTML, XML, curly-brace templates, or other raw markup.',
     '- If the context is insufficient to answer, say so and name what you would need.',
     '- Be direct. No preamble, no flattery, no restating the question.',
     '',
@@ -42,17 +43,19 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
 export function buildUserPrompt(payload: ReviewRequestPayload): string {
   const { context: ctx, scope } = payload;
   const parts: string[] = [];
+  const projectStructure = ctx.projectStructure ?? [];
+  const imports = ctx.imports ?? [];
 
   parts.push(`# Review request: ${scope}`);
-  parts.push(`Language: ${ctx.language}`);
+  parts.push(`Language: ${ctx.language ?? 'unknown'}`);
   if (ctx.primaryFile) {
     parts.push(`Primary file: ${ctx.primaryFile}`);
   }
-  if (ctx.projectStructure.length) {
-    parts.push(`Project (top level): ${ctx.projectStructure.join(', ')}`);
+  if (projectStructure.length) {
+    parts.push(`Project (top level): ${projectStructure.join(', ')}`);
   }
-  if (ctx.imports.length) {
-    parts.push('\n## Imports\n```\n' + ctx.imports.join('\n') + '\n```');
+  if (imports.length) {
+    parts.push('\n## Imports\n```\n' + imports.join('\n') + '\n```');
   }
 
   if (ctx.diffHunks?.length) {
@@ -64,7 +67,7 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   }
 
   if (ctx.enclosing && scope === 'selection') {
-    parts.push('\n## Surrounding code (context, ±20 lines)\n```\n' + ctx.enclosing + '\n```');
+    parts.push('\n## Nearby imported files\n' + ctx.enclosing);
   }
   if (ctx.code) {
     const heading = scope === 'selection' ? 'Selected code' : 'File';
@@ -86,6 +89,11 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
 
 /** System + user prompt for generating one multiple-choice comprehension question as JSON. */
 export function buildComprehensionPrompt(payload: ReviewRequestPayload): { system: string; user: string } {
+  const quizInstruction = payload.quizMode === 'recall'
+    ? 'Mode: RECALL. Test whether the reader can name the responsibility or purpose of the code in their own words. Do not test surface syntax.'
+    : payload.quizMode === 'scenario'
+      ? 'Mode: SCENARIO. Ask what behaviour, data flow, or risk follows from a small concrete change. Keep the scenario strictly grounded in the supplied code.'
+      : 'Mode: QUICK CHECK. Test the central behaviour or intent of the code in one direct question.';
   const system = [
     'You are Uncode. Generate ONE multiple-choice question that tests whether the reader',
     'UNDERSTOOD the provided code (not trivia or recall). Use only the provided context.',
@@ -94,6 +102,7 @@ export function buildComprehensionPrompt(payload: ReviewRequestPayload): { syste
     '{"question": string, "options": [string, string, string, string],',
     ' "answerIndex": 0-3, "rationale": string, "concept": kebab-case-slug, "conceptLabel": string}',
     'Exactly one option must be correct. Keep options plausible and similar in length.',
+    quizInstruction,
   ].join('\n');
   const user = buildUserPrompt({ ...payload, question: undefined });
   return { system, user };
@@ -104,8 +113,10 @@ function taskForScope(scope: ReviewRequestPayload['scope']): string {
     case 'project':
       return 'Give an architecture-level overview: the main parts, how they fit together, the entry points, and where a newcomer should start reading. Cite the directories/files you reference.';
     case 'diff':
-      return 'Explain what changed and why, and how data flows through the change. End with one sentence on what would break if the change were reverted.';
+      return 'Explain what changed and why, and how data flows through the change. End with one sentence on what would break if the change were reverted. If this looks like an AI-agent edit, call out intent and risks clearly.';
+    case 'file':
+      return 'Explain what changed versus the prior version when both are present. Focus on behavior shifts, risks, and what the reader should re-learn.';
     default:
-      return 'Explain what this code does and why, at the requested level. End with one sentence on what would break if it were removed or changed.';
+      return 'Explain what this code does and why, at the requested level. Use nearby files/imports when provided. End with one sentence on what would break if it were removed or changed.';
   }
 }

@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import {
+  FOUNDER_EMAIL,
+  SUPPORT_EMAIL,
+  founderMailto,
+  supportMailto,
+} from "@/lib/contact";
 
 interface FooterColumn {
   heading: string;
@@ -10,26 +16,31 @@ const columns: FooterColumn[] = [
   {
     heading: "Product",
     links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Works where you do", href: "#works-where" },
-      { label: "Watch demo", href: "#demo" },
-      { label: "Join waitlist", href: "#waitlist" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Explanation levels", href: "/#learn" },
+      { label: "Context ladder", href: "/#context" },
+      { label: "Watch demo", href: "/#demo" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "Join waitlist", href: "/#waitlist" },
+      { label: "Email for access", href: founderMailto },
     ],
   },
   {
-    heading: "Learn",
+    heading: "Explore",
     links: [
-      { label: "Languages", href: "#learn" },
-      { label: "Depth levels", href: "#depth" },
-      { label: "Study from projects", href: "#study" },
-      { label: "For students", href: "#students" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Project curriculum", href: "/#curriculum" },
+      { label: "Works beside tools", href: "/#tools" },
+      { label: "Privacy", href: "/#privacy" },
     ],
   },
   {
     heading: "Company",
     links: [
-      { label: "FAQ", href: "#faq" },
-      { label: "Contact", href: "mailto:hello@unvibe.app" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Investors", href: "/investors" },
+      { label: "Support", href: supportMailto },
+      { label: "Preston", href: founderMailto },
     ],
   },
   {
@@ -52,7 +63,7 @@ export function Footer() {
           <div className="col-span-2 max-w-xs">
             <Logo />
             <p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">
-              AI can write the code. Unvibe helps you understand it.
+              Don&apos;t feel guilty about vibe coding. Make the code yours.
             </p>
           </div>
           {columns.map((col) => (
@@ -63,23 +74,33 @@ export function Footer() {
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((link) => {
                   const external = link.href.startsWith("mailto:");
-                  const internal = link.href.startsWith("/");
+                  const hash = link.href.startsWith("/#") || link.href.startsWith("#");
+                  const investors = link.href === "/investors";
+                  const className = investors
+                    ? "rounded-pill px-2 py-1"
+                    : "text-fluid-sm text-fg-muted transition-colors hover:text-fg";
+                  const style = investors
+                    ? {
+                        color: "#6f45d2",
+                        backgroundColor: "rgba(111, 69, 210, 0.12)",
+                        fontFamily: "var(--font-mono), ui-monospace, monospace",
+                        fontWeight: 700,
+                        fontSize: "0.72rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const,
+                      }
+                    : undefined;
+                  const useAnchor = external || hash || !link.href.startsWith("/") || investors;
                   return (
                     <li key={link.label}>
-                      {internal && !external ? (
-                        <Link
-                          href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
-                        >
-                          {link.label}
-                        </Link>
-                      ) : (
-                        <a
-                          href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
-                        >
+                      {useAnchor ? (
+                        <a href={link.href} className={className} style={style}>
                           {link.label}
                         </a>
+                      ) : (
+                        <Link href={link.href} className={className} style={style}>
+                          {link.label}
+                        </Link>
                       )}
                     </li>
                   );
@@ -90,14 +111,21 @@ export function Footer() {
         </div>
 
         <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {year} Unvibe. Mac first. Made for people who want to understand their code.</p>
+          <p>&copy; {year} Unvibe. Mac first. AI writes it; you learn it.</p>
           <p>
-            Questions?{" "}
+            Support:{" "}
             <a
-              href="mailto:hello@unvibe.app"
+              href={supportMailto}
               className="text-fg-muted underline underline-offset-2 hover:text-fg"
             >
-              hello@unvibe.app
+              {SUPPORT_EMAIL}
+            </a>
+            {" · "}
+            <a
+              href={founderMailto}
+              className="text-fg-muted underline underline-offset-2 hover:text-fg"
+            >
+              {FOUNDER_EMAIL}
             </a>
           </p>
         </div>

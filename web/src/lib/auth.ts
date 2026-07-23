@@ -1,13 +1,29 @@
 import { getStore } from '@/data/store';
 
-/** Resolve the user id from a Bearer token, or null. */
-export async function userFromRequest(req: Request): Promise<string | null> {
+function bearerToken(req: Request): string | null {
   const header = req.headers.get('authorization') ?? '';
   const match = /^Bearer\s+(.+)$/i.exec(header);
-  if (!match) {
-    return null;
-  }
-  return getStore().userForToken(match[1].trim());
+  const cookieToken = /(?:^|;\s*)uncode_session=([^;]+)/.exec(req.headers.get('cookie') ?? '')?.[1];
+  return match?.[1].trim() ?? (cookieToken ? decodeURIComponent(cookieToken) : null);
+}
+
+function isSealedTrialBearer(token: string): boolean {
+  const trial = process.env.UNVIBE_TRIAL_TOKEN?.trim();
+  if (!trial || trial.length < 24) return false;
+  if (token.length !== trial.length) return false;
+  // Constant-time compare without importing crypto here — length already matched.
+  let diff = 0;
+  for (let i = 0; i < token.length; i += 1) diff |= token.charCodeAt(i) ^ trial.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Resolve the user id from a Bearer token or the HttpOnly browser session cookie. */
+export async function userFromRequest(req: Request): Promise<string | null> {
+  const token = bearerToken(req);
+  if (!token) return null;
+  // Sealed desktop trial tokens are not session tokens — never hit the user store.
+  if (isSealedTrialBearer(token)) return null;
+  return getStore().userForToken(token);
 }
 
 export function baseUrlFrom(req: Request): string {

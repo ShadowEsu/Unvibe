@@ -32,21 +32,29 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 
 | Variable | Purpose |
 |---|---|
-| `SUPABASE_URL` | Supabase project URL for waitlist storage. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key. Never expose to the browser. |
+| `BLOB_READ_WRITE_TOKEN` | Server-only Vercel Blob credential for durable production waitlist storage. |
+| `WAITLIST_ADMIN_TOKEN` | Long random server-only secret for admin access and waitlist encryption. |
+| `WAITLIST_NOTIFY_EMAIL` | Legacy configuration only. Signup notifications are intentionally locked to `preston@unvibe.site`. |
+| `RESEND_API_KEY` | Recommended server-only Resend credential for reliable signup email. |
+| `WAITLIST_FROM_EMAIL` | Verified sender used by Resend. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL for metadata, sitemap, robots, referral links. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Optional. When empty, analytics is a no-op. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Optional PostHog host (defaults to US cloud). |
 
-Without Supabase configured, waitlist submissions are written to `.data/waitlist.json`
-(gitignored) so the form works end to end in development.
+Without Vercel Blob configured, waitlist submissions are written to `.data/waitlist.json`
+(gitignored) so the form works end to end in development. Production fails closed when durable
+storage is missing; it never reports a signup as saved to ephemeral serverless storage.
 
 ## Waitlist storage
 
-Apply the migration in `supabase/migrations/0001_waitlist.sql` to your Supabase project
-(via the SQL editor or the Supabase CLI). It creates `waitlist_entries` with row-level
-security enabled and no public policies, so only the server (service role) can read or
-write it.
+Connect a Vercel Blob store to the marketing project, then set `WAITLIST_ADMIN_TOKEN` to a
+long random value. Entries are AES-256-GCM encrypted before upload and the admin endpoint is
+bearer-token protected. The old `supabase/migrations/0001_waitlist.sql` is retained for history,
+but the current marketing storage adapter does not use it.
+
+Configure Resend for founder notifications (`WAITLIST_NOTIFY_EMAIL`, default `preston@unvibe.site`).
+Failed deliveries remain visible and retryable in `/waitlist`. Signups are still saved when
+email delivery fails.
 
 ## Analytics events
 
@@ -60,9 +68,11 @@ third-party script, no cookies, no code contents):
 ## Deploy to Vercel
 
 1. Import the repository into Vercel and set the project root to `marketing/`.
-2. Add the environment variables above in Project Settings → Environment Variables.
-3. Vercel auto-detects Next.js; the default build (`next build`) is used.
-4. Point your domain and set `NEXT_PUBLIC_SITE_URL` to match.
+2. Connect a Vercel Blob store and add the remaining environment variables above.
+3. Configure Resend, then submit a disposable test entry.
+4. Confirm the entry appears in `/waitlist` and the founder notification is marked sent.
+5. Vercel auto-detects Next.js; the default build (`next build`) is used.
+6. Point your domain and set `NEXT_PUBLIC_SITE_URL` to match.
 
 ## Structure
 
