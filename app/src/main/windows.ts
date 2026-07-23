@@ -110,9 +110,10 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : BAR_H;
   const { x, y } = barBounds(position, width, height);
   win.setFocusable(expanded);
-  // CSS owns the visual peel/fold. Native macOS bounds animation fighting it
-  // produced the visible jump captured in the interaction recording.
-  win.setBounds({ x, y, width, height }, false);
+  // Keep the transparent hit area in sync with the visual surface, but let
+  // macOS interpolate the bounds. An immediate resize made the Island jump
+  // from its compact state to the full panel before the renderer could paint.
+  win.setBounds({ x, y, width, height }, true);
   win.moveTop();
 }
 
