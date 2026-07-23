@@ -115,7 +115,7 @@ export function UnvibeWebApp() {
   }
 
   return (
-    <main className="min-h-screen bg-[#171323] px-4 py-5 text-[#f7f4ff] sm:px-7 sm:py-8">
+    <main className="web-workspace min-h-screen px-4 py-5 text-[#f7f4ff] sm:px-7 sm:py-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#8064a2]/35 pb-5">
           <a href="/" className="inline-flex items-center gap-3"><span className="grid h-9 w-9 place-items-center border border-[#af8cff] text-[#c8b1ff]"><Code2 size={19} /></span><span><b className="block text-lg tracking-tight">Unvibe</b><small className="font-mono text-[10px] tracking-[.16em] text-[#a99caf]">WEB WORKSPACE</small></span></a>
