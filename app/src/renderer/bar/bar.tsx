@@ -57,7 +57,6 @@ function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel
 function Bar() {
   const [note, setNote] = useState('');
   const [expanded, setExpanded] = useState(false);
-  const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [attached, setAttached] = useState(true);
@@ -71,8 +70,6 @@ function Bar() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const expandedRef = useRef(false);
-  const closingRef = useRef(false);
-  const foldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerInside = useRef(false);
   const actionLockUntil = useRef(0);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,7 +116,6 @@ function Bar() {
       unsubscribeSettings();
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
-      if (foldTimer.current) clearTimeout(foldTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
     };
   }, []);
@@ -130,33 +126,20 @@ function Bar() {
     return () => window.clearInterval(timer);
   }, [rotateStats]);
 
-  const setPanelExpanded = (next: boolean) => {
+  const setPanelExpanded = (next: boolean, withSound = true) => {
     if (next) {
-      if (closingRef.current) {
-        if (foldTimer.current) clearTimeout(foldTimer.current);
-        closingRef.current = false;
-        setClosing(false);
-        return;
-      }
       if (expandedRef.current) return;
       expandedRef.current = true;
       setExpanded(true);
       window.unvibe.setBarExpanded(true);
-      if (soundEnabled) playIslandTone(true, soundVolume, soundStyle);
-      refresh();
+      if (withSound && soundEnabled) playIslandTone(true, soundVolume, soundStyle);
       return;
     }
-    if (!expandedRef.current || closingRef.current) return;
-    closingRef.current = true;
-    setClosing(true);
-    if (soundEnabled) playIslandTone(false, soundVolume, soundStyle);
-    foldTimer.current = setTimeout(() => {
-      closingRef.current = false;
-      expandedRef.current = false;
-      setClosing(false);
-      setExpanded(false);
-      window.unvibe.setBarExpanded(false);
-    }, 180);
+    if (!expandedRef.current) return;
+    expandedRef.current = false;
+    setExpanded(false);
+    window.unvibe.setBarExpanded(false);
+    if (withSound && soundEnabled) playIslandTone(false, soundVolume, soundStyle);
   };
   const open = () => {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
@@ -165,7 +148,9 @@ function Bar() {
   const openFromHover = () => {
     if (!hoverEnabled || expandedRef.current) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
-    hoverOpenTimer.current = setTimeout(open, hoverDelayMs);
+    hoverOpenTimer.current = setTimeout(() => {
+      if (document.querySelector('.strip')?.matches(':hover')) setPanelExpanded(true, false);
+    }, hoverDelayMs);
   };
   const scheduleClose = () => {
     pointerInside.current = false;
@@ -176,7 +161,7 @@ function Bar() {
     collapseTimer.current = setTimeout(() => {
       const stillHovered = document.querySelector('.strip')?.matches(':hover') ?? false;
       pointerInside.current = stillHovered;
-      if (!stillHovered) setPanelExpanded(false);
+      if (!stillHovered) setPanelExpanded(false, false);
     }, Math.max(120, lockedFor + 40));
   };
 
@@ -214,7 +199,7 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
         {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} />{expanded ? <span>Open app</span> : null}</button> : <><div className="strip__wing strip__wing--left">
           <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>

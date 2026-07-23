@@ -11,8 +11,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -
 .strip--attached { width:100%; min-height:38px; margin:0; border-radius:0 0 19px 19px; border-top:0; }
 .strip--attached .strip__main { height:38px; padding:0 10px; }
 .strip--attached.strip--expanded { border-radius:0 0 21px 21px; }
-.strip--expanded { width:100%; height:100%; margin:0; background:#000; border-radius:24px; animation:islandPeel .28s cubic-bezier(.16,1,.3,1) both; }
-.strip--expanded.strip--closing { animation:islandFold .18s cubic-bezier(.4,0,.8,.2) both; pointer-events:none; }
+.strip--expanded { width:100%; height:100%; margin:0; background:#000; border-radius:24px; }
 .strip--attached.strip--expanded { border-radius:0 0 24px 24px; }
 .strip:hover, .strip--expanded { opacity:1; border-color:rgba(255,255,255,.18); }
 .strip--note { border-color: rgba(167,139,250,.7); }
@@ -34,11 +33,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -
 .strip--bottom .strip__main { width:100%; height:100%; padding:0; justify-content:center; }
 .strip__bottom-open { width:100%; height:100%; display:flex; align-items:center; justify-content:center; gap:0; border:0; border-radius:999px; background:#050505; color:#fff; cursor:pointer; font:600 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; white-space:nowrap; }
 .strip__bottom-open svg { flex:0 0 auto; }
-.strip--bottom.strip--expanded { border-radius:999px; animation:bottomReveal .24s cubic-bezier(.16,1,.3,1) both; }
-.strip--bottom.strip--expanded.strip--closing { animation:bottomFold .16s cubic-bezier(.4,0,.8,.2) both; }
+.strip--bottom.strip--expanded { border-radius:999px; }
 .strip--bottom.strip--expanded .strip__bottom-open { gap:9px; padding:0 16px; }
 
-.strip__drawer { position:relative; z-index:1; border-top:1px solid rgba(255,255,255,.1); padding:18px 18px 20px; -webkit-app-region:no-drag; animation:drawerIn .14s ease-out both; }
+.strip__drawer { position:relative; z-index:1; border-top:1px solid rgba(255,255,255,.1); padding:18px 18px 20px; -webkit-app-region:no-drag; }
 .strip__drawer-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; }.strip__drawer-head > div:first-child { display:grid; gap:4px; }.strip__drawer-head strong { font-size:15px; letter-spacing:-.02em; }.strip__live { display:flex; align-items:center; gap:6px; color:rgba(244,240,250,.52); font-size:8px; white-space:nowrap; }.strip__live i { width:5px; height:5px; border-radius:50%; background:#8bdbb5; }
 .pixel-loader { height:18px; display:flex; align-items:flex-end; gap:3px; }.pixel-loader i { width:4px; height:4px; background:#a78bfa; animation:pixelLoad .8s steps(2,end) infinite; }.pixel-loader i:nth-child(2),.pixel-loader i:nth-child(6) { animation-delay:.1s; }.pixel-loader i:nth-child(3),.pixel-loader i:nth-child(5) { animation-delay:.2s; }.pixel-loader i:nth-child(4) { animation-delay:.3s; }
 .strip__metric-grid { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px 16px; margin-bottom:13px; }.strip__metric-grid article { min-width:0; display:flex; align-items:baseline; gap:4px; }.strip__metric-grid b { color:#fff; font-size:18px; letter-spacing:-.04em; }.strip__metric-grid article[data-tone="streak"] b { color:#f5a524; }.strip__metric-grid article[data-tone="understood"] b { color:#55c99c; }.strip__metric-grid article[data-tone="lines"] b { color:#c4b5fd; }.strip__metric-grid span { color:rgba(255,255,255,.58); font-size:10px; white-space:nowrap; }
@@ -53,11 +51,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -
 .strip__actions button { min-width:0; min-height:35px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:transparent; color:#f4f0fa; padding:7px 10px; text-align:left; font-size:10px; cursor:pointer; }
 .strip__actions button:first-child { background:#6f45d2; border-color:#6f45d2; }.strip__actions button:first-child:hover { background:#805be3; border-color:#805be3; }.strip__actions button:last-child:hover { border-color:rgba(255,255,255,.34); background:rgba(255,255,255,.05); }
 .strip__actions kbd { float:right; border:1px solid rgba(255,255,255,.16); border-radius:4px; padding:1px 4px; color:#c4b5fd; font:8px "SF Mono",Menlo,monospace; }
-@keyframes drawerIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:none; } }
-@keyframes islandPeel { from { clip-path:inset(0 16% calc(100% - 38px) 16% round 0 0 22px 22px); } to { clip-path:inset(0 0 0 0 round 0 0 24px 24px); } }
-@keyframes islandFold { from { clip-path:inset(0 0 0 0 round 0 0 24px 24px); opacity:1; } to { clip-path:inset(0 16% calc(100% - 38px) 16% round 0 0 22px 22px); opacity:.92; } }
-@keyframes bottomReveal { from { clip-path:inset(0 34% 0 34% round 999px); opacity:.9; } to { clip-path:inset(0 0 0 0 round 999px); opacity:1; } }
-@keyframes bottomFold { from { clip-path:inset(0 0 0 0 round 999px); opacity:1; } to { clip-path:inset(0 34% 0 34% round 999px); opacity:.9; } }
 @keyframes statSwap { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 @keyframes pixelLoad { 0%,100% { height:4px; opacity:.35; } 50% { height:15px; opacity:1; } }
 @media (prefers-reduced-motion:reduce) { .strip,.chip,.strip__drawer { transition:none; animation:none; } }

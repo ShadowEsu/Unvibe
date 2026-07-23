@@ -223,7 +223,7 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
-      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, Unvibe falls back to explaining whatever you last copied. If the toggle is already on, quit Unvibe fully and reopen it — macOS only applies the grant to the next launch.</div>
+      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, select-code capture is unavailable; you can still choose a file or deliberately use the clipboard from the source picker. If the toggle is already on, quit Unvibe fully and reopen it — macOS only applies the grant to the next launch.</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
@@ -408,8 +408,8 @@ function UsageChip({ usage, onPlan, compact = false }: {
       onClick={onPlan}
       title={`${planLabel} · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}
     >
-      <span>{out ? '0 left' : `${usage.remaining} left`}</span>
-      <small>{usage.used}/{usage.limit} · {planLabel}</small>
+      <span>{out ? 'No messages left' : `${usage.remaining} messages left`}</span>
+      <small>{usage.used}/{usage.limit} used · {planLabel}</small>
     </button>
   );
 }
@@ -1132,6 +1132,11 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
 
   return (
     <>
+      <section className="ai-container" aria-label="AI settings">
+      <div className="ai-container__intro">
+        <span>AI on your terms</span>
+        <p>Use included Unvibe AI, or securely connect a provider key kept on this Mac.</p>
+      </div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl">Your own API key</div>
         <div className="sd" style={{ marginBottom: 12 }}>
@@ -1203,6 +1208,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
           {selected?.blurb ?? 'Pick a provider and paste its API key. We keep the cheap default models.'}
         </p>
       </div>
+      </section>
     </>
   );
 }
