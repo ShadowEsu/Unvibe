@@ -970,15 +970,28 @@ function LearningEmpty({ title, detail, onReview }: { title: string; detail: str
   return <div className="learning-empty"><div className="stub__icon"><Icon d={IC.spark} /></div><h2>{title}</h2><p>{detail}</p><button className="primary-btn" onClick={onReview}>Explain some code</button></div>;
 }
 
+function PlanSkeleton() {
+  return <div className="plan-view" aria-busy="true" aria-label="Loading plan">
+    <div className="page-head"><div><div className="skeleton-text" style={{ width: 120, height: 13 }} /><div className="skeleton-text" style={{ width: '70%', height: 42, marginTop: 8 }} /><div className="skeleton-text" style={{ width: '50%', height: 16, marginTop: 12 }} /></div></div>
+    <div className="skeleton-block" style={{ height: 72, marginTop: 24 }} />
+    <div className="plan-usage" style={{ marginTop: 14 }}>{[1, 2, 3].map((i) => <div key={i} className="skeleton-block" style={{ height: 76 }} />)}</div>
+    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 28 }}><div className="skeleton-block" style={{ width: 280, height: 38, borderRadius: 8 }} /></div>
+    <div className="plan-options plan-options--two" style={{ marginTop: 14 }}>{[1, 2].map((i) => <div key={i} className="skeleton-block" style={{ height: 300 }} />)}</div>
+  </div>;
+}
+
 function Plan() {
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [available, setAvailable] = useState(false);
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
-  const [message, setMessage] = useState('Loading plan…');
+  const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = async () => {
+    setLoading(true);
     const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean }; error?: string };
+    setLoading(false);
     if (!result.ok || !result.data) { setMessage(result.error ?? 'Could not load plan.'); return; }
     setOverview(result.data.overview); setAvailable(result.data.checkoutAvailable); setMessage('');
   };
@@ -999,14 +1012,16 @@ function Plan() {
     setBusy(false);
   };
 
+  if (loading) return <PlanSkeleton />;
+
   return <div className="plan-view">
     <div className="page-head"><div><div className="eyebrow">Plan & usage</div><h1>Start free. Grow when your projects do.</h1><p>Your AI model access is included. You never need to paste in your own provider API key.</p></div></div>
     {message && <div className="plan-message" role="status">{message}</div>}
     {overview && <>
       <div className="plan-current"><div><span>Current plan</span><strong>{overview.subscription.plan}</strong></div><div><span>Interval</span><strong>{overview.subscription.interval ?? 'no billing'}</strong></div><div><span>Status</span><strong>{overview.subscription.plan === 'free' ? 'ready' : overview.subscription.status.replaceAll('_', ' ')}</strong></div><div><span>Renews</span><strong>{overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString() : 'not applicable'}</strong></div><div><span>Workspace</span><strong>{overview.workspace.name}</strong></div>{overview.canManageBilling && overview.hasBillingAccount && <button className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>}</div>
-      <div className="plan-usage">{overview.usage.slice(0, 3).map((line) => <div key={line.kind}><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong><progress value={line.used} max={line.limit} /></div>)}</div>
+      <div className="plan-usage">{overview.usage.slice(0, 3).map((line) => <div key={line.kind}><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong><progress value={line.used} max={line.limit} aria-label={`${line.kind.replaceAll('_', ' ')}: ${line.used} of ${line.limit}`} /></div>)}</div>
       <div className="plan-billing-control">
-        <div className="plan-toggle" aria-label="Billing interval"><button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div>
+        <div className="plan-toggle" role="radiogroup" aria-label="Billing interval"><button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div>
         <p><strong>Pro annual:</strong> $72/year — about $6/month. Save 25% vs $8/month billed monthly.</p>
       </div>
       {!available && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
