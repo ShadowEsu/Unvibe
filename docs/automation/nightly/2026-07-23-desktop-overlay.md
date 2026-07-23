@@ -92,3 +92,9 @@ correct behavior by accident rather than intent. This fixes the inconsistency.
 ## Risk level
 **Low** — single character change (`'local'` → `'free'`) in a fallback plan label.
 Pathological behavior: label shows "Free" instead of an undefined plan name (identical to before).
+
+## PR status
+Branch `opencode/nightly-desktop-overlay-overview` pushed to origin.
+PR creation not available: GitHub Actions token is not permitted to create pull requests.
+Founder action required: open PR at
+https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-desktop-overlay-overview
