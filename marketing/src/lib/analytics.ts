@@ -21,7 +21,8 @@ export type AnalyticsEvent =
   | "privacy_opened"
   | "pricing_viewed"
   | "billing_interval_selected"
-  | "plan_cta_clicked";
+  | "plan_cta_clicked"
+  | "release_download_clicked";
 
 type Props = Record<string, string | number | boolean | undefined>;
 

@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
@@ -11,13 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
     "dist": "npm run build && electron-builder --mac dir",
-    "dist:dmg": "npm run build && electron-builder --mac dmg",
-    "package:local": "node scripts/package-local.mjs",
-    "package:beta:mac": "node scripts/package-local.mjs",
-    "package:beta:win": "node scripts/package-beta-windows.mjs",
-    "package:release": "node scripts/package-release.mjs",
-    "package:dmg-layout": "node scripts/create-custom-dmg.mjs",
-    "verify:package": "node scripts/verify-package.mjs",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:all": "npm run build && electron-builder --mac --win",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },
   "dependencies": {
@@ -37,31 +33,21 @@
     "appId": "com.unvibe.app",
     "productName": "Unvibe",
     "copyright": "Copyright © 2026 Unvibe",
-    "files": [
-      "dist/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "release",
-      "buildResources": "build"
-    },
-    "icon": "build/icon.icns",
+    "files": ["dist/**/*", "package.json"],
+    "directories": { "output": "release", "buildResources": "build" },
+    "icon": "build/icon.png",
+    "afterSign": "scripts/afterSignHook.cjs",
+    "artifactName": "Unvibe-${version}-${os}-${arch}.${ext}",
     "mac": {
-      "icon": "build/icon.icns",
+      "icon": "build/icon.png",
       "category": "public.app-category.developer-tools",
       "target": [
-        {
-          "target": "dir",
-          "arch": [
-            "arm64"
-          ]
-        }
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
       ],
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "identity": null,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
         "CFBundleDisplayName": "Unvibe",
         "CFBundleName": "Unvibe",
@@ -69,40 +55,29 @@
         "LSUIElement": false
       }
     },
-    "dmg": {
-      "sign": false,
-      "title": "Install Unvibe",
-      "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}",
-      "background": "build/dmg-background.png",
-      "window": {
-        "width": 780,
-        "height": 500
-      },
-      "iconSize": 88,
-      "contents": [
-        {
-          "x": 230,
-          "y": 290,
-          "type": "file"
-        },
-        {
-          "x": 550,
-          "y": 290,
-          "type": "link",
-          "path": "/Applications"
-        }
+    "dmg": { "sign": false },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
       ]
     },
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "Unvibe-${version}-beta-win-${arch}-portable.${ext}"
+    "nsis": {
+      "artifactName": "Unvibe-${version}-${os}-${arch}-setup.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "Unvibe-${version}-${os}-${arch}-portable.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ShadowEsu",
+      "repo": "Unvibe"
     }
   }
 }

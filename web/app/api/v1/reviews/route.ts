@@ -1,35 +1,32 @@
 import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
-import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import { unauthorized, userFromRequest } from '@/lib/auth';
-import { reserveMeteredAction } from '@/billing/enforce';
-import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { userFromRequest } from '@/lib/auth';
+import { getStore } from '@/data/store';
+import { quotaMessage } from '@/billing/plans';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
-  const provider = selectProvider();
-  // Prefer trial detection before session lookup so sealed trial builds never require Supabase.
-  const trialInstall = trialInstallFromRequest(req);
-  const userId = trialInstall ? null : await userFromRequest(req);
-  if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
-    return unauthorized();
-  }
   const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
   if (!payload?.scope || !payload?.level || !payload?.context) {
     return Response.json({ error: 'missing scope, level, or context' }, { status: 400 });
   }
-  if (JSON.stringify(payload.context).length > 120_000) {
-    return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
-  }
-  if (!provider.mock && userId) {
-    const denied = await reserveMeteredAction(userId, 'ai_explanation', req);
-    if (denied) return denied;
-  } else if (!provider.mock && trialInstall) {
-    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
-    if (denied) return denied;
+
+  // Metering only applies to signed-in beta testers. Anonymous, unsynced use is unaffected —
+  // see the change note in the app-release summary for the tradeoff this leaves open.
+  const userId = await userFromRequest(req);
+  if (userId) {
+    const kind: 'selection' | 'ask' = payload.question || payload.variant === 'different' ? 'ask' : 'selection';
+    const usage = await getStore().consumeUsage(userId, kind);
+    if (!usage.allowed) {
+      return Response.json(
+        { error: 'quota_exceeded', kind, limit: usage.limit, message: quotaMessage(kind, usage.limit) },
+        { status: 402 }
+      );
+    }
   }
 
+  const provider = selectProvider();
   const system = buildSystemPrompt(payload);
   const user = buildUserPrompt(payload);
   const encoder = new TextEncoder();

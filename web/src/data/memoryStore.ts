@@ -6,30 +6,31 @@ import type {
   IncomingEvent,
   ProfileSummary,
   ProjectSummary,
-  HistoryPage,
-  SkillRecord,
   Store,
+  UsageResult,
+  UsageSummary,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
-import { compareHistoryDescending, decodeHistoryCursor, isAfterCursor, nextHistoryCursor } from './pagination';
-import { computeSkills } from './skills';
+import { limitFor } from '../billing/plans';
 
 interface PendingDevice {
   userCode: string;
   userId?: string;
   token?: string;
   createdAt: number;
-  redeemedAt?: number;
 }
 
-const DEVICE_CODE_TTL_MS = 10 * 60_000;
-export const SESSION_TTL_MS = 30 * 24 * 60 * 60_000;
+interface UsageCounters {
+  selections: number;
+  asks: number;
+}
 
 interface MemoryData {
   events: EventRecord[];
-  tokens: Map<string, { userId: string; expiresAt: number } | string>; // string = pre-expiry dev record
+  tokens: Map<string, string>; // token -> userId
   devices: Map<string, PendingDevice>; // deviceCode -> pending
   users: Map<string, { email?: string }>; // userId -> profile
+  usage: Map<string, UsageCounters>; // userId -> beta usage counters
 }
 
 /**
@@ -39,17 +40,24 @@ interface MemoryData {
 export class MemoryStore implements Store {
   readonly kind = 'memory (dev)';
   private readonly data: MemoryData;
-  private readonly now: () => number;
 
-  constructor(now: () => number = Date.now) {
-    this.now = now;
+  constructor() {
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
-      g.__uncodeData = { events: [], tokens: new Map(), devices: new Map(), users: new Map() };
+      g.__uncodeData = {
+        events: [],
+        tokens: new Map(),
+        devices: new Map(),
+        users: new Map(),
+        usage: new Map(),
+      };
     }
-    // Additive migration for a store created before `users` existed.
+    // Additive migrations for a store created before these fields existed.
     if (!g.__uncodeData.users) {
       g.__uncodeData.users = new Map();
+    }
+    if (!g.__uncodeData.usage) {
+      g.__uncodeData.usage = new Map();
     }
     this.data = g.__uncodeData;
   }
@@ -57,7 +65,7 @@ export class MemoryStore implements Store {
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
     const userCode = randomUUID().slice(0, 8).toUpperCase();
-    this.data.devices.set(deviceCode, { userCode, createdAt: this.now() });
+    this.data.devices.set(deviceCode, { userCode, createdAt: Date.now() });
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
@@ -66,45 +74,28 @@ export class MemoryStore implements Store {
     if (!entry) {
       return null;
     }
-    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return null;
-    if (entry.redeemedAt) return null;
     if (entry.userId && entry.userId !== userId) return null;
-    if (entry.token) return entry.token;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
     this.data.users.set(userId, { email });
-    this.data.tokens.set(token, { userId, expiresAt: this.now() + SESSION_TTL_MS });
+    this.data.tokens.set(token, userId);
     return token; // also usable as a browser session
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
       return 'unknown';
     }
-    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) return 'expired';
     if (!entry.token) {
       return 'pending';
     }
-    if (entry.redeemedAt) return 'used';
-    entry.redeemedAt = this.now();
     return { token: entry.token };
   }
 
   async userForToken(token: string): Promise<string | null> {
-    const record = this.data.tokens.get(token);
-    if (!record) return null;
-    if (typeof record === 'string') return record;
-    if (record.expiresAt <= this.now()) {
-      this.data.tokens.delete(token);
-      return null;
-    }
-    return record.userId;
-  }
-
-  async revokeToken(token: string): Promise<void> {
-    this.data.tokens.delete(token);
+    return this.data.tokens.get(token) ?? null;
   }
 
   async signIn(email: string): Promise<Account> {
@@ -115,7 +106,7 @@ export class MemoryStore implements Store {
       this.data.users.set(userId, { email: normalized });
     }
     const token = randomUUID();
-    this.data.tokens.set(token, { userId, expiresAt: this.now() + SESSION_TTL_MS });
+    this.data.tokens.set(token, userId);
     return { token, userId, email: normalized };
   }
 
@@ -126,7 +117,7 @@ export class MemoryStore implements Store {
     const userId = randomUUID();
     this.data.users.set(userId, { email: normalized });
     const token = randomUUID();
-    this.data.tokens.set(token, { userId, expiresAt: this.now() + SESSION_TTL_MS });
+    this.data.tokens.set(token, userId);
     return { token, userId, email: normalized };
   }
 
@@ -136,9 +127,8 @@ export class MemoryStore implements Store {
 
   async deleteAccount(userId: string): Promise<void> {
     this.data.events = this.data.events.filter((e) => e.userId !== userId);
-    for (const [token, record] of [...this.data.tokens.entries()]) {
-      const owner = typeof record === 'string' ? record : record.userId;
-      if (owner === userId) {
+    for (const [token, uid] of [...this.data.tokens.entries()]) {
+      if (uid === userId) {
         this.data.tokens.delete(token);
       }
     }
@@ -148,6 +138,7 @@ export class MemoryStore implements Store {
       }
     }
     this.data.users.delete(userId);
+    this.data.usage.delete(userId);
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {
@@ -173,23 +164,33 @@ export class MemoryStore implements Store {
   }
 
   async history(userId: string, limit: number): Promise<EventRecord[]> {
-    return (await this.historyPage(userId, limit)).events;
-  }
-
-  async historyPage(userId: string, limit: number, cursor?: string): Promise<HistoryPage> {
-    const decoded = decodeHistoryCursor(cursor);
-    if (cursor && !decoded) throw new Error('Invalid history cursor.');
-    const sorted = this.eventsFor(userId).sort(compareHistoryDescending);
-    const eligible = decoded ? sorted.filter((event) => isAfterCursor(event, decoded)) : sorted;
-    const events = eligible.slice(0, limit);
-    return { events, nextCursor: nextHistoryCursor(events, limit) };
+    return this.eventsFor(userId).slice(-limit).reverse();
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {
     return computeProjects(this.eventsFor(userId));
   }
 
-  async skills(userId: string): Promise<SkillRecord[]> {
-    return computeSkills(userId, this.eventsFor(userId));
+  async usage(userId: string): Promise<UsageSummary> {
+    const rec = this.data.usage.get(userId) ?? { selections: 0, asks: 0 };
+    return {
+      selectionsUsed: rec.selections,
+      selectionsLimit: limitFor('selection'),
+      asksUsed: rec.asks,
+      asksLimit: limitFor('ask'),
+    };
+  }
+
+  async consumeUsage(userId: string, kind: 'selection' | 'ask'): Promise<UsageResult> {
+    const limit = limitFor(kind);
+    const rec = this.data.usage.get(userId) ?? { selections: 0, asks: 0 };
+    const used = kind === 'selection' ? rec.selections : rec.asks;
+    if (used >= limit) {
+      return { allowed: false, used, limit };
+    }
+    if (kind === 'selection') rec.selections += 1;
+    else rec.asks += 1;
+    this.data.usage.set(userId, rec);
+    return { allowed: true, used: used + 1, limit };
   }
 }

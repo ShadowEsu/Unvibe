@@ -8,38 +8,21 @@ out/
 *.vsix
 .next/
 build/
+# app/build holds packaging resources (icon, entitlements) that must stay tracked
 !app/build/
-app/build/*
-!app/build/icon.icns
-!app/build/icon.png
-!app/build/icon.svg
-!app/build/trayTemplate.png
-!app/build/entitlements.mac.plist
-!app/build/dmg-background.svg
-!app/build/dmg-background.png
-*.tsbuildinfo
+!app/build/**
 
 # Env & secrets (never commit)
 .env
 .env.*
 web/env.local
 !.env.example
-!.env.staging.example
 *.pem
 *.key
 
 # Logs & OS
 *.log
-.release/
 .DS_Store
 
 # Editor
 .vscode-test/
-
-# Scratch PDF/slide builds (canonical copies live in docs/investors/)
-tmp/
-output/
-*.inspect.ndjson
-app/.tools-bin/
-web/.vercel/
-.local/

@@ -190,6 +190,14 @@ export function Nav() {
           {links.map((link) => (
             <li key={link.id}>{renderLink(link, linkClass(link))}</li>
           ))}
+          <li>
+            <Link
+              href="/releases"
+              className="rounded-pill px-3 py-1.5 text-fluid-sm text-fg-faint transition-colors duration-micro hover:text-fg"
+            >
+              Releases
+            </Link>
+          </li>
         </ul>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -239,6 +247,15 @@ export function Nav() {
                   {renderLink(link, mobileLinkClass(link), () => setOpen(false))}
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/releases"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-xl px-3 py-2.5 text-fluid-base text-fg hover:bg-surface-2"
+                >
+                  Releases
+                </Link>
+              </li>
             </ul>
             <div className="mt-auto flex flex-col gap-3 pt-6">
               <Button href="/#waitlist" onClick={() => setOpen(false)}>
