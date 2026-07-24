@@ -201,7 +201,7 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   return (
     <div className="signin">
       <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for Google sign-in…' : 'Continue with Google'}</button>
-      {err && <div className="field-err">{err}</div>}
+      {err && <div className="field-err" role="alert">{err}</div>}
       <div className="field-note">{code ? `Browser open — sign in with Google, then approve code ${code}.` : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}</div>
     </div>
   );
@@ -1081,7 +1081,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
             <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
           </div>
         )}
-        {err && <div className="field-err">{err}</div>}
+        {err && <div className="field-err" role="alert">{err}</div>}
       </div>
     </>
   );
@@ -1155,7 +1155,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
           <button className="act" disabled={busy || !keyDraft.trim()} onClick={() => void saveKey()}>{busy ? 'Saving…' : 'Save key'}</button>
           {present && <button className="act" disabled={busy} onClick={() => void clearKey()}>Remove</button>}
         </div>
-        {err && <div className="field-err">{err}</div>}
+        {err && <div className="field-err" role="alert">{err}</div>}
       </div>
       <div className="setrow">
         <div>
@@ -1314,7 +1314,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Shortcut & Capture' && (
             <>
-              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code, then press this to open an explanation.</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
+              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code, then press this to open an explanation.</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow compact />
             </>
           )}
@@ -1432,14 +1432,15 @@ function App() {
     <>
       <div className="titlebar" />
       <div className="layout">
-        <aside className="side fade-in fade-in--side">
+        <aside className="side fade-in fade-in--side" aria-label="Sidebar">
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
-          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
+          <nav className="nav" aria-label="Main">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
           <button
             className={`sync-state sync-state--${sync.phase}`}
             aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
+            aria-live="polite"
             onClick={() => void window.unvibe.retrySync()}
             disabled={sync.phase === 'syncing' || sync.phase === 'local'}
           >
@@ -1448,7 +1449,7 @@ function App() {
             {sync.pending > 0 && <small>{sync.pending} pending</small>}
           </button>
           <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free · 100 on Pro. AI access included—no provider API key needed.</div></div>
-          <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
+          <nav className="nav" aria-label="Footer">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
           <div className="content-tools">
