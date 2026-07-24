@@ -81,6 +81,11 @@ export class SupabaseStore implements Store {
     return (data?.user_id as string | undefined) ?? null;
   }
 
+  async revokeToken(token: string): Promise<void> {
+    const { error } = await this.db.from('tokens').delete().eq('token', token);
+    if (error) throw new Error(`Could not revoke session: ${error.message}`);
+  }
+
   async signIn(email: string): Promise<Account> {
     const normalized = email.trim().toLowerCase();
     const { data: existing } = await this.db
@@ -175,6 +180,15 @@ export class SupabaseStore implements Store {
   async history(userId: string, limit: number): Promise<EventRecord[]> {
     const events = await this.eventsFor(userId);
     return events.slice(-limit).reverse();
+  }
+
+  async historyPage(userId: string, limit: number, cursor?: string): Promise<import('./types').HistoryPage> {
+    const offset = cursor ? Number.parseInt(cursor, 10) : 0;
+    if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid history cursor.');
+    const events = await this.history(userId, Number.MAX_SAFE_INTEGER);
+    const page = events.slice(offset, offset + limit);
+    const nextOffset = offset + page.length;
+    return { events: page, ...(nextOffset < events.length ? { nextCursor: String(nextOffset) } : {}) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {

@@ -1,6 +1,9 @@
 export interface IncomingEvent {
   id: string;
   ts: string;
+  eventType?: 'explanation_completed';
+  localDate?: string;
+  timezone?: string;
   scope: string;
   level: string;
   file?: string;
@@ -8,6 +11,9 @@ export interface IncomingEvent {
   concept?: string;
   conceptLabel?: string;
   project?: string;
+  lines?: number;
+  language?: string;
+  sourceApp?: string;
 }
 
 export interface EventRecord extends IncomingEvent {
@@ -20,6 +26,8 @@ export interface ProfileSummary {
   needsReview: number;
   conceptsSeen: number;
   conceptsUnderstood: number;
+  conceptsFamiliar: number;
+  conceptsStrong: number;
   conceptsNeedReview: number;
   currentStreakDays: number;
   lastActive?: string;
@@ -44,6 +52,33 @@ export interface UsageResult {
   limit: number;
 }
 
+export type SkillEvidenceState = 'seen' | 'familiar' | 'strong' | 'needs_review';
+
+export interface SkillRecord {
+  id: string;
+  userId: string;
+  normalizedName: string;
+  displayName: string;
+  category?: string;
+  language?: string;
+  firstEncounteredAt: string;
+  lastEncounteredAt: string;
+  lastReviewedAt?: string;
+  encounterCount: number;
+  reviewCount: number;
+  successfulChecks: number;
+  unsuccessfulChecks: number;
+  evidenceState: SkillEvidenceState;
+  nextReviewDate?: string;
+  relatedProjects: string[];
+  relatedEventIds: string[];
+}
+
+export interface HistoryPage {
+  events: EventRecord[];
+  nextCursor?: string;
+}
+
 export interface DeviceCode {
   deviceCode: string;
   userCode: string;
@@ -64,8 +99,9 @@ export interface Store {
   // Device auth
   createDeviceCode(baseUrl: string): Promise<DeviceCode>;
   approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null>;
-  redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'>;
+  redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'>;
   userForToken(token: string): Promise<string | null>;
+  revokeToken(token: string): Promise<void>;
 
   // Direct (in-app) auth. Passwordless in dev; production would add verification.
   signIn(email: string): Promise<Account>;
@@ -77,6 +113,7 @@ export interface Store {
   upsertEvents(userId: string, events: IncomingEvent[]): Promise<void>;
   profile(userId: string): Promise<ProfileSummary>;
   history(userId: string, limit: number): Promise<EventRecord[]>;
+  historyPage(userId: string, limit: number, cursor?: string): Promise<HistoryPage>;
   projects(userId: string): Promise<ProjectSummary[]>;
 
   // Beta usage metering (see src/billing/plans.ts)

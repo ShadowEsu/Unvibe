@@ -98,6 +98,10 @@ export class MemoryStore implements Store {
     return this.data.tokens.get(token) ?? null;
   }
 
+  async revokeToken(token: string): Promise<void> {
+    this.data.tokens.delete(token);
+  }
+
   async signIn(email: string): Promise<Account> {
     const normalized = email.trim().toLowerCase();
     let userId = [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0];
@@ -165,6 +169,15 @@ export class MemoryStore implements Store {
 
   async history(userId: string, limit: number): Promise<EventRecord[]> {
     return this.eventsFor(userId).slice(-limit).reverse();
+  }
+
+  async historyPage(userId: string, limit: number, cursor?: string): Promise<import('./types').HistoryPage> {
+    const offset = cursor ? Number.parseInt(cursor, 10) : 0;
+    if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid history cursor.');
+    const events = (await this.history(userId, Number.MAX_SAFE_INTEGER));
+    const page = events.slice(offset, offset + limit);
+    const nextOffset = offset + page.length;
+    return { events: page, ...(nextOffset < events.length ? { nextCursor: String(nextOffset) } : {}) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {
