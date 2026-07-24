@@ -142,7 +142,7 @@ const FOOT: Array<{ id: string; icon: string; toast: string }> = [
 ];
 
 function Icon({ d }: { d: string }) {
-  return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+  return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
 }
 
 /** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
@@ -1435,7 +1435,7 @@ function App() {
         <aside className="side fade-in fade-in--side">
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
-          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
+          <nav className="nav" aria-label="Main">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} aria-current={p.id === page ? 'page' : undefined} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
           <button
             className={`sync-state sync-state--${sync.phase}`}
@@ -1448,7 +1448,7 @@ function App() {
             {sync.pending > 0 && <small>{sync.pending} pending</small>}
           </button>
           <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free · 100 on Pro. AI access included—no provider API key needed.</div></div>
-          <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
+          <nav className="nav" aria-label="Footer">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
         </aside>
         <main className="content">
           <div className="content-tools">
