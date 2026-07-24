@@ -54,7 +54,19 @@ async function activateApp(name: string): Promise<void> {
 
 async function syntheticCopy(): Promise<void> {
   await osascript('tell application "System Events" to keystroke "c" using command down');
-  await delay(420);
+}
+
+/**
+ * Editors update the pasteboard asynchronously, especially for larger selections.
+ * Poll briefly instead of assuming a single fixed delay is enough.
+ */
+async function waitForCopiedText(): Promise<string> {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await delay(75);
+    const text = clipboard.readText();
+    if (text.trim().length > 0) return text;
+  }
+  return '';
 }
 
 export async function captureSelection(): Promise<string | null> {
@@ -70,11 +82,14 @@ export async function captureSelection(): Promise<string | null> {
       lastForeignApp = front;
     }
 
+    // Give macOS a beat to commit the cleared pasteboard before asking the editor
+    // to write into it. Without this, VS Code can occasionally return the prior item.
+    await delay(60);
     await syntheticCopy();
-    let grabbed = clipboard.readText();
+    let grabbed = await waitForCopiedText();
     if (!grabbed) {
       await syntheticCopy();
-      grabbed = clipboard.readText();
+      grabbed = await waitForCopiedText();
     }
     if (grabbed.trim().length > 0) return grabbed;
     return null;

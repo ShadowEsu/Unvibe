@@ -257,11 +257,15 @@ function asset(...parts: string[]): string {
 async function startReview(): Promise<void> {
   broadcastShortcut();
   // ⌘U must only raise the aisle + explanation panel — never System Settings.
-  // Never call isTrustedAccessibilityClient(true) here: prompt=true re-opens the
-  // macOS permission UI even when the user already toggled Accessibility on.
+  // On a fresh install, make the required macOS permission actionable instead of
+  // silently falling through to a clipboard-only picker.
   if (isMac && !accessibilityGranted(false) && !accessibilitySettingsOpenedThisSession) {
     accessibilitySettingsOpenedThisSession = true;
-    notify('Enable Accessibility for Unvibe in System Settings, then quit and reopen Unvibe');
+    accessibilityGranted(true);
+    void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    notify('Enable Accessibility for Unvibe, return to your editor, then press ⌘U again');
+    showBar(bar);
+    return;
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
