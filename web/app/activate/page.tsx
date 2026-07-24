@@ -27,7 +27,10 @@ function LogoMark() {
 function GoogleMark() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.4 14.7 2.4 12 2.4 6.9 2.4 2.7 6.6 2.7 11.7S6.9 21 12 21c5.2 0 8.6-3.6 8.6-8.7 0-.6-.1-1-.2-1.5H12z" />
+      <path fill="#4285F4" d="M21.35 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.24a4.48 4.48 0 0 1-1.94 2.94v2.52h3.24c1.9-1.75 2.81-4.33 2.81-7.29Z" />
+      <path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.23L15.21 17a5.82 5.82 0 0 1-8.67-3.06H3.19v2.6A9.75 9.75 0 0 0 12 21.75Z" />
+      <path fill="#FBBC05" d="M6.54 13.94a5.85 5.85 0 0 1 0-3.74V7.6H3.19a9.74 9.74 0 0 0 0 8.94l3.35-2.6Z" />
+      <path fill="#EA4335" d="M12 6.39c1.51 0 2.87.52 3.94 1.54l2.95-2.95C16.83 3.06 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.81 5.35l3.35 2.6A5.82 5.82 0 0 1 12 6.39Z" />
     </svg>
   );
 }
@@ -252,10 +255,10 @@ export default function ActivatePage() {
               <span className="activate-kicker__dot" aria-hidden="true" />
               Device approval
             </div>
-            <h1 className="activate-title">Connect your desktop app</h1>
+            <h1 className="activate-title">Make this Mac yours.</h1>
             <p className="activate-sub">
-              Sign in with Google, then approve the code from Unvibe to link this
-              Mac.
+              Sign in once, approve the short code, and return straight to your
+              flow.
             </p>
 
             <div className="activate-steps" aria-hidden="true">
