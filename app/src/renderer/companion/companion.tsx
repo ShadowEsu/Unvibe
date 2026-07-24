@@ -211,9 +211,19 @@ function PermRow({ compact }: { compact?: boolean }) {
   const [state, setState] = useState<{ granted: boolean; platform: string } | null>(null);
   const check = () => void window.unvibe.accessibility().then((r) => setState(r as { granted: boolean; platform: string }));
   useEffect(() => {
-    check();
-    const t = setInterval(check, 2500); // reflect a grant made in System Settings without a manual re-check
-    return () => clearInterval(t);
+    let pollingInterval: ReturnType<typeof setInterval> | null = null;
+    window.unvibe.accessibility().then((r) => {
+      const result = r as { granted: boolean; platform: string };
+      setState(result);
+      // Poll for accessibility grant changes only on macOS (non-darwin is always granted)
+      if (result.platform === 'darwin') {
+        pollingInterval = setInterval(
+          () => void window.unvibe.accessibility().then((r2) => setState(r2 as { granted: boolean; platform: string })),
+          2500,
+        );
+      }
+    });
+    return () => { if (pollingInterval) clearInterval(pollingInterval); };
   }, []);
   const granted = state?.granted ?? false;
   const na = state?.platform !== 'darwin';
