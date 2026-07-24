@@ -267,7 +267,7 @@ export async function buildComparePayload(opts: {
 }
 
 export function isProPlan(plan: string): boolean {
-  return plan === 'pro' || plan === 'teams';
+  return plan === 'pro' || plan === 'teams' || plan === 'full';
 }
 
 export function scopeLabel(scope: ReviewScope | ReviewMode): string {

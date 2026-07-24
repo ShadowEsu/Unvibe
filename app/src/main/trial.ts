@@ -4,6 +4,8 @@
  */
 
 const BAKED_TRIAL_TOKEN = process.env.UNVIBE_RELEASE_TRIAL_TOKEN || '';
+/** Founder/full-product builds deliberately have no local feature or usage gates. */
+const BAKED_FULL_PRODUCT = process.env.UNVIBE_RELEASE_FULL_PRODUCT === '1';
 
 export function bakedTrialToken(): string {
   return BAKED_TRIAL_TOKEN.trim();
@@ -11,4 +13,8 @@ export function bakedTrialToken(): string {
 
 export function trialBuildEnabled(): boolean {
   return bakedTrialToken().length > 0;
+}
+
+export function fullProductBuildEnabled(): boolean {
+  return BAKED_FULL_PRODUCT;
 }

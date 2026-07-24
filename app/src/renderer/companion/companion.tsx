@@ -400,7 +400,7 @@ function UsageChip({ usage, onPlan, compact = false }: {
   if (!usage) return null;
   const low = usage.remaining <= 5;
   const out = usage.remaining <= 0;
-  const planLabel = usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
+  const planLabel = usage.plan === 'full' ? 'Full' : usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
   return (
     <button
       type="button"

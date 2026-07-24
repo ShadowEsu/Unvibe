@@ -536,7 +536,7 @@ function Widget() {
         <div className="levels" aria-label="Explanation depth">
           <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
-            const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams';
+            const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
             return (
               <button
                 key={l.id}

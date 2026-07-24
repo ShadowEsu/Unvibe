@@ -48,7 +48,7 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
-import { trialBuildEnabled } from './trial';
+import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
   signIn,
@@ -269,7 +269,7 @@ async function startReview(): Promise<void> {
   // afterwards rather than racing the synthetic ⌘C operation.
   const code = await captureSelection();
   const sourceApp = await frontmostApp();
-  if (code && trialBuildEnabled()) {
+  if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
       notify('Private beta limit reached: 30 selected-code prompts this month. Your saved learning is still available.');

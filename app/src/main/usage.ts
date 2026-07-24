@@ -6,18 +6,20 @@
  */
 import { billingOverview, trialUsageOverview, type BillingUsageLine } from './backend';
 import { store } from './store';
-import { trialBuildEnabled } from './trial';
+import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 
 export const LOCAL_FREE_LIMIT = 50;
 /** The sealed private beta is intentionally smaller than the normal Free allowance. */
 export const TRIAL_FREE_LIMIT = 20;
+/** UI-safe representation of an unrestricted local entitlement. */
+export const FULL_PRODUCT_LIMIT = 1_000_000;
 
 export interface AppUsage {
   used: number;
   limit: number;
   remaining: number;
   resetsAt: string;
-  plan: 'free' | 'pro' | 'teams' | 'local' | 'trial';
+  plan: 'free' | 'pro' | 'teams' | 'local' | 'trial' | 'full';
   source: 'cloud' | 'local' | 'trial';
 }
 
@@ -34,18 +36,22 @@ export function localExplanationUsage(now = new Date()): AppUsage {
     if (ev.eventType && ev.eventType !== 'explanation_completed') return false;
     return ev.ts.slice(0, 7) === prefix;
   }).length;
-  const limit = trialBuildEnabled() ? TRIAL_FREE_LIMIT : LOCAL_FREE_LIMIT;
+  const fullProduct = fullProductBuildEnabled();
+  const limit = fullProduct ? FULL_PRODUCT_LIMIT : trialBuildEnabled() ? TRIAL_FREE_LIMIT : LOCAL_FREE_LIMIT;
   return {
     used,
     limit,
-    remaining: Math.max(0, limit - used),
+    remaining: fullProduct ? FULL_PRODUCT_LIMIT : Math.max(0, limit - used),
     resetsAt,
-    plan: trialBuildEnabled() ? 'trial' : 'local',
+    plan: fullProduct ? 'full' : trialBuildEnabled() ? 'trial' : 'local',
     source: 'local',
   };
 }
 
 export async function resolveAppUsage(): Promise<AppUsage> {
+  // A full-product build is intentionally local-first and never lets an
+  // unavailable billing endpoint put the owner behind a feature gate.
+  if (fullProductBuildEnabled()) return localExplanationUsage();
   const token = store().token();
   if (token) {
     try {
