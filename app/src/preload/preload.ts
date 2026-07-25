@@ -52,8 +52,16 @@ const api = {
   widgetResizeStart: (edge: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') =>
     ipcRenderer.send('widget:resizeStart', edge),
   widgetResizeEnd: () => ipcRenderer.send('widget:resizeEnd'),
-  onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
-  onAutocollapse: (cb: (v: boolean) => void) => ipcRenderer.on('widget:autocollapse', (_e, v) => cb(v)),
+  onReviewEvent: (cb: (ev: unknown) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, ev: unknown) => cb(ev);
+    ipcRenderer.on('review:event', listener);
+    return () => ipcRenderer.removeListener('review:event', listener);
+  },
+  onAutocollapse: (cb: (v: boolean) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, v: boolean) => cb(v);
+    ipcRenderer.on('widget:autocollapse', listener);
+    return () => ipcRenderer.removeListener('widget:autocollapse', listener);
+  },
 
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
@@ -67,7 +75,11 @@ const api = {
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
-  onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),
+  onSyncStatus: (cb: (status: unknown) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, status: unknown) => cb(status);
+    ipcRenderer.on('sync:status', listener);
+    return () => ipcRenderer.removeListener('sync:status', listener);
+  },
 
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
@@ -84,14 +96,22 @@ const api = {
 
   // onboarding
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
-  onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
+  onShortcutFired: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('shortcut:fired', listener);
+    return () => ipcRenderer.removeListener('shortcut:fired', listener);
+  },
 
   // account
   account: () => ipcRenderer.invoke('account:get'),
   signIn: (email: string) => ipcRenderer.invoke('account:signIn', email),
   signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
-  onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
+  onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, r: { ok: boolean; email?: string; error?: string }) => cb(r);
+    ipcRenderer.on('account:device', listener);
+    return () => ipcRenderer.removeListener('account:device', listener);
+  },
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
 
