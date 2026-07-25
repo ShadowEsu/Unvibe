@@ -1251,6 +1251,17 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onSettings]);
 
+  useEffect(() => {
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !recRef.current) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [onClose]);
+
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>

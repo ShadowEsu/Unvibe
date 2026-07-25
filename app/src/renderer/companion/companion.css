@@ -73,6 +73,7 @@ body {
     #110a20;
 }
 :root[data-theme="light"] body { background: #fbf9fb; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 button, input { font-family: inherit; }
 button { transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
 button:not(:disabled):active { transform: translateY(1px); }
