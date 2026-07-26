@@ -22,6 +22,7 @@ export function parseQuestion(text: string): Question | undefined {
       Array.isArray(obj.options) &&
       obj.options.length >= 2 &&
       typeof obj.answerIndex === 'number' &&
+      Number.isInteger(obj.answerIndex) &&
       obj.answerIndex >= 0 &&
       obj.answerIndex < obj.options.length
     ) {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, forSync, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -85,6 +85,23 @@ test('computeLearningItems includes on-device code and explanation when present'
   assert.equal(items[0]!.code, 'const f = () => x;');
   assert.equal(items[0]!.explanation, 'This closes over x.');
   assert.equal(items[1]!.code, undefined);
+});
+
+test('forSync strips local-only fields (code, explanation) before sync', () => {
+  const event = ev({
+    code: 'const x = 1;',
+    explanation: 'This is a local explanation.',
+    concept: 'closures',
+    file: 'test.ts',
+    project: 'my-project',
+  });
+  const synced = forSync(event);
+  assert.equal('code' in synced, false);
+  assert.equal('explanation' in synced, false);
+  assert.equal(synced.concept, 'closures');
+  assert.equal(synced.file, 'test.ts');
+  assert.equal(synced.project, 'my-project');
+  assert.equal(synced.outcome, 'reviewed');
 });
 
 test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {
