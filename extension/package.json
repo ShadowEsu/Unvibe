@@ -1,7 +1,7 @@
 {
   "name": "uncode",
-  "displayName": "Uncode",
-  "description": "Understand, verify, and retain AI-generated code. Quiet reviews and context-aware explanations for changes made by coding agents.",
+  "displayName": "Unvibe",
+  "description": "Understand, verify, and retain AI-generated code. Send a selected snippet to the private Unvibe desktop review flow.",
   "version": "0.1.0",
   "publisher": "uncode",
   "license": "UNLICENSED",
@@ -45,6 +45,10 @@
         "title": "Uncode: Review Selected Code"
       },
       {
+        "command": "uncode.reviewSelectionInDesktop",
+        "title": "Unvibe: Understand Selection in Desktop App"
+      },
+      {
         "command": "uncode.reviewFile",
         "title": "Uncode: Review Current File"
       },
@@ -80,6 +84,11 @@
     "menus": {
       "editor/context": [
         {
+          "command": "uncode.reviewSelectionInDesktop",
+          "when": "editorHasSelection",
+          "group": "uncode@0"
+        },
+        {
           "command": "uncode.reviewSelection",
           "when": "uncode.hasSelection",
           "group": "uncode@1"
@@ -87,6 +96,12 @@
       ]
     },
     "keybindings": [
+      {
+        "command": "uncode.reviewSelectionInDesktop",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
+        "when": "editorTextFocus && editorHasSelection"
+      },
       {
         "command": "uncode.reviewSelection",
         "key": "ctrl+alt+r",

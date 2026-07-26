@@ -15,12 +15,16 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 7;
+/** Separately migrates the Island's default behavior without restarting onboarding. */
+const ISLAND_BEHAVIOR_REVISION = 1;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
   settingsRevision?: number;
   /** Internal — migrates the former system-default appearance to dark once. */
   appearanceRevision?: number;
+  /** Internal — tracks the quiet-by-default Island preference migration. */
+  islandBehaviorRevision?: number;
   onboarded: boolean;
   /** Electron accelerator. Default is ⌘U. */
   shortcut: string;
@@ -64,11 +68,13 @@ export interface Settings {
 const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
   appearanceRevision: 1,
+  islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
   onboarded: false,
   shortcut: 'CommandOrControl+U',
   barPosition: 'top-center',
-  barVisibility: 'always',
-  barHoverPreview: true,
+  // The Island is an invocation surface, not a permanent desktop obstruction.
+  barVisibility: 'during-review',
+  barHoverPreview: false,
   barHoverDelayMs: 220,
   rotateIslandStats: true,
   followActiveDisplay: true,
@@ -103,6 +109,9 @@ class SettingsStore {
     const needsOnboardingReset = (loaded.settingsRevision ?? 0) < SETTINGS_REVISION;
     const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
       (loaded.theme === undefined || loaded.theme === 'system');
+    // Only migrate the exact former defaults. Deliberate custom settings stay intact.
+    const needsQuietIslandDefaults = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
+      loaded.barVisibility === 'always' && loaded.barHoverPreview === true;
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -114,7 +123,11 @@ class SettingsStore {
       aiProvider,
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 1,
+      islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
       ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
+      ...(needsQuietIslandDefaults
+        ? { barVisibility: 'during-review' as const, barHoverPreview: false }
+        : {}),
       ...(needsOnboardingReset
         ? {
             onboarded: false,
@@ -125,7 +138,7 @@ class SettingsStore {
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
-    if (needsOnboardingReset || needsDarkDefault || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsDarkDefault || needsQuietIslandDefaults || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {

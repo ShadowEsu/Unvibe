@@ -45,6 +45,26 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('uncode.openPanel', () => panel.reveal()),
 
+    vscode.commands.registerCommand('uncode.reviewSelectionInDesktop', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.selection.isEmpty) {
+        void vscode.window.showInformationMessage('Unvibe: select some code first, then press ⌘U.');
+        return;
+      }
+      const path = editor.document.uri.fsPath;
+      if (isExcludedPath(path)) {
+        void vscode.window.showWarningMessage('Unvibe: this file is excluded from review by your privacy defaults.');
+        return;
+      }
+
+      // Do not pass source text to the URI or extension host. The desktop app captures the
+      // existing editor selection locally and runs its normal secret filter before any review.
+      const opened = await vscode.env.openExternal(vscode.Uri.parse('unvibe://review'));
+      if (!opened) {
+        void vscode.window.showErrorMessage('Unvibe could not open the desktop app. Install or open Unvibe, then try ⌘U again.');
+      }
+    }),
+
     vscode.commands.registerCommand('uncode.reviewSelection', () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.selection.isEmpty) {

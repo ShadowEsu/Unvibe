@@ -51,6 +51,12 @@
       "extendInfo": {
         "CFBundleDisplayName": "Unvibe",
         "CFBundleName": "Unvibe",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Unvibe review link",
+            "CFBundleURLSchemes": ["unvibe"]
+          }
+        ],
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
         "LSUIElement": false
       }

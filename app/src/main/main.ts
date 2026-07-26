@@ -105,6 +105,28 @@ const tabSessions = new Map<string, ReviewSession>();
 let activeTabId = '1';
 let panelReady = false;
 const normalBounds = new Map<number, Electron.Rectangle>();
+let pendingExternalReview = false;
+
+/**
+ * The IDE bridge deliberately carries no code. The desktop app captures the current selection
+ * locally through the same Accessibility-protected ⌘U path, so a selection never appears in a
+ * URL, log, extension setting, or third-party process.
+ */
+function acceptExternalReviewUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === 'unvibe:' && url.hostname === 'review' &&
+      (url.pathname === '' || url.pathname === '/') && url.search === '' && url.hash === '';
+  } catch {
+    return false;
+  }
+}
+
+function handleExternalReviewUrl(rawUrl: string): void {
+  if (!acceptExternalReviewUrl(rawUrl)) return;
+  if (app.isReady()) void startReview();
+  else pendingExternalReview = true;
+}
 
 function makeSession(
   tabId: string,
@@ -313,6 +335,21 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 
 app.setName('Unvibe');
 
+// Register before Electron becomes ready: macOS can deliver an open-url event during launch.
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleExternalReviewUrl(url);
+});
+
+// CFBundleURLTypes below registers packaged builds. This additionally makes local development
+// and a manually installed app respond to the same privacy-safe desktop bridge.
+if (process.defaultApp) {
+  const entry = process.argv[1];
+  if (entry) app.setAsDefaultProtocolClient('unvibe', process.execPath, [path.resolve(entry)]);
+} else {
+  app.setAsDefaultProtocolClient('unvibe');
+}
+
 app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
@@ -368,6 +405,10 @@ app.whenReady().then(() => {
   registerShortcut(s.shortcut);
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
+  if (pendingExternalReview) {
+    pendingExternalReview = false;
+    void startReview();
+  }
 
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
