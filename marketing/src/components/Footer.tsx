@@ -154,6 +154,21 @@ export function Footer() {
                 height="54"
               />
             </a>
+            <a
+              href="https://launchbuff.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Featured on LaunchBuff"
+              className="opacity-80 transition-opacity hover:opacity-100"
+              aria-label="Featured on LaunchBuff"
+            >
+              <img
+                src="https://launchbuff.com/badge-featured-dark.svg"
+                alt="Featured on LaunchBuff"
+                width="256"
+                height="80"
+              />
+            </a>
           </div>
           <p>
             Support:{" "}
