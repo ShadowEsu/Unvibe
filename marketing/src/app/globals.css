@@ -97,44 +97,6 @@
   color-scheme: dark;
 }
 
-/*
-  The home page is deliberately a sequence of dark editorial moments and calm
-  light reading surfaces. Keep that rhythm when someone chooses the dark site
-  theme too: the dark preference changes the shell and the dark chapters, but
-  it must not turn every chapter into the same dark panel.
-*/
-.dark .how-field,
-.dark .level-field,
-.dark .tools-field,
-.dark .companion-field,
-.dark .privacy-field,
-.dark .pricing-field,
-.dark .faq-field {
-  --bg: 253 250 255;
-  --surface: 255 255 255;
-  --surface-2: 246 241 252;
-  --fg: 40 26 57;
-  --fg-muted: 100 84 116;
-  --fg-faint: 139 123 153;
-  --line: 225 215 234;
-  --line-strong: 203 187 219;
-  --primary: 105 70 211;
-  --primary-strong: 82 46 185;
-  --primary-soft: 238 232 255;
-  --on-primary: 255 255 255;
-  --cream: #fffdf8;
-  --lavender: #efe8ff;
-  --purple: #6944d2;
-  --purple-strong: #5130b4;
-  --charcoal-purple: #281937;
-  --ink: #281a37;
-  --paper: #ffffff;
-  --soft-field: linear-gradient(135deg, rgba(255, 255, 255, .97), rgba(249, 245, 255, .97) 54%, rgba(255, 247, 241, .97));
-  --feature-field: linear-gradient(135deg, #faf5ff, #f2eaff 50%, #fff4ed);
-  color: rgb(var(--fg));
-  color-scheme: light;
-}
-
 * {
   border-color: rgb(var(--line));
 }

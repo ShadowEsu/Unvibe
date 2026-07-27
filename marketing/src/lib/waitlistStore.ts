@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { del, list, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import { createHash } from "node:crypto";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 
@@ -100,18 +100,12 @@ async function putEntry(entry: WaitlistEntry): Promise<void> {
 }
 
 async function readEntryBlob(url: string): Promise<WaitlistEntry | null> {
-  const downloadUrl = new URL(url);
-  downloadUrl.searchParams.set("download", "1");
-  const response = await fetch(downloadUrl, {
-    headers: {
-      Authorization: `Bearer ${blobToken()}`,
-      "Cache-Control": "no-cache",
-    },
-    cache: "no-store",
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error("Waitlist storage returned an unexpected response");
-  const body = await response.text();
+  // Read through the Blob SDK. Direct fetches against a Blob CDN URL can be
+  // rejected even with a server token, which made the founder waitlist view
+  // fail despite a healthy configured store.
+  const result = await get(url, { access: "public", token: blobToken(), useCache: false });
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  const body = await new Response(result.stream).text();
   if (!body.trim()) return null;
   return decryptEntry(body);
 }

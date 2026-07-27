@@ -7,7 +7,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { list, put } from "@vercel/blob";
+import { get, list, put } from "@vercel/blob";
 
 interface DayBucket {
   views: number;
@@ -122,15 +122,11 @@ async function readBlob(): Promise<StatsFile> {
   const page = await list({ prefix: BLOB_PATH, limit: 1, token });
   const match = page.blobs.find((b) => b.pathname === BLOB_PATH);
   if (!match) return emptyStats();
-  const url = new URL(match.url);
-  url.searchParams.set("download", "1");
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" },
-    cache: "no-store",
-  });
-  if (response.status === 404) return emptyStats();
-  if (!response.ok) throw new Error("Stats storage returned an unexpected response");
-  return normalize((await response.json()) as StatsFile);
+  // Go through the Blob SDK rather than a CDN fetch. The SDK authenticates the
+  // storage read correctly for serverless functions and avoids false 403s.
+  const result = await get(match.url, { access: "public", token, useCache: false });
+  if (!result || result.statusCode !== 200 || !result.stream) return emptyStats();
+  return normalize(JSON.parse(await new Response(result.stream).text()) as StatsFile);
 }
 
 async function writeBlob(data: StatsFile): Promise<void> {

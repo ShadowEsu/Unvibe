@@ -7,7 +7,9 @@ import { track } from "@/lib/analytics";
 const DEMO_SRC =
   process.env.NEXT_PUBLIC_DEMO_VIDEO_URL?.trim()
   || process.env.NEXT_PUBLIC_INVESTOR_DEMO_VIDEO_URL?.trim()
-  || "https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4";
+  // Keep the core product recording with the site. The previous remote Blob
+  // object became unavailable and left the homepage with a broken player.
+  || "/demo.mp4";
 
 /**
  * Homepage product demo — real Mac recording.
