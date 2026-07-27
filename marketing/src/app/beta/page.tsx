@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 // Keep the beta-only aliases for a deployment that needs a distinct access-controlled URL.
 const macDownload = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
   || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
-  || "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.3-cmdu-auto/Unvibe-0.1.3-cmdu-auto-arm64.zip";
+  || "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.4-feedback-rewards/Unvibe-0.1.4-feedback-rewards-arm64.zip";
 const windowsDownload = process.env.NEXT_PUBLIC_BETA_WINDOWS_DOWNLOAD_URL?.trim()
   || process.env.NEXT_PUBLIC_INVESTOR_WINDOWS_DOWNLOAD_URL?.trim();
 const zipDownload = process.env.NEXT_PUBLIC_INVESTOR_ZIP_URL?.trim();
