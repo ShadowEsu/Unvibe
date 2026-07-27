@@ -81,7 +81,8 @@ const DEFAULTS: Settings = {
   soundEffects: true,
   soundVolume: 0.3,
   soundStyle: 'soft',
-  widgetOpacityInactive: 0.72,
+  // Enough transparency to show the editor beneath without making text feel disabled.
+  widgetOpacityInactive: 0.84,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
   theme: 'dark',

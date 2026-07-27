@@ -105,27 +105,35 @@ const tabSessions = new Map<string, ReviewSession>();
 let activeTabId = '1';
 let panelReady = false;
 const normalBounds = new Map<number, Electron.Rectangle>();
-let pendingExternalReview = false;
+let pendingExternalReview: { preferClipboard: boolean } | null = null;
 
 /**
  * The IDE bridge deliberately carries no code. The desktop app captures the current selection
- * locally through the same Accessibility-protected ⌘U path, so a selection never appears in a
+ * locally through a trusted, on-device clipboard handoff, so a selection never appears in a
  * URL, log, extension setting, or third-party process.
  */
-function acceptExternalReviewUrl(rawUrl: string): boolean {
+function parseExternalReviewUrl(rawUrl: string): { preferClipboard: boolean } | null {
   try {
     const url = new URL(rawUrl);
-    return url.protocol === 'unvibe:' && url.hostname === 'review' &&
-      (url.pathname === '' || url.pathname === '/') && url.search === '' && url.hash === '';
+    const isReview = url.protocol === 'unvibe:' && url.hostname === 'review' &&
+      (url.pathname === '' || url.pathname === '/') && url.hash === '';
+    if (!isReview) return null;
+    // This is an intent flag only — a URL must never contain selected source text.
+    if (url.search === '') return { preferClipboard: false };
+    if (url.searchParams.size === 1 && url.searchParams.get('source') === 'ide') {
+      return { preferClipboard: true };
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 function handleExternalReviewUrl(rawUrl: string): void {
-  if (!acceptExternalReviewUrl(rawUrl)) return;
-  if (app.isReady()) void startReview();
-  else pendingExternalReview = true;
+  const request = parseExternalReviewUrl(rawUrl);
+  if (!request) return;
+  if (app.isReady()) void startReview(request);
+  else pendingExternalReview = request;
 }
 
 function makeSession(
@@ -276,7 +284,7 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
-async function startReview(): Promise<void> {
+async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
   // ⌘U must only raise the aisle + explanation panel — never System Settings.
   // On a fresh install, make the required macOS permission actionable instead of
@@ -289,12 +297,12 @@ async function startReview(): Promise<void> {
     showBar(bar);
     return;
   }
+  // Capture before showing any Unvibe surface. This preserves the active editor selection
+  // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
+  const code = await captureSelection(options);
+  const sourceApp = await frontmostApp();
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
-  // captureSelection restores/focuses the app that held the selection, so read the source
-  // afterwards rather than racing the synthetic ⌘C operation.
-  const code = await captureSelection();
-  const sourceApp = await frontmostApp();
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
@@ -406,8 +414,9 @@ app.whenReady().then(() => {
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
   if (pendingExternalReview) {
-    pendingExternalReview = false;
-    void startReview();
+    const request = pendingExternalReview;
+    pendingExternalReview = null;
+    void startReview(request);
   }
 
   // --- bar / companion ---

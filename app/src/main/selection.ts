@@ -69,7 +69,16 @@ async function waitForCopiedText(): Promise<string> {
   return '';
 }
 
-export async function captureSelection(): Promise<string | null> {
+/**
+ * The IDE bridge writes the editor's active selection to the local pasteboard immediately
+ * before opening Unvibe. It is still entirely on-device; this mode avoids relying on macOS
+ * focus timing after the external application link has been handled.
+ */
+export async function captureSelection(options: { preferClipboard?: boolean } = {}): Promise<string | null> {
+  if (options.preferClipboard) {
+    const copied = clipboard.readText();
+    return copied.trim().length > 0 ? copied : null;
+  }
   const previous = clipboard.readText();
   // Empty the text pasteboard so an unchanged clipboard cannot be mistaken for a selection.
   // The explicit “Use clipboard” action remains available in the no-selection picker.
@@ -84,7 +93,7 @@ export async function captureSelection(): Promise<string | null> {
 
     // Give macOS a beat to commit the cleared pasteboard before asking the editor
     // to write into it. Without this, VS Code can occasionally return the prior item.
-    await delay(60);
+    await delay(120);
     await syntheticCopy();
     let grabbed = await waitForCopiedText();
     if (!grabbed) {

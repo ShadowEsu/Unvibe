@@ -750,6 +750,8 @@ h1 { font-family: var(--font-sans); font-size: 32px; font-weight: 680; letter-sp
 .study-pane__head h2 { margin: 6px 0 8px; font-size: 20px; letter-spacing: -.03em; font-family: var(--font-sans); font-weight: 650; }
 .rich-text p { margin: 0 0 10px; }
 .rich-text p:last-child { margin-bottom: 0; }
+.rich-text .rich-heading { margin: 18px 0 8px; font-size: 14px; line-height: 1.3; letter-spacing: -0.01em; }
+.rich-text .rich-heading:first-child { margin-top: 0; }
 .rich-list {
   margin: 0 0 12px;
   padding-left: 1.15em;

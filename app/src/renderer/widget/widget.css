@@ -93,6 +93,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
 
 /* AI Container — flush to the window edge so resize grips sit on the visible border */
 .card {
+  --widget-scale: 1;
   position: relative;
   width: 100%;
   height: 100%;
@@ -318,6 +319,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   display: grid;
   gap: 8px;
 }
+.body .rich-heading {
+  margin: 14px 0 6px;
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+}
+.body .rich-heading:first-child { margin-top: 0; }
 .body .rich-list li { padding-left: 2px; }
 .cursor {
   display: inline-block;
@@ -545,6 +554,32 @@ code.inline {
 .verdict.ok::before { content: '✓ '; }
 .verdict.no::before { content: '↻ '; }
 .quiz__why { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+
+/* A compact widget should remain compact in every dimension, including type and controls. */
+.head { gap: calc(9px * var(--widget-scale)); padding: calc(9px * var(--widget-scale)) calc(10px * var(--widget-scale)) calc(9px * var(--widget-scale)) calc(12px * var(--widget-scale)); }
+.head__mark { width: calc(24px * var(--widget-scale)); height: calc(24px * var(--widget-scale)); border-radius: calc(7px * var(--widget-scale)); }
+.head__product { font-size: calc(10px * var(--widget-scale)); }
+.head .src, .head button { font-size: calc(12px * var(--widget-scale)); }
+.head__status { font-size: calc(8px * var(--widget-scale)); }
+.quota { font-size: calc(10px * var(--widget-scale)); padding: calc(3px * var(--widget-scale)) calc(8px * var(--widget-scale)); }
+.tabs { gap: calc(4px * var(--widget-scale)); padding: calc(6px * var(--widget-scale)) calc(10px * var(--widget-scale)) 0; }
+.tab { max-width: calc(140px * var(--widget-scale)); font-size: calc(11px * var(--widget-scale)); padding: calc(5px * var(--widget-scale)) calc(8px * var(--widget-scale)); }
+.tab-add { width: calc(26px * var(--widget-scale)); height: calc(26px * var(--widget-scale)); font-size: calc(16px * var(--widget-scale)); }
+.levels { gap: calc(5px * var(--widget-scale)); padding: calc(8px * var(--widget-scale)) calc(12px * var(--widget-scale)); }
+.levels__label { font-size: calc(9px * var(--widget-scale)); }
+.lvl { font-size: calc(10px * var(--widget-scale)); padding: calc(5px * var(--widget-scale)) calc(8px * var(--widget-scale)); }
+.body { padding: calc(12px * var(--widget-scale)) calc(14px * var(--widget-scale)) calc(16px * var(--widget-scale)); font-size: calc(13.5px * var(--widget-scale)); }
+.body .rich-heading { font-size: calc(12px * var(--widget-scale)); margin-top: calc(14px * var(--widget-scale)); margin-bottom: calc(6px * var(--widget-scale)); }
+.code-context__head, .codeblock .cb-head, .cb-head button { font-size: calc(10.5px * var(--widget-scale)); }
+.code-context pre, .codeblock pre { font-size: calc(12px * var(--widget-scale)); }
+.state { gap: calc(8px * var(--widget-scale)); padding: calc(24px * var(--widget-scale)); }
+.state .big { font-size: calc(16px * var(--widget-scale)); }
+.state .sub, .btn, .askrow input, .opt, .quiz__why { font-size: calc(12.5px * var(--widget-scale)); }
+.btn { padding: calc(8px * var(--widget-scale)) calc(14px * var(--widget-scale)); border-radius: calc(9px * var(--widget-scale)); }
+.detected span, .chip { font-size: calc(11px * var(--widget-scale)); }
+.foot { padding: calc(10px * var(--widget-scale)) calc(12px * var(--widget-scale)) calc(12px * var(--widget-scale)); gap: calc(10px * var(--widget-scale)); }
+.quiz__q { font-size: calc(14.5px * var(--widget-scale)); }
+.opt { padding: calc(10px * var(--widget-scale)) calc(12px * var(--widget-scale)); }
 
 @media (prefers-reduced-motion: reduce) {
   .cursor, .skeleton i, .card, .lvl, .chip, .btn, .tab-add, .opt { animation: none; transition: none; }

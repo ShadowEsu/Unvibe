@@ -25,6 +25,8 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
     '- Use ONLY the provided context. Do not invent files, symbols, or behaviour you cannot see.',
     '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
     '- Prefer short paragraphs or simple markdown bullets (* item). Bold sparingly with **words**.',
+    '- Structure every explanation with exactly these headings, in order: ## What changed, ## Why it matters, ## What to watch, ## Check yourself.',
+    '  For a selection rather than a diff, “What changed” means what the selected code does. Make Check yourself one short question; do not answer it.',
     '- When citing a real file from the context, you may use [[cite:FILE:LINE]] or [[cite:FILE:START-END]].',
     '  The app renders these as small chips — never invent files. For clipboard/selection-only',
     '  context, write plain words ("line 12") instead of cite markers.',

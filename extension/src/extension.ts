@@ -57,9 +57,12 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      // Do not pass source text to the URI or extension host. The desktop app captures the
-      // existing editor selection locally and runs its normal secret filter before any review.
-      const opened = await vscode.env.openExternal(vscode.Uri.parse('unvibe://review'));
+      const selectedCode = editor.document.getText(editor.selection);
+      // Keep the selected text on this machine. The URL carries only an intent flag; the desktop
+      // app immediately reads this fresh local clipboard value and runs its secret filter before
+      // any remote request. This avoids the focus race caused when macOS foregrounds Unvibe.
+      await vscode.env.clipboard.writeText(selectedCode);
+      const opened = await vscode.env.openExternal(vscode.Uri.parse('unvibe://review?source=ide'));
       if (!opened) {
         void vscode.window.showErrorMessage('Unvibe could not open the desktop app. Install or open Unvibe, then try ⌘U again.');
       }

@@ -268,6 +268,19 @@ function Widget() {
     return () => mq.removeEventListener('change', onScheme);
   }, []);
 
+  // Keep typography in proportion when someone makes the compact panel smaller.
+  // The native window owns size; the renderer only exposes a bounded visual scale.
+  useEffect(() => {
+    const updateScale = () => {
+      const scale = Math.max(0.78, Math.min(1, Math.min(window.innerWidth / 300, window.innerHeight / 360)));
+      document.documentElement.style.setProperty('--widget-scale', scale.toFixed(3));
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     window.unvibe.onReviewEvent((raw) => {
       const ev = raw as WidgetEvent;

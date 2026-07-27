@@ -116,7 +116,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <div className="form-heading">
             <span className="brand-pixel" />
             <strong>Join the waitlist</strong>
-            <small>{variant === "hero" ? "Name and email. That is all." : "Three quick details. That is all."}</small>
+            <small>{variant === "hero" ? "Name and email. That is all." : "Request access in under a minute."}</small>
           </div>
           <div className="name-row">
             <Field label="First name" error={errors.firstName?.message}>
@@ -149,7 +149,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <p className="pixel-label">SPOT SAVED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
           <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
-          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite a friend, get rewarded.</strong><span>Share your personal link. After eligible feedback and referral steps are verified, choose 3 more months of Pro or a $5 reward.</span><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button></div></div>}
+          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite friends, earn beta rewards.</strong><span>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer.</span><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (
               <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>
@@ -182,12 +182,13 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
           <p className="section-number light">10 / PRIVATE BETA</p>
-          <h2>Working product. <em>Access is invite-only.</em></h2>
-          <p>Join the waitlist to request access. Invitations are being issued gradually during the private Mac beta.</p>
+          <h2>Private beta access, <em>with a real role in the product.</em></h2>
+          <p>Join the waitlist to request access. Beta members help shape the reviews, learning flow, integrations, and release priorities.</p>
           <ul>
             <li><Check size={16} />Private Mac beta — working product</li>
-            <li><Check size={16} />Invite-only access</li>
-            <li><Check size={16} />No credit card required</li>
+            <li><Check size={16} />Selected-code explanations, saved learning, and early feature voting</li>
+            <li><Check size={16} />Referral rewards: $5 per 3 verified referrals, up to $25</li>
+            <li><Check size={16} />Invite-only access · no credit card required</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>
         </div>

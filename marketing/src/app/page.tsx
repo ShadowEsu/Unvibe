@@ -51,15 +51,21 @@ export default function Home() {
         <div className="hero-pixels hero-pixels-right" aria-hidden="true" />
         <Reveal className="container-page pixel-hero-inner">
           <p className="pixel-eyebrow"><span className="brand-pixel" aria-hidden="true" />A learning layer for AI-generated code</p>
-          <h1>Don&apos;t feel guilty about vibe coding. <em>Make the code yours.</em></h1>
-          <p className="hero-positioning">AI writes the code. <strong>Unvibe helps you understand it.</strong></p>
-          <p className="hero-support">Select code, choose an explanation depth, and learn what it does, why it works, and how it connects to your project—without leaving your workflow.</p>
+          <h1>AI writes the code. <em>Make sure it becomes yours.</em></h1>
+          <p className="hero-positioning">Select code. Press <strong>⌘U</strong>. Understand what changed, why it matters, and what to check next.</p>
+          <p className="hero-support">Unvibe gives AI-generated code a short, context-aware review step—without becoming another place to work.</p>
           <PixelWaitlist variant="hero" />
           <div className="hero-actions">
             <Button href="#demo" size="lg" variant="secondary">See Unvibe in action <ArrowDown size={17} /></Button>
           </div>
-          <p className="hero-micro">Private Mac beta <i /> Working product <i /> Invite-only access <i /> No credit card required</p>
+          <p className="hero-micro">Private Mac beta <i /> Cursor + VS Code workflow <i /> Quiet Island, only when you ask <i /> No credit card required</p>
           <div id="demo" className="hero-demo-wrap"><HeroDemo /></div>
+          <div className="hero-proof" aria-label="Private beta feedback">
+            <span>PRIVATE BETA FEEDBACK</span>
+            <blockquote>“The explanation and customization for how it breaks down your code felt creative.”</blockquote>
+            <p>Early tester feedback · setup and installation rated smooth</p>
+          </div>
+          <div className="hero-release-link"><a href="/releases">See what changed in the latest beta build <ArrowRight size={15} /></a></div>
         </Reveal>
       </section>
 
@@ -147,7 +153,7 @@ export default function Home() {
             <div className="tool-center"><span className="brand-pixel" /><strong>Unvibe</strong><small>Mac desktop layer</small></div>
             {tools.map((tool, index) => <div className={`tool-node tool-${index + 1}`} key={tool}><TerminalSquare size={17} /><span>{tool}</span></div>)}
           </div>
-          <p className="disclosure">Tool names describe intended workflows, not partnerships or endorsements. Specific integrations may be in development.</p>
+          <p className="disclosure">Select code in Cursor or VS Code and press ⌘U to open a private desktop review. Tool names are not partnerships or endorsements.</p>
         </Reveal>
       </section>
 
