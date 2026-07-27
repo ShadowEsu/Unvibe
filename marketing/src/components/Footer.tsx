@@ -112,20 +112,35 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col gap-5 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {year} Unvibe. Mac first. AI writes it; you learn it.</p>
-          <a
-            href="https://toolindex.net/tools/unvibe?ref=badge"
-            target="_blank"
-            rel="noopener"
-            className="w-fit opacity-80 transition-opacity hover:opacity-100"
-            aria-label="Unvibe — Listed on Tool Index"
-          >
-            <img
-              src="https://toolindex.net/badge/unvibe/medium.svg"
-              alt="Unvibe - Listed on Tool Index"
-              width="180"
-              height="50"
-            />
-          </a>
+          <div className="flex w-fit flex-wrap items-center gap-3">
+            <a
+              href="https://toolindex.net/tools/unvibe?ref=badge"
+              target="_blank"
+              rel="noopener"
+              className="opacity-80 transition-opacity hover:opacity-100"
+              aria-label="Unvibe — Listed on Tool Index"
+            >
+              <img
+                src="https://toolindex.net/badge/unvibe/medium.svg"
+                alt="Unvibe - Listed on Tool Index"
+                width="180"
+                height="50"
+              />
+            </a>
+            <a
+              href="https://devrove.com/tools/unvibe-site"
+              rel="noopener"
+              className="opacity-80 transition-opacity hover:opacity-100"
+              aria-label="Unvibe featured on DevRove"
+            >
+              <img
+                src="https://devrove.com/light.svg"
+                alt="Unvibe featured on DevRove"
+                width="156"
+                height="50"
+              />
+            </a>
+          </div>
           <p>
             Support:{" "}
             <a
