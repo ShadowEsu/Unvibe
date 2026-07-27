@@ -140,6 +140,20 @@ export function Footer() {
                 height="50"
               />
             </a>
+            <a
+              href="https://aitooldiscovery.com"
+              target="_blank"
+              rel="noopener"
+              className="opacity-80 transition-opacity hover:opacity-100"
+              aria-label="Featured on AI Tool Discovery"
+            >
+              <img
+                src="https://aitooldiscovery.com/badges/featured-1.svg"
+                alt="Featured on AI Tool Discovery"
+                width="200"
+                height="54"
+              />
+            </a>
           </div>
           <p>
             Support:{" "}
