@@ -2,7 +2,7 @@
   "name": "uncode",
   "displayName": "Unvibe",
   "description": "Understand, verify, and retain AI-generated code. Send a selected snippet to the private Unvibe desktop review flow.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "uncode",
   "license": "UNLICENSED",
   "engines": {

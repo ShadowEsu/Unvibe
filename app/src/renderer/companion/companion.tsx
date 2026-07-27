@@ -223,7 +223,7 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
-      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, select-code capture is unavailable; you can still choose a file or deliberately use the clipboard from the source picker. If the toggle is already on, quit Unvibe fully and reopen it — macOS only applies the grant to the next launch.</div>
+      <div className="perm-why">This is only the fallback for other Mac apps. For VS Code and Cursor, install the Unvibe Desktop Bridge and press ⌘U — it reads the editor’s selection directly, without relying on macOS Accessibility.</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
@@ -350,7 +350,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
             <>
               <div className="ob__eyebrow">OPTIONAL, MACOS ONLY</div>
               <h2 className="ob__title">Use selected code anywhere.</h2>
-              <p className="ob__sub">Enable this when you want to highlight code in another app and press <span className="kbd-lg">{prettyAccel(shortcut)}</span>. You can skip it and still paste code, choose files, and learn locally.</p>
+              <p className="ob__sub">For VS Code and Cursor, install the Unvibe Desktop Bridge and press <span className="kbd-lg">⌘U</span>. Accessibility is an optional fallback for other Mac apps, activated with <span className="kbd-lg">{prettyAccel(shortcut)}</span>.</p>
               <PermRow />
               <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
             </>

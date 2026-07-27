@@ -17,6 +17,8 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 const SETTINGS_REVISION = 7;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
 const ISLAND_BEHAVIOR_REVISION = 2;
+/** Keeps the editor-owned ⌘U migration separate from product onboarding. */
+const IDE_BRIDGE_SHORTCUT_REVISION = 1;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -25,8 +27,10 @@ export interface Settings {
   appearanceRevision?: number;
   /** Internal — tracks the quiet-by-default Island preference migration. */
   islandBehaviorRevision?: number;
+  /** Internal — tracks the editor bridge shortcut migration. */
+  ideBridgeShortcutRevision?: number;
   onboarded: boolean;
-  /** Electron accelerator. Default is ⌘U. */
+  /** Electron accelerator for the cross-app fallback. ⌘U belongs to the IDE bridge. */
   shortcut: string;
   barPosition: BarPosition;
   /** Keep the learning strip available between reviews, or only show it during a review. */
@@ -69,8 +73,9 @@ const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
   appearanceRevision: 1,
   islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
+  ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   onboarded: false,
-  shortcut: 'CommandOrControl+U',
+  shortcut: 'CommandOrControl+Alt+U',
   barPosition: 'top-center',
   // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
@@ -108,6 +113,11 @@ class SettingsStore {
       /* first run */
     }
     const needsOnboardingReset = (loaded.settingsRevision ?? 0) < SETTINGS_REVISION;
+    // ⌘U is owned by the VS Code / Cursor bridge: it reads the editor selection directly,
+    // rather than asking macOS to synthesize Copy in another process. Move only the legacy
+    // default so deliberately customised shortcuts remain untouched.
+    const needsIdeShortcutMigration = (loaded.ideBridgeShortcutRevision ?? 0) < IDE_BRIDGE_SHORTCUT_REVISION &&
+      loaded.shortcut === 'CommandOrControl+U';
     const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
       (loaded.theme === undefined || loaded.theme === 'system');
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
@@ -125,6 +135,7 @@ class SettingsStore {
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 1,
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
+      ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
       ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
       ...(needsFullscreenIsland
         ? { barVisibility: 'always' as const, barHoverPreview: false }
@@ -139,10 +150,11 @@ class SettingsStore {
             lastWidgetBounds: undefined,
           }
         : {}),
+      ...(needsIdeShortcutMigration ? { shortcut: 'CommandOrControl+Alt+U' } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
-    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {

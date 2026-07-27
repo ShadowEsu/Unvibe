@@ -334,6 +334,13 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 
 app.setName('Unvibe');
 
+// One process owns the global fallback shortcut and the `unvibe://` protocol. Without this,
+// two copies (for example, one in Applications and one opened from a mounted DMG) can race for
+// ⌘U and leave a review panel open with no captured selection.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.quit();
+app.on('second-instance', () => openCompanion());
+
 // Register before Electron becomes ready: macOS can deliver an open-url event during launch.
 app.on('open-url', (event, url) => {
   event.preventDefault();

@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
@@ -34,6 +34,12 @@
     "productName": "Unvibe",
     "copyright": "Copyright © 2026 Unvibe",
     "files": ["dist/**/*", "package.json"],
+    "extraResources": [
+      {
+        "from": "../extension/release/unvibe-desktop-bridge-0.1.2.vsix",
+        "to": "Unvibe Desktop Bridge.vsix"
+      }
+    ],
     "directories": { "output": "release", "buildResources": "build" },
     "icon": "build/icon.png",
     "afterSign": "scripts/afterSignHook.cjs",
