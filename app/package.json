@@ -10,8 +10,9 @@
     "dev": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
-    "dist": "npm run build && electron-builder --mac dir",
-    "dist:mac": "npm run build && electron-builder --mac",
+    "prepare:bridge": "npm --prefix ../extension run package",
+    "dist": "npm run prepare:bridge && npm run build && electron-builder --mac dir",
+    "dist:mac": "npm run prepare:bridge && npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:all": "npm run build && electron-builder --mac --win",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
