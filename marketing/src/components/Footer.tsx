@@ -110,8 +110,22 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-14 flex flex-col gap-5 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {year} Unvibe. Mac first. AI writes it; you learn it.</p>
+          <a
+            href="https://toolindex.net"
+            target="_blank"
+            rel="noopener"
+            className="w-fit opacity-80 transition-opacity hover:opacity-100"
+            aria-label="Verified by Tool Index"
+          >
+            <img
+              src="https://toolindex.net/badge/verify/d8a3d4fa8bba7c93.svg"
+              alt="Verified by Tool Index"
+              width="165"
+              height="40"
+            />
+          </a>
           <p>
             Support:{" "}
             <a
