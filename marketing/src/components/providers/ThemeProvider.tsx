@@ -19,7 +19,8 @@ interface ThemeContextValue {
   toggle: () => void;
 }
 
-const STORAGE_KEY = "unvibe_theme";
+// Versioned key restores Unvibe's intended light / dark editorial rhythm for existing visitors.
+const STORAGE_KEY = "unvibe_marketing_theme_v2";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -38,7 +39,7 @@ function applyClass(theme: ResolvedTheme): void {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [preference, setPreferenceState] = useState<ThemePreference>("light");
   const [resolved, setResolved] = useState<ResolvedTheme>("light");
 
   // Read the stored preference on mount.
@@ -52,7 +53,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const pref: ThemePreference =
       stored === "light" || stored === "dark" || stored === "system"
         ? stored
-        : "system";
+        : "light";
     setPreferenceState(pref);
     const next = pref === "system" ? systemTheme() : pref;
     setResolved(next);
