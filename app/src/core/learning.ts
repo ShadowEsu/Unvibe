@@ -195,8 +195,14 @@ export function deriveSkillState(events: LocalEvent[]): SkillState {
   if (events.length === 0) return 'Insufficient evidence';
   const chronological = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
   const latest = chronological[chronological.length - 1];
-  if (latest.outcome === 'needs_review') return 'Needs review';
   const correct = chronological.filter((event) => event.outcome === 'understood').length;
+
+  if (latest.outcome === 'needs_review') {
+    if (correct >= 3) return 'Familiar';
+    if (correct >= 2) return 'Developing';
+    return 'Needs review';
+  }
+
   if (correct >= 3) return 'Strong';
   if (correct >= 2) return 'Familiar';
   if (correct === 1) return 'Developing';

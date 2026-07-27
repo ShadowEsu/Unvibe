@@ -54,6 +54,20 @@ test('skill evidence never labels a single correct answer strong', () => {
   ]), 'Needs review');
 });
 
+test('skill evidence degrades one level on a slip with strong history', () => {
+  assert.equal(deriveSkillState([
+    ev({ id: 'a', ts: '2026-07-08T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'b', ts: '2026-07-09T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'c', ts: '2026-07-10T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'd', ts: '2026-07-11T10:00:00Z', outcome: 'needs_review' }),
+  ]), 'Familiar');
+  assert.equal(deriveSkillState([
+    ev({ id: 'a', ts: '2026-07-09T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'b', ts: '2026-07-10T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'c', ts: '2026-07-11T10:00:00Z', outcome: 'needs_review' }),
+  ]), 'Developing');
+});
+
 test('computeFeed returns most-recent first', () => {
   const events = [ev({ id: 'a', ts: '2026-07-11T08:00:00Z' }), ev({ id: 'b', ts: '2026-07-11T09:00:00Z' })];
   const feed = computeFeed(events, 5);
