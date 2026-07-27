@@ -283,16 +283,11 @@ function asset(...parts: string[]): string {
 
 async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
-  // ⌘U must only raise the aisle + explanation panel — never System Settings.
-  // On a fresh install, make the required macOS permission actionable instead of
-  // silently falling through to a clipboard-only picker.
-  if (isMac && !accessibilityGranted(false)) {
-    accessibilityGranted(true);
-    void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
-    notify('Unvibe needs Accessibility to read selected code. Enable it, quit and reopen Unvibe, then press ⌘U again.');
-    showBar(bar);
-    return;
-  }
+  // The macOS TCC preflight can report a false negative for a freshly rebuilt,
+  // locally installed app even after its Accessibility switch is enabled. Try
+  // the on-device capture first; System Events is the real permission boundary.
+  // This prevents ⌘U from trapping someone in System Settings when capture is
+  // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
   const code = await captureSelection(options);
