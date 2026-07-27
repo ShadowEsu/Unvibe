@@ -871,6 +871,25 @@ app.whenReady().then(() => {
     void shell.openExternal('https://unvibe.site/privacy');
     return { ok: true };
   });
+  ipcMain.handle('app:reportFeedback', (_event, context: { screen?: unknown; version?: unknown }) => {
+    const screen = typeof context.screen === 'string' ? context.screen.slice(0, 120) : 'Unknown screen';
+    const version = typeof context.version === 'string' ? context.version.slice(0, 48) : app.getVersion();
+    const subject = encodeURIComponent('Unvibe beta feedback');
+    const body = encodeURIComponent([
+      'Hi Preston,',
+      '',
+      'What happened, and what were you trying to do?',
+      '',
+      'Context (added by Unvibe):',
+      `• App version: ${version}`,
+      `• Screen: ${screen}`,
+      `• Platform: ${process.platform}`,
+      '',
+      'Optional: attach a screenshot if it makes the issue easier to see.',
+    ].join('\n'));
+    void shell.openExternal(`mailto:support@unvibe.site?subject=${subject}&body=${body}`);
+    return { ok: true };
+  });
 
   // --- permissions ---
   ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));

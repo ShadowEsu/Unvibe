@@ -81,6 +81,7 @@ const api = {
 
   // privacy
   openPrivacy: () => ipcRenderer.invoke('app:openPrivacy'),
+  reportFeedback: (context: { screen: string; version: string }) => ipcRenderer.invoke('app:reportFeedback', context),
 
   // onboarding
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),

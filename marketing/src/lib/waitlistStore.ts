@@ -284,6 +284,19 @@ export async function referralCodeForEmail(email: string): Promise<string | unde
   return entries.find((entry) => entry.email.trim().toLowerCase() === normalized)?.referralCode;
 }
 
+/** Public referral progress deliberately exposes only aggregate counts for a code, never identities. */
+export async function referralProgress(code: string): Promise<{ found: boolean; joinedReferrals: number }> {
+  const normalized = code.trim().toLowerCase();
+  if (!/^[a-f0-9]{8}$/.test(normalized)) return { found: false, joinedReferrals: 0 };
+  const entries = await listWaitlistEntries(10_000);
+  const found = entries.some((entry) => entry.referralCode.toLowerCase() === normalized);
+  if (!found) return { found: false, joinedReferrals: 0 };
+  return {
+    found: true,
+    joinedReferrals: entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length,
+  };
+}
+
 /** Entries are marked only after Resend accepts the beta invitation, making batches safe to retry. */
 export async function markBetaInviteSent(email: string, betaInviteAt: string): Promise<void> {
   if (durableBlobReady()) {

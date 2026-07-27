@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Copy, Gift, Loader2, Send } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Gift, Loader2, Send } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { Reveal } from "@/components/redesign/Reveal";
 import {
@@ -149,7 +149,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <p className="pixel-label">SPOT SAVED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
           <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
-          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite friends, earn beta rewards.</strong><span>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer.</span><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button></div></div>}
+          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite friends, earn beta rewards.</strong><span>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer.</span><div className="referral-success__actions"><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button><a href={`/rewards?ref=${referralCode}`}>View reward progress <ArrowUpRight size={14} /></a></div></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (
               <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>
