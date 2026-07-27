@@ -53,7 +53,10 @@ async function activateApp(name: string): Promise<void> {
 }
 
 async function syntheticCopy(): Promise<void> {
-  await osascript('tell application "System Events" to keystroke "c" using command down');
+  // Key code 8 is physical C on the current macOS keyboard layout. It is more
+  // reliable than a character keystroke in Cursor and VS Code's full-screen
+  // editor surfaces.
+  await osascript('tell application "System Events" to key code 8 using {command down}');
 }
 
 /**
@@ -61,8 +64,8 @@ async function syntheticCopy(): Promise<void> {
  * Poll briefly instead of assuming a single fixed delay is enough.
  */
 async function waitForCopiedText(): Promise<string> {
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    await delay(75);
+  for (let attempt = 0; attempt < 18; attempt += 1) {
+    await delay(70);
     const text = clipboard.readText();
     if (text.trim().length > 0) return text;
   }

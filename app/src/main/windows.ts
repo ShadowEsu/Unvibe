@@ -129,6 +129,10 @@ export function positionBar(win: BrowserWindow): void {
 /** Quiet aisle — only show while a review is active. */
 export function showBar(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
+  // macOS can lower an auxiliary window while an editor enters a full-screen
+  // Space. Reassert both flags whenever the Island is shown.
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   positionBar(win);
   if (!win.isVisible()) win.showInactive();
   win.moveTop();
@@ -237,8 +241,9 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
     show: false,
     webPreferences: secureWebPrefs(),
   });
-  // pop-up-menu sits above normal windows while still behaving like an auxiliary tool panel.
-  win.setAlwaysOnTop(true, 'pop-up-menu');
+  // Use the same level as the Island so the review remains reachable above a
+  // full-screen editor, not just ordinary desktop windows.
+  win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
@@ -257,14 +262,10 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
     if (win.isDestroyed()) return;
     const behavior = settings().all().inactiveBehavior;
     if (behavior === 'dim') win.setOpacity(settings().all().widgetOpacityInactive);
-    if (behavior === 'collapse') win.webContents.send('widget:autocollapse', true);
   });
   win.on('focus', () => {
     if (win.isDestroyed()) return;
     win.setOpacity(1);
-    if (settings().all().inactiveBehavior === 'collapse') {
-      win.webContents.send('widget:autocollapse', false);
-    }
   });
 
   lockNavigation(win);

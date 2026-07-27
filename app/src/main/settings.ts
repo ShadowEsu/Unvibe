@@ -10,13 +10,13 @@ import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
-export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
+export type InactiveBehavior = 'dim' | 'stay';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 7;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
-const ISLAND_BEHAVIOR_REVISION = 1;
+const ISLAND_BEHAVIOR_REVISION = 2;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -72,8 +72,8 @@ const DEFAULTS: Settings = {
   onboarded: false,
   shortcut: 'CommandOrControl+U',
   barPosition: 'top-center',
-  // The Island is an invocation surface, not a permanent desktop obstruction.
-  barVisibility: 'during-review',
+  // Keep the Island available over full-screen editors; it stays compact until asked.
+  barVisibility: 'always',
   barHoverPreview: false,
   barHoverDelayMs: 220,
   rotateIslandStats: true,
@@ -111,8 +111,8 @@ class SettingsStore {
     const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
       (loaded.theme === undefined || loaded.theme === 'system');
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
-    const needsQuietIslandDefaults = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
-      loaded.barVisibility === 'always' && loaded.barHoverPreview === true;
+    const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
+      loaded.barVisibility === 'during-review';
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -126,9 +126,12 @@ class SettingsStore {
       appearanceRevision: 1,
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
       ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
-      ...(needsQuietIslandDefaults
-        ? { barVisibility: 'during-review' as const, barHoverPreview: false }
+      ...(needsFullscreenIsland
+        ? { barVisibility: 'always' as const, barHoverPreview: false }
         : {}),
+      // Older builds could collapse the whole panel on blur. Preserve the panel
+      // size and simply dim it when focus returns to Cursor or VS Code.
+      ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
       ...(needsOnboardingReset
         ? {
             onboarded: false,
@@ -139,7 +142,7 @@ class SettingsStore {
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
-    if (needsOnboardingReset || needsDarkDefault || needsQuietIslandDefaults || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
