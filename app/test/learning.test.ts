@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, daysSince, decaySkillState, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -43,15 +43,16 @@ test('streak uses the captured local date rather than the UTC date', () => {
 });
 
 test('skill evidence never labels a single correct answer strong', () => {
-  assert.equal(deriveSkillState([ev({ outcome: 'understood' })]), 'Developing');
+  const now = new Date('2026-07-20T12:00:00Z');
+  assert.equal(deriveSkillState([ev({ outcome: 'understood' })], now), 'Developing');
   assert.equal(deriveSkillState([
     ev({ id: 'one', ts: '2026-07-09T10:00:00Z', outcome: 'understood' }),
     ev({ id: 'two', ts: '2026-07-10T10:00:00Z', outcome: 'understood' }),
-  ]), 'Familiar');
+  ], now), 'Familiar');
   assert.equal(deriveSkillState([
     ev({ id: 'one', ts: '2026-07-09T10:00:00Z', outcome: 'understood' }),
     ev({ id: 'two', ts: '2026-07-10T10:00:00Z', outcome: 'needs_review' }),
-  ]), 'Needs review');
+  ], now), 'Needs review');
 });
 
 test('computeFeed returns most-recent first', () => {
@@ -85,6 +86,58 @@ test('computeLearningItems includes on-device code and explanation when present'
   assert.equal(items[0]!.code, 'const f = () => x;');
   assert.equal(items[0]!.explanation, 'This closes over x.');
   assert.equal(items[1]!.code, undefined);
+});
+
+test('daysSince returns days between two dates', () => {
+  const now = new Date('2026-07-20T12:00:00Z');
+  assert.equal(daysSince('2026-07-20T10:00:00Z', now), 0);
+  assert.equal(daysSince('2026-07-19T10:00:00Z', now), 1);
+  assert.equal(daysSince('2026-07-10T10:00:00Z', now), 10);
+  assert.equal(daysSince('2026-04-20T10:00:00Z', now), 91);
+});
+
+test('decaySkillState leaves recent evidence unchanged', () => {
+  assert.equal(decaySkillState('Strong', 5), 'Strong');
+  assert.equal(decaySkillState('Familiar', 5), 'Familiar');
+  assert.equal(decaySkillState('Developing', 5), 'Developing');
+  assert.equal(decaySkillState('New', 5), 'New');
+});
+
+test('decaySkillState decays at 31-90 day window', () => {
+  assert.equal(decaySkillState('Strong', 45), 'Familiar');
+  assert.equal(decaySkillState('Familiar', 45), 'Developing');
+  assert.equal(decaySkillState('Developing', 45), 'Developing');
+  assert.equal(decaySkillState('New', 45), 'New');
+});
+
+test('decaySkillState decays further past 90 days', () => {
+  assert.equal(decaySkillState('Strong', 180), 'Familiar');
+  assert.equal(decaySkillState('Familiar', 180), 'Developing');
+  assert.equal(decaySkillState('Developing', 180), 'New');
+  assert.equal(decaySkillState('New', 180), 'New');
+});
+
+test('decaySkillState does not decay Needs review or Insufficient evidence', () => {
+  assert.equal(decaySkillState('Needs review', 365), 'Needs review');
+  assert.equal(decaySkillState('Insufficient evidence', 365), 'Insufficient evidence');
+});
+
+test('deriveSkillState decays Strong to Familiar after 31+ days without reinforcement', () => {
+  const now = new Date('2026-08-20T12:00:00Z');
+  assert.equal(deriveSkillState([
+    ev({ id: 'one', ts: '2026-07-09T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'two', ts: '2026-07-10T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'three', ts: '2026-07-11T10:00:00Z', outcome: 'understood' }),
+  ], now), 'Familiar');
+});
+
+test('deriveSkillState keeps Strong when evidence is recent (within 30 days)', () => {
+  const now = new Date('2026-07-20T12:00:00Z');
+  assert.equal(deriveSkillState([
+    ev({ id: 'one', ts: '2026-07-09T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'two', ts: '2026-07-10T10:00:00Z', outcome: 'understood' }),
+    ev({ id: 'three', ts: '2026-07-19T10:00:00Z', outcome: 'understood' }),
+  ], now), 'Strong');
 });
 
 test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {

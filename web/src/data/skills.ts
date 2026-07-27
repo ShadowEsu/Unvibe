@@ -6,11 +6,22 @@ function normalizedConcept(event: EventRecord): string | undefined {
   return name ? name.toLocaleLowerCase('en-US') : undefined;
 }
 
-function evidenceState(successful: number, latestOutcome: EventRecord['outcome']): SkillEvidenceState {
+function evidenceState(successful: number, latestOutcome: EventRecord['outcome'], ageDays?: number): SkillEvidenceState {
   if (latestOutcome === 'needs_review') return 'needs_review';
-  if (successful >= 3) return 'strong';
-  if (successful >= 2) return 'familiar';
-  return 'seen';
+  let state: SkillEvidenceState;
+  if (successful >= 3) state = 'strong';
+  else if (successful >= 2) state = 'familiar';
+  else state = 'seen';
+  // Decay: knowledge fades without recent reinforcement (same thresholds as app/src/core/learning.ts)
+  if (ageDays !== undefined) {
+    if (ageDays > 90) {
+      if (state === 'strong') return 'familiar';
+      if (state === 'familiar') return 'seen';
+    } else if (ageDays > 30) {
+      if (state === 'strong') return 'familiar';
+    }
+  }
+  return state;
 }
 
 function stableSkillId(userId: string, normalizedName: string): string {
@@ -33,7 +44,8 @@ export function computeSkills(userId: string, events: EventRecord[]): SkillRecor
     const last = ordered[ordered.length - 1];
     const successful = ordered.filter((event) => event.outcome === 'understood').length;
     const unsuccessful = ordered.filter((event) => event.outcome === 'needs_review').length;
-    const state = evidenceState(successful, last.outcome);
+    const ageDays = Math.floor((Date.now() - new Date(last.ts).getTime()) / 86_400_000);
+    const state = evidenceState(successful, last.outcome, ageDays);
     const nextReviewDate = state === 'strong' ? undefined : last.localDate ?? last.ts.slice(0, 10);
     return {
       id: stableSkillId(userId, normalizedName),

@@ -190,17 +190,43 @@ export function computeProfile(events: LocalEvent[], todayKey: string): Profile 
   };
 }
 
-/** Cautious evidence label: one correct check is developing, never “mastered.” */
-export function deriveSkillState(events: LocalEvent[]): SkillState {
+/** Days since an ISO date string. */
+export function daysSince(iso: string, now = new Date()): number {
+  return Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000);
+}
+
+/**
+ * Decay a skill state when the latest evidence is older than the review-window cap.
+ * Skill fades on a monthly/quarterly cadence when not reinforced.
+ */
+export function decaySkillState(state: SkillState, ageDays: number): SkillState {
+  if (state === 'Needs review' || state === 'Insufficient evidence' || state === 'New') return state;
+  if (ageDays > 90) {
+    if (state === 'Strong') return 'Familiar';
+    if (state === 'Familiar') return 'Developing';
+    return 'New';
+  }
+  if (ageDays > 30) {
+    if (state === 'Strong') return 'Familiar';
+    if (state === 'Familiar') return 'Developing';
+    return state;
+  }
+  return state;
+}
+
+/** Cautious evidence label: one correct check is developing, never “mastered.” Decays over time. */
+export function deriveSkillState(events: LocalEvent[], now = new Date()): SkillState {
   if (events.length === 0) return 'Insufficient evidence';
   const chronological = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
   const latest = chronological[chronological.length - 1];
   if (latest.outcome === 'needs_review') return 'Needs review';
   const correct = chronological.filter((event) => event.outcome === 'understood').length;
-  if (correct >= 3) return 'Strong';
-  if (correct >= 2) return 'Familiar';
-  if (correct === 1) return 'Developing';
-  return latest.outcome === 'reviewed' ? 'New' : 'Insufficient evidence';
+  let state: SkillState;
+  if (correct >= 3) state = 'Strong';
+  else if (correct >= 2) state = 'Familiar';
+  else if (correct === 1) state = 'Developing';
+  else state = latest.outcome === 'reviewed' ? 'New' : 'Insufficient evidence';
+  return decaySkillState(state, daysSince(latest.ts, now));
 }
 
 const OUTCOME_LABEL: Record<Outcome, string> = {
