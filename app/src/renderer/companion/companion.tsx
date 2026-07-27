@@ -1236,6 +1236,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
   const recRef = useRef(recording); recRef.current = recording;
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
@@ -1251,9 +1252,38 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onSettings]);
 
+  useEffect(() => {
+    const el = modalRef.current;
+    if (!el) return;
+    const focusable = el.querySelectorAll<HTMLElement>(
+      'button:not([disabled]):not([hidden]), [href], input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled])'
+    );
+    const visible = Array.from(focusable).filter((f) => f.offsetParent !== null);
+    visible[0]?.focus();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const all = el.querySelectorAll<HTMLElement>(
+        'button:not([disabled]):not([hidden]), [href], input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled])'
+      );
+      const vis = Array.from(all).filter((f) => f.offsetParent !== null);
+      if (vis.length === 0) return;
+      const first = vis[0];
+      const last = vis[vis.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    el.addEventListener('keydown', handler);
+    return () => el.removeEventListener('keydown', handler);
+  }, []);
+
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
         <div className="mside">
           <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
           <div className="mh">PREFERENCES</div>
@@ -1435,7 +1465,7 @@ function App() {
         <aside className="side fade-in fade-in--side">
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
-          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
+          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} aria-current={p.id === page ? 'page' : undefined} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
           <div className="spacer" />
           <button
             className={`sync-state sync-state--${sync.phase}`}
