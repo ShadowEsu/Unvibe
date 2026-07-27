@@ -9,40 +9,41 @@
 */
 
 :root {
-  --bg: 15 10 23;
-  --surface: 24 17 34;
-  --surface-2: 35 24 49;
-  --fg: 245 240 249;
-  --fg-muted: 193 179 200;
-  --fg-faint: 150 132 158;
-  --line: 64 48 76;
-  --line-strong: 83 63 98;
+  /* Light is a real, calm canvas — not dark mode with a different browser chrome. */
+  --bg: 253 250 255;
+  --surface: 255 255 255;
+  --surface-2: 246 241 252;
+  --fg: 40 26 57;
+  --fg-muted: 100 84 116;
+  --fg-faint: 139 123 153;
+  --line: 225 215 234;
+  --line-strong: 203 187 219;
 
-  --primary: 129 140 248;
-  --primary-strong: 165 180 252;
-  --primary-soft: 30 36 58;
-  --on-primary: 12 15 24;
+  --primary: 105 70 211;
+  --primary-strong: 82 46 185;
+  --primary-soft: 238 232 255;
+  --on-primary: 255 255 255;
 
-  --blue: 96 165 250;
-  --green: 52 211 153;
-  --orange: 251 191 36;
-  --red: 248 113 113;
+  --blue: 58 120 211;
+  --green: 21 132 91;
+  --orange: 184 105 12;
+  --red: 194 58 74;
 
-  --focus: 129 140 248;
+  --focus: 105 70 211;
 
-  --cream: #100a19;
-  --lavender: #251834;
-  --purple: #a78bfa;
-  --purple-strong: #c4b5fd;
-  --charcoal-purple: #100a19;
-  --ink: #f2eef9;
-  --paper: #181020;
-  --page-background: radial-gradient(ellipse 78% 58% at -12% -10%, rgba(112, 68, 207, .72) 0%, rgba(112, 68, 207, .26) 34%, transparent 67%), radial-gradient(ellipse 76% 66% at 105% 105%, rgba(202, 109, 57, .48) 0%, rgba(202, 109, 57, .16) 38%, transparent 70%), #100a19;
-  --hero-background: radial-gradient(ellipse 72% 82% at -12% -8%, rgba(124, 73, 220, .48), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(202, 105, 56, .34), transparent 62%), linear-gradient(135deg, #160d25, #25153d 52%, #3c211e);
-  --soft-field: linear-gradient(135deg, rgba(20, 13, 29, .98), rgba(27, 17, 39, .98) 52%, rgba(39, 22, 40, .98));
-  --feature-field: linear-gradient(135deg, #21122d, #291a3d 50%, #3c211e);
-  --deep-field: linear-gradient(135deg, #100a19, #241238 54%, #45241d);
-  --final-field-bg: linear-gradient(135deg, #2e176d, #6343c1 50%, #aa5732);
+  --cream: #fffdf8;
+  --lavender: #efe8ff;
+  --purple: #6944d2;
+  --purple-strong: #5130b4;
+  --charcoal-purple: #281937;
+  --ink: #281a37;
+  --paper: #ffffff;
+  --page-background: radial-gradient(ellipse 74% 54% at -9% -10%, rgba(225, 214, 255, .88) 0%, rgba(225, 214, 255, .36) 34%, transparent 67%), radial-gradient(ellipse 70% 62% at 106% 102%, rgba(255, 222, 194, .56) 0%, rgba(255, 222, 194, .2) 38%, transparent 70%), #fdfaff;
+  --hero-background: radial-gradient(ellipse 72% 82% at -10% -8%, rgba(220, 205, 255, .82), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(255, 218, 190, .62), transparent 62%), linear-gradient(135deg, #fffdfd, #f8f2ff 52%, #fff5ef);
+  --soft-field: linear-gradient(135deg, rgba(255, 255, 255, .97), rgba(249, 245, 255, .97) 54%, rgba(255, 247, 241, .97));
+  --feature-field: linear-gradient(135deg, #faf5ff, #f2eaff 50%, #fff4ed);
+  --deep-field: linear-gradient(135deg, #1a1028, #30194e 54%, #552d27);
+  --final-field-bg: linear-gradient(135deg, #4c279b, #7851d4 50%, #c46c43);
 
   --font-display: "Newsreader", "Georgia", serif;
   --font-sans: "Inter", system-ui, sans-serif;
@@ -67,27 +68,27 @@
   --line: 64 48 76;
   --line-strong: 83 63 98;
 
-  --primary: 129 140 248;
-  --primary-strong: 165 180 252;
-  --primary-soft: 30 36 58;
-  --on-primary: 12 15 24;
+  --primary: 176 151 255;
+  --primary-strong: 203 184 255;
+  --primary-soft: 45 32 73;
+  --on-primary: 20 12 32;
 
   --blue: 96 165 250;
   --green: 52 211 153;
   --orange: 251 191 36;
   --red: 248 113 113;
 
-  --focus: 129 140 248;
+  --focus: 176 151 255;
 
   --cream: #100a19;
   --lavender: #251834;
-  --purple: #a78bfa;
-  --purple-strong: #c4b5fd;
+  --purple: #b097ff;
+  --purple-strong: #d0c0ff;
   --charcoal-purple: #100a19;
   --ink: #f2eef9;
   --paper: #181020;
   --page-background: radial-gradient(ellipse 78% 58% at -12% -10%, rgba(112, 68, 207, .72) 0%, rgba(112, 68, 207, .26) 34%, transparent 67%), radial-gradient(ellipse 76% 66% at 105% 105%, rgba(202, 109, 57, .48) 0%, rgba(202, 109, 57, .16) 38%, transparent 70%), #100a19;
-  --hero-background: radial-gradient(ellipse 72% 82% at -12% -8%, rgba(124, 73, 220, .48), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(202, 105, 56, .34), transparent 62%), linear-gradient(135deg, #160d25, #25153d 52%, #3c211e);
+  --hero-background: radial-gradient(ellipse 72% 82% at -12% -8%, rgba(124, 73, 220, .52), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(202, 105, 56, .38), transparent 62%), linear-gradient(135deg, #160d25, #25153d 52%, #3c211e);
   --soft-field: linear-gradient(135deg, rgba(20, 13, 29, .98), rgba(27, 17, 39, .98) 52%, rgba(39, 22, 40, .98));
   --feature-field: linear-gradient(135deg, #21122d, #291a3d 50%, #3c211e);
   --deep-field: linear-gradient(135deg, #100a19, #241238 54%, #45241d);
@@ -114,6 +115,11 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background-color var(--dur-standard) var(--ease-calm), color var(--dur-standard) var(--ease-calm);
+}
+
+header, main, footer, .admin-shell {
+  transition: background-color var(--dur-standard) var(--ease-calm), border-color var(--dur-standard) var(--ease-calm), color var(--dur-standard) var(--ease-calm);
 }
 
 .page-intro {
@@ -584,6 +590,10 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 .beta-download-page { min-height:100vh; display:grid; place-items:center; padding:2rem; background:var(--deep-field); color:#fffdf8; }.beta-download-panel { width:min(100%,760px); padding:clamp(2rem,6vw,4.5rem); border:1px solid rgba(188,161,255,.55); background:linear-gradient(135deg,rgba(31,20,47,.96),rgba(44,28,61,.94) 55%,rgba(69,35,36,.94)); box-shadow:12px 12px 0 #5a3a9a; }.beta-download-panel h1 { margin:.8rem 0; font-size:clamp(2.5rem,6vw,4.8rem); line-height:.95; letter-spacing:-.06em; }.beta-download-intro { max-width:560px; color:#d3c8df; line-height:1.6; }.beta-download-grid { display:grid; gap:1rem; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:2rem; }.beta-download { min-height:110px; display:flex; align-items:flex-start; gap:.8rem; padding:1.15rem; border:1px solid #bca1ff; background:#6f45d2; color:#fff; text-decoration:none; }.beta-download:hover { background:#8259e5; }.beta-download--disabled { opacity:.62; background:#2b2338; border-color:#766585; }.beta-download span { display:grid; gap:.3rem; }.beta-download small { color:#e3daf0; line-height:1.35; }.beta-download em { margin-left:auto; font-size:.72rem; color:#d3c8df; white-space:nowrap; }.beta-download-note,.beta-download-support { display:flex; align-items:center; gap:.5rem; margin-top:1.4rem; color:#c6bad1; font-size:.86rem; }.beta-download-support a { color:#cdbbff; } @media (max-width:600px) { .beta-download-grid { grid-template-columns:1fr; } }
 
 .web-workspace {
+  background: radial-gradient(ellipse 72% 65% at 4% -10%, rgba(221, 206, 255, .8), transparent 55%), radial-gradient(ellipse 70% 65% at 105% 108%, rgba(255, 218, 190, .6), transparent 58%), #fcf9ff;
+}
+
+.dark .web-workspace {
   background: radial-gradient(ellipse 72% 65% at 4% -10%, rgba(130, 78, 220, .55), transparent 55%), radial-gradient(ellipse 70% 65% at 105% 108%, rgba(204, 107, 59, .42), transparent 58%), #120b1b;
 }
 
