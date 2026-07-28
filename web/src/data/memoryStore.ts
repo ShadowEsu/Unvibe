@@ -13,6 +13,9 @@ import type {
 import { computeProfile, computeProjects } from './progress';
 import { limitFor } from '../billing/plans';
 
+/** Device codes expire 10 minutes after creation (matching SupabaseStore's expires_at default). */
+const DEVICE_CODE_TTL_MS = 10 * 60_000;
+
 interface PendingDevice {
   userCode: string;
   userId?: string;
@@ -74,7 +77,11 @@ export class MemoryStore implements Store {
     if (!entry) {
       return null;
     }
+    if (Date.now() - entry.createdAt > DEVICE_CODE_TTL_MS) {
+      return null;
+    }
     if (entry.userId && entry.userId !== userId) return null;
+    if (entry.token && entry.userId === userId) return entry.token;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
@@ -86,6 +93,9 @@ export class MemoryStore implements Store {
   async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
+      return 'unknown';
+    }
+    if (Date.now() - entry.createdAt > DEVICE_CODE_TTL_MS) {
       return 'unknown';
     }
     if (!entry.token) {

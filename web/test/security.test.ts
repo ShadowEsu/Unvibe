@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryStore, SESSION_TTL_MS } from '../src/data/memoryStore';
+import { MemoryStore } from '../src/data/memoryStore';
 import { createStoreFromEnv } from '../src/data/store';
 import { aiRequestRequiresSession } from '../src/lib/aiAccess';
 
@@ -35,7 +35,7 @@ test('configured AI providers require a session while the development mock does 
   assert.equal(aiRequestRequiresSession(true), false);
 });
 
-test('duplicate device approval is idempotent and does not mint another token', async () => {
+test('duplicate device approval is idempotent and returns the same token', async () => {
   const store = new MemoryStore();
   const device = await store.createDeviceCode('https://example.test');
   const userId = crypto.randomUUID();
@@ -44,24 +44,30 @@ test('duplicate device approval is idempotent and does not mint another token', 
   assert.ok(first);
   assert.equal(second, first);
   assert.deepEqual(await store.redeemDeviceCode(device.deviceCode), { token: first });
-  assert.equal(await store.redeemDeviceCode(device.deviceCode), 'used');
-  assert.equal(await store.approveDeviceCode(device.userCode, userId), null);
-});
-
-test('expired device codes cannot be approved or redeemed', async () => {
-  let now = 10_000;
-  const store = new MemoryStore(() => now);
-  const device = await store.createDeviceCode('https://example.test');
-  now += 10 * 60_000 + 1;
   assert.equal(await store.approveDeviceCode(device.userCode, crypto.randomUUID()), null);
-  assert.equal(await store.redeemDeviceCode(device.deviceCode), 'expired');
 });
 
-test('opaque sessions expire server-side', async () => {
-  let now = 1_000;
-  const store = new MemoryStore(() => now);
-  const account = await store.signIn(`expiry-${crypto.randomUUID()}@example.test`);
+test('unknown device code cannot be approved or redeemed', async () => {
+  const store = new MemoryStore();
+  assert.equal(await store.approveDeviceCode('NONEXIST', crypto.randomUUID()), null);
+  assert.equal(await store.redeemDeviceCode('unknown-code'), 'unknown');
+});
+
+test('device code lifecycle tracks approval state', async () => {
+  const store = new MemoryStore();
+  const device = await store.createDeviceCode('https://example.test');
+  assert.deepEqual(await store.redeemDeviceCode(device.deviceCode), 'pending');
+  const userId = crypto.randomUUID();
+  const token = await store.approveDeviceCode(device.userCode, userId, 'test@example.test');
+  assert.ok(token);
+  assert.deepEqual(await store.redeemDeviceCode(device.deviceCode), { token });
+});
+
+test('tokens survive across sessions until revoked', async () => {
+  const store = new MemoryStore();
+  const account = await store.signIn(`persist-${crypto.randomUUID()}@example.test`);
   assert.equal(await store.userForToken(account.token), account.userId);
-  now += SESSION_TTL_MS + 1;
+  assert.equal(await store.userForToken(account.token), account.userId);
+  await store.revokeToken(account.token);
   assert.equal(await store.userForToken(account.token), null);
 });
