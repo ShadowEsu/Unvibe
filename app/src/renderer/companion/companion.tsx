@@ -313,7 +313,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
             <>
               <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
               <div className="ob__eyebrow">YOUR UNDERSTANDING LAYER</div>
-              <h2 className="ob__title">Understand the code you ship.</h2>
+              <h1 className="ob__title">Understand the code you ship.</h1>
               <p className="ob__sub">Unvibe sits beside your work, explains the exact code you choose, and helps you retain it. Nothing is sent until the on-device secret scan finishes.</p>
               <div className="ob__signal"><span className="ob__pixel" />Local filter on <span>·</span> You stay in control</div>
               {nav('Get started')}
@@ -323,7 +323,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
           {step === 1 && (
             <>
               <div className="ob__eyebrow">GUIDED EXAMPLE</div>
-              <h2 className="ob__title">See the learning loop.</h2>
+              <h1 className="ob__title">See the learning loop.</h1>
               <div className="ob__sample">
                 <div className="ob__sample-code"><span>if</span> (!user.isVerified) {'{'}<br />&nbsp;&nbsp;return redirect('/verify-email');<br />{'}'}</div>
                 <div className="ob__sample-answer">
@@ -339,7 +339,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
           {step === 2 && (
             <>
               <div className="ob__eyebrow">DEFAULT LEARNING DEPTH</div>
-              <h2 className="ob__title">Start at the right level.</h2>
+              <h1 className="ob__title">Start at the right level.</h1>
               <p className="ob__sub">You can change depth inside every explanation. This simply sets your starting point.</p>
               <div className="ob__choices ob__depths"><Choice selected={level === 'new'} title="New" detail="Plain language and the core idea." onClick={() => setLevel('new')} /><Choice selected={level === 'beginner'} title="Beginner" detail="A guided walkthrough." onClick={() => setLevel('beginner')} /><Choice selected={level === 'intermediate'} title="Intermediate" detail="Practical detail and trade-offs." onClick={() => setLevel('intermediate')} /><Choice selected={level === 'advanced'} title="Advanced" detail="Architecture and edge cases." onClick={() => setLevel('advanced')} /></div>
               <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={() => { void window.unvibe.setSettings({ defaultExplanationLevel: level }); next(); }}>Continue</button></div>
@@ -349,7 +349,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
           {step === 3 && (
             <>
               <div className="ob__eyebrow">OPTIONAL, MACOS ONLY</div>
-              <h2 className="ob__title">Use selected code anywhere.</h2>
+              <h1 className="ob__title">Use selected code anywhere.</h1>
               <p className="ob__sub">Enable this when you want to highlight code in another app and press <span className="kbd-lg">{prettyAccel(shortcut)}</span>. You can skip it and still paste code, choose files, and learn locally.</p>
               <PermRow />
               <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
