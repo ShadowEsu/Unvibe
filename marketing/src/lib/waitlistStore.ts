@@ -1,8 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { del, get, list, put } from "@vercel/blob";
-import { createHash } from "node:crypto";
-import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export interface WaitlistNotificationRecord {
   status: "sent" | "failed";
@@ -33,9 +31,56 @@ export interface WaitlistAdminEntry extends WaitlistEntry {
   id: string;
 }
 
-const ENTRY_PREFIX = "waitlist/item/";
-const LEGACY_BLOB_PATH = "waitlist/entries.v2.enc";
-const LEGACY_BLOB_PATH_V1 = "waitlist/entries.v1.enc";
+interface WaitlistRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  tool: string | null;
+  experience: string | null;
+  message: string | null;
+  referred_by: string | null;
+  promo_code: string | null;
+  referral_code: string;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  created_at: string;
+  notification_status: "sent" | "failed" | null;
+  notification_provider: "resend" | "formsubmit" | "none" | null;
+  notification_at: string | null;
+  notification_message_id: string | null;
+  invited_at: string | null;
+}
+
+function rowToEntry(row: WaitlistRow): WaitlistAdminEntry {
+  return {
+    id: row.id,
+    firstName: row.first_name ?? "",
+    lastName: row.last_name ?? "",
+    email: row.email,
+    tool: row.tool ?? undefined,
+    experience: row.experience ?? undefined,
+    message: row.message ?? undefined,
+    referredBy: row.referred_by ?? undefined,
+    promoCode: row.promo_code ?? undefined,
+    referralCode: row.referral_code,
+    utmSource: row.utm_source ?? undefined,
+    utmMedium: row.utm_medium ?? undefined,
+    utmCampaign: row.utm_campaign ?? undefined,
+    createdAt: row.created_at,
+    notification: row.notification_status
+      ? {
+          status: row.notification_status,
+          provider: row.notification_provider ?? "none",
+          at: row.notification_at ?? row.created_at,
+          messageId: row.notification_message_id ?? undefined,
+        }
+      : undefined,
+    betaInviteAt: row.invited_at ?? undefined,
+  };
+}
+
 const localDataDir = path.join(process.cwd(), ".data");
 const tmpDataDir = path.join("/tmp", "unvibe-waitlist");
 
@@ -52,160 +97,23 @@ async function resolveDataFile(): Promise<string> {
   }
 }
 
-function blobConfigured(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+function supabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 }
 
-function encryptionConfigured(): boolean {
-  return Boolean(process.env.WAITLIST_ADMIN_TOKEN?.trim());
+let cachedClient: SupabaseClient | null = null;
+
+/** Server-only client using the service role key. RLS blocks anon access entirely. */
+function supabaseAdmin(): SupabaseClient {
+  if (cachedClient) return cachedClient;
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) throw new Error("Durable waitlist storage is not configured");
+  cachedClient = createClient(url, key, { auth: { persistSession: false } });
+  return cachedClient;
 }
 
-/** Encrypted Blob is used only when both storage and encryption secrets exist. */
-function durableBlobReady(): boolean {
-  return blobConfigured() && encryptionConfigured();
-}
-
-function blobToken(): string {
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (!token) throw new Error("Durable waitlist storage is not configured");
-  return token;
-}
-
-function storageSecret(): string {
-  const secret = process.env.WAITLIST_ADMIN_TOKEN?.trim();
-  if (!secret) throw new Error("Waitlist encryption is not configured");
-  return secret;
-}
-
-function entryPath(email: string): string {
-  const digest = createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 32);
-  return `${ENTRY_PREFIX}${digest}.enc`;
-}
-
-function decryptEntry(body: string): WaitlistEntry {
-  const parsed: unknown = decryptWaitlistJson(body, storageSecret());
-  if (!parsed || typeof parsed !== "object") throw new Error("Waitlist storage contains invalid data");
-  return parsed as WaitlistEntry;
-}
-
-async function putEntry(entry: WaitlistEntry): Promise<void> {
-  await put(entryPath(entry.email), encryptWaitlistJson(entry, storageSecret()), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    cacheControlMaxAge: 60,
-    contentType: "application/octet-stream",
-    token: blobToken(),
-  });
-}
-
-async function readRawBlob(url: string, token: string): Promise<string | null> {
-  // Read through the Blob SDK. Direct fetches against a Blob CDN URL can be
-  // rejected even with a server token, which made the founder waitlist view
-  // fail despite a healthy configured store.
-  const result = await get(url, { access: "public", token, useCache: false });
-  if (!result || result.statusCode !== 200 || !result.stream) return null;
-  const body = await new Response(result.stream).text();
-  return body.trim() ? body : null;
-}
-
-async function readEntryBlob(url: string): Promise<WaitlistEntry | null> {
-  const body = await readRawBlob(url, blobToken());
-  if (!body) return null;
-  try {
-    return decryptEntry(body);
-  } catch (error) {
-    // A single unreadable entry must never take down the whole waitlist view.
-    console.error(`waitlist entry could not be decrypted: ${url}`, error);
-    return null;
-  }
-}
-
-async function listEntryBlobs(): Promise<WaitlistEntry[]> {
-  const token = blobToken();
-  const entries: WaitlistEntry[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await list({ prefix: ENTRY_PREFIX, cursor, limit: 1000, token });
-    for (const blob of page.blobs) {
-      if (!blob.pathname.endsWith(".enc")) continue;
-      const entry = await readEntryBlob(blob.url);
-      if (entry) entries.push(entry);
-    }
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
-  return entries;
-}
-
-const MIGRATION_MARKER = "waitlist/migrated-v2.marker";
-
-/**
- * Copies every entry out of the old single-blob formats into per-item blobs.
- * Guarded by an explicit completion marker rather than "some per-item blobs
- * already exist" — that older check let one failed item during a partial
- * migration permanently hide every entry that hadn't been copied yet, which
- * silently dropped real signups. Each item is migrated independently so one
- * bad entry can't abort the rest, and every failure is logged instead of
- * swallowed.
- */
-async function migrateLegacyIfNeeded(): Promise<void> {
-  const token = blobToken();
-  const marker = await list({ prefix: MIGRATION_MARKER, limit: 1, token });
-  if (marker.blobs.some((blob) => blob.pathname === MIGRATION_MARKER)) return;
-
-  let allLegacyBlobsRead = true;
-  for (const legacyPath of [LEGACY_BLOB_PATH, LEGACY_BLOB_PATH_V1]) {
-    const listed = await list({ prefix: legacyPath, limit: 5, token });
-    const found = listed.blobs.find((blob) => blob.pathname === legacyPath);
-    if (!found) continue;
-    // Read through the Blob SDK, same as readEntryBlob. A raw fetch with an
-    // Authorization header against the CDN URL is rejected in production even
-    // with a valid token, which previously made this migration silently see
-    // every legacy blob as "not found" and mark itself complete without
-    // copying a single old signup.
-    let body: string | null = null;
-    try {
-      body = await readRawBlob(found.url, token);
-    } catch (error) {
-      console.error(`waitlist legacy migration: could not read ${legacyPath}`, error);
-    }
-    if (body === null) {
-      allLegacyBlobsRead = false;
-      continue;
-    }
-    let parsed: unknown;
-    try {
-      parsed = decryptWaitlistJson(body, storageSecret());
-    } catch (error) {
-      console.error(`waitlist legacy migration: could not decrypt ${legacyPath}`, error);
-      allLegacyBlobsRead = false;
-      continue;
-    }
-    if (!Array.isArray(parsed)) continue;
-    for (const item of parsed as WaitlistEntry[]) {
-      if (!item?.email) continue;
-      try {
-        await putEntry(item);
-      } catch (error) {
-        console.error(`waitlist legacy migration: could not migrate ${item.email}`, error);
-        allLegacyBlobsRead = false;
-      }
-    }
-  }
-
-  // Only mark migration complete once every legacy blob that exists has
-  // actually been read and copied — otherwise a transient failure would
-  // permanently hide entries that were never migrated.
-  if (!allLegacyBlobsRead) return;
-
-  await put(MIGRATION_MARKER, new Date().toISOString(), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "text/plain",
-    token,
-  });
-}
+const UNIQUE_VIOLATION = "23505";
 
 async function readLocal(): Promise<WaitlistEntry[]> {
   try {
@@ -225,15 +133,25 @@ async function writeLocal(entries: WaitlistEntry[]): Promise<void> {
 
 export async function saveWaitlistEntry(
   entry: WaitlistEntry,
-): Promise<{ duplicate: boolean; storage: "blob" | "local" }> {
-  if (durableBlobReady()) {
-    await migrateLegacyIfNeeded();
-    const pathName = entryPath(entry.email);
-    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
-    const exists = listed.blobs.some((blob) => blob.pathname === pathName);
-    if (exists) return { duplicate: true, storage: "blob" };
-    await putEntry(entry);
-    return { duplicate: false, storage: "blob" };
+): Promise<{ duplicate: boolean; storage: "supabase" | "local" }> {
+  if (supabaseConfigured()) {
+    const { error } = await supabaseAdmin().from("waitlist_entries").insert({
+      first_name: entry.firstName,
+      last_name: entry.lastName,
+      email: entry.email,
+      referred_by: entry.referredBy ?? null,
+      promo_code: entry.promoCode ?? null,
+      referral_code: entry.referralCode,
+      utm_source: entry.utmSource ?? null,
+      utm_medium: entry.utmMedium ?? null,
+      utm_campaign: entry.utmCampaign ?? null,
+      created_at: entry.createdAt,
+    });
+    if (error) {
+      if (error.code === UNIQUE_VIOLATION) return { duplicate: true, storage: "supabase" };
+      throw new Error(`Supabase waitlist insert failed: ${error.message}`);
+    }
+    return { duplicate: false, storage: "supabase" };
   }
 
   const entries = await readLocal();
@@ -248,19 +166,18 @@ export async function updateWaitlistDetails(
   email: string,
   details: { tool?: string; experience?: string; message?: string },
 ): Promise<boolean> {
-  if (durableBlobReady()) {
-    await migrateLegacyIfNeeded();
-    const pathName = entryPath(email);
-    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
-    const found = listed.blobs.find((blob) => blob.pathname === pathName);
-    if (!found) return false;
-    const current = await readEntryBlob(found.url);
-    if (!current) return false;
-    current.tool = details.tool;
-    current.experience = details.experience;
-    current.message = details.message || undefined;
-    await putEntry(current);
-    return true;
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseAdmin()
+      .from("waitlist_entries")
+      .update({
+        tool: details.tool ?? null,
+        experience: details.experience ?? null,
+        message: details.message || null,
+      })
+      .eq("email", email)
+      .select("id");
+    if (error) throw new Error(`Supabase waitlist update failed: ${error.message}`);
+    return (data?.length ?? 0) > 0;
   }
 
   const entries = await readLocal();
@@ -277,26 +194,18 @@ export async function recordWaitlistNotification(
   email: string,
   notification: WaitlistNotificationRecord,
 ): Promise<void> {
-  if (durableBlobReady()) {
-    await migrateLegacyIfNeeded();
-    const pathName = entryPath(email);
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
-      const found = listed.blobs.find((blob) => blob.pathname === pathName);
-      if (!found) {
-        await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
-        continue;
-      }
-      const current = await readEntryBlob(found.url);
-      if (!current) {
-        await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
-        continue;
-      }
-      current.notification = notification;
-      await putEntry(current);
-      return;
-    }
-    throw new Error("Waitlist entry was not visible while recording notification status");
+  if (supabaseConfigured()) {
+    const { error } = await supabaseAdmin()
+      .from("waitlist_entries")
+      .update({
+        notification_status: notification.status,
+        notification_provider: notification.provider,
+        notification_at: notification.at,
+        notification_message_id: notification.messageId ?? null,
+      })
+      .eq("email", email);
+    if (error) throw new Error(`Supabase waitlist notification update failed: ${error.message}`);
+    return;
   }
 
   const entries = await readLocal();
@@ -307,13 +216,14 @@ export async function recordWaitlistNotification(
 }
 
 export async function listWaitlistEntries(limit = 500): Promise<WaitlistAdminEntry[]> {
-  if (durableBlobReady()) {
-    await migrateLegacyIfNeeded();
-    const entries = await listEntryBlobs();
-    return entries
-      .map((entry) => ({ ...entry, id: entry.referralCode }))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, limit);
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseAdmin()
+      .from("waitlist_entries")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(`Supabase waitlist list failed: ${error.message}`);
+    return ((data ?? []) as WaitlistRow[]).map(rowToEntry);
   }
   return (await readLocal())
     .map((entry) => ({ ...entry, id: entry.referralCode }))
@@ -344,15 +254,14 @@ export async function referralProgress(code: string): Promise<{ found: boolean; 
 
 /** Entries are marked only after Resend accepts the beta invitation, making batches safe to retry. */
 export async function markBetaInviteSent(email: string, betaInviteAt: string): Promise<void> {
-  if (durableBlobReady()) {
-    const pathName = entryPath(email);
-    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
-    const found = listed.blobs.find((blob) => blob.pathname === pathName);
-    if (!found) throw new Error("Waitlist entry was not found while recording beta invite");
-    const current = await readEntryBlob(found.url);
-    if (!current) throw new Error("Waitlist entry could not be read while recording beta invite");
-    current.betaInviteAt = betaInviteAt;
-    await putEntry(current);
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseAdmin()
+      .from("waitlist_entries")
+      .update({ invited_at: betaInviteAt })
+      .eq("email", email)
+      .select("id");
+    if (error) throw new Error(`Supabase mark beta invite failed: ${error.message}`);
+    if (!data || data.length === 0) throw new Error("Waitlist entry was not found while recording beta invite");
     return;
   }
   const entries = await readLocal();
@@ -370,14 +279,14 @@ export async function deleteWaitlistEntry(email: string): Promise<boolean> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;
 
-  if (durableBlobReady()) {
-    await migrateLegacyIfNeeded();
-    const pathName = entryPath(normalized);
-    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
-    const found = listed.blobs.find((blob) => blob.pathname === pathName);
-    if (!found) return false;
-    await del(found.url, { token: blobToken() });
-    return true;
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseAdmin()
+      .from("waitlist_entries")
+      .delete()
+      .eq("email", normalized)
+      .select("id");
+    if (error) throw new Error(`Supabase waitlist delete failed: ${error.message}`);
+    return (data?.length ?? 0) > 0;
   }
 
   const entries = await readLocal();

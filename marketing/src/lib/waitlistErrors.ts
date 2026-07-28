@@ -11,7 +11,7 @@ export type WaitlistFailure = {
 export function publicWaitlistFailure(error: unknown): WaitlistFailure {
   const message = error instanceof Error ? error.message : "";
 
-  if (/Durable waitlist storage is not configured|Waitlist encryption is not configured/i.test(message)) {
+  if (/Durable waitlist storage is not configured/i.test(message)) {
     return {
       code: "waitlist_storage_setup_required",
       error: "The private beta list is being configured. Please try again shortly.",
@@ -19,7 +19,7 @@ export function publicWaitlistFailure(error: unknown): WaitlistFailure {
     };
   }
 
-  if (/waitlist storage|Vercel Blob|blob|fetch failed|timeout/i.test(message)) {
+  if (/waitlist storage|supabase|fetch failed|timeout/i.test(message)) {
     return {
       code: "waitlist_storage_unavailable",
       error: "The private beta list is temporarily unavailable. Please try again shortly.",
