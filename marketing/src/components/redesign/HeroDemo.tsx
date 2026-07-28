@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
+import { ExternalLink, Volume2, VolumeX } from "lucide-react";
 import { track } from "@/lib/analytics";
 
 const DEMO_SRC =
   process.env.NEXT_PUBLIC_DEMO_VIDEO_URL?.trim()
   || process.env.NEXT_PUBLIC_INVESTOR_DEMO_VIDEO_URL?.trim()
   || "https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4";
+
+const FULL_DEMO_URL = "https://youtu.be/V23yQm5QTK8";
 
 /**
  * Homepage product demo — real Mac recording.
@@ -98,6 +100,15 @@ export function HeroDemo() {
           </button>
         ) : null}
       </div>
+      <a
+        className="home-demo__full-link"
+        href={FULL_DEMO_URL}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => track("outbound_social_clicked", { destination: "youtube_demo" })}
+      >
+        Watch the full Unvibe demo on YouTube <ExternalLink size={15} aria-hidden="true" />
+      </a>
     </div>
   );
 }
