@@ -19,19 +19,23 @@ export function parseQuestion(text: string): Question | undefined {
     const obj = JSON.parse(cleaned.slice(start, end + 1)) as Partial<Question>;
     if (
       typeof obj.question === 'string' &&
+      obj.question.trim().length > 0 &&
       Array.isArray(obj.options) &&
       obj.options.length >= 2 &&
+      obj.options.every((o) => typeof o === 'string' && o.trim().length > 0) &&
       typeof obj.answerIndex === 'number' &&
       obj.answerIndex >= 0 &&
-      obj.answerIndex < obj.options.length
+      obj.answerIndex < obj.options.length &&
+      typeof obj.rationale === 'string' &&
+      obj.rationale.trim().length > 0
     ) {
       return {
-        question: obj.question,
-        options: obj.options.map(String),
+        question: obj.question.trim(),
+        options: obj.options.map((o: string) => o.trim()),
         answerIndex: obj.answerIndex,
-        rationale: typeof obj.rationale === 'string' ? obj.rationale : '',
-        concept: typeof obj.concept === 'string' ? obj.concept : 'general',
-        conceptLabel: typeof obj.conceptLabel === 'string' ? obj.conceptLabel : 'General',
+        rationale: obj.rationale.trim(),
+        concept: typeof obj.concept === 'string' && obj.concept.trim().length > 0 ? obj.concept.trim() : 'general',
+        conceptLabel: typeof obj.conceptLabel === 'string' && obj.conceptLabel.trim().length > 0 ? obj.conceptLabel.trim() : 'General',
       };
     }
   } catch {
