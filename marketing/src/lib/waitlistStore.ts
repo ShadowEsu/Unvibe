@@ -99,15 +99,26 @@ async function putEntry(entry: WaitlistEntry): Promise<void> {
   });
 }
 
-async function readEntryBlob(url: string): Promise<WaitlistEntry | null> {
+async function readRawBlob(url: string, token: string): Promise<string | null> {
   // Read through the Blob SDK. Direct fetches against a Blob CDN URL can be
   // rejected even with a server token, which made the founder waitlist view
   // fail despite a healthy configured store.
-  const result = await get(url, { access: "public", token: blobToken(), useCache: false });
+  const result = await get(url, { access: "public", token, useCache: false });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
   const body = await new Response(result.stream).text();
-  if (!body.trim()) return null;
-  return decryptEntry(body);
+  return body.trim() ? body : null;
+}
+
+async function readEntryBlob(url: string): Promise<WaitlistEntry | null> {
+  const body = await readRawBlob(url, blobToken());
+  if (!body) return null;
+  try {
+    return decryptEntry(body);
+  } catch (error) {
+    // A single unreadable entry must never take down the whole waitlist view.
+    console.error(`waitlist entry could not be decrypted: ${url}`, error);
+    return null;
+  }
 }
 
 async function listEntryBlobs(): Promise<WaitlistEntry[]> {
@@ -126,34 +137,74 @@ async function listEntryBlobs(): Promise<WaitlistEntry[]> {
   return entries;
 }
 
+const MIGRATION_MARKER = "waitlist/migrated-v2.marker";
+
+/**
+ * Copies every entry out of the old single-blob formats into per-item blobs.
+ * Guarded by an explicit completion marker rather than "some per-item blobs
+ * already exist" — that older check let one failed item during a partial
+ * migration permanently hide every entry that hadn't been copied yet, which
+ * silently dropped real signups. Each item is migrated independently so one
+ * bad entry can't abort the rest, and every failure is logged instead of
+ * swallowed.
+ */
 async function migrateLegacyIfNeeded(): Promise<void> {
   const token = blobToken();
-  const existing = await list({ prefix: ENTRY_PREFIX, limit: 1, token });
-  if (existing.blobs.length > 0) return;
+  const marker = await list({ prefix: MIGRATION_MARKER, limit: 1, token });
+  if (marker.blobs.some((blob) => blob.pathname === MIGRATION_MARKER)) return;
 
+  let allLegacyBlobsRead = true;
   for (const legacyPath of [LEGACY_BLOB_PATH, LEGACY_BLOB_PATH_V1]) {
     const listed = await list({ prefix: legacyPath, limit: 5, token });
     const found = listed.blobs.find((blob) => blob.pathname === legacyPath);
     if (!found) continue;
-    const downloadUrl = new URL(found.url);
-    downloadUrl.searchParams.set("download", "1");
-    const response = await fetch(downloadUrl, {
-      headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" },
-      cache: "no-store",
-    });
-    if (!response.ok) continue;
-    const body = await response.text();
+    // Read through the Blob SDK, same as readEntryBlob. A raw fetch with an
+    // Authorization header against the CDN URL is rejected in production even
+    // with a valid token, which previously made this migration silently see
+    // every legacy blob as "not found" and mark itself complete without
+    // copying a single old signup.
+    let body: string | null = null;
     try {
-      const parsed: unknown = decryptWaitlistJson(body, storageSecret());
-      if (!Array.isArray(parsed)) continue;
-      for (const item of parsed as WaitlistEntry[]) {
-        if (item?.email) await putEntry(item);
+      body = await readRawBlob(found.url, token);
+    } catch (error) {
+      console.error(`waitlist legacy migration: could not read ${legacyPath}`, error);
+    }
+    if (body === null) {
+      allLegacyBlobsRead = false;
+      continue;
+    }
+    let parsed: unknown;
+    try {
+      parsed = decryptWaitlistJson(body, storageSecret());
+    } catch (error) {
+      console.error(`waitlist legacy migration: could not decrypt ${legacyPath}`, error);
+      allLegacyBlobsRead = false;
+      continue;
+    }
+    if (!Array.isArray(parsed)) continue;
+    for (const item of parsed as WaitlistEntry[]) {
+      if (!item?.email) continue;
+      try {
+        await putEntry(item);
+      } catch (error) {
+        console.error(`waitlist legacy migration: could not migrate ${item.email}`, error);
+        allLegacyBlobsRead = false;
       }
-      return;
-    } catch {
-      // Ignore undecryptable legacy blobs and continue.
     }
   }
+
+  // Only mark migration complete once every legacy blob that exists has
+  // actually been read and copied — otherwise a transient failure would
+  // permanently hide entries that were never migrated.
+  if (!allLegacyBlobsRead) return;
+
+  await put(MIGRATION_MARKER, new Date().toISOString(), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "text/plain",
+    token,
+  });
 }
 
 async function readLocal(): Promise<WaitlistEntry[]> {

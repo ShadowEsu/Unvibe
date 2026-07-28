@@ -9,7 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/lib/*.test.ts",
-    "send:beta-invites": "tsx scripts/send-beta-invites.ts"
+    "send:beta-invites": "tsx scripts/send-beta-invites.ts",
+    "diagnose:waitlist": "tsx scripts/diagnose-waitlist.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
