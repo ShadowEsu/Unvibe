@@ -1257,7 +1257,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
         <div className="mside">
           <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
           <div className="mh">PREFERENCES</div>
-          {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Island' ? '◒' : t === 'Sound & alerts' ? '♪' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
+          {['General', 'Shortcut & Capture', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Shortcut & Capture' ? '⌨' : t === 'Island' ? '◒' : t === 'Sound & alerts' ? '♪' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
           <div className="mh" style={{ paddingTop: 18 }}>UNVIBE</div>
           {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'Integrations' ? '↗' : t === 'AI' ? '◌' : t === 'Account & Plan' ? '◈' : 'i'}</span>{t}</button>)}
           <div className="ver">Unvibe v{info.version}</div>
