@@ -9,7 +9,7 @@ const DEMO_SRC =
   || process.env.NEXT_PUBLIC_INVESTOR_DEMO_VIDEO_URL?.trim()
   || "https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4";
 
-const FULL_DEMO_URL = "https://youtu.be/V23yQm5QTK8";
+const FULL_DEMO_URL = "https://youtu.be/a_X0MyBCkTo";
 
 /**
  * Homepage product demo — real Mac recording.
