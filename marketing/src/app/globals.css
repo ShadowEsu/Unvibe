@@ -292,6 +292,8 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   box-shadow: 4px 4px 0 rgba(79, 42, 169, .35);
 }
 .home-demo__sound:hover { background: #4f2aa9; }
+.home-demo__full-link { display: inline-flex; align-items: center; gap: .45rem; margin-top: 1rem; color: var(--purple-strong); font-size: .86rem; font-weight: 750; text-decoration: underline; text-underline-offset: .25rem; }
+.home-demo__full-link:hover { color: #4f2aa9; }
 
 .demo-shell { border: 1px solid #2d2340; background: #16111f; color: #f5f1fb; box-shadow: 12px 12px 0 var(--lavender); }
 .demo-toolbar { height: 50px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 1rem; border-bottom: 1px solid #342a45; font: 600 .69rem var(--font-mono); letter-spacing: .04em; }
