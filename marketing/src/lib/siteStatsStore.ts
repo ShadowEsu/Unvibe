@@ -124,14 +124,14 @@ async function readBlob(): Promise<StatsFile> {
   if (!match) return emptyStats();
   // Go through the Blob SDK rather than a CDN fetch. The SDK authenticates the
   // storage read correctly for serverless functions and avoids false 403s.
-  const result = await get(match.url, { access: "public", token, useCache: false });
+  const result = await get(match.url, { access: "private", token, useCache: false });
   if (!result || result.statusCode !== 200 || !result.stream) return emptyStats();
   return normalize(JSON.parse(await new Response(result.stream).text()) as StatsFile);
 }
 
 async function writeBlob(data: StatsFile): Promise<void> {
   await put(BLOB_PATH, JSON.stringify(data), {
-    access: "public",
+    access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     cacheControlMaxAge: 60,
