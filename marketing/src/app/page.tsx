@@ -25,21 +25,23 @@ export default function Home() {
     <>
       <FaqJsonLd />
       <Hero />
-      <BrandLogos />
-
-      <section className="founder-build-strip" aria-label="Unvibe build progress">
+      <section className="founder-build-section" aria-labelledby="founder-time-title">
         <div className="container-page founder-build-strip__inner">
           <div className="founder-build-strip__copy">
-            <Clock3 size={18} aria-hidden="true" />
-            <span><strong>Built in public.</strong> Every hour below is real founder build time.</span>
+            <p><Clock3 size={16} aria-hidden="true" /> BUILDING IN PUBLIC</p>
+            <h2 id="founder-time-title">Every hour behind Unvibe, counted.</h2>
+            <span>Real founder build time, updated while the product is being worked on.</span>
           </div>
-          <FounderClock />
+          <FounderClock prominent />
           <a href="/build" className="founder-build-strip__progress">
             <span><b>55%</b> to public beta</span>
             <i><em /></i>
+            <small>See the live build log <ArrowRight size={13} /></small>
           </a>
         </div>
       </section>
+
+      <BrandLogos />
 
       <Section
         eyebrow="See the real product"

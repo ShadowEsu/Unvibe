@@ -10,9 +10,11 @@ const FALLBACK_SECONDS = 160 * 60 * 60;
 
 export function FounderClock({
   compact = false,
+  prominent = false,
   onNavigate,
 }: {
   compact?: boolean;
+  prominent?: boolean;
   onNavigate?: () => void;
 }) {
   const [status, setStatus] = useState<PublicStatus | null>(null);
@@ -52,7 +54,7 @@ export function FounderClock({
   return (
     <Link
       href="/build"
-      className={`founder-clock${live ? " founder-clock--live" : ""}${compact ? " founder-clock--compact" : ""}`}
+      className={`founder-clock${live ? " founder-clock--live" : ""}${compact ? " founder-clock--compact" : ""}${prominent ? " founder-clock--prominent" : ""}`}
       aria-label={`${live ? "Founder is building live" : "Founder build time"}: ${longDuration(seconds)}`}
       title={live && status ? `Building: ${status.focus}` : "See the public build log"}
       onClick={onNavigate}

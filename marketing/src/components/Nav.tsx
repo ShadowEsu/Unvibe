@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { FounderClock } from "@/components/FounderClock";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -40,7 +39,6 @@ export function Nav() {
           {links.map((link) => <Link key={link.href} href={link.href} className="rounded-pill px-3 py-2 text-fluid-sm text-fg-muted hover:text-fg">{link.label}</Link>)}
           <ThemeToggle />
           <Link href="/beta" className="rounded-pill bg-primary px-4 py-2 text-fluid-sm font-semibold text-on-primary hover:bg-primary-strong">Download</Link>
-          <FounderClock />
         </div>
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
@@ -53,7 +51,6 @@ export function Nav() {
           <button type="button" aria-label="Close menu" className="absolute inset-0 bg-fg/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-0 flex h-full w-[min(21rem,88vw)] flex-col gap-2 border-l border-line bg-bg p-6 shadow-lift">
             <div className="mb-6 flex items-center justify-between"><Logo /><button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-full border border-line text-fg"><X size={18} /></button></div>
-            <FounderClock compact onNavigate={() => setOpen(false)} />
             {links.map((link) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="rounded-xl px-3 py-3 text-fluid-lg text-fg hover:bg-surface-2">{link.label}</Link>)}
             <Link href="/beta" onClick={() => setOpen(false)} className="mt-2 rounded-xl bg-primary px-4 py-3 text-center font-semibold text-on-primary">Download</Link>
           </div>
