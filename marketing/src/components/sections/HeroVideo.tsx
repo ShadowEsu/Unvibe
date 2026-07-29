@@ -80,7 +80,7 @@ export function HeroVideo() {
           playsInline
           controls
           preload="auto"
-          poster="/og.png"
+          poster="/unvibe-social-preview-v5.png"
         >
           <source src={src} type="video/mp4" />
         </video>

@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     description:
       "Select code, press ⌘U, and learn what AI shipped in the context of your project.",
     siteName: "Unvibe",
-    images: [{ url: "/unvibe-social-preview-v4.png", width: 1200, height: 630, alt: "Unvibe — learn the code you vibe-coded" }],
+    images: [{ url: "/unvibe-social-preview-v5.png", width: 1200, height: 630, alt: "Unvibe — learn the AI-generated code you ship" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
       "A Mac desktop tutor for learning the AI-generated code in your project without leaving your workflow.",
-    images: ["/unvibe-social-preview-v4.png"],
+    images: ["/unvibe-social-preview-v5.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -90,7 +90,7 @@ const themeScript = `
   try {
     var stored = localStorage.getItem('unvibe_marketing_theme_v2');
     var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    var theme = stored === 'light' || stored === 'dark' ? stored : (stored === 'system' ? system : 'light');
+    var theme = stored === 'light' || stored === 'dark' ? stored : (stored === 'system' ? system : 'dark');
     var root = document.documentElement;
     if (theme === 'dark') root.classList.add('dark');
     root.style.colorScheme = theme;

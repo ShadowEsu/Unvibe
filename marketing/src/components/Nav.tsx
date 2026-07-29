@@ -8,6 +8,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const links = [
+  { label: "Product", href: "/#product" },
+  { label: "Releases", href: "/#releases" },
   { label: "Pricing", href: "/pricing" },
   { label: "Investors", href: "/investors" },
 ];
