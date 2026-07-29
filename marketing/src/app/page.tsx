@@ -1,16 +1,20 @@
 import {
+  ArrowDown,
   ArrowRight,
   Check,
+  Code2,
   Command,
-  Download,
+  History,
   MousePointer2,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/Button";
+import { FaqJsonLd } from "@/components/JsonLd";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
 import { ProductLoop } from "@/components/redesign/ProductLoop";
 import { Reveal } from "@/components/redesign/Reveal";
 import { ToolOrbit } from "@/components/redesign/ToolOrbit";
+import { faqItems } from "@/data/faq";
 
 const distribution = [
   { name: "LaunchKiwi", href: "https://launchkiwi.com/p/unvibe" },
@@ -32,161 +36,155 @@ const distribution = [
   { name: "LaunchBuff", href: "https://launchbuff.com" },
 ];
 
+const quickAnswers = faqItems.filter((item) =>
+  ["free", "pro-annual", "beta", "cancel"].includes(item.id),
+);
+
 export default function Home() {
   return (
     <>
-      <section className="launch-hero" id="product">
-        <div className="launch-ambient" aria-hidden="true" />
-        <Reveal className="container-page launch-hero__inner">
-          <div className="launch-kicker">
-            <span className="launch-kicker__dot" />
-            Your vibe-code tutor · private Mac beta
-          </div>
-          <h1>Learn the project<br />you vibe-coded.</h1>
-          <p className="launch-hero__lead">
-            Select code. Press <kbd>⌘U</kbd>. Unvibe teaches you what AI shipped.
-          </p>
-          <div className="launch-hero__actions">
-            <Button href="/beta" size="lg">
-              <Download size={17} /> Download beta
-            </Button>
-            <Button href="#waitlist" size="lg" variant="secondary">
-              Join the waitlist
-            </Button>
-          </div>
-          <p className="launch-hero__note">
-            macOS · Cursor + VS Code · no provider key required
-          </p>
+      <FaqJsonLd />
 
-          <div className="launch-product">
-            <ProductLoop />
+      <section className="editorial-hero" id="product">
+        <div className="editorial-hero__grid" aria-hidden="true" />
+        <div className="editorial-hero__orb editorial-hero__orb--one" aria-hidden="true" />
+        <div className="editorial-hero__orb editorial-hero__orb--two" aria-hidden="true" />
+        <Reveal className="container-page editorial-hero__inner">
+          <p className="editorial-eyebrow"><span /> Private Mac beta</p>
+          <h1>
+            <span>Vibe code freely.</span>
+            <em>Learn what you ship.</em>
+          </h1>
+          <p className="editorial-hero__lead">
+            Unvibe teaches you the vibe-coded code you are responsible for
+            shipping—so you can understand, review, and maintain it.
+          </p>
+          <div className="editorial-hero__actions">
+            <Button href="#waitlist" size="lg">
+              Request beta access <ArrowRight size={18} />
+            </Button>
+            <Button href="#how-it-works" size="lg" variant="secondary">
+              See how it works <ArrowDown size={17} />
+            </Button>
+          </div>
+          <div className="editorial-hero__status">
+            <a href="/build"><i /> 55% to public beta</a>
+            <span>160+ founder hours</span>
+            <span>Cursor + VS Code</span>
+            <span>No provider key required</span>
           </div>
         </Reveal>
       </section>
 
-      <section className="launch-section launch-section--quiet" id="how-it-works">
+      <section className="editorial-demo" id="how-it-works">
         <Reveal className="container-page">
-          <div className="launch-section__intro">
-            <p>One quiet loop</p>
-            <h2>Review without leaving your flow.</h2>
+          <div className="editorial-heading editorial-heading--ink">
+            <p>01 / ONE QUIET LOOP</p>
+            <h2>The review step <em>your agent skips.</em></h2>
+            <span>Select the code, press ⌘U, and return to building with the context in your head.</span>
           </div>
-          <div className="launch-steps">
-            <article>
-              <span>01</span>
-              <MousePointer2 size={21} />
-              <h3>Select</h3>
-              <p>Highlight the code you need to own.</p>
-            </article>
-            <article>
-              <span>02</span>
-              <Command size={21} />
-              <h3>Understand</h3>
-              <p>Press ⌘U for a focused explanation.</p>
-            </article>
-            <article>
-              <span>03</span>
-              <Check size={21} />
-              <h3>Keep it</h3>
-              <p>Ask, test, save, and continue building.</p>
-            </article>
+          <ProductLoop />
+          <div className="editorial-steps">
+            <article><span>01</span><MousePointer2 size={20} /><h3>Select</h3><p>Highlight the exact code you need to own.</p></article>
+            <article><span>02</span><Command size={20} /><h3>Understand</h3><p>Get a focused explanation at your level.</p></article>
+            <article><span>03</span><Check size={20} /><h3>Keep it</h3><p>Ask, test, save, and continue shipping.</p></article>
           </div>
         </Reveal>
       </section>
 
-      <section className="launch-section launch-section--deep">
+      <section className="editorial-learning">
+        <Reveal className="container-page editorial-learning__grid">
+          <div className="editorial-learning__copy">
+            <p>02 / YOUR PROJECT, REMEMBERED</p>
+            <h2>Understanding that stays <em>after the prompt disappears.</em></h2>
+            <span>
+              Each review can become a saved lesson, a short check, and a useful
+              trail of what you actually understand.
+            </span>
+          </div>
+          <div className="editorial-learning__cards">
+            <article><Code2 size={20} /><small>EXPLAIN</small><strong>What changed, why it matters, and what connects.</strong></article>
+            <article><ShieldCheck size={20} /><small>VERIFY</small><strong>One comprehension check grounded in your code.</strong></article>
+            <article><History size={20} /><small>REMEMBER</small><strong>History, study, and progress built from real reviews.</strong></article>
+          </div>
+        </Reveal>
+      </section>
+
+      <section className="editorial-integrations" id="integrations">
         <Reveal className="container-page">
-          <div className="launch-section__intro launch-section__intro--split">
-            <div>
-              <p>Everywhere you vibe-code</p>
-              <h2>One shortcut.<br />Your tools keep moving.</h2>
-            </div>
-            <p className="launch-section__copy">
-              Unvibe sits beside the project you already built with Cursor, VS Code,
-              Claude Code, a terminal, or another IDE. It teaches instead of replacing
-              your workflow.
-            </p>
+          <div className="editorial-heading editorial-heading--light">
+            <p>03 / WHEREVER YOU VIBE-CODE</p>
+            <h2>Beside your tools.<br /><em>Not another place to work.</em></h2>
+            <span>Unvibe follows the project across the workflow you already use.</span>
           </div>
           <ToolOrbit />
-          <p className="launch-disclosure">
-            Tool names describe compatibility only and do not imply partnerships.
+          <p className="editorial-disclosure">
+            Cursor and VS Code are validated in the private beta. Other names describe
+            workflow compatibility or active testing, not partnerships.
           </p>
         </Reveal>
       </section>
 
-      <section className="launch-section launch-section--proof">
-        <Reveal className="container-page proof-grid">
-          <div className="proof-quote">
-            <p>Private beta feedback</p>
+      <section className="editorial-proof">
+        <Reveal className="container-page editorial-proof__grid">
+          <div>
+            <p>04 / EARLY SIGNAL</p>
             <blockquote>
               “For what Unvibe is right now, it&apos;s genuinely impressive. The
               explanation depth and customization feel creative.”
             </blockquote>
-            <footer>
-              Om Khaunte <span>· Officer, Los Altos Hacks</span>
-            </footer>
+            <footer>Om Khaunte <span>· Officer, Los Altos Hacks</span></footer>
           </div>
-          <div className="proof-support">
-            <p>Early startup support</p>
-            <div>
-              <span>Google for Startups</span>
-              <span>MongoDB for Startups</span>
-              <span>Founder-funded</span>
-            </div>
-            <small>
-              Program participation and committed support; not an endorsement or a
-              claim of institutional investment.
-            </small>
-          </div>
+          <aside>
+            <p>Startup support</p>
+            <strong>Google for Startups</strong>
+            <strong>MongoDB for Startups</strong>
+            <strong>Founder-funded</strong>
+            <small>Program support and founder funding—not institutional investment or endorsement.</small>
+          </aside>
         </Reveal>
+        <div className="editorial-discovery" aria-label="Places where Unvibe is listed">
+          <div className="editorial-discovery__track">
+            {[0, 1].map((copy) => (
+              <div className="editorial-discovery__group" aria-hidden={copy === 1} key={copy}>
+                {distribution.map((item) => (
+                  <a
+                    key={`${copy}-${item.name}`}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    tabIndex={copy === 1 ? -1 : undefined}
+                  >
+                    <i /> {item.name} <ArrowRight size={13} />
+                  </a>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="launch-section launch-section--discover">
-        <Reveal className="container-page discover-layout">
-          <div>
-            <p className="launch-label">Find Unvibe</p>
-            <h2>Listed where developers discover new tools.</h2>
-          </div>
-          <div className="discovery-marquee" aria-label="Places where Unvibe is listed">
-            <div className="discovery-marquee__track">
-              {[0, 1].map((copy) => (
-                <div className="discovery-marquee__group" aria-hidden={copy === 1} key={copy}>
-                  {distribution.map((item) => (
-                    <a
-                      key={`${copy}-${item.name}`}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      tabIndex={copy === 1 ? -1 : undefined}
-                    >
-                      <i /> {item.name} <ArrowRight size={13} />
-                    </a>
-                  ))}
-                </div>
+      <section className="editorial-access" id="access">
+        <Reveal className="container-page editorial-access__grid waitlist-minimal">
+          <div className="editorial-access__faq">
+            <p className="editorial-access__label">05 / BEFORE YOU REQUEST ACCESS</p>
+            <h2>Quick answers.<br /><em>Then come build.</em></h2>
+            <div className="faq-list">
+              {quickAnswers.map((item, index) => (
+                <details key={item.id} open={index === 0}>
+                  <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true" /></summary>
+                  <p>{item.answer}</p>
+                </details>
               ))}
             </div>
           </div>
-        </Reveal>
-      </section>
-
-      <section className="launch-section launch-section--waitlist">
-        <div className="container-page waitlist-minimal">
-          <Reveal>
-            <p className="launch-label">Private beta</p>
-            <h2>Teach yourself what you shipped.</h2>
-            <p>
-              Join the Mac beta and help shape the fastest path from generated code
-              to real understanding.
-            </p>
-            <div className="waitlist-trust">
-              <span><ShieldCheck size={15} /> Selected context only</span>
-              <span>No credit card</span>
-              <span>Gradual invitations</span>
-            </div>
-          </Reveal>
-          <Reveal>
+          <div className="editorial-access__form">
+            <p>PRIVATE MAC BETA</p>
+            <h3>Teach yourself what you shipped.</h3>
+            <span>Request access in under a minute. No credit card.</span>
             <PixelWaitlist variant="hero" />
-          </Reveal>
-        </div>
+          </div>
+        </Reveal>
       </section>
     </>
   );

@@ -9,7 +9,6 @@ import { Logo } from "@/components/Logo";
 const links = [
   { label: "Pricing", href: "/pricing" },
   { label: "Investors", href: "/investors" },
-  { label: "How it works", href: "/#how-it-works" },
 ];
 
 export function Nav() {
@@ -38,7 +37,7 @@ export function Nav() {
         </Link>
         <div className="launch-nav__links">
           {links.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
-          <Link href="/beta" className="launch-nav__download">Download beta</Link>
+          <Link href="/beta" className="launch-nav__download">Download</Link>
           <FounderClock />
         </div>
         <button
@@ -68,9 +67,8 @@ export function Nav() {
                 {link.label}
               </Link>
             ))}
-            <Link href="/releases" onClick={() => setOpen(false)}>Releases</Link>
             <Link href="/beta" onClick={() => setOpen(false)} className="launch-nav__download">
-              Download beta
+              Download
             </Link>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
@@ -15,6 +15,14 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
+});
+
+const display = Newsreader({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-newsreader",
+  display: "swap",
+  adjustFontFallback: false,
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
@@ -34,14 +42,14 @@ export const metadata: Metadata = {
     description:
       "Select code, press ⌘U, and learn what AI shipped in the context of your project.",
     siteName: "Unvibe",
-    images: [{ url: "/unvibe-social-preview-v2.png", width: 1200, height: 630, alt: "Unvibe — learn the project you vibe-coded" }],
+    images: [{ url: "/unvibe-social-preview-v3.png", width: 1200, height: 630, alt: "Unvibe — vibe code freely, learn what you ship" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
       "A Mac desktop tutor for learning the AI-generated code in your project without leaving your workflow.",
-    images: ["/unvibe-social-preview-v2.png"],
+    images: ["/unvibe-social-preview-v3.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -81,7 +89,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} dark`}
+      className={`${sans.variable} ${mono.variable} ${display.variable} dark`}
     >
       <head>
         <script
