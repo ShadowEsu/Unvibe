@@ -2,6 +2,8 @@ import { ArrowRight, Check, ExternalLink } from "lucide-react";
 import { BrandLogos } from "@/components/BrandLogos";
 import { Button } from "@/components/Button";
 import { FounderClock } from "@/components/FounderClock";
+import { HomeMotion } from "@/components/HomeMotion";
+import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 import { HeroVideo } from "@/components/sections/HeroVideo";
 import { DarkProductShowcase } from "@/components/sections/DarkProductShowcase";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
@@ -29,24 +31,37 @@ export default function Home() {
   const recentReleases = milestones.slice(0, 4);
 
   return (
-    <div className="cursor-home">
+    <HomeMotion>
       <section className="cursor-hero" aria-labelledby="home-title">
         <div className="container-page cursor-hero__inner">
-          <div className="cursor-hero__copy">
-            <p className="home-kicker"><span /> PRIVATE MAC BETA</p>
-            <h1 id="home-title">Learn the AI-generated code you ship.</h1>
-            <p>
-              Select code in Cursor or VS Code, press ⌘U, and understand it
-              without leaving your workflow.
-            </p>
-            <div className="cursor-hero__actions">
-              <Button href="#waitlist" size="lg">Join the free beta</Button>
-              <Button href="/beta" variant="secondary" size="lg">Download for macOS</Button>
+          <div className="cursor-hero__top" data-home-reveal>
+            <div className="cursor-hero__copy">
+              <p className="home-kicker"><span /> PRIVATE MAC BETA</p>
+              <h1 id="home-title">Learn the AI-generated code you ship.</h1>
+              <p>
+                Select code in Cursor or VS Code, press ⌘U, and understand it
+                without leaving your workflow.
+              </p>
+              <div className="cursor-hero__actions">
+                <Button href="#waitlist" size="lg">Join the free beta</Button>
+                <Button href="/beta" variant="secondary" size="lg">Download for macOS</Button>
+              </div>
+              <small>Free during private beta · No credit card · No separate AI key</small>
             </div>
-            <small>Free during private beta · No credit card · No separate AI key</small>
+
+            <aside className="cursor-hero__status" aria-label="Release and founder build status">
+              <ReleaseCountdown />
+              <div className="cursor-hero__founder">
+                <div>
+                  <span>FOUNDER BUILD TIME</span>
+                  <p>Follow the work behind Unvibe.</p>
+                </div>
+                <FounderClock />
+              </div>
+            </aside>
           </div>
 
-          <div className="cursor-hero__demo">
+          <div className="cursor-hero__demo" data-home-reveal>
             <div className="cursor-hero__demo-label">
               <span>UNVIBE FOR MAC</span>
               <span>Select → ⌘U → Understand</span>
@@ -56,17 +71,18 @@ export default function Home() {
         </div>
       </section>
 
-      <BrandLogos className="cursor-home__apps" />
+      <div data-home-reveal>
+        <BrandLogos className="cursor-home__apps" />
+      </div>
       <DarkProductShowcase />
 
-      <section className="home-highlights" id="highlights" aria-labelledby="highlights-title">
+      <section className="home-highlights" id="highlights" aria-labelledby="highlights-title" data-home-reveal>
         <div className="container-page">
-          <div className="home-section-heading home-section-heading--with-clock">
+          <div className="home-section-heading">
             <div>
               <p>BUILDING IN PUBLIC</p>
               <h2 id="highlights-title">Recent highlights</h2>
             </div>
-            <FounderClock />
           </div>
           <div className="home-highlight-grid">
             {highlights.map(([value, title, description]) => (
@@ -81,7 +97,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="home-releases" id="releases" aria-labelledby="releases-title">
+      <section className="home-releases" id="releases" aria-labelledby="releases-title" data-home-reveal>
         <div className="container-page">
           <div className="home-section-heading">
             <div>
@@ -102,7 +118,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="home-feedback" id="feedback" aria-labelledby="feedback-title">
+      <section className="home-feedback" id="feedback" aria-labelledby="feedback-title" data-home-reveal>
         <div className="container-page">
           <div className="home-section-heading">
             <div>
@@ -123,7 +139,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="listed-field" aria-labelledby="listed-title">
+      <section className="listed-field" aria-labelledby="listed-title" data-home-reveal>
         <div className="container-page listed-field__heading">
           <div>
             <p>AROUND THE DEVELOPER COMMUNITY</p>
@@ -146,7 +162,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="simple-waitlist" id="access">
+      <section className="simple-waitlist" id="access" data-home-reveal>
         <div className="container-page simple-waitlist__grid waitlist-minimal">
           <div className="simple-waitlist__copy">
             <p>PRIVATE MAC BETA</p>
@@ -161,6 +177,6 @@ export default function Home() {
           <PixelWaitlist variant="hero" />
         </div>
       </section>
-    </div>
+    </HomeMotion>
   );
 }

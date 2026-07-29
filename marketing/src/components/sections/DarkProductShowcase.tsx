@@ -31,13 +31,13 @@ export function DarkProductShowcase() {
   return (
     <section className="product-stories" id="product" aria-labelledby="product-title">
       <div className="container-page">
-        <header className="product-stories__header">
+        <header className="product-stories__header" data-home-reveal>
           <p>HOW UNVIBE WORKS</p>
           <h2 id="product-title">One quiet loop for understanding AI-written code.</h2>
         </header>
         <div className="product-stories__stack">
           {stories.map((story, index) => (
-            <article className={index % 2 ? "product-story product-story--reverse" : "product-story"} key={story.title}>
+            <article className={index % 2 ? "product-story product-story--reverse" : "product-story"} key={story.title} data-home-reveal>
               <div className="product-story__copy">
                 <p>{story.eyebrow}</p>
                 <h3>{story.title}</h3>
