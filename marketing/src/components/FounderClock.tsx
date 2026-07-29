@@ -11,10 +11,12 @@ const FALLBACK_SECONDS = 160 * 60 * 60;
 export function FounderClock({
   compact = false,
   prominent = false,
+  breakdown = false,
   onNavigate,
 }: {
   compact?: boolean;
   prominent?: boolean;
+  breakdown?: boolean;
   onNavigate?: () => void;
 }) {
   const [status, setStatus] = useState<PublicStatus | null>(null);
@@ -51,6 +53,26 @@ export function FounderClock({
   }, [status, tick]);
   const live = Boolean(status?.isLive);
 
+  if (breakdown) {
+    const duration = breakdownDuration(seconds);
+    return (
+      <Link
+        href="/build"
+        className={`founder-clock founder-clock--breakdown${live ? " founder-clock--live" : ""}`}
+        aria-label={`${longDuration(seconds)} worked on Unvibe${live ? ", building live" : ""}`}
+        title={live && status ? `Building: ${status.focus}` : "See the public build log"}
+        onClick={onNavigate}
+      >
+        <span className="founder-clock__breakdown" aria-hidden="true">
+          <span><b>{duration.hours}</b><small>hours</small></span>
+          <span><b>{duration.minutes}</b><small>minutes</small></span>
+          <span><b>{duration.seconds}</b><small>seconds</small></span>
+        </span>
+        <span className="founder-clock__label">worked on Unvibe{live ? " · building live" : ""}</span>
+      </Link>
+    );
+  }
+
   return (
     <Link
       href="/build"
@@ -81,4 +103,13 @@ function longDuration(seconds: number): string {
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
   return `${hours} hours ${minutes} minutes`;
+}
+
+function breakdownDuration(seconds: number) {
+  const safe = Math.max(0, Math.floor(seconds));
+  return {
+    hours: String(Math.floor(safe / 3600)),
+    minutes: String(Math.floor((safe % 3600) / 60)).padStart(2, "0"),
+    seconds: String(safe % 60).padStart(2, "0"),
+  };
 }

@@ -130,6 +130,24 @@ html.dark body {
 .founder-clock--prominent .founder-clock__copy { gap: 5px; }
 .founder-clock--prominent .founder-clock__copy b { font-size: clamp(1.7rem, 4vw, 2.75rem); letter-spacing: -.035em; }
 .founder-clock--prominent .founder-clock__copy small { color: rgb(var(--fg-faint)); font-size: .62rem; }
+.founder-clock--breakdown {
+  display: grid;
+  width: 100%;
+  gap: .65rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.founder-clock__breakdown { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; }
+.founder-clock__breakdown > span { display: grid; gap: .15rem; }
+.founder-clock__breakdown b { color: #f7f2fa; font: 560 1.2rem var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+.founder-clock__breakdown small,
+.founder-clock__label { color: #766a7d; font: 600 .48rem var(--font-mono); letter-spacing: .075em; text-transform: uppercase; }
+.founder-clock__label { color: #ad98b7; }
+.founder-clock--breakdown.founder-clock--live .founder-clock__label { color: #b99cff; }
 @keyframes founder-dial { to { transform: rotate(360deg); } }
 @keyframes founder-hand { to { transform: rotate(360deg); } }
 
@@ -2247,8 +2265,7 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 .release-countdown { padding: 1.25rem; }
 .release-countdown__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .release-countdown__heading span,
-.release-countdown__heading time,
-.cursor-hero__founder > div > span {
+.release-countdown__heading time {
   color: #9c89a6;
   font: 650 .55rem var(--font-mono);
   letter-spacing: .09em;
@@ -2273,16 +2290,10 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 }
 .release-countdown__grid small { color: #716578; font: 600 .42rem var(--font-mono); letter-spacing: .08em; }
 .cursor-hero__founder {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
   padding: 1rem 1.25rem;
   border-top: 1px solid rgba(255,255,255,.08);
 }
-.cursor-hero__founder > div > span { color: #b79cff; }
-.cursor-hero__founder p { margin: .25rem 0 0; color: #756a7b; font-size: .65rem; }
-.cursor-hero__founder .founder-clock { flex: 0 0 auto; margin: 0; border-color: rgba(183,155,255,.24); background: rgba(255,255,255,.035); }
+.cursor-hero__founder .founder-clock { margin: 0; }
 .cursor-hero__demo {
   padding: 11px;
   border: 1px solid rgba(200,174,255,.24);
@@ -2439,7 +2450,6 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .release-countdown__grid > div { padding: .65rem .15rem .58rem; }
   .release-countdown__grid strong { font-size: 1.15rem; }
   .release-countdown__grid small { font-size: .36rem; }
-  .cursor-hero__founder { align-items: flex-start; flex-direction: column; }
   .cursor-hero__demo { margin-inline: -.6rem; padding: 7px; border-radius: 18px; }
   .cursor-hero__demo-label { align-items: flex-start; flex-direction: column; gap: .25rem; }
   .product-story__visual { min-height: 270px; margin: 12px; }

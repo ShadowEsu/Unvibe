@@ -52,11 +52,7 @@ export default function Home() {
             <aside className="cursor-hero__status" aria-label="Release and founder build status">
               <ReleaseCountdown />
               <div className="cursor-hero__founder">
-                <div>
-                  <span>FOUNDER BUILD TIME</span>
-                  <p>Follow the work behind Unvibe.</p>
-                </div>
-                <FounderClock />
+                <FounderClock breakdown />
               </div>
             </aside>
           </div>
