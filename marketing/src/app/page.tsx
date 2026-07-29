@@ -1,108 +1,126 @@
-import { ArrowRight, Check, ExternalLink } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  Check,
+  Code2,
+  Command,
+  History,
+  MousePointer2,
+  ShieldCheck,
+} from "lucide-react";
 import { BrandLogos } from "@/components/BrandLogos";
 import { Button } from "@/components/Button";
 import { FounderClock } from "@/components/FounderClock";
-import { HomeMotion } from "@/components/HomeMotion";
+import { FaqJsonLd } from "@/components/JsonLd";
 import { ReleaseCountdown } from "@/components/ReleaseCountdown";
-import { HeroVideo } from "@/components/sections/HeroVideo";
-import { DarkProductShowcase } from "@/components/sections/DarkProductShowcase";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
+import { ProductLoop } from "@/components/redesign/ProductLoop";
+import { Reveal } from "@/components/redesign/Reveal";
+import { faqItems } from "@/data/faq";
 import { milestones } from "@/data/milestones";
 
-const listings = [
-  ["Product Hunt", "https://www.producthunt.com/products/unvibe?launch=unvibe"],
-  ["LaunchKiwi", "https://launchkiwi.com/p/unvibe"],
-  ["DevRove", "https://devrove.com/tools/unvibe-site"],
-  ["DEV Community", "https://dev.to/preston_jaysusanto_22498/how-to-review-ai-generated-code-without-losing-ownership-of-your-project-ndl"],
-  ["AI Tool Discovery", "https://www.aitooldiscovery.com/tools/aih_unvibe"],
-  ["VibeRank", "https://viberank.dev/apps/Unvibe"],
-  ["SideProjectors", "https://www.sideprojectors.com/project/86739/unvibe"],
-  ["LaunchBuff", "https://launchbuff.com"],
-] as const;
-
-const highlights = [
-  ["55%", "Public-beta roadmap", "Core product loop is live and under active testing."],
-  ["10", "Milestones shipped", "Product, infrastructure, distribution, and company progress."],
-  ["2", "Startup programs", "Google for Startups and MongoDB for Startups support."],
-  ["12+", "Community channels", "Launch platforms, directories, articles, and developer communities."],
-] as const;
+const quickAnswers = faqItems.filter((item) =>
+  ["free", "beta", "screen", "generator"].includes(item.id),
+);
 
 export default function Home() {
   const recentReleases = milestones.slice(0, 4);
 
   return (
-    <HomeMotion>
-      <section className="cursor-hero" aria-labelledby="home-title">
-        <div className="container-page cursor-hero__inner">
-          <div className="cursor-hero__top" data-home-reveal>
-            <div className="cursor-hero__copy">
-              <p className="home-kicker"><span /> PRIVATE MAC BETA</p>
-              <h1 id="home-title">Learn the AI-generated code you ship.</h1>
-              <p>
-                Select code in Cursor or VS Code, press ⌘U, and understand it
-                without leaving your workflow.
-              </p>
-              <div className="cursor-hero__actions">
-                <Button href="#waitlist" size="lg">Join the free beta</Button>
-                <Button href="/beta" variant="secondary" size="lg">Download for macOS</Button>
-              </div>
-              <small>Free during private beta · No credit card · No separate AI key</small>
-            </div>
+    <>
+      <FaqJsonLd />
 
-            <aside className="cursor-hero__status" aria-label="Release and founder build status">
-              <ReleaseCountdown />
-              <div className="cursor-hero__founder">
-                <FounderClock breakdown />
-              </div>
-            </aside>
+      <section className="editorial-hero" id="product">
+        <div className="editorial-hero__grid" aria-hidden="true" />
+        <div className="editorial-hero__orb editorial-hero__orb--one" aria-hidden="true" />
+        <div className="editorial-hero__orb editorial-hero__orb--two" aria-hidden="true" />
+        <Reveal className="container-page editorial-hero__inner">
+          <p className="editorial-eyebrow"><span /> The understanding layer for vibe coding</p>
+          <h1>
+            <span>Vibe code freely.</span>
+            <em>Own what you ship.</em>
+          </h1>
+          <p className="editorial-hero__lead">
+            AI can create the code. Unvibe is the learning layer built to help you
+            understand, verify, and remember the software you are responsible for.
+          </p>
+          <div className="editorial-hero__actions">
+            <Button href="#waitlist" size="lg">
+              Request beta access <ArrowRight size={18} />
+            </Button>
+            <Button href="#how-it-works" size="lg" variant="secondary">
+              See the product <ArrowDown size={17} />
+            </Button>
           </div>
-
-          <div className="cursor-hero__demo" data-home-reveal>
-            <div className="cursor-hero__demo-label">
-              <span>UNVIBE FOR MAC</span>
-              <span>Select → ⌘U → Understand</span>
+          <div className="editorial-hero__status">
+            <a href="/build"><i /> 55% to public beta</a>
+            <span>Cursor + VS Code</span>
+            <span>Local secret filtering</span>
+            <span>No provider key required</span>
+          </div>
+          <div className="editorial-hero__telemetry" aria-label="Unvibe release and founder status">
+            <ReleaseCountdown />
+            <div className="editorial-hero__founder">
+              <FounderClock breakdown />
             </div>
-            <HeroVideo />
           </div>
-        </div>
+        </Reveal>
       </section>
 
-      <div data-home-reveal>
-        <BrandLogos className="cursor-home__apps" />
-      </div>
-      <DarkProductShowcase />
-
-      <section className="home-highlights" id="highlights" aria-labelledby="highlights-title" data-home-reveal>
-        <div className="container-page">
-          <div className="home-section-heading">
-            <div>
-              <p>BUILDING IN PUBLIC</p>
-              <h2 id="highlights-title">Recent highlights</h2>
-            </div>
+      <section className="editorial-demo" id="how-it-works">
+        <Reveal className="container-page">
+          <div className="editorial-heading editorial-heading--ink">
+            <p>01 / THE MISSING STEP</p>
+            <h2>AI ships fast.<br /><em>Understanding should keep up.</em></h2>
+            <span>Select the code, press ⌘U, and return to building with the context in your head.</span>
           </div>
-          <div className="home-highlight-grid">
-            {highlights.map(([value, title, description]) => (
-              <article key={title}>
-                <strong>{value}</strong>
-                <h3>{title}</h3>
-                <p>{description}</p>
-              </article>
-            ))}
+          <ProductLoop />
+          <div className="editorial-steps">
+            <article><span>01</span><MousePointer2 size={20} /><h3>Select</h3><p>Highlight the exact code you need to own.</p></article>
+            <article><span>02</span><Command size={20} /><h3>Understand</h3><p>Get a focused explanation at your level.</p></article>
+            <article><span>03</span><Check size={20} /><h3>Keep it</h3><p>Ask, test, save, and continue shipping.</p></article>
           </div>
-          <a className="home-text-link" href="/build">See the public build record <ArrowRight size={15} /></a>
-        </div>
+        </Reveal>
       </section>
 
-      <section className="home-releases" id="releases" aria-labelledby="releases-title" data-home-reveal>
-        <div className="container-page">
-          <div className="home-section-heading">
-            <div>
-              <p>PRODUCT RECORD</p>
-              <h2 id="releases-title">Latest releases</h2>
-            </div>
-            <a className="home-text-link" href="/releases">All releases <ArrowRight size={15} /></a>
+      <section className="editorial-learning">
+        <Reveal className="container-page editorial-learning__grid">
+          <div className="editorial-learning__copy">
+            <p>02 / CODE BECOMES KNOWLEDGE</p>
+            <h2>The first learning loop <em>built around vibe-coded work.</em></h2>
+            <span>
+              Each review becomes context you can question, test, save, and carry
+              into the next version of your project.
+            </span>
           </div>
-          <div className="home-release-grid">
+          <div className="editorial-learning__cards">
+            <article><Code2 size={20} /><small>EXPLAIN</small><strong>What changed, why it matters, and what connects.</strong></article>
+            <article><ShieldCheck size={20} /><small>VERIFY</small><strong>One comprehension check grounded in your actual code.</strong></article>
+            <article><History size={20} /><small>REMEMBER</small><strong>History, study, and progress built from real reviews.</strong></article>
+          </div>
+        </Reveal>
+      </section>
+
+      <section className="editorial-trail" id="integrations">
+        <Reveal className="container-page editorial-trail__heading">
+          <p>03 / WHEREVER YOU VIBE-CODE</p>
+          <h2>One layer.<br /><em>Your existing workflow.</em></h2>
+          <span>Unvibe sits beside the tools you already use instead of becoming another place to work.</span>
+        </Reveal>
+        <BrandLogos className="editorial-trail__marquee" />
+        <p className="editorial-disclosure">Cursor and VS Code are validated in the private beta. Other workflows are being tested.</p>
+      </section>
+
+      <section className="editorial-releases" id="releases">
+        <Reveal className="container-page">
+          <div className="editorial-releases__heading">
+            <div>
+              <p>04 / BUILDING IN PUBLIC</p>
+              <h2>Every release moves<br /><em>understanding forward.</em></h2>
+            </div>
+            <Button href="/releases" variant="secondary" size="sm">All releases <ArrowRight size={15} /></Button>
+          </div>
+          <div className="editorial-release-grid">
             {recentReleases.map((release) => (
               <a href="/releases" key={`${release.date}-${release.title}`}>
                 <span><time>{release.date}</time><em>{release.category}</em></span>
@@ -111,68 +129,31 @@ export default function Home() {
               </a>
             ))}
           </div>
-        </div>
+        </Reveal>
       </section>
 
-      <section className="home-feedback" id="feedback" aria-labelledby="feedback-title" data-home-reveal>
-        <div className="container-page">
-          <div className="home-section-heading">
-            <div>
-              <p>PRIVATE BETA</p>
-              <h2 id="feedback-title">Early feedback</h2>
+      <section className="editorial-access" id="waitlist">
+        <Reveal className="container-page editorial-access__grid waitlist-minimal">
+          <div className="editorial-access__faq">
+            <p className="editorial-access__label">05 / BEFORE YOU REQUEST ACCESS</p>
+            <h2>Vibe coding made the code.<br /><em>Now make it yours.</em></h2>
+            <div className="faq-list">
+              {quickAnswers.map((item, index) => (
+                <details key={item.id} open={index === 0}>
+                  <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true" /></summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
             </div>
           </div>
-          <div className="beta-comments">
-            <blockquote>
-              <p>“For what Unvibe is right now, it&apos;s genuinely impressive. The explanation depth and customization feel creative.”</p>
-              <footer><strong>Om Anand Khaunte</strong><span>High school developer · Officer, Los Altos Hacks</span></footer>
-            </blockquote>
-            <blockquote>
-              <p>“The setup was smooth, and the dynamic-island idea could become a great feature with a little fine-tuning.”</p>
-              <footer><strong>Private beta feedback</strong><span>Product experience survey</span></footer>
-            </blockquote>
-          </div>
-        </div>
-      </section>
-
-      <section className="listed-field" aria-labelledby="listed-title" data-home-reveal>
-        <div className="container-page listed-field__heading">
-          <div>
-            <p>AROUND THE DEVELOPER COMMUNITY</p>
-            <h2 id="listed-title">Already out in the world.</h2>
-          </div>
-          <Button href="#waitlist" size="sm">Join the beta <ArrowRight size={15} /></Button>
-        </div>
-        <div className="listing-marquee" aria-label="Places where Unvibe is listed">
-          <div className="listing-marquee__track">
-            {[0, 1].map((copy) => (
-              <div className="listing-marquee__group" aria-hidden={copy === 1} key={copy}>
-                {listings.map(([name, href]) => (
-                  <a key={`${copy}-${name}`} href={href} target="_blank" rel="noopener noreferrer" tabIndex={copy === 1 ? -1 : undefined}>
-                    <Check size={14} /> {name} <ExternalLink size={13} />
-                  </a>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="simple-waitlist" id="access" data-home-reveal>
-        <div className="container-page simple-waitlist__grid waitlist-minimal">
-          <div className="simple-waitlist__copy">
+          <div className="editorial-access__form">
             <p>PRIVATE MAC BETA</p>
-            <h2>Know what you ship.</h2>
-            <span>Join the private beta. No credit card and no separate AI provider key required.</span>
-            <ul>
-              <li><Check size={16} />Selected-code explanations</li>
-              <li><Check size={16} />Saved learning and quick checks</li>
-              <li><Check size={16} />Cursor and VS Code workflow</li>
-            </ul>
+            <h3>Understand the code you ship.</h3>
+            <span>Request access in under a minute. No credit card.</span>
+            <PixelWaitlist variant="hero" />
           </div>
-          <PixelWaitlist variant="hero" />
-        </div>
+        </Reveal>
       </section>
-    </HomeMotion>
+    </>
   );
 }
