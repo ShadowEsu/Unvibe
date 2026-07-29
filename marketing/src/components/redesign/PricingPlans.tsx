@@ -70,6 +70,6 @@ function PlanCard({ plan, interval, name, eyebrow, price, detail, savings, featu
   return <article className={`marketing-plan-card${featured ? ' featured' : ''}`}>
     <span className="plan-badge">{eyebrow}</span><h3>{name}</h3><strong className="marketing-plan-price">{price}</strong><small>{detail}</small>{savings && <b className="savings-badge">{savings}</b>}
     <ul>{features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
-    <Button href="#waitlist" size="lg" className="pricing-button" onClick={() => track('plan_cta_clicked', { plan, interval })}>{cta}</Button>
+    <Button href="/#waitlist" size="lg" className="pricing-button" onClick={() => track('plan_cta_clicked', { plan, interval })}>{cta}</Button>
   </article>;
 }

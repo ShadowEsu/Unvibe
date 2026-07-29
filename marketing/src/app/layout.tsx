@@ -4,7 +4,6 @@ import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { SiteAnnouncement } from "@/components/SiteAnnouncement";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -35,14 +34,14 @@ export const metadata: Metadata = {
     description:
       "Select AI-generated code, choose an explanation depth, and make the code yours.",
     siteName: "Unvibe",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Unvibe — make AI-written code yours" }],
+    images: [{ url: "/unvibe-social-preview.png", width: 1200, height: 630, alt: "Unvibe — understand the code AI shipped" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe — Make AI-Written Code Yours",
     description:
       "A Mac desktop learning layer for understanding AI-generated code in the context of your workflow.",
-    images: ["/opengraph-image"],
+    images: ["/unvibe-social-preview.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -72,24 +71,8 @@ const softwareJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0f14" },
-  ],
+  themeColor: "#0f0a17",
 };
-
-const themeScript = `
-(function() {
-  try {
-    var stored = localStorage.getItem('unvibe_marketing_theme_v2');
-    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    var theme = stored === 'light' || stored === 'dark' ? stored : (stored === 'system' ? system : 'light');
-    var root = document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    root.style.colorScheme = theme;
-  } catch (e) {}
-})();
-`;
 
 export default function RootLayout({
   children,
@@ -98,10 +81,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable}`}
+      className={`${sans.variable} ${mono.variable} dark`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
@@ -112,7 +94,6 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          <SiteAnnouncement />
           <Nav />
           <main id="main">{children}</main>
           <Footer />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { cloneElement, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpRight, Check, Copy, Gift, Loader2, Send } from "lucide-react";
@@ -198,6 +198,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <label className="form-field"><span>{label}</span>{children}{error && <small role="alert">{error}</small>}</label>;
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactElement }) {
+  const errorId = `${label.toLowerCase().replace(/\s+/g, "-")}-error`;
+
+  return (
+    <label className="form-field">
+      <span>{label}</span>
+      {cloneElement(children, { "aria-describedby": error ? errorId : undefined })}
+      {error && <small id={errorId} role="alert">{error}</small>}
+    </label>
+  );
 }
