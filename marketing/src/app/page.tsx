@@ -50,9 +50,9 @@ export default function Home() {
         <div className="hero-pixels hero-pixels-left" aria-hidden="true" />
         <div className="hero-pixels hero-pixels-right" aria-hidden="true" />
         <Reveal className="container-page pixel-hero-inner">
-          <p className="pixel-eyebrow"><span className="brand-pixel" aria-hidden="true" />A learning layer for AI-generated code</p>
-          <h1>Don&apos;t feel guilty about vibe coding. <em>Make the code yours.</em></h1>
-          <p className="hero-positioning">AI writes the code. <strong>Unvibe helps you understand it.</strong></p>
+          <p className="pixel-eyebrow"><span className="brand-pixel" aria-hidden="true" />Built to teach you your vibe-coded code</p>
+          <h1>Vibe code fast. <em>Learn the code you ship.</em></h1>
+          <p className="hero-positioning">You vibe-code it. <strong>Unvibe teaches you how it works.</strong></p>
           <p className="hero-support">Select code, choose an explanation depth, and learn what it does, why it works, and how it connects to your project—without leaving your workflow.</p>
           <PixelWaitlist variant="hero" />
           <div className="hero-actions">
@@ -246,8 +246,8 @@ export default function Home() {
         <div className="final-pixels" aria-hidden="true" />
         <Reveal className="container-narrow">
           <p className="pixel-eyebrow"><span className="brand-pixel" />PRIVATE MAC BETA</p>
-          <h2>AI can write the code.<br /><em>Make sure it becomes yours.</em></h2>
-          <p>Unvibe helps developers understand, review, and retain the AI-generated code they are responsible for shipping.</p>
+          <h2>Vibe code freely.<br /><em>Learn what you ship.</em></h2>
+          <p>Unvibe is built to teach you the vibe-coded code you are responsible for shipping—so you can understand, review, and maintain it.</p>
           <div className="hero-actions" style={{ justifyContent: "center" }}>
             <Button href="#waitlist" size="lg" className="beta-button">Request beta access <ArrowRight size={18} /></Button>
           </div>

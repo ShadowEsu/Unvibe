@@ -63,7 +63,7 @@ export function Footer() {
           <div className="col-span-2 max-w-xs">
             <Logo />
             <p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">
-              Don&apos;t feel guilty about vibe coding. Make the code yours.
+              Built to teach you the code you vibe.
             </p>
           </div>
           {columns.map((col) => (
