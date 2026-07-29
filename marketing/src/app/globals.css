@@ -2461,6 +2461,168 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .home-release-grid > a { min-height: 190px; }
 }
 
+/* One public visual language: the same near-black purple/orange field as the app. */
+html,
+html.dark {
+  color-scheme: dark;
+}
+
+html body,
+html.dark body {
+  background:
+    radial-gradient(980px 680px at -4% -5%, rgba(113, 66, 222, .42), transparent 66%),
+    radial-gradient(860px 580px at 55% 2%, rgba(75, 55, 154, .16), transparent 72%),
+    radial-gradient(980px 720px at 103% 102%, rgba(207, 96, 45, .27), transparent 70%),
+    #0f0a17;
+  color: #f8f4ff;
+}
+
+#main {
+  min-height: 100vh;
+  background: transparent;
+}
+
+:is(
+  .build-page,
+  .releases-page,
+  .launch-subpage,
+  .investor-page,
+  .founder-page,
+  .beta-download-page,
+  .reward-page,
+  .admin-shell,
+  .web-workspace
+) {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(rgba(170, 139, 255, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(170, 139, 255, .028) 1px, transparent 1px),
+    radial-gradient(900px 610px at 0% 0%, rgba(105, 61, 205, .34), transparent 67%),
+    radial-gradient(900px 650px at 100% 100%, rgba(207, 97, 46, .22), transparent 72%),
+    #0f0a17;
+  background-size: 56px 56px, 56px 56px, auto, auto, auto;
+  color: #f8f4ff;
+}
+
+.legal-page {
+  color: #f8f4ff;
+}
+
+.legal-page > div:last-child {
+  border-color: rgba(199, 174, 255, .16) !important;
+  background: rgba(19, 13, 28, .76) !important;
+  box-shadow: none !important;
+}
+
+/* Product captures sit directly in the layout instead of inside white screenshot cards. */
+.product-story__visual {
+  min-height: 440px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #0c0812;
+}
+
+.product-story__visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(199, 174, 255, .08);
+}
+
+.subpage-product-visual {
+  margin-bottom: clamp(5rem, 10vw, 8rem);
+  overflow: hidden;
+  border: 1px solid rgba(199, 174, 255, .14);
+  border-radius: 20px;
+  background: #0c0812;
+  box-shadow: 0 34px 110px rgba(4, 2, 10, .42);
+}
+
+.subpage-product-visual img,
+.beta-download-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.beta-download-preview {
+  margin-top: 2rem;
+  overflow: hidden;
+  border: 1px solid rgba(199, 174, 255, .15);
+  border-radius: 14px;
+  background: #0c0812;
+}
+
+/* Dark surfaces for forms, plans and private-beta utilities. */
+.dark .marketing-billing-toggle,
+.dark .marketing-plan-card,
+.dark .pricing-compare-table,
+.dark .pricing-perks section,
+.dark .waitlist-card,
+.dark .referral-offer,
+.dark .referral-success,
+.dark .admin-login,
+.dark .admin-stats article,
+.dark .admin-table-wrap {
+  border-color: rgba(199, 174, 255, .16);
+  background: rgba(20, 14, 29, .84);
+  color: #f6f0fa;
+  box-shadow: none;
+}
+
+.dark .marketing-plan-card.featured {
+  border-color: rgba(180, 146, 255, .48);
+  background:
+    radial-gradient(420px 260px at 0% 0%, rgba(119, 72, 218, .25), transparent 70%),
+    rgba(24, 16, 35, .92);
+}
+
+.dark :is(
+  .form-field input,
+  .optional-details select,
+  .optional-details textarea,
+  .referral-offer input,
+  .admin-login input
+) {
+  border-color: rgba(199, 174, 255, .18);
+  background: #100b18;
+  color: #f5eff8;
+}
+
+.dark :is(.form-heading, .optional-details) {
+  border-color: rgba(199, 174, 255, .13);
+}
+
+.dark :is(.form-heading small, .referral-offer span, .referral-success span, .form-legal) {
+  color: #9c90a4;
+}
+
+.beta-download-panel,
+.reward-panel {
+  border-color: rgba(199, 174, 255, .2);
+  border-radius: 22px;
+  background:
+    radial-gradient(620px 360px at 0% 0%, rgba(110, 65, 216, .24), transparent 72%),
+    radial-gradient(560px 350px at 100% 100%, rgba(203, 93, 44, .17), transparent 72%),
+    rgba(18, 12, 27, .94);
+  box-shadow: 0 36px 120px rgba(4, 2, 10, .48);
+}
+
+@media (max-width: 620px) {
+  .product-story__visual {
+    min-height: 270px;
+    margin: 0;
+  }
+
+  .subpage-product-visual {
+    margin-inline: .85rem;
+    border-radius: 14px;
+  }
+}
+
 /* Respect reduced motion everywhere. */
 @media (prefers-reduced-motion: reduce) {
   html {

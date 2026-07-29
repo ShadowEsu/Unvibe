@@ -79,10 +79,7 @@ const softwareJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdfaff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0a17" },
-  ],
+  themeColor: "#0f0a17",
 };
 
 const themeScript = `

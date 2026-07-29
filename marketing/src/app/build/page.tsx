@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BuildLive } from "@/components/build/BuildLive";
@@ -19,7 +20,7 @@ export default function BuildPage() {
           <h1>55% to<br />public release.</h1>
           <p>
             Unvibe is between private-beta feedback and wider live testing. This page
-            shows the honest stage—not a made-up launch countdown.
+            shows the honest stage and the work behind the August 7 private-beta release.
           </p>
         </div>
         <div className="build-meter" aria-label="55 percent to public release">
@@ -42,6 +43,16 @@ export default function BuildPage() {
 
       <section className="container-page build-live-wrap">
         <BuildLive />
+      </section>
+
+      <section className="container-page subpage-product-visual" aria-label="Unvibe sign-in and learning experience">
+        <Image
+          src="/product-shots/sign-in-carry-learning.png"
+          alt="Unvibe sign-in experience with purple and orange ambient lighting"
+          width={2294}
+          height={1536}
+          sizes="(max-width: 1280px) 100vw, 1216px"
+        />
       </section>
 
       <section className="container-page build-log">

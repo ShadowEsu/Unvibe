@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { DownloadButtons } from "@/components/DownloadButtons";
 import { milestones } from "@/data/milestones";
@@ -25,6 +26,17 @@ export default async function ReleasesPage() {
           still come directly from GitHub.
         </p>
       </header>
+
+      <section className="container-page subpage-product-visual subpage-product-visual--wide" aria-label="Unvibe desktop app">
+        <Image
+          src="/product-shots/sign-in-desktop-dark.png"
+          alt="Unvibe dark sign-in screen running as a desktop app"
+          width={2468}
+          height={1654}
+          sizes="(max-width: 1280px) 100vw, 1216px"
+          priority
+        />
+      </section>
 
       <section className="container-page releases-latest">
         <div>

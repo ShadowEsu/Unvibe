@@ -28,6 +28,15 @@ export default function BetaDownloadsPage() {
       <section className="beta-download-panel">
         <div className="beta-download-brand"><Image src="/brand/icon.png" alt="Unvibe" width={52} height={52} priority /><div><p className="pixel-label">UNVIBE / PRIVATE BETA</p><h1>Install Unvibe and start with one selection.</h1></div></div>
         <p className="beta-download-intro">Your beta build includes the full desktop learning flow. Unvibe only analyzes code you explicitly select.</p>
+        <div className="beta-download-preview">
+          <Image
+            src="/product-shots/onboarding-dark.png"
+            alt="Unvibe onboarding screen in dark mode"
+            width={3024}
+            height={1774}
+            sizes="(max-width: 760px) 100vw, 680px"
+          />
+        </div>
         <div className="beta-download-grid">
           <DownloadCard platform="macOS · Apple Silicon" href={macDownload} detail="ZIP · move Unvibe to Applications" />
           <DownloadCard platform="Windows · 64-bit" href={windowsDownload} detail="Portable installer · Windows may ask for confirmation" />
