@@ -1236,6 +1236,15 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
   const recRef = useRef(recording); recRef.current = recording;
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  useEffect(() => { titleRef.current?.focus(); }, [tab]);
 
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
@@ -1263,7 +1272,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           <div className="ver">Unvibe v{info.version}</div>
         </div>
         <div className="mbody">
-          <h2>{tab}</h2>
+          <h2 ref={titleRef} tabIndex={-1}>{tab}</h2>
 
           {tab === 'AI' && <AiSettingsPanel settings={settings} onSettings={onSettings} onNotice={onNotice} />}
 
