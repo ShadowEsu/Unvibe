@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { FounderClock } from "@/components/FounderClock";
 import { Logo } from "@/components/Logo";
 
 const links = [
@@ -36,11 +37,9 @@ export function Nav() {
           <Logo />
         </Link>
         <div className="launch-nav__links">
-          <Link href="/build" className="launch-status">
-            <span /> 55% to public release
-          </Link>
           {links.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
           <Link href="/beta" className="launch-nav__download">Download beta</Link>
+          <FounderClock />
         </div>
         <button
           type="button"
@@ -63,9 +62,7 @@ export function Nav() {
                 <X size={18} />
               </button>
             </div>
-            <Link href="/build" onClick={() => setOpen(false)} className="launch-status">
-              <span /> 55% to public release
-            </Link>
+            <FounderClock compact onNavigate={() => setOpen(false)} />
             {links.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>
                 {link.label}

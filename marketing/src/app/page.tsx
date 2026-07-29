@@ -10,15 +10,7 @@ import { Button } from "@/components/Button";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
 import { ProductLoop } from "@/components/redesign/ProductLoop";
 import { Reveal } from "@/components/redesign/Reveal";
-
-const environments = [
-  { name: "Cursor", state: "Validated" },
-  { name: "VS Code", state: "Validated" },
-  { name: "Terminal", state: "Workflow" },
-  { name: "Claude Code", state: "Workflow" },
-  { name: "JetBrains", state: "Planned" },
-  { name: "More editors", state: "Testing" },
-];
+import { ToolOrbit } from "@/components/redesign/ToolOrbit";
 
 const distribution = [
   { name: "LaunchKiwi", href: "https://launchkiwi.com/p/unvibe" },
@@ -36,6 +28,8 @@ const distribution = [
     href: "https://www.aitooldiscovery.com/tools/aih_unvibe",
   },
   { name: "VibeRank", href: "https://viberank.dev/apps/Unvibe" },
+  { name: "SideProjectors", href: "https://www.sideprojectors.com/project/86739/unvibe" },
+  { name: "LaunchBuff", href: "https://launchbuff.com" },
 ];
 
 export default function Home() {
@@ -46,11 +40,11 @@ export default function Home() {
         <Reveal className="container-page launch-hero__inner">
           <div className="launch-kicker">
             <span className="launch-kicker__dot" />
-            Private Mac beta
+            Your vibe-code tutor · private Mac beta
           </div>
-          <h1>Understand the code<br />AI shipped.</h1>
+          <h1>Learn the project<br />you vibe-coded.</h1>
           <p className="launch-hero__lead">
-            Select code. Press <kbd>⌘U</kbd>. Keep building.
+            Select code. Press <kbd>⌘U</kbd>. Unvibe teaches you what AI shipped.
           </p>
           <div className="launch-hero__actions">
             <Button href="/beta" size="lg">
@@ -103,23 +97,16 @@ export default function Home() {
         <Reveal className="container-page">
           <div className="launch-section__intro launch-section__intro--split">
             <div>
-              <p>Fits beside your tools</p>
-              <h2>One shortcut.<br />The editor stays yours.</h2>
+              <p>Everywhere you vibe-code</p>
+              <h2>One shortcut.<br />Your tools keep moving.</h2>
             </div>
             <p className="launch-section__copy">
-              Unvibe is a desktop layer, not another coding workspace. Today&apos;s
-              private beta is validated in Cursor and VS Code; the wider workflow is
-              expanding carefully.
+              Unvibe sits beside the project you already built with Cursor, VS Code,
+              Claude Code, a terminal, or another IDE. It teaches instead of replacing
+              your workflow.
             </p>
           </div>
-          <div className="environment-rail" aria-label="Supported developer workflows">
-            {environments.map((item) => (
-              <div key={item.name}>
-                <strong>{item.name}</strong>
-                <span>{item.state}</span>
-              </div>
-            ))}
-          </div>
+          <ToolOrbit />
           <p className="launch-disclosure">
             Tool names describe compatibility only and do not imply partnerships.
           </p>
@@ -159,12 +146,24 @@ export default function Home() {
             <p className="launch-label">Find Unvibe</p>
             <h2>Listed where developers discover new tools.</h2>
           </div>
-          <div className="discover-links">
-            {distribution.map((item) => (
-              <a key={item.name} href={item.href} target="_blank" rel="noopener noreferrer">
-                {item.name} <ArrowRight size={14} />
-              </a>
-            ))}
+          <div className="discovery-marquee" aria-label="Places where Unvibe is listed">
+            <div className="discovery-marquee__track">
+              {[0, 1].map((copy) => (
+                <div className="discovery-marquee__group" aria-hidden={copy === 1} key={copy}>
+                  {distribution.map((item) => (
+                    <a
+                      key={`${copy}-${item.name}`}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      tabIndex={copy === 1 ? -1 : undefined}
+                    >
+                      <i /> {item.name} <ArrowRight size={13} />
+                    </a>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </Reveal>
       </section>
@@ -173,7 +172,7 @@ export default function Home() {
         <div className="container-page waitlist-minimal">
           <Reveal>
             <p className="launch-label">Private beta</p>
-            <h2>Make the code yours.</h2>
+            <h2>Teach yourself what you shipped.</h2>
             <p>
               Join the Mac beta and help shape the fastest path from generated code
               to real understanding.

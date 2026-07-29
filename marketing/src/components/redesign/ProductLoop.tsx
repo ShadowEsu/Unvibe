@@ -36,6 +36,9 @@ export function ProductLoop() {
         <b>⌘U</b>
       </div>
       <div className="product-loop__body">
+        <div className={`product-loop__signal product-loop__signal--${active}`} aria-hidden="true">
+          <i /><i /><i />
+        </div>
         <div className="product-loop__editor" aria-label="Selected TypeScript code">
           <div className="product-loop__file">Editor.tsx</div>
           <pre>

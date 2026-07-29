@@ -22,26 +22,26 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe — Make AI-Written Code Yours",
+    default: "Unvibe — Learn the Project You Vibe-Coded",
     template: "%s · Unvibe",
   },
   description:
-    "Unvibe is a Mac desktop learning layer that helps developers understand AI-generated code using explanations connected to their repository and workflow.",
+    "Unvibe is a Mac desktop tutor that teaches you the project you vibe-coded, using explanations connected to your selected code and workflow.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe — Make AI-Written Code Yours",
+    title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
-      "Select AI-generated code, choose an explanation depth, and make the code yours.",
+      "Select code, press ⌘U, and learn what AI shipped in the context of your project.",
     siteName: "Unvibe",
-    images: [{ url: "/unvibe-social-preview.png", width: 1200, height: 630, alt: "Unvibe — understand the code AI shipped" }],
+    images: [{ url: "/unvibe-social-preview-v2.png", width: 1200, height: 630, alt: "Unvibe — learn the project you vibe-coded" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe — Make AI-Written Code Yours",
+    title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
-      "A Mac desktop learning layer for understanding AI-generated code in the context of your workflow.",
-    images: ["/unvibe-social-preview.png"],
+      "A Mac desktop tutor for learning the AI-generated code in your project without leaving your workflow.",
+    images: ["/unvibe-social-preview-v2.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -61,7 +61,7 @@ const softwareJsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS",
   description:
-    "A Mac desktop learning layer that helps developers understand AI-generated code using explanations connected to their repository and workflow.",
+    "A Mac desktop tutor that teaches developers the AI-generated code in their project using selected context and their existing workflow.",
   offers: {
     "@type": "Offer",
     price: "0",
