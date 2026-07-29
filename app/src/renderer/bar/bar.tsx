@@ -30,6 +30,7 @@ function prettyShortcut(value = 'CommandOrControl+U'): string {
 
 function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel'): void {
   if (volume <= 0) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   try {
     const context = new AudioContext();
     const gain = context.createGain();
