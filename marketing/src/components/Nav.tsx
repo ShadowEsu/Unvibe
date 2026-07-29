@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { FounderClock } from "@/components/FounderClock";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { cn } from "@/lib/utils";
 
 const links = [
   { label: "Pricing", href: "/pricing" },
@@ -24,52 +26,36 @@ export function Nav() {
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   return (
-    <header className={`launch-nav${scrolled ? " launch-nav--scrolled" : ""}`}>
-      <nav className="container-page launch-nav__inner" aria-label="Primary">
-        <Link href="/" aria-label="Unvibe home">
-          <Logo />
-        </Link>
-        <div className="launch-nav__links">
-          {links.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
-          <Link href="/beta" className="launch-nav__download">Download</Link>
+    <header className={cn(
+      "sticky top-0 z-40 border-b transition-colors duration-standard",
+      scrolled ? "border-line bg-bg/90 backdrop-blur-lg" : "border-transparent bg-bg/70 backdrop-blur-md",
+    )}>
+      <nav className="container-page flex h-16 items-center justify-between gap-4" aria-label="Primary">
+        <Link href="/" aria-label="Unvibe home"><Logo /></Link>
+        <div className="hidden items-center gap-2 md:flex">
+          {links.map((link) => <Link key={link.href} href={link.href} className="rounded-pill px-3 py-2 text-fluid-sm text-fg-muted hover:text-fg">{link.label}</Link>)}
+          <ThemeToggle />
+          <Link href="/beta" className="rounded-pill bg-primary px-4 py-2 text-fluid-sm font-semibold text-on-primary hover:bg-primary-strong">Download</Link>
           <FounderClock />
         </div>
-        <button
-          type="button"
-          className="launch-nav__menu"
-          aria-label="Open navigation"
-          aria-expanded={open}
-          onClick={() => setOpen(true)}
-        >
-          <Menu size={18} />
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button type="button" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-line text-fg"><Menu size={18} /></button>
+        </div>
       </nav>
 
       {open && (
-        <div className="launch-drawer">
-          <button type="button" aria-label="Close navigation" onClick={() => setOpen(false)} />
-          <div>
-            <div className="launch-drawer__head">
-              <Logo />
-              <button type="button" aria-label="Close navigation" onClick={() => setOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-fg/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-0 flex h-full w-[min(21rem,88vw)] flex-col gap-2 border-l border-line bg-bg p-6 shadow-lift">
+            <div className="mb-6 flex items-center justify-between"><Logo /><button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-full border border-line text-fg"><X size={18} /></button></div>
             <FounderClock compact onNavigate={() => setOpen(false)} />
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>
-                {link.label}
-              </Link>
-            ))}
-            <Link href="/beta" onClick={() => setOpen(false)} className="launch-nav__download">
-              Download
-            </Link>
+            {links.map((link) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="rounded-xl px-3 py-3 text-fluid-lg text-fg hover:bg-surface-2">{link.label}</Link>)}
+            <Link href="/beta" onClick={() => setOpen(false)} className="mt-2 rounded-xl bg-primary px-4 py-3 text-center font-semibold text-on-primary">Download</Link>
           </div>
         </div>
       )}

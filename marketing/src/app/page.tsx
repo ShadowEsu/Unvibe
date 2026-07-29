@@ -1,161 +1,92 @@
-import {
-  ArrowDown,
-  ArrowRight,
-  Check,
-  Code2,
-  Command,
-  History,
-  MousePointer2,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Check, Clock3, ExternalLink } from "lucide-react";
+import { BrandLogos } from "@/components/BrandLogos";
 import { Button } from "@/components/Button";
+import { FounderClock } from "@/components/FounderClock";
 import { FaqJsonLd } from "@/components/JsonLd";
+import { Section } from "@/components/Section";
+import { Hero } from "@/components/sections/Hero";
+import { HeroVideo } from "@/components/sections/HeroVideo";
+import { ProductGallery } from "@/components/sections/ProductGallery";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
-import { ProductLoop } from "@/components/redesign/ProductLoop";
-import { Reveal } from "@/components/redesign/Reveal";
-import { ToolOrbit } from "@/components/redesign/ToolOrbit";
-import { faqItems } from "@/data/faq";
 
-const distribution = [
-  { name: "LaunchKiwi", href: "https://launchkiwi.com/p/unvibe" },
-  { name: "DevRove", href: "https://devrove.com/tools/unvibe-site" },
-  {
-    name: "DEV Community",
-    href: "https://dev.to/preston_jaysusanto_22498/how-to-review-ai-generated-code-without-losing-ownership-of-your-project-ndl",
-  },
-  {
-    name: "Product Hunt",
-    href: "https://www.producthunt.com/products/unvibe?launch=unvibe",
-  },
-  {
-    name: "AI Tool Discovery",
-    href: "https://www.aitooldiscovery.com/tools/aih_unvibe",
-  },
-  { name: "VibeRank", href: "https://viberank.dev/apps/Unvibe" },
-  { name: "SideProjectors", href: "https://www.sideprojectors.com/project/86739/unvibe" },
-  { name: "LaunchBuff", href: "https://launchbuff.com" },
-];
-
-const quickAnswers = faqItems.filter((item) =>
-  ["free", "pro-annual", "beta", "cancel"].includes(item.id),
-);
+const listings = [
+  ["Product Hunt", "https://www.producthunt.com/products/unvibe?launch=unvibe"],
+  ["LaunchKiwi", "https://launchkiwi.com/p/unvibe"],
+  ["DevRove", "https://devrove.com/tools/unvibe-site"],
+  ["DEV Community", "https://dev.to/preston_jaysusanto_22498/how-to-review-ai-generated-code-without-losing-ownership-of-your-project-ndl"],
+  ["AI Tool Discovery", "https://www.aitooldiscovery.com/tools/aih_unvibe"],
+  ["VibeRank", "https://viberank.dev/apps/Unvibe"],
+  ["SideProjectors", "https://www.sideprojectors.com/project/86739/unvibe"],
+  ["LaunchBuff", "https://launchbuff.com"],
+] as const;
 
 export default function Home() {
   return (
     <>
       <FaqJsonLd />
+      <Hero />
+      <BrandLogos />
 
-      <section className="editorial-hero" id="product">
-        <div className="editorial-hero__grid" aria-hidden="true" />
-        <div className="editorial-hero__orb editorial-hero__orb--one" aria-hidden="true" />
-        <div className="editorial-hero__orb editorial-hero__orb--two" aria-hidden="true" />
-        <Reveal className="container-page editorial-hero__inner">
-          <p className="editorial-eyebrow"><span /> Private Mac beta</p>
-          <h1>
-            <span>Vibe code freely.</span>
-            <em>Learn what you ship.</em>
-          </h1>
-          <p className="editorial-hero__lead">
-            Unvibe teaches you the vibe-coded code you are responsible for
-            shipping—so you can understand, review, and maintain it.
-          </p>
-          <div className="editorial-hero__actions">
-            <Button href="#waitlist" size="lg">
-              Request beta access <ArrowRight size={18} />
-            </Button>
-            <Button href="#how-it-works" size="lg" variant="secondary">
-              See how it works <ArrowDown size={17} />
-            </Button>
+      <section className="founder-build-strip" aria-label="Unvibe build progress">
+        <div className="container-page founder-build-strip__inner">
+          <div className="founder-build-strip__copy">
+            <Clock3 size={18} aria-hidden="true" />
+            <span><strong>Built in public.</strong> Every hour below is real founder build time.</span>
           </div>
-          <div className="editorial-hero__status">
-            <a href="/build"><i /> 55% to public beta</a>
-            <span>160+ founder hours</span>
-            <span>Cursor + VS Code</span>
-            <span>No provider key required</span>
-          </div>
-        </Reveal>
+          <FounderClock />
+          <a href="/build" className="founder-build-strip__progress">
+            <span><b>55%</b> to public beta</span>
+            <i><em /></i>
+          </a>
+        </div>
       </section>
 
-      <section className="editorial-demo" id="how-it-works">
-        <Reveal className="container-page">
-          <div className="editorial-heading editorial-heading--ink">
-            <p>01 / ONE QUIET LOOP</p>
-            <h2>The review step <em>your agent skips.</em></h2>
-            <span>Select the code, press ⌘U, and return to building with the context in your head.</span>
-          </div>
-          <ProductLoop />
-          <div className="editorial-steps">
-            <article><span>01</span><MousePointer2 size={20} /><h3>Select</h3><p>Highlight the exact code you need to own.</p></article>
-            <article><span>02</span><Command size={20} /><h3>Understand</h3><p>Get a focused explanation at your level.</p></article>
-            <article><span>03</span><Check size={20} /><h3>Keep it</h3><p>Ask, test, save, and continue shipping.</p></article>
-          </div>
-        </Reveal>
-      </section>
+      <Section
+        eyebrow="See the real product"
+        title="Select code. Press ⌘U. Learn what shipped."
+        subtitle="A short demo of Unvibe working beside the tools you already use."
+        centered
+        variant="compact"
+      >
+        <HeroVideo />
+      </Section>
 
-      <section className="editorial-learning">
-        <Reveal className="container-page editorial-learning__grid">
-          <div className="editorial-learning__copy">
-            <p>02 / YOUR PROJECT, REMEMBERED</p>
-            <h2>Understanding that stays <em>after the prompt disappears.</em></h2>
-            <span>
-              Each review can become a saved lesson, a short check, and a useful
-              trail of what you actually understand.
-            </span>
-          </div>
-          <div className="editorial-learning__cards">
-            <article><Code2 size={20} /><small>EXPLAIN</small><strong>What changed, why it matters, and what connects.</strong></article>
-            <article><ShieldCheck size={20} /><small>VERIFY</small><strong>One comprehension check grounded in your code.</strong></article>
-            <article><History size={20} /><small>REMEMBER</small><strong>History, study, and progress built from real reviews.</strong></article>
-          </div>
-        </Reveal>
-      </section>
+      <ProductGallery />
 
-      <section className="editorial-integrations" id="integrations">
-        <Reveal className="container-page">
-          <div className="editorial-heading editorial-heading--light">
-            <p>03 / WHEREVER YOU VIBE-CODE</p>
-            <h2>Beside your tools.<br /><em>Not another place to work.</em></h2>
-            <span>Unvibe follows the project across the workflow you already use.</span>
-          </div>
-          <ToolOrbit />
-          <p className="editorial-disclosure">
-            Cursor and VS Code are validated in the private beta. Other names describe
-            workflow compatibility or active testing, not partnerships.
-          </p>
-        </Reveal>
-      </section>
+      <Section
+        id="feedback"
+        eyebrow="Private beta comments"
+        title="What early testers are saying."
+        centered
+        surface="alt"
+      >
+        <div className="beta-comments">
+          <blockquote>
+            <p>“For what Unvibe is right now, it&apos;s genuinely impressive. The explanation depth and customization feel creative.”</p>
+            <footer><strong>Om Anand Khaunte</strong><span>High school developer · Officer, Los Altos Hacks</span></footer>
+          </blockquote>
+          <blockquote>
+            <p>“The setup was smooth, and the dynamic-island idea could become a great feature with a little fine-tuning.”</p>
+            <footer><strong>Private beta feedback</strong><span>Product experience survey</span></footer>
+          </blockquote>
+        </div>
+      </Section>
 
-      <section className="editorial-proof">
-        <Reveal className="container-page editorial-proof__grid">
+      <section className="listed-field" aria-labelledby="listed-title">
+        <div className="container-page listed-field__heading">
           <div>
-            <p>04 / EARLY SIGNAL</p>
-            <blockquote>
-              “For what Unvibe is right now, it&apos;s genuinely impressive. The
-              explanation depth and customization feel creative.”
-            </blockquote>
-            <footer>Om Khaunte <span>· Officer, Los Altos Hacks</span></footer>
+            <p>SEEN AROUND THE DEVELOPER COMMUNITY</p>
+            <h2 id="listed-title">Unvibe is already out in the world.</h2>
           </div>
-          <aside>
-            <p>Startup support</p>
-            <strong>Google for Startups</strong>
-            <strong>MongoDB for Startups</strong>
-            <strong>Founder-funded</strong>
-            <small>Program support and founder funding—not institutional investment or endorsement.</small>
-          </aside>
-        </Reveal>
-        <div className="editorial-discovery" aria-label="Places where Unvibe is listed">
-          <div className="editorial-discovery__track">
+          <Button href="/#waitlist" size="sm">Join the beta <ArrowRight size={15} /></Button>
+        </div>
+        <div className="listing-marquee" aria-label="Places where Unvibe is listed">
+          <div className="listing-marquee__track">
             {[0, 1].map((copy) => (
-              <div className="editorial-discovery__group" aria-hidden={copy === 1} key={copy}>
-                {distribution.map((item) => (
-                  <a
-                    key={`${copy}-${item.name}`}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    tabIndex={copy === 1 ? -1 : undefined}
-                  >
-                    <i /> {item.name} <ArrowRight size={13} />
+              <div className="listing-marquee__group" aria-hidden={copy === 1} key={copy}>
+                {listings.map(([name, href]) => (
+                  <a key={`${copy}-${name}`} href={href} target="_blank" rel="noopener noreferrer" tabIndex={copy === 1 ? -1 : undefined}>
+                    <Check size={14} /> {name} <ExternalLink size={13} />
                   </a>
                 ))}
               </div>
@@ -164,27 +95,20 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="editorial-access" id="access">
-        <Reveal className="container-page editorial-access__grid waitlist-minimal">
-          <div className="editorial-access__faq">
-            <p className="editorial-access__label">05 / BEFORE YOU REQUEST ACCESS</p>
-            <h2>Quick answers.<br /><em>Then come build.</em></h2>
-            <div className="faq-list">
-              {quickAnswers.map((item, index) => (
-                <details key={item.id} open={index === 0}>
-                  <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true" /></summary>
-                  <p>{item.answer}</p>
-                </details>
-              ))}
-            </div>
-          </div>
-          <div className="editorial-access__form">
+      <section className="simple-waitlist" id="access">
+        <div className="container-page simple-waitlist__grid waitlist-minimal">
+          <div className="simple-waitlist__copy">
             <p>PRIVATE MAC BETA</p>
-            <h3>Teach yourself what you shipped.</h3>
-            <span>Request access in under a minute. No credit card.</span>
-            <PixelWaitlist variant="hero" />
+            <h2>Learn the code you vibe-coded.</h2>
+            <span>Join the private beta. No credit card and no separate AI provider key required.</span>
+            <ul>
+              <li><Check size={16} />Selected-code explanations</li>
+              <li><Check size={16} />Saved learning and quick checks</li>
+              <li><Check size={16} />Cursor and VS Code workflow</li>
+            </ul>
           </div>
-        </Reveal>
+          <PixelWaitlist variant="hero" />
+        </div>
       </section>
     </>
   );

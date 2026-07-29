@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     description:
       "Select code, press ⌘U, and learn what AI shipped in the context of your project.",
     siteName: "Unvibe",
-    images: [{ url: "/unvibe-social-preview-v3.png", width: 1200, height: 630, alt: "Unvibe — vibe code freely, learn what you ship" }],
+    images: [{ url: "/unvibe-social-preview-v4.png", width: 1200, height: 630, alt: "Unvibe — learn the code you vibe-coded" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
       "A Mac desktop tutor for learning the AI-generated code in your project without leaving your workflow.",
-    images: ["/unvibe-social-preview-v3.png"],
+    images: ["/unvibe-social-preview-v4.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -79,8 +79,24 @@ const softwareJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f0a17",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fdfaff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0a17" },
+  ],
 };
+
+const themeScript = `
+(function() {
+  try {
+    var stored = localStorage.getItem('unvibe_marketing_theme_v2');
+    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    var theme = stored === 'light' || stored === 'dark' ? stored : (stored === 'system' ? system : 'light');
+    var root = document.documentElement;
+    if (theme === 'dark') root.classList.add('dark');
+    root.style.colorScheme = theme;
+  } catch (e) {}
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -89,9 +105,10 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} ${display.variable} dark`}
+      className={`${sans.variable} ${mono.variable} ${display.variable}`}
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
