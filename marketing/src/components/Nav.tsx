@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -39,11 +38,9 @@ export function Nav() {
         <Link href="/" aria-label="Unvibe home"><Logo /></Link>
         <div className="hidden items-center gap-2 md:flex">
           {links.map((link) => <Link key={link.href} href={link.href} className="rounded-pill px-3 py-2 text-fluid-sm text-fg-muted hover:text-fg">{link.label}</Link>)}
-          <ThemeToggle />
           <Link href="/beta" className="rounded-pill bg-primary px-4 py-2 text-fluid-sm font-semibold text-on-primary hover:bg-primary-strong">Download</Link>
         </div>
         <div className="flex items-center gap-2 md:hidden">
-          <ThemeToggle />
           <button type="button" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-line text-fg"><Menu size={18} /></button>
         </div>
       </nav>

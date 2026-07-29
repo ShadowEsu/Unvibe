@@ -88,12 +88,9 @@ export const viewport: Viewport = {
 const themeScript = `
 (function() {
   try {
-    var stored = localStorage.getItem('unvibe_marketing_theme_v2');
-    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    var theme = stored === 'light' || stored === 'dark' ? stored : (stored === 'system' ? system : 'dark');
     var root = document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    root.style.colorScheme = theme;
+    root.classList.add('dark');
+    root.style.colorScheme = 'dark';
   } catch (e) {}
 })();
 `;
