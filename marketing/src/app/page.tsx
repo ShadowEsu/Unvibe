@@ -45,8 +45,8 @@ export default function Home() {
             <Button href="#waitlist" size="lg">
               Request beta access <ArrowRight size={18} />
             </Button>
-            <Button href="#how-it-works" size="lg" variant="secondary">
-              See the product <ArrowDown size={17} />
+            <Button href="/beta" size="lg" variant="secondary">
+              Download for macOS <ArrowDown size={17} />
             </Button>
           </div>
           <div className="editorial-hero__status">
@@ -109,9 +109,34 @@ export default function Home() {
         </Reveal>
       </section>
 
+      <section className="editorial-voices" id="reviews">
+        <Reveal className="container-page">
+          <div className="editorial-voices__heading">
+            <p>03 / PRIVATE BETA NOTES</p>
+            <h2>Built with the people<br /><em>learning from it.</em></h2>
+          </div>
+          <div className="editorial-voices__grid">
+            <blockquote>
+              <span>9 / 10</span>
+              <p>“The interface was simple to navigate, the explanations were clear, and Test Me made it easy to recap what I learned.”</p>
+              <footer><strong>Sharice Gustian</strong><small>Private beta tester</small></footer>
+            </blockquote>
+            <blockquote>
+              <span>7 / 10</span>
+              <p>“Setup was smooth. The floating Island feels distinctive, and the explanation-depth controls make learning feel genuinely tailored.”</p>
+              <footer><strong>Om Anand Khaunte</strong><small>High school student · Officer, Los Altos Hacks</small></footer>
+            </blockquote>
+          </div>
+          <div className="editorial-voices__action">
+            <p>Try the same private beta build, then tell us what should ship next.</p>
+            <Button href="/beta" size="lg">Download the beta <ArrowRight size={17} /></Button>
+          </div>
+        </Reveal>
+      </section>
+
       <section className="editorial-trail" id="integrations">
         <Reveal className="container-page editorial-trail__heading">
-          <p>03 / WHEREVER YOU VIBE-CODE</p>
+          <p>04 / WHEREVER YOU VIBE-CODE</p>
           <h2>One layer.<br /><em>Your existing workflow.</em></h2>
           <span>Unvibe sits beside the tools you already use instead of becoming another place to work.</span>
         </Reveal>
@@ -123,7 +148,7 @@ export default function Home() {
         <Reveal className="container-page">
           <div className="editorial-releases__heading">
             <div>
-              <p>04 / BUILDING IN PUBLIC</p>
+              <p>05 / BUILDING IN PUBLIC</p>
               <h2>Every release moves<br /><em>understanding forward.</em></h2>
             </div>
             <Button href="/releases" variant="secondary" size="sm">All releases <ArrowRight size={15} /></Button>
@@ -143,7 +168,7 @@ export default function Home() {
       <section className="editorial-access" id="waitlist">
         <Reveal className="container-page editorial-access__grid waitlist-minimal">
           <div className="editorial-access__faq">
-            <p className="editorial-access__label">05 / BEFORE YOU REQUEST ACCESS</p>
+            <p className="editorial-access__label">06 / BEFORE YOU REQUEST ACCESS</p>
             <h2>Vibe coding made the code.<br /><em>Now make it yours.</em></h2>
             <div className="faq-list">
               {quickAnswers.map((item, index) => (

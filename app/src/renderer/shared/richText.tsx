@@ -95,7 +95,7 @@ export function renderInline(text: string): ReactNode[] {
 }
 
 const LIST_RE = /^\s*(?:[-*•]|\d+[.)])\s+/;
-const HEADING_RE = /^\s*##\s+(.+?)\s*$/;
+const HEADING_RE = /^\s*#{1,6}\s+(.+?)\s*$/;
 
 function renderList(lines: string[], key: string): ReactNode {
   const ordered = /^\s*\d+[.)]\s+/.test(lines[0] ?? '');

@@ -9,8 +9,8 @@ import { store } from './store';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 
 export const LOCAL_FREE_LIMIT = 50;
-/** The sealed private beta is intentionally smaller than the normal Free allowance. */
-export const TRIAL_FREE_LIMIT = 20;
+/** The private beta includes the same 50 monthly AI explanations as Free. */
+export const TRIAL_FREE_LIMIT = 50;
 /** UI-safe representation of an unrestricted local entitlement. */
 export const FULL_PRODUCT_LIMIT = 1_000_000;
 

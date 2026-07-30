@@ -229,17 +229,24 @@ h1 { font-family: var(--font-sans); font-size: 32px; font-weight: 680; letter-sp
   font-size: 14px; font-weight: 600; flex-shrink: 0;
 }
 .usage-chip {
-  display: inline-flex; align-items: baseline; gap: 6px;
+  display: inline-grid; gap: 6px;
   border: 1px solid var(--line); background: var(--accent-soft); color: var(--accent-strong);
   border-radius: 999px; padding: 6px 11px; font-family: -apple-system, sans-serif;
   font-size: 12px; font-weight: 700; cursor: pointer;
 }
 .usage-chip small { color: var(--muted); font-weight: 500; }
+.usage-chip__title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.usage-chip__title b { font-size: 12px; }
+.usage-chip__meter { display: grid; grid-template-columns: 1fr 40px 46px; align-items: center; gap: 6px; text-align: right; }
+.usage-chip__meter > i { grid-column: 1 / -1; height: 3px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--line) 75%, transparent); }
+.usage-chip__meter > i em { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.usage-chip__meter small { text-align: left; }
+.usage-chip__meter b,.usage-chip__meter strong { font-size: 10px; font-weight: 650; color: var(--muted); }
 .usage-chip:hover { border-color: var(--accent); }
 .usage-chip--low { background: #f6ecd7; color: #8a5a16; border-color: #e4d3a8; }
 .usage-chip--out { background: #f7e9e6; color: #8a342b; border-color: #e2c4bf; }
 .usage-chip--side {
-  width: calc(100% - 4px); margin: 0 2px 12px; justify-content: space-between;
+  width: calc(100% - 4px); margin: 0 2px 12px;
   border-radius: 10px; padding: 9px 11px; font-size: 13px;
 }
 .usage-chip--side small { font-size: 11px; }

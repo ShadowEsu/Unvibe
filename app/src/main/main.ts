@@ -297,7 +297,7 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
-      notify('Private beta limit reached: 30 selected-code prompts this month. Your saved learning is still available.');
+      notify(`Private beta limit reached: ${store().betaSelectedCodeUsage().limit} selected-code prompts this month. Your saved learning is still available.`);
       return;
     }
   }
@@ -914,7 +914,7 @@ app.whenReady().then(() => {
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load plan.' }; }
   });
   ipcMain.handle('usage:get', async () => {
-    try { return { ok: true, data: await resolveAppUsage() }; }
+    try { return { ok: true, data: { ...await resolveAppUsage(), selections: store().betaSelectedCodeUsage() } }; }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load usage.' }; }
   });
   ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));

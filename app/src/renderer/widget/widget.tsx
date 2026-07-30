@@ -219,6 +219,7 @@ interface UsageState {
   remaining: number;
   resetsAt: string;
   plan: string;
+  selections?: { used: number; limit: number; remaining: number; resetsAt: string };
 }
 
 function applyTheme(preference: 'system' | 'light' | 'dark') {
@@ -286,13 +287,14 @@ function Widget() {
       const ev = raw as WidgetEvent;
       const tabId = ev.tabId;
       if (ev.type === 'usage') {
-        setUsage({
+        setUsage((current) => ({
           used: ev.used,
           limit: ev.limit,
           remaining: ev.remaining,
           resetsAt: ev.resetsAt,
           plan: ev.plan,
-        });
+          selections: current?.selections,
+        }));
       }
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
@@ -510,6 +512,16 @@ function Widget() {
           {src}
         </div>
         <span className="head__spacer" />
+        {usage && (
+          <span
+            className="quota quota--usage"
+            title={`AI: ${usage.used}/${usage.limit} used · Selections: ${usage.selections?.used ?? 0}/${usage.selections?.limit ?? 100} used`}
+          >
+            <b>AI {usage.remaining}</b>
+            <i aria-hidden="true" />
+            <b>Select {usage.selections?.remaining ?? 100}</b>
+          </span>
+        )}
         <span className={`head__status head__status--${phase}`}><i />{phaseLabel}</span>
         <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
           {collapsed ? '▾' : '▴'}

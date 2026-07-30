@@ -42,7 +42,7 @@ interface Data {
 
 export const STUDY_ASK_DAILY_LIMIT = 20;
 export const QUIZ_DAILY_LIMIT = 30;
-export const BETA_SELECTED_CODE_PROMPT_LIMIT = 30;
+export const BETA_SELECTED_CODE_PROMPT_LIMIT = 100;
 
 class Store {
   private data: Data = { events: [], outbox: [] };
@@ -158,6 +158,19 @@ class Store {
     const current = this.data.betaPromptUsage;
     if (!current || current.month !== month) this.data.betaPromptUsage = { month, selectedCodePrompts: 0 };
     return this.data.betaPromptUsage!;
+  }
+
+  /** Private-beta selection credit. It is local-only and never contains the selected code. */
+  betaSelectedCodeUsage(): { used: number; limit: number; remaining: number; resetsAt: string } {
+    const usage = this.betaMonthUsage();
+    const now = new Date();
+    const resetsAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
+    return {
+      used: usage.selectedCodePrompts,
+      limit: BETA_SELECTED_CODE_PROMPT_LIMIT,
+      remaining: Math.max(0, BETA_SELECTED_CODE_PROMPT_LIMIT - usage.selectedCodePrompts),
+      resetsAt,
+    };
   }
 
   /** Private-beta selection credit. It is local-only and never contains the selected code. */

@@ -189,6 +189,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   padding: 3px 8px;
   white-space: nowrap;
 }
+.quota--usage { display: inline-flex; align-items: center; gap: 6px; }
+.quota--usage b { font: inherit; color: var(--fg); }
+.quota--usage i { width: 1px; height: 11px; background: var(--line); }
 .head button {
   -webkit-app-region: no-drag;
   background: transparent;

@@ -1,26 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Download, Monitor, ShieldCheck } from "lucide-react";
+import { Monitor, ShieldCheck } from "lucide-react";
+import { BetaDownloadAccess } from "@/components/BetaDownloadAccess";
 
 export const metadata: Metadata = {
   title: "Private beta downloads",
   description: "Private beta downloads for Unvibe.",
   robots: { index: false, follow: false },
 };
-
-// The investor release storage is the single source of truth for private-beta artifacts.
-// Keep the beta-only aliases for a deployment that needs a distinct access-controlled URL.
-const macDownload = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
-  || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
-  || "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.4-feedback-rewards/Unvibe-0.1.4-feedback-rewards-arm64.zip";
-const windowsDownload = process.env.NEXT_PUBLIC_BETA_WINDOWS_DOWNLOAD_URL?.trim()
-  || process.env.NEXT_PUBLIC_INVESTOR_WINDOWS_DOWNLOAD_URL?.trim();
-const zipDownload = process.env.NEXT_PUBLIC_INVESTOR_ZIP_URL?.trim();
-
-function DownloadCard({ platform, href, detail }: { platform: string; href?: string; detail: string }) {
-  const content = <><Download size={22} /><span><strong>{platform}</strong><small>{detail}</small></span></>;
-  return href ? <a className="beta-download" href={href}>{content}</a> : <div className="beta-download beta-download--disabled" aria-disabled="true">{content}<em>Coming shortly</em></div>;
-}
 
 export default function BetaDownloadsPage() {
   return (
@@ -37,11 +24,7 @@ export default function BetaDownloadsPage() {
             sizes="(max-width: 760px) 100vw, 680px"
           />
         </div>
-        <div className="beta-download-grid">
-          <DownloadCard platform="macOS · Apple Silicon" href={macDownload} detail="ZIP · move Unvibe to Applications" />
-          <DownloadCard platform="Windows · 64-bit" href={windowsDownload} detail="Portable installer · Windows may ask for confirmation" />
-          {zipDownload && <DownloadCard platform="macOS ZIP" href={zipDownload} detail="Unvibe private beta ZIP" />}
-        </div>
+        <BetaDownloadAccess />
         <ol className="beta-install-steps">
           <li><b>1</b><span><strong>Move Unvibe to Applications</strong><small>Open it once so macOS can register the desktop shortcut.</small></span></li>
           <li><b>2</b><span><strong>Allow Accessibility when prompted</strong><small>This lets Unvibe read only the code you actively select.</small></span></li>

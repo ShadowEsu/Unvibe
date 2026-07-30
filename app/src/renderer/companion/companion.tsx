@@ -57,6 +57,15 @@ interface BillingOverview {
   hasBillingAccount: boolean;
 }
 
+interface AppUsageLine {
+  used: number;
+  limit: number;
+  remaining: number;
+  resetsAt: string;
+  plan?: string;
+  selections?: { used: number; limit: number; remaining: number; resetsAt: string };
+}
+
 const PLAN_FEATURES = {
   free: ['50 explanations each month', '1 active project', 'Core explanation levels', 'Selected-code explanations', 'No credit card required'],
   pro: ['100 explanations each month', 'Git diff + agent change briefs', 'Nearby-file context', 'Since-last-understood compares', 'Expert explanations'],
@@ -393,7 +402,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
 }
 
 function UsageChip({ usage, onPlan, compact = false }: {
-  usage: { used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null;
+  usage: AppUsageLine | null;
   onPlan: () => void;
   compact?: boolean;
 }) {
@@ -401,6 +410,8 @@ function UsageChip({ usage, onPlan, compact = false }: {
   const low = usage.remaining <= 5;
   const out = usage.remaining <= 0;
   const planLabel = usage.plan === 'full' ? 'Full' : usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
+  const aiPct = Math.min(100, Math.round((usage.used / Math.max(1, usage.limit)) * 100));
+  const selectionPct = Math.min(100, Math.round(((usage.selections?.used ?? 0) / Math.max(1, usage.selections?.limit ?? 100)) * 100));
   return (
     <button
       type="button"
@@ -408,8 +419,9 @@ function UsageChip({ usage, onPlan, compact = false }: {
       onClick={onPlan}
       title={`${planLabel} · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}
     >
-      <span>{out ? 'No messages left' : `${usage.remaining} messages left`}</span>
-      <small>{usage.used}/{usage.limit} used · {planLabel}</small>
+      <span className="usage-chip__title"><b>Usage</b><small>{planLabel}</small></span>
+      <span className="usage-chip__meter"><i><em style={{ width: `${aiPct}%` }} /></i><small>AI</small><b>{usage.used}/{usage.limit}</b><strong>{aiPct}%</strong></span>
+      <span className="usage-chip__meter"><i><em style={{ width: `${selectionPct}%` }} /></i><small>Select</small><b>{usage.selections?.used ?? 0}/{usage.selections?.limit ?? 100}</b><strong>{selectionPct}%</strong></span>
     </button>
   );
 }
@@ -1354,7 +1366,7 @@ function App() {
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
-  const [usageLine, setUsageLine] = useState<{ used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null>(null);
+  const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
 
   const refresh = async () => {
     try {
@@ -1365,13 +1377,13 @@ function App() {
         window.unvibe.history(100) as Promise<LearningItem[]>,
         window.unvibe.getSettings() as Promise<Settings>,
         window.unvibe.syncStatus() as Promise<SyncStatus>,
-        window.unvibe.usageGet() as Promise<{ ok: boolean; data?: { used: number; limit: number; remaining: number; resetsAt: string; plan: string } }>,
+        window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
       ]);
       setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
       setUsageLine(usage.ok && usage.data
-        ? { used: usage.data.used, limit: usage.data.limit, remaining: usage.data.remaining, resetsAt: usage.data.resetsAt, plan: usage.data.plan }
-        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local' });
+        ? usage.data
+        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 100, remaining: 100, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
