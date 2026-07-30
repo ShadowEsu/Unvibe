@@ -72,15 +72,12 @@ export default function Home() {
             <span>Select the code, press ⌘U, and return to building with the context in your head.</span>
           </div>
           <div className="editorial-promo-frame">
-            <div className="editorial-promo-frame__label">
-              <span>UNVIBE FOR MAC</span>
-              <span>AI writes the code. Make it yours.</span>
-            </div>
             <MarketingVideo
               className="editorial-promo-frame__video"
               src="/videos/unvibe-promo.mp4"
               poster="/videos/unvibe-promo-poster.jpg"
               label="Unvibe product overview showing selected-code explanations, learning history, and progress"
+              autoPlay
             />
           </div>
           <div className="editorial-steps">

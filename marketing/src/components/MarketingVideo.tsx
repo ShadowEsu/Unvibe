@@ -7,11 +7,13 @@ export function MarketingVideo({
   poster,
   label,
   className,
+  autoPlay = false,
 }: {
   src: string;
   poster: string;
   label: string;
   className?: string;
+  autoPlay?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -40,6 +42,7 @@ export function MarketingVideo({
       ref={videoRef}
       className={className}
       aria-label={label}
+      autoPlay={autoPlay}
       controls
       loop
       muted
