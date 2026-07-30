@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { get, list, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 
 export interface BetaDownloadEntry {
@@ -96,4 +96,16 @@ export async function betaDownloadCount(): Promise<number> {
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
   return count;
+}
+
+/** Delete one exact release request. Used only by the authenticated admin route. */
+export async function deleteBetaDownload(email: string, release: string): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const blobToken = token();
+  if (blobToken && process.env.WAITLIST_ADMIN_TOKEN?.trim()) {
+    await del(pathname(normalizedEmail, release), { token: blobToken });
+    return;
+  }
+  const entries = await readLocal();
+  await writeLocal(entries.filter((entry) => !(entry.email === normalizedEmail && entry.release === release)));
 }
