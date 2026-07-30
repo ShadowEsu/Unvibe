@@ -31,6 +31,18 @@ test('pricing math matches every published total', () => {
   assert.equal(teamsAnnualSavingsPercent(), 25);
 });
 
+test('pricing formula is internally consistent across all plans', () => {
+  const savings = proAnnualSavingsPercent();
+  for (const plan of ['pro', 'teams'] as const) {
+    for (const seats of [1, 2, 5, 10]) {
+      const monthly = priceFor(plan, 'monthly', seats);
+      const annual = priceFor(plan, 'annual', seats);
+      assert.equal(annual, monthly * 12 * (1 - savings / 100),
+        `${plan} ${seats} seat(s): annual ${annual} !== monthly ${monthly} × 12 × ${(100 - savings) / 100}`);
+    }
+  }
+});
+
 test('Teams checkout stays paused for private launch', () => {
   assert.equal(TEAMS_CHECKOUT_ENABLED, false);
 });
@@ -44,8 +56,8 @@ test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
 });
 
 test('Pro and Teams entitlements use configured allowance scaling', () => {
-  assert.equal(planLimit('pro', 'ai_explanation'), 100);
-  assert.equal(planLimit('pro', 'indexed_project'), 10);
+  assert.equal(planLimit('pro', 'ai_explanation', 1), 100);
+  assert.equal(planLimit('pro', 'indexed_project', 1), 10);
   assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
   assert.equal(planLimit('teams', 'project_question', 5), 2_500);
   assert.equal(planLimit('teams', 'indexed_project', 5), 10);

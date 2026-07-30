@@ -39,7 +39,9 @@ export const TEAMS_CHECKOUT_ENABLED = false;
 export function normalizedSeats(plan: Exclude<PlanId, 'free'>, requested: number): number {
   if (plan === 'pro') return 1;
   if (!Number.isFinite(requested)) return 2;
-  return Math.max(2, Math.min(500, Math.floor(requested)));
+  if (!Number.isInteger(requested)) throw new Error('Seat count must be a whole number.');
+  if (requested < 2) throw new Error('Teams requires at least 2 seats.');
+  return Math.max(2, Math.min(500, requested));
 }
 
 export function effectivePlan(plan: PlanId, status: SubscriptionStatus, gracePeriodEndsAt?: string, now = new Date()): PlanId {
@@ -71,4 +73,18 @@ export function canManageBilling(role: WorkspaceRole): boolean {
 
 export function canManageMembers(role: WorkspaceRole): boolean {
   return role === 'owner' || role === 'admin';
+}
+
+export function priceFor(plan: PlanId, interval: 'monthly' | 'annual', seats: number): number {
+  if (plan === 'free') return 0;
+  const perSeat = interval === 'annual' ? 7_200 : 800;
+  return perSeat * (plan === 'teams' ? seats : 1);
+}
+
+export function proAnnualSavingsPercent(): number {
+  return 25;
+}
+
+export function teamsAnnualSavingsPercent(): number {
+  return 25;
 }

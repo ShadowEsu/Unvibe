@@ -18,6 +18,7 @@ interface PendingDevice {
   userId?: string;
   token?: string;
   createdAt: number;
+  redeemedAt?: number;
 }
 
 interface UsageCounters {
@@ -27,11 +28,13 @@ interface UsageCounters {
 
 interface MemoryData {
   events: EventRecord[];
-  tokens: Map<string, string>; // token -> userId
+  tokens: Map<string, { userId: string; createdAt: number }>; // token -> metadata
   devices: Map<string, PendingDevice>; // deviceCode -> pending
   users: Map<string, { email?: string }>; // userId -> profile
   usage: Map<string, UsageCounters>; // userId -> beta usage counters
 }
+
+export const SESSION_TTL_MS = 30 * 60 * 1000;
 
 /**
  * DEV-ONLY in-memory store, kept on globalThis so it survives route-module reloads within a
@@ -40,8 +43,10 @@ interface MemoryData {
 export class MemoryStore implements Store {
   readonly kind = 'memory (dev)';
   private readonly data: MemoryData;
+  private readonly now: () => number;
 
-  constructor() {
+  constructor(now: () => number = Date.now) {
+    this.now = now;
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
       g.__uncodeData = {
@@ -65,7 +70,7 @@ export class MemoryStore implements Store {
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
     const userCode = randomUUID().slice(0, 8).toUpperCase();
-    this.data.devices.set(deviceCode, { userCode, createdAt: Date.now() });
+    this.data.devices.set(deviceCode, { userCode, createdAt: this.now() });
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
@@ -74,28 +79,46 @@ export class MemoryStore implements Store {
     if (!entry) {
       return null;
     }
+    if (this.now() - entry.createdAt > 10 * 60_000) {
+      return null;
+    }
     if (entry.userId && entry.userId !== userId) return null;
+    if (entry.token && entry.redeemedAt) return null;
+    if (entry.token) return entry.token;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
     this.data.users.set(userId, { email });
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, createdAt: this.now() });
     return token; // also usable as a browser session
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
       return 'unknown';
     }
+    if (this.now() - entry.createdAt > 10 * 60_000) {
+      return 'expired';
+    }
     if (!entry.token) {
       return 'pending';
     }
+    if (entry.redeemedAt) {
+      return 'used';
+    }
+    entry.redeemedAt = this.now();
     return { token: entry.token };
   }
 
   async userForToken(token: string): Promise<string | null> {
-    return this.data.tokens.get(token) ?? null;
+    const record = this.data.tokens.get(token);
+    if (!record) return null;
+    if (this.now() - record.createdAt > SESSION_TTL_MS) {
+      this.data.tokens.delete(token);
+      return null;
+    }
+    return record.userId;
   }
 
   async revokeToken(token: string): Promise<void> {
@@ -110,7 +133,7 @@ export class MemoryStore implements Store {
       this.data.users.set(userId, { email: normalized });
     }
     const token = randomUUID();
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, createdAt: this.now() });
     return { token, userId, email: normalized };
   }
 
@@ -121,7 +144,7 @@ export class MemoryStore implements Store {
     const userId = randomUUID();
     this.data.users.set(userId, { email: normalized });
     const token = randomUUID();
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, createdAt: this.now() });
     return { token, userId, email: normalized };
   }
 
@@ -131,8 +154,8 @@ export class MemoryStore implements Store {
 
   async deleteAccount(userId: string): Promise<void> {
     this.data.events = this.data.events.filter((e) => e.userId !== userId);
-    for (const [token, uid] of [...this.data.tokens.entries()]) {
-      if (uid === userId) {
+    for (const [token, record] of [...this.data.tokens.entries()]) {
+      if (record.userId === userId) {
         this.data.tokens.delete(token);
       }
     }
