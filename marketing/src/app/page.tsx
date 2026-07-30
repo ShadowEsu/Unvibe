@@ -2,19 +2,16 @@ import {
   ArrowDown,
   ArrowRight,
   Check,
-  Code2,
   Command,
-  History,
   MousePointer2,
-  ShieldCheck,
 } from "lucide-react";
 import { BrandLogos } from "@/components/BrandLogos";
 import { Button } from "@/components/Button";
 import { FounderClock } from "@/components/FounderClock";
 import { FaqJsonLd } from "@/components/JsonLd";
+import { MarketingVideo } from "@/components/MarketingVideo";
 import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
-import { ProductLoop } from "@/components/redesign/ProductLoop";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { milestones } from "@/data/milestones";
@@ -74,7 +71,18 @@ export default function Home() {
             <h2>AI ships fast.<br /><em>Understanding should keep up.</em></h2>
             <span>Select the code, press ⌘U, and return to building with the context in your head.</span>
           </div>
-          <ProductLoop />
+          <div className="editorial-promo-frame">
+            <div className="editorial-promo-frame__label">
+              <span>UNVIBE FOR MAC</span>
+              <span>AI writes the code. Make it yours.</span>
+            </div>
+            <MarketingVideo
+              className="editorial-promo-frame__video"
+              src="/videos/unvibe-promo.mp4"
+              poster="/videos/unvibe-promo-poster.jpg"
+              label="Unvibe product overview showing selected-code explanations, learning history, and progress"
+            />
+          </div>
           <div className="editorial-steps">
             <article><span>01</span><MousePointer2 size={20} /><h3>Select</h3><p>Highlight the exact code you need to own.</p></article>
             <article><span>02</span><Command size={20} /><h3>Understand</h3><p>Get a focused explanation at your level.</p></article>
@@ -93,10 +101,13 @@ export default function Home() {
               into the next version of your project.
             </span>
           </div>
-          <div className="editorial-learning__cards">
-            <article><Code2 size={20} /><small>EXPLAIN</small><strong>What changed, why it matters, and what connects.</strong></article>
-            <article><ShieldCheck size={20} /><small>VERIFY</small><strong>One comprehension check grounded in your actual code.</strong></article>
-            <article><History size={20} /><small>REMEMBER</small><strong>History, study, and progress built from real reviews.</strong></article>
+          <div className="editorial-learning__film">
+            <MarketingVideo
+              className="editorial-learning__video"
+              src="/videos/unvibe-promo-animation.mp4"
+              poster="/videos/unvibe-animation-poster.jpg"
+              label="Animated Unvibe workflow showing code selection, five explanation depths, and learning progress"
+            />
           </div>
         </Reveal>
       </section>
