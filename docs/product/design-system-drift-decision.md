@@ -42,3 +42,10 @@ issues, and flag the spec drift here so the a11y/design direction stays coherent
 - **Option B:** keeps the current product coherent; requires a doc update and
   explicit contrast AA checks on the new colored pairs (verified: focus ring
   `#a78bfa` on `#14111c` and fill `#6f45d2` with white text pass AA).
+
+## Runner note
+
+The 2026-07-31 Night Lab runner's GitHub Actions token could not create the
+PR for this mission's branch
+(`opencode/nightly-product-design-and-accessibility-reduced-motion-rotation`).
+The branch is pushed; the PR must be opened manually.

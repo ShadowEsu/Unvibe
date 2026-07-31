@@ -86,5 +86,16 @@ involved.
 
 ## Recommended next action
 
-Revert or back out to the previous night's summary; the fixes are safe to merge
-after one reviewer confirms the reduced-motion behavior on macOS.
+Open the PR for `opencode/nightly-product-design-and-accessibility-reduced-motion-rotation`
+when a token with `createPullRequest` permission is available; the fixes are
+safe to merge after one reviewer confirms the reduced-motion behavior on macOS.
+
+## PR blocker
+
+The GitHub Actions token on this runner cannot create or approve pull requests
+("GitHub Actions is not permitted to create or approve pull requests"). The
+branch has been pushed to origin and the PR description is written out above;
+it needs to be opened manually with the PR template (mission, why, evidence,
+root cause, changes, files, tests run + results, what was not verified, risk,
+security/privacy impact, performance impact, manual review steps, rollback
+plan, recommended next action).
