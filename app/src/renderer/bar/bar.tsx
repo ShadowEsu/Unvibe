@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { formatAccelerator } from '../../core/accelerator';
 import { LogoMark } from '../shared/logo';
 
 type Snapshot = {
@@ -25,7 +26,7 @@ function HomeIcon() {
 }
 
 function prettyShortcut(value = 'CommandOrControl+U'): string {
-  return value.replace('CommandOrControl+', '⌘').replace('Shift+', '⇧').replace('Alt+', '⌥');
+  return formatAccelerator(value);
 }
 
 function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel'): void {

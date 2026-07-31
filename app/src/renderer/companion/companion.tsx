@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { formatAccelerator } from '../../core/accelerator';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
 
@@ -168,7 +169,7 @@ function FadeIn({
 }
 
 function prettyAccel(a: string): string {
-  return a.replace('CommandOrControl', '⌘').replace('Command', '⌘').replace('Control', '⌃').replace('Alt', '⌥').replace('Shift', '⇧').replace(/\+/g, '');
+  return formatAccelerator(a);
 }
 function accelFromEvent(e: KeyboardEvent): string | null {
   const mods: string[] = [];

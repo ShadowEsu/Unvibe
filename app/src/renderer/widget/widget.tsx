@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { formatAccelerator } from '../../core/accelerator';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 
@@ -76,7 +77,7 @@ function newTab(id: string, label: string): TabState {
 }
 
 function prettyAccel(accel: string): string {
-  return accel.replace('CommandOrControl', '⌘').replace('Control', '⌃').replace('Shift', '⇧').replace('Alt', '⌥');
+  return formatAccelerator(accel);
 }
 
 const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
