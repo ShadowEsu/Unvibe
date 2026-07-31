@@ -67,3 +67,8 @@ behavior matches the Supabase migration contract instead of minting a new token 
   took the opposite direction (re-adding removed exports to source). They were never merged. This PR
   aligns tests to the current source instead. If the pricing helpers are wanted back, that is a
   product decision, not a test fix.
+- **PR could not be opened automatically**: the `github-actions[bot]` token is blocked by the
+  repo-level setting "Allow GitHub Actions to create and approve pull requests". Branch
+  `opencode/nightly-auto-repository-health-20260731` (commit `62f2153`) is pushed and ready.
+  Create the PR manually against `main` with the body from the commit description + the standard
+  night-lab template (mission, evidence, root cause, changes, test results, risk, rollback).
