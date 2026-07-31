@@ -705,6 +705,7 @@ function Widget() {
                           key={i}
                           className={cls}
                           disabled={active.quiz!.phase !== 'answering'}
+                          aria-pressed={active.quiz!.phase === 'answering' && active.quiz!.choice === i}
                           onClick={() =>
                             setTabs((prev) =>
                               patchTab(prev, activeTabId, {
@@ -720,7 +721,7 @@ function Widget() {
                   </div>
                   {active.quiz.phase === 'graded' ? (
                     <>
-                      <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`}>
+                      <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`} role="status">
                         {active.quiz.correct ? 'Correct — that one is understood.' : 'Not quite — saved to revisit.'}
                       </div>
                       {active.quiz.rationale && (

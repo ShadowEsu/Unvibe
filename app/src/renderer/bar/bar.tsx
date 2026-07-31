@@ -64,6 +64,7 @@ function Bar() {
   const [position, setPosition] = useState('top-center');
   const [rotateStats, setRotateStats] = useState(true);
   const [statIndex, setStatIndex] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(0.3);
   const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
@@ -125,9 +126,20 @@ function Bar() {
 
   useEffect(() => {
     if (!rotateStats) { setStatIndex(0); return; }
+    if (reduceMotion) { setStatIndex(0); return; }
     const timer = window.setInterval(() => setStatIndex((index) => (index + 1) % 3), 3000);
     return () => window.clearInterval(timer);
-  }, [rotateStats]);
+  }, [rotateStats, reduceMotion]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => {
+      setReduceMotion(mq.matches);
+      if (mq.matches) setStatIndex(0);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const setPanelExpanded = (next: boolean, withSound = true) => {
     if (next) {
