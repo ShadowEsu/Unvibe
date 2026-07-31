@@ -1,9 +1,18 @@
 import { createHash } from 'node:crypto';
 import type { EventRecord, SkillEvidenceState, SkillRecord } from './types';
 
+/**
+ * Canonical identity for a concept. Group on the machine-facing `concept` slug — the on-device
+ * learning model groups on it too (app/src/core/learning.ts) — so a concept's evidence is not
+ * split by drift in the human-facing `conceptLabel` phrasing. The label is only a fallback when
+ * no slug was captured (older events). Both are normalized: trimmed, lowercased, and
+ * whitespace-collapsed.
+ */
 function normalizedConcept(event: EventRecord): string | undefined {
-  const name = (event.conceptLabel ?? event.concept)?.trim().replace(/\s+/g, ' ');
-  return name ? name.toLocaleLowerCase('en-US') : undefined;
+  const slug = event.concept?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+  if (slug) return slug;
+  const label = event.conceptLabel?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+  return label || undefined;
 }
 
 function evidenceState(successful: number, latestOutcome: EventRecord['outcome']): SkillEvidenceState {
