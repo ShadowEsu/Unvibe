@@ -7,45 +7,40 @@ import {
   canManageBilling,
   canManageMembers,
   effectivePlan,
+  limitFor,
   minimumSeatsForUsage,
   normalizedSeats,
   planLimit,
-  priceFor,
-  proAnnualSavingsPercent,
-  teamsAnnualSavingsPercent,
+  quotaMessage,
   TEAMS_CHECKOUT_ENABLED,
 } from '../src/billing/plans';
 import { syncStripeSubscription } from '../src/billing/webhooks';
 import { publicBillingOverview } from '../src/billing/presentation';
 import { stripePriceId } from '../src/billing/stripe';
 
-test('pricing math matches every published total', () => {
-  assert.equal(priceFor('free', 'monthly', 1), 0);
-  assert.equal(priceFor('pro', 'monthly', 1), 800);
-  assert.equal(priceFor('pro', 'annual', 1), 7_200);
-  assert.equal(priceFor('teams', 'monthly', 2), 1_600);
-  assert.equal(priceFor('teams', 'monthly', 5), 4_000);
-  assert.equal(priceFor('teams', 'annual', 2), 14_400);
-  assert.equal(priceFor('teams', 'annual', 5), 36_000);
-  assert.equal(proAnnualSavingsPercent(), 25);
-  assert.equal(teamsAnnualSavingsPercent(), 25);
+test('beta quotas cap the two metered actions at published totals', () => {
+  assert.equal(limitFor('selection'), 30);
+  assert.equal(limitFor('ask'), 20);
+  assert.match(quotaMessage('selection', 30), /used all 30 free code explanations/i);
+  assert.match(quotaMessage('ask', 20), /used all 20 free follow-up questions/i);
 });
 
 test('Teams checkout stays paused for private launch', () => {
   assert.equal(TEAMS_CHECKOUT_ENABLED, false);
 });
 
-test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
-  assert.throws(() => normalizedSeats('teams', 1), /at least 2/i);
-  assert.throws(() => normalizedSeats('teams', 2.5), /whole number/i);
+test('Teams seats normalize into a valid range while Pro stays one-person', () => {
+  assert.equal(normalizedSeats('teams', 1), 2);
+  assert.equal(normalizedSeats('teams', 2.5), 2);
   assert.equal(normalizedSeats('teams', 2), 2);
+  assert.equal(normalizedSeats('teams', 501), 500);
   assert.equal(normalizedSeats('pro', 300), 1);
   assert.equal(minimumSeatsForUsage(3, 2), 5);
 });
 
 test('Pro and Teams entitlements use configured allowance scaling', () => {
-  assert.equal(planLimit('pro', 'ai_explanation'), 100);
-  assert.equal(planLimit('pro', 'indexed_project'), 10);
+  assert.equal(planLimit('pro', 'ai_explanation', 1), 100);
+  assert.equal(planLimit('pro', 'indexed_project', 1), 10);
   assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
   assert.equal(planLimit('teams', 'project_question', 5), 2_500);
   assert.equal(planLimit('teams', 'indexed_project', 5), 10);

@@ -18,6 +18,7 @@ interface PendingDevice {
   userId?: string;
   token?: string;
   createdAt: number;
+  redeemedAt?: number;
 }
 
 interface UsageCounters {
@@ -75,6 +76,8 @@ export class MemoryStore implements Store {
       return null;
     }
     if (entry.userId && entry.userId !== userId) return null;
+    if (entry.redeemedAt) return null;
+    if (entry.token) return entry.token;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
@@ -83,14 +86,18 @@ export class MemoryStore implements Store {
     return token; // also usable as a browser session
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'used'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
       return 'unknown';
     }
+    if (entry.redeemedAt) {
+      return 'used';
+    }
     if (!entry.token) {
       return 'pending';
     }
+    entry.redeemedAt = Date.now();
     return { token: entry.token };
   }
 
