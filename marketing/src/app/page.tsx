@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { BrandLogos } from "@/components/BrandLogos";
 import { Button } from "@/components/Button";
+import { DemoSwitcher } from "@/components/DemoSwitcher";
 import { FounderClock } from "@/components/FounderClock";
 import { FaqJsonLd } from "@/components/JsonLd";
 import { MarketingVideo } from "@/components/MarketingVideo";
@@ -98,14 +99,7 @@ export default function Home() {
               into the next version of your project.
             </span>
           </div>
-          <div className="editorial-learning__film">
-            <MarketingVideo
-              className="editorial-learning__video"
-              src="/videos/unvibe-promo-animation.mp4"
-              poster="/videos/unvibe-animation-poster.jpg"
-              label="Animated Unvibe workflow showing code selection, five explanation depths, and learning progress"
-            />
-          </div>
+          <DemoSwitcher />
         </Reveal>
       </section>
 

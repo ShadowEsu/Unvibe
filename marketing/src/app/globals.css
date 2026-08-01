@@ -2542,6 +2542,67 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   box-shadow: 0 30px 100px rgba(3,1,8,.38);
 }
 
+.demo-switcher {
+  min-width: 0;
+}
+
+.demo-switcher__tabs {
+  display: inline-flex;
+  gap: .35rem;
+  margin-bottom: .85rem;
+  padding: .3rem;
+  border: 1px solid rgba(198,174,255,.2);
+  border-radius: 999px;
+  background: rgba(8,5,13,.38);
+}
+
+.demo-switcher__tabs button {
+  min-height: 36px;
+  padding: .45rem .8rem;
+  border-radius: 999px;
+  color: #9e91a7;
+  font: 650 .68rem var(--font-mono);
+  letter-spacing: .02em;
+  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.demo-switcher__tabs button:hover {
+  color: #f8f3ff;
+}
+
+.demo-switcher__tabs button:focus-visible {
+  outline: 2px solid #bca1ff;
+  outline-offset: 2px;
+}
+
+.demo-switcher__tabs button.is-active {
+  color: #190d29;
+  background: #c4a9ff;
+  transform: translateY(-1px);
+}
+
+.demo-switcher__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .8rem;
+}
+
+.demo-switcher__meta small {
+  flex: 0 0 auto;
+  color: #a98cef;
+  font: 700 .58rem var(--font-mono);
+  letter-spacing: .13em;
+}
+
+.demo-switcher__meta strong {
+  color: #cfc3d7;
+  font-size: .76rem;
+  font-weight: 520;
+  text-align: right;
+}
+
 .editorial-trail {
   position: relative;
   overflow: hidden;
@@ -2698,6 +2759,10 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .editorial-promo-frame__video,
   .editorial-learning__video { border-radius: 11px; }
   .editorial-learning__film { padding: 5px; border-radius: 14px; }
+  .demo-switcher__tabs { display: flex; }
+  .demo-switcher__tabs button { flex: 1; }
+  .demo-switcher__meta { align-items: flex-start; flex-direction: column; gap: .35rem; }
+  .demo-switcher__meta strong { text-align: left; }
   .editorial-releases__heading { align-items: flex-start; flex-direction: column; }
   .editorial-release-grid { grid-template-columns: 1fr; }
   .editorial-release-grid > a { min-height: 190px; }
