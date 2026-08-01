@@ -44,7 +44,10 @@ desktop-overlay — inspect Electron main/preload/renderer, test cross-platform 
 
 ## Branch / PR
 - Branch: `opencode/nightly-desktop-overlay-20260801`
-- Commit: `0a3fc49`
+- Commit: `0a3fc49` (report: `34678dd`)
+- **PR creation blocked**: same as every night since 2026-07-24 — "GitHub Actions
+  is not permitted to create or approve pull requests" (GraphQL 403). Branch
+  `opencode/nightly-desktop-overlay-20260801` is pushed and ready.
 - **PR NOT created**: the runner token is restricted by the repo ("GitHub Actions
   is not permitted to create or approve pull requests", HTTP 403). The branch is
   pushed and ready to open manually at
