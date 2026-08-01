@@ -54,7 +54,7 @@ export function monthWindow(now = new Date()): { startsAt: string; resetsAt: str
   return { startsAt: startsAt.toISOString(), resetsAt: resetsAt.toISOString() };
 }
 
-export function planLimit(plan: PlanId, kind: BillingUsageKind, seats: number): number {
+export function planLimit(plan: PlanId, kind: BillingUsageKind, seats = 1): number {
   const limit = BILLING_LIMITS[plan][kind];
   return plan === 'teams' && (kind === 'ai_explanation' || kind === 'project_question')
     ? limit * Math.max(2, Math.min(500, Math.floor(seats)))

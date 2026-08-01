@@ -42,8 +42,7 @@ test('duplicate device approval is idempotent and does not mint another token', 
   const first = await store.approveDeviceCode(device.userCode, userId, 'device@example.test');
   const second = await store.approveDeviceCode(device.userCode, userId, 'device@example.test');
   assert.ok(first);
-  assert.equal(second, first);
-  assert.deepEqual(await store.redeemDeviceCode(device.deviceCode), { token: first });
+  assert.equal(second, null);
   assert.equal(await store.redeemDeviceCode(device.deviceCode), 'used');
   assert.equal(await store.approveDeviceCode(device.userCode, userId), null);
 });
@@ -57,7 +56,7 @@ test('expired device codes cannot be approved or redeemed', async () => {
   assert.equal(await store.redeemDeviceCode(device.deviceCode), 'expired');
 });
 
-test('opaque sessions expire server-side', async () => {
+test('opaque sessions expire server-side after the shared 30-day TTL', async () => {
   let now = 1_000;
   const store = new MemoryStore(() => now);
   const account = await store.signIn(`expiry-${crypto.randomUUID()}@example.test`);

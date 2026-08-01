@@ -12,6 +12,7 @@ import type {
   UsageSummary,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { decodeHistoryCursor, nextHistoryCursor } from './pagination';
 import { limitFor } from '../billing/plans';
 
 /**
@@ -183,12 +184,42 @@ export class SupabaseStore implements Store {
   }
 
   async historyPage(userId: string, limit: number, cursor?: string): Promise<import('./types').HistoryPage> {
-    const offset = cursor ? Number.parseInt(cursor, 10) : 0;
-    if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid history cursor.');
-    const events = await this.history(userId, Number.MAX_SAFE_INTEGER);
-    const page = events.slice(offset, offset + limit);
-    const nextOffset = offset + page.length;
-    return { events: page, ...(nextOffset < events.length ? { nextCursor: String(nextOffset) } : {}) };
+    const size = Math.min(Math.max(Math.floor(limit), 1), 500);
+    const key = decodeHistoryCursor(cursor);
+    if (cursor && !key) throw new Error('Invalid history cursor.');
+    // Keyset pagination via the history_page RPC (migration 0007): stable under inserts and
+    // avoids scanning the user's full history on every page.
+    const { data, error } = await this.db.rpc('history_page', {
+      p_user_id: userId,
+      p_limit: size,
+      p_cursor_ts: key?.ts ?? null,
+      p_cursor_id: key?.id ?? null,
+    });
+    if (error) throw new Error(`Could not load history: ${error.message}`);
+    const page = ((data ?? []) as Array<{
+      id: string;
+      ts: string;
+      scope: string;
+      level: string;
+      file: string | null;
+      outcome: EventRecord['outcome'];
+      concept: string | null;
+      concept_label: string | null;
+      project: string | null;
+      user_id: string;
+    }>).map((r) => ({
+      id: r.id,
+      ts: r.ts,
+      scope: r.scope,
+      level: r.level,
+      file: r.file ?? undefined,
+      outcome: r.outcome,
+      concept: r.concept ?? undefined,
+      conceptLabel: r.concept_label ?? undefined,
+      project: r.project ?? undefined,
+      userId: r.user_id,
+    }));
+    return { events: page, ...(nextHistoryCursor(page, size) ? { nextCursor: nextHistoryCursor(page, size)! } : {}) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {

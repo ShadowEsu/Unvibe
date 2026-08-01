@@ -10,7 +10,10 @@ steps below extend the automated database/deletion checks with packaged-app and 
 2. Complete verified device login, restart the packaged app, and confirm encrypted session restore.
 3. Generate a real streamed explanation, cancel one, complete a quiz, and verify mock is false.
 4. Record events online, offline, then after reconnect; inspect event IDs remotely for exactly-once
-   upserts. Test midnight and timezone boundaries with controlled clocks.
+   upserts. Test midnight and timezone boundaries with controlled clocks. Sync pulls use stable
+   keyset cursors (`history_page` RPC, `(ts, id)` cursor): insert a new record mid-pull on a second
+   client and confirm the first client's local mirror still converges to the full set (no skipped
+   records).
 5. Delete the account and verify the old token returns 401, records are absent, and local store is
    empty. Recreate the account and confirm no history returns.
 6. Repeat from `app/release/mac-arm64/Unvibe.app` with an external display and macOS Accessibility.

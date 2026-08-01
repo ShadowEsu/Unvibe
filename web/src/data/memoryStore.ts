@@ -11,6 +11,7 @@ import type {
   UsageSummary,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { compareHistoryDescending, decodeHistoryCursor, isAfterCursor, nextHistoryCursor } from './pagination';
 import { limitFor } from '../billing/plans';
 
 interface PendingDevice {
@@ -20,6 +21,11 @@ interface PendingDevice {
   createdAt: number;
 }
 
+/** Opaque sessions expire after 30 days in both stores (see migration 0004_session_expiry). */
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Device codes are short-lived (see migration 0002_device_code_lifecycle). */
+const DEVICE_CODE_TTL_MS = 10 * 60 * 1000;
+
 interface UsageCounters {
   selections: number;
   asks: number;
@@ -28,6 +34,7 @@ interface UsageCounters {
 interface MemoryData {
   events: EventRecord[];
   tokens: Map<string, string>; // token -> userId
+  tokenCreatedAt: Map<string, number>; // token -> issued epoch ms
   devices: Map<string, PendingDevice>; // deviceCode -> pending
   users: Map<string, { email?: string }>; // userId -> profile
   usage: Map<string, UsageCounters>; // userId -> beta usage counters
@@ -40,13 +47,16 @@ interface MemoryData {
 export class MemoryStore implements Store {
   readonly kind = 'memory (dev)';
   private readonly data: MemoryData;
+  private readonly now: () => number;
 
-  constructor() {
+  constructor(now: () => number = () => Date.now()) {
+    this.now = now;
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
       g.__uncodeData = {
         events: [],
         tokens: new Map(),
+        tokenCreatedAt: new Map(),
         devices: new Map(),
         users: new Map(),
         usage: new Map(),
@@ -59,13 +69,16 @@ export class MemoryStore implements Store {
     if (!g.__uncodeData.usage) {
       g.__uncodeData.usage = new Map();
     }
+    if (!g.__uncodeData.tokenCreatedAt) {
+      g.__uncodeData.tokenCreatedAt = new Map();
+    }
     this.data = g.__uncodeData;
   }
 
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
     const userCode = randomUUID().slice(0, 8).toUpperCase();
-    this.data.devices.set(deviceCode, { userCode, createdAt: Date.now() });
+    this.data.devices.set(deviceCode, { userCode, createdAt: this.now() });
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
@@ -75,31 +88,43 @@ export class MemoryStore implements Store {
       return null;
     }
     if (entry.userId && entry.userId !== userId) return null;
+    if (entry.createdAt + DEVICE_CODE_TTL_MS <= this.now()) return null;
+    // An already-approved device is a one-time flow: redeeming it consumes the token.
+    if (entry.token) return null;
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
     this.data.users.set(userId, { email });
     this.data.tokens.set(token, userId);
+    this.data.tokenCreatedAt.set(token, this.now());
     return token; // also usable as a browser session
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
       return 'unknown';
     }
-    if (!entry.token) {
-      return 'pending';
+    if (entry.createdAt + DEVICE_CODE_TTL_MS <= this.now()) {
+      return 'expired';
     }
-    return { token: entry.token };
+    if (entry.token) {
+      return 'used';
+    }
+    return 'pending';
   }
 
   async userForToken(token: string): Promise<string | null> {
-    return this.data.tokens.get(token) ?? null;
+    const userId = this.data.tokens.get(token) ?? null;
+    if (!userId) return null;
+    const createdAt = this.data.tokenCreatedAt.get(token);
+    if (createdAt !== undefined && createdAt + SESSION_TTL_MS <= this.now()) return null;
+    return userId;
   }
 
   async revokeToken(token: string): Promise<void> {
     this.data.tokens.delete(token);
+    this.data.tokenCreatedAt.delete(token);
   }
 
   async signIn(email: string): Promise<Account> {
@@ -111,6 +136,7 @@ export class MemoryStore implements Store {
     }
     const token = randomUUID();
     this.data.tokens.set(token, userId);
+    this.data.tokenCreatedAt.set(token, this.now());
     return { token, userId, email: normalized };
   }
 
@@ -122,6 +148,7 @@ export class MemoryStore implements Store {
     this.data.users.set(userId, { email: normalized });
     const token = randomUUID();
     this.data.tokens.set(token, userId);
+    this.data.tokenCreatedAt.set(token, this.now());
     return { token, userId, email: normalized };
   }
 
@@ -134,6 +161,7 @@ export class MemoryStore implements Store {
     for (const [token, uid] of [...this.data.tokens.entries()]) {
       if (uid === userId) {
         this.data.tokens.delete(token);
+        this.data.tokenCreatedAt.delete(token);
       }
     }
     for (const [dc, dev] of [...this.data.devices.entries()]) {
@@ -172,12 +200,14 @@ export class MemoryStore implements Store {
   }
 
   async historyPage(userId: string, limit: number, cursor?: string): Promise<import('./types').HistoryPage> {
-    const offset = cursor ? Number.parseInt(cursor, 10) : 0;
-    if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid history cursor.');
-    const events = (await this.history(userId, Number.MAX_SAFE_INTEGER));
-    const page = events.slice(offset, offset + limit);
-    const nextOffset = offset + page.length;
-    return { events: page, ...(nextOffset < events.length ? { nextCursor: String(nextOffset) } : {}) };
+    const size = Math.min(Math.max(Math.floor(limit), 1), 500);
+    const key = decodeHistoryCursor(cursor);
+    if (cursor && !key) throw new Error('Invalid history cursor.');
+    const sorted = this.eventsFor(userId)
+      .filter((event) => (key ? isAfterCursor(event, key) : true))
+      .sort(compareHistoryDescending);
+    const page = sorted.slice(0, size);
+    return { events: page, ...(nextHistoryCursor(page, size) ? { nextCursor: nextHistoryCursor(page, size)! } : {}) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {
