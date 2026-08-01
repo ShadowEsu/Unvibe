@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { widgetKeyAction } from '../../core/widgetKeys';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 
@@ -405,9 +406,16 @@ function Widget() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey && e.key === 'w') window.unvibe.closeWidget();
-      else if (e.key === 'Escape') toggleCollapse();
-      else if (e.metaKey && e.key >= '1' && e.key <= '5') pick(LEVELS[Number(e.key) - 1]!.id);
+      const target = e.target as HTMLElement | null;
+      const action = widgetKeyAction({
+        key: e.key,
+        metaKey: e.metaKey,
+        ctrlKey: e.ctrlKey,
+        inFormField: Boolean(target?.matches('input, textarea, select, [contenteditable="true"]')),
+      });
+      if (action.kind === 'close') window.unvibe.closeWidget();
+      else if (action.kind === 'toggle-collapse') toggleCollapse();
+      else if (action.kind === 'pick-level') pick(LEVELS[action.levelIndex]!.id);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
