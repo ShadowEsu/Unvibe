@@ -87,6 +87,21 @@ test('computeLearningItems includes on-device code and explanation when present'
   assert.equal(items[1]!.code, undefined);
 });
 
+test('computeReviewQueue surfaces recently-due understood items before ancient ones', () => {
+  const now = new Date('2026-07-20T12:00:00Z');
+  const queue = computeReviewQueue([
+    // 2 days old -> crossed the 1d interval, "1d revisit"
+    ev({ id: 'fresh-due', ts: '2026-07-18T12:00:00Z', outcome: 'understood', conceptLabel: 'FreshDue' }),
+    // 30 days old -> crossed every interval, "14d revisit"
+    ev({ id: 'ancient', ts: '2026-06-20T12:00:00Z', outcome: 'understood', conceptLabel: 'Ancient' }),
+  ], now, 1);
+  // With room for a single understood item, the recently-due lesson must win,
+  // not the stale one that has sat in the queue for a month.
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0]!.title, 'FreshDue');
+  assert.equal(queue[0]!.dueLabel, '1d revisit');
+});
+
 test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {
   const now = new Date('2026-07-20T12:00:00Z');
   const queue = computeReviewQueue([

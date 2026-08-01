@@ -267,7 +267,9 @@ export function computeReviewQueue(events: LocalEvent[], now = new Date(), limit
     if (hits.length === 0) continue;
     dueUnderstood.push({ ...e, dueLabel: `${hits[hits.length - 1]}d revisit` });
   }
-  dueUnderstood.sort((a, b) => a.ts.localeCompare(b.ts));
+  // Surface lessons that most recently became due first so a lesson that just crossed an
+  // interval is reinforced before stale ones; the limit then graduates ancient items out.
+  dueUnderstood.sort((a, b) => b.ts.localeCompare(a.ts));
 
   const merged = [...needs.map((e) => ({ ...e, dueLabel: 'Needs review' as string })), ...dueUnderstood]
     .slice(0, limit);
