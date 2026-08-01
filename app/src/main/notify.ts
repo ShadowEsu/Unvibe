@@ -1,6 +1,7 @@
 /** Floating-bar notifications with rate limiting + quiet-hours suppression. */
 import type { BrowserWindow } from 'electron';
 import { settings } from './settings';
+import { showBar } from './windows';
 
 let bar: BrowserWindow | null = null;
 let lastAt = 0;
@@ -16,5 +17,8 @@ export function notify(message: string): void {
   const now = Date.now();
   if (now - lastAt < MIN_GAP_MS) return; // never spammy
   lastAt = now;
-  if (bar && !bar.isDestroyed()) bar.webContents.send('bar:notify', message);
+  if (bar && !bar.isDestroyed()) {
+    showBar(bar);
+    bar.webContents.send('bar:notify', message);
+  }
 }

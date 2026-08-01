@@ -3,29 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { Logo } from "./Logo";
-import { Button } from "./Button";
-import { ThemeToggle } from "./ThemeToggle";
+import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
-interface NavLink {
-  label: string;
-  href: string;
-  id: string;
-}
-
-const links: NavLink[] = [
-  { label: "How it works", href: "#how-it-works", id: "how-it-works" },
-  { label: "Depth", href: "#learn", id: "learn" },
-  { label: "Gallery", href: "#gallery", id: "gallery" },
-  { label: "Privacy", href: "#privacy", id: "privacy" },
-  { label: "FAQ", href: "#faq", id: "faq" },
+const links = [
+  { label: "Product", href: "/#product" },
+  { label: "Releases", href: "/#releases" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Investors", href: "/investors" },
 ];
 
 export function Nav() {
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<string>("");
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -35,132 +25,33 @@ export function Nav() {
   }, []);
 
   useEffect(() => {
-    const observed = links
-      .map((l) => document.getElementById(l.id))
-      .filter((el): el is HTMLElement => el !== null);
-    if (observed.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) setActive(visible[0].target.id);
-      },
-      { rootMargin: "-45% 0px -50% 0px", threshold: [0, 0.25, 0.5] }
-    );
-    observed.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 transition-all duration-standard",
-        scrolled
-          ? "border-b border-line bg-bg/85 backdrop-blur-lg"
-          : "border-b border-transparent bg-transparent"
-      )}
-    >
-      <nav
-        className="container-page flex h-14 items-center justify-between gap-4 sm:h-16"
-        aria-label="Primary"
-      >
-        <Link href="/" className="rounded-md shrink-0" aria-label="Unvibe home">
-          <Logo />
-        </Link>
-
-        <ul className="hidden items-center gap-1 lg:flex">
-          {links.map((link) => (
-            <li key={link.id}>
-              <a
-                href={link.href}
-                aria-current={active === link.id ? "true" : undefined}
-                className={cn(
-                  "rounded-pill px-3 py-1.5 text-fluid-sm transition-colors duration-micro",
-                  active === link.id
-                    ? "text-fg"
-                    : "text-fg-faint hover:text-fg"
-                )}
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-
-        <div className="hidden items-center gap-2 lg:flex">
-          <ThemeToggle />
-          <Button href="#demo" variant="ghost" size="sm">
-            Watch demo
-          </Button>
-          <Button href="#waitlist" size="sm">
-            Join beta
-          </Button>
+    <header className={cn(
+      "sticky top-0 z-40 border-b transition-colors duration-standard",
+      scrolled ? "border-line bg-bg/90 backdrop-blur-lg" : "border-transparent bg-bg/70 backdrop-blur-md",
+    )}>
+      <nav className="container-page flex h-16 items-center justify-between gap-4" aria-label="Primary">
+        <Link href="/" aria-label="Unvibe home"><Logo /></Link>
+        <div className="hidden items-center gap-2 md:flex">
+          {links.map((link) => <Link key={link.href} href={link.href} className="rounded-pill px-3 py-2 text-fluid-sm text-fg-muted hover:text-fg">{link.label}</Link>)}
+          <Link href="/beta" className="rounded-pill bg-primary px-4 py-2 text-fluid-sm font-semibold text-on-primary hover:bg-primary-strong">Download</Link>
         </div>
-
-        <div className="flex items-center gap-2 lg:hidden">
-          <ThemeToggle />
-          <button
-            type="button"
-            aria-label="Open menu"
-            aria-expanded={open}
-            onClick={() => setOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-pill border border-line text-fg"
-          >
-            <Menu size={17} aria-hidden="true" />
-          </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <button type="button" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-line text-fg"><Menu size={18} /></button>
         </div>
       </nav>
 
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close menu"
-            className="absolute inset-0 bg-fg/20 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 top-0 flex h-full w-[min(18rem,85vw)] flex-col bg-bg p-6 shadow-lift">
-            <div className="mb-8 flex items-center justify-between">
-              <Logo />
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-pill border border-line text-fg"
-              >
-                <X size={17} aria-hidden="true" />
-              </button>
-            </div>
-            <ul className="flex flex-col gap-1">
-              {links.map((link) => (
-                <li key={link.id}>
-                  <a
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block rounded-xl px-3 py-2.5 text-fluid-base text-fg hover:bg-surface-2"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-auto flex flex-col gap-3 pt-6">
-              <Button href="#demo" variant="secondary" onClick={() => setOpen(false)}>
-                Watch demo
-              </Button>
-              <Button href="#waitlist" onClick={() => setOpen(false)}>
-                Join free beta
-              </Button>
-            </div>
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-fg/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-0 flex h-full w-[min(21rem,88vw)] flex-col gap-2 border-l border-line bg-bg p-6 shadow-lift">
+            <div className="mb-6 flex items-center justify-between"><Logo /><button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-full border border-line text-fg"><X size={18} /></button></div>
+            {links.map((link) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="rounded-xl px-3 py-3 text-fluid-lg text-fg hover:bg-surface-2">{link.label}</Link>)}
+            <Link href="/beta" onClick={() => setOpen(false)} className="mt-2 rounded-xl bg-primary px-4 py-3 text-center font-semibold text-on-primary">Download</Link>
           </div>
         </div>
       )}

@@ -38,23 +38,37 @@ export const experienceLabels: Record<(typeof experiences)[number], string> = {
 };
 
 export const waitlistSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "First name is required")
+    .max(80, "Keep it under 80 characters"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Last name is required")
+    .max(80, "Keep it under 80 characters"),
   email: z
     .string()
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email"),
-  tool: z.enum(tools, { message: "Pick where you work" }),
-  experience: z.enum(experiences, { message: "Pick your experience" }),
-  message: z
-    .string()
-    .trim()
-    .max(500, "Keep it under 500 characters")
-    .optional()
-    .or(z.literal("")),
-  referredBy: z.string().trim().max(32).optional().or(z.literal("")),
+  // A referral link supplies a short code; the on-page beta offer also accepts the
+  // referring friend's email so the server can resolve it without exposing the list.
+  referredBy: z.string().trim().max(254).optional().or(z.literal("")),
+  promoCode: z.string().trim().max(32).optional().or(z.literal("")),
   utmSource: z.string().trim().max(64).optional().or(z.literal("")),
   utmMedium: z.string().trim().max(64).optional().or(z.literal("")),
   utmCampaign: z.string().trim().max(64).optional().or(z.literal("")),
 });
 
 export type WaitlistInput = z.infer<typeof waitlistSchema>;
+
+export const waitlistDetailsSchema = z.object({
+  email: z.string().trim().email("Enter a valid email"),
+  tool: z.enum(tools).optional(),
+  experience: z.enum(experiences).optional(),
+  message: z.string().trim().max(500, "Keep it under 500 characters").optional(),
+});
+
+export type WaitlistDetailsInput = z.infer<typeof waitlistDetailsSchema>;

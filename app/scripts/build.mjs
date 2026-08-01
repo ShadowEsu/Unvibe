@@ -3,6 +3,8 @@ import { cpSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 
 const testsOnly = process.argv.includes('--tests');
 const releaseBackend = process.env.UNVIBE_BACKEND?.trim() ?? '';
+const releaseTrialToken = process.env.UNVIBE_TRIAL_TOKEN?.trim() ?? '';
+const releaseFullProduct = process.env.UNVIBE_FULL_PRODUCT === '1';
 
 if (testsOnly) {
   rmSync('dist-test', { recursive: true, force: true });
@@ -15,7 +17,11 @@ if (testsOnly) {
     platform: 'node',
     format: 'cjs',
     target: 'node20',
-    define: { 'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify('') },
+    define: {
+      'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(''),
+      'process.env.UNVIBE_RELEASE_TRIAL_TOKEN': JSON.stringify(''),
+      'process.env.UNVIBE_RELEASE_FULL_PRODUCT': JSON.stringify(''),
+    },
   });
   process.exit(0);
 }
@@ -32,7 +38,11 @@ await build({
   format: 'cjs',
   target: 'node20',
   external: ['electron'],
-  define: { 'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(releaseBackend) },
+  define: {
+    'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(releaseBackend),
+    'process.env.UNVIBE_RELEASE_TRIAL_TOKEN': JSON.stringify(releaseTrialToken),
+    'process.env.UNVIBE_RELEASE_FULL_PRODUCT': JSON.stringify(releaseFullProduct ? '1' : ''),
+  },
 });
 
 // Renderers (browser/iife) + static html/css

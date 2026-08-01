@@ -13,6 +13,9 @@ export type { Provider } from './provider';
  * 3. else labelled mock
  */
 export function selectProvider(): Provider {
+  // Local demos / consumer walkthroughs can force the labelled mock even when keys exist.
+  if (process.env.ENABLE_MOCK_AI === 'true') return new MockProvider();
+
   const anthropic = process.env.ANTHROPIC_API_KEY?.trim();
   if (anthropic) return new AnthropicProvider(anthropic);
 

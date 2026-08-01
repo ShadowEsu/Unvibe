@@ -1,8 +1,8 @@
 {
   "name": "uncode",
-  "displayName": "Uncode",
-  "description": "Understand, verify, and retain AI-generated code. Quiet reviews and context-aware explanations for changes made by coding agents.",
-  "version": "0.1.0",
+  "displayName": "Unvibe",
+  "description": "Understand, verify, and retain AI-generated code. Send a selected snippet to the private Unvibe desktop review flow.",
+  "version": "0.1.2",
   "publisher": "uncode",
   "license": "UNLICENSED",
   "engines": {
@@ -45,6 +45,10 @@
         "title": "Uncode: Review Selected Code"
       },
       {
+        "command": "uncode.reviewSelectionInDesktop",
+        "title": "Unvibe: Understand Selection in Desktop App"
+      },
+      {
         "command": "uncode.reviewFile",
         "title": "Uncode: Review Current File"
       },
@@ -80,6 +84,11 @@
     "menus": {
       "editor/context": [
         {
+          "command": "uncode.reviewSelectionInDesktop",
+          "when": "editorHasSelection",
+          "group": "uncode@0"
+        },
+        {
           "command": "uncode.reviewSelection",
           "when": "uncode.hasSelection",
           "group": "uncode@1"
@@ -87,6 +96,12 @@
       ]
     },
     "keybindings": [
+      {
+        "command": "uncode.reviewSelectionInDesktop",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
+        "when": "editorTextFocus && editorHasSelection"
+      },
       {
         "command": "uncode.reviewSelection",
         "key": "ctrl+alt+r",
@@ -128,6 +143,7 @@
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
+    "package": "vsce package --out release/unvibe-desktop-bridge-0.1.2.vsix",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/**/*.test.ts",
     "vscode:prepublish": "npm run build"
@@ -135,6 +151,7 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.20.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"

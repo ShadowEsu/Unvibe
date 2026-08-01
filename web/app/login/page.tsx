@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +22,7 @@ export default function LoginPage() {
         setError(data.error ?? 'Sign-in failed.');
         return;
       }
-      router.push('/');
+      window.location.assign('/');
     } catch {
       setError('Could not reach the service.');
     } finally {

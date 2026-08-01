@@ -1,107 +1,37 @@
 import Link from "next/link";
-import { Logo } from "./Logo";
+import { Logo } from "@/components/Logo";
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact";
 
-interface FooterColumn {
-  heading: string;
-  links: { label: string; href: string }[];
-}
+const product = [
+  ["Watch demo", "/#demo"],
+  ["Pricing", "/pricing"],
+  ["Download beta", "/beta"],
+  ["Build in public", "/build"],
+];
 
-const columns: FooterColumn[] = [
-  {
-    heading: "Product",
-    links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Works where you do", href: "#works-where" },
-      { label: "Watch demo", href: "#demo" },
-      { label: "Join waitlist", href: "#waitlist" },
-    ],
-  },
-  {
-    heading: "Learn",
-    links: [
-      { label: "Languages", href: "#learn" },
-      { label: "Depth levels", href: "#depth" },
-      { label: "Study from projects", href: "#study" },
-      { label: "For students", href: "#students" },
-    ],
-  },
-  {
-    heading: "Company",
-    links: [
-      { label: "FAQ", href: "#faq" },
-      { label: "Contact", href: "mailto:hello@unvibe.app" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
-      { label: "Data controls", href: "/data-controls" },
-      { label: "Delete account", href: "/account-deletion" },
-    ],
-  },
+const company = [
+  ["Investors", "/investors"],
+  ["Privacy", "/privacy"],
+  ["Terms", "/terms"],
+  ["Data controls", "/data-controls"],
 ];
 
 export function Footer() {
-  const year = new Date().getFullYear();
   return (
     <footer className="border-t border-line bg-surface-2/60">
-      <div className="container-page py-16">
-        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:grid-cols-6">
-          <div className="col-span-2 max-w-xs">
-            <Logo />
-            <p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">
-              AI can write the code. Unvibe helps you understand it.
-            </p>
-          </div>
-          {columns.map((col) => (
-            <nav key={col.heading} aria-label={col.heading}>
-              <h3 className="font-sans text-fluid-sm font-semibold tracking-tight text-fg">
-                {col.heading}
-              </h3>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((link) => {
-                  const external = link.href.startsWith("mailto:");
-                  const internal = link.href.startsWith("/");
-                  return (
-                    <li key={link.label}>
-                      {internal && !external ? (
-                        <Link
-                          href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
-                        >
-                          {link.label}
-                        </Link>
-                      ) : (
-                        <a
-                          href={link.href}
-                          className="text-fluid-sm text-fg-muted transition-colors hover:text-fg"
-                        >
-                          {link.label}
-                        </a>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          ))}
-        </div>
-
-        <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {year} Unvibe. Mac first. Made for people who want to understand their code.</p>
-          <p>
-            Questions?{" "}
-            <a
-              href="mailto:hello@unvibe.app"
-              className="text-fg-muted underline underline-offset-2 hover:text-fg"
-            >
-              hello@unvibe.app
-            </a>
-          </p>
-        </div>
+      <div className="container-page grid gap-10 py-14 sm:grid-cols-[1fr_auto_auto]">
+        <div className="max-w-sm"><Logo /><p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">AI writes the code. Unvibe helps you learn what you shipped.</p></div>
+        <FooterLinks heading="Product" links={product} />
+        <FooterLinks heading="Company" links={company} />
+      </div>
+      <div className="container-page flex flex-col gap-2 border-t border-line py-5 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
+        <p>© {new Date().getFullYear()} Unvibe · Perth, Australia</p>
+        <a href={supportMailto} className="hover:text-fg">{SUPPORT_EMAIL}</a>
       </div>
     </footer>
   );
+}
+
+function FooterLinks({ heading, links }: { heading: string; links: readonly string[][] }) {
+  return <nav aria-label={heading} className="grid content-start gap-2"><strong className="mb-1 text-fluid-sm text-fg">{heading}</strong>{links.map(([label, href]) => <Link key={href} href={href!} className="text-fluid-sm text-fg-muted hover:text-fg">{label}</Link>)}</nav>;
 }
