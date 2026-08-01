@@ -44,7 +44,7 @@ desktop-overlay — inspect Electron main/preload/renderer, test cross-platform 
 
 ## Branch / PR
 - Branch: `opencode/nightly-desktop-overlay-20260801`
-- Commit: TBD
+- Commit: `0a3fc49`
 - **PR NOT created**: the runner token is restricted by the repo ("GitHub Actions
   is not permitted to create or approve pull requests", HTTP 403). The branch is
   pushed and ready to open manually at
