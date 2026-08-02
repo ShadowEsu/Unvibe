@@ -65,3 +65,9 @@ test('opaque sessions expire server-side', async () => {
   now += SESSION_TTL_MS + 1;
   assert.equal(await store.userForToken(account.token), null);
 });
+
+test('sessions minted with the real clock are valid immediately', async () => {
+  const store = new MemoryStore();
+  const account = await store.signIn(`default-clock-${crypto.randomUUID()}@example.test`);
+  assert.equal(await store.userForToken(account.token), account.userId);
+});

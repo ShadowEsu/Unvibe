@@ -44,8 +44,8 @@ test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
 });
 
 test('Pro and Teams entitlements use configured allowance scaling', () => {
-  assert.equal(planLimit('pro', 'ai_explanation'), 100);
-  assert.equal(planLimit('pro', 'indexed_project'), 10);
+  assert.equal(planLimit('pro', 'ai_explanation', 1), 100);
+  assert.equal(planLimit('pro', 'indexed_project', 1), 10);
   assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
   assert.equal(planLimit('teams', 'project_question', 5), 2_500);
   assert.equal(planLimit('teams', 'indexed_project', 5), 10);
