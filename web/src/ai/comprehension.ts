@@ -25,9 +25,17 @@ export function parseQuestion(text: string): Question | undefined {
       obj.answerIndex >= 0 &&
       obj.answerIndex < obj.options.length
     ) {
+      const options = obj.options.map((o) => String(o).trim());
+      // Duplicate options make a comprehension question ambiguous: the model's grading
+      // compares the pick index to answerIndex, so the "same" wording at a different
+      // index would be graded wrong and corrupt mastery evidence. Reject such questions.
+      const distinct = new Set(options.map((o) => o.toLocaleLowerCase('en-US'))).size === options.length;
+      if (!distinct || options.some((o) => o.length === 0)) {
+        return undefined;
+      }
       return {
         question: obj.question,
-        options: obj.options.map(String),
+        options,
         answerIndex: obj.answerIndex,
         rationale: typeof obj.rationale === 'string' ? obj.rationale : '',
         concept: typeof obj.concept === 'string' ? obj.concept : 'general',
