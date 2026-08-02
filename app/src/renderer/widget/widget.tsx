@@ -5,6 +5,7 @@ import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
+import { revealInitialState } from '../../core/reveal';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
@@ -367,13 +368,15 @@ function Widget() {
   }, []);
 
   // ChatGPT-style progressive reveal: catch displayed text up to the streamed buffer.
+  // Respect prefers-reduced-motion — show the full text immediately, no typing motion.
   useEffect(() => {
-    if (active.phase !== 'streaming' && active.phase !== 'done') {
-      setRevealedText('');
-      return;
-    }
-    if (active.text.length === 0) {
-      setRevealedText('');
+    const reveal = revealInitialState(
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      active.phase,
+      active.text,
+    );
+    if (!reveal.animate) {
+      setRevealedText(reveal.initial);
       return;
     }
     let cancelled = false;
