@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
+import { nextTabbable, visibleFocusables, type FocusableElement } from '../shared/focusTrap';
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -1236,6 +1237,40 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
   const recRef = useRef(recording); recRef.current = recording;
+  const modalRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
+
+  // Dialog focus management: move focus into the dialog on open, restore it to
+  // the trigger on close, keep Tab cycling inside, and let Escape dismiss.
+  // Shortcut recording keeps its own capture-phase key handling; Escape during
+  // recording must cancel that capture, not close the dialog.
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusables = visibleFocusables(modal);
+    (focusables[0] ?? modal).focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !recRef.current) {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const current = visibleFocusables(modal);
+        const next = nextTabbable(current, document.activeElement as FocusableElement | null, e.shiftKey);
+        if (next) {
+          e.preventDefault();
+          next.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
@@ -1253,7 +1288,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
         <div className="mside">
           <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
           <div className="mh">PREFERENCES</div>
