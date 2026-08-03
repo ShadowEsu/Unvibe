@@ -5,6 +5,7 @@ import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { SiteStatsSummary } from "@/lib/siteStatsStore";
 import type { WaitlistAdminEntry } from "@/lib/waitlistStore";
+import { summarizeWaitlistAttribution } from "@/lib/waitlistAttribution";
 
 type ViewState = "locked" | "loading" | "ready" | "error";
 
@@ -24,6 +25,8 @@ export function AdminWaitlist() {
     () => entries.filter((entry) => entry.notification?.status === "sent").length,
     [entries]
   );
+  const attribution = useMemo(() => summarizeWaitlistAttribution(entries), [entries]);
+  const referredSignups = useMemo(() => entries.filter((entry) => entry.referredBy?.trim()).length, [entries]);
 
   const load = useCallback(async (background = false) => {
     if (!adminToken.trim()) {
@@ -219,9 +222,21 @@ export function AdminWaitlist() {
           <div className="admin-stats">
             <article><small>Total signups</small><strong>{entries.length}</strong></article>
             <article><small>Email notifications sent</small><strong>{notified}</strong></article>
-            <article><small>Promo claims</small><strong>{entries.filter((entry) => entry.promoCode).length}</strong></article>
+            <article><small>Referred signups</small><strong>{referredSignups}</strong></article>
             <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : "—"}</strong></article>
           </div>
+          <div className="admin-section-label">
+            <p className="pixel-label">Attribution</p>
+            <span>Completed signups by source · Founder-only aggregate, no extra tracking</span>
+          </div>
+          {attribution.length > 0 && (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead><tr><th>Source</th><th>Completed signups</th><th>Referred signups</th></tr></thead>
+                <tbody>{attribution.map((row) => <tr key={row.label}><td><strong>{row.label}</strong></td><td>{row.signups}</td><td>{row.referrals}</td></tr>)}</tbody>
+              </table>
+            </div>
+          )}
           {retryError && <p className="admin-error" role="alert">{retryError}</p>}
           {actionError && <p className="admin-error" role="alert">{actionError}</p>}
           {entries.length === 0 ? (
