@@ -3,7 +3,12 @@
 Mission: `ai-learning-engine`. Branch: `opencode/nightly-ai-learning-engine-sse-spec-compliance`.
 
 ## Status
-Code change complete, verified, and pushed. See PR-creation note under Founders.
+Code change complete, verified, and pushed to
+`opencode/nightly-ai-learning-engine-sse-spec-compliance`. PR creation was attempted and
+**blocked by the repo**: "GitHub Actions is not permitted to create or approve pull requests"
+(GraphQL `createPullRequest` 403). The branch is ready; open the PR manually from
+https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-ai-learning-engine-sse-spec-compliance
+targeting `main`.
 
 ## Why this was selected
 The mission scope includes inspecting `app/src/core/` (protocol, learning, secret filter,
