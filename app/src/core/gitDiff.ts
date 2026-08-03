@@ -18,11 +18,23 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
 
   for (const line of diff.split(/\r?\n/)) {
     if (line.startsWith('+++ ')) {
-      currentFile = stripDiffPrefix(line.slice(4).trim());
+      const newFile = stripDiffPrefix(line.slice(4).trim());
+      // Deleted files present the target as /dev/null; keep the old path.
+      if (newFile !== '/dev/null') {
+        currentFile = newFile;
+      }
       current = undefined;
       continue;
     }
-    if (line.startsWith('--- ') || line.startsWith('diff --git') || line.startsWith('index ')) {
+    if (line.startsWith('--- ')) {
+      const oldFile = stripDiffPrefix(line.slice(4).trim());
+      if (oldFile !== '/dev/null') {
+        currentFile = oldFile;
+      }
+      current = undefined;
+      continue;
+    }
+    if (line.startsWith('diff --git') || line.startsWith('index ')) {
       current = undefined;
       continue;
     }
