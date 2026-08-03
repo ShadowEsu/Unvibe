@@ -215,14 +215,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
 .tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   max-width: 140px;
   font-size: 11px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--muted);
   border-radius: 7px 7px 0 0;
-  padding: 5px 8px;
   cursor: pointer;
   white-space: nowrap;
   transition: background .15s ease, color .15s ease;
@@ -235,8 +233,27 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   border-bottom-color: var(--bg);
   font-weight: 650;
 }
-.tab__x { opacity: 0.55; font-size: 13px; line-height: 1; padding: 0 2px; border-radius: 4px; }
-.tab__x:hover { opacity: 1; background: rgba(0,0,0,.06); }
+.tab__select {
+  border: 0;
+  background: transparent;
+  padding: 5px 2px 5px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab__x {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  font-size: 13px;
+  line-height: 1;
+  padding: 5px 8px 5px 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tab__x:hover, .tab__x:focus-visible { opacity: 1; background: rgba(0,0,0,.06); }
 .tab-add {
   flex: 0 0 auto;
   width: 26px;
@@ -547,5 +564,5 @@ code.inline {
 .quiz__why { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cursor, .skeleton i, .card, .lvl, .chip, .btn, .tab-add, .opt { animation: none; transition: none; }
+  .cursor, .skeleton i, .card, .lvl, .chip, .btn, .tab-add, .opt, .tab, .tab__select, .tab__x { animation: none; transition: none; }
 }

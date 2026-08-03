@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { nextTabIndex, type TabArrowKey } from '../../core/tabs';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 
@@ -446,6 +447,17 @@ function Widget() {
     window.unvibe.setActiveTab(tabId);
   };
 
+  const onTabsKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const key = e.key as TabArrowKey;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
+    e.preventDefault();
+    if (tabs.length === 0) return;
+    const current = tabs.findIndex((t) => t.id === activeTabId);
+    const nextTab = tabs[nextTabIndex(current, tabs.length, key)]!;
+    selectTab(nextTab.id);
+    document.getElementById(`tab-${nextTab.id}`)?.focus();
+  };
+
   const addTab = () => {
     const id = String(Date.now());
     const label = `Review ${tabs.length + 1}`;
@@ -466,6 +478,9 @@ function Widget() {
     setActiveTabId(nextActive);
     if (nextActive !== activeTabId) window.unvibe.setActiveTab(nextActive);
     window.unvibe.closeTab(tabId);
+    requestAnimationFrame(() => {
+      document.getElementById(`tab-${nextActive}`)?.focus();
+    });
   };
 
   const phase = active.phase;
@@ -507,25 +522,33 @@ function Widget() {
       </div>
 
       {!collapsed && (
-        <div className="tabs" role="tablist" aria-label="Review tabs">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={t.id === activeTabId}
-              className={`tab${t.id === activeTabId ? ' on' : ''}`}
-              onClick={() => selectTab(t.id)}
-            >
-              <span>{t.label}</span>
-              <span
-                className="tab__x"
-                aria-label={`Close ${t.label}`}
-                onClick={(e) => closeTab(t.id, e)}
-              >
-                ×
-              </span>
-            </button>
-          ))}
+        <div className="tabs" role="tablist" aria-label="Review tabs" onKeyDown={onTabsKeyDown}>
+          {tabs.map((t) => {
+            const active = t.id === activeTabId;
+            return (
+              <div key={t.id} role="presentation" className={`tab${active ? ' on' : ''}`}>
+                <button
+                  type="button"
+                  role="tab"
+                  id={`tab-${t.id}`}
+                  aria-selected={active}
+                  tabIndex={active ? 0 : -1}
+                  className="tab__select"
+                  onClick={() => selectTab(t.id)}
+                >
+                  {t.label}
+                </button>
+                <button
+                  type="button"
+                  className="tab__x"
+                  aria-label={`Close ${t.label}`}
+                  onClick={(e) => closeTab(t.id, e)}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
           <button className="tab-add" aria-label="Add tab" title="Add another review tab" onClick={addTab}>
             +
           </button>
