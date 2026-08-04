@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
+import { nextRovingIndex, type RovingKey } from '../../core/rovingTabs';
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -640,6 +641,7 @@ function Study({ history, queue, shortcut, onReview, onRestudy, onRefresh }: {
 function History({ items, onReview, onContinue }: { items: LearningItem[]; onReview: () => void; onContinue: (item: LearningItem) => void | Promise<void> }) {
   const [filter, setFilter] = useState<'all' | 'understood' | 'needs_review'>('all');
   const [query, setQuery] = useState('');
+  const tabsRef = useRef<HTMLDivElement>(null);
   const filtered = items.filter((item) => {
     const matchesFilter = filter === 'all' || (filter === 'understood' ? item.outcome === 'understood' : item.outcome === 'needs_review');
     const haystack = [item.title, item.meta, item.file, item.project, item.language, item.concept, item.explanation].filter(Boolean).join(' ').toLowerCase();
@@ -667,6 +669,18 @@ function History({ items, onReview, onContinue }: { items: LearningItem[]; onRev
   };
   const continueItem = items.find((item) => item.outcome === 'needs_review') ?? items[0] ?? null;
 
+  const onFilterKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = event.key;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
+    event.preventDefault();
+    const order = ['all', 'understood', 'needs_review'] as const;
+    const current = order.indexOf(filter);
+    const next = nextRovingIndex(current, order.length, key as RovingKey);
+    setFilter(order[next]!);
+    const tab = tabsRef.current?.querySelectorAll<HTMLButtonElement>('button[role="tab"]')[next];
+    tab?.focus();
+  };
+
   return (
     <div className="learn-page">
       <div className="topline learn-topline">
@@ -675,7 +689,7 @@ function History({ items, onReview, onContinue }: { items: LearningItem[]; onRev
           <p className="lead lead--tight">Code and explanations from reviews on this Mac. Open any row to reread.</p>
         </div>
         {items.length > 0 ? (
-          <div className="learn-filters" role="tablist" aria-label="Filter history">
+          <div className="learn-filters" role="tablist" aria-label="Filter history" ref={tabsRef} onKeyDown={onFilterKeyDown}>
             {([
               ['all', 'All', counts.all],
               ['understood', 'Understood', counts.understood],
@@ -685,7 +699,10 @@ function History({ items, onReview, onContinue }: { items: LearningItem[]; onRev
                 key={id}
                 type="button"
                 role="tab"
+                id={`history-filter-${id}`}
                 aria-selected={filter === id}
+                aria-controls="history-results"
+                tabIndex={filter === id ? 0 : -1}
                 className={filter === id ? 'on' : ''}
                 onClick={() => setFilter(id)}
               >
@@ -707,7 +724,7 @@ function History({ items, onReview, onContinue }: { items: LearningItem[]; onRev
       ) : null}
 
       {items.length === 0 ? <LearningEmpty title="No history yet." detail="Your explanations will appear here after you select code and open a review." onReview={onReview} /> : (
-        <div className="learn-shell">
+        <div className="learn-shell" id="history-results" role="tabpanel" aria-labelledby={`history-filter-${filter}`}>
           <aside className="learn-rail" aria-label="History list">
             {filtered.length === 0 ? (
               <p className="learn-rail__empty">Nothing in this filter.</p>
