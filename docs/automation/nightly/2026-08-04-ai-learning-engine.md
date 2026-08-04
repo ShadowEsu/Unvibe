@@ -3,12 +3,15 @@
 Mission: `ai-learning-engine`. Branch: `opencode/nightly-ai-learning-engine-comprehension-task-fix`.
 
 ## Status
-- Code change complete and ready. PR creation **blocked**: the repo setting "Allow GitHub
-  Actions to create and approve pull requests" is disabled, so the automation token receives
-  403 on both GraphQL and REST `POST /pulls` (same blocker documented nightly since
-  2026-07-24). The branch is pushed and ready; a founder (or any user with write access) can
-  open the PR from
+- Code change complete, committed (`94a136d`), and **pushed** to
+  `origin/opencode/nightly-ai-learning-engine-comprehension-task-fix`.
+- PR creation **attempted and blocked**: `gh pr create` failed with "GitHub Actions is not
+  permitted to create or approve pull requests" — the same repo setting blocker documented
+  nightly since 2026-07-24 (the Actions token cannot create/approve PRs). The branch is pushed
+  and ready; a founder (or any user with write access) can open the PR from
   https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-ai-learning-engine-comprehension-task-fix
+- Branch contents verified: exactly one commit touching only `web/src/ai/prompt.ts`,
+  `web/test/prompt.test.ts` (new), and this report.
 
 ## Why this was selected
 The 9 previously-pushed `nightly-ai-learning-engine-*` branches (all unmerged, no PRs) already
