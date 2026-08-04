@@ -39,8 +39,10 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
   ].join('\n');
 }
 
-/** Serialises the constructed context into the user message. */
-export function buildUserPrompt(payload: ReviewRequestPayload): string {
+/** Serialises the constructed context into the user message. An explicit `task` overrides
+ * the scope-derived task line (used by the comprehension endpoint, which must generate a
+ * question rather than explain the code). */
+export function buildUserPrompt(payload: ReviewRequestPayload, task?: string): string {
   const { context: ctx, scope } = payload;
   const parts: string[] = [];
   const projectStructure = ctx.projectStructure ?? [];
@@ -81,7 +83,7 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   if (payload.question) {
     parts.push(`\n## Follow-up question\n${payload.question}`);
   } else {
-    parts.push(`\n## Task\n${taskForScope(scope)}`);
+    parts.push(`\n## Task\n${task ?? taskForScope(scope)}`);
   }
 
   return parts.join('\n');
@@ -104,7 +106,10 @@ export function buildComprehensionPrompt(payload: ReviewRequestPayload): { syste
     'Exactly one option must be correct. Keep options plausible and similar in length.',
     quizInstruction,
   ].join('\n');
-  const user = buildUserPrompt({ ...payload, question: undefined });
+  const user = buildUserPrompt(
+    { ...payload, question: undefined },
+    'Generate ONE multiple-choice comprehension question about the code. Do NOT explain what the code does — that is a separate task.',
+  );
   return { system, user };
 }
 
