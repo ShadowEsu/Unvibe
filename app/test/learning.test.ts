@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, forSync, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -85,6 +85,27 @@ test('computeLearningItems includes on-device code and explanation when present'
   assert.equal(items[0]!.code, 'const f = () => x;');
   assert.equal(items[0]!.explanation, 'This closes over x.');
   assert.equal(items[1]!.code, undefined);
+});
+
+test('forSync strips on-device code and explanation before cloud sync', () => {
+  const synced = forSync(ev({
+    id: 'a',
+    concept: 'closures',
+    code: 'const f = () => x;',
+    explanation: 'This closes over x.',
+    file: 'src/a.ts',
+    project: 'demo',
+  }));
+  assert.equal(synced.code, undefined);
+  assert.equal(synced.explanation, undefined);
+  // Metadata and learning signals survive for the cloud mirror.
+  assert.equal(synced.id, 'a');
+  assert.equal(synced.scope, 'selection');
+  assert.equal(synced.level, 'intermediate');
+  assert.equal(synced.outcome, 'reviewed');
+  assert.equal(synced.concept, 'closures');
+  assert.equal(synced.file, 'src/a.ts');
+  assert.equal(synced.project, 'demo');
 });
 
 test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {
