@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
+import { nextRadioIndex, type RadioRovingKey } from '../../core/rovingRadio';
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -786,6 +787,19 @@ function Quiz({ history, queue, onReview, onRefresh }: {
   const [left, setLeft] = useState<number | null>(null);
   const [cardKey, setCardKey] = useState(0);
   const [mode, setMode] = useState<'quick-check' | 'recall' | 'scenario'>('quick-check');
+  const modeBarRef = useRef<HTMLDivElement>(null);
+  const MODES = [['quick-check', 'Quick check'], ['recall', 'Recall'], ['scenario', 'Scenario']] as const;
+
+  const onModeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = event.key as RadioRovingKey;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return;
+    event.preventDefault();
+    const current = MODES.findIndex(([id]) => id === mode);
+    const next = nextRadioIndex(current, MODES.length, key, () => busy);
+    if (next === current) return;
+    setMode(MODES[next]![0]);
+    modeBarRef.current?.querySelectorAll<HTMLButtonElement>('button[role="radio"]')[next]?.focus();
+  };
 
   useEffect(() => {
     void window.unvibe.quizStatus().then((s) => setLeft((s as { remaining: number }).remaining));
@@ -879,12 +893,8 @@ function Quiz({ history, queue, onReview, onRefresh }: {
           </aside>
 
           <section className="learn-stage quiz-stage" aria-live="polite">
-            <div className="quiz-mode-bar" role="radiogroup" aria-label="Quiz mode">
-              {([
-                ['quick-check', 'Quick check'],
-                ['recall', 'Recall'],
-                ['scenario', 'Scenario'],
-              ] as const).map(([id, label]) => <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? 'on' : ''} disabled={busy} onClick={() => setMode(id)}>{label}</button>)}
+            <div className="quiz-mode-bar" role="radiogroup" aria-label="Quiz mode" ref={modeBarRef} onKeyDown={onModeKeyDown}>
+              {MODES.map(([id, label]) => <button key={id} type="button" role="radio" aria-checked={mode === id} tabIndex={mode === id ? 0 : -1} className={mode === id ? 'on' : ''} disabled={busy} onClick={() => setMode(id)}>{label}</button>)}
               <span className="quiz-mode-bar__note">Adaptive to your last result</span>
             </div>
             {card ? (
