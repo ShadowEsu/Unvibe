@@ -48,6 +48,7 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
+import { barPlacementAction } from '../core/barPlacement';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
@@ -787,11 +788,12 @@ app.whenReady().then(() => {
         return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
       }
     }
-    if (patch.barPosition && bar && !bar.isDestroyed()) {
+    const placement = barPlacementAction(patch);
+    if (placement.kind === 'reset-and-reposition' && bar && !bar.isDestroyed()) {
       resizeBar(bar, false, true);
       bar.webContents.send('bar:collapse');
       positionBar(bar);
-    } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
+    } else if (placement.kind === 'reposition' && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
     if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
