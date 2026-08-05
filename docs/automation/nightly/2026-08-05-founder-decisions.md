@@ -6,10 +6,10 @@
 
 ### 1. PR creation / manual review
 The research branch `opencode/nightly-competitor-research-and-v2-metacognition-calibration` was
-pushed and a PR was attempted. Known limitation from prior nights (2026-07-24, 2026-07-31,
-2026-08-01, 2026-08-02): the GitHub Actions token reports `pull-requests: read` in practice even
-though the workflow grants `pull-requests: write`, so PR creation may fail. If no PR link appears,
-create it manually:
+pushed. PR creation was attempted and **failed** with `GitHub Actions is not permitted to create or
+approve pull requests (createPullRequest)` — the known limitation from prior nights (2026-07-24,
+2026-07-31, 2026-08-01, 2026-08-02), where the Actions token reports `pull-requests: read` in
+practice. Create the PR manually:
 https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-competitor-research-and-v2-metacognition-calibration
 
 ### 2. Adopt the "I understand is not verification" data-model rule (v1)
