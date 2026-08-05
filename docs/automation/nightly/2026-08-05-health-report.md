@@ -12,6 +12,12 @@ verified fix still sits unmerged on `nightly-backend-and-sync-web-contract-align
 No new defect introduced on `main` since the 2026-08-04 sweep. The
 repository-health slot did not run in tonight's scheduled cycle (schedule
 delivery skipped it, same as 08-04), so this run fills that gap.
+Branch pushed (`opencode/nightly-auto-repository-health-20260805`); PR creation
+was attempted and **failed** with the same known token-policy error
+(`GitHub Actions is not permitted to create or approve pull requests`) logged
+in prior nights (2026-07-24, 07-31, 08-01, 08-02) and this night's
+competitor-research founder-decisions file. Create the PR manually:
+https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-auto-repository-health-20260805
 
 ## Health matrix (fresh, this run)
 
