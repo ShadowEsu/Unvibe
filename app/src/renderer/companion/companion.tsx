@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
+import { nextRadioIndex, type RadioRovingKey } from '../../core/rovingRadio';
 
 type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -537,6 +538,18 @@ function Study({ history, queue, shortcut, onReview, onRestudy, onRefresh }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [askLeft, setAskLeft] = useState<number | null>(null);
+  const levelRowRef = useRef<HTMLDivElement>(null);
+
+  const onLevelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = event.key as RadioRovingKey;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return;
+    event.preventDefault();
+    const current = STUDY_LEVELS.findIndex((opt) => opt.id === level);
+    const next = nextRadioIndex(current, STUDY_LEVELS.length, key, () => false);
+    if (next === current) return;
+    setLevel(STUDY_LEVELS[next]!.id);
+    levelRowRef.current?.querySelectorAll<HTMLButtonElement>('button[role="radio"]')[next]?.focus();
+  };
 
   useEffect(() => {
     void window.unvibe.studyAskStatus().then((s) => {
@@ -604,9 +617,9 @@ function Study({ history, queue, shortcut, onReview, onRestudy, onRefresh }: {
             {selected.explanation ? <div className="lesson-explain"><span className="learning-kicker">Last explanation</span><RichText className="lesson-explain__body" text={selected.explanation} /></div> : null}
             <div className="study-levels">
               <span className="learning-kicker">Restudy level</span>
-              <div className="level-row">
+              <div className="level-row" role="radiogroup" aria-label="Restudy level" ref={levelRowRef} onKeyDown={onLevelKeyDown}>
                 {STUDY_LEVELS.map((opt) => (
-                  <button key={opt.id} type="button" className={level === opt.id ? 'on' : ''} onClick={() => setLevel(opt.id)}>{opt.label}</button>
+                  <button key={opt.id} type="button" role="radio" aria-checked={level === opt.id} tabIndex={level === opt.id ? 0 : -1} className={level === opt.id ? 'on' : ''} onClick={() => setLevel(opt.id)}>{opt.label}</button>
                 ))}
               </div>
               <button className="primary-btn" type="button" onClick={() => void onRestudy(selected, level)}>Explain again at this level</button>
