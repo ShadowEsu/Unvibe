@@ -55,9 +55,11 @@ logic (geometry, state, settings), fix contained low-risk issues. No full redesi
 
 ## Branch / PR
 - Branch: `opencode/nightly-desktop-overlay-bar-placement-and-widget-keys`
-- PR created with the required template. If this run's token is still restricted
-  ("GitHub Actions is not permitted to create or approve pull requests", persistent
-  since 2026-07-24), the branch is pushed and ready to open manually at
+- Commit: `c4fc7a7` (branch pushed and tracking origin)
+- **PR creation blocked**: same as every night since 2026-07-24 — `gh pr create`
+  failed with "GitHub Actions is not permitted to create or approve pull
+  requests" (GraphQL createPullRequest 403). Pushing to the remote works; only
+  PR creation is denied. Branch ready to open manually at
   https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-desktop-overlay-bar-placement-and-widget-keys
 
 ## Tests run
