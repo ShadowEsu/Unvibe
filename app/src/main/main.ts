@@ -64,6 +64,7 @@ import {
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
+import { barPlacementAction } from '../core/barPlacement';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
 import { resolveAppUsage } from './usage';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
@@ -787,11 +788,12 @@ app.whenReady().then(() => {
         return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
       }
     }
-    if (patch.barPosition && bar && !bar.isDestroyed()) {
+    const placement = barPlacementAction(patch);
+    if (placement === 'reset-and-reposition' && bar && !bar.isDestroyed()) {
       resizeBar(bar, false, true);
       bar.webContents.send('bar:collapse');
       positionBar(bar);
-    } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
+    } else if (placement === 'reposition' && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
     if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
