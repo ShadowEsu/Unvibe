@@ -79,6 +79,15 @@ design system is untouched.
    checked state per level are announced.
 5. Confirm the visual `.on` styling and focus ring are unchanged.
 
+## PR status
+
+The GitHub Actions token on this runner cannot create pull requests ("GitHub
+Actions is not permitted to create or approve pull requests"). The branch is
+pushed to origin:
+`opencode/nightly-product-design-and-accessibility-study-level-radio`. Open a PR
+against `main` manually, or leave it for the integration-review run to carry
+forward (same blocker as every prior product-design run).
+
 ## Recommended next action
 
 Merge after a short manual keyboard pass on a real Mac. Remaining un-audited
