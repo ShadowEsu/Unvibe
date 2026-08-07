@@ -39,6 +39,8 @@ export const TEAMS_CHECKOUT_ENABLED = false;
 export function normalizedSeats(plan: Exclude<PlanId, 'free'>, requested: number): number {
   if (plan === 'pro') return 1;
   if (!Number.isFinite(requested)) return 2;
+  if (!Number.isInteger(requested)) throw new Error('Seat quantity must be a whole number.');
+  if (requested < 2) throw new Error('Teams subscriptions require at least 2 seats.');
   return Math.max(2, Math.min(500, Math.floor(requested)));
 }
 

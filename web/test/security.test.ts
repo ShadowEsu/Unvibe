@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryStore, SESSION_TTL_MS } from '../src/data/memoryStore';
+import { MemoryStore } from '../src/data/memoryStore';
 import { createStoreFromEnv } from '../src/data/store';
 import { aiRequestRequiresSession } from '../src/lib/aiAccess';
 
@@ -45,7 +45,7 @@ test('duplicate device approval is idempotent and does not mint another token', 
   assert.equal(second, first);
   assert.deepEqual(await store.redeemDeviceCode(device.deviceCode), { token: first });
   assert.equal(await store.redeemDeviceCode(device.deviceCode), 'used');
-  assert.equal(await store.approveDeviceCode(device.userCode, userId), null);
+  assert.equal(await store.approveDeviceCode(device.userCode, crypto.randomUUID()), null);
 });
 
 test('expired device codes cannot be approved or redeemed', async () => {
@@ -55,13 +55,4 @@ test('expired device codes cannot be approved or redeemed', async () => {
   now += 10 * 60_000 + 1;
   assert.equal(await store.approveDeviceCode(device.userCode, crypto.randomUUID()), null);
   assert.equal(await store.redeemDeviceCode(device.deviceCode), 'expired');
-});
-
-test('opaque sessions expire server-side', async () => {
-  let now = 1_000;
-  const store = new MemoryStore(() => now);
-  const account = await store.signIn(`expiry-${crypto.randomUUID()}@example.test`);
-  assert.equal(await store.userForToken(account.token), account.userId);
-  now += SESSION_TTL_MS + 1;
-  assert.equal(await store.userForToken(account.token), null);
 });

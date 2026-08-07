@@ -18,7 +18,11 @@ interface PendingDevice {
   userId?: string;
   token?: string;
   createdAt: number;
+  usedAt?: number;
 }
+
+/** Mirrors the production expiry window in supabase/migrations/0002_device_code_lifecycle.sql. */
+const DEVICE_CODE_TTL_MS = 10 * 60_000;
 
 interface UsageCounters {
   selections: number;
@@ -40,8 +44,10 @@ interface MemoryData {
 export class MemoryStore implements Store {
   readonly kind = 'memory (dev)';
   private readonly data: MemoryData;
+  private readonly now: () => number;
 
-  constructor() {
+  constructor(now: () => number = Date.now) {
+    this.now = now;
     const g = globalThis as unknown as { __uncodeData?: MemoryData };
     if (!g.__uncodeData) {
       g.__uncodeData = {
@@ -65,7 +71,7 @@ export class MemoryStore implements Store {
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
     const userCode = randomUUID().slice(0, 8).toUpperCase();
-    this.data.devices.set(deviceCode, { userCode, createdAt: Date.now() });
+    this.data.devices.set(deviceCode, { userCode, createdAt: this.now() });
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
@@ -74,7 +80,17 @@ export class MemoryStore implements Store {
     if (!entry) {
       return null;
     }
-    if (entry.userId && entry.userId !== userId) return null;
+    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) {
+      return null;
+    }
+    // Idempotent: the same user approving twice keeps the same token instead of
+    // minting a fresh one and invalidating the earlier approval.
+    if (entry.userId === userId && entry.token) {
+      return entry.token;
+    }
+    if (entry.userId && entry.userId !== userId) {
+      return null;
+    }
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
@@ -83,14 +99,21 @@ export class MemoryStore implements Store {
     return token; // also usable as a browser session
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
     const entry = this.data.devices.get(deviceCode);
     if (!entry) {
       return 'unknown';
     }
+    if (this.now() - entry.createdAt > DEVICE_CODE_TTL_MS) {
+      return 'expired';
+    }
+    if (entry.usedAt) {
+      return 'used';
+    }
     if (!entry.token) {
       return 'pending';
     }
+    entry.usedAt = this.now();
     return { token: entry.token };
   }
 
