@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { nextLevelIndex, type LevelPickerKey } from '../../core/levelPicker';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 
@@ -235,10 +236,27 @@ function Widget() {
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [proGate, setProGate] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const levelsRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
   activeRef.current = activeTabId;
+
+  const expertLocked = (id: string) =>
+    id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
+
+  const onLevelsKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = event.key as LevelPickerKey;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+    event.preventDefault();
+    const current = LEVELS.findIndex((l) => l.id === active.level);
+    const next = nextLevelIndex(current, LEVELS.length, key, (i) => outOfExplanations || expertLocked(LEVELS[i]!.id));
+    if (next === current) return;
+    const target = LEVELS[next]!;
+    setProGate(false);
+    pick(target.id);
+    levelsRef.current?.querySelectorAll<HTMLButtonElement>('button[role="radio"]')[next]?.focus();
+  };
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
@@ -533,19 +551,23 @@ function Widget() {
       )}
 
       {!collapsed && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
-        <div className="levels" aria-label="Explanation depth">
+        <div className="levels" role="radiogroup" aria-label="Explanation depth" ref={levelsRef} onKeyDown={onLevelsKeyDown}>
           <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
-            const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
+            const locked = expertLocked(l.id);
             return (
               <button
                 key={l.id}
+                type="button"
+                role="radio"
+                aria-checked={l.id === active.level}
+                tabIndex={l.id === active.level ? 0 : -1}
                 data-level={l.id}
                 className={`lvl${l.id === active.level ? ' on' : ''}`}
-                disabled={outOfExplanations || expertLocked}
-                title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
+                disabled={outOfExplanations || locked}
+                title={locked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
                 onClick={() => {
-                  if (expertLocked) {
+                  if (locked) {
                     setProGate(true);
                     setTabs((prev) => patchTab(prev, activeRef.current, {
                       phase: 'error',
