@@ -77,6 +77,7 @@ export class SupabaseStore implements Store {
       .from('tokens')
       .select('user_id')
       .eq('token', token)
+      .gte('expires_at', new Date().toISOString())
       .maybeSingle();
     return (data?.user_id as string | undefined) ?? null;
   }

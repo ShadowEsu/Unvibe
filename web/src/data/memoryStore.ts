@@ -23,6 +23,13 @@ interface PendingDevice {
 
 /** Mirrors the production expiry window in supabase/migrations/0002_device_code_lifecycle.sql. */
 const DEVICE_CODE_TTL_MS = 10 * 60_000;
+/** Mirrors production opaque-session expiry in supabase/migrations/0004_session_expiry.sql. */
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface TokenRecord {
+  userId: string;
+  createdAt: number;
+}
 
 interface UsageCounters {
   selections: number;
@@ -31,7 +38,7 @@ interface UsageCounters {
 
 interface MemoryData {
   events: EventRecord[];
-  tokens: Map<string, string>; // token -> userId
+  tokens: Map<string, TokenRecord>; // token -> record
   devices: Map<string, PendingDevice>; // deviceCode -> pending
   users: Map<string, { email?: string }>; // userId -> profile
   usage: Map<string, UsageCounters>; // userId -> beta usage counters
@@ -65,6 +72,13 @@ export class MemoryStore implements Store {
     if (!g.__uncodeData.usage) {
       g.__uncodeData.usage = new Map();
     }
+    // Tokens were once stored as token -> userId strings; upgrade them to records so a
+    // hot-reloaded store keeps working and session TTL has a birth timestamp.
+    for (const [token, value] of [...g.__uncodeData.tokens.entries()]) {
+      if (typeof value === 'string') {
+        g.__uncodeData.tokens.set(token, { userId: value, createdAt: this.now() });
+      }
+    }
     this.data = g.__uncodeData;
   }
 
@@ -95,7 +109,7 @@ export class MemoryStore implements Store {
     entry.userId = userId;
     entry.token = token;
     this.data.users.set(userId, { email });
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, createdAt: this.now() });
     return token; // also usable as a browser session
   }
 
@@ -118,7 +132,12 @@ export class MemoryStore implements Store {
   }
 
   async userForToken(token: string): Promise<string | null> {
-    return this.data.tokens.get(token) ?? null;
+    const record = this.data.tokens.get(token);
+    if (!record) return null;
+    if (this.now() - record.createdAt > SESSION_TTL_MS) {
+      return null;
+    }
+    return record.userId;
   }
 
   async revokeToken(token: string): Promise<void> {
@@ -133,7 +152,7 @@ export class MemoryStore implements Store {
       this.data.users.set(userId, { email: normalized });
     }
     const token = randomUUID();
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, createdAt: this.now() });
     return { token, userId, email: normalized };
   }
 
@@ -144,7 +163,7 @@ export class MemoryStore implements Store {
     const userId = randomUUID();
     this.data.users.set(userId, { email: normalized });
     const token = randomUUID();
-    this.data.tokens.set(token, userId);
+    this.data.tokens.set(token, { userId, createdAt: this.now() });
     return { token, userId, email: normalized };
   }
 
@@ -154,8 +173,8 @@ export class MemoryStore implements Store {
 
   async deleteAccount(userId: string): Promise<void> {
     this.data.events = this.data.events.filter((e) => e.userId !== userId);
-    for (const [token, uid] of [...this.data.tokens.entries()]) {
-      if (uid === userId) {
+    for (const [token, record] of [...this.data.tokens.entries()]) {
+      if (record.userId === userId) {
         this.data.tokens.delete(token);
       }
     }
