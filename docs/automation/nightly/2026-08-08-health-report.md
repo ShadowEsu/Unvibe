@@ -119,6 +119,16 @@ unmodified (secret filtering unchanged).
 
 None (pure parsing logic; constant-time path fallback).
 
+## PR-creation blocker (known, unchanged)
+
+PR creation was **blocked**: the repo setting "Allow GitHub Actions to create and
+approve pull requests" is disabled, so the automation token gets a 403 on
+`createPullRequest` (same blocker as the 2026-07-31/08-01/08-02 runs). The branch
+`opencode/nightly-repository-health-20260808` (commit `4b43ad9`) is pushed and ready;
+a founder or any user with write access can open the PR from
+https://github.com/ShadowEsu/Unvibe/pull/new/opencode/nightly-repository-health-20260808
+targeting `main`.
+
 ## Recommended next action
 
 Founder/operator: open a PR for `nightly-backend-and-sync-web-contract-alignment`
