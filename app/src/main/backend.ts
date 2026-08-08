@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
+import { batchEvents } from '../core/syncModel';
 import { store } from './store';
 import { bakedTrialToken } from './trial';
 import { resolveBackendUrl } from './backendUrl';
@@ -175,16 +176,24 @@ export async function signOut(token: string): Promise<void> {
   await json<{ ok: boolean }>(res);
 }
 
-/** Best-effort event sync. Returns the ids the backend accepted (for outbox clearing). */
+/**
+ * Best-effort event sync. Returns the ids the backend accepted (for outbox clearing).
+ * Uploads in batches at or below the backend's per-request cap so a large offline outbox
+ * cannot wedge sync in a permanent rejection loop.
+ */
 export async function pushEvents(token: string, events: LocalEvent[]): Promise<string[]> {
   if (events.length === 0) return [];
-  const res = await request(`${BACKEND}/api/v1/events`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ events: events.map(forSync) }),
-  });
-  await json<{ ok: boolean }>(res);
-  return events.map((e) => e.id);
+  const accepted: string[] = [];
+  for (const batch of batchEvents(events)) {
+    const res = await request(`${BACKEND}/api/v1/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ events: batch.map(forSync) }),
+    });
+    await json<{ ok: boolean }>(res);
+    accepted.push(...batch.map((e) => e.id));
+  }
+  return accepted;
 }
 
 interface HistoryPage {
