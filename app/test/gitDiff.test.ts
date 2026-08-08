@@ -33,10 +33,26 @@ diff --git a/src/b.ts b/src/b.ts
 --- a/src/b.ts
 +++ b/src/b.ts
 @@ -1,1 +1,2 @@
- keep
+  keep
 +added
 `;
   const hunks = parseUnifiedDiff(multi);
   assert.equal(hunks.length, 2);
   assert.equal(hunks[1]!.file, 'src/b.ts');
+});
+
+test('parseUnifiedDiff attributes deleted-file hunks to the old path, not /dev/null', () => {
+  const deletion = `diff --git a/src/old.ts b/src/old.ts
+deleted file mode 100644
+index 83db48f..0000000
+--- a/src/old.ts
++++ /dev/null
+@@ -1,3 +0,0 @@
+-line1
+-line2
+-line3
+`;
+  const hunks = parseUnifiedDiff(deletion);
+  assert.equal(hunks.length, 1);
+  assert.equal(hunks[0]!.file, 'src/old.ts');
 });

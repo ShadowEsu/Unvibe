@@ -14,6 +14,7 @@ const MAX_UNTRACKED_BYTES = 80_000;
 export function parseUnifiedDiff(diff: string): DiffHunk[] {
   const hunks: DiffHunk[] = [];
   let currentFile = '';
+  let oldFile = '';
   let current: DiffHunk | undefined;
 
   for (const line of diff.split(/\r?\n/)) {
@@ -22,7 +23,12 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
       current = undefined;
       continue;
     }
-    if (line.startsWith('--- ') || line.startsWith('diff --git') || line.startsWith('index ')) {
+    if (line.startsWith('--- ')) {
+      oldFile = stripDiffPrefix(line.slice(4).trim());
+      current = undefined;
+      continue;
+    }
+    if (line.startsWith('diff --git') || line.startsWith('index ')) {
       current = undefined;
       continue;
     }
@@ -30,7 +36,8 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
       const m = /@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
       if (m) {
         current = {
-          file: currentFile,
+          // Deleted files appear as `+++ /dev/null`; attribute the hunk to the old path.
+          file: currentFile === '/dev/null' ? oldFile : currentFile,
           oldStart: Number(m[1]),
           oldLines: m[2] ? Number(m[2]) : 1,
           newStart: Number(m[3]),
