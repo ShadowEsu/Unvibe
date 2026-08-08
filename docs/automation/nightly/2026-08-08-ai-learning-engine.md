@@ -78,3 +78,12 @@ Review and merge the pending server-side `parseQuestion` hardening branches
 (`parsequestion-integer-validation`, `duplicate-option-rejection`,
 `comprehension-validation`) so both ends of the wire validate, then close this
 nightly branch after review.
+
+## PR-creation blocker (founder decision required)
+Branch `opencode/nightly-ai-learning-engine-comprehension-guard` was pushed to
+origin, but `gh pr create` failed with `GitHub Actions is not permitted to create
+or approve pull requests (createPullRequest)`. This is the same blocker noted in
+prior nightly reports (2026-07-29, 07-31, 08-01, 08-03, 08-04). The changes are
+reviewable directly on the branch. **Required decision:** grant the Actions
+`contents: write`/`pull-requests: write` permission (or run the night lab with a
+PAT) so nightly runs can open PRs, or review the branch manually.
