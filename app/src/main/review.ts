@@ -7,6 +7,7 @@ import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter'
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
+import { isValidComprehensionQuestion } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
 import { aiAuthHeaders, BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
@@ -48,7 +49,7 @@ export interface ReviewSession {
   /** Raw file text for memory baselines — never the display blob for diffs/compares. */
   snapshotText?: string;
   mode?: ReviewMode;
-  pendingAnswer?: { answerIndex: number; concept: string; conceptLabel: string; rationale: string };
+  pendingAnswer?: { answerIndex: number; optionsLength: number; concept: string; conceptLabel: string; rationale: string };
   onRecorded?: () => void;
   onUnderstood?: () => void;
 }
@@ -425,8 +426,13 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
   try {
     const payload = await ensurePayload(session, { level: session.level });
     const q = await fetchQuestion(payload, store().token());
+    if (!isValidComprehensionQuestion(q)) {
+      send(win, session, { type: 'error', message: 'Could not build a question for this one. Try again.' });
+      return;
+    }
     session.pendingAnswer = {
       answerIndex: q.answerIndex,
+      optionsLength: q.options.length,
       concept: q.concept,
       conceptLabel: q.conceptLabel,
       rationale: q.rationale,
@@ -445,6 +451,10 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
 export function gradeComprehension(win: BrowserWindow, session: ReviewSession, choice: number): void {
   const a = session.pendingAnswer;
   if (!a) return;
+  if (!Number.isInteger(choice) || choice < 0 || choice >= a.optionsLength) {
+    send(win, session, { type: 'error', message: 'Pick one of the options.' });
+    return;
+  }
   const correct = choice === a.answerIndex;
   try {
     store().setOutcome(session.reviewId, correct ? 'understood' : 'needs_review', a.concept, a.conceptLabel);

@@ -5,6 +5,7 @@
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
+import { isValidComprehensionQuestion } from '../core/protocol';
 import type { LocalEvent } from '../core/learning';
 import { BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
@@ -17,6 +18,7 @@ import { resolveAppUsage } from './usage';
 interface PendingQuiz {
   eventId: string;
   answerIndex: number;
+  optionsLength: number;
   concept: string;
   conceptLabel: string;
   rationale: string;
@@ -209,6 +211,10 @@ export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-che
     };
     try {
       q = await fetchQuestion({ ...built.payload, level: adaptiveQuizLevel(built.event), quizMode: mode }, store().token());
+      if (!isValidComprehensionQuestion(q)) {
+        // Never grade against a malformed question — fall back to the local deterministic card.
+        q = localLessonQuiz(built.event, mode);
+      }
     } catch {
       // Keep demos usable when the cloud quiz endpoint is unavailable or requires sign-in.
       q = localLessonQuiz(built.event, mode);
@@ -218,6 +224,7 @@ export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-che
     pendingQuizzes.set(eventId, {
       eventId,
       answerIndex: q.answerIndex,
+      optionsLength: q.options.length,
       concept: q.concept,
       conceptLabel: q.conceptLabel,
       rationale: q.rationale,
@@ -244,7 +251,9 @@ export function answerQuizCard(eventId: string, choice: number):
   | { ok: false; error: string } {
   const pending = pendingQuizzes.get(eventId);
   if (!pending) return { ok: false, error: 'Start a quiz card first.' };
-  if (!Number.isInteger(choice) || choice < 0) return { ok: false, error: 'Pick one of the options.' };
+  if (!Number.isInteger(choice) || choice < 0 || choice >= pending.optionsLength) {
+    return { ok: false, error: 'Pick one of the options.' };
+  }
 
   const correct = choice === pending.answerIndex;
   // Soft mode: wrong answers stay open so the learner can try again.

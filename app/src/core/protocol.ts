@@ -60,3 +60,22 @@ export interface ComprehensionQuestion {
   concept: string;
   conceptLabel: string;
 }
+
+/**
+ * Trust-boundary guard for comprehension questions received from the backend. Grading compares
+ * the picked index to answerIndex, so a malformed question (float or out-of-range answerIndex,
+ * empty/duplicate options) would silently grade a correct pick as wrong and corrupt mastery
+ * evidence. Reject anything that cannot be graded unambiguously.
+ */
+export function isValidComprehensionQuestion(value: unknown): value is ComprehensionQuestion {
+  if (typeof value !== 'object' || value === null) return false;
+  const q = value as Record<string, unknown>;
+  if (typeof q.question !== 'string' || q.question.trim().length === 0) return false;
+  if (!Array.isArray(q.options) || q.options.length < 2) return false;
+  if (!q.options.every((o) => typeof o === 'string' && o.trim().length > 0)) return false;
+  const distinct = new Set(q.options.map((o) => String(o).trim().toLocaleLowerCase('en-US')));
+  if (distinct.size !== q.options.length) return false;
+  if (typeof q.answerIndex !== 'number' || !Number.isInteger(q.answerIndex)) return false;
+  if (q.answerIndex < 0 || q.answerIndex >= q.options.length) return false;
+  return typeof q.rationale === 'string' && typeof q.concept === 'string' && typeof q.conceptLabel === 'string';
+}
