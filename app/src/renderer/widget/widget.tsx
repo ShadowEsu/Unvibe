@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { nextQuizOptionIndex, type QuizPickerKey } from '../../core/quizPicker';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 
@@ -235,6 +236,7 @@ function Widget() {
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [proGate, setProGate] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const quizOptsRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -432,6 +434,21 @@ function Widget() {
     setTabs((prev) => patchTab(prev, activeRef.current, { level: l }));
     const tab = tabsRef.current.find((t) => t.id === activeRef.current);
     if (tab?.phase === 'done') window.unvibe.request({ level: l });
+  };
+
+  const onQuizOptsKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const key = event.key as QuizPickerKey;
+    if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return;
+    if (active.quiz?.phase !== 'answering') return;
+    event.preventDefault();
+    const options = active.quiz.options ?? [];
+    const current = active.quiz.choice ?? -1;
+    const next = nextQuizOptionIndex(current, options.length, key);
+    if (next === current) return;
+    setTabs((prev) =>
+      patchTab(prev, activeTabId, { quiz: { ...active.quiz!, choice: next } }),
+    );
+    quizOptsRef.current?.querySelectorAll<HTMLButtonElement>('button[role="radio"]')[next]?.focus();
   };
 
   const toggleCollapse = () => {
@@ -688,7 +705,7 @@ function Widget() {
                     <div className="quiz__concept">{active.quiz.conceptLabel}</div>
                   )}
                   <div className="quiz__q">{active.quiz.question}</div>
-                  <div className="quiz__opts">
+                  <div className="quiz__opts" role="radiogroup" aria-label="Answer options" ref={quizOptsRef} onKeyDown={onQuizOptsKeyDown}>
                     {active.quiz.options?.map((o, i) => {
                       const graded = active.quiz!.phase === 'graded';
                       const cls = graded
@@ -703,6 +720,10 @@ function Widget() {
                       return (
                         <button
                           key={i}
+                          type="button"
+                          role="radio"
+                          aria-checked={i === active.quiz!.choice}
+                          tabIndex={i === (active.quiz!.choice ?? 0) ? 0 : -1}
                           className={cls}
                           disabled={active.quiz!.phase !== 'answering'}
                           onClick={() =>
@@ -720,7 +741,7 @@ function Widget() {
                   </div>
                   {active.quiz.phase === 'graded' ? (
                     <>
-                      <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`}>
+                      <div role="status" className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`}>
                         {active.quiz.correct ? 'Correct — that one is understood.' : 'Not quite — saved to revisit.'}
                       </div>
                       {active.quiz.rationale && (
