@@ -1,5 +1,4 @@
 import {
-  ArrowDown,
   ArrowRight,
   Check,
   Command,
@@ -7,10 +6,10 @@ import {
 } from "lucide-react";
 import { BrandLogos } from "@/components/BrandLogos";
 import { Button } from "@/components/Button";
-import { DemoSwitcher } from "@/components/DemoSwitcher";
 import { FounderClock } from "@/components/FounderClock";
 import { FaqJsonLd } from "@/components/JsonLd";
 import { MarketingVideo } from "@/components/MarketingVideo";
+import { MobileBetaCta } from "@/components/MobileBetaCta";
 import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 import { PixelWaitlist } from "@/components/redesign/PixelWaitlist";
 import { Reveal } from "@/components/redesign/Reveal";
@@ -18,7 +17,7 @@ import { faqItems } from "@/data/faq";
 import { milestones } from "@/data/milestones";
 
 const quickAnswers = faqItems.filter((item) =>
-  ["free", "beta", "screen", "generator"].includes(item.id),
+  ["free", "beta", "screen", "generator", "accuracy"].includes(item.id),
 );
 
 export default function Home() {
@@ -32,7 +31,7 @@ export default function Home() {
         <div className="editorial-hero__grid" aria-hidden="true" />
         <div className="editorial-hero__orb editorial-hero__orb--one" aria-hidden="true" />
         <div className="editorial-hero__orb editorial-hero__orb--two" aria-hidden="true" />
-        <Reveal className="container-page editorial-hero__inner">
+        <div className="container-page editorial-hero__inner">
           <p className="editorial-eyebrow"><span /> The understanding layer for vibe coding</p>
           <h1>
             <span>Vibe code freely.</span>
@@ -44,10 +43,7 @@ export default function Home() {
           </p>
           <div className="editorial-hero__actions">
             <Button href="#waitlist" size="lg">
-              Request beta access <ArrowRight size={18} />
-            </Button>
-            <Button href="/beta" size="lg" variant="secondary">
-              Download for macOS <ArrowDown size={17} />
+              Join the private beta waitlist <ArrowRight size={18} />
             </Button>
           </div>
           <div className="editorial-hero__status">
@@ -62,6 +58,27 @@ export default function Home() {
               <FounderClock breakdown />
             </div>
           </div>
+        </div>
+      </section>
+      <MobileBetaCta />
+
+      <section className="editorial-brand-film" aria-labelledby="brand-film-title">
+        <Reveal className="container-page editorial-brand-film__inner">
+          <div className="editorial-video-stage editorial-video-stage--wide">
+            <div className="editorial-video-stage__bar">
+              <p id="brand-film-title"><i aria-hidden="true">⌘</i> Unvibe beside Cursor</p>
+              <span>60 second product demo</span>
+            </div>
+            <div className="editorial-video-stage__screen">
+              <MarketingVideo
+                className="editorial-video-stage__video"
+                src="/videos/unvibe-cursor-integration-2026.mp4"
+                poster="/videos/unvibe-cursor-integration-2026-poster.jpg"
+                label="Polished Unvibe demonstration showing Cursor code selection, instant explanations, comprehension checks, and retained learning"
+                autoPlay
+              />
+            </div>
+          </div>
         </Reveal>
       </section>
 
@@ -72,15 +89,6 @@ export default function Home() {
             <h2>AI ships fast.<br /><em>Understanding should keep up.</em></h2>
             <span>Select the code, press ⌘U, and return to building with the context in your head.</span>
           </div>
-          <div className="editorial-promo-frame">
-            <MarketingVideo
-              className="editorial-promo-frame__video"
-              src="/videos/unvibe-promo.mp4"
-              poster="/videos/unvibe-promo-poster.jpg"
-              label="Unvibe product overview showing selected-code explanations, learning history, and progress"
-              autoPlay
-            />
-          </div>
           <div className="editorial-steps">
             <article><span>01</span><MousePointer2 size={20} /><h3>Select</h3><p>Highlight the exact code you need to own.</p></article>
             <article><span>02</span><Command size={20} /><h3>Understand</h3><p>Get a focused explanation at your level.</p></article>
@@ -90,16 +98,35 @@ export default function Home() {
       </section>
 
       <section className="editorial-learning">
-        <Reveal className="container-page editorial-learning__grid">
-          <div className="editorial-learning__copy">
-            <p>02 / CODE BECOMES KNOWLEDGE</p>
-            <h2>The first learning loop <em>built around vibe-coded work.</em></h2>
+        <Reveal className="container-page editorial-learning__campaign">
+          <div className="editorial-learning__campaign-copy">
+            <p>THE WHOLE LOOP / 32 SECONDS</p>
+            <h3>From a changed file to knowledge that stays yours.</h3>
             <span>
-              Each review becomes context you can question, test, save, and carry
-              into the next version of your project.
+              Unvibe turns the moment after AI finishes coding into a review you
+              can understand now and revisit later.
             </span>
+            <ul aria-label="Unvibe learning loop">
+              <li>Select code in the editor you already use</li>
+              <li>Explain it at the depth that fits you</li>
+              <li>Test, save, and track what you understand</li>
+            </ul>
           </div>
-          <DemoSwitcher />
+          <div className="editorial-video-stage editorial-video-stage--portrait">
+            <div className="editorial-video-stage__bar">
+              <p><i aria-hidden="true">U</i> Unvibe</p>
+              <span>32 sec</span>
+            </div>
+            <div className="editorial-video-stage__screen">
+              <MarketingVideo
+                className="editorial-video-stage__video"
+                src="/videos/unvibe-campaign-reel-2026.mp4"
+                poster="/videos/unvibe-campaign-reel-2026-poster.jpg"
+                label="Short Unvibe campaign showing code selection, explanations, and retained learning"
+                autoPlay
+              />
+            </div>
+          </div>
         </Reveal>
       </section>
 
@@ -122,8 +149,8 @@ export default function Home() {
             </blockquote>
           </div>
           <div className="editorial-voices__action">
-            <p>Try the same private beta build, then tell us what should ship next.</p>
-            <Button href="/beta" size="lg">Download the beta <ArrowRight size={17} /></Button>
+            <p>Join the private beta waitlist and help decide what ships next.</p>
+            <Button href="#waitlist" size="lg">Join the waitlist <ArrowRight size={17} /></Button>
           </div>
         </Reveal>
       </section>
@@ -159,7 +186,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <section className="editorial-access" id="waitlist">
+      <section className="editorial-access" id="beta-access">
         <Reveal className="container-page editorial-access__grid waitlist-minimal">
           <div className="editorial-access__faq">
             <p className="editorial-access__label">06 / BEFORE YOU REQUEST ACCESS</p>

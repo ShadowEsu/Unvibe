@@ -13,9 +13,8 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
   return (
     <motion.div
       className={className}
-      initial={reducedMotion ? false : { opacity: 0.12, y: 24 }}
-      whileInView={reducedMotion ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.12, margin: "-5% 0px -8% 0px" }}
+      initial={reducedMotion ? false : { opacity: 0.72, y: 16 }}
+      animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.58, delay, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}

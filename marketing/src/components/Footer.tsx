@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact";
 const product = [
   ["Watch demo", "/#demo"],
   ["Pricing", "/pricing"],
-  ["Download beta", "/beta"],
+  ["Join private beta", "/#waitlist"],
   ["Build in public", "/build"],
 ];
 
@@ -26,7 +26,17 @@ export function Footer() {
       </div>
       <div className="container-page flex flex-col gap-2 border-t border-line py-5 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
         <p>© {new Date().getFullYear()} Unvibe · Perth, Australia</p>
-        <a href={supportMailto} className="hover:text-fg">{SUPPORT_EMAIL}</a>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <a
+            href="https://strategic-flow-audit.replit.app/directory"
+            target="_blank"
+            rel="noopener"
+            className="font-mono text-[.68rem] font-bold text-primary hover:text-fg"
+          >
+            ↗ Listed on ToolIndex · DR 86
+          </a>
+          <a href={supportMailto} className="hover:text-fg">{SUPPORT_EMAIL}</a>
+        </div>
       </div>
     </footer>
   );

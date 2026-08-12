@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+import { JetBrains_Mono, Manrope, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 
-const sans = Inter({
+const sans = Manrope({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -78,6 +78,19 @@ const softwareJsonLd = {
   },
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Unvibe",
+  url: siteUrl,
+  logo: `${siteUrl}/icon.png`,
+  email: "support@unvibe.site",
+  sameAs: [
+    "https://www.linkedin.com/company/unvibeapp/",
+    "https://www.instagram.com/unvibe_app/",
+  ],
+};
+
 export const viewport: Viewport = {
   themeColor: "#0f0a17",
 };
@@ -106,6 +119,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
       </head>
       <body>
