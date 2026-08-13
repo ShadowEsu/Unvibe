@@ -8,12 +8,14 @@ export function MarketingVideo({
   label,
   className,
   autoPlay = false,
+  captions,
 }: {
   src: string;
   poster: string;
   label: string;
   className?: string;
   autoPlay?: boolean;
+  captions?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -51,6 +53,7 @@ export function MarketingVideo({
       poster={poster}
     >
       <source src={src} type="video/mp4" />
+      {captions ? <track kind="captions" src={captions} srcLang="en" label="English" default /> : null}
       Your browser does not support embedded video.
     </video>
   );

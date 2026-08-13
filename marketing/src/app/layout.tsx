@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Manrope, Newsreader } from "next/font/google";
+import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 
-const sans = Manrope({
+const sans = Inter({
   subsets: ["latin"],
   variable: "--font-manrope",
   display: "swap",
@@ -17,12 +17,10 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const display = Newsreader({
+const display = Inter_Tight({
   subsets: ["latin"],
-  style: ["normal", "italic"],
   variable: "--font-newsreader",
   display: "swap",
-  adjustFontFallback: false,
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";

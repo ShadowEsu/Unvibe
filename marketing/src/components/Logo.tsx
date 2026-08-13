@@ -19,6 +19,7 @@ export function Logo({
   return (
     <span
       className={cn("inline-flex items-center gap-2.5", className)}
+      role="img"
       aria-label={label}
     >
       <svg

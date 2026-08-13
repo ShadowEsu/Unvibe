@@ -129,7 +129,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <Field label="Email" error={errors.email?.message}>
             <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
           </Field>
-          <div className="referral-offer" aria-label="Referral and promo code">
+          <div className="referral-offer" role="group" aria-label="Referral and promo code">
             <Gift size={18} aria-hidden="true" />
             <div><strong>Have a referral or promo code?</strong><span>Optional. Enter the friend who referred you and <b>UNVIBE SPECIAL</b> so we can verify the benefit.</span></div>
             <div className="referral-offer__fields">
