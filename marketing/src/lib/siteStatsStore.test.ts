@@ -9,7 +9,11 @@ const dataFile = path.join(process.cwd(), ".data", "site-stats.json");
 describe("siteStatsStore", () => {
   it("counts views and unique visitors across day week and all time", async () => {
     const previousBlob = process.env.BLOB_READ_WRITE_TOKEN;
+    const previousSupabaseUrl = process.env.SUPABASE_URL;
+    const previousSupabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     await fs.rm(dataFile, { force: true }).catch(() => undefined);
 
     try {
@@ -29,6 +33,10 @@ describe("siteStatsStore", () => {
     } finally {
       if (previousBlob === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
       else process.env.BLOB_READ_WRITE_TOKEN = previousBlob;
+      if (previousSupabaseUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = previousSupabaseUrl;
+      if (previousSupabaseKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = previousSupabaseKey;
       await fs.rm(dataFile, { force: true }).catch(() => undefined);
     }
   });

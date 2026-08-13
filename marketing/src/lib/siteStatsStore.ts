@@ -8,6 +8,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { get, list, put } from "@vercel/blob";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 interface DayBucket {
   views: number;
@@ -37,6 +38,36 @@ const MAX_DAY_IDS = 5_000;
 const MAX_SEEN_IDS = 50_000;
 const KEEP_DAY_DETAIL = 120;
 const STATS_TZ = "America/Los_Angeles";
+let cachedSupabase: SupabaseClient | null = null;
+
+interface TrafficDailyRow {
+  visit_date: string;
+  visitor_hash: string;
+  views: number | string;
+}
+
+interface TrafficTotalsRow {
+  total_views: number | string;
+  total_visitors: number | string;
+}
+
+function supabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
+function supabaseClient(): SupabaseClient {
+  if (cachedSupabase) return cachedSupabase;
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) throw new Error("Supabase traffic storage is not configured");
+  cachedSupabase = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
+  });
+  return cachedSupabase;
+}
 
 function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
@@ -150,6 +181,42 @@ async function save(data: StatsFile): Promise<void> {
   else await writeLocal(data);
 }
 
+async function readSupabase(): Promise<StatsFile> {
+  const dates = lastNDates(14);
+  const oldestDate = dates.at(-1) ?? dayKey();
+  const [totalsResult, dailyResult] = await Promise.all([
+    supabaseClient()
+      .from("site_traffic_totals")
+      .select("total_views,total_visitors")
+      .eq("id", 1)
+      .single<TrafficTotalsRow>(),
+    supabaseClient()
+      .from("site_traffic_daily")
+      .select("visit_date,visitor_hash,views")
+      .gte("visit_date", oldestDate)
+      .limit(10_000)
+      .returns<TrafficDailyRow[]>(),
+  ]);
+
+  if (totalsResult.error) {
+    throw new Error(`Supabase traffic totals failed: ${totalsResult.error.message}`);
+  }
+  if (dailyResult.error) {
+    throw new Error(`Supabase traffic daily stats failed: ${dailyResult.error.message}`);
+  }
+
+  const stats = emptyStats();
+  stats.totalViews = Number(totalsResult.data.total_views) || 0;
+  stats.totalUniques = Number(totalsResult.data.total_visitors) || 0;
+  for (const row of dailyResult.data ?? []) {
+    const bucket = ensureDay(stats, row.visit_date);
+    bucket.views += Number(row.views) || 0;
+    bucket.uniques += 1;
+    bucket.ids.push(row.visitor_hash);
+  }
+  return stats;
+}
+
 /** Last N Pacific calendar dates, newest first. */
 export function lastNDates(n: number, from = new Date()): string[] {
   const { year, month, day } = pacificParts(from);
@@ -205,6 +272,14 @@ export async function recordSiteHit(visitorId: string): Promise<void> {
   const raw = visitorId.trim().slice(0, 128);
   if (!raw) return;
   const id = hashVisitor(raw);
+  if (supabaseConfigured()) {
+    const { error } = await supabaseClient().rpc("record_site_hit", {
+      p_visitor_hash: id,
+      p_visit_date: dayKey(),
+    });
+    if (error) throw new Error(`Supabase traffic write failed: ${error.message}`);
+    return;
+  }
   const data = await load();
   const key = dayKey();
   const day = ensureDay(data, key);
@@ -226,5 +301,5 @@ export async function recordSiteHit(visitorId: string): Promise<void> {
 }
 
 export async function getSiteStats(): Promise<SiteStatsSummary> {
-  return summarize(await load());
+  return summarize(supabaseConfigured() ? await readSupabase() : await load());
 }
