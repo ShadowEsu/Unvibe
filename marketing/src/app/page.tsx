@@ -29,8 +29,6 @@ export default function Home() {
 
       <section className="editorial-hero" id="product">
         <div className="editorial-hero__grid" aria-hidden="true" />
-        <div className="editorial-hero__orb editorial-hero__orb--one" aria-hidden="true" />
-        <div className="editorial-hero__orb editorial-hero__orb--two" aria-hidden="true" />
         <div className="container-page editorial-hero__inner">
           <p className="editorial-eyebrow"><span /> The understanding layer for vibe coding</p>
           <h1>
