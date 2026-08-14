@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { waitlistDetailsSchema, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 import { publicWaitlistFailure } from "@/lib/waitlistErrors";
+import { betaMacDownloadUrl } from "@/lib/betaRelease";
+import { sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
 import {
+  findWaitlistEntry,
+  recordWaitlistBetaEmail,
   recordWaitlistNotification,
   referralCodeForEmail,
   saveWaitlistEntry,
@@ -76,13 +80,50 @@ export async function POST(req: Request) {
 
   try {
     const stored = await saveWaitlistEntry(entry);
-    if (!stored.duplicate) {
-      const notification = await notifyFounder({ ...entry, duplicate: false });
-      await recordWaitlistNotification(email, notification).catch((error) => {
-        console.error("waitlist notification status write failed", error);
-      });
-    }
-    return NextResponse.json({ duplicate: stored.duplicate, saved: true, referralCode });
+    const existing = stored.duplicate ? await findWaitlistEntry(email) : entry;
+    const previousEmailWasSent = existing?.betaEmail?.status === "sent";
+    const [notification, betaDelivery] = await Promise.all([
+      stored.duplicate
+        ? Promise.resolve(null)
+        : notifyFounder({ ...entry, duplicate: false }),
+      previousEmailWasSent
+        ? Promise.resolve({ sent: true, messageId: existing?.betaEmail?.messageId, error: undefined })
+        : sendBetaDownloadEmail({
+          firstName: parsed.data.firstName,
+          email,
+          macDownloadUrl: betaMacDownloadUrl(),
+          referralCode,
+        }),
+    ]);
+
+    await Promise.all([
+      notification
+        ? recordWaitlistNotification(email, notification).catch((error) => {
+          console.error("waitlist notification status write failed", error);
+        })
+        : Promise.resolve(),
+      previousEmailWasSent
+        ? Promise.resolve()
+        : recordWaitlistBetaEmail(email, {
+          status: betaDelivery.sent ? "sent" : "failed",
+          at: new Date().toISOString(),
+          messageId: betaDelivery.messageId,
+          error: betaDelivery.error,
+        }).catch((error) => {
+          console.error("waitlist beta email status write failed", error);
+        }),
+    ]);
+    if (!betaDelivery.sent) console.error("waitlist beta email delivery failed", betaDelivery.error);
+
+    return NextResponse.json({
+      duplicate: stored.duplicate,
+      saved: true,
+      referralCode,
+      emailSent: betaDelivery.sent,
+      emailNotice: betaDelivery.sent
+        ? "Your beta download and feedback survey were sent to your inbox."
+        : "Your spot is saved, but the download email could not be delivered. Use the beta download page or contact Preston.",
+    });
   } catch (error) {
     console.error("waitlist signup failed", error);
     const failure = publicWaitlistFailure(error);

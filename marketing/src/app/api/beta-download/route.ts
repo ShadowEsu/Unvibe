@@ -2,13 +2,12 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
+import { BETA_RELEASE, betaMacDownloadUrl } from "@/lib/betaRelease";
 import { sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const release = "0.1.10-beta-usage";
-const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.10-beta-usage/Unvibe-0.1.10-usage-meters-arm64-unsigned.dmg";
 const schema = z.object({
   firstName: z.string().trim().min(1).max(80),
   email: z.string().trim().email().max(240),
@@ -45,20 +44,19 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Enter a valid first name and email." }, { status: 422 });
 
   const email = parsed.data.email.toLowerCase();
-  const macDownloadUrl = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
-    || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
-    || fallbackMacDownload;
-  const existing = await findBetaDownload(email, release).catch(() => null);
+  const macDownloadUrl = betaMacDownloadUrl();
+  const existing = await findBetaDownload(email, BETA_RELEASE).catch(() => null);
   const code = existing?.referralCode || referralCode(email);
   const delivery = existing?.emailSentAt
-    ? { sent: true, messageId: existing.emailMessageId }
+    ? { sent: true, messageId: existing.emailMessageId, error: undefined }
     : await sendBetaDownloadEmail({ firstName: parsed.data.firstName, email, macDownloadUrl, referralCode: code });
+  if (!delivery.sent) console.error("beta download email delivery failed", delivery.error);
 
   const entry: BetaDownloadEntry = {
     firstName: parsed.data.firstName,
     email,
     platform: "mac",
-    release,
+    release: BETA_RELEASE,
     referralCode: code,
     createdAt: existing?.createdAt || new Date().toISOString(),
     emailSentAt: existing?.emailSentAt || (delivery.sent ? new Date().toISOString() : undefined),

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { del, get, list, put } from "@vercel/blob";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 
 export interface BetaDownloadEntry {
@@ -17,6 +18,46 @@ export interface BetaDownloadEntry {
 
 const PREFIX = "beta-downloads/item/";
 const localDir = path.join(process.cwd(), ".data");
+let cachedSupabase: SupabaseClient | null = null;
+
+interface BetaDownloadRow {
+  first_name: string;
+  email: string;
+  platform: "mac";
+  release: string;
+  referral_code: string;
+  created_at: string;
+  email_sent_at: string | null;
+  email_message_id: string | null;
+}
+
+function supabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
+function supabaseClient(): SupabaseClient {
+  if (cachedSupabase) return cachedSupabase;
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) throw new Error("Supabase beta-download storage is not configured");
+  cachedSupabase = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return cachedSupabase;
+}
+
+function fromRow(row: BetaDownloadRow): BetaDownloadEntry {
+  return {
+    firstName: row.first_name,
+    email: row.email,
+    platform: row.platform,
+    release: row.release,
+    referralCode: row.referral_code,
+    createdAt: row.created_at,
+    emailSentAt: row.email_sent_at ?? undefined,
+    emailMessageId: row.email_message_id ?? undefined,
+  };
+}
 
 function secret(): string {
   return process.env.WAITLIST_ADMIN_TOKEN?.trim() || "local-beta-downloads";
@@ -53,6 +94,16 @@ async function writeLocal(entries: BetaDownloadEntry[]): Promise<void> {
 }
 
 export async function findBetaDownload(email: string, release: string): Promise<BetaDownloadEntry | null> {
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseClient()
+      .from("beta_downloads")
+      .select("*")
+      .eq("email", email.trim().toLowerCase())
+      .eq("release", release)
+      .maybeSingle<BetaDownloadRow>();
+    if (error) throw new Error(`Supabase beta-download read failed: ${error.message}`);
+    return data ? fromRow(data) : null;
+  }
   const blobToken = token();
   if (!blobToken || !process.env.WAITLIST_ADMIN_TOKEN?.trim()) {
     return (await readLocal()).find((entry) => entry.email === email && entry.release === release) ?? null;
@@ -67,6 +118,20 @@ export async function findBetaDownload(email: string, release: string): Promise<
 }
 
 export async function saveBetaDownload(entry: BetaDownloadEntry): Promise<void> {
+  if (supabaseConfigured()) {
+    const { error } = await supabaseClient().from("beta_downloads").upsert({
+      first_name: entry.firstName,
+      email: entry.email.trim().toLowerCase(),
+      platform: entry.platform,
+      release: entry.release,
+      referral_code: entry.referralCode,
+      created_at: entry.createdAt,
+      email_sent_at: entry.emailSentAt ?? null,
+      email_message_id: entry.emailMessageId ?? null,
+    }, { onConflict: "email,release" });
+    if (error) throw new Error(`Supabase beta-download write failed: ${error.message}`);
+    return;
+  }
   const blobToken = token();
   if (blobToken && process.env.WAITLIST_ADMIN_TOKEN?.trim()) {
     await put(pathname(entry.email, entry.release), encryptWaitlistJson(entry, secret()), {
@@ -86,6 +151,13 @@ export async function saveBetaDownload(entry: BetaDownloadEntry): Promise<void> 
 }
 
 export async function betaDownloadCount(): Promise<number> {
+  if (supabaseConfigured()) {
+    const { count, error } = await supabaseClient()
+      .from("beta_downloads")
+      .select("id", { count: "exact", head: true });
+    if (error) throw new Error(`Supabase beta-download count failed: ${error.message}`);
+    return count ?? 0;
+  }
   const blobToken = token();
   if (!blobToken || !process.env.WAITLIST_ADMIN_TOKEN?.trim()) return (await readLocal()).length;
   let count = 0;
@@ -101,6 +173,15 @@ export async function betaDownloadCount(): Promise<number> {
 /** Delete one exact release request. Used only by the authenticated admin route. */
 export async function deleteBetaDownload(email: string, release: string): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
+  if (supabaseConfigured()) {
+    const { error } = await supabaseClient()
+      .from("beta_downloads")
+      .delete()
+      .eq("email", normalizedEmail)
+      .eq("release", release);
+    if (error) throw new Error(`Supabase beta-download delete failed: ${error.message}`);
+    return;
+  }
   const blobToken = token();
   if (blobToken && process.env.WAITLIST_ADMIN_TOKEN?.trim()) {
     await del(pathname(normalizedEmail, release), { token: blobToken });

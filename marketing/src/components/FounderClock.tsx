@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { BuildStatus } from "@/lib/buildStatus";
-
-type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
+import type { PublicBuildStatus } from "@/lib/buildStatus";
 
 const FALLBACK_SECONDS = 160 * 60 * 60;
 
@@ -19,7 +17,7 @@ export function FounderClock({
   breakdown?: boolean;
   onNavigate?: () => void;
 }) {
-  const [status, setStatus] = useState<PublicStatus | null>(null);
+  const [status, setStatus] = useState<PublicBuildStatus | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -28,7 +26,7 @@ export function FounderClock({
       try {
         const response = await fetch("/api/build-status", { cache: "no-store" });
         if (!response.ok) return;
-        const next = await response.json() as PublicStatus;
+        const next = await response.json() as PublicBuildStatus;
         if (alive) {
           setStatus(next);
           setTick(0);
@@ -49,7 +47,7 @@ export function FounderClock({
 
   const seconds = useMemo(() => {
     if (!status) return FALLBACK_SECONDS;
-    return status.totalSeconds + (status.isLive ? tick : 0);
+    return status.displayTotalSeconds + (status.isLive ? tick : 0);
   }, [status, tick]);
   const live = Boolean(status?.isLive);
 

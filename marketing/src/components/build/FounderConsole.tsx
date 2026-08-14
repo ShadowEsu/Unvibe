@@ -1,100 +1,137 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
-import { BUILD_FOCUS_OPTIONS, type BuildAction, type BuildStatus } from "@/lib/buildStatus";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { BUILD_FOCUS_OPTIONS, type BuildAction, type PublicBuildStatus } from "@/lib/buildStatus";
+import {
+  founderActionFailureMessage,
+  type BuildStatusErrorPayload,
+} from "@/lib/buildStatusError";
 
-type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const founderSupabase = url && key ? createClient(url, key) : null;
+const PASSCODE_STORAGE_KEY = "unvibe-founder-control-passcode";
 
 export function FounderConsole() {
-  const supabase = founderSupabase;
-  const [session, setSession] = useState<Session | null>(null);
-  const [status, setStatus] = useState<PublicStatus | null>(null);
+  const [status, setStatus] = useState<PublicBuildStatus | null>(null);
   const [focus, setFocus] = useState<string>(BUILD_FOCUS_OPTIONS[0]);
   const [note, setNote] = useState("");
-  const [message, setMessage] = useState("Checking founder session…");
+  const [passcode, setPasscode] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [message, setMessage] = useState("Enter your founder passcode to start the public timer.");
+  const [messageTone, setMessageTone] = useState<"default" | "error">("default");
   const [busy, setBusy] = useState(false);
+  const requestInFlight = useRef(false);
 
   const loadStatus = useCallback(async () => {
-    const response = await fetch("/api/build-status", { cache: "no-store" });
-    if (!response.ok) return;
-    const next = await response.json() as PublicStatus;
-    setStatus(next);
-    setFocus(next.focus);
-    setNote(next.note);
+    try {
+      const response = await fetch("/api/build-status", { cache: "no-store" });
+      if (!response.ok) return;
+      const next = await response.json() as PublicBuildStatus;
+      setStatus(next);
+      setFocus(next.focus);
+      setNote(next.note);
+    } catch {
+      // The status is a convenience; the user can still make a fresh action.
+    }
   }, []);
 
   useEffect(() => {
-    if (!supabase) {
-      setMessage("Google sign-in is not configured on this deployment.");
-      return;
+    try {
+      const saved = window.sessionStorage.getItem(PASSCODE_STORAGE_KEY);
+      if (!saved) return;
+      setPasscode(saved);
+      setUnlocked(true);
+      setMessage("Founder control ready.");
+    } catch {
+      // Session storage is a convenience only; the control still works without it.
     }
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setMessage(data.session ? "Founder session ready." : "Sign in with the founder Google account.");
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setMessage(next ? "Founder session ready." : "Sign in with the founder Google account.");
-    });
-    return () => data.subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
 
   const send = useCallback(async (action: BuildAction) => {
-    if (!session) return;
+    if (requestInFlight.current) return;
+    if (!passcode) {
+      setMessage("Enter your founder passcode first.");
+      setMessageTone("error");
+      return;
+    }
+    requestInFlight.current = true;
     setBusy(true);
     try {
       const response = await fetch("/api/build-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          "X-Founder-Control": passcode,
         },
         body: JSON.stringify(action),
       });
-      const payload = await response.json() as PublicStatus & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Update failed.");
+      const payload = await response.json().catch(() => null) as (PublicBuildStatus & BuildStatusErrorPayload) | null;
+      if (!response.ok) {
+        setMessage(founderActionFailureMessage(response.status, payload));
+        setMessageTone("error");
+        return;
+      }
+      if (!payload) {
+        setMessage("Couldn’t save that update. Please try again.");
+        setMessageTone("error");
+        return;
+      }
       setStatus(payload);
-      setMessage(action.action === "stop" ? "Build session stopped." : "Public build signal updated.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Update failed.");
+      setMessage(action.action === "stop" ? "Timer stopped." : "Saved to the public build page.");
+      setMessageTone("default");
+    } catch {
+      setMessage("Couldn’t reach the timer. Check your connection and try again.");
+      setMessageTone("error");
+      void loadStatus();
     } finally {
+      requestInFlight.current = false;
       setBusy(false);
     }
-  }, [session]);
+  }, [loadStatus, passcode]);
 
-  useEffect(() => {
-    if (!session || !status?.isBuilding) return;
-    const timer = window.setInterval(() => void send({ action: "heartbeat" }), 30_000);
-    return () => window.clearInterval(timer);
-  }, [send, session, status?.isBuilding]);
-
-  const signIn = async () => {
-    if (!supabase) return;
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/founder` },
-    });
+  const unlock = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!passcode.trim()) {
+      setMessage("Enter the founder passcode first.");
+      setMessageTone("error");
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(PASSCODE_STORAGE_KEY, passcode.trim());
+    } catch {
+      // The passcode remains available for this page even if storage is blocked.
+    }
+    setPasscode(passcode.trim());
+    setUnlocked(true);
+    setMessage("Founder control ready.");
+    setMessageTone("default");
   };
 
-  if (!session) {
+  const lock = () => {
+    try {
+      window.sessionStorage.removeItem(PASSCODE_STORAGE_KEY);
+    } catch {
+      // Nothing else to clean up.
+    }
+    setPasscode("");
+    setUnlocked(false);
+    setMessage("Founder control locked.");
+    setMessageTone("default");
+  };
+
+  if (!unlocked) {
     return (
-      <div className="founder-signin">
+      <form className="founder-signin" onSubmit={unlock}>
         <p className="launch-label">Founder control</p>
-        <h1>Start a public build session.</h1>
-        <p>{message}</p>
-        <button type="button" onClick={signIn} disabled={!supabase}>Continue with Google</button>
+        <h1>Control the public timer.</h1>
+        <p>{message} The passcode stays only in this browser session.</p>
+        <label htmlFor="founder-passcode">Founder passcode</label>
+        <input id="founder-passcode" type="password" autoComplete="current-password" value={passcode} onChange={(event) => setPasscode(event.target.value)} />
+        <button type="submit">Open founder control</button>
         <a href="/build">View the public build page →</a>
-      </div>
+      </form>
     );
   }
 
@@ -103,14 +140,14 @@ export function FounderConsole() {
       <div className="founder-console__head">
         <div>
           <p className="launch-label">Founder control</p>
-          <h1>{status?.isBuilding ? "Building live." : "Ready to build."}</h1>
-          <p>{message}</p>
+          <h1>{status?.isBuilding ? "Timer is running." : "Start your timer."}</h1>
+          <p className={`founder-console__message founder-console__message--${messageTone}`}>{message}</p>
         </div>
-        <button type="button" onClick={() => supabase?.auth.signOut()}>Sign out</button>
+        <button type="button" onClick={lock}>Lock</button>
       </div>
 
       <section>
-        <label>Current focus</label>
+        <label>What are you working on?</label>
         <div className="founder-focus">
           {BUILD_FOCUS_OPTIONS.map((option) => (
             <button
@@ -123,19 +160,19 @@ export function FounderConsole() {
             </button>
           ))}
         </div>
-        <label htmlFor="build-note">Short public note</label>
-        <textarea id="build-note" value={note} maxLength={220} onChange={(event) => setNote(event.target.value)} />
+        <label htmlFor="build-note">Optional public note</label>
+        <textarea id="build-note" value={note} maxLength={220} placeholder="A short update for the public build page." onChange={(event) => setNote(event.target.value)} />
         <div className="founder-actions">
           <button type="button" disabled={busy} onClick={() => void send({ action: "update", focus, note })}>
-            Save message
+            Save note
           </button>
           {status?.isBuilding ? (
             <button type="button" className="danger" disabled={busy} onClick={() => void send({ action: "stop" })}>
-              Stop building
+              Stop timer
             </button>
           ) : (
             <button type="button" className="primary" disabled={busy} onClick={() => void send({ action: "start", focus, note })}>
-              Start building live
+              Start timer
             </button>
           )}
         </div>

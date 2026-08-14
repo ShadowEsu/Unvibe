@@ -1,30 +1,26 @@
-import { createClient } from "@supabase/supabase-js";
+import { timingSafeEqual } from "node:crypto";
 
-function supabaseConfig(): { url: string; key: string } | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || process.env.SUPABASE_URL?.trim();
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
-    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  return url && key ? { url, key } : null;
+function founderControlToken(): string | null {
+  return process.env.FOUNDER_CONTROL_TOKEN?.trim()
+    || process.env.WAITLIST_ADMIN_TOKEN?.trim()
+    || null;
 }
 
-function allowedFounderEmails(): Set<string> {
-  return new Set(
-    (process.env.FOUNDER_EMAILS || process.env.FOUNDER_EMAIL || "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
+function matches(expected: string, supplied: string): boolean {
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  return expectedBytes.length === suppliedBytes.length
+    && timingSafeEqual(expectedBytes, suppliedBytes);
 }
 
+/**
+ * Founder build control intentionally uses a short-lived browser passcode instead
+ * of an OAuth account. The token is server-only; the client supplies it only when
+ * the founder actively updates the public build signal.
+ */
 export async function verifyFounderRequest(request: Request): Promise<boolean> {
-  const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-  const config = supabaseConfig();
-  const allowed = allowedFounderEmails();
-  if (!token || !config || allowed.size === 0) return false;
-  const client = createClient(config.url, config.key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data, error } = await client.auth.getUser(token);
-  const email = data.user?.email?.trim().toLowerCase();
-  return !error && Boolean(email && allowed.has(email));
+  const expected = founderControlToken();
+  const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const supplied = request.headers.get("x-founder-control")?.trim() || bearer?.trim();
+  return Boolean(expected && supplied && matches(expected, supplied));
 }

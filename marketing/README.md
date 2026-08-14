@@ -32,16 +32,15 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 
 | Variable | Purpose |
 |---|---|
-| `BLOB_READ_WRITE_TOKEN` | Server-only Vercel Blob credential for durable production waitlist storage. |
+| `SUPABASE_URL` | Server-only Supabase project URL used for durable production waitlist storage. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase service-role key. Never expose it with a `NEXT_PUBLIC_` prefix. |
+| `BLOB_READ_WRITE_TOKEN` | Legacy encrypted waitlist storage fallback while existing Blob records are migrated. |
 | `WAITLIST_ADMIN_TOKEN` | Long random server-only secret for admin access and waitlist encryption. |
 | `WAITLIST_NOTIFY_EMAIL` | Legacy configuration only. Signup notifications are intentionally locked to `preston@unvibe.site`. |
 | `RESEND_API_KEY` | Recommended server-only Resend credential for reliable signup email. |
 | `WAITLIST_FROM_EMAIL` | Verified sender used by Resend. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL for metadata, sitemap, robots, referral links. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Public Supabase project URL used for founder Google sign-in. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public Supabase browser key (preferred). |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Legacy public key fallback when no publishable key exists. |
-| `FOUNDER_EMAILS` | Server-only comma-separated founder Google accounts allowed to update `/build`. |
+| `FOUNDER_CONTROL_TOKEN` | Optional server-only passcode for `/founder`. When absent, `WAITLIST_ADMIN_TOKEN` is used instead. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Optional. When empty, analytics is a no-op. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Optional PostHog host (defaults to US cloud). |
 
@@ -49,9 +48,9 @@ Without Vercel Blob configured, waitlist submissions are written to `.data/waitl
 (gitignored) so the form works end to end in development. Production fails closed when durable
 storage is missing; it never reports a signup as saved to ephemeral serverless storage.
 
-The public `/build` page also uses Blob for its tiny status document. `/founder` signs in
-through Supabase Google OAuth, and the API verifies the bearer token and server-only founder
-email allow-list before accepting a start, heartbeat, note, or stop action.
+The public `/build` page also uses Blob for its tiny status document. `/founder` uses a
+server-only founder passcode stored only in the current browser session. It accepts the
+dedicated `FOUNDER_CONTROL_TOKEN`, or securely falls back to `WAITLIST_ADMIN_TOKEN`.
 
 ## Waitlist storage
 

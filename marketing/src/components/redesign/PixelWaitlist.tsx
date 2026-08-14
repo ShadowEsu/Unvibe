@@ -19,6 +19,8 @@ type Status = "idle" | "submitting" | "success" | "duplicate" | "error";
 type WaitlistResponse = {
   duplicate?: boolean;
   error?: string;
+  emailSent?: boolean;
+  emailNotice?: string;
   code?: "waitlist_storage_setup_required" | "waitlist_storage_unavailable" | "waitlist_save_failed";
 };
 
@@ -30,6 +32,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const [savedEmail, setSavedEmail] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [emailNotice, setEmailNotice] = useState("");
   const [detailsStatus, setDetailsStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [tool, setTool] = useState<(typeof tools)[number] | "">("");
   const [experience, setExperience] = useState<(typeof experiences)[number] | "">("");
@@ -73,8 +76,17 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       }
       setSavedEmail(values.email.trim().toLowerCase());
       setReferralCode(typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string" ? (data as WaitlistResponse & { referralCode?: string }).referralCode ?? "" : "");
+      setEmailNotice(data.emailNotice || (data.emailSent ? "Your beta download was sent to your inbox." : "Your beta spot is saved."));
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
+      if (variant === "hero") {
+        const ref = typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string"
+          ? (data as WaitlistResponse & { referralCode?: string }).referralCode
+          : "";
+        window.setTimeout(() => {
+          window.location.assign(ref ? `/thanks?ref=${encodeURIComponent(ref)}` : "/thanks");
+        }, 700);
+      }
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
@@ -148,7 +160,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <span className="success-pixel"><Check /></span>
           <p className="pixel-label">SPOT SAVED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
-          <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
+          <p>{emailNotice || "Thanks for requesting access. Check your inbox for your beta download and feedback survey."}</p>
           {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite friends, earn beta rewards.</strong><span>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer.</span><div className="referral-success__actions"><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button><a href={`/rewards?ref=${referralCode}`}>View reward progress <ArrowUpRight size={14} /></a></div></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (

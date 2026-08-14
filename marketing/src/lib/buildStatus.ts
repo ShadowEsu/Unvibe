@@ -33,6 +33,18 @@ export interface BuildStatus {
   updatedAt: string;
 }
 
+export interface PublicBuildStatus extends BuildStatus {
+  isLive: boolean;
+  sessionSeconds: number;
+  /**
+   * The server-side total plus the fresh, not-yet-persisted heartbeat interval.
+   * Clients use this as their base so a polling response never visually resets
+   * a running clock back to its last saved value.
+   */
+  displayTotalSeconds: number;
+  displayTodaySeconds: number;
+}
+
 export type BuildAction =
   | { action: "start"; focus?: string; note?: string }
   | { action: "heartbeat" }
@@ -93,7 +105,9 @@ export function normalizeBuildStatus(input: Partial<BuildStatus> | null | undefi
 
 export function applyBuildAction(status: BuildStatus, action: BuildAction, now = new Date()): BuildStatus {
   const next = normalizeBuildStatus(status, now);
-  creditElapsed(next, now);
+  // Normal detail saves must never alter elapsed time. Heartbeats and the legacy
+  // stop path retain the bounded credit behavior used by local development.
+  if (action.action === "heartbeat" || action.action === "stop") creditElapsed(next, now);
 
   if (action.action === "start") {
     if (!next.isBuilding) next.sessionStartedAt = now.toISOString();
@@ -126,13 +140,40 @@ export function applyBuildAction(status: BuildStatus, action: BuildAction, now =
   return next;
 }
 
-export function publicBuildStatus(status: BuildStatus, now = new Date()) {
-  const lastHeartbeat = status.lastHeartbeatAt ? new Date(status.lastHeartbeatAt).getTime() : 0;
-  const live = status.isBuilding && now.getTime() - lastHeartbeat < 150_000;
+export function publicBuildStatus(status: BuildStatus, now = new Date()): PublicBuildStatus {
+  // Founder control is an intentional start/stop switch. Do not make a public
+  // build session look stopped just because a browser tab was closed or a
+  // heartbeat request was interrupted.
+  const live = status.isBuilding;
   const sessionSeconds = live && status.sessionStartedAt
     ? Math.max(0, Math.floor((now.getTime() - new Date(status.sessionStartedAt).getTime()) / 1000))
     : 0;
-  return { ...status, isLive: live, sessionSeconds };
+  return {
+    ...status,
+    isLive: live,
+    sessionSeconds,
+    // While a session is live, its elapsed time is derived from the original
+    // start time. The durable base is updated only when the session stops.
+    displayTotalSeconds: status.totalSeconds + sessionSeconds,
+    displayTodaySeconds: status.todaySeconds + sessionSeconds,
+  };
+}
+
+/** Commits a running session to its durable total without requiring a heartbeat write. */
+export function stopBuildSession(status: BuildStatus, now = new Date()): BuildStatus {
+  const next = normalizeBuildStatus(status, now);
+  const startedAt = next.sessionStartedAt ? new Date(next.sessionStartedAt).getTime() : 0;
+  const elapsed = startedAt > 0 ? Math.max(0, Math.floor((now.getTime() - startedAt) / 1000)) : 0;
+
+  if (next.isBuilding) {
+    next.totalSeconds += elapsed;
+    next.todaySeconds += elapsed;
+  }
+  next.isBuilding = false;
+  next.sessionStartedAt = null;
+  next.lastHeartbeatAt = now.toISOString();
+  next.updatedAt = now.toISOString();
+  return next;
 }
 
 function creditElapsed(status: BuildStatus, now: Date): void {

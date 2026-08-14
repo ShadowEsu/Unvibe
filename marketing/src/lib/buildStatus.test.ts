@@ -19,9 +19,12 @@ test("build timer starts, credits bounded heartbeats, and stops", () => {
   assert.equal(status.sessionStartedAt, null);
 });
 
-test("public status is live only while the heartbeat is fresh", () => {
+test("public status stays live until the founder stops the session", () => {
   const start = new Date("2026-07-29T10:00:00.000Z");
   const status = applyBuildAction(defaultBuildStatus(start), { action: "start" }, start);
-  assert.equal(publicBuildStatus(status, new Date("2026-07-29T10:01:00.000Z")).isLive, true);
-  assert.equal(publicBuildStatus(status, new Date("2026-07-29T10:03:00.000Z")).isLive, false);
+  const oneMinuteLater = publicBuildStatus(status, new Date("2026-07-29T10:01:00.000Z"));
+  assert.equal(oneMinuteLater.isLive, true);
+  assert.equal(oneMinuteLater.displayTotalSeconds, (20 * 8 * 3600) + 60);
+  assert.equal(oneMinuteLater.displayTodaySeconds, 60);
+  assert.equal(publicBuildStatus(status, new Date("2026-07-29T10:03:00.000Z")).isLive, true);
 });

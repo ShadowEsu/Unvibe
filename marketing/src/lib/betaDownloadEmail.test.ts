@@ -12,9 +12,11 @@ describe("beta download email", () => {
   it("contains the real download, feedback reward, and referral rule", () => {
     const text = betaDownloadText(input);
     assert.match(text, /https:\/\/example\.com\/unvibe\.zip/);
-    assert.match(text, /3 months of Unvibe Pro/);
+    assert.match(text, /20 selected-code explanations/);
+    assert.match(text, /4 months of Unvibe Pro/);
     assert.match(text, /Every 3 verified referrals/);
     assert.match(text, /\$25 maximum cash value/);
+    assert.match(text, /Open Anyway/);
     assert.doesNotMatch(text, /Windows.*attached/i);
   });
 

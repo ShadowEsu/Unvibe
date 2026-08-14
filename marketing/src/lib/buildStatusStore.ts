@@ -1,34 +1,70 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { get, list, put } from "@vercel/blob";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { defaultBuildStatus, normalizeBuildStatus, type BuildStatus } from "@/lib/buildStatus";
 
-const BLOB_PATH = "public/build-status.v1.json";
 const localFile = path.join(process.cwd(), ".data", "build-status.json");
+const BUCKET = "unvibe-timer";
+const OBJECT_PATH = "public/build-status.v1.json";
 
-function blobToken(): string | null {
-  return process.env.BLOB_READ_WRITE_TOKEN?.trim() || null;
+let cachedSupabase: SupabaseClient | null = null;
+
+function supabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 }
 
-async function readBlob(token: string): Promise<BuildStatus> {
-  const page = await list({ prefix: BLOB_PATH, limit: 1, token });
-  const match = page.blobs.find((blob) => blob.pathname === BLOB_PATH);
-  if (!match) return defaultBuildStatus();
-  const result = await get(match.url, { access: "private", token, useCache: false });
-  if (!result || result.statusCode !== 200 || !result.stream) return defaultBuildStatus();
-  const parsed: unknown = JSON.parse(await new Response(result.stream).text());
+function supabaseClient(): SupabaseClient {
+  if (cachedSupabase) return cachedSupabase;
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) throw new Error("Supabase build-status storage is not configured");
+  cachedSupabase = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return cachedSupabase;
+}
+
+async function ensureTimerBucket(): Promise<void> {
+  const client = supabaseClient();
+  const { data: buckets, error: listError } = await client.storage.listBuckets();
+  if (listError) throw new Error(`Supabase timer bucket lookup failed: ${listError.message}`);
+  if (buckets.some((bucket) => bucket.id === BUCKET)) return;
+
+  const { error: createError } = await client.storage.createBucket(BUCKET, {
+    public: false,
+    fileSizeLimit: "1024",
+  });
+  // Another request may have created the bucket after the initial list.
+  if (createError && !/already exists|duplicate/i.test(createError.message)) {
+    throw new Error(`Supabase timer bucket creation failed: ${createError.message}`);
+  }
+}
+
+async function readSupabase(): Promise<BuildStatus> {
+  const client = supabaseClient();
+  await ensureTimerBucket();
+  const { data, error } = await client.storage.from(BUCKET).download(OBJECT_PATH);
+  if (error) {
+    if (/not found|object not found/i.test(error.message)) return defaultBuildStatus();
+    throw new Error(`Supabase timer read failed: ${error.message}`);
+  }
+  const parsed: unknown = JSON.parse(await data.text());
   return normalizeBuildStatus(parsed && typeof parsed === "object" ? parsed as Partial<BuildStatus> : null);
 }
 
-async function writeBlob(status: BuildStatus, token: string): Promise<void> {
-  await put(BLOB_PATH, JSON.stringify(status), {
-    access: "private",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    cacheControlMaxAge: 30,
-    contentType: "application/json",
-    token,
-  });
+async function writeSupabase(status: BuildStatus): Promise<void> {
+  const client = supabaseClient();
+  await ensureTimerBucket();
+  const { error } = await client.storage.from(BUCKET).upload(
+    OBJECT_PATH,
+    JSON.stringify(status),
+    {
+      contentType: "application/json",
+      upsert: true,
+      cacheControl: "0",
+    },
+  );
+  if (error) throw new Error(`Supabase timer write failed: ${error.message}`);
 }
 
 async function readLocal(): Promise<BuildStatus> {
@@ -46,12 +82,10 @@ async function writeLocal(status: BuildStatus): Promise<void> {
 }
 
 export async function getBuildStatus(): Promise<BuildStatus> {
-  const token = blobToken();
-  return token ? readBlob(token) : readLocal();
+  return supabaseConfigured() ? readSupabase() : readLocal();
 }
 
 export async function saveBuildStatus(status: BuildStatus): Promise<void> {
-  const token = blobToken();
-  if (token) await writeBlob(status, token);
+  if (supabaseConfigured()) await writeSupabase(status);
   else await writeLocal(status);
 }
