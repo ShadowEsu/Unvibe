@@ -17,7 +17,7 @@ export default function TermsPage() {
       <LegalSection heading="The service">
         <p>
           Unvibe is a desktop application that generates explanations of code to help you
-          learn. It is a learning aid — not a code generator, a security scanner, or
+          learn. It is a learning aid, not a code generator, a security scanner, or
           professional advice.
         </p>
       </LegalSection>

@@ -1,47 +1,53 @@
 import Link from "next/link";
+import { ListingBadges } from "@/components/paper/ListingBadges";
+import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
-import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact";
 
 const product = [
-  ["Watch demo", "/#demo"],
+  ["Product", "/#product"],
   ["Pricing", "/pricing"],
-  ["Join private beta", "/#waitlist"],
-  ["Build in public", "/build"],
+  ["Join waitlist", "/#waitlist"],
+  ["Change Log", "/releases"],
+  ["Growth", "/build"],
 ];
 
 const company = [
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
-  ["Data controls", "/data-controls"],
 ];
 
 export function Footer() {
   return (
-    <footer className="border-t border-line bg-surface-2/60">
-      <div className="container-page grid gap-10 py-14 sm:grid-cols-[1fr_auto_auto]">
-        <div className="max-w-sm"><Logo /><p className="mt-4 text-fluid-sm leading-relaxed text-fg-muted">AI writes the code. Unvibe helps you learn what you shipped.</p></div>
+    <footer className="paper-footer">
+      <div className="paper-wrap grid gap-10 py-14 sm:grid-cols-[1fr_auto_auto]">
+        <div className="max-w-sm">
+          <Logo />
+          <p className="mt-4 text-sm leading-relaxed">
+            Select the code. Press Command U. Keep what you learned on this Mac.
+          </p>
+        </div>
         <FooterLinks heading="Product" links={product} />
         <FooterLinks heading="Company" links={company} />
       </div>
-      <div className="container-page flex flex-col gap-2 border-t border-line py-5 text-fluid-sm text-fg-faint sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Unvibe · Perth, Australia</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <a
-            href="https://strategic-flow-audit.replit.app/directory"
-            target="_blank"
-            rel="noopener"
-            className="font-mono text-[.68rem] font-bold text-primary hover:text-fg"
-          >
-            ↗ Listed on ToolIndex · DR 86
-          </a>
-          <a href={supportMailto} className="hover:text-fg">{SUPPORT_EMAIL}</a>
-        </div>
+      <div className="paper-wrap pb-10">
+        <ListingBadges />
+      </div>
+      <div className="paper-footer__legal paper-wrap flex flex-col gap-3 py-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <p>© {new Date().getFullYear()} Unvibe. Perth, Australia.</p>
+        <SocialFollowLinks includeMail />
       </div>
     </footer>
   );
 }
 
 function FooterLinks({ heading, links }: { heading: string; links: readonly string[][] }) {
-  return <nav aria-label={heading} className="grid content-start gap-2"><strong className="mb-1 text-fluid-sm text-fg">{heading}</strong>{links.map(([label, href]) => <Link key={href} href={href!} className="text-fluid-sm text-fg-muted hover:text-fg">{label}</Link>)}</nav>;
+  return (
+    <nav aria-label={heading} className="grid content-start gap-2">
+      <strong className="mb-1 text-sm text-[color:var(--ink)]">{heading}</strong>
+      {links.map(([label, href]) => (
+        <Link key={href} href={href!} className="text-sm hover:text-[color:var(--ink)]">{label}</Link>
+      ))}
+    </nav>
+  );
 }

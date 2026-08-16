@@ -1,25 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
+import "./paper.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 
 const sans = Inter({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-sans-face",
   display: "swap",
 });
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-mono-face",
   display: "swap",
 });
 
-const display = Inter_Tight({
+const display = Newsreader({
   subsets: ["latin"],
-  variable: "--font-newsreader",
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display-face",
   display: "swap",
 });
 
@@ -28,25 +31,25 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe — Learn the Project You Vibe-Coded",
+    default: "Unvibe. Learn the code AI shipped.",
     template: "%s · Unvibe",
   },
   description:
-    "Unvibe is a Mac desktop tutor that teaches you the project you vibe-coded, using explanations connected to your selected code and workflow.",
+    "Select code in Cursor, VS Code, or Terminal. Press Command U. Unvibe explains it in place so you keep what you ship.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe — Learn the Project You Vibe-Coded",
+    title: "Unvibe. Learn the code AI shipped.",
     description:
-      "Select code, press ⌘U, and learn what AI shipped in the context of your project.",
+      "Select code, press Command U, and keep the explanation on this Mac.",
     siteName: "Unvibe",
-    images: [{ url: "/unvibe-social-preview-v5.png", width: 1200, height: 630, alt: "Unvibe — learn the AI-generated code you ship" }],
+    images: [{ url: "/unvibe-social-preview-v5.png", width: 1200, height: 630, alt: "Unvibe. Learn the code AI shipped." }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe — Learn the Project You Vibe-Coded",
+    title: "Unvibe. Learn the code AI shipped.",
     description:
-      "A Mac desktop tutor for learning the AI-generated code in your project without leaving your workflow.",
+      "A Mac overlay that explains selected code beside the tools you already use.",
     images: ["/unvibe-social-preview-v5.png"],
   },
   robots: { index: true, follow: true },
@@ -67,7 +70,7 @@ const softwareJsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS",
   description:
-    "A Mac desktop tutor that teaches developers the AI-generated code in their project using selected context and their existing workflow.",
+    "A Mac desktop overlay that explains selected AI-generated code in place.",
   offers: {
     "@type": "Offer",
     price: "0",
@@ -86,22 +89,14 @@ const organizationJsonLd = {
   sameAs: [
     "https://www.linkedin.com/company/unvibeapp/",
     "https://www.instagram.com/unvibe_app/",
+    "https://x.com/unvibe_app",
+    "https://www.tiktok.com/@unvibe_app",
   ],
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f0a17",
+  themeColor: "var(--paper)",
 };
-
-const themeScript = `
-(function() {
-  try {
-    var root = document.documentElement;
-    root.classList.add('dark');
-    root.style.colorScheme = 'dark';
-  } catch (e) {}
-})();
-`;
 
 export default function RootLayout({
   children,
@@ -113,7 +108,6 @@ export default function RootLayout({
       className={`${sans.variable} ${mono.variable} ${display.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}

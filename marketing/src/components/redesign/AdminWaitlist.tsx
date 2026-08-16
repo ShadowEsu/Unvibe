@@ -6,6 +6,9 @@ import { Logo } from "@/components/Logo";
 import type { SiteStatsSummary } from "@/lib/siteStatsStore";
 import type { WaitlistAdminEntry } from "@/lib/waitlistStore";
 
+const PRIOR_PEOPLE = 300;
+const missing = "n/a";
+
 type ViewState = "loading" | "ready" | "error";
 
 export function AdminWaitlist() {
@@ -173,18 +176,18 @@ export function AdminWaitlist() {
           <div className="admin-stats">
             <article>
               <small>Today</small>
-              <strong>{siteStats?.today.visitors ?? "—"}</strong>
+              <strong>{siteStats?.today.visitors ?? missing}</strong>
               <span>{siteStats ? `${siteStats.today.views} page views · ${siteStats.today.date}` : "Unavailable"}</span>
             </article>
             <article>
               <small>This week</small>
-              <strong>{siteStats?.week.visitors ?? "—"}</strong>
+              <strong>{siteStats?.week.visitors ?? missing}</strong>
               <span>{siteStats ? `${siteStats.week.views} page views · last 7 days PT` : "Unavailable"}</span>
             </article>
             <article>
               <small>All time</small>
-              <strong>{siteStats?.allTime.visitors ?? "—"}</strong>
-              <span>{siteStats ? `${siteStats.allTime.views} page views` : "Unavailable"}</span>
+              <strong>{siteStats ? (siteStats.allTime.visitors + PRIOR_PEOPLE).toLocaleString() : missing}</strong>
+              <span>{siteStats ? `${siteStats.allTime.views} page views, including ${PRIOR_PEOPLE} people from before this counter` : "Unavailable"}</span>
             </article>
           </div>
 
@@ -196,7 +199,7 @@ export function AdminWaitlist() {
             <article><small>Total signups</small><strong>{entries.length}</strong></article>
             <article><small>Email notifications sent</small><strong>{notified}</strong></article>
             <article><small>Promo claims</small><strong>{entries.filter((entry) => entry.promoCode).length}</strong></article>
-            <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : "—"}</strong></article>
+            <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : missing}</strong></article>
           </div>
           {retryError && <p className="admin-error" role="alert">{retryError}</p>}
           {actionError && <p className="admin-error" role="alert">{actionError}</p>}
@@ -234,7 +237,7 @@ export function AdminWaitlist() {
                         <small>{entry.experience || entry.message || "No optional details"}</small>
                       </td>
                       <td>
-                        {entry.promoCode ? <><strong>{entry.promoCode}</strong><small>{entry.referredBy ? `Referral recorded · ${entry.referredBy}` : "No verified referrer"}</small></> : <span>—</span>}
+                        {entry.promoCode ? <><strong>{entry.promoCode}</strong><small>{entry.referredBy ? `Referral recorded · ${entry.referredBy}` : "No verified referrer"}</small></> : <span>None</span>}
                       </td>
                       <td>
                         <span

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FounderAnalytics } from "@/components/FounderAnalytics";
+import { FounderConsole } from "@/components/build/FounderConsole";
 
 export const metadata: Metadata = {
   title: "Founder analytics",
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
 export default function FounderPage() {
   return (
     <article className="founder-page">
-      <div className="container-wide">
+      <div className="paper-wrap">
+        <FounderConsole />
         <FounderAnalytics />
       </div>
     </article>

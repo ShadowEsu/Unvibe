@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { armAudioUnlock, isAudioUnlocked, whenAudioUnlocked } from "@/lib/autoplayAudio";
 
 export function MarketingVideo({
   src,
   poster,
   label,
   className,
-  autoPlay = false,
+  autoPlay = true,
   captions,
 }: {
   src: string;
@@ -21,13 +22,34 @@ export function MarketingVideo({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !autoPlay) return;
+    armAudioUnlock();
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches) return;
+
+    const playWithSound = async () => {
+      video.volume = 1;
+      video.muted = false;
+      try {
+        await video.play();
+      } catch {
+        video.muted = true;
+        await video.play().catch(() => undefined);
+      }
+    };
+
+    const release = whenAudioUnlocked(() => {
+      video.muted = false;
+      video.volume = 1;
+      void video.play().catch(() => undefined);
+    });
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting && !reducedMotion.matches) {
-          void video.play().catch(() => undefined);
+        if (entry?.isIntersecting) {
+          if (isAudioUnlocked()) video.muted = false;
+          void playWithSound();
         } else {
           video.pause();
         }
@@ -36,8 +58,11 @@ export function MarketingVideo({
     );
 
     observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
+    return () => {
+      release();
+      observer.disconnect();
+    };
+  }, [autoPlay]);
 
   return (
     <video
@@ -47,9 +72,8 @@ export function MarketingVideo({
       autoPlay={autoPlay}
       controls
       loop
-      muted
       playsInline
-      preload="metadata"
+      preload="auto"
       poster={poster}
     >
       <source src={src} type="video/mp4" />

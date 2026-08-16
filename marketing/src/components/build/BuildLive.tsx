@@ -43,27 +43,27 @@ export function BuildLive() {
 
   if (!status) {
     return (
-      <div className="build-live build-live--loading" aria-live="polite">
+      <div className="paper-live paper-glass paper-live--loading" aria-live="polite">
         <span />
-        <p>{error ? "Build signal is reconnecting." : "Checking the build signal…"}</p>
+        <p>{error ? "Build signal is reconnecting." : "Checking the build signal."}</p>
       </div>
     );
   }
 
   return (
-    <div className={`build-live${status.isLive ? " build-live--active" : ""}`} aria-live="polite">
-      <div className="build-live__signal">
+    <div className={status.isLive ? "paper-live paper-glass is-live" : "paper-live paper-glass"} aria-live="polite">
+      <div className="paper-live__signal">
         <span />
-        <p>{status.isLive ? "BUILDING LIVE" : "LAST BUILD SESSION"}</p>
+        <p className="paper-meta">{status.isLive ? "Building live" : "Last build session"}</p>
       </div>
       <h2>{status.focus}</h2>
-      <p className="build-live__note">{status.note}</p>
-      <div className="build-live__stats">
+      <p className="paper-lead">{status.note}</p>
+      <div className="paper-live__stats">
         <Metric label={status.isLive ? "This session" : "Status"} value={status.isLive ? duration(sessionSeconds) : "Offline"} />
         <Metric label="Today" value={duration(status.todaySeconds + (status.isLive ? tick : 0))} />
         <Metric label="Total invested" value={`${(status.totalSeconds / 3600).toFixed(1)}h`} />
       </div>
-      <p className="build-live__updated">Updated {relativeTime(status.updatedAt)}</p>
+      <p className="paper-live__updated">Updated {relativeTime(status.updatedAt)}</p>
     </div>
   );
 }

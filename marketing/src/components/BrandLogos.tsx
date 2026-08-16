@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const apps = [
   { name: "Cursor", detail: "Select + ⌘U", src: "/tools/cursor.svg" },
-  { name: "VS Code", detail: "Select + ⌘U", src: "/tools/vscode.png" },
+  { name: "VS Code", detail: "Select + ⌘U", src: "/tools/vscode.svg" },
   { name: "JetBrains", detail: "Testing", src: "/tools/jetbrains.svg" },
   { name: "Claude Code", detail: "Workflow context", src: "/tools/claude.svg" },
   { name: "GitHub", detail: "Project context", src: "/tools/github.svg" },

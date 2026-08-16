@@ -29,19 +29,19 @@ function applyClass(theme: ResolvedTheme): void {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    applyClass("dark");
+    applyClass("light");
   }, []);
 
   const setPreference = useCallback((_next: ThemePreference) => {
-    applyClass("dark");
+    applyClass("light");
   }, []);
 
   const toggle = useCallback(() => {
-    applyClass("dark");
+    applyClass("light");
   }, []);
 
   const value = useMemo(
-    () => ({ preference: "dark" as const, resolved: "dark" as const, setPreference, toggle }),
+    () => ({ preference: "light" as const, resolved: "light" as const, setPreference, toggle }),
     [setPreference, toggle]
   );
 

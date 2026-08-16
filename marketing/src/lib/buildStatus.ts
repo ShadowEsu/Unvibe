@@ -2,13 +2,14 @@ export const BUILD_ROADMAP = [
   { label: "Idea", percent: 8, complete: true },
   { label: "MVP", percent: 22, complete: true },
   { label: "Private beta", percent: 38, complete: true },
-  { label: "Feedback", percent: 55, complete: true, current: true },
-  { label: "Live testing", percent: 68, complete: false },
-  { label: "Public beta", percent: 82, complete: false },
+  { label: "Feedback", percent: 55, complete: true },
+  { label: "Live testing", percent: 68, complete: true },
+  { label: "Public beta", percent: 82, complete: false, current: true },
   { label: "App Store", percent: 100, complete: false },
 ] as const;
 
 export const BUILD_FOCUS_OPTIONS = [
+  "Live testing",
   "Selection shortcut",
   "Island",
   "AI / API",
@@ -60,13 +61,13 @@ export function buildDayKey(now = new Date()): string {
 export function defaultBuildStatus(now = new Date()): BuildStatus {
   return {
     version: 1,
-    roadmapPercent: 55,
+    roadmapPercent: 75,
     totalSeconds: INITIAL_HOURS * 60 * 60,
     todaySeconds: 0,
     todayKey: buildDayKey(now),
     isBuilding: false,
-    focus: "Live-testing the private beta",
-    note: "Turning tester feedback into a quieter, more reliable product.",
+    focus: "Closing in on public release",
+    note: "Live testing and feedback are done. Public beta is next.",
     sessionStartedAt: null,
     lastHeartbeatAt: null,
     updatedAt: INITIAL_UPDATED_AT,
@@ -78,7 +79,7 @@ export function normalizeBuildStatus(input: Partial<BuildStatus> | null | undefi
   const today = buildDayKey(now);
   return {
     version: 1,
-    roadmapPercent: clamp(finiteNumber(input?.roadmapPercent, fallback.roadmapPercent), 0, 100),
+    roadmapPercent: clamp(Math.max(75, finiteNumber(input?.roadmapPercent, fallback.roadmapPercent)), 0, 100),
     totalSeconds: Math.max(0, finiteNumber(input?.totalSeconds, fallback.totalSeconds)),
     todaySeconds: input?.todayKey === today ? Math.max(0, Number(input.todaySeconds) || 0) : 0,
     todayKey: today,
@@ -127,8 +128,7 @@ export function applyBuildAction(status: BuildStatus, action: BuildAction, now =
 }
 
 export function publicBuildStatus(status: BuildStatus, now = new Date()) {
-  const lastHeartbeat = status.lastHeartbeatAt ? new Date(status.lastHeartbeatAt).getTime() : 0;
-  const live = status.isBuilding && now.getTime() - lastHeartbeat < 150_000;
+  const live = status.isBuilding;
   const sessionSeconds = live && status.sessionStartedAt
     ? Math.max(0, Math.floor((now.getTime() - new Date(status.sessionStartedAt).getTime()) / 1000))
     : 0;

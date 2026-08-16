@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { BuildLive } from "@/components/build/BuildLive";
-import { BUILD_ROADMAP } from "@/lib/buildStatus";
-import { milestones } from "@/data/milestones";
+import { BuildMap } from "@/components/paper/BuildMap";
+import { ChangelogList } from "@/components/paper/ChangelogList";
+import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
+import { GrowthFollowSum } from "@/components/paper/SocialFollow";
+import { Reveal } from "@/components/redesign/Reveal";
+import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
   title: "Building Unvibe",
@@ -14,64 +15,53 @@ export const metadata: Metadata = {
 export default function BuildPage() {
   return (
     <article className="build-page">
-      <header className="container-page build-hero">
-        <div>
-          <p className="launch-label">Building in public</p>
-          <h1>55% to<br />public release.</h1>
+      <header className="paper-photo-band">
+        <img src="/hero/golden-gate.png" alt="" />
+        <div className="paper-hero__veil" />
+        <div className="paper-photo-band__copy">
+          <p className="paper-meta">Building in public</p>
+          <h1>75% to public release.</h1>
           <p>
-            Unvibe is between private-beta feedback and wider live testing. This page
-            shows the honest stage and the work behind the August 7 private-beta release.
+            Almost here. Live testing is done. Feedback is done.
           </p>
-        </div>
-        <div className="build-meter" aria-label="55 percent to public release">
-          <div><span style={{ width: "55%" }} /></div>
-          <strong>55%</strong>
+          <div className="paper-meter" aria-label="75 percent to public release">
+            <div className="paper-meter__track">
+              <span style={{ width: "75%" }} />
+            </div>
+            <strong>75%</strong>
+          </div>
+          <JoinWaitlistRow href="/#waitlist" />
         </div>
       </header>
 
-      <section className="container-page build-roadmap" aria-label="Product roadmap">
-        {BUILD_ROADMAP.map((stage) => (
-          <div
-            key={stage.label}
-            className={`${stage.complete ? "complete" : ""}${"current" in stage && stage.current ? " current" : ""}`}
-          >
-            <span />
-            <p>{stage.label}</p>
+      <section className="paper-section" id="growth">
+        <Reveal className="paper-wrap">
+          <div className="paper-center mb-8">
+            <p className="paper-meta">Growth</p>
+            <h2 className="mt-3">The road so far.</h2>
           </div>
-        ))}
+          <GrowthFollowSum />
+          <div className="paper-map-frame">
+            <BuildMap />
+          </div>
+        </Reveal>
       </section>
 
-      <section className="container-page build-live-wrap">
-        <BuildLive />
+      <section className="paper-section">
+        <Reveal className="paper-wrap">
+          <BuildLive />
+        </Reveal>
       </section>
 
-      <section className="container-page subpage-product-visual" aria-label="Unvibe sign-in and learning experience">
-        <Image
-          src="/product-shots/sign-in-carry-learning.png"
-          alt="Unvibe sign-in experience with purple and orange ambient lighting"
-          width={2294}
-          height={1536}
-          sizes="(max-width: 1280px) 100vw, 1216px"
-        />
-      </section>
-
-      <section className="container-page build-log">
-        <div className="build-log__intro">
-          <p className="launch-label">Milestones</p>
-          <h2>What has actually shipped.</h2>
-          <p>Product, infrastructure, company, and distribution milestones—kept in one readable record.</p>
-          <Link href="/releases">Open full release history <ArrowRight size={14} /></Link>
-        </div>
-        <div className="build-log__list">
-          {milestones.slice(0, 6).map((item) => (
-            <article key={`${item.date}-${item.title}`}>
-              <time>{item.date}</time>
-              <span>{item.category}</span>
-              <h3>{item.title}</h3>
-              <p>{item.summary}</p>
-            </article>
-          ))}
-        </div>
+      <section className="paper-section">
+        <Reveal className="paper-wrap">
+          <div className="paper-center mb-8">
+            <p className="paper-meta">What shipped</p>
+            <h2 className="mt-3">The record, newest first.</h2>
+            <a href="/releases" className="paper-text-link">Full change log</a>
+          </div>
+          <ChangelogList items={changelogPreview(5)} />
+        </Reveal>
       </section>
     </article>
   );

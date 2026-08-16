@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { applyBuildAction, defaultBuildStatus, publicBuildStatus, type BuildAction } from "@/lib/buildStatus";
 import { getBuildStatus, saveBuildStatus } from "@/lib/buildStatusStore";
-import { verifyFounderRequest } from "@/lib/founderAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +26,6 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await verifyFounderRequest(request))) {
-    return NextResponse.json({ error: "Founder authorization required." }, { status: 401 });
-  }
   const parsed = actionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid build-status action." }, { status: 400 });

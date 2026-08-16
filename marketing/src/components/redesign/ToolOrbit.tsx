@@ -3,7 +3,7 @@ import { Terminal } from "lucide-react";
 
 const tools = [
   { name: "Cursor", state: "Validated", src: "/tools/cursor.svg" },
-  { name: "VS Code", state: "Validated", src: "/tools/vscode.png" },
+  { name: "VS Code", state: "Validated", src: "/tools/vscode.svg" },
   { name: "JetBrains", state: "Testing", src: "/tools/jetbrains.svg" },
   { name: "Claude Code", state: "Workflow", src: "/tools/claude.svg" },
   { name: "GitHub", state: "Project context", src: "/tools/github.svg" },

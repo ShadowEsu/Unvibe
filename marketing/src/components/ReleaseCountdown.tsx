@@ -13,7 +13,7 @@ type Remaining = {
 
 const EMPTY: Remaining = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
-export function ReleaseCountdown() {
+export function ReleaseCountdown({ variant = "page" }: { variant?: "page" | "hero" }) {
   const [remaining, setRemaining] = useState<Remaining | null>(null);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function ReleaseCountdown() {
 
   return (
     <div
-      className="release-countdown"
+      className={variant === "hero" ? "release-countdown release-countdown--hero" : "release-countdown"}
       role="timer"
       aria-label={released ? "Unvibe private beta release day" : countdownLabel(values)}
     >

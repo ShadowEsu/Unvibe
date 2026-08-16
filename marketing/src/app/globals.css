@@ -2,19 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 2026 private-beta launch system — dark, ambient, deliberately compact. */
-html.dark {
-  color-scheme: dark;
-}
-
-html.dark body {
-  background:
-    radial-gradient(1000px 680px at 0% -5%, rgba(118, 64, 236, .42), transparent 64%),
-    radial-gradient(920px 620px at 100% 18%, rgba(48, 96, 215, .28), transparent 68%),
-    radial-gradient(980px 720px at 74% 100%, rgba(216, 87, 39, .28), transparent 70%),
-    #0f0a17;
-  color: #f8f4ff;
-}
+/* Paper is the public site. Dark leftovers stay unused. */
 
 .launch-nav {
   position: sticky;
@@ -1248,35 +1236,88 @@ html.dark body {
 */
 
 :root {
-  /* Light is a real, calm canvas — not dark mode with a different browser chrome. */
-  --bg: 253 250 255;
-  --surface: 255 255 255;
-  --surface-2: 246 241 252;
-  --fg: 40 26 57;
-  --fg-muted: 100 84 116;
-  --fg-faint: 139 123 153;
-  --line: 225 215 234;
-  --line-strong: 203 187 219;
+  --paper: #f3eef8;
+  --paper-raised: rgb(255 255 255 / 0.42);
+  --snow: #ffffff;
+  --glass: rgb(255 255 255 / 0.14);
+  --glass-fill: rgb(255 255 255 / 0.16);
+  --glass-edge: rgb(255 255 255 / 0.34);
+  --glass-field: rgb(255 255 255 / 0.22);
+  --glass-blur: blur(14px) saturate(1.85);
+  --shadow-glass: inset 0 1px 0 rgb(255 255 255 / 0.4);
+  --dusk-veil: linear-gradient(180deg, rgb(255 196 150 / 0.12) 0%, rgb(140 190 255 / 0.08) 42%, rgb(70 80 170 / 0.14) 100%);
+  --page-photo: url("/hero/golden-gate.png");
+  --ink: #12110f;
+  --ink-muted: #12110f;
+  --ink-faint: #1c1a16;
+  --hairline: #d4cce0;
+  --hero-type: #f7f4ee;
+  --hero-type-muted: rgb(247 244 238 / 0.7);
+  --hero-glass: rgb(18 12 32 / 0.32);
+  --hero-line: rgb(247 244 238 / 0.22);
+  --hero-veil: linear-gradient(180deg, rgb(12 16 28 / 0.14) 0%, rgb(12 16 28 / 0.1) 38%, rgb(18 12 32 / 0.62) 100%);
+  --brand: #6f45d2;
+  --brand-deep: #3d2080;
+  --brand-soft: #e8dff8;
+  --brand-mist: rgb(111 69 210 / 0.12);
+  --glow-copy: 0 0 28px rgb(111 69 210 / 0.2);
+  --glow-hero: 0 0 46px rgb(167 139 250 / 0.42);
+  --glow-bloom: 0 0 48px rgb(111 69 210 / 0.16);
+  --cta-fill: linear-gradient(180deg, #c4a4ff 0%, #8b5cf6 42%, #6d28d9 100%);
+  --cta-fill-hot: linear-gradient(180deg, #d4b8ff 0%, #a78bfa 40%, #7c3aed 100%);
+  --cta-edge: rgb(247 244 238 / 0.42);
+  --cta-glow: 0 0 22px rgb(196 164 255 / 0.55), 0 0 54px rgb(139 92 246 / 0.42);
+  --cta-inset: inset 0 1px 0 rgb(255 255 255 / 0.62), inset 0 -10px 18px rgb(61 32 128 / 0.28);
+  --cta-sheen: linear-gradient(108deg, transparent 16%, rgb(255 255 255 / 0.46) 48%, transparent 70%);
+  --key-face: #ebe4f6;
+  --key-edge: #c4b6dc;
+  --key-shade: #9d86c4;
+  --key-shine: rgb(255 255 255 / 0.72);
+  --key-inset: rgb(255 255 255 / 0.9);
+  --logo-x: #111111;
+  --logo-linkedin: #0a66c2;
+  --logo-ig-gold: #f9ce34;
+  --logo-ig-pink: #ee2a7b;
+  --logo-ig-violet: #6228d7;
+  --logo-tiktok: #111111;
+  --logo-tiktok-cyan: #25f4ee;
+  --logo-tiktok-pink: #fe2c55;
+  --row-hover: rgb(111 69 210 / 0.05);
+  --nav-blur: rgb(245 242 246 / 0.72);
+  --radius-card: 16px;
+  --radius-glass: 12px;
+  --radius-pill: 999px;
+  --radius-key: 12px;
+  --radius-field: 10px;
+  --shadow-key: inset 0 1px 0 var(--key-inset), inset 0 -6px 0 var(--key-shade), 0 1px 0 var(--key-edge);
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.8);
 
-  --primary: 105 70 211;
-  --primary-strong: 82 46 185;
-  --primary-soft: 238 232 255;
-  --on-primary: 255 255 255;
+  --bg: 246 243 236;
+  --surface: 255 252 247;
+  --surface-2: 246 243 236;
+  --fg: 28 26 22;
+  --fg-muted: 92 87 78;
+  --fg-faint: 138 132 120;
+  --line: 217 211 198;
+  --line-strong: 184 176 160;
+
+  --primary: 28 26 22;
+  --primary-strong: 18 16 13;
+  --primary-soft: 236 230 216;
+  --on-primary: 246 243 236;
 
   --blue: 58 120 211;
   --green: 21 132 91;
   --orange: 184 105 12;
   --red: 194 58 74;
 
-  --focus: 105 70 211;
+  --focus: 28 26 22;
 
-  --cream: #fffdf8;
-  --lavender: #efe8ff;
-  --purple: #6944d2;
-  --purple-strong: #5130b4;
-  --charcoal-purple: #281937;
-  --ink: #281a37;
-  --paper: #ffffff;
+  --cream: #f6f3ec;
+  --lavender: #ece7dc;
+  --purple: #1c1a16;
+  --purple-strong: #1c1a16;
+  --charcoal-purple: #1c1a16;
   --page-background: radial-gradient(ellipse 74% 54% at -9% -10%, rgba(225, 214, 255, .88) 0%, rgba(225, 214, 255, .36) 34%, transparent 67%), radial-gradient(ellipse 70% 62% at 106% 102%, rgba(255, 222, 194, .56) 0%, rgba(255, 222, 194, .2) 38%, transparent 70%), #fdfaff;
   --hero-background: radial-gradient(ellipse 72% 82% at -10% -8%, rgba(220, 205, 255, .82), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(255, 218, 190, .62), transparent 62%), linear-gradient(135deg, #fffdfd, #f8f2ff 52%, #fff5ef);
   --soft-field: linear-gradient(135deg, rgba(255, 255, 255, .97), rgba(249, 245, 255, .97) 54%, rgba(255, 247, 241, .97));
@@ -1284,9 +1325,9 @@ html.dark body {
   --deep-field: linear-gradient(135deg, #1a1028, #30194e 54%, #552d27);
   --final-field-bg: linear-gradient(135deg, #4c279b, #7851d4 50%, #c46c43);
 
-  --font-display: var(--font-newsreader), "Newsreader", "Georgia", serif;
-  --font-sans: var(--font-manrope), "Manrope", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: var(--font-display-face), "Newsreader", Georgia, serif;
+  --font-sans: var(--font-sans-face), Inter, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), "JetBrains Mono", ui-monospace, monospace;
 
   --dur-micro: 150ms;
   --dur-standard: 320ms;
@@ -2524,7 +2565,7 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 .founder-build-strip__progress span { display: flex; justify-content: space-between; }
 .founder-build-strip__progress b { color: rgb(var(--primary)); }
 .founder-build-strip__progress > i { height: 5px; overflow: hidden; border-radius: 999px; background: rgb(var(--line)); }
-.founder-build-strip__progress em { display: block; width: 55%; height: 100%; border-radius: inherit; background: rgb(var(--primary)); }
+.founder-build-strip__progress em { display: block; width: 75%; height: 100%; border-radius: inherit; background: rgb(var(--primary)); }
 .founder-build-strip__progress small { display: flex; align-items: center; justify-content: flex-end; gap: .35rem; margin-top: .2rem; color: rgb(var(--fg-faint)); }
 
 .beta-comments { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
@@ -3651,20 +3692,16 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .editorial-release-grid > a { min-height: 190px; }
 }
 
-/* One public visual language: the same near-black purple/orange field as the app. */
+/* Public site is paper. Keep html.dark harmless if a leftover class appears. */
 html,
 html.dark {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html body,
 html.dark body {
-  background:
-    radial-gradient(980px 680px at -4% -5%, rgba(113, 66, 222, .42), transparent 66%),
-    radial-gradient(860px 580px at 55% 2%, rgba(75, 55, 154, .16), transparent 72%),
-    radial-gradient(980px 720px at 103% 102%, rgba(207, 96, 45, .27), transparent 70%),
-    #0f0a17;
-  color: #f8f4ff;
+  background: var(--paper);
+  color: var(--ink);
 }
 
 #main {

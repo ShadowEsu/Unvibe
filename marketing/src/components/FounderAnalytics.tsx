@@ -25,6 +25,8 @@ interface AnalyticsPayload {
   betaDownloads: number;
 }
 
+const PRIOR_PEOPLE = 300;
+
 function compactDate(date: string): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     .format(new Date(`${date}T12:00:00Z`));
@@ -120,8 +122,8 @@ export function FounderAnalytics() {
             </article>
             <article>
               <span>All-time visitors</span>
-              <strong>{data.stats.allTime.visitors.toLocaleString()}</strong>
-              <small>{data.stats.allTime.views.toLocaleString()} page views</small>
+              <strong>{(data.stats.allTime.visitors + PRIOR_PEOPLE).toLocaleString()}</strong>
+              <small>{data.stats.allTime.views.toLocaleString()} page views, including {PRIOR_PEOPLE} people from before this counter</small>
             </article>
             <article>
               <span>Referred signups</span>
