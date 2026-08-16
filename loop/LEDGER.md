@@ -259,6 +259,33 @@ score: n/a
 gate: local
 unsure: Waitlist API untouched.
 
+## Production ship | 2026-08-16T16:22:00Z
+agents: orchestrator
+built: commit 1443d54 on origin/codex/unvibe-studio-redesign, production deploy dpl_CnXWpcVJqyiLxpbFLKe1yNmEyzuh
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: live
+unsure: unvibe.site and unvibe.live both alias the same READY production deployment. Waitlist API untouched.
+
+## Footer social move | 2026-08-16T16:24:00Z
+agents: orchestrator
+built: SocialFollowLinks under footer tagline
+deleted: social row from legal bar
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Waitlist API untouched.
+
+## Pricing contrast and toggle | 2026-08-16T16:26:00Z
+agents: orchestrator
+built: paper pricing type to ink, oval monthly annual toggle
+deleted: grey fg-muted copy on pricing cards
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Waitlist API untouched.
+
 
 
 

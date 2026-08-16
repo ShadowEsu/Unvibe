@@ -26,6 +26,7 @@ export function Footer() {
           <p className="mt-4 text-sm leading-relaxed">
             Select the code. Press Command U. Keep what you learned on this Mac.
           </p>
+          <SocialFollowLinks includeMail />
         </div>
         <FooterLinks heading="Product" links={product} />
         <FooterLinks heading="Company" links={company} />
@@ -33,9 +34,8 @@ export function Footer() {
       <div className="paper-wrap pb-10">
         <ListingBadges />
       </div>
-      <div className="paper-footer__legal paper-wrap flex flex-col gap-3 py-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Perth, Australia.</p>
-        <SocialFollowLinks includeMail />
       </div>
     </footer>
   );

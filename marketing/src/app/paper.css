@@ -1096,6 +1096,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  margin-top: 1.25rem;
 }
 
 .paper-footer__social a {
@@ -1728,9 +1729,21 @@ h2 {
   }
 }
 
+.paper-pricing .plan-kicker,
+.paper-pricing .plan-badge,
+.paper-pricing .annual-savings-note,
+.paper-pricing .pricing-disclosure,
+.paper-pricing .marketing-plan-card,
+.paper-pricing .marketing-plan-card h3,
+.paper-pricing .marketing-plan-card > small,
+.paper-pricing .marketing-plan-card li,
+.paper-pricing .marketing-plan-card li svg,
+.paper-pricing .marketing-plan-price {
+  color: var(--ink);
+}
+
 .paper-pricing .plan-kicker {
   margin: 0 0 0.4rem;
-  color: var(--ink-muted);
   font-size: 0.92rem;
 }
 
@@ -1749,8 +1762,28 @@ h2 {
   font-weight: 400;
 }
 
+.paper-pricing .marketing-billing-toggle {
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  padding: 0.28rem;
+}
+
 .paper-pricing .marketing-billing-toggle button {
+  min-width: 8.5rem;
+  border-radius: var(--radius-pill);
+  color: var(--ink);
   transition: background 200ms ease, color 200ms ease, transform 100ms ease;
+}
+
+.paper-pricing .marketing-billing-toggle button span {
+  display: inline;
+  margin: 0 0 0 0.4rem;
+  color: var(--ink);
+}
+
+.paper-pricing .marketing-billing-toggle button.active,
+.paper-pricing .marketing-billing-toggle button.active span {
+  color: var(--paper);
 }
 
 .paper-key {
