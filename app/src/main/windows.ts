@@ -6,9 +6,9 @@ const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
-/** Compact AI Container — small enough not to intimidate on first open. */
-const DEFAULT_WIDGET_W = 300;
-const DEFAULT_WIDGET_H = 360;
+/** Opening size for the review panel. Big enough to read, not a full window. */
+const DEFAULT_WIDGET_W = 480;
+const DEFAULT_WIDGET_H = 600;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
@@ -57,7 +57,8 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 /** Compact landscape aisle: play · logo · home. */
 const TOP_BAR_W = 340;
 const FLOATING_BAR_W = 196;
-const BOTTOM_BAR_W = 48;
+const BOTTOM_BAR_COMPACT_W = 48;
+const BOTTOM_BAR_W = 160;
 const BAR_H = 44;
 const BAR_EXPANDED_W = 620;
 // The drawer contains recent learning, stats, and two actions. Keep transparent
@@ -66,17 +67,19 @@ const BAR_EXPANDED_H = 324;
 
 function compactBarWidth(position: BarPosition): number {
   if (position === 'top-center') return TOP_BAR_W;
-  if (position.startsWith('bottom')) return BOTTOM_BAR_W;
+  if (position.startsWith('bottom')) return BOTTOM_BAR_COMPACT_W;
   return FLOATING_BAR_W;
 }
 
 export function createBar(): BrowserWindow {
   barIsExpanded = false;
-  const compactWidth = compactBarWidth(settings().all().barPosition);
-  const { x, y } = barBounds(settings().all().barPosition, compactWidth, BAR_H);
+  const position = settings().all().barPosition;
+  const compactWidth = compactBarWidth(position);
+  const compactHeight = position.startsWith('bottom') ? 48 : BAR_H;
+  const { x, y } = barBounds(position, compactWidth, compactHeight);
   const win = new BrowserWindow({
     width: compactWidth,
-    height: BAR_H,
+    height: compactHeight,
     x,
     y,
     frame: false,
@@ -106,24 +109,25 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   barIsExpanded = expanded;
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
-  const width = expanded ? (bottom ? 152 : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : BAR_H;
+  const width = expanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
+  const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : (bottom ? 48 : BAR_H);
   const { x, y } = barBounds(position, width, height);
   win.setFocusable(expanded);
-  // Resize the transparent hit area before the renderer morphs the visible
-  // Island. Animating both native bounds and the CSS surface caused a visible
-  // double-step on macOS; the renderer owns the one continuous visual motion.
-  win.setBounds({ x, y, width, height }, false);
+  const prev = win.getBounds();
+  if (force || prev.x !== x || prev.y !== y || prev.width !== width || prev.height !== height) {
+    win.setBounds({ x, y, width, height }, false);
+  }
   win.moveTop();
 }
 
 /** Move the bar to a new position (called when the setting changes). */
 export function positionBar(win: BrowserWindow): void {
-  const b = win.getBounds();
   const position = settings().all().barPosition;
-  const width = barIsExpanded ? b.width : compactBarWidth(position);
-  const { x, y } = barBounds(position, width, b.height);
-  win.setBounds({ ...b, width, x, y });
+  const bottom = position.startsWith('bottom');
+  const width = barIsExpanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
+  const height = bottom ? 48 : (barIsExpanded ? BAR_EXPANDED_H : BAR_H);
+  const { x, y } = barBounds(position, width, height);
+  win.setBounds({ x, y, width, height });
 }
 
 /** Quiet aisle — only show while a review is active. */
@@ -184,15 +188,17 @@ function defaultWidgetBounds(): Electron.Rectangle {
   };
 }
 
-/** Restore user size/position, but migrate the old stock 440×560 default to the shorter panel. */
+/** Restore user size/position. Stock tiny panels get the current opening size. */
 function resolveWidgetBounds(): Electron.Rectangle {
   const saved = settings().all().lastWidgetBounds;
   if (!saved) return defaultWidgetBounds();
-  const stockOld =
-    (saved.width === 440 && saved.height === 560) ||
+  const stockTiny =
+    (saved.width === 300 && saved.height === 360) ||
+    (saved.width === 280 && saved.height === 240) ||
+    (saved.width === 340 && saved.height === 440) ||
     (saved.width === 360 && saved.height === 480) ||
-    (saved.width === 340 && saved.height === 440);
-  if (stockOld) {
+    (saved.width === 440 && saved.height === 560);
+  if (stockTiny) {
     return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
   }
   return { ...saved };
@@ -201,8 +207,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
 /** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
 export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-const WIDGET_MIN_W = 280;
-const WIDGET_MIN_H = 240;
+const WIDGET_MIN_W = 360;
+const WIDGET_MIN_H = 420;
 
 export function applyWidgetResize(
   start: Electron.Rectangle,
@@ -305,7 +311,7 @@ export function createCompanion(): BrowserWindow {
     minWidth: 980,
     minHeight: 620,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: '#faf7f0',
+    backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
     skipTaskbar: false,
     webPreferences: secureWebPrefs(),
   });

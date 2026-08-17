@@ -60,6 +60,9 @@ for (const name of ['bar', 'widget', 'companion']) {
   for (const ext of ['html', 'css']) {
     cpSync(`src/renderer/${name}/${name}.${ext}`, `dist/renderer/${name}/${name}.${ext}`);
   }
+  for (const file of readdirSync(`src/renderer/${name}`).filter((f) => f.endsWith('.png'))) {
+    cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
+  }
 }
 mkdirSync('dist/assets', { recursive: true });
 for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {

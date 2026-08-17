@@ -1,90 +1,92 @@
 :root {
-  --font-sans: "DM Sans", "Avenir Next", "Segoe UI", sans-serif;
-  --font-display: "DM Sans", "Avenir Next", sans-serif;
-  --font-mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  --font-sans: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
   --bg: #ffffff;
-  --fg: #24212a;
-  --muted: #706b78;
-  --line: #e6e3ea;
-  --fill: #7657dd;
-  --fill-strong: #5638b7;
+  --fg: #111111;
+  --muted: #5c5c5c;
+  --line: #d8d8d8;
+  --fill: #111111;
+  --fill-strong: #000000;
   --on-fill: #ffffff;
-  --chip-bg: #f0ecfb;
-  --panel-tint: #f8f7fb;
-  --danger-line: #c9b9cf;
-  --focus-ring: rgba(111, 69, 210, .28);
-  --test: #0d9488;
-  --test-soft: #ccfbf1;
-  --diff: #d97706;
-  --diff-soft: #ffedd5;
-  --ask: #2563eb;
-  --ask-soft: #dbeafe;
+  --chip-bg: #f3f3f3;
+  --panel-tint: #ffffff;
+  --danger-line: #bdbdbd;
+  --focus-ring: rgba(0, 0, 0, .28);
+  --test: #111111;
+  --test-soft: #f3f3f3;
+  --diff: #111111;
+  --diff-soft: #f3f3f3;
+  --ask: #111111;
+  --ask-soft: #f3f3f3;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #14111c;
-    --fg: #f4effc;
-    --muted: #b8adc4;
-    --line: #3a2f49;
-    --fill: #a78bfa;
-    --fill-strong: #c4b5fd;
-    --on-fill: #120c1c;
-    --chip-bg: #2a2038;
-    --panel-tint: #1a1524;
-    --danger-line: #5a455e;
-    --focus-ring: rgba(167, 139, 250, .34);
-    --test: #2dd4bf;
-    --test-soft: #134e4a;
-    --diff: #fbbf24;
-    --diff-soft: #422006;
-    --ask: #93c5fd;
-    --ask-soft: #1e3a5f;
+    --bg: #111111;
+    --fg: #f4f4f4;
+    --muted: rgb(244 244 244 / 0.72);
+    --line: rgb(244 244 244 / 0.2);
+    --fill: #f4f4f4;
+    --fill-strong: #ffffff;
+    --on-fill: #111111;
+    --chip-bg: rgb(255 255 255 / 0.08);
+    --panel-tint: #161616;
+    --danger-line: rgb(244 244 244 / 0.28);
+    --focus-ring: rgba(255, 255, 255, .42);
+    --test: #f4f4f4;
+    --test-soft: #1c1c1c;
+    --diff: #f4f4f4;
+    --diff-soft: #1c1c1c;
+    --ask: #f4f4f4;
+    --ask-soft: #1c1c1c;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #14111c;
-  --fg: #f4effc;
-  --muted: #b8adc4;
-  --line: #3a2f49;
-  --fill: #a78bfa;
-  --fill-strong: #c4b5fd;
-  --on-fill: #120c1c;
-  --chip-bg: #2a2038;
-  --panel-tint: #1a1524;
-  --danger-line: #5a455e;
-  --focus-ring: rgba(167, 139, 250, .34);
-  --test: #2dd4bf;
-  --test-soft: #134e4a;
-  --diff: #fbbf24;
-  --diff-soft: #422006;
-  --ask: #93c5fd;
-  --ask-soft: #1e3a5f;
+  --bg: #111111;
+  --fg: #f4f4f4;
+  --muted: rgb(244 244 244 / 0.72);
+  --line: rgb(244 244 244 / 0.2);
+  --fill: #f4f4f4;
+  --fill-strong: #ffffff;
+  --on-fill: #111111;
+  --chip-bg: rgb(255 255 255 / 0.08);
+  --panel-tint: #161616;
+  --danger-line: rgb(244 244 244 / 0.28);
+  --focus-ring: rgba(255, 255, 255, .42);
+  --test: #f4f4f4;
+  --test-soft: #1c1c1c;
+  --diff: #f4f4f4;
+  --diff-soft: #1c1c1c;
+  --ask: #f4f4f4;
+  --ask-soft: #1c1c1c;
 }
 :root[data-theme="light"] {
-  --bg: #fffdfb;
-  --fg: #1c1428;
-  --muted: #6f6578;
-  --line: #e7dcf0;
-  --fill: #6f45d2;
-  --fill-strong: #4f2aa9;
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #5c5c5c;
+  --line: #d8d8d8;
+  --fill: #111111;
+  --fill-strong: #000000;
   --on-fill: #ffffff;
-  --chip-bg: #f1e9ff;
-  --panel-tint: #faf6ff;
-  --danger-line: #c9b9cf;
-  --focus-ring: rgba(111, 69, 210, .28);
-  --test: #0d9488;
-  --test-soft: #ccfbf1;
-  --diff: #d97706;
-  --diff-soft: #ffedd5;
-  --ask: #2563eb;
-  --ask-soft: #dbeafe;
+  --chip-bg: #f3f3f3;
+  --panel-tint: #ffffff;
+  --danger-line: #bdbdbd;
+  --focus-ring: rgba(0, 0, 0, .28);
+  --test: #111111;
+  --test-soft: #f3f3f3;
+  --diff: #111111;
+  --diff-soft: #f3f3f3;
+  --ask: #111111;
+  --ask-soft: #f3f3f3;
 }
 
 * { box-sizing: border-box; margin: 0; }
 html, body, #root { background: transparent; height: 100%; overflow: hidden; }
 body {
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
+  font-weight: 500;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   padding: 0;
   color: var(--fg);
@@ -102,12 +104,23 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 14px 42px rgba(25, 19, 34, .16), inset 0 1px rgba(255,255,255,.68);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .18), inset 0 1px rgba(255,255,255,.7);
   overflow: hidden;
-  transition: opacity 0.3s ease, border-color 0.25s ease, background 0.3s ease;
+  isolation: isolate;
+  animation: widgetIn .42s var(--ease-emphatic) both;
+  transition: opacity 0.3s ease, border-color 0.25s ease, background 0.3s ease, transform 220ms var(--ease-emphatic);
 }
-.card::before { content:""; position:absolute; left:38%; right:38%; top:0; height:2px; border-radius:0 0 2px 2px; background:var(--fill); opacity:.55; pointer-events:none; }
-.card:hover { border-color: color-mix(in srgb, var(--fill) 35%, var(--line)); }
+.card::before { content:""; position:absolute; left:32%; right:32%; top:0; height:2px; border-radius:0 0 2px 2px; background:var(--fg); opacity:.7; pointer-events:none; z-index:2; }
+.card::after { content: none; }
+:root[data-theme="dark"] .card {
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.5), inset 0 1px rgb(255 255 255 / 0.12);
+}
+.card > * { position: relative; z-index: 1; }
+@keyframes widgetIn {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+.card:hover { border-color: var(--fg); }
 
 /* Resize grips — exactly on the card border lines (not an invisible outer rim) */
 .rz {
@@ -179,19 +192,23 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
 .quota {
   -webkit-app-region: no-drag;
   flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--fill-strong);
+  max-width: 46%;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--fg);
   background: var(--chip-bg);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 5px 10px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.quota--usage { display: inline-flex; align-items: center; gap: 6px; }
+.quota--usage { display: inline-flex; align-items: center; gap: 8px; }
 .quota--usage b { font: inherit; color: var(--fg); }
-.quota--usage i { width: 1px; height: 11px; background: var(--line); }
+.quota--usage i { width: 1px; height: 12px; background: var(--line); }
 .head button {
   -webkit-app-region: no-drag;
   background: transparent;
@@ -585,5 +602,5 @@ code.inline {
 .opt { padding: calc(10px * var(--widget-scale)) calc(12px * var(--widget-scale)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .cursor, .skeleton i, .card, .lvl, .chip, .btn, .tab-add, .opt { animation: none; transition: none; }
+  .cursor, .skeleton i, .card, .card::after, .lvl, .chip, .btn, .tab-add, .opt { animation: none; transition: none; transform: none; }
 }

@@ -515,11 +515,15 @@ function Widget() {
         {usage && (
           <span
             className="quota quota--usage"
-            title={`AI: ${usage.used}/${usage.limit} used · Selections: ${usage.selections?.used ?? 0}/${usage.selections?.limit ?? 100} used`}
+            title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
           >
-            <b>AI {usage.remaining}</b>
-            <i aria-hidden="true" />
-            <b>Select {usage.selections?.remaining ?? 100}</b>
+            <b>{usage.remaining} of {usage.limit} left this month</b>
+            {usage.selections ? (
+              <>
+                <i aria-hidden="true" />
+                <b>{usage.selections.remaining} selections left</b>
+              </>
+            ) : null}
           </span>
         )}
         <span className={`head__status head__status--${phase}`}><i />{phaseLabel}</span>

@@ -419,6 +419,33 @@ score: n/a
 gate: local
 unsure: Waitlist API files were not edited. Signed in users get the existing 8 character email hash so /api/referrals can fill 0/5. Unsigned users get a local mixed code. Pro credit is still evaluated after signup, same as today.
 
+## Gift Unvibe page | 2026-08-17T02:35:00Z
+agents: orchestrator
+built: gift.tsx, companion.tsx, companion.css, build.mjs, waitlist-form.png, waitlist-referral.png
+deleted: sidebar GiftCard strip
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Gift Unvibe is a full companion page like Plan and Chat. Waitlist screenshots are the ones from unvibe.site. Pro credit is still evaluated after signup.
+
+## Companion pane breathing room | 2026-08-17T02:40:00Z
+agents: orchestrator
+built: companion.tsx, companion.css
+deleted: dashed empty states, 4-up Home rail on daily use, viewport-only stacking
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Pane uses container queries. Under 640px the sidebar becomes a drawer with a menu button. Hover-reveal feed actions stay visible on touch.
+
+## Changelog Gift page companion | 2026-08-17T03:31:00Z
+agents: orchestrator
+built: milestones.ts, .cursor/rules/01-commits.mdc
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Changelog records the Gift Unvibe page and calmer companion pane. Commit messages from here skip agent as contributor.
+
 
 
 

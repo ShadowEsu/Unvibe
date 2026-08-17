@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { LocalEvent, Outcome } from '../core/learning';
+import { localDayKey } from '../core/learning';
 import { openToken, sealToken } from '../core/tokenVault';
 import { mergeRemoteEvents } from '../core/syncModel';
 
@@ -38,6 +39,8 @@ interface Data {
   dailyUsage?: { day: string; studyAsks: number; quizzes: number };
   /** Monthly selected-code prompt counter for a sealed private-beta build. */
   betaPromptUsage?: { month: string; selectedCodePrompts: number };
+  /** Event ids the user removed. Local only, so a later sync cannot restore them. */
+  deletedIds?: string[];
 }
 
 export const STUDY_ASK_DAILY_LIMIT = 20;
@@ -61,6 +64,7 @@ class Store {
     this.data.events ??= [];
     this.data.outbox ??= [];
     this.data.snapshots ??= [];
+    this.data.deletedIds ??= [];
     if (this.data.account && !this.data.syncOwnerId) this.data.syncOwnerId = this.data.account.userId;
     // Versions before 0.1.0 could persist a reversible base64 token when the keychain was
     // unavailable. Fail closed and require sign-in again instead of retaining that token.
@@ -90,6 +94,32 @@ class Store {
     this.save();
   }
 
+  /** Persist on this Mac only. Used for streak days that should not sync or use AI quota. */
+  recordLocal(ev: LocalEvent): void {
+    const idx = this.data.events.findIndex((e) => e.id === ev.id);
+    if (idx >= 0) this.data.events[idx] = ev;
+    else this.data.events.push(ev);
+    this.save();
+  }
+
+  ensureDayActive(): void {
+    const today = localDayKey(new Date());
+    const already = this.data.events.some((event) => (event.localDate ?? event.ts.slice(0, 10)) === today);
+    if (already) return;
+    const now = new Date();
+    this.recordLocal({
+      id: `active-${today}`,
+      ts: now.toISOString(),
+      eventType: 'day_active',
+      localDate: today,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      scope: 'app',
+      level: 'intermediate',
+      outcome: 'reviewed',
+      lines: 0,
+    });
+  }
+
   setOutcome(id: string, outcome: Outcome, concept?: string, conceptLabel?: string): void {
     const ev = this.data.events.find((e) => e.id === id);
     if (!ev) return;
@@ -111,7 +141,20 @@ class Store {
   }
 
   eventById(id: string): LocalEvent | undefined {
+    if ((this.data.deletedIds ?? []).includes(id)) return undefined;
     return this.data.events.find((e) => e.id === id);
+  }
+
+  forgetEvent(id: string): boolean {
+    if (!id || id.startsWith('active-')) return false;
+    const existed = this.data.events.some((event) => event.id === id);
+    this.data.events = this.data.events.filter((event) => event.id !== id);
+    this.data.outbox = this.data.outbox.filter((queued) => queued !== id);
+    const hidden = new Set(this.data.deletedIds ?? []);
+    hidden.add(id);
+    this.data.deletedIds = [...hidden].slice(-2000);
+    this.save();
+    return existed || hidden.has(id);
   }
 
   private todayUsage(): { day: string; studyAsks: number; quizzes: number } {
@@ -187,7 +230,9 @@ class Store {
   }
 
   events(): LocalEvent[] {
-    return this.data.events;
+    const hidden = new Set(this.data.deletedIds ?? []);
+    if (hidden.size === 0) return this.data.events;
+    return this.data.events.filter((event) => !hidden.has(event.id));
   }
 
   pending(): LocalEvent[] {
@@ -202,7 +247,8 @@ class Store {
   /** Merge the remote mirror without replacing a newer local event still waiting to upload. */
   mergeRemote(events: LocalEvent[]): number {
     const result = mergeRemoteEvents(this.data.events, this.data.outbox, events);
-    this.data.events = result.events;
+    const hidden = new Set(this.data.deletedIds ?? []);
+    this.data.events = hidden.size === 0 ? result.events : result.events.filter((event) => !hidden.has(event.id));
     this.save();
     return result.merged;
   }
@@ -259,7 +305,7 @@ class Store {
   }
 
   wipeEverything(): void {
-    this.data = { events: [], outbox: [], snapshots: [] };
+    this.data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
     this.save();
   }
 

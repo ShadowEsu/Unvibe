@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
 import { Chat } from './chat';
+import { Gift } from './gift';
 import { playUiTone } from '../shared/tones';
 
-type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
+type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -94,9 +95,10 @@ const IC = {
   clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
   map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
   plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
+  gift: 'M4 9h12v8H4z M10 9v8 M4 9l6-5 6 5 M7 5c0-1.4 3-1.4 3 1.2 M13 5c0-1.4-3-1.4-3 1.2',
 };
 
-const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
+const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
     { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
     { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
@@ -143,6 +145,7 @@ const NAV: Array<{ id: PageId; icon: string }> = [
   { id: 'Chat', icon: IC.chat },
   { id: 'Progress', icon: IC.progress },
   { id: 'Plan', icon: IC.plan },
+  { id: 'Gift', icon: IC.gift },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
@@ -194,6 +197,15 @@ function accelFromEvent(e: KeyboardEvent): string | null {
 }
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+function dayGroup(iso: string): string {
+  const when = new Date(iso);
+  const today = new Date();
+  const start = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((start(today) - start(when)) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return when.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 function SignInForm({ onDone }: { onDone: (email: string) => void }) {
@@ -379,58 +391,6 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
   );
 }
 
-function GiftCard({ compact }: { compact: boolean }) {
-  const [code, setCode] = useState('');
-  const [used, setUsed] = useState(0);
-  const [email, setEmail] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      const result = await window.unvibe.giftStatus() as { ok?: boolean; code?: string; used?: number; email?: string | null };
-      if (!alive || !result?.code) return;
-      setCode(result.code);
-      setUsed(Math.min(5, Math.max(0, result.used ?? 0)));
-      setEmail(result.email ?? null);
-    };
-    void load();
-    const timer = window.setInterval(() => void load(), 30_000);
-    return () => {
-      alive = false;
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  const copy = () => {
-    if (!code) return;
-    void navigator.clipboard.writeText(code);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  };
-
-  return (
-    <section className="gift-card" aria-label="Gift Unvibe">
-      <div className="gift-card__head">
-        <LogoMark size={18} />
-        <span>Gift Unvibe</span>
-      </div>
-      <p className="gift-card__copy">
-        A friend opens unvibe.site, expands Referral or promo code, puts {email ?? 'your email'}, then this SPECIAL CHAR. You both get 1 month of Pro. Five gifts max.
-      </p>
-      <button type="button" className="gift-card__code" onClick={copy} disabled={!code} title="Copy SPECIAL CHAR">
-        {code || '········'}
-        <small>{copied ? 'Copied' : 'Copy'}</small>
-      </button>
-      <div className="gift-card__meter" aria-label={`${used} of 5 gifts used`}>
-        <i><em style={{ width: `${(used / 5) * 100}%` }} /></i>
-        <b>{used}/5</b>
-      </div>
-      {compact ? <span className="sr-only">Gift Unvibe {used} of 5</span> : null}
-    </section>
-  );
-}
-
 function UsageChip({ usage, onPlan, compact = false }: {
   usage: AppUsageLine | null;
   onPlan: () => void;
@@ -464,10 +424,18 @@ function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
   onPlan: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
+  const groups: Array<{ label: string; items: FeedItem[] }> = [];
+  for (const item of feed) {
+    const label = dayGroup(item.ts);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(item);
+    else groups.push({ label, items: [item] });
+  }
+  const daily = feed.length > 0;
   return (
     <>
       <div className="topline">
-        <h1>Keep it local.</h1>
+        <h1>{daily ? 'Today' : 'Keep it local.'}</h1>
       </div>
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
@@ -478,36 +446,44 @@ function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
           <button type="button" className="primary-btn" onClick={onPlan}>Upgrade to Pro</button>
         </div>
       )}
-      <div className="cols">
+      <div className={`cols${daily ? ' cols--daily' : ''}`}>
         <div className="main-col">
-          <div className="hero">
-            <h2>Understand everything you ship.</h2>
-            <p>Highlight code in any app and Unvibe explains it right where you are working — pitched to how much you already know, and quiet until you ask.</p>
+          <div className={`hero${daily ? ' hero--quiet' : ''}`}>
+            <h2>{daily ? 'Keep going.' : 'Understand everything you ship.'}</h2>
+            <p>{daily ? `Select code and press ${shortcut}. New reviews land in the list below.` : `Highlight code in any app and Unvibe explains it where you are working, pitched to how much you already know. Quiet until you ask.`}</p>
             <div className="row">
               <button onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
               <span className="kbd">or press {shortcut} anywhere</span>
             </div>
           </div>
-          <div className="feed-label">LATELY</div>
           {feed.length === 0 ? (
-            <div className="feed-empty"><div className="t">Nothing reviewed yet</div><div className="d">Highlight some code and press {shortcut}. The things you review will gather here so you can return to any of them.</div></div>
-          ) : (
-            <div className="feed">
-              {feed.map((f) => (
-                <div className="feed-row" key={f.id}>
-                  <div className="feed-time">{fmtTime(f.ts)}</div>
-                  <div className="feed-main"><div className="feed-title">{f.title}</div><div className="feed-meta">{f.meta}</div></div>
-                  <span className={`tag tag--${f.outcome}`}>{f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}</span>
-                  <TrashButton
-                    label={`Remove ${f.title}`}
-                    onClick={() => {
-                      if (!window.confirm('Remove this lesson from this Mac?')) return;
-                      void window.unvibe.forgetLearning(f.id).then(() => void onRefresh());
-                    }}
-                  />
-                </div>
-              ))}
+            <div className="feed-empty">
+              <div className="t">Nothing reviewed yet</div>
+              <div className="d">Highlight some code and press {shortcut}. Reviews gather here so you can return to them.</div>
+              <button type="button" className="primary-btn" onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
             </div>
+          ) : (
+            groups.map((group) => (
+              <div className="feed-block" key={group.label}>
+                <div className="feed-label">{group.label}</div>
+                <div className="feed">
+                  {group.items.map((f) => (
+                    <div className="feed-row" key={f.id}>
+                      <div className="feed-time">{fmtTime(f.ts)}</div>
+                      <div className="feed-main"><div className="feed-title">{f.title}</div><div className="feed-meta">{f.meta}</div></div>
+                      <span className={`tag tag--${f.outcome}`}>{f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}</span>
+                      <TrashButton
+                        label={`Remove ${f.title}`}
+                        onClick={() => {
+                          if (!window.confirm('Remove this lesson from this Mac?')) return;
+                          void window.unvibe.forgetLearning(f.id).then(() => void onRefresh());
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
           )}
         </div>
         <div className="rail">
@@ -516,8 +492,12 @@ function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
             <div className="stat"><span className="v">{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</span><span className="l">concepts familiar or strong</span></div>
             <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
           </div>
-          <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
-          <div className="rail-card"><div className="t">How it works</div><div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div></div>
+          {!daily && (
+            <>
+              <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
+              <div className="rail-card"><div className="t">How it works</div><div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div></div>
+            </>
+          )}
         </div>
       </div>
     </>
@@ -529,7 +509,7 @@ function Progress({ profile }: { profile: Profile | null }) {
   return (
     <>
       <div className="topline"><h1>Progress</h1></div>
-      <p className="lead">The honest measure of what you have understood — not lines typed, but lines you could explain to someone else.</p>
+      <p className="lead">The honest measure of what you have understood. Lines you could explain to someone else.</p>
       <div className="tiles">
         <div className="tile"><div className="v">{profile?.linesUnderstood ?? 0}</div><div className="l">lines understood</div><div className="note">of {profile?.linesReviewed ?? 0} reviewed</div></div>
         <div className="tile"><div className="v">{profile?.conceptsDeveloping ?? 0}</div><div className="l">concepts developing</div><div className="note">{profile?.conceptsSeen ?? 0} encountered · {profile?.conceptsNeedReview ?? 0} to revisit</div></div>
@@ -539,7 +519,7 @@ function Progress({ profile }: { profile: Profile | null }) {
       <div className="panel-card">
         <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
         <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
-        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span style={{ marginLeft: 'auto' }}>5, 25, 50, 100, 200 lines explained that day.</span></div>
+        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
       </div>
       <div className="two">
         <div className="panel-card" style={{ marginBottom: 0 }}>
@@ -989,6 +969,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
 function App() {
   const [page, setPage] = useState<PageId>('Home');
+  const [navOpen, setNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
@@ -1117,15 +1098,17 @@ function App() {
   return (
     <>
       <div className="titlebar" />
-      <div className="layout">
+      <div className={`layout${navOpen ? ' layout--nav-open' : ''}`}>
+        {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
         <aside className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
           <nav className="nav">{NAV.map((p) => {
             const on = p.id === page || (p.id === 'Learn' && page === 'Study');
+            const label = p.id === 'Gift' ? 'Gift Unvibe' : p.id;
             return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={p.id} title={sideCompact ? p.id : undefined} onClick={() => setPage(p.id)}>
-                <Icon d={p.icon} /><span className="nav-label">{p.id}</span>
+              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setPage(p.id); setNavOpen(false); }}>
+                <Icon d={p.icon} /><span className="nav-label">{label}</span>
               </button>
             );
           })}</nav>
@@ -1141,9 +1124,9 @@ function App() {
             {sync.pending > 0 && <small>{sync.pending} pending</small>}
           </button>
           <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free. 100 on Pro. AI access included, no provider API key needed.</div></div>
-          <GiftCard compact={sideCompact} />
           <nav className="nav">{FOOT.map((f) => (
             <button key={f.id} type="button" aria-label={f.id} title={sideCompact ? f.id : undefined} onClick={() => {
+              setNavOpen(false);
               if (f.id === 'Settings') { setSettingsTab('General'); setSettingsOpen(true); }
               else flash(f.toast);
             }}>
@@ -1154,6 +1137,14 @@ function App() {
         </aside>
         <main className="content">
           <div className="content-tools">
+            <button
+              type="button"
+              className="nav-toggle"
+              aria-label="Open menu"
+              onClick={() => setNavOpen(true)}
+            >
+              <Icon d="M3 6h14 M3 10h14 M3 14h14" />
+            </button>
             <button
               type="button"
               className="theme-toggle"
@@ -1193,6 +1184,7 @@ function App() {
                 />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan />
+                : page === 'Gift' ? <Gift />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>

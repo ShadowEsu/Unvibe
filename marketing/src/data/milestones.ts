@@ -20,6 +20,13 @@ export const milestones: Milestone[] = [
   },
   {
     date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Gift Unvibe page and a calmer companion",
+    summary: "Gift Unvibe is its own page in the Mac app: an 8 character SPECIAL CHAR, a 0/5 meter, and the waitlist screenshots from unvibe.site. The companion pane is less compact. Home is a daily feed. Small windows get a menu drawer.",
+    figure: "Mac app",
+  },
+  {
+    date: "17 AUG 2026",
     category: "DISTRIBUTION",
     title: "Gift Unvibe",
     summary: "Share an 8 character SPECIAL CHAR from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts.",

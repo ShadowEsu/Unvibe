@@ -83,8 +83,10 @@ export async function captureSelection(options: { preferClipboard?: boolean } = 
     return copied.trim().length > 0 ? copied : null;
   }
   const previous = clipboard.readText();
+  // Let Control+U / the saved shortcut release before synthesizing Copy.
+  await delay(90);
   // Empty the text pasteboard so an unchanged clipboard cannot be mistaken for a selection.
-  // The explicit “Use clipboard” action remains available in the no-selection picker.
+  // The explicit Use clipboard action remains available in the no-selection picker.
   clipboard.writeText('');
   try {
     const front = await frontmostApp();

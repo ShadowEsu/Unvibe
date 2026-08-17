@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, heatLevel, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -30,7 +30,7 @@ test('computeProfile sums lines and uses cautious concept evidence', () => {
   assert.equal(p.conceptsFamiliar, 0);
   assert.equal(p.streak, 1);
   assert.equal(p.heat.length, 182);
-  assert.equal(p.heat[181], 2); // 2 events today -> intensity 2
+  assert.equal(p.heat[181], 1); // 20 lines today -> shade 1 (5+)
   // usage buckets both apps
   assert.equal(p.usage.find((u) => u.label === 'Editors & IDEs')?.pct, 50);
   assert.equal(p.usage.find((u) => u.label === 'Terminal')?.pct, 50);
@@ -40,6 +40,49 @@ test('streak uses the captured local date rather than the UTC date', () => {
   const events = [ev({ ts: '2026-07-12T06:30:00Z', localDate: '2026-07-11', timezone: 'America/Los_Angeles' })];
   assert.equal(computeProfile(events, '2026-07-11').streak, 1);
   assert.equal(computeProfile(events, '2026-07-12').streak, 1);
+});
+
+test('heatLevel maps explained lines to five shades', () => {
+  assert.equal(heatLevel(0), 0);
+  assert.equal(heatLevel(4), 0);
+  assert.equal(heatLevel(5), 1);
+  assert.equal(heatLevel(24), 1);
+  assert.equal(heatLevel(25), 2);
+  assert.equal(heatLevel(50), 3);
+  assert.equal(heatLevel(100), 4);
+  assert.equal(heatLevel(200), 5);
+});
+
+test('opening the app counts as a saved streak day without a review', () => {
+  const events = [ev({
+    id: 'active-2026-07-11',
+    eventType: 'day_active',
+    scope: 'app',
+    lines: 0,
+    localDate: '2026-07-11',
+  })];
+  const p = computeProfile(events, '2026-07-11');
+  assert.equal(p.streak, 1);
+  assert.equal(p.bestStreak, 1);
+  assert.equal(p.reviews, 0);
+  assert.equal(p.heat[181], 0);
+  assert.equal(computeLearningItems(events, 10).length, 0);
+});
+
+test('chat lines add heat without appearing in history', () => {
+  const events = [ev({
+    id: 'chat-1',
+    scope: 'chat',
+    eventType: 'explanation_completed',
+    lines: 60,
+    localDate: '2026-07-11',
+    concept: 'chat',
+  })];
+  const p = computeProfile(events, '2026-07-11');
+  assert.equal(p.streak, 1);
+  assert.equal(p.heat[181], 3);
+  assert.equal(p.reviews, 0);
+  assert.equal(computeLearningItems(events, 10).length, 0);
 });
 
 test('skill evidence never labels a single correct answer strong', () => {
