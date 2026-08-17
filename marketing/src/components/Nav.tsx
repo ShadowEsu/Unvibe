@@ -65,14 +65,14 @@ export function Nav() {
 
       {open && (
         <div className="paper-sheet md:hidden">
-          <button type="button" aria-label="Close menu" className="absolute inset-0" onClick={() => setOpen(false)} />
+          <button type="button" aria-label="Close menu" className="paper-sheet__scrim" onClick={() => setOpen(false)} />
           <div className="paper-sheet__panel">
-            <div className="mb-6 flex items-center justify-between">
+            <div className="paper-sheet__head">
               <Logo />
               <button type="button" aria-label="Close menu" onClick={() => setOpen(false)}>Close</button>
             </div>
             {links.map((link) => (
-              <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="py-3 text-lg">
+              <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="paper-sheet__link">
                 {link.label}
               </Link>
             ))}

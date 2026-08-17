@@ -1284,6 +1284,9 @@
   --logo-tiktok-pink: #fe2c55;
   --row-hover: rgb(111 69 210 / 0.05);
   --nav-blur: rgb(245 242 246 / 0.72);
+  --nav-menu-fill: rgb(255 255 255 / 0.88);
+  --nav-menu-edge: rgb(255 255 255 / 0.7);
+  --nav-menu-scrim: rgb(18 12 32 / 0.22);
   --radius-card: 16px;
   --radius-glass: 12px;
   --radius-pill: 999px;
