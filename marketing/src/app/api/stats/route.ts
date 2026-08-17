@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getBetaInstallCounts } from "@/lib/betaInstallStats";
 import { getSiteStats } from "@/lib/siteStatsStore";
 import { getPublicAnalytics } from "@/lib/publicAnalyticsStore";
 
@@ -12,8 +13,9 @@ export async function GET(req: Request) {
     // are opt-in to avoid loading waitlist storage for every dashboard refresh.
     const includeWaitlist = new URL(req.url).searchParams.get("include") === "waitlist";
     const publicAnalytics = includeWaitlist ? await getPublicAnalytics() : undefined;
+    const installs = includeWaitlist ? await getBetaInstallCounts() : undefined;
     return NextResponse.json(
-      { ok: true, stats, ...publicAnalytics },
+      { ok: true, stats, ...publicAnalytics, installs },
       { headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=45" } },
     );
   } catch (error) {

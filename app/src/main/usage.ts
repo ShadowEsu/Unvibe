@@ -2,15 +2,15 @@
  * Explanation quota for the desktop app.
  * Signed-in: prefer server billing overview.
  * Sealed trial: server trial meter (per install).
- * Local / unsigned: Free allotment (50/month) counted from local review events.
+ * Local / unsigned: Free allotment (30/month) counted from local review events.
  */
 import { billingOverview, trialUsageOverview, type BillingUsageLine } from './backend';
 import { store } from './store';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 
-export const LOCAL_FREE_LIMIT = 50;
-/** The private beta includes the same 50 monthly AI explanations as Free. */
-export const TRIAL_FREE_LIMIT = 50;
+export const LOCAL_FREE_LIMIT = 30;
+/** The private beta matches Free: 30 monthly AI explanations. */
+export const TRIAL_FREE_LIMIT = 30;
 /** UI-safe representation of an unrestricted local entitlement. */
 export const FULL_PRODUCT_LIMIT = 1_000_000;
 

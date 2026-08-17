@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { PricingHeadline } from "@/components/paper/PricingHeadline";
 import { PricingPlans } from "@/components/redesign/PricingPlans";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Free is 50 explanations a month. Pro is $8 a month or $72 a year. Team and Enterprise are priced and coming soon.",
+  description: "You'll spend 15,000 hours+ on vibe coding. Make them count. Free is 30 explanations a month. Pro is $8 a month or $72 a year.",
 };
 
 export default function PricingPage() {
@@ -13,9 +14,7 @@ export default function PricingPage() {
         <img src="/hero/golden-gate.png" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
-          <p className="paper-meta">Pricing</p>
-          <h1>Start free.</h1>
-          <p>Private beta. Free and Pro are open on the waitlist. Team and Enterprise are priced, and coming soon.</p>
+          <PricingHeadline />
         </div>
       </header>
       <section className="paper-section">

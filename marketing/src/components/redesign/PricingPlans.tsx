@@ -10,7 +10,7 @@ type PlanId = 'free' | 'pro' | 'team' | 'enterprise';
 
 const cards = {
   free: [
-    '50 explanations each month',
+    '30 explanations each month',
     'Selected-code explanations',
     'Core explanation levels',
     'Spaced study / revisit queue',

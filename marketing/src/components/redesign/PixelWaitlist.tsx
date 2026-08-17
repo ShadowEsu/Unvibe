@@ -75,6 +75,19 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       setReferralCode(typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string" ? (data as WaitlistResponse & { referralCode?: string }).referralCode ?? "" : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
+      const giverEmail = (values.referredBy ?? "").trim();
+      const promoCode = (values.promoCode ?? "").trim();
+      if (giverEmail && promoCode) {
+        void fetch("/api/gifts/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientEmail: values.email.trim(),
+            giverEmail,
+            promoCode,
+          }),
+        });
+      }
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");

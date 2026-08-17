@@ -31,6 +31,14 @@ export function baseUrlFrom(req: Request): string {
   return `${url.protocol}//${url.host}`;
 }
 
+/** Google device approval lives on the public site, where Supabase browser keys already exist. */
+export function activateOriginFrom(req: Request): string {
+  const configured = process.env.PUBLIC_ACTIVATE_ORIGIN?.trim();
+  if (configured) return configured.replace(/\/$/, '');
+  if (process.env.NODE_ENV === 'production') return 'https://unvibe.site';
+  return baseUrlFrom(req);
+}
+
 export function unauthorized(): Response {
   return Response.json({ error: 'unauthorized' }, { status: 401 });
 }

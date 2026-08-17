@@ -14,7 +14,7 @@ export type InactiveBehavior = 'dim' | 'stay';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
-const SETTINGS_REVISION = 7;
+const SETTINGS_REVISION = 8;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
 const ISLAND_BEHAVIOR_REVISION = 2;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
@@ -59,6 +59,10 @@ export interface Settings {
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
+  /** Local greeting name for chat. Falls back to the Mac account name. */
+  displayName: string;
+  /** Optional local profile email. Not required to use the app. */
+  profileEmail: string;
   /** Prefer the user's own local API key instead of Unvibe cloud AI. */
   useOwnAi: boolean;
   /** Provider for local BYOK calls (cheap default model per provider). */
@@ -96,6 +100,8 @@ const DEFAULTS: Settings = {
   launchAtLogin: false,
   theme: 'dark',
   defaultExplanationLevel: 'intermediate',
+  displayName: '',
+  profileEmail: '',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
@@ -200,6 +206,12 @@ class SettingsStore {
     const sidebarWidth = patch.sidebarWidth === undefined
       ? undefined
       : Math.min(340, Math.max(168, Math.round(patch.sidebarWidth)));
+    const displayName = patch.displayName === undefined
+      ? undefined
+      : String(patch.displayName).replace(/\s+/g, ' ').trim().slice(0, 48);
+    const profileEmail = patch.profileEmail === undefined
+      ? undefined
+      : String(patch.profileEmail).trim().slice(0, 120);
     this.data = {
       ...this.data,
       ...patch,
@@ -209,6 +221,8 @@ class SettingsStore {
       ...(soundVolume !== undefined ? { soundVolume } : {}),
       ...(soundStyle ? { soundStyle } : {}),
       ...(sidebarWidth !== undefined ? { sidebarWidth } : {}),
+      ...(displayName !== undefined ? { displayName } : {}),
+      ...(profileEmail !== undefined ? { profileEmail } : {}),
     };
     delete this.data.aiModel;
     this.persist();

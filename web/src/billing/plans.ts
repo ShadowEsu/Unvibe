@@ -28,10 +28,13 @@ export function quotaMessage(kind: UsageKind, limit: number): string {
 }
 
 /** Billing helpers mirror the limits and access rules in the Supabase migration. */
+export const FREE_AI_EXPLANATIONS = 30;
+export const PRO_AI_EXPLANATIONS = 100;
+
 const BILLING_LIMITS: Record<PlanId, Record<BillingUsageKind, number>> = {
-  free: { ai_explanation: 50, project_question: 10, indexed_project: 1, dictionary_item: 25, saved_item: 20 },
-  pro: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
-  teams: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
+  free: { ai_explanation: FREE_AI_EXPLANATIONS, project_question: 10, indexed_project: 1, dictionary_item: 25, saved_item: 20 },
+  pro: { ai_explanation: PRO_AI_EXPLANATIONS, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
+  teams: { ai_explanation: PRO_AI_EXPLANATIONS, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
 };
 
 export const TEAMS_CHECKOUT_ENABLED = false;

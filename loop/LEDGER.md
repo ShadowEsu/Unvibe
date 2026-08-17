@@ -446,6 +446,186 @@ score: n/a
 gate: local
 unsure: Changelog records the Gift Unvibe page and calmer companion pane. Commit messages from here skip agent as contributor.
 
+## Gifts billing sign-in | run 1 | 2026-08-17T04:15:00Z
+agents: orchestrator
+built: web/src/gifts/*, web/app/api/v1/gifts/*, web/supabase/migrations/20260817120000_gift_redemptions.sql, marketing/src/app/api/gifts/*, marketing/src/app/activate/*, marketing/src/app/api/activate/approve/route.ts, PixelWaitlist claim, app gift:status, checkout gift id skip, device activate origin
+deleted: unsigned random website gift codes
+findings: 0/0/0
+score: n/a
+gate: local tests pending
+unsure: Production still needs the gift_redemptions SQL on the web Supabase project, PUBLIC_ACTIVATE_ORIGIN=https://unvibe.site on api.unvibe.site, and https://unvibe.site/activate on the Supabase Auth redirect allow-list. Vercel MCP team picker is stuck in Cursor so env was not written from here.
+
+## Gifts billing live deploy | run 1 | 2026-08-17T05:22:00Z
+agents: orchestrator
+built: storage fallback for gifts, PUBLIC_ACTIVATE_ORIGIN, UNVIBE_APP_BACKEND_URL, api.unvibe.site verified on unvibe-api, production deploys for unvibe-api and unvibe-site
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: live gift progress 200 on api.unvibe.site and unvibe.site/api/gifts/progress
+unsure: Google redirect URL https://unvibe.site/activate still has to be allowed in Supabase Auth if OAuth rejects it. Gift tables are optional now because claims use a private gift-ledger bucket when the SQL has not been applied.
+
+## Activate San Fran wash | run 1 | 2026-08-17T06:52:00Z
+agents: orchestrator
+built: marketing/src/app/activate/activate.css
+deleted: solid --paper fill on the device approval overlay
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Wash uses --page-photo and --dusk-veil only. Card sits on glass via --paper-raised. Not deployed.
+
+## Private beta DMG | run 1 | 2026-08-17T07:11:00Z
+agents: orchestrator
+built: app/release/Unvibe-0.1.10-beta-arm64-unsigned.dmg (arm64, ad-hoc signed, backend https://api.unvibe.site)
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: local package
+unsure: GitHub prerelease upload needs founder approval. Apple silicon only. Gatekeeper right-click Open. Not notarized.
+
+## Plan usage board | run 1 | 2026-08-17T07:40:00Z
+agents: orchestrator
+built: companion.tsx PlanUsageBoard, companion.css plan-pick and usage rows, settings left nav spacing
+deleted: old Plan current-row plus three-up usage tiles
+findings: 0/0/0
+score: n/a
+gate: app typecheck
+unsure: Live Stripe checkout still depends on server billing config. Team remains coming soon. Local selected-code meter is the 100 monthly beta cap.
+
+## Free cap 30 explanations | run 1 | 2026-08-17T08:10:00Z
+agents: orchestrator
+built: plans.ts FREE_AI_EXPLANATIONS=30, trial default 30, app local/trial/selected-code 30, pricing copy, SQL 20260817163000_free_plan_30_explanations.sql, billing and trial tests
+deleted: Free 50 monthly explanation entitlement
+findings: 0/0/0
+score: n/a
+gate: web tests: 30 allowed then 31st denied; trial default limit 30
+unsure: Production plan_entitlements row still needs the SQL update on Supabase. UNVIBE_TRIAL_MONTHLY_LIMIT on Vercel should be 30.
+
+## Command U install line | run 1 | 2026-08-17T10:10:00Z
+agents: orchestrator
+built: BetaInstall under ShortcutKeys Command U
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: visual CSS
+unsure: Live after the marketing deploy.
+
+## Hero title lifted | run 1 | 2026-08-17T09:56:00Z
+agents: orchestrator
+built: paper-hero copy padding so title and kicker sit higher above the install line
+deleted: tight 1.4rem gap under the kicker
+findings: 0/0/0
+score: n/a
+gate: visual CSS
+unsure: Live after the marketing deploy.
+
+## Bare install line | run 1 | 2026-08-17T09:40:00Z
+agents: orchestrator
+built: no container, white lead for 30 explanations and 1 week Pro, beta v0.1.10
+deleted: glass chip around the command
+findings: 0/0/0
+score: n/a
+gate: visual CSS
+unsure: Live after the marketing deploy.
+
+## Glass install command | run 1 | 2026-08-17T09:33:00Z
+agents: orchestrator
+built: paper-beta frosted glass chip, copy icon, check after copy
+deleted: black terminal block and Copy label
+findings: 0/0/0
+score: n/a
+gate: visual CSS
+unsure: Live after the marketing deploy.
+
+## Copy paste install and pause widget | run 1 | 2026-08-17T09:22:00Z
+agents: orchestrator
+built: homepage OpenClaw-style install.sh command, copy/fetch/install counters, session paused overlay after 30 explanations
+deleted: name and email beta form
+findings: 0/0/0
+score: n/a
+gate: marketing tests 26 pass, limitOffer tests pass
+unsure: Overlay ships with the next app build. Homepage needs the marketing deploy. Google sign-in is still the later task.
+
+## Beta install form live | run 2 | 2026-08-17T09:00:00Z
+agents: orchestrator
+built: paper-beta compact equal fields, 2rem matching button, Show command, production unvibe.site
+deleted: two-line Show the install command button
+findings: 0/0/0
+score: n/a
+gate: live CSS minmax 1fr 1fr max-content, height 2rem, homepage and investors Show command
+unsure: Hard refresh if the old two-line button is cached.
+
+## Beta install form tighter | run 1 | 2026-08-17T08:52:00Z
+agents: orchestrator
+built: paper-beta form smaller equal-height fields and Show command button
+deleted: two-line install button
+findings: 0/0/0
+score: n/a
+gate: visual CSS
+unsure: Live after the marketing deploy.
+
+## Beta install and survey | run 1 | 2026-08-17T08:40:00Z
+agents: orchestrator
+built: PhotoHero BetaInstall command, homepage and investors survey, widget and companion limit upgrade cards, Typeform deal copy
+deleted: investors copy that said there is no public download
+findings: 0/0/0
+score: n/a
+gate: limitOffer tests
+unsure: Desktop upgrade widget ships with the next app build. Site is live.
+
+## Free cap 30 live | run 2 | 2026-08-17T08:28:00Z
+agents: orchestrator
+built: reviews route meters ai_explanation for signed-in and trial, trial fallback 30, supabase align on billing and boot, unvibe-api production deploy
+deleted: trial reviews skipping the monthly cap
+findings: 0/0/0
+score: n/a
+gate: billing 30 then deny; trial 30 then deny; api.unvibe.site aliased
+unsure: Homepage keeps the main demo videos. A couple unused mp4s were left out of this CLI upload because of the 100MB cap.
+
+## Beta Gatekeeper bypass | run 1 | 2026-08-17T07:50:00Z
+agents: orchestrator
+built: scripts/install-unvibe-beta.sh, app/build/open-unvibe.command, create-custom-dmg opener, GitHub release notes
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: install script uploaded to v0.1.10-beta-gifts
+unsure: Browser DMG downloads stay blocked until Developer ID notarization. Curl install avoids quarantine.
+
+## Centered glass install and slim onboarding | run 1 | 2026-08-17T18:20:00Z
+agents: orchestrator
+built: BetaInstall glass command, investors centered stack, feedback promo link, onboarding name plus Mac settings, chat bubble width, displayName greeting
+deleted: investors Join waitlist pill, onboarding depth and sample choices
+findings: 0/0/0
+score: n/a
+gate: marketing tsc pass, app tsc pass, app tests 41/41
+unsure: Survey promo is still fulfilled in Typeform. Installed DMGs need a new app build before testers see the slimmer onboarding.
+
+## Founder clock, visits table, beta stack | run 1 | 2026-08-17T18:35:00Z
+agents: orchestrator
+built: BetaInstall title/version/glass command/Typeform glass, FounderConsole on/off plus hours minutes, BuildLive, founder waitlist table API, daily visits table
+deleted: missing FounderConsole was the live-testing switch
+findings: 0/0/0
+score: n/a
+gate: marketing tsc pass, marketing tests 27/27
+unsure: Waitlist names on /founder are founder-only and noindexed. The clock still needs the founder page open to heartbeat while On.
+
+## Pricing vibe coding headline | run 1 | 2026-08-17T18:40:00Z
+agents: orchestrator
+built: PricingHeadline.tsx, pricing page header, paper.css fade and left align
+deleted: Start free pricing header copy
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Headline sits on the Golden Gate band, left aligned, Newsreader, fade in on load.
+
+## Widget room, onboarding, curl 0.1.11 | run 1 | 2026-08-17T18:50:00Z
+agents: orchestrator
+built: widget two-row header plus larger panel, survey and buy-subscription pause, onboarding name/profile/Accessibility, SETTINGS_REVISION 8, install tag v0.1.11-beta-onboard
+deleted: overlapping usage pill on UNVIBE
+findings: 0/0/0
+score: n/a
+gate: app tests 41/41, marketing install tests pass, DMG on GitHub, live install.sh points at v0.1.11-beta-onboard
+unsure: Trial token could not be decrypted from Vercel, so this unsigned build meters 30 explanations locally against https://api.unvibe.site. Testers already on 0.1.10 need to run the curl install again to see onboarding.
+
 
 
 

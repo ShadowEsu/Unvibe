@@ -7,6 +7,7 @@ import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
+import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
@@ -97,6 +98,8 @@ export default function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      <BetaSurvey />
 
       <section className="paper-section paper-waitlist">
         <Reveal className="paper-wrap">

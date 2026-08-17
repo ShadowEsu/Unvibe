@@ -22,7 +22,9 @@ export type AnalyticsEvent =
   | "pricing_viewed"
   | "billing_interval_selected"
   | "plan_cta_clicked"
-  | "release_download_clicked";
+  | "release_download_clicked"
+  | "beta_install_copied"
+  | "survey_opened";
 
 type Props = Record<string, string | number | boolean | undefined>;
 

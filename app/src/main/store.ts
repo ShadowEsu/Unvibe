@@ -45,7 +45,7 @@ interface Data {
 
 export const STUDY_ASK_DAILY_LIMIT = 20;
 export const QUIZ_DAILY_LIMIT = 30;
-export const BETA_SELECTED_CODE_PROMPT_LIMIT = 100;
+export const BETA_SELECTED_CODE_PROMPT_LIMIT = 30;
 
 class Store {
   private data: Data = { events: [], outbox: [] };

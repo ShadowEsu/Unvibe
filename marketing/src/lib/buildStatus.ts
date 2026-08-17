@@ -39,7 +39,8 @@ export type BuildAction =
   | { action: "heartbeat" }
   | { action: "stop" }
   | { action: "update"; focus: string; note: string }
-  | { action: "set-total"; totalHours: number };
+  | { action: "set-total"; totalHours: number }
+  | { action: "set-clock"; hours: number; minutes: number };
 
 export const INITIAL_HOURS = 162.56;
 export const INITIAL_SECONDS = Math.round(INITIAL_HOURS * 3600);
@@ -122,6 +123,12 @@ export function applyBuildAction(status: BuildStatus, action: BuildAction, now =
 
   if (action.action === "set-total") {
     next.totalSeconds = clamp(Math.round(action.totalHours * 3600), 0, 100_000 * 3600);
+  }
+
+  if (action.action === "set-clock") {
+    const minutes = clamp(Math.round(action.minutes), 0, 59);
+    const hours = clamp(Math.round(action.hours), 0, 100_000);
+    next.totalSeconds = clamp(hours * 3600 + minutes * 60, INITIAL_SECONDS, 100_000 * 3600);
   }
 
   next.updatedAt = now.toISOString();

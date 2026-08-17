@@ -3,6 +3,8 @@ import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { userFromRequest } from '@/lib/auth';
 import { getStore } from '@/data/store';
 import { quotaMessage } from '@/billing/plans';
+import { reserveMeteredAction } from '@/billing/enforce';
+import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 
 export const runtime = 'nodejs';
 
@@ -12,9 +14,17 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'missing scope, level, or context' }, { status: 400 });
   }
 
-  // Metering only applies to signed-in beta testers. Anonymous, unsynced use is unaffected —
-  // see the change note in the app-release summary for the tradeoff this leaves open.
-  const userId = await userFromRequest(req);
+  const provider = selectProvider();
+  const trialInstall = trialInstallFromRequest(req);
+  const userId = trialInstall ? null : await userFromRequest(req);
+  if (!provider.mock && userId) {
+    const denied = await reserveMeteredAction(userId, 'ai_explanation', req);
+    if (denied) return denied;
+  } else if (!provider.mock && trialInstall) {
+    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
+    if (denied) return denied;
+  }
+
   if (userId) {
     const kind: 'selection' | 'ask' = payload.question || payload.variant === 'different' ? 'ask' : 'selection';
     const usage = await getStore().consumeUsage(userId, kind);
@@ -26,7 +36,6 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const provider = selectProvider();
   const system = buildSystemPrompt(payload);
   const user = buildUserPrompt(payload);
   const encoder = new TextEncoder();

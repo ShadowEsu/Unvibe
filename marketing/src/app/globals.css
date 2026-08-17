@@ -1192,7 +1192,7 @@
 .investor-hero h1 { max-width: 900px; margin-top: 23px; color: #fff; font-family: var(--font-sans); font-size: clamp(2.5rem,4.5vw,4rem); line-height: 1; letter-spacing: -.055em; }
 .investor-hero > div > p:last-of-type { max-width: 700px; margin-top: 30px; color: #a297a8; font-size: 1.05rem; line-height: 1.7; }
 .investor-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 30px; }
-.investor-actions a, .investor-download > a { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 17px; border: 1px solid rgba(255,255,255,.14); border-radius: 99px; color: #d2c3f6; font-size: .78rem; font-weight: 700; }
+.investor-actions a { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 17px; border: 1px solid rgba(255,255,255,.14); border-radius: 99px; color: #d2c3f6; font-size: .78rem; font-weight: 700; }
 .investor-actions a:first-child { background: #f5f1fb; color: #181020; }
 .investor-hero aside { padding: 25px; border: 1px solid rgba(255,255,255,.11); border-radius: 14px; background: rgba(21,14,31,.8); }
 .investor-hero aside p { color: #756979; font: 600 .62rem var(--font-mono); text-transform: uppercase; }
@@ -1217,16 +1217,16 @@
 .investor-pipeline > div:last-child article { display: grid; grid-template-columns: .42fr 1fr; gap: 24px; padding: 19px 0; border-top: 1px solid rgba(255,255,255,.1); }
 .investor-pipeline article strong { color: #d9d0de; font-size: .82rem; }
 .investor-pipeline article p { color: #7f7384; font-size: .78rem; line-height: 1.55; }
-.investor-download { display: flex; align-items: center; justify-content: space-between; gap: 45px; margin-top: 120px; padding-top: 42px; padding-bottom: 42px; border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
-.investor-download h2 { margin-top: 14px; color: #fff; font-size: clamp(1.8rem,3vw,2.8rem); letter-spacing: -.045em; }
-.investor-download > div > p:last-child { margin-top: 12px; color: #7d7182; }
+.investor-download { display: grid; justify-items: center; text-align: center; gap: 14px; margin-top: 120px; padding-top: 42px; padding-bottom: 42px; border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
+.investor-download h2 { margin-top: 8px; color: #fff; font-size: clamp(2.2rem,4.2vw,3.6rem); letter-spacing: -.045em; }
+.investor-download > p { margin: 0; color: #7d7182; }
 
 @media (max-width: 800px) {
   .investor-hero, .investor-support, .investor-pipeline { grid-template-columns: 1fr; }
   .investor-hero aside { max-width: 420px; }
   .investor-thesis { grid-template-columns: 1fr; }
   .investor-thesis article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.1); }
-  .investor-download { align-items: flex-start; flex-direction: column; }
+  .investor-download { justify-items: center; }
 }
 
 /*

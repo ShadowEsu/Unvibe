@@ -36,3 +36,12 @@ test("build timer starts at 162.56 hours and does not drop below that", () => {
   const lifted = normalizeBuildStatus({ totalSeconds: 160 * 3600 }, new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(lifted.totalSeconds, INITIAL_SECONDS);
 });
+
+test("set-clock writes hours and minutes without dropping below the floor", () => {
+  const now = new Date("2026-08-17T00:00:00.000Z");
+  const raised = applyBuildAction(defaultBuildStatus(now), { action: "set-clock", hours: 170, minutes: 12 }, now);
+  assert.equal(raised.totalSeconds, 170 * 3600 + 12 * 60);
+
+  const floored = applyBuildAction(defaultBuildStatus(now), { action: "set-clock", hours: 10, minutes: 0 }, now);
+  assert.equal(floored.totalSeconds, INITIAL_SECONDS);
+});

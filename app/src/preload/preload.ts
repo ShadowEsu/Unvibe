@@ -49,6 +49,13 @@ const api = {
   collapse: (collapsed: boolean) => ipcRenderer.send('widget:collapse', collapsed),
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
+  openPlan: () => ipcRenderer.send('companion:openPlan'),
+  openUrl: (url: string) => ipcRenderer.invoke('app:openUrl', url),
+  onShowPage: (cb: (page: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, page: string) => cb(page);
+    ipcRenderer.on('companion:showPage', listener);
+    return () => ipcRenderer.removeListener('companion:showPage', listener);
+  },
   widgetResizeStart: (edge: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') =>
     ipcRenderer.send('widget:resizeStart', edge),
   widgetResizeEnd: () => ipcRenderer.send('widget:resizeEnd'),

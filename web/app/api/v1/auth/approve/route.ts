@@ -1,4 +1,5 @@
 import { getStore } from '@/data/store';
+import { applyPendingGiftMonths } from '@/gifts/service';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
@@ -21,6 +22,11 @@ export async function POST(req: Request): Promise<Response> {
   const token = await getStore().approveDeviceCode(body.userCode, data.user.id, data.user.email);
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });
+  }
+  try {
+    await applyPendingGiftMonths(data.user.id, data.user.email);
+  } catch (error) {
+    console.error('pending gift grant failed', error);
   }
   // Secure only over HTTPS (so local http dev still works).
   const isHttps = new URL(req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';

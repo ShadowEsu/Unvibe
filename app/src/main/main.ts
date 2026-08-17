@@ -30,6 +30,7 @@ import {
   getOrCreateWidget,
   hideBar,
   positionBar,
+  raiseLimitPause,
   resizeBar,
   showBar,
   type WidgetResizeEdge,
@@ -48,7 +49,7 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
-import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT, randomGiftCode } from './gift';
+import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT } from './gift';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
@@ -62,6 +63,7 @@ import {
   billingOverview,
   startBillingCheckout,
   startBillingPortal,
+  resolveBackendUrl,
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
@@ -92,6 +94,12 @@ function firstName(): Promise<string> {
       resolve(full.split(/\s+/)[0] || process.env.USER || 'there');
     });
   });
+}
+
+function greetingName(osName: string): string {
+  const saved = (settings().all().displayName ?? '').trim();
+  if (saved) return saved.split(/\s+/)[0];
+  return osName;
 }
 
 const todayKey = () => localDayKey(new Date());
@@ -274,6 +282,27 @@ function openCompanion(): void {
   companion.on('closed', () => (companion = null));
 }
 
+function openCompanionPage(page: string): void {
+  openCompanion();
+  const send = () => {
+    if (companion && !companion.isDestroyed()) companion.webContents.send('companion:showPage', page);
+  };
+  if (companion && companion.webContents.isLoading()) companion.webContents.once('did-finish-load', send);
+  else send();
+}
+
+function allowedExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    return parsed.hostname === 'unvibe.site'
+      || parsed.hostname === 'unvibe.live'
+      || parsed.hostname === '5fmnqm5vw5o.typeform.com';
+  } catch {
+    return false;
+  }
+}
+
 function broadcastShortcut(): void {
   if (companion && !companion.isDestroyed()) companion.webContents.send('shortcut:fired');
 }
@@ -284,6 +313,29 @@ function asset(...parts: string[]): string {
 
 async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
+  const usage = await resolveAppUsage();
+  if (usage.remaining <= 0) {
+    showBar(bar);
+    const win = getOrCreateWidget();
+    raiseLimitPause(win);
+    win.webContents.send('review:event', {
+      type: 'usage',
+      tabId: '1',
+      used: usage.used,
+      limit: usage.limit,
+      remaining: usage.remaining,
+      resetsAt: usage.resetsAt,
+      plan: usage.plan,
+    });
+    win.webContents.send('review:event', {
+      type: 'error',
+      tabId: '1',
+      code: 'plan_limit_reached',
+      upgradePath: '/plan',
+      message: 'You have reached your monthly explanation limit.',
+    });
+    return;
+  }
   // The macOS TCC preflight can report a false negative for a freshly rebuilt,
   // locally installed app even after its Accessibility switch is enabled. Try
   // the on-device capture first; System Events is the real permission boundary.
@@ -636,6 +688,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
+  ipcMain.on('companion:openPlan', () => openCompanionPage('Plan'));
 
   // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
   let resizeTick: ReturnType<typeof setInterval> | null = null;
@@ -687,7 +740,7 @@ app.whenReady().then(() => {
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
     version: app.getVersion(),
-    user: await firstName(),
+    user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
   }));
   ipcMain.handle('learning:profile', () => {
@@ -887,6 +940,11 @@ app.whenReady().then(() => {
     void shell.openExternal('https://unvibe.site/privacy');
     return { ok: true };
   });
+  ipcMain.handle('app:openUrl', (_event, url: unknown) => {
+    if (typeof url !== 'string' || !allowedExternalUrl(url)) return { ok: false };
+    void shell.openExternal(url);
+    return { ok: true };
+  });
   ipcMain.handle('app:reportFeedback', (_event, context: { screen?: unknown; version?: unknown }) => {
     const screen = typeof context.screen === 'string' ? context.screen.slice(0, 120) : 'Unknown screen';
     const version = typeof context.version === 'string' ? context.version.slice(0, 48) : app.getVersion();
@@ -937,22 +995,27 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('gift:status', async () => {
     const email = store().account()?.email ?? null;
-    let code = email ? giftCodeFromEmail(email) : settings().all().giftCode;
-    if (!email && (!code || code.length !== 8)) {
-      code = randomGiftCode();
-      settings().set({ giftCode: code });
+    if (!email) {
+      return { ok: true, needsSignIn: true, code: '', used: 0, limit: GIFT_LIMIT, email: null };
     }
+    const code = giftCodeFromEmail(email);
     let used = 0;
-    try {
-      const response = await fetch(`https://unvibe.site/api/referrals/${code}`, { cache: 'no-store' });
-      if (response.ok) {
-        const data = await response.json() as { joinedReferrals?: number };
-        used = capGiftUsed(Number(data.joinedReferrals) || 0);
+    const urls = [
+      `${resolveBackendUrl()}/api/v1/gifts/progress/${code}`,
+      `https://unvibe.site/api/gifts/progress/${code}`,
+    ];
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) continue;
+        const data = await response.json() as { used?: number };
+        used = capGiftUsed(Number(data.used) || 0);
+        break;
+      } catch {
+        /* try the next origin */
       }
-    } catch {
-      used = 0;
     }
-    return { ok: true, code, used, limit: GIFT_LIMIT, email };
+    return { ok: true, needsSignIn: false, code, used, limit: GIFT_LIMIT, email };
   });
   ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));
   ipcMain.handle('ai:setKey', (_e, key: string) => {

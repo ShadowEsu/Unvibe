@@ -11,6 +11,11 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("stop") }),
   z.object({ action: z.literal("update"), focus: z.string().min(1).max(80), note: z.string().max(220) }),
   z.object({ action: z.literal("set-total"), totalHours: z.number().min(0).max(100_000) }),
+  z.object({
+    action: z.literal("set-clock"),
+    hours: z.number().min(0).max(100_000),
+    minutes: z.number().min(0).max(59),
+  }),
 ]);
 
 export async function GET() {

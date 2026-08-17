@@ -7,11 +7,12 @@ const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}
 
 const SNAP = 18;
 /** Opening size for the review panel. Big enough to read, not a full window. */
-const DEFAULT_WIDGET_W = 480;
-const DEFAULT_WIDGET_H = 600;
+const DEFAULT_WIDGET_W = 540;
+const DEFAULT_WIDGET_H = 720;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
+let limitPauseActive = false;
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -197,7 +198,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
     (saved.width === 280 && saved.height === 240) ||
     (saved.width === 340 && saved.height === 440) ||
     (saved.width === 360 && saved.height === 480) ||
-    (saved.width === 440 && saved.height === 560);
+    (saved.width === 440 && saved.height === 560) ||
+    (saved.width === 480 && saved.height === 600);
   if (stockTiny) {
     return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
   }
@@ -207,8 +209,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
 /** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
 export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-const WIDGET_MIN_W = 360;
-const WIDGET_MIN_H = 420;
+const WIDGET_MIN_W = 420;
+const WIDGET_MIN_H = 520;
 
 export function applyWidgetResize(
   start: Electron.Rectangle,
@@ -266,6 +268,10 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
   win.on('blur', () => {
     if (win.isDestroyed()) return;
+    if (limitPauseActive) {
+      win.setOpacity(1);
+      return;
+    }
     const behavior = settings().all().inactiveBehavior;
     if (behavior === 'dim') win.setOpacity(settings().all().widgetOpacityInactive);
   });
@@ -302,6 +308,23 @@ export function createWidget(): BrowserWindow {
 
 export function currentWidget(): BrowserWindow | null {
   return panelWin && !panelWin.isDestroyed() ? panelWin : null;
+}
+
+/** Keep the overlay visible over Cursor after the beta explanations are used up. */
+export function raiseLimitPause(win: BrowserWindow | null): void {
+  limitPauseActive = true;
+  if (!win || win.isDestroyed()) return;
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setOpacity(1);
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.moveTop();
+  win.focus();
+}
+
+export function clearLimitPause(): void {
+  limitPauseActive = false;
 }
 
 export function createCompanion(): BrowserWindow {

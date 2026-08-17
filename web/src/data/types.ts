@@ -107,6 +107,7 @@ export interface Store {
   signIn(email: string): Promise<Account>;
   signUp(email: string): Promise<Account | null>; // null = already exists
   accountInfo(userId: string): Promise<{ userId: string; email?: string }>;
+  findUserIdByEmail(email: string): Promise<string | null>;
   deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
 
   // Data

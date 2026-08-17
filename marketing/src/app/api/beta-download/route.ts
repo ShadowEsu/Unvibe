@@ -7,8 +7,8 @@ import { sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const release = "0.1.10-beta-usage";
-const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.10-beta-usage/Unvibe-0.1.10-usage-meters-arm64-unsigned.dmg";
+const release = "0.1.11-beta-onboard";
+const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.11-beta-onboard/Unvibe-0.1.11-beta-arm64-unsigned.dmg";
 const schema = z.object({
   firstName: z.string().trim().min(1).max(80),
   email: z.string().trim().email().max(240),

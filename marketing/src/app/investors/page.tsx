@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ArrowRight, FileText, Mail } from "lucide-react";
+import { BetaInstall } from "@/components/paper/BetaInstall";
 
 export const metadata: Metadata = {
   title: "Investors",
@@ -104,12 +105,7 @@ export default function InvestorsPage() {
       </section>
 
       <section className="container-page investor-download">
-        <div>
-          <p className="launch-label">Private beta</p>
-          <h2>Join the waitlist for the Mac build.</h2>
-          <p>Invites go out gradually. There is no public download yet.</p>
-        </div>
-        <a href="/#waitlist">Join waitlist</a>
+        <BetaInstall tone="page" />
       </section>
     </article>
   );

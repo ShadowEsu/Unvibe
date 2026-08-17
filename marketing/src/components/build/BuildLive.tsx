@@ -8,7 +8,6 @@ type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
 
 export function BuildLive() {
   const [status, setStatus] = useState<PublicStatus | null>(null);
-  const [error, setError] = useState(false);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -16,19 +15,18 @@ export function BuildLive() {
     const load = async () => {
       try {
         const response = await fetch("/api/build-status", { cache: "no-store" });
+        if (!response.ok) return;
         const next = await readResponseJson<PublicStatus>(response);
-        if (!response.ok) throw new Error("status unavailable");
         if (alive) {
           setStatus(next);
           setTick(0);
-          setError(false);
         }
       } catch {
-        if (alive) setError(true);
+        // Keep the last known clock on the public page.
       }
     };
     void load();
-    const poll = window.setInterval(load, 30_000);
+    const poll = window.setInterval(() => void load(), 10_000);
     const clock = window.setInterval(() => setTick((value) => value + 1), 1_000);
     return () => {
       alive = false;
@@ -37,56 +35,56 @@ export function BuildLive() {
     };
   }, []);
 
-  const sessionSeconds = useMemo(
-    () => (status?.isLive ? status.sessionSeconds + tick : 0),
-    [status, tick],
-  );
+  const seconds = useMemo(() => {
+    if (!status) return 0;
+    return status.totalSeconds + (status.isLive ? tick : 0);
+  }, [status, tick]);
+  const live = Boolean(status?.isLive);
+  const clock = splitClock(seconds);
 
   if (!status) {
     return (
-      <div className="paper-live paper-glass paper-live--loading" aria-live="polite">
+      <div className="paper-live paper-live--loading" aria-label="Loading live testing">
         <span />
-        <p>{error ? "Build signal is reconnecting." : "Checking the build signal."}</p>
+        Loading live testing.
       </div>
     );
   }
 
   return (
-    <div className={status.isLive ? "paper-live paper-glass is-live" : "paper-live paper-glass"} aria-live="polite">
+    <div className={live ? "paper-live is-live" : "paper-live"}>
       <div className="paper-live__signal">
         <span />
-        <p className="paper-meta">{status.isLive ? "Building live" : "Last build session"}</p>
+        {live ? "Building live" : "Clock paused"}
       </div>
       <h2>{status.focus}</h2>
       <p className="paper-lead">{status.note}</p>
       <div className="paper-live__stats">
-        <Metric label={status.isLive ? "This session" : "Status"} value={status.isLive ? duration(sessionSeconds) : "Offline"} />
-        <Metric label="Today" value={duration(status.todaySeconds + (status.isLive ? tick : 0))} />
-        <Metric label="Total invested" value={`${(status.totalSeconds / 3600).toFixed(2)} hrs`} />
+        <div>
+          <span>Hours</span>
+          <strong>{clock.hours}</strong>
+        </div>
+        <div>
+          <span>Minutes</span>
+          <strong>{clock.minutes}</strong>
+        </div>
+        <div>
+          <span>Seconds</span>
+          <strong>{clock.seconds}</strong>
+        </div>
       </div>
-      <p className="paper-live__updated">Updated {relativeTime(status.updatedAt)}</p>
+      <p className="paper-live__updated">
+        {live ? "The founder clock is on." : "The founder clock is off."}
+      </p>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function duration(seconds: number): string {
+function splitClock(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(safe / 3600);
-  const minutes = Math.floor((safe % 3600) / 60);
-  const secs = safe % 60;
-  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-  return `${minutes}m ${String(secs).padStart(2, "0")}s`;
-}
-
-function relativeTime(iso: string): string {
-  const minutes = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+  return {
+    hours: String(Math.floor(safe / 3600)),
+    minutes: String(Math.floor((safe % 3600) / 60)).padStart(2, "0"),
+    seconds: String(safe % 60).padStart(2, "0"),
+  };
 }

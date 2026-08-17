@@ -11,6 +11,34 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Roomier overlay, setup that asks for your name",
+    summary: "The review panel no longer stacks the usage pill on the logo. First launch walks through name, profile, and Accessibility in System Settings. Curl install now ships that build.",
+    figure: "v0.1.11",
+  },
+  {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Try the Mac beta from the homepage",
+    summary: "A copy paste Terminal command sits under the title. No name or email. After 30 explanations, a short survey continues the session for 1 week of Pro. Gifts still add on.",
+    figure: "curl install",
+  },
+  {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Free is 30 explanations a month",
+    summary: "Free, trial, and unsigned beta now stop after 30 AI explanations. Pro stays at 100. Pricing on the site matches that cap.",
+    figure: "30 / month",
+  },
+  {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Gifts, Pro, and Google sign-in actually connect",
+    summary: "A SPECIAL CHAR is proven from the giver email, not a random string. A verified waitlist gift gives both people 1 month of Pro. Stripe Buy still works after a gift month. Continue with Google opens unvibe.site/activate.",
+    figure: "Waitlist + app",
+  },
+  {
     date: "16 AUG 2026",
     category: "COMPANY",
     title: "GitLab for Startups",
