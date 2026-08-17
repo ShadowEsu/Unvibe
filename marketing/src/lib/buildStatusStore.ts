@@ -16,7 +16,9 @@ async function readBlob(token: string): Promise<BuildStatus> {
   if (!match) return defaultBuildStatus();
   const result = await get(match.url, { access: "private", token, useCache: false });
   if (!result || result.statusCode !== 200 || !result.stream) return defaultBuildStatus();
-  const parsed: unknown = JSON.parse(await new Response(result.stream).text());
+  const body = await new Response(result.stream).text();
+  if (!body.trim()) return defaultBuildStatus();
+  const parsed: unknown = JSON.parse(body);
   return normalizeBuildStatus(parsed && typeof parsed === "object" ? parsed as Partial<BuildStatus> : null);
 }
 

@@ -18,7 +18,7 @@ const SETTINGS_REVISION = 7;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
 const ISLAND_BEHAVIOR_REVISION = 2;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
-const IDE_BRIDGE_SHORTCUT_REVISION = 1;
+const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -67,6 +67,10 @@ export interface Settings {
   aiModel?: string;
   /** Last folder used for git-diff / nearby-file Pro features. */
   lastProjectRoot?: string;
+  /** Companion sidebar width in pixels. */
+  sidebarWidth: number;
+  /** Local 8 character gift code when the Mac is not signed in. */
+  giftCode: string;
 }
 
 const DEFAULTS: Settings = {
@@ -75,7 +79,7 @@ const DEFAULTS: Settings = {
   islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
   ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   onboarded: false,
-  shortcut: 'CommandOrControl+Alt+U',
+  shortcut: 'Control+U',
   barPosition: 'top-center',
   // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
@@ -96,6 +100,8 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
+  sidebarWidth: 232,
+  giftCode: '',
 };
 
 class SettingsStore {
@@ -117,7 +123,7 @@ class SettingsStore {
     // rather than asking macOS to synthesize Copy in another process. Move only the legacy
     // default so deliberately customised shortcuts remain untouched.
     const needsIdeShortcutMigration = (loaded.ideBridgeShortcutRevision ?? 0) < IDE_BRIDGE_SHORTCUT_REVISION &&
-      loaded.shortcut === 'CommandOrControl+U';
+      (loaded.shortcut === 'CommandOrControl+U' || loaded.shortcut === 'CommandOrControl+Alt+U');
     const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
       (loaded.theme === undefined || loaded.theme === 'system');
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
@@ -150,10 +156,11 @@ class SettingsStore {
             lastWidgetBounds: undefined,
           }
         : {}),
-      ...(needsIdeShortcutMigration ? { shortcut: 'CommandOrControl+Alt+U' } : {}),
+      ...(needsIdeShortcutMigration ? { shortcut: 'Control+U' } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
+    this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
     if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
@@ -190,6 +197,9 @@ class SettingsStore {
       ? undefined
       : Math.min(1, Math.max(0, patch.soundVolume));
     const soundStyle = patch.soundStyle === 'pixel' ? 'pixel' : patch.soundStyle === 'soft' ? 'soft' : undefined;
+    const sidebarWidth = patch.sidebarWidth === undefined
+      ? undefined
+      : Math.min(340, Math.max(168, Math.round(patch.sidebarWidth)));
     this.data = {
       ...this.data,
       ...patch,
@@ -198,6 +208,7 @@ class SettingsStore {
       ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
       ...(soundVolume !== undefined ? { soundVolume } : {}),
       ...(soundStyle ? { soundStyle } : {}),
+      ...(sidebarWidth !== undefined ? { sidebarWidth } : {}),
     };
     delete this.data.aiModel;
     this.persist();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { readResponseJson } from "@/lib/readResponseJson";
 import {
   BUILD_MAP_HEIGHT,
   BUILD_MAP_WIDTH,
@@ -39,7 +40,7 @@ export function BuildMap() {
       try {
         const response = await fetch("/api/build-status", { cache: "no-store" });
         if (!response.ok) return;
-        const next = await response.json() as { isLive?: boolean };
+        const next = await readResponseJson<{ isLive?: boolean }>(response);
         if (alive) setLive(Boolean(next.isLive));
       } catch {
         // Keep the last known live state while the signal reconnects.

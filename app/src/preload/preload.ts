@@ -60,11 +60,14 @@ const api = {
   feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
   history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
   learningItem: (id: string) => ipcRenderer.invoke('learning:item', id),
+  forgetLearning: (id: string) => ipcRenderer.invoke('learning:forget', id),
   studyAskStatus: () => ipcRenderer.invoke('study:askStatus'),
   studyAsk: (input: { eventId: string; question: string }) => ipcRenderer.invoke('study:ask', input),
   quizStatus: () => ipcRenderer.invoke('quiz:status'),
   quizStart: (input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) => ipcRenderer.invoke('quiz:start', input),
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
+  chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+    ipcRenderer.invoke('chat:ask', input),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
   onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),
@@ -99,6 +102,7 @@ const api = {
   // plans + usage (network stays in the main process)
   billingOverview: () => ipcRenderer.invoke('billing:overview'),
   usageGet: () => ipcRenderer.invoke('usage:get'),
+  giftStatus: () => ipcRenderer.invoke('gift:status'),
   aiKeyStatus: () => ipcRenderer.invoke('ai:keyStatus'),
   aiSetKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
   aiClearKey: () => ipcRenderer.invoke('ai:clearKey'),

@@ -20,6 +20,13 @@ export const milestones: Milestone[] = [
   },
   {
     date: "17 AUG 2026",
+    category: "DISTRIBUTION",
+    title: "Gift Unvibe",
+    summary: "Share an 8 character SPECIAL CHAR from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts.",
+    figure: "5 gifts",
+  },
+  {
+    date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Almost here",
     summary: "Live testing is done. Feedback is done. Unvibe is at 75 percent to public release.",

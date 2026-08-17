@@ -43,14 +43,23 @@ export const metadata: Metadata = {
     description:
       "Select code, press Command U, and keep the explanation on this Mac.",
     siteName: "Unvibe",
-    images: [{ url: "/unvibe-social-preview-v5.png", width: 1200, height: 630, alt: "Unvibe. Learn the code AI shipped." }],
+    locale: "en_US",
+    images: [
+      {
+        url: "/unvibe-social-preview-v6.png",
+        width: 1200,
+        height: 630,
+        alt: "Unvibe. Learn the code AI shipped.",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe. Learn the code AI shipped.",
     description:
       "A Mac overlay that explains selected code beside the tools you already use.",
-    images: ["/unvibe-social-preview-v5.png"],
+    images: ["/unvibe-social-preview-v6.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },

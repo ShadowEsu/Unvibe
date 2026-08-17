@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BuildStatus } from "@/lib/buildStatus";
+import { readResponseJson } from "@/lib/readResponseJson";
 
 type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
 
@@ -15,8 +16,8 @@ export function BuildLive() {
     const load = async () => {
       try {
         const response = await fetch("/api/build-status", { cache: "no-store" });
+        const next = await readResponseJson<PublicStatus>(response);
         if (!response.ok) throw new Error("status unavailable");
-        const next = await response.json() as PublicStatus;
         if (alive) {
           setStatus(next);
           setTick(0);
@@ -61,7 +62,7 @@ export function BuildLive() {
       <div className="paper-live__stats">
         <Metric label={status.isLive ? "This session" : "Status"} value={status.isLive ? duration(sessionSeconds) : "Offline"} />
         <Metric label="Today" value={duration(status.todaySeconds + (status.isLive ? tick : 0))} />
-        <Metric label="Total invested" value={`${(status.totalSeconds / 3600).toFixed(1)}h`} />
+        <Metric label="Total invested" value={`${(status.totalSeconds / 3600).toFixed(2)} hrs`} />
       </div>
       <p className="paper-live__updated">Updated {relativeTime(status.updatedAt)}</p>
     </div>

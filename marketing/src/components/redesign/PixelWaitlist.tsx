@@ -131,10 +131,10 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           </Field>
           <details className="referral-offer">
             <summary>Referral or promo code</summary>
-            <p>Optional. Friend email and UNVIBE SPECIAL if you have them.</p>
+            <p>Optional. Friend email and SPECIAL CHAR if you have them. Both of you get 1 month of Pro, up to five gifts.</p>
             <div className="referral-offer__fields">
               <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
-              <label><span>Promo code</span><input placeholder="UNVIBE SPECIAL" {...register("promoCode")} /></label>
+              <label><span>Promo code</span><input placeholder="SPECIAL CHAR" {...register("promoCode")} /></label>
             </div>
           </details>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}

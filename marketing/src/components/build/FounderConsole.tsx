@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BuildAction, BuildStatus } from "@/lib/buildStatus";
+import { readResponseJson } from "@/lib/readResponseJson";
 
 type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
 
@@ -11,11 +12,15 @@ export function FounderConsole() {
   const [busy, setBusy] = useState(false);
 
   const loadStatus = useCallback(async () => {
-    const response = await fetch("/api/build-status", { cache: "no-store" });
-    if (!response.ok) return;
-    const next = await response.json() as PublicStatus;
-    setStatus(next);
-    setMessage(next.isLive ? "Live testing is on." : "Live testing is off.");
+    try {
+      const response = await fetch("/api/build-status", { cache: "no-store" });
+      const next = await readResponseJson<PublicStatus & { error?: string }>(response);
+      if (!response.ok) throw new Error(next.error || "Could not load live testing.");
+      setStatus(next);
+      setMessage(next.isLive ? "Live testing is on." : "Live testing is off.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load live testing.");
+    }
   }, []);
 
   useEffect(() => {
@@ -30,7 +35,7 @@ export function FounderConsole() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(action),
       });
-      const payload = await response.json() as PublicStatus & { error?: string };
+      const payload = await readResponseJson<PublicStatus & { error?: string }>(response);
       if (!response.ok) throw new Error(payload.error || "Update failed.");
       setStatus(payload);
       setMessage(payload.isLive ? "Live testing is on." : "Live testing is off.");

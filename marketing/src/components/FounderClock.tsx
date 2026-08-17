@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { BuildStatus } from "@/lib/buildStatus";
+import { readResponseJson } from "@/lib/readResponseJson";
 
 type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
 
-const FALLBACK_SECONDS = 160 * 60 * 60;
+const FALLBACK_SECONDS = Math.round(162.56 * 60 * 60);
 
 export function FounderClock({
   compact = false,
@@ -28,7 +29,7 @@ export function FounderClock({
       try {
         const response = await fetch("/api/build-status", { cache: "no-store" });
         if (!response.ok) return;
-        const next = await response.json() as PublicStatus;
+        const next = await readResponseJson<PublicStatus>(response);
         if (alive) {
           setStatus(next);
           setTick(0);
@@ -91,11 +92,7 @@ export function FounderClock({
 }
 
 function clockDuration(seconds: number): string {
-  const safe = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(safe / 3600);
-  const minutes = Math.floor((safe % 3600) / 60);
-  const secs = safe % 60;
-  return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  return `${(Math.max(0, seconds) / 3600).toFixed(2)} hrs`;
 }
 
 function longDuration(seconds: number): string {

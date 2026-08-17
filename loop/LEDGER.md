@@ -286,6 +286,147 @@ score: n/a
 gate: local
 unsure: Waitlist API untouched.
 
+## App dusk theme | 2026-08-16T16:32:00Z
+agents: orchestrator
+built: Newsreader across companion widget bar, Golden Gate blur wash in dark mode, slower page motion
+deleted: DM Sans dark radial leftover
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Waitlist API untouched. Production waitlist POST saved preston+livecheck-20260817@unvibe.site with referral 25e25c02.
+
+## Learn workspace research | 2026-08-16T16:35:00Z
+agents: orchestrator
+built: canvases/learn-workspace-research.canvas.tsx
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Recommendation is merge Study History Quiz into one Learn workspace. Not implemented yet.
+
+## History split research | 2026-08-16T16:40:00Z
+agents: orchestrator
+built: canvases/history-split-alternatives.canvas.tsx
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: local
+## Learn library then document | 2026-08-17T00:45:00Z
+agents: orchestrator
+built: app/src/renderer/companion/learn.tsx, companion.tsx, companion.css
+deleted: Study History Quiz split panes in companion
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Study History Quiz now share one Learn page. Library is the list. Click opens a full document with Read Restudy Check. Escape and Library return to the same scroll position.
+
+## San Fran gradient | 2026-08-17T00:52:00Z
+agents: orchestrator
+built: companion.css, companion.tsx, widget.css, bar.css
+deleted: purple startup ribbons on login and onboarding
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: San Fran is the Golden Gate photo wash. Startup and login use it. Light containers and the AI overlay use it. The island stays black.
+
+## Phone nav glass | 2026-08-17T00:55:00Z
+agents: orchestrator
+built: marketing/src/app/globals.css, paper.css, Nav.tsx
+deleted: full height phone menu with no box
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Phone menu is now a white glass dropdown card. Live site still needs a deploy.
+
+## White light, Chat, island | 2026-08-17T01:05:00Z
+agents: orchestrator
+built: companion.css, companion.tsx, chat.tsx, bar.tsx, bar.css, windows.ts, preload.ts, main.ts, tones.ts, studyQuiz.ts
+deleted: light-mode Golden Gate on settings and containers; grey shell/paper; beige settings sidebar
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: History and Quiz are back in the sidebar. Chat is a new page that uses the selected model and counts against monthly AI. Bottom island grows in CSS after the native window resizes, so the pill should not jump. Sounds resume the shared AudioContext so Electron can actually play them.
+
+## Streak heat and chat | 2026-08-17T04:15:00Z
+agents: orchestrator
+built: learning.ts, store.ts, main.ts, studyQuiz.ts, companion.css, companion.tsx, bar.css, learning.test.ts
+deleted: heat cells that never received color (legend-only classes)
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Opening the app writes a local day_active event so the streak is 1 even with no review. Heat is 5 shades from 5/25/50/100/200 explained lines. Chat records lines and still stays out of History.
+
+## Chat quiz integrations overlays | 2026-08-17T01:40:00Z
+agents: orchestrator
+built: chat.tsx, thinkingStatus.tsx, learn.tsx, integrations.ts, companion.tsx, companion.css
+deleted: compact chat bubbles, underline quiz tabs, four-row integration list
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Chat still waits for a full reply (no token stream yet), so thinking verbs cover the wait. Quiz progress is cards cleared this sitting, not a known-length survey. Integrations stay detection-only and never write another app's config.
+
+## Overlay size shortcut history | 2026-08-17T01:50:00Z
+agents: orchestrator
+built: windows.ts, widget.css, widget.tsx, selection.ts, settings.ts, main.ts, store.ts, learn.tsx, companion.tsx, companion.css, preload.ts
+deleted: purple overlay tokens, golden-gate wash on the review panel, hidden Shortcut settings tab
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Control+U is always registered plus the saved shortcut. Cursor/VS Code still use the bridge at ⌘U. History deletes stay on this Mac via deletedIds so a later sync cannot restore them.
+
+## Chat empty state and sidebar | 2026-08-17T01:55:00Z
+agents: orchestrator
+built: chat.tsx, companion.tsx, companion.css, settings.ts
+deleted: chat remaining chip in the header, sidebar hover translateX
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Empty chat centers Hello again plus the composer, then the same field docks as the thread box. Usage percent at the bottom is green under 60, yellow to 85, red after that. Sidebar width persists from 168 to 340 and compactifies under 200.
+
+## Social preview hero | 2026-08-17T01:58:00Z
+agents: orchestrator
+built: opengraph-image.tsx, twitter-image.tsx, unvibe-social-preview-v6.png, layout.tsx, og fonts
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: LinkedIn still shows the old compact card until this deploys and LinkedIn Post Inspector recrawls. v6 is 1200x630 Golden Gate with the live hero line so the large top card can render.
+
+## Founder live toggle and 162.56h | 2026-08-17T02:05:00Z
+agents: orchestrator
+built: FounderConsole.tsx, build-status route, buildStatus.ts, BuildLive.tsx, FounderClock.tsx, readResponseJson.ts
+deleted: empty JSON parse on the live testing switch
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: POST now always returns JSON. Stored totals below 162.56 hours lift on read, so the public timer shows 162.56 hrs without a blob rewrite.
+
+## Chat model picker | 2026-08-17T02:10:00Z
+agents: orchestrator
+built: chat.tsx, companion.tsx, companion.css
+deleted: AI settings outer border and filled inset card
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Chat always shows Unvibe AI (default) or the selected provider and model. The dropdown opens Settings on the AI tab for provider and API key changes.
+
+## Gift Unvibe | 2026-08-17T02:20:00Z
+agents: orchestrator
+built: gift.ts, gift.test.ts, companion.tsx, companion.css, settings.ts, main.ts, preload.ts, PixelWaitlist.tsx, milestones.ts
+deleted: UNVIBE SPECIAL placeholder copy on the waitlist form
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Waitlist API files were not edited. Signed in users get the existing 8 character email hash so /api/referrals can fill 0/5. Unsigned users get a local mixed code. Pro credit is still evaluated after signup, same as today.
+
+
+
+
+
+
+
+
+
 
 
 

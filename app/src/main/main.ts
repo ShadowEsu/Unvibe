@@ -48,6 +48,7 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
+import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT, randomGiftCode } from './gift';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
@@ -81,7 +82,7 @@ import {
   isProPlan,
   resolveRepoRoot,
 } from './contextBuilder';
-import { answerQuizCard, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
+import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
 import { integrationStatus } from './integrations';
 
 function firstName(): Promise<string> {
@@ -321,11 +322,16 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
 
 function registerShortcut(accel: string): boolean {
   globalShortcut.unregisterAll();
-  try {
-    return globalShortcut.register(accel, () => void startReview());
-  } catch {
-    return false;
+  const keys = new Set<string>([accel, 'Control+U']);
+  let any = false;
+  for (const key of keys) {
+    try {
+      if (globalShortcut.register(key, () => void startReview())) any = true;
+    } catch {
+      /* shortcut taken by another app */
+    }
   }
+  return any;
 }
 
 function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): BrowserWindow | null {
@@ -360,6 +366,7 @@ app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
+  store().ensureDayActive();
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
   void flush();
@@ -438,6 +445,7 @@ app.whenReady().then(() => {
     ]).popup({ window: bar });
   });
   ipcMain.handle('bar:snapshot', () => {
+    store().ensureDayActive();
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
     return {
@@ -682,7 +690,10 @@ app.whenReady().then(() => {
     user: await firstName(),
     shortcut: settings().all().shortcut,
   }));
-  ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
+  ipcMain.handle('learning:profile', () => {
+    store().ensureDayActive();
+    return computeProfile(store().events(), todayKey());
+  });
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
@@ -691,6 +702,11 @@ app.whenReady().then(() => {
     if (!event) return null;
     return computeLearningItems([event], 1)[0] ?? null;
   });
+  ipcMain.handle('learning:forget', (_e, id: string) => {
+    if (typeof id !== 'string' || !id) return { ok: false, error: 'Missing lesson.' };
+    store().forgetEvent(id);
+    return { ok: true };
+  });
   ipcMain.handle('study:askStatus', () => studyAskStatus());
   ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string }) => askStudyAssistant(input));
   ipcMain.handle('quiz:status', () => quizCardStatus());
@@ -698,6 +714,8 @@ app.whenReady().then(() => {
     startQuizCard(input.eventId, input.mode),
   );
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
+  ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+    askChat(input));
 
   ipcMain.handle('project:pickRoot', async () => {
     const picked = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -916,6 +934,25 @@ app.whenReady().then(() => {
   ipcMain.handle('usage:get', async () => {
     try { return { ok: true, data: { ...await resolveAppUsage(), selections: store().betaSelectedCodeUsage() } }; }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load usage.' }; }
+  });
+  ipcMain.handle('gift:status', async () => {
+    const email = store().account()?.email ?? null;
+    let code = email ? giftCodeFromEmail(email) : settings().all().giftCode;
+    if (!email && (!code || code.length !== 8)) {
+      code = randomGiftCode();
+      settings().set({ giftCode: code });
+    }
+    let used = 0;
+    try {
+      const response = await fetch(`https://unvibe.site/api/referrals/${code}`, { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json() as { joinedReferrals?: number };
+        used = capGiftUsed(Number(data.joinedReferrals) || 0);
+      }
+    } catch {
+      used = 0;
+    }
+    return { ok: true, code, used, limit: GIFT_LIMIT, email };
   });
   ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));
   ipcMain.handle('ai:setKey', (_e, key: string) => {

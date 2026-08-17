@@ -26,11 +26,18 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const parsed = actionSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid build-status action." }, { status: 400 });
+  try {
+    const parsed = actionSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid build-status action." }, { status: 400 });
+    }
+    const next = applyBuildAction(await getBuildStatus(), parsed.data as BuildAction);
+    await saveBuildStatus(next);
+    return NextResponse.json(publicBuildStatus(next), { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return NextResponse.json(
+      { error: "Live testing could not update. Try again." },
+      { status: 500 },
+    );
   }
-  const next = applyBuildAction(await getBuildStatus(), parsed.data as BuildAction);
-  await saveBuildStatus(next);
-  return NextResponse.json(publicBuildStatus(next), { headers: { "Cache-Control": "no-store" } });
 }

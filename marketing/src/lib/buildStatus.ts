@@ -41,7 +41,8 @@ export type BuildAction =
   | { action: "update"; focus: string; note: string }
   | { action: "set-total"; totalHours: number };
 
-const INITIAL_HOURS = 20 * 8;
+export const INITIAL_HOURS = 162.56;
+export const INITIAL_SECONDS = Math.round(INITIAL_HOURS * 3600);
 const INITIAL_UPDATED_AT = "2026-07-29T12:00:00.000Z";
 const PERTH_TZ = "Australia/Perth";
 const MAX_HEARTBEAT_SECONDS = 90;
@@ -62,7 +63,7 @@ export function defaultBuildStatus(now = new Date()): BuildStatus {
   return {
     version: 1,
     roadmapPercent: 75,
-    totalSeconds: INITIAL_HOURS * 60 * 60,
+    totalSeconds: INITIAL_SECONDS,
     todaySeconds: 0,
     todayKey: buildDayKey(now),
     isBuilding: false,
@@ -80,7 +81,7 @@ export function normalizeBuildStatus(input: Partial<BuildStatus> | null | undefi
   return {
     version: 1,
     roadmapPercent: clamp(Math.max(75, finiteNumber(input?.roadmapPercent, fallback.roadmapPercent)), 0, 100),
-    totalSeconds: Math.max(0, finiteNumber(input?.totalSeconds, fallback.totalSeconds)),
+    totalSeconds: Math.max(INITIAL_SECONDS, finiteNumber(input?.totalSeconds, fallback.totalSeconds)),
     todaySeconds: input?.todayKey === today ? Math.max(0, Number(input.todaySeconds) || 0) : 0,
     todayKey: today,
     isBuilding: Boolean(input?.isBuilding),
