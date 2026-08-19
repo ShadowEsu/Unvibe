@@ -22,6 +22,7 @@ interface InstallCounts {
   copied: number;
   fetched: number;
   installed: number;
+  survey?: number;
 }
 
 interface AnalyticsPayload {
@@ -37,6 +38,14 @@ interface WaitlistPerson {
   email: string;
   joinedAt: string;
   tool: string;
+  experience: string;
+  message: string;
+  promoCode: string;
+  referredBy: string;
+  referralCode: string;
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
 }
 
 const PRIOR_PEOPLE = 300;
@@ -112,7 +121,7 @@ export function FounderAnalytics() {
         <div>
           <span className="founder-analytics__eyebrow">Founder analytics</span>
           <h1>Unvibe, by the numbers.</h1>
-          <p>Page views count every load. Unique visitors count distinct browsers. Waitlist names and emails sit in the table at the bottom.</p>
+          <p>Page views count every load. Unique visitors count distinct browsers. Copy clicks, form clicks, and every waitlist field sit below.</p>
         </div>
         <div className="founder-analytics__actions">
           <button type="button" onClick={() => void load()} disabled={loading}>
@@ -175,9 +184,14 @@ export function FounderAnalytics() {
               <small>{people.length.toLocaleString()} names in the table below</small>
             </article>
             <article>
-              <span>Install copies</span>
+              <span>Command copies</span>
               <strong>{(data.installs?.copied ?? 0).toLocaleString()}</strong>
-              <small>{data.installs?.fetched ?? 0} script runs, {data.installs?.installed ?? 0} finished</small>
+              <small>{data.installs?.fetched ?? 0} curl or PowerShell fetches, {data.installs?.installed ?? 0} finished installs</small>
+            </article>
+            <article>
+              <span>Form clicks</span>
+              <strong>{(data.installs?.survey ?? 0).toLocaleString()}</strong>
+              <small>Opens of unvibe.site/feedback from the site, email, or the app</small>
             </article>
             <article>
               <span>Referred signups</span>
@@ -259,7 +273,7 @@ export function FounderAnalytics() {
           <article className="founder-analytics__people">
             <header>
               <span>Waitlist</span>
-              <h2>Names and emails</h2>
+              <h2>Everyone who joined</h2>
             </header>
             {peopleError ? <p className="founder-analytics__empty">{peopleError}</p> : null}
             {!peopleError && people.length === 0 ? (
@@ -274,6 +288,14 @@ export function FounderAnalytics() {
                       <th>Email</th>
                       <th>Joined</th>
                       <th>Tool</th>
+                      <th>Experience</th>
+                      <th>Message</th>
+                      <th>Promo</th>
+                      <th>Referred by</th>
+                      <th>Referral code</th>
+                      <th>UTM source</th>
+                      <th>UTM medium</th>
+                      <th>UTM campaign</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -283,6 +305,14 @@ export function FounderAnalytics() {
                         <td><a href={`mailto:${person.email}`}>{person.email}</a></td>
                         <td>{joinedStamp(person.joinedAt)}</td>
                         <td>{person.tool}</td>
+                        <td>{person.experience ?? "Not given"}</td>
+                        <td>{person.message ?? "Not given"}</td>
+                        <td>{person.promoCode ?? "None"}</td>
+                        <td>{person.referredBy ?? "None"}</td>
+                        <td>{person.referralCode ?? "None"}</td>
+                        <td>{person.utmSource ?? "None"}</td>
+                        <td>{person.utmMedium ?? "None"}</td>
+                        <td>{person.utmCampaign ?? "None"}</td>
                       </tr>
                     ))}
                   </tbody>

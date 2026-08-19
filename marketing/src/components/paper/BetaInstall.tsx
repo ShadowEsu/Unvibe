@@ -1,30 +1,53 @@
 "use client";
 
-import { useState } from "react";
-import { track } from "@/lib/analytics";
-import { BETA_INSTALL_COMMAND, BETA_INSTALL_VERSION, BETA_SURVEY_URL } from "@/lib/betaOffer";
+import { useEffect, useState } from "react";
+import { useCopyToast } from "@/components/paper/CopyToast";
+import { recordBetaSiteEvent, track } from "@/lib/analytics";
+import {
+  BETA_FEEDBACK_URL,
+  BETA_INSTALL_COMMAND,
+  BETA_INSTALL_LABEL,
+  BETA_INSTALL_VERSION,
+  BETA_WINDOWS_INSTALL_COMMAND,
+} from "@/lib/betaOffer";
 
 interface BetaInstallProps {
   tone?: "hero" | "page";
   showFeedback?: boolean;
+  title?: string;
 }
 
-export function BetaInstall({ tone = "hero", showFeedback = true }: BetaInstallProps) {
+type InstallOs = "mac" | "windows";
+
+function detectInstallOs(): InstallOs {
+  if (typeof navigator === "undefined") return "mac";
+  return /Windows/i.test(navigator.userAgent) ? "windows" : "mac";
+}
+
+export function BetaInstall({
+  tone = "hero",
+  showFeedback = true,
+  title = BETA_INSTALL_LABEL,
+}: BetaInstallProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [os, setOs] = useState<InstallOs>("mac");
+  const { showCopyToast } = useCopyToast();
+  const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
+  const prompt = os === "windows" ? "PS>" : "$";
+
+  useEffect(() => {
+    setOs(detectInstallOs());
+  }, []);
 
   const copyCommand = async () => {
     setError("");
     try {
-      await navigator.clipboard.writeText(BETA_INSTALL_COMMAND);
+      await navigator.clipboard.writeText(command);
       setCopied(true);
-      track("beta_install_copied");
-      void fetch("/api/install/event", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event: "copied" }),
-        keepalive: true,
-      }).catch(() => undefined);
+      showCopyToast("Copied the install command");
+      track("beta_install_copied", { os });
+      recordBetaSiteEvent("copied");
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setError("Copy failed. Select the command and copy it yourself.");
@@ -33,14 +56,41 @@ export function BetaInstall({ tone = "hero", showFeedback = true }: BetaInstallP
 
   return (
     <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
-      <p className="paper-beta__title">Beta App (30 Explanations)</p>
-      <p className="paper-beta__version">{BETA_INSTALL_VERSION}.30</p>
+      <p className="paper-beta__title">{title}</p>
+      <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
+      {tone === "page" ? (
+        <p className="paper-beta__blurb">
+          {os === "windows"
+            ? "Windows x64. 30 AI explanations, then it stops. No API key."
+            : "Apple silicon. 30 AI explanations, then it stops. No API key."}
+        </p>
+      ) : null}
+      <div className="paper-beta__os" role="tablist" aria-label="Install platform">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={os === "mac"}
+          className={os === "mac" ? "is-on" : undefined}
+          onClick={() => setOs("mac")}
+        >
+          Mac
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={os === "windows"}
+          className={os === "windows" ? "is-on" : undefined}
+          onClick={() => setOs("windows")}
+        >
+          Windows
+        </button>
+      </div>
       <div className="paper-beta__term">
         <pre>
           <code>
             <span className="paper-beta__cmd">
-              <span className="paper-beta__prompt">$</span>
-              {BETA_INSTALL_COMMAND}
+              <span className="paper-beta__prompt">{prompt}</span>
+              {command}
             </span>
           </code>
         </pre>
@@ -56,18 +106,39 @@ export function BetaInstall({ tone = "hero", showFeedback = true }: BetaInstallP
       {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
       {showFeedback ? (
         <>
-          <p className="paper-beta__offer">Finish feedback for free subscription offer</p>
+          <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Waitlist gifts still add on.</p>
           <a
             className="paper-beta__survey"
-            href={BETA_SURVEY_URL}
+            href={BETA_FEEDBACK_URL}
             target="_blank"
             rel="noreferrer"
-            onClick={() => track("survey_opened", { source: tone === "hero" ? "hero_install" : "page_install" })}
+            onClick={() => {
+              track("survey_opened", { source: tone === "hero" ? "hero_install" : "page_install" });
+            }}
           >
-            {BETA_SURVEY_URL}
+            {BETA_FEEDBACK_URL}
           </a>
         </>
       ) : null}
+    </div>
+  );
+}
+
+export function BetaFeedback({ source }: { source: string }) {
+  return (
+    <div className="paper-beta-feedback">
+      <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Waitlist gifts still add on.</p>
+      <a
+        className="paper-beta__survey"
+        href={BETA_FEEDBACK_URL}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => {
+          track("survey_opened", { source });
+        }}
+      >
+        {BETA_FEEDBACK_URL}
+      </a>
     </div>
   );
 }

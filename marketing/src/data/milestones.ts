@@ -11,6 +11,52 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "19 AUG 2026",
+    category: "PRODUCT",
+    title: "Windows 30 explanation trial",
+    summary: "Private beta now includes a Windows x64 trial with the same 30 AI explanations as Mac. Install from PowerShell. The app is unsigned, so SmartScreen may warn.",
+  },
+  {
+    date: "18 AUG 2026",
+    category: "DISTRIBUTION",
+    title: "Beta waitlist email",
+    summary: "Waitlist and download mails now include the install curl and the Typeform feedback link. Survey still unlocks 1 week of Pro. Nothing is sent until a dry run is approved.",
+  },
+  {
+    date: "18 AUG 2026",
+    category: "PRODUCT",
+    title: "Pricing checkout",
+    summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site.",
+  },
+  {
+    date: "18 AUG 2026",
+    category: "COMPANY",
+    title: "Mixpanel for Startups",
+    summary: "Accepted into the program. $144,000 in Mixpanel credits. Not cash. Not a round.",
+    figure: "$144,000",
+  },
+  {
+    date: "18 AUG 2026",
+    category: "COMPANY",
+    title: "PostHog for Startups",
+    summary: "Accepted into the program. $50,000 in PostHog credits. Not cash. Not a round.",
+    figure: "$50,000",
+  },
+  {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Homepage curl sits on its own",
+    summary: "The survey form moved above the demo video. The install command is wider, and Command U now says what the Mac download is.",
+    figure: "Give a try",
+  },
+  {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Current Mac app stills on the site",
+    summary: "Homepage product shots now match the live companion: island, home, chat, learn, quiz, and progress. The demo videos stay, with a note that they are a little behind.",
+    figure: "app stills",
+  },
+  {
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Roomier overlay, setup that asks for your name",
@@ -66,6 +112,20 @@ export const milestones: Milestone[] = [
     title: "Almost here",
     summary: "Live testing is done. Feedback is done. Unvibe is at 75 percent to public release.",
     figure: "75%",
+  },
+  {
+    date: "16 AUG 2026",
+    category: "COMPANY",
+    title: "OpenAI for Startups",
+    summary: "Accepted into the program. One ChatGPT Business seat, $1,200 in credits. Not cash. Not a round.",
+    figure: "$1,200",
+  },
+  {
+    date: "14 AUG 2026",
+    category: "COMPANY",
+    title: "Linear Founder Value Pack",
+    summary: "Accepted into the pack. Six months of Linear, $4,500 value. Not cash. Not a round.",
+    figure: "$4,500",
   },
   {
     date: "3 AUG 2026",

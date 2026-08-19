@@ -6,6 +6,7 @@ import { Chat } from './chat';
 import { Gift } from './gift';
 import { playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { prettyShortcut } from '../shared/prettyShortcut';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -253,7 +254,7 @@ function FadeIn({
 }
 
 function prettyAccel(a: string): string {
-  return a.replace('CommandOrControl', '⌘').replace('Command', '⌘').replace('Control', '⌃').replace('Alt', '⌥').replace('Shift', '⇧').replace(/\+/g, '');
+  return prettyShortcut(a);
 }
 function accelFromEvent(e: KeyboardEvent): string | null {
   const mods: string[] = [];

@@ -626,6 +626,395 @@ score: n/a
 gate: app tests 41/41, marketing install tests pass, DMG on GitHub, live install.sh points at v0.1.11-beta-onboard
 unsure: Trial token could not be decrypted from Vercel, so this unsigned build meters 30 explanations locally against https://api.unvibe.site. Testers already on 0.1.10 need to run the curl install again to see onboarding.
 
+## Bigger glass install stack | run 1 | 2026-08-17T19:05:00Z
+agents: orchestrator
+built: paper-beta outer glass, larger curl and Typeform glass rows, 1 week Pro survey copy on hero, keys, investors, and survey section
+deleted: cramped one-line beta blurb without Typeform
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Survey still unlocks 1 week of Pro, not a free month. Gift waitlist copy still says 1 month of Pro.
+
+## Hero glass install stack | run 1 | 2026-08-17T19:05:00Z
+agents: orchestrator
+built: BetaInstall outer glass plus larger curl and Typeform glass rows, ShortcutKeys feedback on, BetaSurvey glass URL, 1 week of Pro copy
+deleted: cramped one line beta v0.1.10 prompt
+findings: 0/0/0
+score: n/a
+gate: local
+unsure: Survey still unlocks 1 week of Pro, not a free month. Gift waitlist month is a separate offer.
+
+## Current app stills on the site | run 1 | 2026-08-17T19:15:00Z
+agents: orchestrator
+built: marketing/public/product home chat learn quiz progress island gift settings shots, StoryStage and video caption
+deleted: overlay-editor dashboard overview installer and old product-shots stills
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site home.png 557921 bytes, island-bar.png 200, demo mp4 200
+unsure: Screenshots are 1024px wide from the chat attach pipeline. Videos stay with a note that they are a little behind.
+
+## Compact beta glass rows | run 1 | 2026-08-17T19:21:00Z
+agents: orchestrator
+built: paper-beta outer card removed, glass only on curl and survey rows, 36rem max
+deleted: hero-glass wrapper, 62rem padding, large type on the install block
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site CSS paper-beta 36rem transparent, glass only on term and survey
+unsure: Live after marketing deploy.
+
+## Hero foot tighter plus survey line | run 1 | 2026-08-17T21:08:00Z
+agents: orchestrator
+built: PhotoHero survey line to Typeform, smaller hero foot gap and copy padding
+deleted: 4.6rem hero copy bottom padding, 1.1rem foot gap
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site has finish this form
+unsure: Live after marketing deploy.
+
+## Page beta as its own glass install | run 1 | 2026-08-17T21:16:00Z
+agents: orchestrator
+built: homepage install section below Command U, page glass only on curl and survey, beta blurb
+deleted: BetaInstall nested under ShortcutKeys, solid snow link boxes
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site has install section and Apple silicon Mac blurb
+unsure: Live after marketing deploy.
+
+## Hero title up waitlist under kicker | run 1 | 2026-08-17T21:28:00Z
+agents: orchestrator
+built: PhotoHero title at top, waitlist between kicker and Beta App, looser title and curl gaps
+deleted: waitlist and duplicate survey line from hero foot
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site order is kicker, waitlist, Beta App, curl, form, countdown
+unsure: Live after marketing deploy.
+
+## Hero waitlist space above countdown | run 1 | 2026-08-17T22:57:00Z
+agents: orchestrator
+built: More space around waitlist buttons, countdown sits a little lower
+deleted: tight gap under waitlist
+findings: 0/0/0
+score: n/a
+gate: live hero has air between waitlist, curl, and countdown
+unsure: Live after marketing deploy.
+
+## Founder waitlist plus copy and form counts | run 1 | 2026-08-17T22:48:00Z
+agents: orchestrator
+built: give it a try on homepage, professional investor beta label, form click count, full waitlist fields on founder
+deleted: give a try
+findings: 0/0/0
+score: n/a
+gate: live homepage label, investors title, founder shows copies, form clicks, waitlist emails
+unsure: Survey click count starts at 0 until the next live click. Beta app already caps at 30 explanations.
+
+## Clean mono curl like the example | run 1 | 2026-08-17T22:43:00Z
+agents: orchestrator
+built: Curl and Typeform use JetBrains Mono, no pixel font
+deleted: Press Start 2P on install command
+findings: 0/0/0
+score: n/a
+gate: live curl is clean mono on glass
+unsure: Live after marketing deploy.
+
+## Cleaner Command U copy | run 1 | 2026-08-17T22:24:00Z
+agents: orchestrator
+built: Outfit on the Command U block, short caption and install blurb
+deleted: long serif install paragraph
+findings: 0/0/0
+score: n/a
+gate: live Command U copy is short in Outfit
+unsure: Live after marketing deploy.
+
+## Tiny pixel survey back in hero | run 1 | 2026-08-17T22:20:00Z
+agents: orchestrator
+built: Survey back under hero curl, small copy, tiny pixel URL, no glass on the link
+deleted: Survey above the demo video
+findings: 0/0/0
+score: n/a
+gate: live hero has small pixel Typeform under curl
+unsure: Live after marketing deploy.
+
+## Pixel glass curl plus full beta label | run 1 | 2026-08-17T22:16:00Z
+agents: orchestrator
+built: Hero label is Beta Testing App (30 AI Explanations), give a try. Curl is glass with Press Start 2P
+deleted: SF gradient curl, Give a try only
+findings: 0/0/0
+score: n/a
+gate: live curl is glass pixel type with the full beta label
+unsure: Live after marketing deploy.
+
+## Footer GitHub star bubble | run 1 | 2026-08-17T21:58:00Z
+agents: orchestrator
+built: Centered Star this on GitHub bubble in the footer, linked to ShadowEsu/Unvibe
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: live footer bubble opens github.com/ShadowEsu/Unvibe
+unsure: Live after marketing deploy.
+
+## Hero curl space plus form above demo | run 1 | 2026-08-17T21:50:00Z
+agents: orchestrator
+built: Feedback form above demo, Give a try label, wider SF curl wash, white Command U copy
+deleted: Hero survey block, giant Beta Testing App label in hero
+findings: 0/0/0
+score: n/a
+gate: live homepage has curl then space then countdown, form above video
+unsure: Live after marketing deploy.
+
+## Build meter smaller plus 750 followers | run 1 | 2026-08-17T21:43:00Z
+agents: orchestrator
+built: 75% under the /build bar is now small, with 750+ followers beside it
+deleted: giant 75% readout, 650+ follower count
+findings: 0/0/0
+score: n/a
+gate: live /build shows small 75% and 750+ followers
+unsure: Live after marketing deploy.
+
+## Mixpanel 144k and verify | run 1 | 2026-08-18T07:50:00Z
+agents: orchestrator
+built: Mixpanel $144,000 on changelog and investors, autocapture and session replay on
+deleted: Mixpanel pipeline not-secured line
+findings: 0/0/0
+score: n/a
+gate: live changelog lists Mixpanel $144,000, site inits Mixpanel with replay
+unsure: Mixpanel Live View needs a homepage hit after deploy.
+
+## PostHog MCP and warehouse | run 1 | 2026-08-18T07:05:00Z
+agents: orchestrator
+built: Cursor MCP at mcp.posthog.com, Unvibe org project 562518 linked, warehouse connect links for Stripe Github Supabase
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: MCP authenticated, production PostHog key live on unvibe-site after redeploy
+unsure: Warehouse sources need Preston to finish the three connect pages, then source-setup can run.
+
+## Hero tighter, muted videos | run 2 | 2026-08-18T06:52:00Z
+agents: orchestrator
+built: install padding wins over paper-section, Command U gap tighter, Typeform glass under curl, videos stay muted
+deleted: leftover 1fr hero gap and auto unmute
+findings: 0/0/0
+score: n/a
+gate: live hero countdown sits under Typeform, install Typeform matches curl, videos muted
+unsure: none
+
+## Hero tighter, muted videos | run 1 | 2026-08-17T22:52:00Z
+agents: orchestrator
+built: countdown up, Command U install closer, Typeform glass under curl, videos start muted
+deleted: auto unmute on first click
+findings: 0/0/0
+score: n/a
+gate: live hero countdown sits under Typeform, install Typeform matches curl, videos muted
+unsure: none
+
+## PostHog for Startups 50k | run 1 | 2026-08-17T22:47:00Z
+agents: orchestrator
+built: PostHog $50,000 on 18 AUG changelog and investors secured list
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: live changelog and investors show PostHog for Startups $50,000
+unsure: Mixpanel stays not awarded.
+
+## Mixpanel credit not awarded | run 1 | 2026-08-17T18:26:00Z
+agents: orchestrator
+built: Mixpanel moved to investor pipeline as not secured
+deleted: $144,000 Mixpanel from changelog and secured credits
+findings: 0/0/0
+score: n/a
+gate: live investors and changelog do not claim Mixpanel $144,000
+unsure: Site still sends named Mixpanel events. Session replay stays off.
+
+## Mixpanel 18 Aug, OpenAI and Linear later | run 1 | 2026-08-17T17:48:00Z
+agents: orchestrator
+built: Mixpanel dated 18 AUG starred, OpenAI 16 AUG, Linear 14 AUG, no stars
+deleted: OpenAI and Linear from the top of the changelog
+findings: 0/0/0
+score: n/a
+gate: live changelog dates Mixpanel 18, OpenAI 16, Linear 14
+unsure: none
+
+## Star Mixpanel and GitLab | run 1 | 2026-08-17T16:41:00Z
+agents: orchestrator
+built: changelog stars Mixpanel and GitLab only
+deleted: stars on OpenAI and Linear
+findings: 0/0/0
+score: n/a
+gate: live changelog stars Mixpanel and GitLab
+unsure: none
+
+## Linear Founder Value Pack | run 1 | 2026-08-17T16:35:00Z
+agents: orchestrator
+built: Linear 6 months free, $4,500 on investors and changelog
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: live investors and releases show Linear Founder Value Pack
+unsure: Value is the founder-reported pack figure.
+
+## OpenAI credit and copy toast | run 1 | 2026-08-17T16:22:00Z
+agents: orchestrator
+built: OpenAI $1,200 and Mixpanel $144,000 on investors and changelog, 3s copied toast
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: live investors lists OpenAI, changelog pins it, copy shows bottom right toast
+unsure: Mixpanel value is the 1 year credit the founder reported.
+
+## Mixpanel browser SDK, named events | run 1 | 2026-08-17T16:10:00Z
+agents: orchestrator
+built: mixpanel-browser on the marketing site, init without autocapture or session replay
+deleted: Mixpanel wizard autocapture true and record_sessions_percent 100
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site inits Mixpanel SDK, Verify Connection can see page_viewed
+unsure: Desktop app is not wired.
+
+## Mixpanel named events on the site | run 1 | 2026-08-17T15:10:00Z
+agents: orchestrator
+built: marketing Mixpanel via /api/analytics, page_viewed plus existing named events, no SDK
+deleted: autocapture and session replay from the Mixpanel snippet
+findings: 0/0/0
+score: n/a
+gate: live unvibe.site posts named events, Mixpanel Live View shows page_viewed
+unsure: Desktop app is not wired. Token is server-only MIXPANEL_TOKEN.
+
+## Investors top plus bold beta label | run 1 | 2026-08-17T21:36:00Z
+agents: orchestrator
+built: BetaInstall at top of investors, bold page copy, label Beta Testing App (30 AI Explanations)
+deleted: investors download at bottom, Beta App (30 explanations)
+findings: 0/0/0
+score: n/a
+gate: live investors label before ownership headline
+unsure: Live after marketing deploy.
+
+## Pricing checkout plus Composio | run 1 | 2026-08-18T04:10:00Z
+agents: orchestrator
+built: PricingPlans Start Pro/Team checkout, PlanManager auto checkout, Teams checkout enabled, Composio MCP
+deleted: Join waitlist on /pricing
+findings: 0/0/0
+score: n/a
+gate: live /pricing buttons are not Join waitlist
+unsure: Linear Stripe GitHub Composio links need user auth. Team Stripe price IDs are not on unvibe-api yet. Enterprise remains contact.
+
+## Composio ops playbooks | run 1 | 2026-08-18T06:24:00Z
+agents: orchestrator
+built: .cursor/skills/unvibe-ops/SKILL.md, .cursor/commands/ops.md, docs/automation/composio/playbooks.md, Unvibe ops Sheet, regrade Gmail draft
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: weekly row and unsent draft exist. Linear labels wait on Composio auth
+unsure: Linear GitHub GitLab Vercel Stripe Mixpanel still pending in Composio. Credit cap is 20 calls/month each for Linear PostHog Mixpanel GitLab OpenAI.
+
+## Security checklist pass | run 1 | 2026-08-18T06:40:00Z
+agents: orchestrator
+built: webhook timestamp replay reject, HSTS, no-store on authed pages, Action SHA pins, consume_usage search_path, log scrub, auth rate limit, docs/security-checklist.md
+deleted: floating @v4/@latest GitHub Action refs
+findings: 0/0/0
+score: n/a
+gate: web tests for timestamp replay, log scrub, and auth rate limit
+unsure: Founder MFA is a Supabase dashboard setting. Waitlist admin is still a Bearer token. CSP remains Next-compatible, not nonce-strict. Apply consume_usage search_path migration on staging.
+
+## Beta waitlist email templates | run 1 | 2026-08-18T12:40:00Z
+agents: orchestrator
+built: waitlist and download emails with curl plus Typeform, docs/automation/emails/beta-waitlist.md
+deleted: 3 month Pro claim in download mail, emoji heavy draft
+findings: 0/0/0
+score: n/a
+gate: marketing email tests for curl, feedback URL, 1 week Pro
+unsure: No send. Cold email not drafted. Reward is 1 week Pro after survey, matching the site, not 1 month.
+
+## Home install beta block | run 1 | 2026-08-18T13:26:00Z
+agents: orchestrator
+built: centered curl and Typeform, white offer copy, smaller survey type than curl
+deleted: left aligned black offer on home install
+findings: 0/0/0
+score: n/a
+gate: visual, home #install
+unsure: Investors page still uses ink on tone=page because it is not paper-install.
+
+## Politer beta waitlist email | run 1 | 2026-08-18T13:28:00Z
+agents: orchestrator
+built: thank you for waitlisting, purple heart, softer bug ask in invite and download mail
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: marketing email tests
+unsure: Still not sent.
+
+## Waitlist email send check | run 1 | 2026-08-18T13:50:00Z
+agents: orchestrator
+built: live Resend probe, founder and Mirzett send attempts
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: Resend domains=0, 422 on both send attempts, email tests 29/29
+unsure: Local marketing env has no Supabase. Production waitlist is not on the connected Regrade project. Outbound to waitlist people needs a verified unvibe.site sender in Resend.
+
+## Resend Composio connect | run 1 | 2026-08-18T13:56:00Z
+agents: orchestrator
+built: Composio Resend alias unvibe-resend initiated, new key probed
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: same Resend account, domains=0, Composio still initiated
+unsure: Mirzett invite still blocked until unvibe.site is verified in Resend. Key was pasted in chat and should be rotated.
+
+## Waitlist blast blocked | run 1 | 2026-08-18T14:01:00Z
+agents: orchestrator
+built: Composio Resend active check
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: RESEND_LIST_DOMAINS returned 0 domains
+unsure: Waitlist people cannot be emailed until unvibe.site is verified in Resend.
+
+## Waitlist beta invites sent | run 1 | 2026-08-18T14:09:41Z
+agents: orchestrator
+built: 3 beta invites from waitlist@unvibe.site after domain verified
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: Resend batch 3 ids, retrieve queued/sent
+unsure: Local/prod waitlist store still not wired here. Sent the 3 real signups from founder alerts. Skipped test and founder rows. Set WAITLIST_FROM_EMAIL on Vercel to the verified sender.
+
+## Night Lab disabled | run 1 | 2026-08-18T14:25:00Z
+agents: orchestrator
+built: gh workflow disable Unvibe Autonomous Night Lab
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: workflow list shows disabled_manually
+unsure: YAML still in the repo. Re-enable later with gh workflow enable if wanted.
+
+## Windows 30 explanation trial | run 1 | 2026-08-19T11:54:00Z
+agents: orchestrator
+built: Windows Ctrl+C capture, install.ps1, Mac/Windows beta switch, same 30 explanation trial copy
+deleted: Windows waitlist only FAQ
+findings: 0/0/0
+score: n/a
+gate: marketing and app tests
+unsure: Windows exe still needs packaging with UNVIBE_TRIAL_TOKEN and upload to v0.1.11-beta-onboard as Unvibe-0.1.11-win-x64-portable.exe
+
+## Windows 30 explanation trial | run 2 | 2026-08-19T12:00:00Z
+agents: orchestrator
+built: removed duplicate prettyShortcut import in bar.tsx; app typecheck passes
+deleted: /tmp/unvibe-api.prod.env after a Vercel env pull
+findings: 0/0/0
+score: n/a
+gate: app typecheck
+unsure: UNVIBE_TRIAL_TOKEN is Vercel Sensitive so this session cannot bake it. GitHub release still has only the Mac DMG. install.ps1 is not live until marketing deploys after the exe is uploaded.
+
+## Windows trial push | run 1 | 2026-08-19T12:10:00Z
+agents: orchestrator
+built: counted /feedback redirect for email and app survey opens, os on copy, push Windows trial source without tokens or installers
+deleted: nothing
+findings: 0/0/0
+score: n/a
+gate: marketing tests
+unsure: founder copy and fetch counts are live on /api/stats. /feedback counts after marketing deploy.
+
+
+
 
 
 

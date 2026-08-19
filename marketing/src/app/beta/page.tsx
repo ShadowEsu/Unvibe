@@ -17,10 +17,10 @@ export default function BetaDownloadsPage() {
         <p className="beta-download-intro">Your beta build includes the full desktop learning flow. Unvibe only analyzes code you explicitly select.</p>
         <div className="beta-download-preview">
           <Image
-            src="/product-shots/onboarding-dark.png"
-            alt="Unvibe onboarding screen in dark mode"
-            width={3024}
-            height={1774}
+            src="/product/home.png"
+            alt="Unvibe companion home in dark mode"
+            width={1024}
+            height={678}
             sizes="(max-width: 760px) 100vw, 680px"
           />
         </div>

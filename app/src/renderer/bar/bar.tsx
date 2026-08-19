@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
+import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
 
 type Snapshot = {
@@ -23,10 +24,6 @@ function CodeIcon() {
 
 function HomeIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 11.2 12 4.8l7.5 6.4" /><path d="M7.2 10.2V19h9.6v-8.8" /></svg>;
-}
-
-function prettyShortcut(value = 'CommandOrControl+U'): string {
-  return value.replace('CommandOrControl+', '⌘').replace('Shift+', '⇧').replace('Alt+', '⌥');
 }
 
 /**

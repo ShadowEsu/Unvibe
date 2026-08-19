@@ -32,7 +32,7 @@ export function WaitlistInvite() {
       <div className="paper-invite__card paper-glass">
         <p className="paper-meta">Private beta</p>
         <h2>Save a seat.</h2>
-        <p className="paper-lead">Mac ships first. Windows can join the list. Name and email. You can skip the rest.</p>
+        <p className="paper-lead">Mac and Windows private beta. 30 AI explanations. Name and email. You can skip the rest.</p>
         <div className="paper-invite__form">
           <PixelWaitlist variant="hero" />
         </div>

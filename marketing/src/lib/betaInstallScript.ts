@@ -1,5 +1,6 @@
 export const BETA_INSTALL_TAG = "v0.1.11-beta-onboard";
 export const BETA_INSTALL_ASSET = "Unvibe-0.1.11-beta-arm64-unsigned.dmg";
+export const BETA_WINDOWS_ASSET = "Unvibe-0.1.11-win-x64-portable.exe";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 
 /** Private beta installer. Curl download so macOS never quarantines the app. */
@@ -15,7 +16,8 @@ DEST="/Applications/Unvibe.app"
 TRACK="${BETA_INSTALL_TRACK_URL}"
 
 if [ "$(uname -s)" != "Darwin" ]; then
-  echo "Unvibe beta is macOS only."
+  echo "On Windows run: irm https://unvibe.site/install.ps1 | iex"
+  echo "This installer is for macOS."
   exit 1
 fi
 if [ "$(uname -m)" != "arm64" ]; then
@@ -59,3 +61,33 @@ curl -fsS -m 4 -X POST "$TRACK" -H "Content-Type: application/json" -d '{"event"
 echo "Done. If macOS still blocks it, run: xattr -cr /Applications/Unvibe.app && open /Applications/Unvibe.app"
 `;
 }
+
+/** Private beta installer. Downloads a portable Windows exe with the same 30 explanation trial. */
+export function betaWindowsInstallScript(): string {
+  return `# Unvibe private beta installer for Windows. 30 AI explanations. Unsigned.
+# irm https://unvibe.site/install.ps1 | iex
+\$ErrorActionPreference = "Stop"
+\$tag = if (\$env:UNVIBE_BETA_TAG) { \$env:UNVIBE_BETA_TAG } else { "${BETA_INSTALL_TAG}" }
+\$asset = if (\$env:UNVIBE_BETA_ASSET) { \$env:UNVIBE_BETA_ASSET } else { "${BETA_WINDOWS_ASSET}" }
+\$url = "https://github.com/ShadowEsu/Unvibe/releases/download/\$tag/\$asset"
+\$destDir = Join-Path \$env:LOCALAPPDATA "Unvibe"
+\$dest = Join-Path \$destDir "Unvibe.exe"
+\$track = "${BETA_INSTALL_TRACK_URL}"
+
+if (\$env:OS -notlike "*Windows*") {
+  Write-Error "This installer is for Windows. On a Mac run: curl -fsSL https://unvibe.site/install.sh | bash"
+}
+
+New-Item -ItemType Directory -Force -Path \$destDir | Out-Null
+Write-Host "Downloading Unvibe beta..."
+Invoke-WebRequest -Uri \$url -OutFile \$dest -UseBasicParsing
+Unblock-File -Path \$dest
+Write-Host "Opening Unvibe..."
+Start-Process \$dest
+try {
+  Invoke-RestMethod -Method Post -Uri \$track -ContentType "application/json" -Body '{"event":"installed"}' -TimeoutSec 4 | Out-Null
+} catch {}
+Write-Host "Done. Windows may warn that Unvibe is unsigned. That is expected during beta. If SmartScreen appears, choose More info, then Run anyway."
+`;
+}
+

@@ -6,8 +6,8 @@ agent writes, at the depth you choose, and checks that you understood it.
 > AI can write the code. Unvibe helps you understand it.
 
 Built with Next.js 14 (App Router), TypeScript, Tailwind CSS, Framer Motion, and a
-privacy-respecting analytics abstraction. It is independent of the product backend in
-`../web`.
+privacy-respecting analytics abstraction (named Mixpanel and optional PostHog events,
+no vendor script). It is independent of the product backend in `../web`.
 
 ## Run locally
 
@@ -42,7 +42,10 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public Supabase browser key (preferred). |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Legacy public key fallback when no publishable key exists. |
 | `FOUNDER_EMAILS` | Server-only comma-separated founder Google accounts allowed to update `/build`. |
-| `NEXT_PUBLIC_POSTHOG_KEY` | Optional. When empty, analytics is a no-op. |
+| `NEXT_PUBLIC_MIXPANEL_TOKEN` | Optional Mixpanel project token for the browser SDK. Autocapture and session replay are on. |
+| `MIXPANEL_TOKEN` | Optional Mixpanel project token (server only). Fallback named events via `/api/analytics`. |
+| `MIXPANEL_HOST` | Optional Mixpanel API host (defaults to `https://api.mixpanel.com`). |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Optional PostHog project key. Named events only. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Optional PostHog host (defaults to US cloud). |
 
 Without Vercel Blob configured, waitlist submissions are written to `.data/waitlist.json`
@@ -66,12 +69,17 @@ email delivery fails.
 
 ## Analytics events
 
-Fired only when a PostHog key is set, via a single fetch to the capture endpoint (no
-third-party script, no cookies, no code contents):
+Fired when Mixpanel and/or PostHog is configured. Mixpanel loads `mixpanel-browser`
+with autocapture and session replay on, then tracks named events. `/api/analytics`
+remains as a fallback when the browser token is unset. No code contents, no emails:
 
-`waitlist_started`, `waitlist_completed`, `demo_started`, `demo_completed`,
+`page_viewed`, `waitlist_started`, `waitlist_completed`, `demo_started`, `demo_completed`,
 `depth_changed`, `code_example_selected`, `faq_opened`, `referral_copied`,
-`outbound_social_clicked`, `privacy_opened`.
+`outbound_social_clicked`, `privacy_opened`, `pricing_viewed`, `billing_interval_selected`,
+`plan_cta_clicked`, `release_download_clicked`, `beta_install_copied`, `survey_opened`.
+
+The desktop app does not send Mixpanel events. Do not copy the Mixpanel snippet into
+`app/`.
 
 ## Deploy to Vercel
 

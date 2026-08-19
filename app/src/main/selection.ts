@@ -1,18 +1,31 @@
 /**
- * macOS selection capture: save clipboard → activate the user's editor if needed →
- * synthesize ⌘C via System Events → read → restore clipboard. Requires Accessibility
- * permission. A failed capture intentionally returns null: ⌘U must never explain stale
- * clipboard contents when the user did not select anything.
+ * Selection capture: save clipboard → activate the user's editor if needed →
+ * synthesize Copy → read → restore clipboard. macOS uses System Events (⌘C).
+ * Windows uses SendKeys (Ctrl+C). A failed capture returns null so the shortcut
+ * never explains a stale clipboard when the user did not select anything.
  */
 import { clipboard } from 'electron';
 import { execFile } from 'node:child_process';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const isWindows = process.platform === 'win32';
+const isMac = process.platform === 'darwin';
 
 function osascript(script: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile('osascript', ['-e', script], { timeout: 5000 }, (err, stdout) =>
       err ? reject(err) : resolve(stdout.trim()),
+    );
+  });
+}
+
+function powershell(command: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-STA', '-NonInteractive', '-Command', command],
+      { timeout: 5000, windowsHide: true },
+      (err, stdout) => (err ? reject(err) : resolve(String(stdout).trim())),
     );
   });
 }
@@ -29,6 +42,7 @@ let watchTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startFrontmostWatch(): void {
   if (watchTimer) return;
+  if (!isMac) return;
   watchTimer = setInterval(() => {
     void frontmostApp().then((name) => {
       if (name && !isSelfApp(name)) lastForeignApp = name;
@@ -38,6 +52,13 @@ export function startFrontmostWatch(): void {
 
 export async function frontmostApp(): Promise<string | null> {
   try {
+    if (isWindows) {
+      const name = await powershell(
+        'Add-Type @"\nusing System;\nusing System.Runtime.InteropServices;\npublic class Fg {\n  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();\n  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);\n}\n"@\n$h = [Fg]::GetForegroundWindow(); $pid = 0; [void][Fg]::GetWindowThreadProcessId($h, [ref]$pid); (Get-Process -Id $pid -ErrorAction SilentlyContinue).ProcessName',
+      );
+      return name || null;
+    }
+    if (!isMac) return null;
     return await osascript(
       'tell application "System Events" to get name of first application process whose frontmost is true',
     );
@@ -47,12 +68,22 @@ export async function frontmostApp(): Promise<string | null> {
 }
 
 async function activateApp(name: string): Promise<void> {
+  if (isWindows) {
+    const escaped = name.replace(/'/g, "''");
+    await powershell(`$w = New-Object -ComObject WScript.Shell; [void]$w.AppActivate('${escaped}')`);
+    await delay(160);
+    return;
+  }
   const escaped = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   await osascript(`tell application "${escaped}" to activate`);
   await delay(160);
 }
 
 async function syntheticCopy(): Promise<void> {
+  if (isWindows) {
+    await powershell("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')");
+    return;
+  }
   // Key code 8 is physical C on the current macOS keyboard layout. It is more
   // reliable than a character keystroke in Cursor and VS Code's full-screen
   // editor surfaces.
@@ -82,6 +113,7 @@ export async function captureSelection(options: { preferClipboard?: boolean } = 
     const copied = clipboard.readText();
     return copied.trim().length > 0 ? copied : null;
   }
+  if (!isMac && !isWindows) return null;
   const previous = clipboard.readText();
   // Let Control+U / the saved shortcut release before synthesizing Copy.
   await delay(90);

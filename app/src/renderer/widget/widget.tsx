@@ -6,6 +6,7 @@ import type { SecretFinding } from '../../core/secretFilter';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { prettyShortcut } from '../shared/prettyShortcut';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
@@ -77,7 +78,7 @@ function newTab(id: string, label: string): TabState {
 }
 
 function prettyAccel(accel: string): string {
-  return accel.replace('CommandOrControl', '⌘').replace('Control', '⌃').replace('Shift', '⇧').replace('Alt', '⌥');
+  return prettyShortcut(accel);
 }
 
 const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;

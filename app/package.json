@@ -14,6 +14,7 @@
     "dist": "npm run prepare:bridge && npm run build && electron-builder --mac dir",
     "dist:mac": "npm run prepare:bridge && npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
+    "package:beta:win": "node scripts/package-beta-windows.mjs",
     "dist:all": "npm run build && electron-builder --mac --win",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },

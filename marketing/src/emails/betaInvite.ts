@@ -1,37 +1,35 @@
-const FEEDBACK_FORM_URL = "https://5fmnqm5vw5o.typeform.com/to/gtkkixB7";
+import {
+  BETA_CURL,
+  BETA_FEEDBACK_URL,
+  BETA_WINDOWS_COMMAND,
+  betaEarlyNoteText,
+  betaFeedbackText,
+  betaInstallText,
+  betaSignOffText,
+  betaThanksText,
+  escapeEmailHtml,
+  safeFirstName,
+} from "./betaShared";
 
-export const BETA_INVITE_SUBJECT = "You’re Invited to Join the Unvibe Private Beta";
-
-function safeName(firstName: string): string {
-  return firstName.trim() || "there";
-}
+export const BETA_INVITE_SUBJECT = "You're on the Unvibe private beta";
 
 export function betaInviteText(firstName: string): string {
-  return `Hi ${safeName(firstName)},
+  return `Hi ${safeFirstName(firstName)},
 
-Thank you for joining the Unvibe waitlist. We truly appreciate your early interest and support.
+${betaThanksText()}
 
-You’re now registered for access to the Unvibe private beta. During the beta, you’ll be able to test the product, explore how Unvibe explains AI-generated code, and share feedback that will help shape the experience before launch.
+${betaEarlyNoteText()}
 
-The feedback form gives you a direct line into what Unvibe ships next and access to your personal referral link.
+${betaInstallText()}
 
-Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer. Additional eligibility requirements and program terms may apply.
+${betaFeedbackText()}
 
-Your feedback will directly influence the features, explanations, and learning tools we prioritize as we continue improving Unvibe.
-
-Complete the feedback form: ${FEEDBACK_FORM_URL}
-
-Thank you again for being one of our earliest users. We’re excited to have you building and learning with us.
-
-AI writes the code. Unvibe helps you understand it.
-
-Best,
-Preston Susanto
-Founder, Unvibe
-https://unvibe.site`;
+${betaSignOffText()}`;
 }
 
 export function betaInviteHtml(firstName: string): string {
-  const name = safeName(firstName).replace(/[&<>"']/g, (value) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[value] ?? value);
-  return `<!doctype html><html lang="en"><body style="margin:0;background:#f6f1ff;color:#23192f;font-family:Arial,sans-serif"><main style="max-width:600px;margin:0 auto;padding:36px 18px"><section style="padding:32px;background:#fffdf8;border:1px solid #d8cde3"><p style="margin:0 0 12px;color:#6f45d2;font-size:12px;font-weight:700;letter-spacing:1.6px">UNVIBE PRIVATE BETA</p><h1 style="margin:0 0 24px;font-size:26px">You’re invited to join the Unvibe private beta</h1><p>Hi ${name},</p><p>Thank you for joining the Unvibe waitlist. We truly appreciate your early interest and support.</p><p>You’re now registered for access to the Unvibe private beta. During the beta, you’ll be able to test the product, explore how Unvibe explains AI-generated code, and share feedback that will help shape the experience before launch.</p><p>The feedback form gives you a direct line into what Unvibe ships next and access to your personal referral link.</p><p><strong>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total).</strong> Rewards are reviewed before Unvibe credit or wire transfer. Additional eligibility requirements and program terms may apply.</p><p>Your feedback will directly influence the features, explanations, and learning tools we prioritize as we continue improving Unvibe.</p><p style="margin:28px 0"><a href="${FEEDBACK_FORM_URL}" style="display:inline-block;padding:13px 18px;background:#6f45d2;color:#fff;text-decoration:none;font-weight:700">Complete the feedback form</a></p><p>Thank you again for being one of our earliest users. We’re excited to have you building and learning with us.</p><p><em>AI writes the code. Unvibe helps you understand it.</em></p><p>Best,<br><strong>Preston Susanto</strong><br>Founder, Unvibe<br><a href="https://unvibe.site" style="color:#6f45d2">unvibe.site</a></p></section></main></body></html>`;
+  const name = escapeEmailHtml(safeFirstName(firstName));
+  const curl = escapeEmailHtml(BETA_CURL);
+  const windows = escapeEmailHtml(BETA_WINDOWS_COMMAND);
+  return `<!doctype html><html lang="en"><body style="margin:0;background:#f6f1ff;color:#23192f;font-family:Arial,sans-serif"><main style="max-width:600px;margin:0 auto;padding:36px 18px"><section style="padding:32px;background:#fffdf8;border:1px solid #d8cde3"><p style="margin:0 0 12px;color:#6f45d2;font-size:12px;font-weight:700;letter-spacing:1.6px">UNVIBE PRIVATE BETA</p><h1 style="margin:0 0 24px;font-size:26px">You're on the Unvibe private beta</h1><p>Hi ${name},</p><p>Thank you so much for waitlisting, and for your support 💜</p><p>You're on the Unvibe private beta. This build is early, so bugs, crashes, and unfinished screens are expected. If something breaks, please tell us what you were doing. That note really helps.</p><p><strong>Apple silicon Mac</strong></p><p style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f3eef8;padding:12px 14px">${curl}</p><p><strong>Windows x64 PowerShell</strong></p><p style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f3eef8;padding:12px 14px">${windows}</p><p>macOS may warn that Unvibe is unsigned. Windows SmartScreen may say the same. That is expected until we notarize.</p><p>The beta includes 30 AI explanations. After you try it, fill the feedback form. That unlocks 1 week of Pro and your referral code. Waitlist gifts still add on.</p><p>Every 3 verified referrals earns $5, up to 5 rewards ($25). You can take Unvibe credit instead of a wire. We check eligibility first.</p><p style="margin:28px 0"><a href="${BETA_FEEDBACK_URL}" style="display:inline-block;padding:13px 18px;background:#6f45d2;color:#fff;text-decoration:none;font-weight:700">Open the feedback form</a></p><p>Thank you again for being here 💜</p><p><em>AI writes the code. Unvibe helps you understand it.</em></p><p>Best,<br><strong>Preston Susanto</strong><br>Founder, Unvibe<br><a href="https://unvibe.site" style="color:#6f45d2">unvibe.site</a></p></section></main></body></html>`;
 }

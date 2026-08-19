@@ -2,7 +2,7 @@
  * FAQ content.
  *
  * Answers match the product as actually scoped:
- * Mac first; selection based (not screen OCR); no local-only mode yet;
+ * Mac and Windows private beta; selection based (not screen OCR); no local-only mode yet;
  * no enterprise certifications; AI explanations can be wrong.
  */
 
@@ -107,21 +107,21 @@ export const faqItems: FaqItem[] = [
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "Join the waitlist for Mac or Windows. Invitations are being issued gradually. Mac ships first. For beta partnerships, contact preston@unvibe.site.",
+      "The private beta is live for Apple silicon Mac and Windows x64. 30 AI explanations, then it stops. Copy the install command on unvibe.site. For partnerships, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Not yet. Unvibe is Mac-first. You can still join the waitlist from Windows and note your platform in the optional message so we know demand.",
+      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from PowerShell with irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
     category: "platform",
   },
   {
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "Team is coming soon: $10 per seat, 2 seats minimum, 20 seats maximum, shared in one app. Enterprise is coming soon: $50 a month for 1,000 AI questions and integrations. Annual is 25% off for both. Join the waitlist if you want a seat when they open.",
+      "Team is $10 per seat, 2 seats minimum, 20 seats maximum, shared in one app. Start Team from /pricing. Enterprise is $50 a month for 1,000 AI questions and integrations. Write preston@unvibe.site for Enterprise. Annual is 25% off for both.",
     category: "platform",
   },
   {

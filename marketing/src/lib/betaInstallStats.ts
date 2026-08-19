@@ -2,12 +2,13 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { get, list, put } from "@vercel/blob";
 
-export type BetaInstallEvent = "copied" | "fetched" | "installed";
+export type BetaInstallEvent = "copied" | "fetched" | "installed" | "survey";
 
 export interface BetaInstallCounts {
   copied: number;
   fetched: number;
   installed: number;
+  survey: number;
 }
 
 const BLOB_PATH = "stats/beta-install.v1.json";
@@ -15,7 +16,7 @@ const dataDir = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDir, "beta-install.json");
 
 function emptyCounts(): BetaInstallCounts {
-  return { copied: 0, fetched: 0, installed: 0 };
+  return { copied: 0, fetched: 0, installed: 0, survey: 0 };
 }
 
 function normalize(parsed: Partial<BetaInstallCounts> | null | undefined): BetaInstallCounts {
@@ -23,6 +24,7 @@ function normalize(parsed: Partial<BetaInstallCounts> | null | undefined): BetaI
     copied: Number(parsed?.copied) || 0,
     fetched: Number(parsed?.fetched) || 0,
     installed: Number(parsed?.installed) || 0,
+    survey: Number(parsed?.survey) || 0,
   };
 }
 
@@ -81,7 +83,7 @@ async function save(data: BetaInstallCounts): Promise<void> {
 }
 
 export function parseBetaInstallEvent(value: unknown): BetaInstallEvent | null {
-  if (value === "copied" || value === "fetched" || value === "installed") return value;
+  if (value === "copied" || value === "fetched" || value === "installed" || value === "survey") return value;
   return null;
 }
 

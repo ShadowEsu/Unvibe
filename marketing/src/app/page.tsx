@@ -3,6 +3,7 @@ import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
+import { BetaInstall } from "@/components/paper/BetaInstall";
 import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
@@ -31,19 +32,19 @@ export default function HomePage() {
           <div className="paper-video">
             <AutoPlayVideo
               src="/videos/unvibe-demo.mp4"
-              poster="/product/overlay-editor.png"
+              poster="/product/home.png"
               label="Unvibe explaining selected code beside an editor"
             />
           </div>
           <p className="paper-caption">
-            Highlight code in your editor. Unvibe explains it beside the work, then you can test yourself.
+            Highlight code in your editor. Unvibe explains it beside the work, then you can test yourself. The video is a little behind. The stills below are current.
           </p>
         </Reveal>
       </section>
 
       <ToolsMarquee />
 
-      <section className="paper-section" id="loop">
+      <section className="paper-section paper-section--loop" id="loop">
         <div className="paper-wrap paper-center">
           <Reveal>
             <p className="paper-meta">The loop</p>
@@ -52,10 +53,16 @@ export default function HomePage() {
           <div className="mt-10">
             <DecoderBoard />
           </div>
-          <div className="mt-12">
+          <div className="mt-6">
             <ShortcutKeys />
           </div>
         </div>
+      </section>
+
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" />
+        </Reveal>
       </section>
 
       <StoryStage />

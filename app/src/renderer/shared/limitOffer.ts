@@ -1,4 +1,4 @@
-export const BETA_SURVEY_URL = 'https://5fmnqm5vw5o.typeform.com/to/gtkkixB7';
+export const BETA_SURVEY_URL = 'https://unvibe.site/feedback';
 
 export interface LimitOfferCopy {
   title: string;
