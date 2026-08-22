@@ -82,7 +82,10 @@ import {
   resolveRepoRoot,
 } from './contextBuilder';
 import { answerQuizCard, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
-import { integrationStatus } from './integrations';
+import { installDesktopBridge, integrationStatus, type EditorId } from './integrations';
+import { installDesktopCrashReporting } from './telemetry';
+
+installDesktopCrashReporting();
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -824,6 +827,15 @@ app.whenReady().then(() => {
   // --- settings ---
   ipcMain.handle('settings:get', () => settings().all());
   ipcMain.handle('integrations:status', () => integrationStatus());
+  ipcMain.handle('integrations:installBridge', (_event, editor: unknown) => {
+    if (editor !== 'cursor' && editor !== 'vscode') {
+      return { ok: false, error: 'Choose Cursor or VS Code before installing the Desktop Bridge.' };
+    }
+    return installDesktopBridge(editor as EditorId, {
+      appPath: app.getAppPath(),
+      resourcesPath: process.resourcesPath,
+    });
+  });
   ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
     const before = settings().all().shortcut;
     const next = settings().set(patch);

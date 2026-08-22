@@ -8,7 +8,7 @@
  */
 export const BETA_PLAN = {
   /** A "code selection" is a fresh explanation of a new piece of selected code. */
-  codeSelections: 30,
+  codeSelections: 20,
   /** An "AI ask" is a follow-up question or an "Explain differently" on an existing explanation. */
   aiAsks: 20,
 } as const;
@@ -34,12 +34,35 @@ const BILLING_LIMITS: Record<PlanId, Record<BillingUsageKind, number>> = {
   teams: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
 };
 
-export const TEAMS_CHECKOUT_ENABLED = false;
+/** Teams is opt-in at deploy time: Stripe price IDs are the final safety gate. */
+export function teamsCheckoutEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean(env.STRIPE_PRICE_TEAMS_MONTHLY?.trim() && env.STRIPE_PRICE_TEAMS_ANNUAL?.trim());
+}
+
+const MONTHLY_UNIT_AMOUNT = 800;
+const ANNUAL_UNIT_AMOUNT = 7_200;
+
+export function priceFor(plan: PlanId, interval: 'monthly' | 'annual', seats = 1): number {
+  if (plan === 'free') return 0;
+  const normalized = normalizedSeats(plan, seats);
+  return (interval === 'annual' ? ANNUAL_UNIT_AMOUNT : MONTHLY_UNIT_AMOUNT) * normalized;
+}
+
+export function proAnnualSavingsPercent(): number {
+  return Math.round((1 - ANNUAL_UNIT_AMOUNT / (MONTHLY_UNIT_AMOUNT * 12)) * 100);
+}
+
+export function teamsAnnualSavingsPercent(): number {
+  return proAnnualSavingsPercent();
+}
 
 export function normalizedSeats(plan: Exclude<PlanId, 'free'>, requested: number): number {
   if (plan === 'pro') return 1;
-  if (!Number.isFinite(requested)) return 2;
-  return Math.max(2, Math.min(500, Math.floor(requested)));
+  if (!Number.isFinite(requested)) throw new Error('Teams requires a valid seat quantity.');
+  if (!Number.isInteger(requested)) throw new Error('Teams seats must be a whole number.');
+  if (requested < 2) throw new Error('Teams requires at least 2 seats.');
+  if (requested > 500) throw new Error('Teams supports at most 500 seats.');
+  return requested;
 }
 
 export function effectivePlan(plan: PlanId, status: SubscriptionStatus, gracePeriodEndsAt?: string, now = new Date()): PlanId {
@@ -54,7 +77,7 @@ export function monthWindow(now = new Date()): { startsAt: string; resetsAt: str
   return { startsAt: startsAt.toISOString(), resetsAt: resetsAt.toISOString() };
 }
 
-export function planLimit(plan: PlanId, kind: BillingUsageKind, seats: number): number {
+export function planLimit(plan: PlanId, kind: BillingUsageKind, seats = 1): number {
   const limit = BILLING_LIMITS[plan][kind];
   return plan === 'teams' && (kind === 'ai_explanation' || kind === 'project_question')
     ? limit * Math.max(2, Math.min(500, Math.floor(seats)))

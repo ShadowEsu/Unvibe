@@ -1,6 +1,7 @@
 import { getBillingStore } from '@/billing/store';
 import { getStripe } from '@/billing/stripe';
 import { processStripeEvent } from '@/billing/webhooks';
+import { reportServerFailure } from '@/integrations/telemetry';
 
 export const runtime = 'nodejs';
 
@@ -24,6 +25,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await store.failWebhook(event.id, message);
+    await reportServerFailure(error, { route: '/api/v1/billing/webhook', event_type: event.type });
     return Response.json({ error: 'processing_failed' }, { status: 500 });
   }
 }

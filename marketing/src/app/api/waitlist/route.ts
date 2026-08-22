@@ -5,6 +5,7 @@ import { notifyFounder } from "@/lib/notifyWaitlist";
 import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import { betaMacDownloadUrl } from "@/lib/betaRelease";
 import { sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
+import { captureMarketingEvent } from "@/lib/serverAnalytics";
 import {
   findWaitlistEntry,
   recordWaitlistBetaEmail,
@@ -114,6 +115,10 @@ export async function POST(req: Request) {
         }),
     ]);
     if (!betaDelivery.sent) console.error("waitlist beta email delivery failed", betaDelivery.error);
+    void captureMarketingEvent(stored.duplicate ? "waitlist_duplicate" : "waitlist_signup", {
+      has_referral: Boolean(referredBy),
+      email_sent: betaDelivery.sent,
+    });
 
     return NextResponse.json({
       duplicate: stored.duplicate,

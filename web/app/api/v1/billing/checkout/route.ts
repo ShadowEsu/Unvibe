@@ -1,8 +1,9 @@
 import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
-import { normalizedSeats, TEAMS_CHECKOUT_ENABLED } from '@/billing/plans';
-import { getStripe, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
+import { capturePostHog, reportServerFailure } from '@/integrations/telemetry';
+import { checkoutSessionMatchesAppUrl, getStripe, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -14,7 +15,7 @@ export async function POST(req: Request): Promise<Response> {
   if (isResponse(user)) return user;
   try {
     const body = (await req.json()) as CheckoutBody;
-    if (body.plan === 'teams' && !TEAMS_CHECKOUT_ENABLED) {
+    if (body.plan === 'teams' && !teamsCheckoutEnabled()) {
       return Response.json({ error: 'teams_unavailable', message: 'Teams is not available right now. Choose Pro for a personal plan.' }, { status: 403 });
     }
     if ((body.plan !== 'pro' && body.plan !== 'teams') || (body.interval !== 'monthly' && body.interval !== 'annual')) {
@@ -38,17 +39,19 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ error: 'subscription_exists', message: 'Use Manage billing to change an existing subscription.' }, { status: 409 });
     }
     const stripe = getStripe();
+    const appUrl = publicAppUrl(req);
     const pending = await billing.pendingCheckout(user, workspace.id);
     if (pending?.stripeCheckoutSessionId && pending.plan === body.plan && pending.interval === body.interval && pending.seats === seats) {
       const existing = await stripe.checkout.sessions.retrieve(pending.stripeCheckoutSessionId);
-      if (existing.status === 'open' && existing.url) return Response.json({ url: existing.url, reused: true });
+      if (existing.status === 'open' && existing.url && checkoutSessionMatchesAppUrl(existing, appUrl)) {
+        return Response.json({ url: existing.url, reused: true });
+      }
       await billing.expireCheckoutIntent(pending.id);
     } else if (pending) {
       return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
     }
     const intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
     const account = await getStore().accountInfo(user);
-    const appUrl = publicAppUrl(req);
     const metadata = { workspace_id: workspace.id, user_id: user, plan: body.plan, interval: body.interval, checkout_intent_id: intent.id };
     let session;
     try { session = await stripe.checkout.sessions.create({
@@ -66,8 +69,10 @@ export async function POST(req: Request): Promise<Response> {
     if (!session.url) throw new Error('Stripe did not return a checkout URL.');
     await billing.attachCheckoutSession(intent.id, session.id);
     await billing.recordAudit(user, workspace.id, 'checkout.created', { plan: body.plan, interval: body.interval, seats });
+    await capturePostHog('billing_checkout_created', { plan: body.plan, interval: body.interval, seats });
     return Response.json({ url: session.url }, { status: 201 });
   } catch (error) {
+    await reportServerFailure(error, { route: '/api/v1/billing/checkout' });
     return billingError(error, 503);
   }
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
 import { BETA_RELEASE, betaMacDownloadUrl } from "@/lib/betaRelease";
 import { sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
+import { captureMarketingEvent } from "@/lib/serverAnalytics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
     emailMessageId: existing?.emailMessageId || delivery.messageId,
   };
   await saveBetaDownload(entry).catch((error) => console.error("beta download record failed", error));
+  void captureMarketingEvent("beta_download_requested", { email_sent: delivery.sent, platform: "mac" });
 
   return NextResponse.json({
     downloadUrl: macDownloadUrl,
