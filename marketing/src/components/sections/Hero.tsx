@@ -33,9 +33,9 @@ export function Hero() {
               }}
               className="max-w-2xl text-balance font-display text-fluid-4xl font-book leading-[1.06] tracking-tight text-fg"
             >
-              Understand the code
+              Learn the code
               <br />
-              <span className="text-primary">AI writes.</span>
+              <span className="text-primary">you vibe-coded.</span>
             </motion.h1>
 
             <motion.p
@@ -48,10 +48,9 @@ export function Hero() {
               }}
               className="mt-5 max-w-xl text-pretty text-fluid-lg leading-relaxed text-fg-muted"
             >
-              Your agent ships code faster than you can learn it.
-              Unvibe lives beside Cursor, VS Code, and your terminal:
-              select any code, choose your depth, and understand what
-              shipped — without leaving your workflow.
+              Unvibe teaches you the AI-generated code you are responsible
+              for shipping. Select it, press ⌘U, and understand what changed
+              without leaving your workflow.
             </motion.p>
 
             <motion.div

@@ -2,8 +2,13 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { LocalEvent } from '../core/learning';
+import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
+import { store } from './store';
+import { bakedTrialToken } from './trial';
+import { resolveBackendUrl } from './backendUrl';
+
+export { resolveBackendUrl } from './backendUrl';
 
 /** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
 function loadAppEnv(): void {
@@ -34,15 +39,19 @@ function loadAppEnv(): void {
 
 loadAppEnv();
 
-/** The desktop and `web/` development servers share this documented default. */
-const BAKED_RELEASE_BACKEND = process.env.UNVIBE_RELEASE_BACKEND || '';
-
-export function resolveBackendUrl(env: NodeJS.ProcessEnv = process.env, baked = BAKED_RELEASE_BACKEND): string {
-  return baked || env.UNVIBE_BACKEND || 'http://localhost:8787';
-}
-
 export const BACKEND = resolveBackendUrl();
 const REQUEST_TIMEOUT_MS = 20_000;
+
+/** Session bearer when signed in; otherwise sealed trial token + install id. */
+export function aiAuthHeaders(sessionToken?: string | null): Record<string, string> {
+  if (sessionToken) return { authorization: `Bearer ${sessionToken}` };
+  const trial = bakedTrialToken();
+  if (!trial) return {};
+  return {
+    authorization: `Bearer ${trial}`,
+    'x-unvibe-install-id': store().installId(),
+  };
+}
 
 /** Network access stays in the main process. Bound requests so an unavailable backend never
  * leaves the widget or account controls waiting indefinitely. */
@@ -64,13 +73,47 @@ async function request(url: string, init: RequestInit): Promise<Response> {
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
-    if (res.status === 429) throw new Error('Too many requests. Please wait a moment and try again.');
+    if (res.status === 429) throw new Error(body.message ?? 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
     throw new Error(`The service could not complete that request (${res.status}).`);
   }
   return (await res.json()) as T;
+}
+
+export interface BillingUsageLine { kind: string; used: number; limit: number; remaining: number; resetsAt: string }
+export interface BillingOverview {
+  workspace: { id: string; name: string; type: 'personal' | 'team'; role: 'owner' | 'admin' | 'member' };
+  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };
+  usage: BillingUsageLine[];
+  occupiedSeats: number;
+  pendingInvitations: number;
+  minimumBillableSeats: number;
+  canManageBilling: boolean;
+  hasBillingAccount: boolean;
+}
+
+export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean }> {
+  return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
+}
+
+export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
+  if (input.plan === 'teams') {
+    throw new Error('Teams is not available right now. Choose Pro for a personal plan.');
+  }
+  const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/checkout`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(input),
+  }));
+  return result.url;
+}
+
+export async function startBillingPortal(token: string, workspaceId: string): Promise<string> {
+  const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/portal`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ workspaceId }),
+  }));
+  return result.url;
 }
 
 export interface Account {
@@ -138,7 +181,7 @@ export async function pushEvents(token: string, events: LocalEvent[]): Promise<s
   const res = await request(`${BACKEND}/api/v1/events`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ events }),
+    body: JSON.stringify({ events: events.map(forSync) }),
   });
   await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);
@@ -182,9 +225,20 @@ export async function fetchQuestion(payload: ReviewRequestPayload, token?: strin
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...aiAuthHeaders(token),
     },
     body: JSON.stringify(payload),
   });
   return json<ComprehensionQuestion>(res);
+}
+
+export async function trialUsageOverview(): Promise<{
+  plan: 'trial';
+  usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
+} | null> {
+  const headers = aiAuthHeaders(null);
+  if (!headers.authorization) return null;
+  const res = await request(`${BACKEND}/api/v1/trial/usage`, { headers });
+  if (!res.ok) return null;
+  return json(res);
 }

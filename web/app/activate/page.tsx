@@ -1,23 +1,43 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useEffect, useMemo, useState } from 'react';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+const DEVICE_CODE_KEY = 'unvibe_device_user_code';
 
 function LogoMark() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 2.6 19.8 7.1 V16.9 L12 21.4 4.2 16.9 V7.1 Z"
-        fill="currentColor"
-      />
-      <path
-        d="M9 9 V12.2 A3 3 0 0 0 15 12.2 V9"
-        stroke="#4F46E5"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <g stroke="#3d2080" strokeOpacity="0.22" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" transform="translate(0.7 0.7)">
+        <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z" />
+        <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4" />
+      </g>
+      <g stroke="#3d2080" strokeOpacity="0.12" strokeWidth="2.1" strokeLinejoin="round" strokeLinecap="round" transform="translate(1 1)">
+        <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z" />
+        <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4" />
+      </g>
+      <g stroke="#6f45d2" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z" />
+        <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4" />
+      </g>
     </svg>
   );
+}
+
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M21.35 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.24a4.48 4.48 0 0 1-1.94 2.94v2.52h3.24c1.9-1.75 2.81-4.33 2.81-7.29Z" />
+      <path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.23L15.21 17a5.82 5.82 0 0 1-8.67-3.06H3.19v2.6A9.75 9.75 0 0 0 12 21.75Z" />
+      <path fill="#FBBC05" d="M6.54 13.94a5.85 5.85 0 0 1 0-3.74V7.6H3.19a9.74 9.74 0 0 0 0 8.94l3.35-2.6Z" />
+      <path fill="#EA4335" d="M12 6.39c1.51 0 2.87.52 3.94 1.54l2.95-2.95C16.83 3.06 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.81 5.35l3.35 2.6A5.82 5.82 0 0 1 12 6.39Z" />
+    </svg>
+  );
+}
+
+function activateOrigin(): string {
+  if (typeof window === 'undefined') return '';
+  return `${window.location.origin}/activate`;
 }
 
 export default function ActivatePage() {
@@ -28,27 +48,90 @@ export default function ActivatePage() {
   const [email, setEmail] = useState('');
   const [authMessage, setAuthMessage] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const configured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 
-  useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get('code');
-    if (fromUrl) setCode(fromUrl.toUpperCase());
+  const client = useMemo((): SupabaseClient | null => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return null;
+    return createClient(url, key, {
+      auth: {
+        flowType: 'pkce',
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
   }, []);
 
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) {
+    const params = new URLSearchParams(window.location.search);
+    // Device codes use user_code (or legacy device). Never treat OAuth ?code= as a device code.
+    const fromDevice =
+      params.get('user_code') ||
+      params.get('device') ||
+      params.get('device_code');
+    if (fromDevice) {
+      const normalized = fromDevice.trim().toUpperCase();
+      setCode(normalized);
+      try {
+        window.sessionStorage.setItem(DEVICE_CODE_KEY, normalized);
+      } catch {
+        /* ignore */
+      }
+    } else {
+      try {
+        const saved = window.sessionStorage.getItem(DEVICE_CODE_KEY);
+        if (saved) setCode(saved);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!client) {
       setMessage('Sign-in is not configured for this environment yet.');
+      setBootstrapping(false);
       return;
     }
-    const client = createClient(url, key);
-    void client.auth.getSession().then(({ data }) => {
-      setAccessToken(data.session?.access_token ?? null);
+
+    let cancelled = false;
+
+    async function bootstrap() {
+      const params = new URLSearchParams(window.location.search);
+      const oauthCode = params.get('code');
+      // OAuth auth codes are long; device user codes are short (8 chars).
+      if (oauthCode && oauthCode.length > 16) {
+        const { error } = await client!.auth.exchangeCodeForSession(oauthCode);
+        if (error && !cancelled) {
+          setAuthMessage('Google sign-in did not finish. Try Continue with Google again.');
+        }
+        // Drop the OAuth code from the address bar; keep /activate clean.
+        const clean = activateOrigin();
+        window.history.replaceState({}, '', clean);
+      }
+
+      const { data } = await client!.auth.getSession();
+      if (!cancelled) {
+        setAccessToken(data.session?.access_token ?? null);
+        setBootstrapping(false);
+      }
+    }
+
+    void bootstrap();
+
+    const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
+      setAccessToken(session?.access_token ?? null);
     });
-  }, []);
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, [client]);
 
   async function approve() {
     setStatus('working');
@@ -65,11 +148,18 @@ export default function ActivatePage() {
       if (!res.ok) {
         setStatus('error');
         setMessage(
-          res.status === 404
-            ? 'That code was not recognised. Check the desktop app and try again.'
-            : 'Something went wrong. Please try again.',
+          res.status === 401
+            ? 'Sign in with Google first, then approve this device.'
+            : res.status === 404
+              ? 'That code was not recognised. Check the desktop app and try again.'
+              : 'Something went wrong. Please try again.',
         );
         return;
+      }
+      try {
+        window.sessionStorage.removeItem(DEVICE_CODE_KEY);
+      } catch {
+        /* ignore */
       }
       setStatus('done');
     } catch {
@@ -78,17 +168,55 @@ export default function ActivatePage() {
     }
   }
 
-  async function sendMagicLink() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) return;
+  async function signInWithGoogle() {
+    if (!client) return;
     setAuthBusy(true);
     setAuthMessage('');
     try {
-      const client = createClient(url, key);
+      if (code.trim()) {
+        try {
+          window.sessionStorage.setItem(DEVICE_CODE_KEY, code.trim().toUpperCase());
+        } catch {
+          /* ignore */
+        }
+      }
+      const { error } = await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: activateOrigin(),
+          queryParams: { prompt: 'select_account', access_type: 'online' },
+        },
+      });
+      if (error) {
+        setAuthMessage(
+          error.message?.includes('provider')
+            ? 'Google is not enabled yet in Supabase Auth. Enable the Google provider and add this redirect URL.'
+            : 'Google sign-in failed. Check Supabase Auth → Google and try again.',
+        );
+        setAuthBusy(false);
+      }
+      // On success the browser navigates away to Google.
+    } catch {
+      setAuthMessage('Google sign-in could not start. Try again.');
+      setAuthBusy(false);
+    }
+  }
+
+  async function sendMagicLink() {
+    if (!client) return;
+    setAuthBusy(true);
+    setAuthMessage('');
+    try {
+      if (code.trim()) {
+        try {
+          window.sessionStorage.setItem(DEVICE_CODE_KEY, code.trim().toUpperCase());
+        } catch {
+          /* ignore */
+        }
+      }
       const { error } = await client.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.href },
+        options: { emailRedirectTo: activateOrigin() },
       });
       setAuthMessage(
         error
@@ -127,19 +255,19 @@ export default function ActivatePage() {
               <span className="activate-kicker__dot" aria-hidden="true" />
               Device approval
             </div>
-            <h1 className="activate-title">Connect your desktop app</h1>
+            <h1 className="activate-title">Make this Mac yours.</h1>
             <p className="activate-sub">
-              Sign in once in the browser, then enter the code shown in Unvibe
-              to link this Mac.
+              Sign in once, approve the short code, and return straight to your
+              flow.
             </p>
 
             <div className="activate-steps" aria-hidden="true">
               <div className="activate-step">
                 <span className="activate-step__n">1</span>
                 <div>
-                  <div className="activate-step__t">Verify your email</div>
+                  <div className="activate-step__t">Sign in with Google</div>
                   <div className="activate-step__d">
-                    We send a secure link — Unvibe never sees your password.
+                    Use your Google account — Unvibe never sees your password.
                   </div>
                 </div>
               </div>
@@ -165,6 +293,27 @@ export default function ActivatePage() {
 
             {!accessToken && (
               <div className="activate-section">
+                <button
+                  className="activate-btn activate-btn--google"
+                  type="button"
+                  onClick={signInWithGoogle}
+                  disabled={!configured || authBusy || bootstrapping}
+                >
+                  <GoogleMark />
+                  {authBusy ? 'Opening Google…' : 'Continue with Google'}
+                </button>
+                {authMessage && (
+                  <p
+                    className={`activate-note ${
+                      authMessage.startsWith('Check')
+                        ? 'activate-note--ok'
+                        : 'activate-note--error'
+                    }`}
+                  >
+                    {authMessage}
+                  </p>
+                )}
+                <div className="activate-divider">or email a link</div>
                 <label className="activate-label" htmlFor="activate-email">
                   Email
                 </label>
@@ -179,24 +328,13 @@ export default function ActivatePage() {
                   aria-label="Email address"
                 />
                 <button
-                  className="activate-btn"
+                  className="activate-btn activate-btn--ghost"
                   type="button"
                   onClick={sendMagicLink}
                   disabled={!configured || !email || authBusy}
                 >
                   {authBusy ? 'Sending link…' : 'Email me a secure sign-in link'}
                 </button>
-                {authMessage && (
-                  <p
-                    className={`activate-note ${
-                      authMessage.startsWith('Check')
-                        ? 'activate-note--ok'
-                        : 'activate-note--error'
-                    }`}
-                  >
-                    {authMessage}
-                  </p>
-                )}
                 <div className="activate-divider">then</div>
               </div>
             )}
@@ -220,7 +358,7 @@ export default function ActivatePage() {
                 type="button"
                 onClick={approve}
                 disabled={
-                  status === 'working' || code.length < 4 || !accessToken
+                  status === 'working' || code.length < 4 || !accessToken || bootstrapping
                 }
               >
                 {status === 'working' ? 'Connecting…' : 'Connect this device'}
@@ -231,7 +369,7 @@ export default function ActivatePage() {
               {!accessToken && (
                 <p className="activate-note">
                   {configured
-                    ? 'Sign in with email above before approving this device.'
+                    ? 'Sign in with Google (or email) above before approving this device.'
                     : message ||
                       'Sign-in is not configured for this environment yet.'}
                 </p>

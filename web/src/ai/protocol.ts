@@ -5,6 +5,7 @@
 
 export type ReviewScope = 'selection' | 'file' | 'diff' | 'project';
 export type ExplanationLevel = 'new' | 'beginner' | 'intermediate' | 'advanced' | 'expert';
+export type QuizMode = 'quick-check' | 'recall' | 'scenario';
 
 export interface DiffHunk {
   file: string;
@@ -33,6 +34,7 @@ export interface ReviewRequestPayload {
   context: ReviewContext;
   question?: string;
   variant?: 'default' | 'different';
+  quizMode?: QuizMode;
 }
 
 export type StreamEvent =

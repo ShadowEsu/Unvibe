@@ -1,6 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="220" fill="#FFFFFF"/>
-  <g fill="none" stroke="#0A0A0A" stroke-width="56" stroke-linejoin="round" stroke-linecap="round" transform="translate(512 512) scale(28) translate(-12 -12)">
+  <rect width="1024" height="1024" rx="220" fill="#FFFDFF"/>
+  <!-- Baked 45° down-right shadow -->
+  <g
+    fill="none"
+    stroke="#3d2080"
+    stroke-opacity="0.22"
+    stroke-width="2.4"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    transform="translate(528 524) scale(26) translate(-12 -12)"
+  >
+    <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z"/>
+    <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4"/>
+  </g>
+  <g
+    fill="none"
+    stroke="#3d2080"
+    stroke-opacity="0.12"
+    stroke-width="3.2"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    transform="translate(532 528) scale(26) translate(-12 -12)"
+  >
+    <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z"/>
+    <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4"/>
+  </g>
+  <!-- Foreground mark -->
+  <g
+    fill="none"
+    stroke="#6f45d2"
+    stroke-width="1.9"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    transform="translate(512 508) scale(26) translate(-12 -12)"
+  >
     <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z"/>
     <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4"/>
   </g>

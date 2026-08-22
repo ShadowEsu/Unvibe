@@ -1,14 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+import { JetBrains_Mono, Manrope, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { Announcement } from "@/components/Announcement";
 
-const sans = Inter({
+const sans = Manrope({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -20,39 +19,47 @@ const mono = JetBrains_Mono({
 
 const display = Newsreader({
   subsets: ["latin"],
-  variable: "--font-display",
+  style: ["normal", "italic"],
+  variable: "--font-newsreader",
   display: "swap",
-  weight: ["400", "500", "600"],
+  adjustFontFallback: false,
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe — Understand the Code AI Writes",
+    default: "Unvibe — Learn the Project You Vibe-Coded",
     template: "%s · Unvibe",
   },
   description:
-    "Unvibe is a free Mac desktop learning layer that explains selected code, diffs, and repositories beside Cursor, VS Code, and your terminal—so you understand what AI shipped.",
+    "Unvibe is a Mac desktop tutor that teaches you the project you vibe-coded, using explanations connected to your selected code and workflow.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe — Understand the Code AI Writes",
+    title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
-      "Free desktop learning layer for AI-written code. Select, explain, check understanding—beside tools you already use.",
+      "Select code, press ⌘U, and learn what AI shipped in the context of your project.",
     siteName: "Unvibe",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Unvibe" }],
+    images: [{ url: "/unvibe-social-preview-v5.png", width: 1200, height: 630, alt: "Unvibe — learn the AI-generated code you ship" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe — Understand the Code AI Writes",
+    title: "Unvibe — Learn the Project You Vibe-Coded",
     description:
-      "Free desktop learning layer for AI-written code. Select, explain, check understanding.",
-    images: ["/og.png"],
+      "A Mac desktop tutor for learning the AI-generated code in your project without leaving your workflow.",
+    images: ["/unvibe-social-preview-v5.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 const softwareJsonLd = {
@@ -62,31 +69,38 @@ const softwareJsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS",
   description:
-    "A free desktop AI learning layer that explains selected code beside the tools where you already build.",
+    "A Mac desktop tutor that teaches developers the AI-generated code in their project using selected context and their existing workflow.",
   offers: {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "No charge during the current private beta. No credit card.",
+    description: "Free at $0 per month. No API key or credit card required.",
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0f14" },
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Unvibe",
+  url: siteUrl,
+  logo: `${siteUrl}/icon.png`,
+  email: "support@unvibe.site",
+  sameAs: [
+    "https://www.linkedin.com/company/unvibeapp/",
+    "https://www.instagram.com/unvibe_app/",
   ],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f0a17",
 };
 
 const themeScript = `
 (function() {
   try {
-    var stored = localStorage.getItem('unvibe_theme');
-    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    var theme = stored === 'light' || stored === 'dark' ? stored : system;
     var root = document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    root.style.colorScheme = theme;
+    root.classList.add('dark');
+    root.style.colorScheme = 'dark';
   } catch (e) {}
 })();
 `;
@@ -106,13 +120,16 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
       </head>
       <body>
         <Providers>
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          <Announcement />
           <Nav />
           <main id="main">{children}</main>
           <Footer />

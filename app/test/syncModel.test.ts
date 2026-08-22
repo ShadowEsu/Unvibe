@@ -25,3 +25,10 @@ test('remote merge preserves a newer local event still in the outbox', () => {
   assert.equal(result.merged, 0);
   assert.equal(result.events[0].outcome, 'needs_review');
 });
+
+test('remote merge keeps local lesson bodies when the cloud mirror has none', () => {
+  const local: LocalEvent = { ...event('a', 'understood'), code: 'x = 1', explanation: 'Sets x.' };
+  const result = mergeRemoteEvents([local], [], [event('a', 'understood')]);
+  assert.equal(result.events[0]!.code, 'x = 1');
+  assert.equal(result.events[0]!.explanation, 'Sets x.');
+});

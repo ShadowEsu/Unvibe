@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.0",
+  "version": "0.1.10",
   "private": true,
   "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
@@ -10,10 +10,11 @@
     "dev": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
-    "dist": "npm run build && electron-builder --mac dir",
-    "dist:dmg": "npm run build && electron-builder --mac dmg",
-    "package:local": "node scripts/package-local.mjs",
-    "verify:package": "node scripts/verify-package.mjs",
+    "prepare:bridge": "npm --prefix ../extension run package",
+    "dist": "npm run prepare:bridge && npm run build && electron-builder --mac dir",
+    "dist:mac": "npm run prepare:bridge && npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:all": "npm run build && electron-builder --mac --win",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },
   "dependencies": {
@@ -34,24 +35,62 @@
     "productName": "Unvibe",
     "copyright": "Copyright © 2026 Unvibe",
     "files": ["dist/**/*", "package.json"],
+    "extraResources": [
+      {
+        "from": "../extension/release/unvibe-desktop-bridge-0.1.2.vsix",
+        "to": "Unvibe Desktop Bridge.vsix"
+      }
+    ],
     "directories": { "output": "release", "buildResources": "build" },
-    "icon": "build/icon.icns",
+    "icon": "build/icon.png",
+    "afterSign": "scripts/afterSignHook.cjs",
+    "artifactName": "Unvibe-${version}-${os}-${arch}.${ext}",
     "mac": {
-      "icon": "build/icon.icns",
+      "icon": "build/icon.png",
       "category": "public.app-category.developer-tools",
-      "target": [{ "target": "dir", "arch": ["arm64"] }],
-      "hardenedRuntime": true,
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "identity": null,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
         "CFBundleDisplayName": "Unvibe",
         "CFBundleName": "Unvibe",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Unvibe review link",
+            "CFBundleURLSchemes": ["unvibe"]
+          }
+        ],
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
         "LSUIElement": false
       }
     },
-    "dmg": { "sign": false, "artifactName": "Unvibe-${version}-${arch}-unsigned.${ext}" }
+    "dmg": { "sign": false },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "artifactName": "Unvibe-${version}-${os}-${arch}-setup.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "Unvibe-${version}-${os}-${arch}-portable.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ShadowEsu",
+      "repo": "Unvibe"
+    }
   }
 }

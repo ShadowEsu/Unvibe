@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -59,4 +59,46 @@ test('computeFeed returns most-recent first', () => {
   const feed = computeFeed(events, 5);
   assert.equal(feed[0].id, 'b');
   assert.equal(feed.length, 2);
+});
+
+test('computeLearningItems includes on-device code and explanation when present', () => {
+  const items = computeLearningItems([
+    ev({ id: 'earlier', ts: '2026-07-11T08:00:00Z', lines: 6, language: 'TypeScript' }),
+    ev({
+      id: 'latest',
+      ts: '2026-07-11T09:00:00Z',
+      concept: 'closures',
+      conceptLabel: 'Closures',
+      level: 'advanced',
+      lines: 12,
+      outcome: 'needs_review',
+      code: 'const f = () => x;',
+      explanation: 'This closes over x.',
+    }),
+  ], 10);
+  assert.equal(items[0]!.id, 'latest');
+  assert.equal(items[0]!.title, 'Closures');
+  assert.equal(items[0]!.outcome, 'needs_review');
+  assert.equal(items[0]!.concept, 'Closures');
+  assert.equal(items[0]!.level, 'advanced');
+  assert.equal(items[0]!.lines, 12);
+  assert.equal(items[0]!.code, 'const f = () => x;');
+  assert.equal(items[0]!.explanation, 'This closes over x.');
+  assert.equal(items[1]!.code, undefined);
+});
+
+test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {
+  const now = new Date('2026-07-20T12:00:00Z');
+  const queue = computeReviewQueue([
+    // Same calendar day as now: not yet due for 1d revisit.
+    ev({ id: 'fresh', ts: '2026-07-20T08:00:00Z', outcome: 'understood', conceptLabel: 'Fresh' }),
+    ev({ id: 'old', ts: '2026-07-10T12:00:00Z', outcome: 'understood', conceptLabel: 'Old' }),
+    ev({ id: 'revisit', ts: '2026-07-18T12:00:00Z', outcome: 'needs_review', conceptLabel: 'Revisit' }),
+  ], now, 10);
+  assert.equal(queue[0]!.title, 'Revisit');
+  assert.equal(queue[0]!.dueLabel, 'Needs review');
+  const old = queue.find((item) => item.title === 'Old');
+  assert.ok(old);
+  assert.equal(old!.dueLabel, '7d revisit');
+  assert.ok(!queue.some((item) => item.title === 'Fresh'));
 });

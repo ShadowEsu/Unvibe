@@ -86,16 +86,28 @@ export const faqItems: FaqItem[] = [
   },
   {
     id: "free",
-    question: "Is Unvibe free?",
+    question: "Is Free actually usable?",
     answer:
-      "There is no charge or credit card during the current private Mac beta. That is not a permanent or unlimited-use promise; if a paid plan is introduced later, we will explain it before anyone chooses or is charged.",
+      "Yes. Free includes the main selected-code explanation experience, saved learning, and study features. No payment card or separate AI provider key is required.",
+    category: "pricing",
+  },
+  {
+    id: "pro-annual",
+    question: "Is Pro cheaper annually?",
+    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year — about $6 per month, a 25% savings versus paying monthly.",
+    category: "pricing",
+  },
+  {
+    id: "cancel",
+    question: "What happens if I cancel?",
+    answer: "Paid access continues through the end of the billing period. Your account then returns to the Free plan, subject to the Free plan’s limits.",
     category: "pricing",
   },
   {
     id: "beta",
-    question: "When will the beta launch?",
+    question: "How do I get the product?",
     answer:
-      "A private beta for Mac is opening soon. Join the waitlist and we will email you when invites begin. We will not invent a date here before it is firm.",
+      "Join the waitlist to request access. Invitations are being issued gradually during the private Mac beta. For beta partnerships or developer-community access, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
@@ -109,7 +121,7 @@ export const faqItems: FaqItem[] = [
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "The first release focuses on individual learners and builders. Educator and team workflows may come later; they are not the launch surface.",
+      "Right now Unvibe is Free and Pro for individuals. Shared team workspaces are paused; each person can use their own Pro account. Join the waitlist if you want to hear when Teams returns.",
     category: "platform",
   },
   {
