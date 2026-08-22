@@ -9,6 +9,12 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "20 AUG 2026",
+    category: "INFRA",
+    title: "AWS Activate credits secured",
+    summary: "Received $5,000 in AWS Activate startup credits to support Unvibe's production infrastructure and beta operations.",
+  },
+  {
     date: "16 AUG 2026",
     category: "INFRA",
     title: "GitLab for Startups accepted",

@@ -11,6 +11,7 @@ const DECK_URL = "/investors/unvibe-pitch-deck.pdf";
 
 const support = [
   { name: "GitLab for Startups", value: "$23,700+ platform credits", state: "Accepted" },
+  { name: "AWS Activate", value: "$5,000 startup credits", state: "Secured" },
   { name: "Google for Startups", value: "$2,000 cloud credits", state: "Secured" },
   { name: "MongoDB for Startups", value: "$500 credits", state: "Secured" },
   { name: "Founder capital", value: "$500 committed", state: "Committed" },
@@ -73,11 +74,11 @@ export default function InvestorsPage() {
       <section className="container-page investor-support">
         <div className="investor-section-copy">
           <p className="launch-label">Resource runway</p>
-          <h2>$27k in credits and committed support.</h2>
+          <h2>$32k in credits and committed support.</h2>
           <p>
             A mix of platform credits and founder-reported committed capital, including
-            $23.7k in GitLab Ultimate backing. This is not a funding-round total and
-            credits are not cash.
+            $23.7k in GitLab Ultimate backing and $5k in AWS Activate credits. This is
+            not a funding-round total and credits are not cash.
           </p>
         </div>
         <div className="investor-support__list">
