@@ -9,6 +9,12 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "16 AUG 2026",
+    category: "INFRA",
+    title: "GitLab for Startups accepted",
+    summary: "Accepted into GitLab for Startups with $23,700+ in GitLab Ultimate platform credits for secure, automated DevSecOps operations.",
+  },
+  {
     date: "29 JUL 2026",
     category: "PRODUCT",
     title: "Build-in-public system",
