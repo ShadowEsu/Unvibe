@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
@@ -10,6 +9,7 @@ import { TypingFaq } from "@/components/paper/TypingFaq";
 import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
 import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
+import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
@@ -29,13 +29,7 @@ export default function HomePage() {
 
       <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
-          <div className="paper-video">
-            <AutoPlayVideo
-              src="https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4"
-              poster="/product/home.png"
-              label="Unvibe explaining selected code beside an editor"
-            />
-          </div>
+          <PaperDemoVideo />
           <p className="paper-caption">
             Highlight code in your editor. Unvibe explains it beside the work, then you can test yourself. The video is a little behind. The stills below are current.
           </p>
