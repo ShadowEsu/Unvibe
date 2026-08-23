@@ -1,5 +1,6 @@
 export const ANALYTICS_EVENTS = [
   "page_viewed",
+  "waitlist_viewed",
   "waitlist_started",
   "waitlist_completed",
   "demo_started",
@@ -8,6 +9,7 @@ export const ANALYTICS_EVENTS = [
   "code_example_selected",
   "faq_opened",
   "referral_copied",
+  "referral_shared",
   "outbound_social_clicked",
   "privacy_opened",
   "pricing_viewed",

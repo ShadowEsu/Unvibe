@@ -10,6 +10,7 @@ import {
   updateWaitlistDetails,
   type WaitlistEntry,
 } from "@/lib/waitlistStore";
+import { captureServerEvent } from "@/lib/posthogServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,13 @@ export async function POST(req: Request) {
         console.error("waitlist notification status write failed", error);
       });
     }
+    // Server truth for the growth gauge. Client track can miss ad blockers / race.
+    void captureServerEvent("waitlist_completed", referralCode, {
+      duplicate: stored.duplicate,
+      storage: stored.storage,
+      has_referral: Boolean(referredBy),
+      has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
+    });
     return NextResponse.json({ duplicate: stored.duplicate, saved: true, referralCode });
   } catch (error) {
     console.error("waitlist signup failed", error);
