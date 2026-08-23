@@ -10,10 +10,16 @@ export async function captureServerEvent(
   distinctId: string,
   props?: Props,
 ): Promise<void> {
-  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+  const apiKey =
+    process.env.POSTHOG_PROJECT_API_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
   if (!apiKey) return;
 
-  const host = (process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/$/, "");
+  const host = (
+    process.env.POSTHOG_HOST ||
+    process.env.NEXT_PUBLIC_POSTHOG_HOST ||
+    "https://us.i.posthog.com"
+  ).replace(/\/$/, "");
   const properties: Record<string, string | number | boolean> = {
     source: "server",
   };
@@ -24,7 +30,7 @@ export async function captureServerEvent(
   }
 
   try {
-    await fetch(`${host}/i/v0/e/`, {
+    const response = await fetch(`${host}/i/v0/e/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -34,10 +40,12 @@ export async function captureServerEvent(
         properties,
         timestamp: new Date().toISOString(),
       }),
-      // Vercel serverless: do not hang the response on analytics.
       signal: AbortSignal.timeout(2500),
     });
-  } catch {
-    // Analytics must never break signup.
+    if (!response.ok) {
+      console.error("posthog server capture rejected", response.status);
+    }
+  } catch (error) {
+    console.error("posthog server capture failed", error);
   }
 }

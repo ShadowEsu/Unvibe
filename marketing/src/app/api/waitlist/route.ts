@@ -83,8 +83,8 @@ export async function POST(req: Request) {
         console.error("waitlist notification status write failed", error);
       });
     }
-    // Server truth for the growth gauge. Client track can miss ad blockers / race.
-    void captureServerEvent("waitlist_completed", referralCode, {
+    // Await so Vercel does not freeze the isolate before the capture request leaves.
+    await captureServerEvent("waitlist_completed", referralCode, {
       duplicate: stored.duplicate,
       storage: stored.storage,
       has_referral: Boolean(referredBy),
