@@ -26,6 +26,9 @@ export default function InvestorsPage() {
   const credits = formatUsd(compensationCreditsUsd());
   const cash = formatUsd(compensationCashUsd());
   const total = compensationTotalLabel();
+  const mixpanel = compensationLines.find((line) => line.name.startsWith("Mixpanel"));
+  const mixpanelAmount = mixpanel ? formatUsd(mixpanel.amountUsd) : "$144,000";
+  const otherLines = compensationLines.filter((line) => !line.name.startsWith("Mixpanel"));
 
   return (
     <article className="investor-page">
@@ -46,14 +49,29 @@ export default function InvestorsPage() {
             </a>
           </div>
         </div>
-        <aside className="investor-hero__capital">
-          <p>Total support</p>
-          <strong>{total}</strong>
-          <span>Credits {credits} · Cash {cash}</span>
-          <span>Not a funding round. Credits are not cash.</span>
-          <a href="#support">Full breakdown <ArrowRight size={13} /></a>
+        <aside className="investor-hero__stage">
+          <p>Current stage</p>
+          <strong>Private beta</strong>
+          <span>75% to public release</span>
+          <a href="/build">Follow the live build <ArrowRight size={13} /></a>
         </aside>
       </header>
+
+      <section className="container-page investor-money" aria-label="Total support">
+        <p className="launch-label">Total support raised</p>
+        <p className="investor-money__total">{total}</p>
+        <p className="investor-money__mixpanel">
+          <span>Largest line</span>
+          <strong>Mixpanel for Startups · {mixpanelAmount}</strong>
+          <small>1 year Mixpanel Pro subscription credits</small>
+        </p>
+        <p className="investor-money__split">
+          Program credits {credits} · Cash {cash}. Credits are not cash. Not a funding round.
+        </p>
+        <a className="investor-money__link" href="#support">
+          Full breakdown by source <ArrowRight size={14} />
+        </a>
+      </section>
 
       <section className="container-page investor-thesis">
         <article>
@@ -87,6 +105,10 @@ export default function InvestorsPage() {
               <dd>{total}</dd>
             </div>
             <div>
+              <dt>Mixpanel for Startups</dt>
+              <dd>{mixpanelAmount}</dd>
+            </div>
+            <div>
               <dt>Program credits</dt>
               <dd>{credits}</dd>
             </div>
@@ -103,7 +125,15 @@ export default function InvestorsPage() {
             <span role="columnheader">What it is</span>
             <span role="columnheader">Status</span>
           </div>
-          {compensationLines.map((line) => (
+          {mixpanel ? (
+            <div className="investor-support__row investor-support__row--lead" role="row">
+              <strong role="cell">{mixpanel.name}</strong>
+              <span role="cell">{formatUsd(mixpanel.amountUsd)}</span>
+              <span role="cell">{mixpanel.detail}</span>
+              <span role="cell">{mixpanel.state}</span>
+            </div>
+          ) : null}
+          {otherLines.map((line) => (
             <div key={line.name} className="investor-support__row" role="row">
               <strong role="cell">{line.name}</strong>
               <span role="cell">{formatUsd(line.amountUsd)}</span>
