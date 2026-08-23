@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowRight, FileText, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
+import { InvestorBriefDemo } from "@/components/paper/InvestorBriefDemo";
 import {
   compensationCashUsd,
   compensationCreditsUsd,
@@ -73,6 +74,8 @@ export default function InvestorsPage() {
         </a>
       </section>
 
+      <InvestorBriefDemo />
+
       <section className="container-page investor-thesis">
         <article>
           <span>01</span>
@@ -143,6 +146,8 @@ export default function InvestorsPage() {
           ))}
         </div>
       </section>
+
+      <InvestorBriefDemo />
 
       <section className="container-page investor-pipeline">
         <div>

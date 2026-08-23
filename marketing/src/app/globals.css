@@ -1252,6 +1252,29 @@
   font-size: .85rem;
   font-weight: 650;
 }
+.investor-brief {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: clamp(32px, 6vw, 80px);
+  align-items: center;
+  padding-top: 96px;
+}
+.investor-brief__copy h2 {
+  margin: 14px 0 16px;
+  color: #fff;
+  font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+  line-height: 1.04;
+  letter-spacing: -.045em;
+}
+.investor-brief__copy p:last-child {
+  margin: 0;
+  color: #847989;
+  line-height: 1.65;
+  max-width: 34rem;
+}
+.investor-brief__video {
+  margin: 0;
+}
 .investor-support__row--lead {
   color: #efe8f4;
 }
@@ -1287,7 +1310,7 @@
 .investor-download > p { margin: 0; color: #7d7182; }
 
 @media (max-width: 800px) {
-  .investor-hero, .investor-support, .investor-pipeline { grid-template-columns: 1fr; }
+  .investor-hero, .investor-support, .investor-pipeline, .investor-brief { grid-template-columns: 1fr; }
   .investor-hero aside { max-width: 420px; }
   .investor-thesis { grid-template-columns: 1fr; }
   .investor-thesis article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.1); }

@@ -2,17 +2,14 @@
 
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 
-/**
- * Homepage product demo from a site-hosted mp4.
- * YouTube embeds fail here because the site sends Referrer-Policy: no-referrer (Error 153).
- */
+/** Homepage main product demo: Cursor integration recording. */
 export function PaperDemoVideo() {
   return (
     <div className="paper-video">
       <AutoPlayVideo
-        src="/videos/unvibe-app-tour.mp4"
-        poster="/videos/unvibe-app-tour-poster.jpg"
-        label="Unvibe explaining selected code beside an editor"
+        src="/videos/unvibe-cursor-demo.mp4"
+        poster="/videos/unvibe-cursor-demo-poster.jpg"
+        label="Unvibe overlay working beside Cursor"
       />
     </div>
   );

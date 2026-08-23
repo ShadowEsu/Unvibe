@@ -31,7 +31,7 @@ export default function HomePage() {
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
           <p className="paper-caption">
-            Highlight code in your editor. Unvibe explains it beside the work, then you can test yourself. The video is a little behind. The stills below are current.
+            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills below are current.
           </p>
         </Reveal>
       </section>
