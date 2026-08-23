@@ -24,7 +24,7 @@ A Mac desktop learning layer for AI generated code. It sits beside Cursor, VS Co
 - Waitlist promo UnvibeSpecial still unlocks 3 months of Pro.
 - Team is $10 per seat per month, 2 seat minimum ($20), 20 seat maximum ($200). Shared workspace. Annual is 25% off. Start Pro and Start Team from /pricing open Stripe checkout on api.unvibe.site. Free goes to the beta install.
 - Enterprise is $50 per month for 1,000 AI questions and integrations. Annual is 25% off. Write preston@unvibe.site. No Stripe checkout yet.
-- Backed by MongoDB for Startups. Awarded $200K from AWS for Startups.
+- Backed by MongoDB for Startups. Awarded $5,000 from AWS for Startups. AWS credits host downloads, not the backend.
 - Accepted into GitLab for Startups. Awarded $23,700 in GitLab Ultimate credits. Not cash. Not an equity round.
 - Accepted into PostHog for Startups. Awarded $50,000 in PostHog credits. Not cash. Not an equity round.
 - Accepted into OpenAI for Startups. One ChatGPT Business seat, $1,200 in credits. Not cash. Not an equity round.

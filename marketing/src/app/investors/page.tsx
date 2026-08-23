@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 const DECK_URL = "/investors/unvibe-pitch-deck.pdf";
 
 const support = [
+  { name: "AWS for Startups", value: "$5,000 AWS Activate credits", state: "Secured" },
   { name: "GitLab for Startups", value: "$23,700 GitLab Ultimate credits", state: "Secured" },
   { name: "Google AI Startups", value: "$2,000 Google Cloud credits, USD", state: "Secured" },
   { name: "MongoDB for Startups", value: "$500 program support", state: "Secured" },
@@ -19,7 +20,6 @@ const support = [
 
 const pipeline = [
   ["YC", "Application work in progress"],
-  ["AWS Activate", "Exploring eligibility · up to $200k is a program ceiling, not secured capital"],
   ["Live product directories", "LaunchKiwi, DevRove, Product Hunt, AI Tool Discovery"],
   ["Pending distribution", "Tool Index, DotProTools, DevStack, ListAi, Uneed, Launching Next"],
 ];
