@@ -15,7 +15,7 @@ export function HeroVideo() {
   const src =
     process.env.NEXT_PUBLIC_DEMO_VIDEO_URL?.trim()
     || process.env.NEXT_PUBLIC_INVESTOR_DEMO_VIDEO_URL?.trim()
-    || "https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/unvibe-demo.mp4";
+    || "/demo.mp4";
 
   useEffect(() => {
     const el = videoRef.current;
@@ -69,7 +69,7 @@ export function HeroVideo() {
   return (
     <section
       id="demo"
-      className="container-page scroll-mt-24 pb-4 pt-6 sm:pt-10"
+      className="scroll-mt-24"
       aria-label="Product demo"
     >
       <div className="relative overflow-hidden rounded-card border border-line bg-[#0F1419] shadow-lift">
@@ -80,7 +80,7 @@ export function HeroVideo() {
           playsInline
           controls
           preload="auto"
-          poster="/og.png"
+          poster="/unvibe-social-preview-v5.png"
         >
           <source src={src} type="video/mp4" />
         </video>

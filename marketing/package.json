@@ -9,7 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/lib/*.test.ts",
-    "send:beta-invites": "tsx scripts/send-beta-invites.ts"
+    "send:beta-invites": "tsx scripts/send-beta-invites.ts",
+    "diagnose:waitlist": "tsx scripts/diagnose-waitlist.ts",
+    "verify:supabase-waitlist": "tsx scripts/verify-supabase-waitlist.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -19,6 +21,7 @@
     "framer-motion": "^12.42.2",
     "gsap": "^3.15.0",
     "lucide-react": "^1.24.0",
+    "mixpanel-browser": "^2.82.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",

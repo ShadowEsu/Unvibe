@@ -1,0 +1,23 @@
+export const ANALYTICS_EVENTS = [
+  "page_viewed",
+  "waitlist_started",
+  "waitlist_completed",
+  "demo_started",
+  "demo_completed",
+  "depth_changed",
+  "code_example_selected",
+  "faq_opened",
+  "referral_copied",
+  "outbound_social_clicked",
+  "privacy_opened",
+  "pricing_viewed",
+  "billing_interval_selected",
+  "plan_cta_clicked",
+  "release_download_clicked",
+  "beta_install_copied",
+  "survey_opened",
+] as const;
+
+export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
+
+export const ANALYTICS_EVENT_SET = new Set<string>(ANALYTICS_EVENTS);

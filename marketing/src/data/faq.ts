@@ -2,7 +2,7 @@
  * FAQ content.
  *
  * Answers match the product as actually scoped:
- * Mac first; selection based (not screen OCR); no local-only mode yet;
+ * Mac and Windows private beta; selection based (not screen OCR); no local-only mode yet;
  * no enterprise certifications; AI explanations can be wrong.
  */
 
@@ -46,7 +46,7 @@ export const faqItems: FaqItem[] = [
     id: "screen",
     question: "Does it read my entire screen?",
     answer:
-      "No. Unvibe activates intentionally. You choose what to review — a selection, file, diff, or project scope. It does not record your screen or use OCR to watch everything you do.",
+      "No. Unvibe activates intentionally. You choose what to review: a selection, file, diff, or project scope. It does not record your screen or use OCR to watch everything you do.",
     category: "privacy",
   },
   {
@@ -67,7 +67,7 @@ export const faqItems: FaqItem[] = [
     id: "repo",
     question: "Can it explain an entire repository?",
     answer:
-      "Yes at a summary level. You can move from a line to a function, file, folder, git change, or repository overview. Repo summaries describe modules, data flow, and concepts to learn — they do not dump the entire codebase to a model.",
+      "Yes at a summary level. You can move from a line to a function, file, folder, git change, or repository overview. Repo summaries describe modules, data flow, and concepts to learn. They do not dump the entire codebase to a model.",
     category: "product",
   },
   {
@@ -94,7 +94,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year — about $6 per month, a 25% savings versus paying monthly.",
+    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year, about $6 per month. Team and Enterprise also take 25% off yearly: Team is $90 per seat per year, Enterprise is $450 per year.",
     category: "pricing",
   },
   {
@@ -107,21 +107,21 @@ export const faqItems: FaqItem[] = [
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "Join the waitlist to request access. Invitations are being issued gradually during the private Mac beta. For beta partnerships or developer-community access, contact preston@unvibe.site.",
+      "The private beta is live for Apple silicon Mac and Windows x64. 30 AI explanations, then it stops. Copy the install command on unvibe.site. For partnerships, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Not yet. Unvibe is Mac-first. You can still join the waitlist from Windows and note your platform in the optional message so we know demand.",
+      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from PowerShell with irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
     category: "platform",
   },
   {
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "Right now Unvibe is Free and Pro for individuals. Shared team workspaces are paused; each person can use their own Pro account. Join the waitlist if you want to hear when Teams returns.",
+      "Team is $10 per seat, 2 seats minimum, 20 seats maximum, shared in one app. Start Team from /pricing. Enterprise is $50 a month for 1,000 AI questions and integrations. Write preston@unvibe.site for Enterprise. Annual is 25% off for both.",
     category: "platform",
   },
   {

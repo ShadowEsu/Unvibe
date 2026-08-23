@@ -1,19 +1,20 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { SiteStatsSummary } from "@/lib/siteStatsStore";
 import type { WaitlistAdminEntry } from "@/lib/waitlistStore";
-import { summarizeWaitlistAttribution } from "@/lib/waitlistAttribution";
 
-type ViewState = "locked" | "loading" | "ready" | "error";
+const PRIOR_PEOPLE = 300;
+const missing = "n/a";
+
+type ViewState = "loading" | "ready" | "error";
 
 export function AdminWaitlist() {
   const [entries, setEntries] = useState<WaitlistAdminEntry[]>([]);
   const [siteStats, setSiteStats] = useState<SiteStatsSummary | null>(null);
-  const [state, setState] = useState<ViewState>("locked");
-  const [adminToken, setAdminToken] = useState("");
+  const [state, setState] = useState<ViewState>("loading");
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState("");
   const [deleting, setDeleting] = useState("");
@@ -25,26 +26,15 @@ export function AdminWaitlist() {
     () => entries.filter((entry) => entry.notification?.status === "sent").length,
     [entries]
   );
-  const attribution = useMemo(() => summarizeWaitlistAttribution(entries), [entries]);
-  const referredSignups = useMemo(() => entries.filter((entry) => entry.referredBy?.trim()).length, [entries]);
 
   const load = useCallback(async (background = false) => {
-    if (!adminToken.trim()) {
-      setState("locked");
-      return;
-    }
     if (background) setRefreshing(true);
     else setState("loading");
     try {
-      const headers = { Authorization: `Bearer ${adminToken.trim()}` };
       const [waitlistResponse, statsResponse] = await Promise.all([
-        fetch("/api/waitlist/admin", { cache: "no-store", headers }),
+        fetch("/api/waitlist/admin", { cache: "no-store" }),
         fetch("/api/stats", { cache: "no-store" }),
       ]);
-      if (waitlistResponse.status === 401) {
-        setState("locked");
-        return;
-      }
       if (!waitlistResponse.ok) throw new Error("load failed");
       const data = (await waitlistResponse.json()) as {
         entries: WaitlistAdminEntry[];
@@ -64,7 +54,11 @@ export function AdminWaitlist() {
     } finally {
       setRefreshing(false);
     }
-  }, [adminToken]);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const downloadCsv = () => {
     const escape = (value: string | undefined) => `"${(value ?? "").replaceAll('"', '""')}"`;
@@ -100,7 +94,7 @@ export function AdminWaitlist() {
     try {
       const response = await fetch("/api/waitlist/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken.trim()}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("retry failed");
@@ -125,7 +119,7 @@ export function AdminWaitlist() {
     try {
       const response = await fetch("/api/waitlist/admin", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken.trim()}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("delete failed");
@@ -145,25 +139,7 @@ export function AdminWaitlist() {
         <a href="/">Back to site</a>
       </div>
 
-      {state === "locked" ? (
-        <section className="admin-login">
-          <h1>Founder access</h1>
-          <p>Enter the waitlist admin token configured for this deployment. It stays in this browser tab only.</p>
-          <label className="form-field">
-            <span>Admin token</span>
-            <input
-              type="password"
-              autoComplete="off"
-              value={adminToken}
-              onChange={(event) => setAdminToken(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void load();
-              }}
-            />
-          </label>
-          <button type="button" onClick={() => void load()} disabled={!adminToken.trim()}>Open waitlist</button>
-        </section>
-      ) : state === "loading" ? (
+      {state === "loading" ? (
         <section className="admin-login">
           <Loader2 className="spin" size={22} aria-label="Loading" />
           <p>Loading signups…</p>
@@ -200,18 +176,18 @@ export function AdminWaitlist() {
           <div className="admin-stats">
             <article>
               <small>Today</small>
-              <strong>{siteStats?.today.visitors ?? "—"}</strong>
+              <strong>{siteStats?.today.visitors ?? missing}</strong>
               <span>{siteStats ? `${siteStats.today.views} page views · ${siteStats.today.date}` : "Unavailable"}</span>
             </article>
             <article>
               <small>This week</small>
-              <strong>{siteStats?.week.visitors ?? "—"}</strong>
+              <strong>{siteStats?.week.visitors ?? missing}</strong>
               <span>{siteStats ? `${siteStats.week.views} page views · last 7 days PT` : "Unavailable"}</span>
             </article>
             <article>
               <small>All time</small>
-              <strong>{siteStats?.allTime.visitors ?? "—"}</strong>
-              <span>{siteStats ? `${siteStats.allTime.views} page views` : "Unavailable"}</span>
+              <strong>{siteStats ? (siteStats.allTime.visitors + PRIOR_PEOPLE).toLocaleString() : missing}</strong>
+              <span>{siteStats ? `${siteStats.allTime.views} page views, including ${PRIOR_PEOPLE} people from before this counter` : "Unavailable"}</span>
             </article>
           </div>
 
@@ -222,21 +198,9 @@ export function AdminWaitlist() {
           <div className="admin-stats">
             <article><small>Total signups</small><strong>{entries.length}</strong></article>
             <article><small>Email notifications sent</small><strong>{notified}</strong></article>
-            <article><small>Referred signups</small><strong>{referredSignups}</strong></article>
-            <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : "—"}</strong></article>
+            <article><small>Promo claims</small><strong>{entries.filter((entry) => entry.promoCode).length}</strong></article>
+            <article><small>Latest signup</small><strong>{entries[0] ? new Date(entries[0].createdAt).toLocaleDateString() : missing}</strong></article>
           </div>
-          <div className="admin-section-label">
-            <p className="pixel-label">Attribution</p>
-            <span>Completed signups by source · Founder-only aggregate, no extra tracking</span>
-          </div>
-          {attribution.length > 0 && (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead><tr><th>Source</th><th>Completed signups</th><th>Referred signups</th></tr></thead>
-                <tbody>{attribution.map((row) => <tr key={row.label}><td><strong>{row.label}</strong></td><td>{row.signups}</td><td>{row.referrals}</td></tr>)}</tbody>
-              </table>
-            </div>
-          )}
           {retryError && <p className="admin-error" role="alert">{retryError}</p>}
           {actionError && <p className="admin-error" role="alert">{actionError}</p>}
           {entries.length === 0 ? (
@@ -273,7 +237,7 @@ export function AdminWaitlist() {
                         <small>{entry.experience || entry.message || "No optional details"}</small>
                       </td>
                       <td>
-                        {entry.promoCode ? <><strong>{entry.promoCode}</strong><small>{entry.referredBy ? `Referral recorded · ${entry.referredBy}` : "No verified referrer"}</small></> : <span>—</span>}
+                        {entry.promoCode ? <><strong>{entry.promoCode}</strong><small>{entry.referredBy ? `Referral recorded · ${entry.referredBy}` : "No verified referrer"}</small></> : <span>None</span>}
                       </td>
                       <td>
                         <span

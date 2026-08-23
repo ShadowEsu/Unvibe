@@ -1,22 +1,23 @@
 import { timingSafeEqual } from "node:crypto";
 
-function configuredAdminToken(): string | null {
-  const token = process.env.WAITLIST_ADMIN_TOKEN?.trim();
-  return token || null;
+function configuredToken(): string {
+  return process.env.WAITLIST_ADMIN_TOKEN?.trim() ?? "";
 }
 
 /**
- * Waitlist entries contain personal data. The founder view must require the
- * server-only token, rather than relying on an unlinked URL as a secret.
+ * Administrative waitlist data is private. Access is denied until a production
+ * token is configured, then granted only to a matching Bearer credential.
  */
 export function isWaitlistAdminAuthorized(authorization: string | null): boolean {
-  const token = configuredAdminToken();
-  if (!token || !authorization?.startsWith("Bearer ")) return false;
+  const token = configuredToken();
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+  const suppliedToken = match?.[1]?.trim() ?? "";
 
-  const provided = authorization.slice("Bearer ".length);
-  const expectedBuffer = Buffer.from(token);
-  const providedBuffer = Buffer.from(provided);
-  return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer);
+  if (!token || !suppliedToken) return false;
+
+  const expected = Buffer.from(token);
+  const supplied = Buffer.from(suppliedToken);
+  return expected.length === supplied.length && timingSafeEqual(expected, supplied);
 }
 
 export function waitlistAdminOpenAccess(): boolean {

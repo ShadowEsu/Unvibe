@@ -28,11 +28,11 @@ export default function PrivacyPage() {
             your repository in the background.
           </li>
           <li>
-            <strong>Learning records</strong> — which snippets you reviewed,
+            <strong>Learning records:</strong> which snippets you reviewed,
             comprehension results, concepts, and streaks.
           </li>
           <li>
-            <strong>Account data</strong> — your email for sign-in and an
+            <strong>Account data:</strong> your email for sign-in and an
             authentication token.
           </li>
         </ul>
@@ -49,8 +49,8 @@ export default function PrivacyPage() {
 
       <LegalSection heading="Secret filtering, before anything is sent">
         <p>
-          Every remote request is scanned on your Mac for known credential patterns —
-          API keys, tokens, private keys — plus high-entropy strings and{" "}
+          Every remote request is scanned on your Mac for known credential patterns:
+          API keys, tokens, private keys, plus high-entropy strings and{" "}
           <code className="font-mono">KEY=</code> style assignments. A hit blocks the
           request and shows you the file and line so you can redact it or add it to a{" "}
           <code className="font-mono">.unvibeignore</code> file. Files like{" "}
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
           token is encrypted at rest using the operating system keychain, and data is
           encrypted in transit. Backend at-rest and backup settings must be verified for
           the selected staging/production infrastructure. You can access and delete your
-          data — see <a href="/data-controls">data controls</a> and{" "}
+          data. See <a href="/data-controls">data controls</a> and{" "}
           <a href="/account-deletion">account deletion</a>. We use no advertising
           trackers.
         </p>
@@ -86,9 +86,9 @@ export default function PrivacyPage() {
 
       <LegalSection heading="Platforms and scope">
         <p>
-          Unvibe is Mac first; Windows and Linux are not available yet. We claim no
-          security certifications. Explanations are a learning aid, not a security audit
-          — see the <a href="/terms">terms</a> for the AI limitations disclaimer.
+          Unvibe private beta is Mac (Apple silicon) and Windows x64. Linux is not available yet. We claim no
+          security certifications. Explanations are a learning aid, not a security audit.
+          See the <a href="/terms">terms</a> for the AI limitations disclaimer.
         </p>
       </LegalSection>
     </LegalLayout>

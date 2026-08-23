@@ -50,24 +50,57 @@ function emailHtml(entry: FounderNotificationInput): string {
 async function sendWithResend(entry: FounderNotificationInput, to: string): Promise<WaitlistNotificationRecord | null> {
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return null;
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `unvibe-waitlist-${entry.referralCode}`,
-    },
-    body: JSON.stringify({
-      from: process.env.WAITLIST_FROM_EMAIL?.trim() || "Unvibe Waitlist <onboarding@resend.com>",
-      to: [to],
-      reply_to: entry.email,
-      subject: `New Unvibe waitlist signup: ${entry.firstName} ${entry.lastName}`,
-      html: emailHtml(entry),
-      text: `New Unvibe waitlist signup\n\nName: ${entry.firstName} ${entry.lastName}\nEmail: ${entry.email}\nTool: ${entry.tool ?? "Not provided"}\nExperience: ${entry.experience ?? "Not provided"}\nMessage: ${entry.message || "None"}\n\nView: https://unvibe.site/waitlist`,
-    }),
-    signal: AbortSignal.timeout(8_000),
-  });
-  const data = (await response.json().catch(() => ({}))) as { id?: string; message?: string };
+  const fallbackFrom = "Unvibe Waitlist <onboarding@resend.dev>";
+  const configuredFrom = process.env.WAITLIST_FROM_EMAIL?.trim() || fallbackFrom;
+
+  const attempt = async (from: string, recipient = to) => {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `unvibe-waitlist-${entry.referralCode}`,
+      },
+      body: JSON.stringify({
+        from,
+        to: [recipient],
+        reply_to: entry.email,
+        subject: `New Unvibe waitlist signup: ${entry.firstName} ${entry.lastName}`,
+        html: emailHtml(entry),
+        text: `New Unvibe waitlist signup\n\nName: ${entry.firstName} ${entry.lastName}\nEmail: ${entry.email}\nTool: ${entry.tool ?? "Not provided"}\nExperience: ${entry.experience ?? "Not provided"}\nMessage: ${entry.message || "None"}\n\nView: https://unvibe.site/waitlist`,
+      }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    const data = (await response.json().catch(() => ({}))) as { id?: string; message?: string };
+    return { response, data };
+  };
+
+  let { response, data } = await attempt(configuredFrom);
+  // Keep founder alerts working while a custom sending domain is awaiting
+  // Resend verification. The Resend onboarding sender is limited, but it is
+  // accepted for the account owner's inbox and is safer than losing a lead.
+  if (
+    !response.ok
+    && response.status === 403
+    && configuredFrom !== fallbackFrom
+    && /domain is not verified/i.test(data.message ?? "")
+  ) {
+    ({ response, data } = await attempt(fallbackFrom));
+  }
+  // Resend's onboarding sender can only deliver to the account owner's email
+  // until a custom domain is verified. Keep that owner-alert route server-only
+  // and opt-in through an environment variable; the official sender remains
+  // the default as soon as the Unvibe domain is verified.
+  const testRecipient = process.env.RESEND_FALLBACK_EMAIL?.trim();
+  if (
+    !response.ok
+    && response.status === 403
+    && testRecipient
+    && testRecipient !== to
+    && /only send testing emails to your own email address/i.test(data.message ?? "")
+  ) {
+    ({ response, data } = await attempt(fallbackFrom, testRecipient));
+  }
   if (!response.ok) throw new Error(`Resend notification failed: ${response.status} ${data.message ?? ""}`.trim());
   return { status: "sent", provider: "resend", at: new Date().toISOString(), messageId: data.id };
 }

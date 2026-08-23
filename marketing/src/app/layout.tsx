@@ -1,20 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
+import "./paper.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { SiteAnnouncement } from "@/components/SiteAnnouncement";
 
 const sans = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-sans-face",
   display: "swap",
 });
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-mono-face",
+  display: "swap",
+});
+
+const display = Newsreader({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display-face",
   display: "swap",
 });
 
@@ -23,26 +31,35 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe — Make AI-Written Code Yours",
+    default: "Unvibe. Learn the code AI shipped.",
     template: "%s · Unvibe",
   },
   description:
-    "Unvibe is a Mac desktop learning layer that helps developers understand AI-generated code using explanations connected to their repository and workflow.",
+    "Select code in Cursor, VS Code, or Terminal. Press Command U. Unvibe explains it in place so you keep what you ship.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe — Make AI-Written Code Yours",
+    title: "Unvibe. Learn the code AI shipped.",
     description:
-      "Select AI-generated code, choose an explanation depth, and make the code yours.",
+      "Select code, press Command U, and keep the explanation on this Mac.",
     siteName: "Unvibe",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Unvibe — make AI-written code yours" }],
+    locale: "en_US",
+    images: [
+      {
+        url: "/unvibe-social-preview-v6.png",
+        width: 1200,
+        height: 630,
+        alt: "Unvibe. Learn the code AI shipped.",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe — Make AI-Written Code Yours",
+    title: "Unvibe. Learn the code AI shipped.",
     description:
-      "A Mac desktop learning layer for understanding AI-generated code in the context of your workflow.",
-    images: ["/opengraph-image"],
+      "A Mac overlay that explains selected code beside the tools you already use.",
+    images: ["/unvibe-social-preview-v6.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: siteUrl },
@@ -62,7 +79,7 @@ const softwareJsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS",
   description:
-    "A Mac desktop learning layer that helps developers understand AI-generated code using explanations connected to their repository and workflow.",
+    "A Mac desktop overlay that explains selected AI-generated code in place.",
   offers: {
     "@type": "Offer",
     price: "0",
@@ -71,25 +88,24 @@ const softwareJsonLd = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0f14" },
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Unvibe",
+  url: siteUrl,
+  logo: `${siteUrl}/icon.png`,
+  email: "support@unvibe.site",
+  sameAs: [
+    "https://www.linkedin.com/company/unvibeapp/",
+    "https://www.instagram.com/unvibe_app/",
+    "https://x.com/unvibe_app",
+    "https://www.tiktok.com/@unvibe_app",
   ],
 };
 
-const themeScript = `
-(function() {
-  try {
-    var stored = localStorage.getItem('unvibe_theme');
-    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    var theme = stored === 'light' || stored === 'dark' ? stored : system;
-    var root = document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    root.style.colorScheme = theme;
-  } catch (e) {}
-})();
-`;
+export const viewport: Viewport = {
+  themeColor: "var(--paper)",
+};
 
 export default function RootLayout({
   children,
@@ -98,13 +114,16 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable}`}
+      className={`${sans.variable} ${mono.variable} ${display.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
       </head>
       <body>
@@ -112,7 +131,6 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          <SiteAnnouncement />
           <Nav />
           <main id="main">{children}</main>
           <Footer />

@@ -21,7 +21,7 @@ interface LegalLayoutProps {
  */
 export function LegalLayout({ title, updated, intro, children }: LegalLayoutProps) {
   return (
-    <article className="container-page max-w-prose py-16 sm:py-24">
+    <article className="legal-page container-page max-w-prose py-16 sm:py-24">
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-2 text-fluid-sm text-fg-muted transition-colors hover:text-fg"

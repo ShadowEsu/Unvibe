@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { cloneElement, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Copy, Gift, Loader2, Send } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Gift, Loader2, Send } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { Reveal } from "@/components/redesign/Reveal";
 import {
@@ -75,6 +75,19 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       setReferralCode(typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string" ? (data as WaitlistResponse & { referralCode?: string }).referralCode ?? "" : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
+      const giverEmail = (values.referredBy ?? "").trim();
+      const promoCode = (values.promoCode ?? "").trim();
+      if (giverEmail && promoCode) {
+        void fetch("/api/gifts/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientEmail: values.email.trim(),
+            giverEmail,
+            promoCode,
+          }),
+        });
+      }
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
@@ -116,7 +129,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <div className="form-heading">
             <span className="brand-pixel" />
             <strong>Join the waitlist</strong>
-            <small>{variant === "hero" ? "Name and email. That is all." : "Three quick details. That is all."}</small>
+            <small>Name and email. You can skip the rest.</small>
           </div>
           <div className="name-row">
             <Field label="First name" error={errors.firstName?.message}>
@@ -129,14 +142,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <Field label="Email" error={errors.email?.message}>
             <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
           </Field>
-          <div className="referral-offer" aria-label="Referral and promo code">
-            <Gift size={18} aria-hidden="true" />
-            <div><strong>Have a referral or promo code?</strong><span>Optional. Enter the friend who referred you and <b>UNVIBE SPECIAL</b> so we can verify the benefit.</span></div>
+          <details className="referral-offer">
+            <summary>Referral or promo code</summary>
+            <p>Optional. Friend email and SPECIAL CHAR if you have them. Both of you get 1 month of Pro, up to five gifts.</p>
             <div className="referral-offer__fields">
               <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
-              <label><span>Promo code</span><input placeholder="UNVIBE SPECIAL" {...register("promoCode")} /></label>
+              <label><span>Promo code</span><input placeholder="SPECIAL CHAR" {...register("promoCode")} /></label>
             </div>
-          </div>
+          </details>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
           <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
             {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
@@ -146,20 +159,19 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       ) : (
         <div className="success-panel" role="status">
           <span className="success-pixel"><Check /></span>
-          <p className="pixel-label">SPOT SAVED</p>
-          <h3>{status === "duplicate" ? "You were already on the list." : "You're on the list."}</h3>
+          <p className="pixel-label">JOINED</p>
+          <h3>{status === "duplicate" ? "You were already on the list." : "Joined the waitlist."}</h3>
           <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
-          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite a friend, get rewarded.</strong><span>Share your personal link. After eligible feedback and referral steps are verified, choose 3 more months of Pro or a $5 reward.</span><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button></div></div>}
+          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite friends, earn beta rewards.</strong><span>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer.</span><div className="referral-success__actions"><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button><a href={`/rewards?ref=${referralCode}`}>View reward progress <ArrowUpRight size={14} /></a></div></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (
               <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>
             ) : (
               <div className="optional-details">
-                <label>Where do you code?<select value={tool} onChange={(event) => setTool(event.target.value as typeof tool)}><option value="">Prefer not to say</option>{tools.map((item) => <option key={item} value={item}>{toolLabels[item]}</option>)}</select></label>
-                <label>Your experience<select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)}><option value="">Prefer not to say</option>{experiences.map((item) => <option key={item} value={item}>{experienceLabels[item]}</option>)}</select></label>
-                <label>What should Unvibe help you learn?<textarea value={message} maxLength={500} rows={3} onChange={(event) => setMessage(event.target.value)} /></label>
-                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details weren&apos;t saved. Your beta spot is still safe.</p>}
-                <button type="button" className="details-button" disabled={detailsStatus === "saving"} onClick={saveDetails}>{detailsStatus === "saving" ? "Saving…" : "Save optional details"}</button>
+                <label>Where you work<select value={tool} onChange={(event) => setTool(event.target.value as typeof tool)}><option value="">Skip</option>{tools.map((item) => <option key={item} value={item}>{toolLabels[item]}</option>)}</select></label>
+                <label>Your experience<select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)}><option value="">Skip</option>{experiences.map((item) => <option key={item} value={item}>{experienceLabels[item]}</option>)}</select></label>
+                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details were not saved. Your waitlist spot is still safe.</p>}
+                <button type="button" className="details-button" disabled={detailsStatus === "saving"} onClick={saveDetails}>{detailsStatus === "saving" ? "Saving" : "Save optional details"}</button>
               </div>
             )
           )}
@@ -182,12 +194,13 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
           <p className="section-number light">10 / PRIVATE BETA</p>
-          <h2>Working product. <em>Access is invite-only.</em></h2>
-          <p>Join the waitlist to request access. Invitations are being issued gradually during the private Mac beta.</p>
+          <h2>Private beta access, <em>with a real role in the product.</em></h2>
+          <p>Join the waitlist to request access. Beta members help shape the reviews, learning flow, integrations, and release priorities.</p>
           <ul>
-            <li><Check size={16} />Private Mac beta — working product</li>
-            <li><Check size={16} />Invite-only access</li>
-            <li><Check size={16} />No credit card required</li>
+            <li><Check size={16} />Private Mac beta. Working product.</li>
+            <li><Check size={16} />Selected-code explanations, saved learning, and early feature voting</li>
+            <li><Check size={16} />Referral rewards: $5 per 3 verified referrals, up to $25</li>
+            <li><Check size={16} />Invite-only access · no credit card required</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>
         </div>
@@ -197,6 +210,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <label className="form-field"><span>{label}</span>{children}{error && <small role="alert">{error}</small>}</label>;
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactElement }) {
+  const errorId = `${label.toLowerCase().replace(/\s+/g, "-")}-error`;
+
+  return (
+    <label className="form-field">
+      <span>{label}</span>
+      {cloneElement(children, { "aria-describedby": error ? errorId : undefined })}
+      {error && <small id={errorId} role="alert">{error}</small>}
+    </label>
+  );
 }
