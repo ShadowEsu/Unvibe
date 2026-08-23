@@ -1260,6 +1260,7 @@
   color: #fff;
   font-weight: 700;
 }
+.investor-thesis { display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
 .investor-thesis article { min-height: 240px; padding: 27px; border-right: 1px solid rgba(255,255,255,.1); }
 .investor-thesis article:last-child { border-right: 0; }
 .investor-thesis span { color: #665a6d; font: 600 2.2rem var(--font-mono); }
