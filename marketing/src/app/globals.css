@@ -963,6 +963,10 @@
 .founder-analytics__error button:hover { border-color: rgba(194,163,255,.58); background: rgba(50,31,72,.82); transform: translateY(-1px); }
 .founder-analytics__actions button:disabled { opacity: .55; cursor: wait; }
 .founder-analytics__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: rgba(255,255,255,.09); box-shadow: 0 35px 90px rgba(4,1,9,.24); }
+.founder-analytics__grid--tight article { min-height: 148px; }
+.founder-analytics__delete { min-height: 32px; padding: 0 .75rem; border: 1px solid rgba(237,149,168,.35); border-radius: 999px; color: #f0c4ce; background: rgba(92,30,48,.22); font: 650 .72rem var(--font-manrope); cursor: pointer; }
+.founder-analytics__delete:hover:not(:disabled) { border-color: rgba(237,149,168,.6); background: rgba(92,30,48,.4); }
+.founder-analytics__delete:disabled { opacity: .55; cursor: wait; }
 .founder-analytics__grid article { min-height: 178px; padding: 1.45rem; display: flex; flex-direction: column; background: radial-gradient(380px 210px at 0% 0%, rgba(123,71,227,.12), transparent 72%), rgba(17,11,25,.94); }
 .founder-analytics__grid strong { margin: auto 0 .3rem; color: #f8f4fb; font: 520 clamp(2.4rem, 5vw, 4rem)/1 var(--font-manrope); letter-spacing: -.06em; }
 .founder-analytics__grid small { color: #7f7487; font-size: .73rem; }
@@ -1208,12 +1212,16 @@
 .investor-support, .investor-pipeline { display: grid; grid-template-columns: .75fr 1.25fr; gap: clamp(50px,9vw,130px); padding-top: 120px; }
 .investor-section-copy h2, .investor-pipeline h2 { margin-top: 18px; color: #fff; font-size: clamp(1.8rem,2.8vw,2.6rem); line-height: 1.04; letter-spacing: -.045em; }
 .investor-section-copy > p:last-child { margin-top: 22px; color: #847989; line-height: 1.65; }
-.investor-support__list { display: grid; grid-template-columns: repeat(2,1fr); }
-.investor-support__list > div { min-height: 160px; padding: 23px; border-top: 1px solid rgba(255,255,255,.1); }
-.investor-support__list > div:nth-child(odd) { border-right: 1px solid rgba(255,255,255,.1); }
-.investor-support__list span { color: #9476d0; font: 600 .58rem var(--font-mono); text-transform: uppercase; }
-.investor-support__list strong { display: block; margin-top: 20px; color: #e2d9e7; }
-.investor-support__list p { margin-top: 7px; color: #817486; font-size: .78rem; }
+.investor-support__totals { display: grid; gap: 0; margin: 28px 0 0; }
+.investor-support__totals > div { display: flex; justify-content: space-between; gap: 1rem; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.1); }
+.investor-support__totals dt { color: #817486; font-size: .78rem; }
+.investor-support__totals dd { margin: 0; color: #efe8f4; font: 600 1rem var(--font-mono); }
+.investor-support__table { display: grid; gap: 0; align-content: start; }
+.investor-support__row { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(5.5rem,0.55fr) minmax(0,1.3fr) minmax(5.5rem,0.55fr); gap: 12px; padding: 16px 0; border-top: 1px solid rgba(255,255,255,.1); color: #817486; font-size: .78rem; }
+.investor-support__row--head { color: #9476d0; font: 600 .58rem var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+.investor-support__row strong { color: #e2d9e7; font-weight: 600; }
+.investor-hero__capital strong { display: block; margin: 10px 0 8px; font: 520 clamp(2.2rem,4vw,3.2rem)/1 var(--font-manrope); letter-spacing: -.05em; }
+.investor-hero__capital span { display: block; margin-top: 6px; }
 .investor-pipeline > div:last-child article { display: grid; grid-template-columns: .42fr 1fr; gap: 24px; padding: 19px 0; border-top: 1px solid rgba(255,255,255,.1); }
 .investor-pipeline article strong { color: #d9d0de; font-size: .82rem; }
 .investor-pipeline article p { color: #7f7384; font-size: .78rem; line-height: 1.55; }
@@ -1227,6 +1235,12 @@
   .investor-thesis { grid-template-columns: 1fr; }
   .investor-thesis article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.1); }
   .investor-download { justify-items: center; }
+  .investor-support__row,
+  .investor-support__row--head { grid-template-columns: 1fr 1fr; }
+  .investor-support__row span:nth-child(3),
+  .investor-support__row span:nth-child(4),
+  .investor-support__row--head span:nth-child(3),
+  .investor-support__row--head span:nth-child(4) { display: none; }
 }
 
 /*

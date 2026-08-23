@@ -117,7 +117,7 @@ export function AdminWaitlist() {
     setActionError("");
     setRetryError("");
     try {
-      const response = await fetch("/api/waitlist/admin", {
+      const response = await fetch("/api/founder/waitlist", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

@@ -11,6 +11,14 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "23 AUG 2026",
+    category: "COMPANY",
+    title: "Startup support total",
+    summary: "Program credits plus founder-reported cash now total $231,700. Mixpanel for Startups is $144,000 for 1 year of Mixpanel Pro. Credits are not cash. Not a round.",
+    figure: "$231,700",
+    pinned: true,
+  },
+  {
     date: "20 AUG 2026",
     category: "COMPANY",
     title: "AWS for Startups",
@@ -36,10 +44,10 @@ export const milestones: Milestone[] = [
     summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site.",
   },
   {
-    date: "18 AUG 2026",
+    date: "17 AUG 2026",
     category: "COMPANY",
     title: "Mixpanel for Startups",
-    summary: "Accepted into the program. $144,000 in Mixpanel credits. Not cash. Not a round.",
+    summary: "Accepted into Mixpanel for Startups with $144,000 worth of Mixpanel Pro subscription credits for 1 year. Not cash. Not a round.",
     figure: "$144,000",
   },
   {
@@ -97,7 +105,6 @@ export const milestones: Milestone[] = [
     title: "GitLab for Startups",
     summary: "Accepted into the program. GitLab Ultimate credits to secure, automate, and scale the developer pipeline. Not cash. Not a round.",
     figure: "$23,700",
-    pinned: true,
   },
   {
     date: "17 AUG 2026",

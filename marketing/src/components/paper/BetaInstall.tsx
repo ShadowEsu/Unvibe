@@ -37,16 +37,23 @@ export function BetaInstall({
   const prompt = os === "windows" ? "PS>" : "$";
 
   useEffect(() => {
-    setOs(detectInstallOs());
-  }, []);
+    const detected = detectInstallOs();
+    setOs(detected);
+    track("beta_install_viewed", { surface: tone, os: detected });
+  }, [tone]);
+
+  const selectOs = (next: InstallOs) => {
+    setOs(next);
+    track("beta_install_os_selected", { os: next, surface: tone });
+  };
 
   const copyCommand = async () => {
     setError("");
     try {
       await navigator.clipboard.writeText(command);
       setCopied(true);
-      showCopyToast("Copied the install command");
-      track("beta_install_copied", { os });
+      showCopyToast(os === "windows" ? "Copied the Windows install command" : "Copied the Mac install command");
+      track("beta_install_copied", { os, surface: tone });
       recordBetaSiteEvent("copied");
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -71,7 +78,7 @@ export function BetaInstall({
           role="tab"
           aria-selected={os === "mac"}
           className={os === "mac" ? "is-on" : undefined}
-          onClick={() => setOs("mac")}
+          onClick={() => selectOs("mac")}
         >
           Mac
         </button>
@@ -80,13 +87,24 @@ export function BetaInstall({
           role="tab"
           aria-selected={os === "windows"}
           className={os === "windows" ? "is-on" : undefined}
-          onClick={() => setOs("windows")}
+          onClick={() => selectOs("windows")}
         >
           Windows
         </button>
       </div>
       <div className="paper-beta__term">
-        <pre>
+        <pre
+          role="button"
+          tabIndex={0}
+          aria-label={`Copy ${os === "windows" ? "Windows" : "Mac"} install command`}
+          onClick={() => void copyCommand()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              void copyCommand();
+            }
+          }}
+        >
           <code>
             <span className="paper-beta__cmd">
               <span className="paper-beta__prompt">{prompt}</span>
@@ -113,7 +131,9 @@ export function BetaInstall({
             target="_blank"
             rel="noreferrer"
             onClick={() => {
-              track("survey_opened", { source: tone === "hero" ? "hero_install" : "page_install" });
+              track("survey_opened", { source: tone === "hero" ? "hero_install" : "page_install", os });
+              track("feedback_opened", { source: tone === "hero" ? "hero_install" : "page_install", os });
+              recordBetaSiteEvent("survey");
             }}
           >
             {BETA_FEEDBACK_URL}
@@ -135,6 +155,8 @@ export function BetaFeedback({ source }: { source: string }) {
         rel="noreferrer"
         onClick={() => {
           track("survey_opened", { source });
+          track("feedback_opened", { source });
+          recordBetaSiteEvent("survey");
         }}
       >
         {BETA_FEEDBACK_URL}

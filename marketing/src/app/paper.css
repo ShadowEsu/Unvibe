@@ -1862,7 +1862,8 @@ h2 {
 .investor-hero > div > p:last-of-type,
 .investor-thesis p,
 .investor-section-copy > p:last-child,
-.investor-support__list p,
+.investor-support__totals dt,
+.investor-support__row,
 .investor-pipeline article p,
 .investor-download > p {
   color: var(--ink-muted);
@@ -1897,30 +1898,20 @@ h2 {
 
 .investor-thesis,
 .investor-download,
-.investor-support__list > div,
+.investor-support__totals > div,
+.investor-support__row,
 .investor-pipeline > div:last-child article,
 .investor-thesis article {
   border-color: var(--hairline);
 }
 
-.investor-support__list strong,
+.investor-support__totals dd,
+.investor-support__row strong,
 .investor-pipeline article strong {
   color: var(--ink);
 }
 
-.investor-support__list strong {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.investor-support__list strong img {
-  width: 1.2rem;
-  height: 1.2rem;
-  object-fit: contain;
-}
-
-.investor-support__list span,
+.investor-support__row--head,
 .investor-thesis span {
   color: var(--ink-faint);
 }
@@ -2492,6 +2483,17 @@ h2 {
   background: var(--snow);
   border-color: var(--ink);
   transform: translateY(-1px);
+}
+
+.founder-page .founder-analytics__delete {
+  border-color: var(--hairline);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+
+.founder-page .founder-analytics__delete:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--snow);
 }
 
 .founder-page .founder-analytics__bar-track {

@@ -38,14 +38,6 @@ interface WaitlistPerson {
   email: string;
   joinedAt: string;
   tool: string;
-  experience: string;
-  message: string;
-  promoCode: string;
-  referredBy: string;
-  referralCode: string;
-  utmSource: string;
-  utmMedium: string;
-  utmCampaign: string;
 }
 
 const PRIOR_PEOPLE = 300;
@@ -74,6 +66,8 @@ export function FounderAnalytics() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [deleting, setDeleting] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -115,13 +109,43 @@ export function FounderAnalytics() {
     ...(data?.stats.recentDays ?? []).map((day) => day.views),
   ), [data]);
 
+  const deletePerson = async (email: string) => {
+    const confirmed = window.confirm(`Remove ${email} from the waitlist? Use this for test signups.`);
+    if (!confirmed) return;
+    setDeleting(email);
+    setDeleteError(null);
+    try {
+      const response = await fetch("/api/founder/waitlist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) throw new Error("delete failed");
+      setPeople((current) => current.filter((person) => person.email !== email));
+      setData((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          waitlist: {
+            ...current.waitlist,
+            total: Math.max(0, current.waitlist.total - 1),
+          },
+        };
+      });
+    } catch {
+      setDeleteError("That signup could not be deleted. Refresh and try again.");
+    } finally {
+      setDeleting("");
+    }
+  };
+
   return (
     <section className="founder-analytics" aria-busy={loading}>
       <header className="founder-analytics__header">
         <div>
           <span className="founder-analytics__eyebrow">Founder analytics</span>
           <h1>Unvibe, by the numbers.</h1>
-          <p>Page views count every load. Unique visitors count distinct browsers. Copy clicks, form clicks, and every waitlist field sit below.</p>
+          <p>Only the numbers that matter for growth: traffic, waitlist, install copies, and feedback.</p>
         </div>
         <div className="founder-analytics__actions">
           <button type="button" onClick={() => void load()} disabled={loading}>
@@ -147,56 +171,36 @@ export function FounderAnalytics() {
 
       {data ? (
         <>
-          <div className="founder-analytics__grid">
+          <div className="founder-analytics__grid founder-analytics__grid--tight">
             <article>
-              <span>Page views today</span>
-              <strong>{data.stats.today.views.toLocaleString()}</strong>
-              <small>Every homepage and marketing page load counted today, Pacific time</small>
+              <span>Waitlist</span>
+              <strong>{data.waitlist.total.toLocaleString()}</strong>
+              <small>{data.waitlist.referred.toLocaleString()} referred · {people.length.toLocaleString()} listed below</small>
             </article>
             <article>
-              <span>Unique visitors today</span>
+              <span>Visitors today</span>
               <strong>{data.stats.today.visitors.toLocaleString()}</strong>
-              <small>Distinct browsers today. Repeat refreshes from one person stay one visitor</small>
+              <small>{data.stats.today.views.toLocaleString()} page views today, Pacific time</small>
             </article>
             <article>
-              <span>Page views, 7 days</span>
-              <strong>{data.stats.week.views.toLocaleString()}</strong>
-              <small>{data.stats.week.visitors.toLocaleString()} unique visitors this week</small>
-            </article>
-            <article>
-              <span>Unique visitors, 7 days</span>
+              <span>Visitors, 7 days</span>
               <strong>{data.stats.week.visitors.toLocaleString()}</strong>
               <small>{data.stats.week.views.toLocaleString()} page views this week</small>
             </article>
             <article>
-              <span>All-time page views</span>
-              <strong>{data.stats.allTime.views.toLocaleString()}</strong>
-              <small>Counted since tracking was repaired on Aug 13, 2026</small>
-            </article>
-            <article>
-              <span>All-time unique visitors</span>
-              <strong>{(data.stats.allTime.visitors + PRIOR_PEOPLE).toLocaleString()}</strong>
-              <small>{data.stats.allTime.visitors.toLocaleString()} from this counter, plus {PRIOR_PEOPLE} people from before it</small>
-            </article>
-            <article>
-              <span>Waitlist people</span>
-              <strong>{data.waitlist.total.toLocaleString()}</strong>
-              <small>{people.length.toLocaleString()} names in the table below</small>
-            </article>
-            <article>
-              <span>Command copies</span>
+              <span>Install copies</span>
               <strong>{(data.installs?.copied ?? 0).toLocaleString()}</strong>
-              <small>{data.installs?.fetched ?? 0} curl or PowerShell fetches, {data.installs?.installed ?? 0} finished installs</small>
+              <small>{data.installs?.fetched ?? 0} script fetches · {data.installs?.installed ?? 0} finished</small>
             </article>
             <article>
-              <span>Form clicks</span>
+              <span>Feedback clicks</span>
               <strong>{(data.installs?.survey ?? 0).toLocaleString()}</strong>
-              <small>Opens of unvibe.site/feedback from the site, email, or the app</small>
+              <small>Opens of /feedback from site, email, or app</small>
             </article>
             <article>
-              <span>Referred signups</span>
-              <strong>{data.waitlist.referred.toLocaleString()}</strong>
-              <small>{data.betaDownloads.toLocaleString()} beta download requests</small>
+              <span>All-time visitors</span>
+              <strong>{(data.stats.allTime.visitors + PRIOR_PEOPLE).toLocaleString()}</strong>
+              <small>{data.stats.allTime.views.toLocaleString()} page views since Aug 13, 2026</small>
             </article>
           </div>
 
@@ -207,7 +211,7 @@ export function FounderAnalytics() {
                   <span>Page views</span>
                   <h2>Last 14 days</h2>
                 </div>
-                <small>Pacific time. Bar height is page views, not unique visitors.</small>
+                <small>Pacific time</small>
               </header>
               <div className="founder-analytics__bars" aria-label="Fourteen day page views">
                 {[...data.stats.recentDays].reverse().map((day) => {
@@ -227,8 +231,8 @@ export function FounderAnalytics() {
 
             <article className="founder-analytics__sources">
               <header>
-                <span>Waitlist sources</span>
-                <h2>Where people found Unvibe</h2>
+                <span>Sources</span>
+                <h2>Where joins came from</h2>
               </header>
               <ol>
                 {data.waitlist.sourceCounts.length ? data.waitlist.sourceCounts.map((source) => (
@@ -241,41 +245,13 @@ export function FounderAnalytics() {
             </article>
           </div>
 
-          <article className="founder-analytics__visits">
-            <header>
-              <span>Daily visits</span>
-              <h2>Page views versus unique visitors</h2>
-            </header>
-            <div className="founder-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Page views</th>
-                    <th>Unique visitors</th>
-                    <th>Waitlist joins</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.stats.recentDays.map((day) => (
-                    <tr key={day.date}>
-                      <td>{compactDate(day.date)}</td>
-                      <td>{day.views.toLocaleString()}</td>
-                      <td>{day.visitors.toLocaleString()}</td>
-                      <td>{(data.waitlist.dailySignups.find((item) => item.date === day.date)?.signups ?? 0).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-
           <article className="founder-analytics__people">
             <header>
               <span>Waitlist</span>
-              <h2>Everyone who joined</h2>
+              <h2>People · delete test emails here</h2>
             </header>
             {peopleError ? <p className="founder-analytics__empty">{peopleError}</p> : null}
+            {deleteError ? <p className="founder-analytics__empty" role="alert">{deleteError}</p> : null}
             {!peopleError && people.length === 0 ? (
               <p className="founder-analytics__empty">No waitlist names yet. The first signup will appear here.</p>
             ) : null}
@@ -288,14 +264,7 @@ export function FounderAnalytics() {
                       <th>Email</th>
                       <th>Joined</th>
                       <th>Tool</th>
-                      <th>Experience</th>
-                      <th>Message</th>
-                      <th>Promo</th>
-                      <th>Referred by</th>
-                      <th>Referral code</th>
-                      <th>UTM source</th>
-                      <th>UTM medium</th>
-                      <th>UTM campaign</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -305,14 +274,16 @@ export function FounderAnalytics() {
                         <td><a href={`mailto:${person.email}`}>{person.email}</a></td>
                         <td>{joinedStamp(person.joinedAt)}</td>
                         <td>{person.tool}</td>
-                        <td>{person.experience ?? "Not given"}</td>
-                        <td>{person.message ?? "Not given"}</td>
-                        <td>{person.promoCode ?? "None"}</td>
-                        <td>{person.referredBy ?? "None"}</td>
-                        <td>{person.referralCode ?? "None"}</td>
-                        <td>{person.utmSource ?? "None"}</td>
-                        <td>{person.utmMedium ?? "None"}</td>
-                        <td>{person.utmCampaign ?? "None"}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="founder-analytics__delete"
+                            onClick={() => void deletePerson(person.email)}
+                            disabled={deleting === person.email}
+                          >
+                            {deleting === person.email ? "Deleting…" : "Delete"}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
