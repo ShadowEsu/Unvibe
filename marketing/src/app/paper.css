@@ -1864,6 +1864,8 @@ h2 {
 .investor-section-copy > p:last-child,
 .investor-support__totals dt,
 .investor-support__row,
+.investor-money__split,
+.investor-money__mixpanel small,
 .investor-pipeline article p,
 .investor-download > p {
   color: var(--ink-muted);
@@ -1883,6 +1885,26 @@ h2 {
 
 .investor-hero aside span {
   color: var(--ink-muted);
+}
+
+.investor-money {
+  border-color: var(--hairline);
+}
+
+.investor-money__total,
+.investor-money__mixpanel strong {
+  color: var(--ink);
+}
+
+.investor-money__mixpanel > span,
+.investor-money__link {
+  color: var(--ink);
+}
+
+.investor-support__row--lead,
+.investor-support__row--lead strong,
+.investor-support__row--lead span:nth-child(2) {
+  color: var(--ink);
 }
 
 .investor-actions a {

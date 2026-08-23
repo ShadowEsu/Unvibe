@@ -1203,7 +1203,63 @@
 .investor-hero aside strong { display: block; margin-top: 12px; color: #e8e0ec; font-size: 1.35rem; }
 .investor-hero aside span { display: block; margin-top: 8px; color: #9d82d8; font: 600 .68rem var(--font-mono); }
 .investor-hero aside a { display: inline-flex; align-items: center; gap: 7px; margin-top: 27px; color: #988aa0; font-size: .72rem; }
-.investor-thesis { display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
+.investor-money {
+  margin-top: 48px;
+  padding: clamp(2rem, 5vw, 3.2rem) 0;
+  border-top: 1px solid rgba(255,255,255,.12);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.investor-money__total {
+  margin: 18px 0 0;
+  color: #fff;
+  font: 520 clamp(3.6rem, 12vw, 7.5rem)/0.92 var(--font-manrope);
+  letter-spacing: -0.07em;
+}
+.investor-money__mixpanel {
+  display: grid;
+  gap: 6px;
+  max-width: 42rem;
+  margin: 1.4rem 0 0;
+}
+.investor-money__mixpanel > span {
+  color: #9476d0;
+  font: 600 .62rem var(--font-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.investor-money__mixpanel strong {
+  color: #efe8f4;
+  font: 600 clamp(1.35rem, 3vw, 2rem)/1.15 var(--font-manrope);
+  letter-spacing: -0.03em;
+}
+.investor-money__mixpanel small {
+  color: #817486;
+  font-size: .9rem;
+}
+.investor-money__split {
+  max-width: 36rem;
+  margin: 1.1rem 0 0;
+  color: #847989;
+  font-size: .92rem;
+  line-height: 1.55;
+}
+.investor-money__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1.4rem;
+  color: #d2c3f6;
+  font-size: .85rem;
+  font-weight: 650;
+}
+.investor-support__row--lead {
+  color: #efe8f4;
+}
+.investor-support__row--lead strong,
+.investor-support__row--lead span:nth-child(2) {
+  color: #fff;
+  font-weight: 700;
+}
 .investor-thesis article { min-height: 240px; padding: 27px; border-right: 1px solid rgba(255,255,255,.1); }
 .investor-thesis article:last-child { border-right: 0; }
 .investor-thesis span { color: #665a6d; font: 600 2.2rem var(--font-mono); }
