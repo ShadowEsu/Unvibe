@@ -14,7 +14,9 @@ describe("compensation", () => {
     assert.equal(mixpanel?.amountUsd, 144_000);
     assert.match(mixpanel?.detail ?? "", /1 year/i);
     assert.equal(compensationTotalUsd(), compensationCreditsUsd() + compensationCashUsd());
-    assert.equal(compensationTotalUsd(), 231_700);
-    assert.equal(compensationTotalLabel(), "$231,700");
+    assert.equal(compensationTotalUsd(), 232_700);
+    assert.equal(compensationTotalLabel(), "$232,700");
+    const deepgram = compensationLines.find((line) => line.name.startsWith("Deepgram"));
+    assert.equal(deepgram?.amountUsd, 1_000);
   });
 });

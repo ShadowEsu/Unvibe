@@ -22,6 +22,7 @@ export const ANALYTICS_EVENTS = [
   "beta_install_fetched",
   "survey_opened",
   "feedback_opened",
+  "story_beat_viewed",
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

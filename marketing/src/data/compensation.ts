@@ -60,6 +60,13 @@ export const compensationLines: CompensationLine[] = [
     state: "Secured",
   },
   {
+    name: "Deepgram for Startups",
+    amountUsd: 1_000,
+    detail: "Deepgram API credits",
+    kind: "credits",
+    state: "Secured",
+  },
+  {
     name: "MongoDB for Startups",
     amountUsd: 500,
     detail: "Program support",

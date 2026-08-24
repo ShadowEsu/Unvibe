@@ -159,10 +159,13 @@ export function initAnalytics(): void {
   mixpanelStart = import("mixpanel-browser")
     .then((mod) => {
       const mixpanel = mod.default as MixpanelClient;
+      // Mixpanel for Startups Pro credits: autocapture + session replay are included.
+      // Do not enable paid add-ons outside that credit plan.
       mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
         autocapture: true,
         record_sessions_percent: 100,
         persistence: "localStorage",
+        track_pageview: true,
         ip: true,
       });
       mixpanel.identify(anonId());

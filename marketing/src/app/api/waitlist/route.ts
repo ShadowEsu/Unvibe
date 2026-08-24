@@ -10,6 +10,7 @@ import {
   updateWaitlistDetails,
   type WaitlistEntry,
 } from "@/lib/waitlistStore";
+import { captureMixpanelServerEvent } from "@/lib/mixpanelServer";
 import { captureServerEvent } from "@/lib/posthogServer";
 
 export const runtime = "nodejs";
@@ -84,12 +85,16 @@ export async function POST(req: Request) {
       });
     }
     // Await so Vercel does not freeze the isolate before the capture request leaves.
-    await captureServerEvent("waitlist_completed", referralCode, {
+    const completionProps = {
       duplicate: stored.duplicate,
       storage: stored.storage,
       has_referral: Boolean(referredBy),
       has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
-    });
+    };
+    await Promise.all([
+      captureServerEvent("waitlist_completed", referralCode, completionProps),
+      captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
+    ]);
     return NextResponse.json({ duplicate: stored.duplicate, saved: true, referralCode });
   } catch (error) {
     console.error("waitlist signup failed", error);

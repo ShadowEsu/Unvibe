@@ -11,12 +11,19 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
-    date: "23 AUG 2026",
+    date: "24 AUG 2026",
     category: "COMPANY",
     title: "Startup support total",
-    summary: "Program credits plus founder-reported cash now total $231,700. Mixpanel for Startups is $144,000 for 1 year of Mixpanel Pro. Credits are not cash. Not a round.",
-    figure: "$231,700",
+    summary: "Program credits plus founder-reported cash now total $232,700. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.",
+    figure: "$232,700",
     pinned: true,
+  },
+  {
+    date: "24 AUG 2026",
+    category: "PRODUCT",
+    title: "Current Mac app stills on the site",
+    summary: "Homepage scroll story now uses live companion shots: welcome, Island, Home, History, Progress, Quiz, Privacy, and Mac access. Cursor demo stays the long walkthrough.",
+    figure: "app stills",
   },
   {
     date: "20 AUG 2026",
@@ -24,6 +31,13 @@ export const milestones: Milestone[] = [
     title: "AWS for Startups",
     summary: "Secured $5,000 in AWS Activate credits through AWS for Startups. Credits for Bedrock and related AWS infrastructure during private Mac beta. Not cash. Not a round.",
     figure: "$5,000",
+  },
+  {
+    date: "18 AUG 2026",
+    category: "COMPANY",
+    title: "Deepgram for Startups",
+    summary: "Secured $1,000 in Deepgram API credits. Not cash. Not a round.",
+    figure: "$1,000",
   },
   {
     date: "19 AUG 2026",
@@ -63,13 +77,6 @@ export const milestones: Milestone[] = [
     title: "Homepage curl sits on its own",
     summary: "The survey form moved above the demo video. The install command is wider, and Command U now says what the Mac download is.",
     figure: "Give a try",
-  },
-  {
-    date: "17 AUG 2026",
-    category: "PRODUCT",
-    title: "Current Mac app stills on the site",
-    summary: "Homepage product shots now match the live companion: island, home, chat, learn, quiz, and progress. The demo videos stay, with a note that they are a little behind.",
-    figure: "app stills",
   },
   {
     date: "17 AUG 2026",
