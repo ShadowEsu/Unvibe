@@ -1,5 +1,3 @@
-import { BetaInstall } from "@/components/paper/BetaInstall";
-
 export function ShortcutKeys() {
   return (
     <div className="paper-keys-stage">
@@ -16,7 +14,6 @@ export function ShortcutKeys() {
         </div>
       </div>
       <p className="paper-caption">The overlay opens on the code you selected.</p>
-      <BetaInstall tone="page" showFeedback={false} />
     </div>
   );
 }

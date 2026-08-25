@@ -3,6 +3,7 @@ import { PhotoHero } from "@/components/paper/PhotoHero";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
 import { BetaInstall } from "@/components/paper/BetaInstall";
+import { BackingStrip } from "@/components/paper/BackingStrip";
 import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
@@ -26,6 +27,8 @@ export default function HomePage() {
   return (
     <div>
       <PhotoHero />
+
+      <BackingStrip />
 
       <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
