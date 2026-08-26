@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 interface JoinWaitlistLinkProps {
@@ -49,7 +50,13 @@ export function JoinWaitlistLink({
   return (
     <Link
       href={href}
-      onClick={onClick}
+      onClick={() => {
+        track("waitlist_cta_clicked", {
+          platform: platform ?? "generic",
+          surface: size,
+        });
+        onClick?.();
+      }}
       className={cn(
         "paper-join",
         tone === "win" ? "paper-join--win" : "paper-join--mac",

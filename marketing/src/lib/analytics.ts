@@ -1,13 +1,11 @@
 /**
  * Privacy respecting analytics abstraction.
  *
- * Mixpanel loads via mixpanel-browser with the project token. Autocapture
- * and session replay are on so Mixpanel can verify the project. We also
- * track enumerated events. We never send code contents, emails, or other
- * personal data. An anonymous id is kept in localStorage so repeat events
- * from the same browser can be de-duplicated.
- *
- * PostHog still fires from the browser when NEXT_PUBLIC_POSTHOG_KEY is set.
+ * Mixpanel loads via mixpanel-browser (autocapture + session replay inside
+ * Mixpanel Pro startup credits). PostHog loads via posthog-js when
+ * NEXT_PUBLIC_POSTHOG_KEY is set — named events, exception autocapture for
+ * Error Tracking, and Surveys. We never send code contents, emails, or other
+ * personal data. An anonymous id is kept in localStorage.
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
@@ -19,6 +17,12 @@ type MixpanelClient = {
   init: (token: string, config: Record<string, unknown>) => void;
   identify: (id: string) => void;
   track: (event: string, props?: Record<string, unknown>) => void;
+};
+type PosthogClient = {
+  init: (token: string, config: Record<string, unknown>) => void;
+  identify: (id: string) => void;
+  capture: (event: string, props?: Record<string, unknown>) => void;
+  captureException: (error: unknown, props?: Record<string, unknown>) => void;
 };
 
 const POSTHOG_KEY =
@@ -42,6 +46,10 @@ export const analyticsEnabled = Boolean(POSTHOG_KEY || MIXPANEL_BROWSER_TOKEN);
 let mixpanelClient: MixpanelClient | null = null;
 let mixpanelStart: Promise<void> | null = null;
 const mixpanelQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
+
+let posthogClient: PosthogClient | null = null;
+let posthogStart: Promise<void> | null = null;
+const posthogQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
 
 function anonId(): string {
   if (typeof window === "undefined") return "server";
@@ -69,27 +77,24 @@ function cleanedProps(props?: Props): Props {
   return cleaned;
 }
 
+function flushPosthog(): void {
+  if (!posthogClient) return;
+  while (posthogQueue.length > 0) {
+    const item = posthogQueue.shift();
+    if (!item) break;
+    posthogClient.capture(item.event, item.props);
+  }
+}
+
 function sendPosthog(event: AnalyticsEvent, cleaned: Props): void {
   if (!POSTHOG_KEY || typeof window === "undefined") return;
-  const body = JSON.stringify({
-    api_key: POSTHOG_KEY,
-    event,
-    distinct_id: anonId(),
-    properties: { ...cleaned, $current_url: window.location.href },
-    timestamp: new Date().toISOString(),
-  });
-  try {
-    void fetch(`${POSTHOG_HOST}/i/v0/e/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      keepalive: true,
-    }).catch(() => {
-      // Analytics must never break the page.
-    });
-  } catch {
-    // Ignore, best effort only.
+  const props = { ...cleaned, $current_url: window.location.href };
+  if (posthogClient) {
+    posthogClient.capture(event, props);
+    return;
   }
+  posthogQueue.push({ event, props });
+  initAnalytics();
 }
 
 function flushMixpanel(): void {
@@ -101,22 +106,22 @@ function flushMixpanel(): void {
   }
 }
 
-function sendMixpanel(event: AnalyticsEvent, cleaned: Props): void {
+function sendMixpanel(event: AnalyticsEvent, props: Props): void {
   if (typeof window === "undefined") return;
-  const props = { ...cleaned, path: window.location.pathname };
+  const withPath = { ...props, path: window.location.pathname };
   if (mixpanelClient) {
-    mixpanelClient.track(event, props);
+    mixpanelClient.track(event, withPath);
     return;
   }
   if (MIXPANEL_BROWSER_TOKEN) {
-    mixpanelQueue.push({ event, props });
+    mixpanelQueue.push({ event, props: withPath });
     initAnalytics();
     return;
   }
   const body = JSON.stringify({
     event,
     distinctId: anonId(),
-    properties: props,
+    properties: withPath,
   });
   try {
     void fetch("/api/analytics", {
@@ -143,7 +148,7 @@ export function recordBetaSiteEvent(event: "copied" | "survey"): void {
   }).catch(() => undefined);
 }
 
-/** Track an enumerated event. Mixpanel uses the browser SDK when a token is set. */
+/** Track an enumerated event on Mixpanel and PostHog when configured. */
 export function track(event: AnalyticsEvent, props?: Props): void {
   if (typeof window === "undefined") return;
   const cleaned = cleanedProps(props);
@@ -151,16 +156,60 @@ export function track(event: AnalyticsEvent, props?: Props): void {
   sendMixpanel(event, cleaned);
 }
 
-/** Load Mixpanel with autocapture and session replay, plus named events. */
-export function initAnalytics(): void {
+/** Manual exception capture for handled errors (uncaught still autocaptured). */
+export function captureClientException(
+  error: unknown,
+  props?: Props,
+): void {
   if (typeof window === "undefined") return;
-  if (!MIXPANEL_BROWSER_TOKEN) return;
+  initAnalytics();
+  const cleaned = cleanedProps(props);
+  if (posthogClient) {
+    posthogClient.captureException(error, cleaned);
+    return;
+  }
+  void posthogStart?.then(() => {
+    posthogClient?.captureException(error, cleaned);
+  });
+}
+
+function startPosthog(): void {
+  if (!POSTHOG_KEY || typeof window === "undefined") return;
+  if (posthogClient || posthogStart) return;
+  posthogStart = import("posthog-js")
+    .then((mod) => {
+      const posthog = mod.default as PosthogClient;
+      posthog.init(POSTHOG_KEY, {
+        api_host: POSTHOG_HOST,
+        defaults: "2026-05-30",
+        persistence: "localStorage",
+        person_profiles: "identified_only",
+        capture_pageview: true,
+        capture_pageleave: true,
+        // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
+        capture_exceptions: true,
+        disable_session_recording: false,
+        session_recording: {
+          maskAllInputs: true,
+          maskTextSelector: "[data-ph-mask]",
+        },
+      });
+      posthog.identify(anonId());
+      posthogClient = posthog;
+      flushPosthog();
+    })
+    .catch(() => {
+      posthogStart = null;
+    });
+}
+
+function startMixpanel(): void {
+  if (!MIXPANEL_BROWSER_TOKEN || typeof window === "undefined") return;
   if (mixpanelClient || mixpanelStart) return;
   mixpanelStart = import("mixpanel-browser")
     .then((mod) => {
       const mixpanel = mod.default as MixpanelClient;
       // Mixpanel for Startups Pro credits: autocapture + session replay are included.
-      // Do not enable paid add-ons outside that credit plan.
       mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
         autocapture: true,
         record_sessions_percent: 100,
@@ -175,4 +224,11 @@ export function initAnalytics(): void {
     .catch(() => {
       mixpanelStart = null;
     });
+}
+
+/** Load Mixpanel + PostHog browser SDKs when tokens are present. */
+export function initAnalytics(): void {
+  if (typeof window === "undefined") return;
+  startPosthog();
+  startMixpanel();
 }

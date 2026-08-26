@@ -5,7 +5,7 @@ import { captureServerEvent } from "@/lib/posthogServer";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Count every open of the public feedback link, including email paste, then send people to Typeform. */
+/** Count every open of the public feedback link, then send people to the PostHog survey. */
 export async function GET() {
   try {
     await recordBetaInstallEvent("survey");

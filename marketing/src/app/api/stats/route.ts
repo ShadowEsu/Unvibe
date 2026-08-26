@@ -16,7 +16,12 @@ export async function GET(req: Request) {
     const installs = includeWaitlist ? await getBetaInstallCounts() : undefined;
     return NextResponse.json(
       { ok: true, stats, ...publicAnalytics, installs },
-      { headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=45" } },
+      {
+        headers: {
+          // Founder dashboard polls this; avoid CDN serving stale install/waitlist totals.
+          "Cache-Control": includeWaitlist ? "no-store, private" : "public, s-maxage=15, stale-while-revalidate=45",
+        },
+      },
     );
   } catch (error) {
     console.error("stats load failed", error);

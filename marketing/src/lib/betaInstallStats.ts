@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { get, list, put } from "@vercel/blob";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export type BetaInstallEvent = "copied" | "fetched" | "installed" | "survey";
 
@@ -15,6 +16,8 @@ const BLOB_PATH = "stats/beta-install.v1.json";
 const dataDir = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDir, "beta-install.json");
 
+let cachedSupabase: SupabaseClient | null = null;
+
 function emptyCounts(): BetaInstallCounts {
   return { copied: 0, fetched: 0, installed: 0, survey: 0 };
 }
@@ -26,6 +29,24 @@ function normalize(parsed: Partial<BetaInstallCounts> | null | undefined): BetaI
     installed: Number(parsed?.installed) || 0,
     survey: Number(parsed?.survey) || 0,
   };
+}
+
+function supabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
+function supabaseClient(): SupabaseClient {
+  if (cachedSupabase) return cachedSupabase;
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) throw new Error("Supabase install stats storage is not configured");
+  cachedSupabase = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
+  });
+  return cachedSupabase;
 }
 
 function blobConfigured(): boolean {
@@ -52,34 +73,63 @@ async function writeLocal(data: BetaInstallCounts): Promise<void> {
   await fs.writeFile(dataFile, JSON.stringify(data));
 }
 
+/** Prefer public access — private put/get 500s on public Blob stores. */
 async function readBlob(): Promise<BetaInstallCounts> {
   const token = blobToken();
   const page = await list({ prefix: BLOB_PATH, limit: 1, token });
   const match = page.blobs.find((blob) => blob.pathname === BLOB_PATH);
   if (!match) return emptyCounts();
-  const result = await get(match.url, { access: "private", token, useCache: false });
-  if (!result || result.statusCode !== 200 || !result.stream) return emptyCounts();
-  return normalize(JSON.parse(await new Response(result.stream).text()) as Partial<BetaInstallCounts>);
+  for (const access of ["public", "private"] as const) {
+    try {
+      const result = await get(match.url, { access, token, useCache: false });
+      if (!result || result.statusCode !== 200 || !result.stream) continue;
+      return normalize(JSON.parse(await new Response(result.stream).text()) as Partial<BetaInstallCounts>);
+    } catch {
+      // Try the other access mode.
+    }
+  }
+  return emptyCounts();
 }
 
 async function writeBlob(data: BetaInstallCounts): Promise<void> {
-  await put(BLOB_PATH, JSON.stringify(data), {
-    access: "private",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    cacheControlMaxAge: 60,
-    contentType: "application/json",
-    token: blobToken(),
+  const token = blobToken();
+  const body = JSON.stringify(data);
+  let lastError: unknown;
+  for (const access of ["public", "private"] as const) {
+    try {
+      await put(BLOB_PATH, body, {
+        access,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 60,
+        contentType: "application/json",
+        token,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Blob install stats write failed");
+}
+
+async function readSupabase(): Promise<BetaInstallCounts> {
+  const { data, error } = await supabaseClient()
+    .from("beta_install_counts")
+    .select("copied,fetched,installed,survey")
+    .eq("id", 1)
+    .maybeSingle<BetaInstallCounts>();
+  if (error) throw new Error(`Supabase install stats read failed: ${error.message}`);
+  return normalize(data ?? undefined);
+}
+
+async function recordSupabase(event: BetaInstallEvent): Promise<BetaInstallCounts> {
+  const { data, error } = await supabaseClient().rpc("record_beta_install_event", {
+    p_event: event,
   });
-}
-
-async function load(): Promise<BetaInstallCounts> {
-  return blobConfigured() ? readBlob() : readLocal();
-}
-
-async function save(data: BetaInstallCounts): Promise<void> {
-  if (blobConfigured()) await writeBlob(data);
-  else await writeLocal(data);
+  if (error) throw new Error(`Supabase install stats write failed: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  return normalize(row as Partial<BetaInstallCounts> | null | undefined);
 }
 
 export function parseBetaInstallEvent(value: unknown): BetaInstallEvent | null {
@@ -88,12 +138,44 @@ export function parseBetaInstallEvent(value: unknown): BetaInstallEvent | null {
 }
 
 export async function recordBetaInstallEvent(event: BetaInstallEvent): Promise<BetaInstallCounts> {
-  const data = await load();
+  if (supabaseConfigured()) {
+    try {
+      return await recordSupabase(event);
+    } catch (error) {
+      // Table may not exist yet on older deploys; fall through to Blob/local.
+      console.error("supabase install stats write failed", error);
+    }
+  }
+  if (blobConfigured()) {
+    try {
+      const data = await readBlob();
+      data[event] += 1;
+      await writeBlob(data);
+      return data;
+    } catch (error) {
+      console.error("blob install stats write failed", error);
+    }
+  }
+  const data = await readLocal();
   data[event] += 1;
-  await save(data);
+  await writeLocal(data);
   return data;
 }
 
 export async function getBetaInstallCounts(): Promise<BetaInstallCounts> {
-  return load();
+  if (supabaseConfigured()) {
+    try {
+      return await readSupabase();
+    } catch (error) {
+      console.error("supabase install stats read failed", error);
+    }
+  }
+  if (blobConfigured()) {
+    try {
+      return await readBlob();
+    } catch (error) {
+      console.error("blob install stats read failed", error);
+    }
+  }
+  return readLocal();
 }

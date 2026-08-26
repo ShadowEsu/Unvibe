@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { initAnalytics } from "@/lib/analytics";
 
-/** Starts Mixpanel with autocapture, session replay, and named events. */
+/** Starts Mixpanel + PostHog (events, exception autocapture, surveys). */
 export function MixpanelInit() {
   useEffect(() => {
     initAnalytics();
