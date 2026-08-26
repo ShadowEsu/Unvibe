@@ -36,7 +36,7 @@ interface GrowthFunnel {
   installViewedPeople: number;
   installCopiedPeople: number;
   surveyOpenedPeople: number;
-  source: "posthog" | "floor";
+  source: "posthog" | "live" | "floor";
 }
 
 interface AnalyticsPayload {
@@ -223,7 +223,7 @@ export function FounderAnalytics() {
             <article>
               <span>Started the form</span>
               <strong>{(data.funnel?.formStartedPeople ?? 0).toLocaleString()}</strong>
-              <small>{data.funnel?.formStartedEvents ?? 0} start events · PostHog unique people</small>
+              <small>{data.funnel?.formStartedEvents ?? 0} start events · unique people, counting live</small>
             </article>
             <article>
               <span>Started, did not finish</span>
@@ -360,7 +360,7 @@ export function FounderAnalytics() {
           </article>
 
           <footer className="founder-analytics__footer">
-            <span>Funnel from PostHog. Joined count excludes probes and the install sentinel. Floor seeded from the Aug 26 audit if PostHog query is unavailable.</span>
+            <span>Funnel counts itself from form starts and PostHog. Joined people stay real emails only.</span>
             <span>{updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span>
           </footer>
         </>

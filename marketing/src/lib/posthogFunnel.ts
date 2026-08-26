@@ -1,7 +1,4 @@
-/**
- * Live growth funnel from PostHog HogQL. Founder tiles use this so started-not-finished
- * people stay visible without adding fake rows to waitlist_entries.
- */
+import { getStoredGrowthFunnel } from "@/lib/growthFunnelStore";
 
 export interface GrowthFunnel {
   formStartedPeople: number;
@@ -10,7 +7,7 @@ export interface GrowthFunnel {
   installViewedPeople: number;
   installCopiedPeople: number;
   surveyOpenedPeople: number;
-  source: "posthog" | "floor";
+  source: "posthog" | "live" | "floor";
 }
 
 const FLOOR: GrowthFunnel = {
@@ -42,14 +39,16 @@ function appHost(): string {
 }
 
 function maxFunnel(live: Partial<GrowthFunnel>): GrowthFunnel {
+  const formStartedPeople = Math.max(FLOOR.formStartedPeople, Number(live.formStartedPeople) || 0);
+  const startedDidNotFinish = Math.max(0, Number(live.startedDidNotFinish) || 0);
   return {
-    formStartedPeople: Math.max(FLOOR.formStartedPeople, Number(live.formStartedPeople) || 0),
+    formStartedPeople,
     formStartedEvents: Math.max(FLOOR.formStartedEvents, Number(live.formStartedEvents) || 0),
-    startedDidNotFinish: Math.max(FLOOR.startedDidNotFinish, Number(live.startedDidNotFinish) || 0),
+    startedDidNotFinish,
     installViewedPeople: Math.max(FLOOR.installViewedPeople, Number(live.installViewedPeople) || 0),
     installCopiedPeople: Math.max(FLOOR.installCopiedPeople, Number(live.installCopiedPeople) || 0),
     surveyOpenedPeople: Math.max(FLOOR.surveyOpenedPeople, Number(live.surveyOpenedPeople) || 0),
-    source: live.source === "posthog" ? "posthog" : "floor",
+    source: live.source === "posthog" ? "posthog" : live.source === "live" ? "live" : "floor",
   };
 }
 
@@ -83,6 +82,7 @@ async function hogql(query: string): Promise<unknown[][] | null> {
 }
 
 export async function getGrowthFunnel(): Promise<GrowthFunnel> {
+  const stored = await getStoredGrowthFunnel().catch(() => null);
   const rows = await hogql(`
     SELECT
       uniqIf(person_id, event = 'waitlist_started') AS formStartedPeople,
@@ -96,20 +96,22 @@ export async function getGrowthFunnel(): Promise<GrowthFunnel> {
       AND event IN ('waitlist_started', 'waitlist_completed', 'beta_install_viewed', 'beta_install_copied', 'survey_opened')
   `);
   const row = rows?.[0];
-  if (!row) return { ...FLOOR };
-  const formStartedPeople = Number(row[0]) || 0;
-  const formStartedEvents = Number(row[1]) || 0;
+  const live = stored
+    ? maxFunnel({ ...stored, source: "live" })
+    : { ...FLOOR };
+  if (!row) return live;
+  const formStartedPeople = Math.max(live.formStartedPeople, Number(row[0]) || 0);
+  const formStartedEvents = Math.max(live.formStartedEvents, Number(row[1]) || 0);
   const formCompletedPeople = Number(row[2]) || 0;
-  const installViewedPeople = Number(row[3]) || 0;
-  const installCopiedPeople = Number(row[4]) || 0;
-  const surveyOpenedPeople = Number(row[5]) || 0;
+  const storedCompleted = Math.max(0, live.formStartedPeople - live.startedDidNotFinish);
+  const completed = Math.max(storedCompleted, formCompletedPeople);
   return maxFunnel({
     formStartedPeople,
     formStartedEvents,
-    startedDidNotFinish: Math.max(0, formStartedPeople - formCompletedPeople),
-    installViewedPeople,
-    installCopiedPeople,
-    surveyOpenedPeople,
+    startedDidNotFinish: Math.max(0, formStartedPeople - completed),
+    installViewedPeople: Math.max(live.installViewedPeople, Number(row[3]) || 0),
+    installCopiedPeople: Math.max(live.installCopiedPeople, Number(row[4]) || 0),
+    surveyOpenedPeople: Math.max(live.surveyOpenedPeople, Number(row[5]) || 0),
     source: "posthog",
   });
 }

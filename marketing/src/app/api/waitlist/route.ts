@@ -13,6 +13,7 @@ import {
 import { captureMixpanelServerEvent } from "@/lib/mixpanelServer";
 import { captureServerEvent } from "@/lib/posthogServer";
 import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
+import { recordGrowthFunnelEvent } from "@/lib/growthFunnelStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,6 +99,7 @@ export async function POST(req: Request) {
     await Promise.all([
       captureServerEvent("waitlist_completed", referralCode, completionProps),
       captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
+      recordGrowthFunnelEvent("waitlist_completed", referralCode),
     ]);
     return NextResponse.json({ duplicate: stored.duplicate, saved: true, referralCode });
   } catch (error) {

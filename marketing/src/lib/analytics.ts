@@ -61,6 +61,14 @@ const MIXPANEL_BROWSER_TOKEN = usablePublicToken(
 
 const ANON_KEY = "unvibe_anon_id";
 
+const FUNNEL_EVENTS: ReadonlySet<string> = new Set([
+  "waitlist_started",
+  "waitlist_completed",
+  "beta_install_viewed",
+  "beta_install_copied",
+  "survey_opened",
+]);
+
 export const analyticsEnabled = Boolean(POSTHOG_KEY || MIXPANEL_BROWSER_TOKEN);
 
 let mixpanelClient: MixpanelClient | null = null;
@@ -168,10 +176,22 @@ export function recordBetaSiteEvent(event: "copied" | "survey"): void {
   }).catch(() => undefined);
 }
 
+function recordFunnelEvent(event: AnalyticsEvent): void {
+  if (typeof window === "undefined") return;
+  if (!FUNNEL_EVENTS.has(event)) return;
+  void fetch("/api/funnel/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, distinctId: anonId() }),
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 /** Track an enumerated event on Mixpanel and PostHog when configured. */
 export function track(event: AnalyticsEvent, props?: Props): void {
   if (typeof window === "undefined") return;
   const cleaned = cleanedProps(props);
+  recordFunnelEvent(event);
   sendPosthog(event, cleaned);
   sendMixpanel(event, cleaned);
 }
@@ -209,6 +229,9 @@ function startPosthog(): void {
         // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
         capture_exceptions: true,
         disable_session_recording: false,
+        disable_surveys: false,
+        enable_heatmaps: true,
+        capture_dead_clicks: true,
         session_recording: {
           maskAllInputs: true,
           maskTextSelector: "[data-ph-mask]",

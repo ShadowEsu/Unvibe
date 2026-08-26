@@ -6,7 +6,7 @@ export function isProbeWaitlistEmail(email: string | null | undefined, name?: st
   const e = (email ?? "").trim().toLowerCase();
   const n = (name ?? "").trim().toLowerCase();
   if (!e) return true;
-  if (e === INSTALL_SENTINEL_EMAIL) return true;
+  if (e === INSTALL_SENTINEL_EMAIL || e.endsWith("@unvibe.internal")) return true;
   return (
     e.includes("probe") ||
     e.includes("gauge") ||
