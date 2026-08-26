@@ -1,20 +1,6 @@
--- Atomic founder counters for install copy / script fetch / finished install / feedback opens.
--- Public roles have no table access; server routes use the service-role key.
-
-create table if not exists public.beta_install_counts (
-  id         smallint primary key default 1 check (id = 1),
-  copied     bigint not null default 0 check (copied >= 0),
-  fetched    bigint not null default 0 check (fetched >= 0),
-  installed  bigint not null default 0 check (installed >= 0),
-  survey     bigint not null default 0 check (survey >= 0),
-  updated_at timestamptz not null default now()
-);
-
-insert into public.beta_install_counts (id, copied, fetched, installed, survey)
-values (1, 0, 0, 0, 0)
-on conflict (id) do nothing;
-
-alter table public.beta_install_counts enable row level security;
+-- RETURNS TABLE declared output names that collided with column names in UPDATE,
+-- so record_beta_install_event raised "column reference copied is ambiguous"
+-- and founder install counters never persisted.
 
 create or replace function public.record_beta_install_event(p_event text)
 returns table (
@@ -36,7 +22,6 @@ begin
   values (1)
   on conflict (id) do nothing;
 
-  -- Qualify target columns: RETURNS TABLE names collide with bare column refs.
   if p_event = 'copied' then
     update public.beta_install_counts as c
     set copied = c.copied + 1, updated_at = now()
@@ -62,6 +47,5 @@ begin
 end;
 $$;
 
-revoke all on table public.beta_install_counts from public, anon, authenticated;
 revoke all on function public.record_beta_install_event(text) from public, anon, authenticated;
 grant execute on function public.record_beta_install_event(text) to service_role;

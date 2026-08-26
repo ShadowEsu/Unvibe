@@ -142,13 +142,54 @@ async function readSupabase(): Promise<BetaInstallCounts> {
   return normalize(data ?? undefined);
 }
 
+async function recordSupabaseDirect(event: BetaInstallEvent): Promise<BetaInstallCounts> {
+  const client = supabaseClient();
+  const current = await readSupabase();
+  const next: BetaInstallCounts = {
+    copied: current.copied + (event === "copied" ? 1 : 0),
+    fetched: current.fetched + (event === "fetched" ? 1 : 0),
+    installed: current.installed + (event === "installed" ? 1 : 0),
+    survey: current.survey + (event === "survey" ? 1 : 0),
+  };
+  const { data, error } = await client
+    .from("beta_install_counts")
+    .upsert(
+      {
+        id: 1,
+        copied: next.copied,
+        fetched: next.fetched,
+        installed: next.installed,
+        survey: next.survey,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    )
+    .select("copied,fetched,installed,survey")
+    .single<BetaInstallCounts>();
+  if (error) throw new Error(`Supabase install stats write failed: ${error.message}`);
+  return normalize(data);
+}
+
 async function recordSupabase(event: BetaInstallEvent): Promise<BetaInstallCounts> {
   const { data, error } = await supabaseClient().rpc("record_beta_install_event", {
     p_event: event,
   });
-  if (error) throw new Error(`Supabase install stats write failed: ${error.message}`);
-  const row = Array.isArray(data) ? data[0] : data;
-  return normalize(row as Partial<BetaInstallCounts> | null | undefined);
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    return normalize(row as Partial<BetaInstallCounts> | null | undefined);
+  }
+  // Older RPC builds can fail with ambiguous column names; fall back to upsert.
+  console.error("supabase install stats rpc failed", error.message);
+  return recordSupabaseDirect(event);
+}
+
+function maxCounts(a: BetaInstallCounts, b: BetaInstallCounts): BetaInstallCounts {
+  return {
+    copied: Math.max(a.copied, b.copied),
+    fetched: Math.max(a.fetched, b.fetched),
+    installed: Math.max(a.installed, b.installed),
+    survey: Math.max(a.survey, b.survey),
+  };
 }
 
 export function parseBetaInstallEvent(value: unknown): BetaInstallEvent | null {
@@ -189,19 +230,26 @@ export async function recordBetaInstallEvent(event: BetaInstallEvent): Promise<B
 }
 
 export async function getBetaInstallCounts(): Promise<BetaInstallCounts> {
+  let fromSupabase: BetaInstallCounts | null = null;
+  let fromBlob: BetaInstallCounts | null = null;
+
   if (supabaseConfigured()) {
     try {
-      return await readSupabase();
+      fromSupabase = await readSupabase();
     } catch (error) {
       console.error("supabase install stats read failed", error);
     }
   }
   if (blobConfigured()) {
     try {
-      return await readBlob();
+      fromBlob = await readBlob();
     } catch (error) {
       console.error("blob install stats read failed", error);
     }
   }
+  // Writes may have landed in Blob while an empty Supabase row still answers reads.
+  if (fromSupabase && fromBlob) return maxCounts(fromSupabase, fromBlob);
+  if (fromSupabase) return fromSupabase;
+  if (fromBlob) return fromBlob;
   return readLocal();
 }
