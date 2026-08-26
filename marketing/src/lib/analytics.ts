@@ -25,19 +25,39 @@ type PosthogClient = {
   captureException: (error: unknown, props?: Record<string, unknown>) => void;
 };
 
-const POSTHOG_KEY =
+const POSTHOG_KEY_RAW =
   typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_POSTHOG_KEY
+    ? process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim()
     : undefined;
 
-const POSTHOG_HOST =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_HOST) ||
+const POSTHOG_HOST_RAW =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim()) ||
   "https://us.i.posthog.com";
 
-const MIXPANEL_BROWSER_TOKEN =
+function usablePublicToken(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value === "[SENSITIVE]" || value.toLowerCase() === "sensitive") return undefined;
+  return value;
+}
+
+function usableApiHost(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "https://us.i.posthog.com";
+    return url.origin;
+  } catch {
+    return "https://us.i.posthog.com";
+  }
+}
+
+const POSTHOG_KEY = usablePublicToken(POSTHOG_KEY_RAW);
+const POSTHOG_HOST = usableApiHost(POSTHOG_HOST_RAW);
+
+const MIXPANEL_BROWSER_TOKEN = usablePublicToken(
   typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_MIXPANEL_TOKEN
-    : undefined;
+    ? process.env.NEXT_PUBLIC_MIXPANEL_TOKEN?.trim()
+    : undefined,
+);
 
 const ANON_KEY = "unvibe_anon_id";
 

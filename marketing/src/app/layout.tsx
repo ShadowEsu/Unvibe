@@ -26,7 +26,12 @@ const display = Newsreader({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
+const siteUrlRaw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+const siteUrl =
+  siteUrlRaw && /^https?:\/\//i.test(siteUrlRaw) && !siteUrlRaw.includes("[SENSITIVE]")
+    ? siteUrlRaw
+    : "https://unvibe.site";
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -62,6 +67,9 @@ export const metadata: Metadata = {
     images: ["/unvibe-social-preview-v6.png"],
   },
   robots: { index: true, follow: true },
+  verification: {
+    google: "7KTQZKnFINspHj8_DOwYo9FnaD-9-nLZQ-adL2dgH6Q",
+  },
   alternates: { canonical: siteUrl },
   icons: {
     icon: [
