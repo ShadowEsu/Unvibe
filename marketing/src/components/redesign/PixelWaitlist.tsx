@@ -72,14 +72,19 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...values, ...tracking }),
       });
-      const data = (await response.json().catch(() => ({}))) as WaitlistResponse;
+      const data = (await response.json().catch(() => ({}))) as WaitlistResponse & { referralCode?: string };
       if (!response.ok) {
         setSubmitError(data.error || "We couldn't save your spot. Please try again.");
         setStatus("error");
+        track("waitlist_failed", {
+          surface: variant,
+          status: response.status,
+          code: data.code ?? "http_error",
+        });
         return;
       }
       setSavedEmail(values.email.trim().toLowerCase());
-      setReferralCode(typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string" ? (data as WaitlistResponse & { referralCode?: string }).referralCode ?? "" : "");
+      setReferralCode(typeof data.referralCode === "string" ? data.referralCode : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
       const giverEmail = (values.referredBy ?? "").trim();
@@ -98,6 +103,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
+      track("waitlist_failed", { surface: variant, code: "network" });
     }
   };
 

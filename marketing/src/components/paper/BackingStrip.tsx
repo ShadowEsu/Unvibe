@@ -3,6 +3,7 @@ import { compensationCreditsUsd, formatUsd } from "@/data/compensation";
 const sponsors = [
   { name: "Mixpanel", src: "/sponsors/mixpanel.svg" },
   { name: "PostHog", src: "/sponsors/posthog.svg" },
+  { name: "Salesforce", src: "/sponsors/salesforce.svg" },
   { name: "GitLab", src: "/sponsors/gitlab.svg" },
   { name: "AWS", src: "/sponsors/aws.svg" },
   { name: "Linear", src: "/sponsors/linear.svg" },
@@ -23,7 +24,8 @@ export function BackingStrip() {
       <div className="paper-wrap paper-center">
         <p className="paper-backing__amount">{headline}</p>
         <p className="paper-backing__lead">
-          in subscriptions and credits, backed and supported by these startup programs
+          in subscriptions and credits, backed and supported by these startup programs.
+          Affiliated with Salesforce for Startups.
         </p>
         <ul className="paper-backing__logos">
           {sponsors.map((sponsor) => (

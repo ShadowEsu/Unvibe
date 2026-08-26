@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 
 interface TrafficSummary {
   today: { views: number; visitors: number; date: string };
@@ -42,6 +43,24 @@ interface WaitlistPerson {
 
 const PRIOR_PEOPLE = 300;
 
+function isProbeSignup(email: string, name: string): boolean {
+  const e = email.toLowerCase();
+  const n = name.toLowerCase();
+  return (
+    e.includes("probe") ||
+    e.includes("gauge") ||
+    e.endsWith("@example.com") ||
+    e.endsWith("@example.invalid") ||
+    e.endsWith("@unvibe.test") ||
+    e.endsWith("@unvibe.dev") ||
+    e.includes("+livecheck") ||
+    e.includes("livecheck") ||
+    n.includes("probe") ||
+    n.includes("gauge") ||
+    n === "name unavailable"
+  );
+}
+
 function compactDate(date: string): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     .format(new Date(`${date}T12:00:00Z`));
@@ -68,6 +87,7 @@ export function FounderAnalytics() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [clearingProbes, setClearingProbes] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -109,6 +129,11 @@ export function FounderAnalytics() {
     ...(data?.stats.recentDays ?? []).map((day) => day.views),
   ), [data]);
 
+  const probeCount = useMemo(
+    () => people.filter((person) => isProbeSignup(person.email, person.name)).length,
+    [people],
+  );
+
   const deletePerson = async (email: string) => {
     const confirmed = window.confirm(`Remove ${email} from the waitlist? Use this for test signups.`);
     if (!confirmed) return;
@@ -136,6 +161,30 @@ export function FounderAnalytics() {
       setDeleteError("That signup could not be deleted. Refresh and try again.");
     } finally {
       setDeleting("");
+    }
+  };
+
+  const clearProbes = async () => {
+    const probes = people.filter((person) => isProbeSignup(person.email, person.name));
+    if (probes.length === 0) return;
+    const confirmed = window.confirm(`Delete ${probes.length} probe/test waitlist signups? Real emails stay.`);
+    if (!confirmed) return;
+    setClearingProbes(true);
+    setDeleteError(null);
+    try {
+      for (const person of probes) {
+        const response = await fetch("/api/founder/waitlist", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: person.email }),
+        });
+        if (!response.ok) throw new Error("delete failed");
+      }
+      await load();
+    } catch {
+      setDeleteError("Could not clear every probe. Refresh and delete remaining rows with the trash button.");
+    } finally {
+      setClearingProbes(false);
     }
   };
 
@@ -247,8 +296,20 @@ export function FounderAnalytics() {
 
           <article className="founder-analytics__people">
             <header>
-              <span>Waitlist</span>
-              <h2>People · delete test emails here</h2>
+              <div>
+                <span>Waitlist</span>
+                <h2>People · trash probes on the right</h2>
+              </div>
+              {probeCount > 0 ? (
+                <button
+                  type="button"
+                  className="founder-analytics__clear-probes"
+                  onClick={() => void clearProbes()}
+                  disabled={clearingProbes || Boolean(deleting)}
+                >
+                  {clearingProbes ? "Clearing…" : `Clear ${probeCount} probes`}
+                </button>
+              ) : null}
             </header>
             {peopleError ? <p className="founder-analytics__empty">{peopleError}</p> : null}
             {deleteError ? <p className="founder-analytics__empty" role="alert">{deleteError}</p> : null}
@@ -264,24 +325,26 @@ export function FounderAnalytics() {
                       <th>Email</th>
                       <th>Joined</th>
                       <th>Tool</th>
-                      <th>Actions</th>
+                      <th aria-label="Delete" />
                     </tr>
                   </thead>
                   <tbody>
                     {people.map((person) => (
-                      <tr key={`${person.email}-${person.joinedAt}`}>
+                      <tr key={`${person.email}-${person.joinedAt}`} className={isProbeSignup(person.email, person.name) ? "is-probe" : undefined}>
                         <td>{person.name}</td>
                         <td><a href={`mailto:${person.email}`}>{person.email}</a></td>
                         <td>{joinedStamp(person.joinedAt)}</td>
                         <td>{person.tool}</td>
-                        <td>
+                        <td className="founder-analytics__trash-cell">
                           <button
                             type="button"
-                            className="founder-analytics__delete"
+                            className="founder-analytics__trash"
                             onClick={() => void deletePerson(person.email)}
-                            disabled={deleting === person.email}
+                            disabled={deleting === person.email || clearingProbes}
+                            aria-label={`Delete ${person.email}`}
+                            title="Delete signup"
                           >
-                            {deleting === person.email ? "Deleting…" : "Delete"}
+                            {deleting === person.email ? "…" : <Trash2 size={16} aria-hidden="true" />}
                           </button>
                         </td>
                       </tr>

@@ -31,17 +31,42 @@ export function AdminWaitlist() {
     if (background) setRefreshing(true);
     else setState("loading");
     try {
-      const [waitlistResponse, statsResponse] = await Promise.all([
+      const [waitlistResponse, statsResponse, founderResponse] = await Promise.all([
         fetch("/api/waitlist/admin", { cache: "no-store" }),
         fetch("/api/stats", { cache: "no-store" }),
+        fetch("/api/founder/waitlist", { cache: "no-store" }),
       ]);
-      if (!waitlistResponse.ok) throw new Error("load failed");
-      const data = (await waitlistResponse.json()) as {
-        entries: WaitlistAdminEntry[];
-        generatedAt: string;
-      };
-      setEntries(data.entries);
-      setUpdatedAt(data.generatedAt);
+
+      if (waitlistResponse.ok) {
+        const data = (await waitlistResponse.json()) as {
+          entries: WaitlistAdminEntry[];
+          generatedAt: string;
+        };
+        setEntries(data.entries);
+        setUpdatedAt(data.generatedAt);
+      } else if (founderResponse.ok) {
+        // Admin Bearer token is often unset in the browser; founder list still works.
+        const roster = (await founderResponse.json()) as {
+          entries?: Array<{ name: string; email: string; joinedAt: string; tool: string }>;
+        };
+        const mapped: WaitlistAdminEntry[] = (roster.entries ?? []).map((entry, index) => {
+          const [firstName = "", ...rest] = entry.name.split(" ");
+          return {
+            id: `${entry.email}-${index}`,
+            firstName,
+            lastName: rest.join(" "),
+            email: entry.email,
+            tool: entry.tool,
+            referralCode: "",
+            createdAt: entry.joinedAt,
+          };
+        });
+        setEntries(mapped);
+        setUpdatedAt(new Date().toISOString());
+      } else {
+        throw new Error("load failed");
+      }
+
       if (statsResponse.ok) {
         const statsData = (await statsResponse.json()) as { stats?: SiteStatsSummary };
         setSiteStats(statsData.stats ?? null);

@@ -11,6 +11,21 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "26 AUG 2026",
+    category: "DISTRIBUTION",
+    title: "Smol Startup #1 daily",
+    summary: "Unvibe hit #1 on Smol Startup for the day. Public badge lives in the site footer.",
+    figure: "#1",
+    pinned: true,
+  },
+  {
+    date: "26 AUG 2026",
+    category: "COMPANY",
+    title: "Salesforce for Startups",
+    summary: "Affiliated with Salesforce for Startups. Logo added beside the other program partners on the homepage backing strip.",
+    figure: "Salesforce",
+  },
+  {
     date: "24 AUG 2026",
     category: "COMPANY",
     title: "Startup support total",
