@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { deleteWaitlistEntry, listWaitlistEntries } from "@/lib/waitlistStore";
+import { isBetaInstallStatsEmail } from "@/lib/betaInstallStats";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const entries = await listWaitlistEntries(10_000);
+    const entries = (await listWaitlistEntries(10_000)).filter(
+      (entry) => !isBetaInstallStatsEmail(entry.email),
+    );
     return NextResponse.json(
       {
         ok: true,
