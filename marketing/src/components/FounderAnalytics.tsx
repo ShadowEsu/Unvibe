@@ -242,12 +242,12 @@ export function FounderAnalytics() {
             </article>
             <article>
               <span>Install copies</span>
-              <strong>{Math.max(data.funnel?.installCopiedPeople ?? 0, data.installs?.copied ?? 0).toLocaleString()}</strong>
+              <strong>{(data.funnel?.installCopiedPeople ?? data.installs?.copied ?? 0).toLocaleString()}</strong>
               <small>{data.funnel?.installViewedPeople ?? 0} saw the command · {data.installs?.fetched ?? 0} fetches · {data.installs?.installed ?? 0} finished</small>
             </article>
             <article>
               <span>Feedback clicks</span>
-              <strong>{Math.max(data.funnel?.surveyOpenedPeople ?? 0, data.installs?.survey ?? 0).toLocaleString()}</strong>
+              <strong>{(data.funnel?.surveyOpenedPeople ?? data.installs?.survey ?? 0).toLocaleString()}</strong>
               <small>Opens of /feedback from site, email, or app</small>
             </article>
             <article>
