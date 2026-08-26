@@ -6,6 +6,7 @@ import { betaInstallScript, betaWindowsInstallScript } from "./betaInstallScript
 import { parseBetaInstallEvent, recordBetaInstallEvent } from "./betaInstallStats";
 
 const dataFile = path.join(process.cwd(), ".data", "beta-install.json");
+const tmpDataFile = path.join("/tmp", "unvibe-beta-install", "beta-install.json");
 
 describe("betaInstallScript", () => {
   it("installs Unvibe.app and clears Apple quarantine", () => {
@@ -53,6 +54,7 @@ describe("betaInstallStats", () => {
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     await fs.rm(dataFile, { force: true }).catch(() => undefined);
+    await fs.rm(tmpDataFile, { force: true }).catch(() => undefined);
     try {
       const afterCopy = await recordBetaInstallEvent("copied");
       const afterInstall = await recordBetaInstallEvent("installed");
@@ -69,6 +71,7 @@ describe("betaInstallStats", () => {
       if (previousKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
       else process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey;
       await fs.rm(dataFile, { force: true }).catch(() => undefined);
+      await fs.rm(tmpDataFile, { force: true }).catch(() => undefined);
     }
   });
 });

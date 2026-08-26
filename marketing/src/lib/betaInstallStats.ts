@@ -13,10 +13,11 @@ export interface BetaInstallCounts {
 }
 
 const BLOB_PATH = "stats/beta-install.v1.json";
-const dataDir = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDir, "beta-install.json");
+const localDataDir = path.join(process.cwd(), ".data");
+const tmpDataDir = path.join("/tmp", "unvibe-beta-install");
 
 let cachedSupabase: SupabaseClient | null = null;
+let dataFilePromise: Promise<string> | null = null;
 
 function emptyCounts(): BetaInstallCounts {
   return { copied: 0, fetched: 0, installed: 0, survey: 0 };
@@ -29,6 +30,23 @@ function normalize(parsed: Partial<BetaInstallCounts> | null | undefined): BetaI
     installed: Number(parsed?.installed) || 0,
     survey: Number(parsed?.survey) || 0,
   };
+}
+
+async function resolveDataFile(): Promise<string> {
+  if (dataFilePromise) return dataFilePromise;
+  dataFilePromise = (async () => {
+    try {
+      await fs.mkdir(localDataDir, { recursive: true });
+      const probe = path.join(localDataDir, ".write-check");
+      await fs.writeFile(probe, "ok", "utf8");
+      await fs.unlink(probe);
+      return path.join(localDataDir, "beta-install.json");
+    } catch {
+      await fs.mkdir(tmpDataDir, { recursive: true });
+      return path.join(tmpDataDir, "beta-install.json");
+    }
+  })();
+  return dataFilePromise;
 }
 
 function supabaseConfigured(): boolean {
@@ -61,7 +79,7 @@ function blobToken(): string {
 
 async function readLocal(): Promise<BetaInstallCounts> {
   try {
-    const raw = await fs.readFile(dataFile, "utf8");
+    const raw = await fs.readFile(await resolveDataFile(), "utf8");
     return normalize(JSON.parse(raw) as Partial<BetaInstallCounts>);
   } catch {
     return emptyCounts();
@@ -69,8 +87,9 @@ async function readLocal(): Promise<BetaInstallCounts> {
 }
 
 async function writeLocal(data: BetaInstallCounts): Promise<void> {
-  await fs.mkdir(dataDir, { recursive: true });
-  await fs.writeFile(dataFile, JSON.stringify(data));
+  const file = await resolveDataFile();
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(data));
 }
 
 /** Prefer public access — private put/get 500s on public Blob stores. */
@@ -156,10 +175,17 @@ export async function recordBetaInstallEvent(event: BetaInstallEvent): Promise<B
       console.error("blob install stats write failed", error);
     }
   }
-  const data = await readLocal();
-  data[event] += 1;
-  await writeLocal(data);
-  return data;
+  try {
+    const data = await readLocal();
+    data[event] += 1;
+    await writeLocal(data);
+    return data;
+  } catch (error) {
+    console.error("local install stats write failed", error);
+    const data = emptyCounts();
+    data[event] = 1;
+    return data;
+  }
 }
 
 export async function getBetaInstallCounts(): Promise<BetaInstallCounts> {
