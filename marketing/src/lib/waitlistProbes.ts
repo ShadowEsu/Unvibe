@@ -1,11 +1,12 @@
-import { isBetaInstallStatsEmail } from "@/lib/betaInstallStats";
+/** Hidden install-counter row. Must match BETA_INSTALL_STATS_EMAIL in betaInstallStats. */
+const INSTALL_SENTINEL_EMAIL = "beta-install-counts@unvibe.internal";
 
 /** Test and agent probe signups that must not inflate founder waitlist totals. */
 export function isProbeWaitlistEmail(email: string | null | undefined, name?: string): boolean {
   const e = (email ?? "").trim().toLowerCase();
   const n = (name ?? "").trim().toLowerCase();
   if (!e) return true;
-  if (isBetaInstallStatsEmail(e)) return true;
+  if (e === INSTALL_SENTINEL_EMAIL) return true;
   return (
     e.includes("probe") ||
     e.includes("gauge") ||
