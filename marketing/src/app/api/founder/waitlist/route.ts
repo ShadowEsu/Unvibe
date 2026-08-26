@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteWaitlistEntry, listWaitlistEntries } from "@/lib/waitlistStore";
-import { isBetaInstallStatsEmail } from "@/lib/betaInstallStats";
+import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const entries = (await listWaitlistEntries(10_000)).filter(
-      (entry) => !isBetaInstallStatsEmail(entry.email),
+      (entry) => !isProbeWaitlistEmail(entry.email, `${entry.firstName} ${entry.lastName}`),
     );
     return NextResponse.json(
       {

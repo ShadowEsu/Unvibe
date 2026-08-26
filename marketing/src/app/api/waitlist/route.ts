@@ -12,6 +12,7 @@ import {
 } from "@/lib/waitlistStore";
 import { captureMixpanelServerEvent } from "@/lib/mixpanelServer";
 import { captureServerEvent } from "@/lib/posthogServer";
+import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +55,9 @@ export async function POST(req: Request) {
   }
 
   const email = parsed.data.email.trim().toLowerCase();
+  if (isProbeWaitlistEmail(email, `${parsed.data.firstName} ${parsed.data.lastName}`)) {
+    return NextResponse.json({ error: "That email cannot be added to the waitlist." }, { status: 422 });
+  }
   const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
   const referredBy = referralInput?.includes("@")

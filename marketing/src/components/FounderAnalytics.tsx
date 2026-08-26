@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
+import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
+
+const PRIOR_PEOPLE = 300;
 
 interface TrafficSummary {
   today: { views: number; visitors: number; date: string };
@@ -26,12 +29,23 @@ interface InstallCounts {
   survey?: number;
 }
 
+interface GrowthFunnel {
+  formStartedPeople: number;
+  formStartedEvents: number;
+  startedDidNotFinish: number;
+  installViewedPeople: number;
+  installCopiedPeople: number;
+  surveyOpenedPeople: number;
+  source: "posthog" | "floor";
+}
+
 interface AnalyticsPayload {
   ok: true;
   stats: TrafficSummary;
   waitlist: WaitlistSummary;
   betaDownloads: number;
   installs?: InstallCounts;
+  funnel?: GrowthFunnel;
 }
 
 interface WaitlistPerson {
@@ -39,26 +53,6 @@ interface WaitlistPerson {
   email: string;
   joinedAt: string;
   tool: string;
-}
-
-const PRIOR_PEOPLE = 300;
-
-function isProbeSignup(email: string, name: string): boolean {
-  const e = email.toLowerCase();
-  const n = name.toLowerCase();
-  return (
-    e.includes("probe") ||
-    e.includes("gauge") ||
-    e.endsWith("@example.com") ||
-    e.endsWith("@example.invalid") ||
-    e.endsWith("@unvibe.test") ||
-    e.endsWith("@unvibe.dev") ||
-    e.includes("+livecheck") ||
-    e.includes("livecheck") ||
-    n.includes("probe") ||
-    n.includes("gauge") ||
-    n === "name unavailable"
-  );
 }
 
 function compactDate(date: string): string {
@@ -130,7 +124,7 @@ export function FounderAnalytics() {
   ), [data]);
 
   const probeCount = useMemo(
-    () => people.filter((person) => isProbeSignup(person.email, person.name)).length,
+    () => people.filter((person) => isProbeWaitlistEmail(person.email, person.name)).length,
     [people],
   );
 
@@ -165,7 +159,7 @@ export function FounderAnalytics() {
   };
 
   const clearProbes = async () => {
-    const probes = people.filter((person) => isProbeSignup(person.email, person.name));
+    const probes = people.filter((person) => isProbeWaitlistEmail(person.email, person.name));
     if (probes.length === 0) return;
     const confirmed = window.confirm(`Delete ${probes.length} probe/test waitlist signups? Real emails stay.`);
     if (!confirmed) return;
@@ -194,7 +188,7 @@ export function FounderAnalytics() {
         <div>
           <span className="founder-analytics__eyebrow">Founder analytics</span>
           <h1>Unvibe, by the numbers.</h1>
-          <p>Only the numbers that matter for growth: traffic, waitlist, install copies, and feedback.</p>
+          <p>Joined people stay on the roster. Form starts, copies, and drop-off come from PostHog so unfinished traffic is not invented as accounts.</p>
         </div>
         <div className="founder-analytics__actions">
           <button type="button" onClick={() => void load()} disabled={loading}>
@@ -222,9 +216,19 @@ export function FounderAnalytics() {
         <>
           <div className="founder-analytics__grid founder-analytics__grid--tight">
             <article>
-              <span>Waitlist</span>
+              <span>Waitlist joined</span>
               <strong>{data.waitlist.total.toLocaleString()}</strong>
-              <small>{data.waitlist.referred.toLocaleString()} referred · {people.length.toLocaleString()} listed below</small>
+              <small>{data.waitlist.referred.toLocaleString()} referred · {people.length.toLocaleString()} real emails below</small>
+            </article>
+            <article>
+              <span>Started the form</span>
+              <strong>{(data.funnel?.formStartedPeople ?? 0).toLocaleString()}</strong>
+              <small>{data.funnel?.formStartedEvents ?? 0} start events · PostHog unique people</small>
+            </article>
+            <article>
+              <span>Started, did not finish</span>
+              <strong>{(data.funnel?.startedDidNotFinish ?? 0).toLocaleString()}</strong>
+              <small>People who opened the form and never joined</small>
             </article>
             <article>
               <span>Visitors today</span>
@@ -238,12 +242,12 @@ export function FounderAnalytics() {
             </article>
             <article>
               <span>Install copies</span>
-              <strong>{(data.installs?.copied ?? 0).toLocaleString()}</strong>
-              <small>{data.installs?.fetched ?? 0} script fetches · {data.installs?.installed ?? 0} finished</small>
+              <strong>{Math.max(data.funnel?.installCopiedPeople ?? 0, data.installs?.copied ?? 0).toLocaleString()}</strong>
+              <small>{data.funnel?.installViewedPeople ?? 0} saw the command · {data.installs?.fetched ?? 0} fetches · {data.installs?.installed ?? 0} finished</small>
             </article>
             <article>
               <span>Feedback clicks</span>
-              <strong>{(data.installs?.survey ?? 0).toLocaleString()}</strong>
+              <strong>{Math.max(data.funnel?.surveyOpenedPeople ?? 0, data.installs?.survey ?? 0).toLocaleString()}</strong>
               <small>Opens of /feedback from site, email, or app</small>
             </article>
             <article>
@@ -298,7 +302,7 @@ export function FounderAnalytics() {
             <header>
               <div>
                 <span>Waitlist</span>
-                <h2>People · trash probes on the right</h2>
+                <h2>Joined people only</h2>
               </div>
               {probeCount > 0 ? (
                 <button
@@ -330,7 +334,7 @@ export function FounderAnalytics() {
                   </thead>
                   <tbody>
                     {people.map((person) => (
-                      <tr key={`${person.email}-${person.joinedAt}`} className={isProbeSignup(person.email, person.name) ? "is-probe" : undefined}>
+                      <tr key={`${person.email}-${person.joinedAt}`} className={isProbeWaitlistEmail(person.email, person.name) ? "is-probe" : undefined}>
                         <td>{person.name}</td>
                         <td><a href={`mailto:${person.email}`}>{person.email}</a></td>
                         <td>{joinedStamp(person.joinedAt)}</td>
@@ -356,7 +360,7 @@ export function FounderAnalytics() {
           </article>
 
           <footer className="founder-analytics__footer">
-            <span>Tracking repaired on Aug 13, 2026. Earlier Blob counters could not be recovered.</span>
+            <span>Funnel from PostHog. Joined count excludes probes and the install sentinel. Floor seeded from the Aug 26 audit if PostHog query is unavailable.</span>
             <span>{updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span>
           </footer>
         </>

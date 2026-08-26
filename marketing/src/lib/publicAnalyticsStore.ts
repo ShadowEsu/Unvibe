@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dayKey, lastNDates } from "@/lib/siteStatsStore";
-import { isBetaInstallStatsEmail } from "@/lib/betaInstallStats";
+import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
 
 export interface PublicWaitlistSummary {
   total: number;
@@ -120,7 +120,7 @@ export async function getPublicAnalytics(): Promise<{
   // if an older environment has not applied that migration yet.
   const betaDownloads = betaResult.error ? 0 : betaResult.count ?? 0;
   const waitlistRows = (waitlistResult.data ?? []).filter(
-    (row) => !isBetaInstallStatsEmail(row.email),
+    (row) => !isProbeWaitlistEmail(row.email),
   );
   return {
     waitlist: summarizeWaitlist(waitlistRows),
