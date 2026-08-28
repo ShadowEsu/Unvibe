@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
 import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 
 export function PhotoHero() {
@@ -25,6 +26,7 @@ export function PhotoHero() {
         <p className="paper-hero__kicker">Select it. Press Command U. Keep it.</p>
       </div>
       <div className={ready ? "paper-hero__foot is-ready" : "paper-hero__foot"}>
+        <JoinWaitlistRow href="/waitlist" />
         <ReleaseCountdown variant="hero" />
       </div>
     </section>

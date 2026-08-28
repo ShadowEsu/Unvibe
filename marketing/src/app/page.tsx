@@ -37,7 +37,7 @@ export default function HomePage() {
 
       <section className="paper-section paper-install" id="install">
         <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" showFeedback={false} />
+          <BetaInstall tone="page" />
         </Reveal>
       </section>
 
