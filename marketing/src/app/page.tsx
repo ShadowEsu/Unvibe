@@ -1,37 +1,102 @@
-import { Hero } from "@/components/sections/Hero";
-import { Problem } from "@/components/sections/Problem";
-import { DemoSection } from "@/components/sections/DemoSection";
-import { DepthDemo } from "@/components/sections/DepthDemo";
-import { ContextStory } from "@/components/sections/ContextStory";
-import { WorksWhere } from "@/components/sections/WorksWhere";
-import { StudyFromProjects } from "@/components/sections/StudyFromProjects";
-import { ProductGallery } from "@/components/sections/ProductGallery";
-import { Privacy } from "@/components/sections/Privacy";
-import { Waitlist } from "@/components/sections/Waitlist";
-import { Faq } from "@/components/sections/Faq";
-import { FinalCta } from "@/components/sections/FinalCta";
-import { FaqJsonLd } from "@/components/JsonLd";
+import type { Metadata } from "next";
+import { PhotoHero } from "@/components/paper/PhotoHero";
+import { DecoderBoard } from "@/components/paper/DecoderBoard";
+import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
+import { BetaInstall } from "@/components/paper/BetaInstall";
+import { BackingStrip } from "@/components/paper/BackingStrip";
+import { StoryStage } from "@/components/paper/StoryStage";
+import { TypingFaq } from "@/components/paper/TypingFaq";
+import { ChangelogList } from "@/components/paper/ChangelogList";
+import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
+import { Reveal } from "@/components/redesign/Reveal";
+import { faqItems } from "@/data/faq";
+import { changelogPreview } from "@/data/milestones";
 
-/**
- * Focused beta landing page: product proof first, supporting detail only where it earns trust.
- */
-export default function Home() {
+export const metadata: Metadata = {
+  title: "Unvibe. Learn the code AI shipped.",
+};
+
+const homeFaq = faqItems.filter((item) =>
+  ["what-is-it", "generator", "editors", "sent", "beta", "windows"].includes(item.id),
+);
+
+export default function HomePage() {
   return (
-    <>
-      <FaqJsonLd />
+    <div>
+      <PhotoHero />
 
-      <Hero />
-      <Problem />
-      <DemoSection />
-      <DepthDemo />
-      <ContextStory />
-      <WorksWhere />
-      <StudyFromProjects />
-      <ProductGallery />
-      <Privacy />
-      <Waitlist />
-      <Faq />
-      <FinalCta />
-    </>
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" />
+        </Reveal>
+      </section>
+
+      <BackingStrip />
+
+      <section className="paper-section paper-section--demo" id="product">
+        <Reveal className="paper-wrap paper-center">
+          <PaperDemoVideo />
+          <p className="paper-caption">
+            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills below are current.
+          </p>
+        </Reveal>
+      </section>
+
+      <section className="paper-section paper-section--loop" id="loop">
+        <div className="paper-wrap paper-center">
+          <Reveal>
+            <p className="paper-meta">The loop</p>
+            <h2 className="mt-3">One shortcut. The rest stays with you.</h2>
+          </Reveal>
+          <div className="mt-10">
+            <DecoderBoard />
+          </div>
+          <div className="mt-6">
+            <ShortcutKeys />
+          </div>
+        </div>
+      </section>
+
+      <StoryStage />
+
+      <section className="paper-section">
+        <Reveal className="paper-wrap paper-center">
+          <p className="paper-meta">From testers</p>
+          <div className="paper-quotes mt-8">
+            <blockquote className="paper-glass">
+              <p>The interface was simple to navigate, the explanations were clear, and Test Me made it easy to recap what I learned.</p>
+              <footer>Sharice Gustian, private beta tester</footer>
+            </blockquote>
+            <blockquote className="paper-glass">
+              <p>Setup was smooth. The floating Island feels distinctive, and the explanation depth controls make learning feel genuinely tailored.</p>
+              <footer>Om Anand Khaunte, officer, Los Altos Hacks</footer>
+            </blockquote>
+          </div>
+        </Reveal>
+      </section>
+
+      <section className="paper-section">
+        <Reveal className="paper-wrap">
+          <div className="paper-center mb-8">
+            <p className="paper-meta">Change log</p>
+            <h2 className="mt-3">What shipped.</h2>
+            <a href="/releases" className="paper-text-link">Full change log</a>
+          </div>
+          <div className="paper-log-wrap paper-glass">
+            <ChangelogList items={changelogPreview(5)} />
+          </div>
+        </Reveal>
+      </section>
+
+      <section className="paper-section">
+        <Reveal className="paper-wrap paper-center">
+          <p className="paper-meta">Questions</p>
+          <h2 className="mt-3">Short answers.</h2>
+          <div className="mt-10">
+            <TypingFaq items={homeFaq} />
+          </div>
+        </Reveal>
+      </section>
+    </div>
   );
 }

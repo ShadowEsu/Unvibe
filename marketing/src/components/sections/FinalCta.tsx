@@ -1,40 +1,39 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Button } from "../Button";
-import { durations, easing } from "@/lib/motion";
 
 export function FinalCta() {
   return (
-    <section className="container-page py-20 sm:py-28">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-10%" }}
-        transition={{ duration: durations.story, ease: easing.emphatic }}
-        className="relative overflow-hidden rounded-card border border-line bg-surface px-8 py-16 text-center sm:px-16 sm:py-20"
-      >
+    <section className="container-page section-editorial">
+      <div className="relative overflow-hidden rounded-card border border-line bg-surface px-6 py-16 text-center sm:px-12 sm:py-20">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_30%,rgb(var(--primary)/0.10),transparent_60%),radial-gradient(ellipse_40%_30%_at_80%_70%,rgb(var(--blue)/0.06),transparent_50%)]"
+          aria-hidden="true"
+        />
         <div className="relative mx-auto max-w-2xl">
-          <h2 className="text-balance text-fluid-3xl font-semibold tracking-tight text-fg">
-            Ship with AI. Learn what you shipped.
+          <p className="mb-4 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary">
+            Ship with confidence
+          </p>
+          <h2 className="text-balance font-display text-fluid-3xl font-book leading-[1.08] tracking-tight text-fg">
+            Ship with AI.
+            <br />
+            <span className="text-primary">Learn what you shipped.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-lg text-pretty text-fluid-lg leading-relaxed text-fg-muted">
-            Join the private beta for a quieter way to understand the code you
-            ship. No API key or model account required — Unvibe covers it during beta.
+            Unvibe is free for everyone in the Mac private beta.
+            No credit card. No pricing page. No catch.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-            <Button href="#waitlist" size="lg" className="btn-magnetic">
-              Join the private beta
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button href="#waitlist" size="lg">
+              Join the free beta
             </Button>
             <Button href="#demo" variant="secondary" size="lg">
               Watch the demo
             </Button>
           </div>
-          <p className="mt-6 text-fluid-sm text-fg-faint">
-            Mac first · Invitation-only beta · Free during beta · Privacy built in
+          <p className="mt-5 text-fluid-sm text-fg-faint">
+            Mac first &middot; No credit card &middot; No charge during private beta
           </p>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }

@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00.000 --> 00:06.000
+An AI coding agent builds a working tic-tac-toe feature inside Cursor.
+
+00:06.000 --> 00:13.000
+Unvibe appears beside the editor. The developer selects the changed code and presses Command U.
+
+00:13.000 --> 00:25.000
+Unvibe explains what changed, why it changed, and how the selected code fits into the project.
+
+00:25.000 --> 00:36.000
+The developer chooses an explanation level and asks a project-aware follow-up question.
+
+00:36.000 --> 00:48.000
+Test Me creates a comprehension check from the reviewed code and gives immediate feedback.
+
+00:48.000 --> 01:00.000
+The explanation is saved to the learning history so the developer can revisit the concept and track progress.

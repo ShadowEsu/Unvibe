@@ -6,8 +6,8 @@ agent writes, at the depth you choose, and checks that you understood it.
 > AI can write the code. Unvibe helps you understand it.
 
 Built with Next.js 14 (App Router), TypeScript, Tailwind CSS, Framer Motion, and a
-privacy-respecting analytics abstraction. It is independent of the product backend in
-`../web`.
+privacy-respecting analytics abstraction (named Mixpanel and optional PostHog events,
+no vendor script). It is independent of the product backend in `../web`.
 
 ## Run locally
 
@@ -32,65 +32,65 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 
 | Variable | Purpose |
 |---|---|
-| `SUPABASE_URL` | Supabase project URL for waitlist storage. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key. Never expose to the browser. |
+| `BLOB_READ_WRITE_TOKEN` | Server-only Vercel Blob credential for durable production waitlist storage. |
+| `WAITLIST_ADMIN_TOKEN` | Long random server-only secret for admin access and waitlist encryption. |
+| `WAITLIST_NOTIFY_EMAIL` | Legacy configuration only. Signup notifications are intentionally locked to `preston@unvibe.site`. |
+| `RESEND_API_KEY` | Recommended server-only Resend credential for reliable signup email. |
+| `WAITLIST_FROM_EMAIL` | Verified sender used by Resend. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL for metadata, sitemap, robots, referral links. |
-| `NEXT_PUBLIC_POSTHOG_KEY` | Optional. When empty, analytics is a no-op. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Public Supabase project URL used for founder Google sign-in. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public Supabase browser key (preferred). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Legacy public key fallback when no publishable key exists. |
+| `FOUNDER_EMAILS` | Server-only comma-separated founder Google accounts allowed to update `/build`. |
+| `NEXT_PUBLIC_MIXPANEL_TOKEN` | Optional Mixpanel project token for the browser SDK. Autocapture and session replay are on. |
+| `MIXPANEL_TOKEN` | Optional Mixpanel project token (server only). Fallback named events via `/api/analytics`. |
+| `MIXPANEL_HOST` | Optional Mixpanel API host (defaults to `https://api.mixpanel.com`). |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Optional PostHog project key. Named events only. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Optional PostHog host (defaults to US cloud). |
 
-Without Supabase configured, waitlist submissions are written to `.data/waitlist.json`
-(gitignored) so the form works end to end in development.
+Without Vercel Blob configured, waitlist submissions are written to `.data/waitlist.json`
+(gitignored) so the form works end to end in development. Production fails closed when durable
+storage is missing; it never reports a signup as saved to ephemeral serverless storage.
+
+The public `/build` page also uses Blob for its tiny status document. `/founder` signs in
+through Supabase Google OAuth, and the API verifies the bearer token and server-only founder
+email allow-list before accepting a start, heartbeat, note, or stop action.
 
 ## Waitlist storage
 
-Apply every migration in `supabase/migrations/` to your Supabase project
-(via the SQL editor or the Supabase CLI). It creates `waitlist_entries` with row-level
-security enabled and no public policies, so only the server (service role) can read or
-write it.
+Connect a Vercel Blob store to the marketing project, then set `WAITLIST_ADMIN_TOKEN` to a
+long random value. Entries are AES-256-GCM encrypted before upload and the admin endpoint is
+bearer-token protected. The old `supabase/migrations/0001_waitlist.sql` is retained for history,
+but the current marketing storage adapter does not use it.
+
+Configure Resend for founder notifications (`WAITLIST_NOTIFY_EMAIL`, default `preston@unvibe.site`).
+Failed deliveries remain visible and retryable in `/waitlist`. Signups are still saved when
+email delivery fails.
 
 ## Analytics events
 
-Fired only when a PostHog key is set, via a single fetch to the capture endpoint (no
-third-party script, no cookies, no code contents):
+Fired when Mixpanel and/or PostHog is configured. Mixpanel loads `mixpanel-browser`
+with autocapture and session replay on, then tracks named events. `/api/analytics`
+remains as a fallback when the browser token is unset. No code contents, no emails:
 
-`waitlist_started`, `waitlist_completed`, `demo_started`, `demo_completed`,
+`page_viewed`, `waitlist_started`, `waitlist_completed`, `demo_started`, `demo_completed`,
 `depth_changed`, `code_example_selected`, `faq_opened`, `referral_copied`,
-`outbound_social_clicked`, `privacy_opened`.
+`outbound_social_clicked`, `privacy_opened`, `pricing_viewed`, `billing_interval_selected`,
+`plan_cta_clicked`, `release_download_clicked`, `beta_install_viewed`,
+`beta_install_os_selected`, `beta_install_copied`, `beta_install_fetched`,
+`survey_opened`, `feedback_opened`.
+
+The desktop app does not send Mixpanel events. Do not copy the Mixpanel snippet into
+`app/`.
 
 ## Deploy to Vercel
 
-Project: **unvibe-site** (Vercel team `evantsai2010-labs-projects`).
-
-Staging / current production alias:
-
-- https://unvibe-site.vercel.app
-
-Custom domain target: **https://unvibe.site**
-
-1. Deploy from `marketing/` (`vercel deploy --prod`) or connect the GitHub repo with
-   **Root Directory** `marketing` and **Production Branch** `marketing`.
-2. Env vars are set on the Vercel project (`NEXT_PUBLIC_SITE_URL=https://unvibe.site`,
-   Supabase, `WAITLIST_NOTIFY_EMAIL`, etc.).
-3. Domains `unvibe.site` and `www.unvibe.site` are attached in Vercel.
-
-### GoDaddy DNS (required for unvibe.site)
-
-The domain currently uses GoDaddy Website Builder nameservers
-(`ns47.domaincontrol.com` / `ns48.domaincontrol.com`). Point it at Vercel instead:
-
-In GoDaddy → **unvibe.site** → **DNS** → **Records**:
-
-| Type | Name | Value | TTL |
-|---|---|---|---|
-| A | `@` | `76.76.21.21` | 600 |
-| CNAME | `www` | `cname.vercel-dns.com` | 600 |
-
-Remove or disable any GoDaddy Website Builder / forwarding records that conflict.
-After DNS propagates, https://unvibe.site should serve this Next.js waitlist site
-(not the GoDaddy builder page).
-
-Optional alternate: change nameservers to `ns1.vercel-dns.com` and
-`ns2.vercel-dns.com` (then manage DNS in Vercel).
+1. Import the repository into Vercel and set the project root to `marketing/`.
+2. Connect a Vercel Blob store and add the remaining environment variables above.
+3. Configure Resend, then submit a disposable test entry.
+4. Confirm the entry appears in `/waitlist` and the founder notification is marked sent.
+5. Vercel auto-detects Next.js; the default build (`next build`) is used.
+6. Point your domain and set `NEXT_PUBLIC_SITE_URL` to match.
 
 ## Structure
 

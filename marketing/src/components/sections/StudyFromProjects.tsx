@@ -56,21 +56,22 @@ export function StudyFromProjects() {
   return (
     <Section
       id="study"
-      eyebrow="A daily learning habit"
-      title="Five minutes with today’s code becomes understanding that lasts."
-      subtitle="Unvibe turns the code you already touched into a short, project-grounded curriculum — so each day you learn one useful concept instead of losing the thread."
+      eyebrow="Study from projects"
+      title="Turn a codebase you use into a course you can follow."
+      subtitle="Point Unvibe at a project and it proposes a short curriculum grounded in that project's real files — so you learn the concepts that actually show up in your work."
+      variant="editorial"
     >
-      <div className="mb-7 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         {projects.map((p) => (
           <button
             key={p.id}
             onClick={() => setActive(p.id)}
             aria-pressed={p.id === active}
             className={cn(
-              "flex items-center gap-2 rounded-pill border px-4 py-2.5 font-mono text-fluid-sm font-medium transition-all duration-200",
+              "flex items-center gap-2 rounded-pill border px-4 py-2 font-mono text-fluid-sm transition-colors duration-micro",
               p.id === active
-                ? "border-primary bg-primary text-on-primary shadow-sm"
-                : "border-line text-fg-muted hover:border-line-strong hover:text-fg"
+                ? "border-primary bg-primary-soft text-primary"
+                : "border-line text-fg-muted hover:text-fg"
             )}
           >
             <Folder size={14} aria-hidden="true" />
@@ -81,14 +82,14 @@ export function StudyFromProjects() {
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1.4fr]">
         {/* Project files */}
-        <div className="rounded-card border border-line bg-surface p-6">
-          <p className="mb-4 flex items-center gap-2 text-fluid-sm font-medium text-fg">
+        <div className="rounded-card border border-line bg-surface p-5">
+          <p className="mb-3 flex items-center gap-2 text-fluid-sm font-medium text-fg">
             <Folder size={15} className="text-fg-faint" aria-hidden="true" />
             {project.name}
           </p>
-          <ul className="space-y-1.5 font-mono text-[0.8rem] text-fg-muted">
+          <ul className="space-y-1.5 font-mono text-[0.78rem] text-fg-muted">
             {project.files.map((f) => (
-              <li key={f} className="rounded-lg px-2.5 py-1.5 hover:bg-surface-2">
+              <li key={f} className="rounded px-2 py-1 hover:bg-surface-2">
                 {f}
               </li>
             ))}
@@ -97,37 +98,37 @@ export function StudyFromProjects() {
 
         {/* Arrow */}
         <div className="flex items-center justify-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-primary lg:rotate-0">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-primary lg:rotate-0">
             <ArrowRight size={18} aria-hidden="true" />
           </span>
         </div>
 
         {/* Curriculum */}
-        <div className="rounded-card border border-line bg-surface p-6">
-          <p className="mb-4 flex items-center gap-2 text-fluid-sm font-medium text-fg">
+        <div className="rounded-card border border-line bg-surface p-5">
+          <p className="mb-3 flex items-center gap-2 text-fluid-sm font-medium text-fg">
             <GraduationCap size={16} className="text-primary" aria-hidden="true" />
             Proposed curriculum
           </p>
           <AnimatePresence mode="wait">
             <motion.ol
               key={project.id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: durations.standardFast, ease: easing.calm }}
-              className="space-y-2.5"
+              className="space-y-2"
             >
               {project.curriculum.map((lesson, i) => (
                 <li
                   key={lesson.title}
-                  className="flex items-start gap-3 rounded-xl border border-line bg-surface-2/50 px-3.5 py-3"
+                  className="flex items-start gap-3 rounded-xl border border-line bg-surface-2/50 px-3 py-2.5"
                 >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface text-[0.72rem] font-medium text-fg-muted">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface text-[0.7rem] font-medium text-fg-muted">
                     {i + 1}
                   </span>
                   <div>
                     <p className="text-fluid-sm text-fg">{lesson.title}</p>
-                    <span className="mt-1 inline-block rounded-pill bg-primary-soft px-2 py-0.5 font-mono text-[0.64rem] text-primary">
+                    <span className="mt-0.5 inline-block rounded-pill bg-surface px-2 py-0.5 font-mono text-[0.62rem] text-primary">
                       {lesson.concept}
                     </span>
                   </div>

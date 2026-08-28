@@ -2,7 +2,7 @@
  * FAQ content.
  *
  * Answers match the product as actually scoped:
- * Mac first; selection based (not screen OCR); no local-only mode yet;
+ * Mac and Windows private beta; selection based (not screen OCR); no local-only mode yet;
  * no enterprise certifications; AI explanations can be wrong.
  */
 
@@ -46,7 +46,7 @@ export const faqItems: FaqItem[] = [
     id: "screen",
     question: "Does it read my entire screen?",
     answer:
-      "No. Unvibe activates intentionally. You choose what to review — a selection, file, diff, or project scope. It does not record your screen or use OCR to watch everything you do.",
+      "No. Unvibe activates intentionally. You choose what to review: a selection, file, diff, or project scope. It does not record your screen or use OCR to watch everything you do.",
     category: "privacy",
   },
   {
@@ -67,7 +67,7 @@ export const faqItems: FaqItem[] = [
     id: "repo",
     question: "Can it explain an entire repository?",
     answer:
-      "Yes at a summary level. You can move from a line to a function, file, folder, git change, or repository overview. Repo summaries describe modules, data flow, and concepts to learn — they do not dump the entire codebase to a model.",
+      "Yes at a summary level. You can move from a line to a function, file, folder, git change, or repository overview. Repo summaries describe modules, data flow, and concepts to learn. They do not dump the entire codebase to a model.",
     category: "product",
   },
   {
@@ -81,42 +81,47 @@ export const faqItems: FaqItem[] = [
     id: "training",
     question: "Will my private code be used for training?",
     answer:
-      "We configure the model provider so API inputs are not used for training by default, and Unvibe does not train models on your private repositories. Confirm provider terms in Privacy if you need the contractual detail.",
+      "Unvibe does not build its own training dataset from your repositories. Before cloud beta access, we will name the configured provider and disclose its applicable retention and data-use terms; do not treat a secret filter as a guarantee that every sensitive value will be found.",
     category: "privacy",
   },
   {
     id: "free",
-    question: "Do I need my own AI API key?",
+    question: "Is Free actually usable?",
     answer:
-      "No. During the private beta, Unvibe covers the AI model. You do not need an API key, a model account, or a separate usage bill. Access is invitation-only and there is no public download yet.",
+      "Yes. Free includes the main selected-code explanation experience, saved learning, and study features. No payment card or separate AI provider key is required.",
     category: "pricing",
   },
   {
-    id: "team-pricing",
-    question: "Can my team use Unvibe?",
-    answer:
-      "The private beta is focused on individual builders. Team workflows are not part of the current release.",
+    id: "pro-annual",
+    question: "Is Pro cheaper annually?",
+    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year, about $6 per month. Team and Enterprise also take 25% off yearly: Team is $90 per seat per year, Enterprise is $450 per year.",
+    category: "pricing",
+  },
+  {
+    id: "cancel",
+    question: "What happens if I cancel?",
+    answer: "Paid access continues through the end of the billing period. Your account then returns to the Free plan, subject to the Free plan’s limits.",
     category: "pricing",
   },
   {
     id: "beta",
-    question: "When will the beta launch?",
+    question: "How do I get the product?",
     answer:
-      "A private beta for Mac is opening soon. Join the waitlist and we will email you when invites begin. We will not invent a date here before it is firm.",
+      "The private beta is live for Apple silicon Mac and Windows x64. 30 AI explanations, then it stops. Copy the install command on unvibe.site. For partnerships, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Not yet. Unvibe is Mac-first. You can still join the waitlist from Windows, but invitations currently target macOS.",
+      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from PowerShell with irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
     category: "platform",
   },
   {
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "The first release focuses on individual learners and builders. Educator and team workflows may come later; they are not the launch surface.",
+      "Team is $10 per seat, 2 seats minimum, 20 seats maximum, shared in one app. Start Team from /pricing. Enterprise is $50 a month for 1,000 AI questions and integrations. Write preston@unvibe.site for Enterprise. Annual is 25% off for both.",
     category: "platform",
   },
   {

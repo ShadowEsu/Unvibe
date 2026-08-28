@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { Logo } from "./Logo";
+import {
+  FOUNDER_EMAIL,
+  SUPPORT_EMAIL,
+  founderMailto,
+  supportMailto,
+} from "@/lib/contact";
 
 interface LegalLayoutProps {
   title: string;
@@ -16,10 +21,7 @@ interface LegalLayoutProps {
  */
 export function LegalLayout({ title, updated, intro, children }: LegalLayoutProps) {
   return (
-    <article className="container-page max-w-prose py-16 sm:py-24">
-      <Link href="/" className="mb-12 inline-flex rounded-md" aria-label="Unvibe home">
-        <Logo />
-      </Link>
+    <article className="legal-page container-page max-w-prose py-16 sm:py-24">
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-2 text-fluid-sm text-fg-muted transition-colors hover:text-fg"
@@ -34,11 +36,13 @@ export function LegalLayout({ title, updated, intro, children }: LegalLayoutProp
       <div className="legal-prose mt-10 space-y-8">{children}</div>
       <div className="mt-14 rounded-card border border-line bg-surface-2/60 p-5 text-fluid-sm text-fg-muted">
         This page summarizes our policies in plain language. Questions? Email{" "}
-        <a
-          href="mailto:hello@unvibe.app"
-          className="text-fg underline underline-offset-2"
-        >
-          hello@unvibe.app
+        <a href={supportMailto} className="text-fg underline underline-offset-2">
+          {SUPPORT_EMAIL}
+        </a>
+        {" "}
+        or{" "}
+        <a href={founderMailto} className="text-fg underline underline-offset-2">
+          {FOUNDER_EMAIL}
         </a>
         .
       </div>

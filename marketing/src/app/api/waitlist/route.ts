@@ -1,9 +1,19 @@
-import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { createHash } from "node:crypto";
-import { waitlistSchema } from "@/lib/waitlistSchema";
+import { NextResponse } from "next/server";
+import { waitlistDetailsSchema, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
+import { publicWaitlistFailure } from "@/lib/waitlistErrors";
+import {
+  recordWaitlistNotification,
+  referralCodeForEmail,
+  saveWaitlistEntry,
+  updateWaitlistDetails,
+  type WaitlistEntry,
+} from "@/lib/waitlistStore";
+import { captureMixpanelServerEvent } from "@/lib/mixpanelServer";
+import { captureServerEvent } from "@/lib/posthogServer";
+import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
+import { recordGrowthFunnelEvent } from "@/lib/growthFunnelStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,108 +37,17 @@ function referralCodeFor(email: string): string {
 }
 
 function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "local";
 }
 
-const dataDir = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDir, "waitlist.json");
-
-interface StoredEntry {
-  name?: string;
-  email: string;
-  referredBy?: string;
-  referralCode: string;
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
-  createdAt: string;
-}
-
-async function readLocal(): Promise<StoredEntry[]> {
-  try {
-    return JSON.parse(await fs.readFile(dataFile, "utf8")) as StoredEntry[];
-  } catch {
-    return [];
-  }
-}
-
-async function writeLocal(entries: StoredEntry[]): Promise<void> {
-  await fs.mkdir(dataDir, { recursive: true });
-  await fs.writeFile(dataFile, JSON.stringify(entries, null, 2), "utf8");
-}
-
-async function saveToSupabase(entry: StoredEntry): Promise<{
-  used: boolean;
-  duplicate: boolean;
-  unavailable: boolean;
-}> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const production = process.env.NODE_ENV === "production";
-  if (!url || !key) {
-    return { used: false, duplicate: false, unavailable: production };
-  }
-
-  try {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(url, key, {
-      auth: { persistSession: false },
-    });
-
-    const { error } = await supabase.from("waitlist_entries").insert({
-      name: entry.name || null,
-      email: entry.email,
-      referred_by: entry.referredBy || null,
-      referral_code: entry.referralCode,
-      utm_source: entry.utmSource || null,
-      utm_medium: entry.utmMedium || null,
-      utm_campaign: entry.utmCampaign || null,
-    });
-
-    if (error) {
-      if (error.code === "23505") {
-        return { used: true, duplicate: true, unavailable: false };
-      }
-      console.warn("supabase waitlist insert skipped", error.code, error.message);
-      return { used: false, duplicate: false, unavailable: production };
-    }
-    return { used: true, duplicate: false, unavailable: false };
-  } catch (err) {
-    console.warn("supabase waitlist unavailable", err);
-    return { used: false, duplicate: false, unavailable: production };
-  }
-}
-
-async function saveLocal(entry: StoredEntry): Promise<{ duplicate: boolean }> {
-  const entries = await readLocal();
-  const existing = entries.find((e) => e.email === entry.email);
-  if (existing) {
-    return { duplicate: true };
-  }
-  entries.push(entry);
-  await writeLocal(entries);
-  return { duplicate: false };
-}
-
 export async function POST(req: Request) {
-  const ip = clientIp(req);
-  if (rateLimited(ip)) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again shortly." },
-      { status: 429 }
-    );
+  if (rateLimited(clientIp(req))) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const parsed = waitlistSchema.safeParse(body);
+  const parsed = waitlistSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", issues: parsed.error.flatten().fieldErrors },
@@ -137,11 +56,24 @@ export async function POST(req: Request) {
   }
 
   const email = parsed.data.email.trim().toLowerCase();
+  if (isProbeWaitlistEmail(email, `${parsed.data.firstName} ${parsed.data.lastName}`)) {
+    return NextResponse.json({ error: "That email cannot be added to the waitlist." }, { status: 422 });
+  }
   const referralCode = referralCodeFor(email);
-  const entry: StoredEntry = {
-    name: `${parsed.data.firstName} ${parsed.data.lastName}`,
+  const referralInput = parsed.data.referredBy?.trim();
+  const referredBy = referralInput?.includes("@")
+    ? await referralCodeForEmail(referralInput)
+    : referralInput;
+  const promoCode = parsed.data.promoCode?.trim().toUpperCase();
+  const entry: WaitlistEntry = {
+    firstName: parsed.data.firstName,
+    lastName: parsed.data.lastName,
     email,
-    referredBy: parsed.data.referredBy || undefined,
+    referredBy,
+    // Keep every submitted code visible to the founder in admin/CSV. Eligibility
+    // for a particular offer is evaluated later, rather than silently discarding
+    // a code a waitlist member typed.
+    promoCode: promoCode || undefined,
     referralCode,
     utmSource: parsed.data.utmSource || undefined,
     utmMedium: parsed.data.utmMedium || undefined,
@@ -150,37 +82,51 @@ export async function POST(req: Request) {
   };
 
   try {
-    const supa = await saveToSupabase(entry);
-    let duplicate = supa.duplicate;
-
-    if (supa.unavailable) {
-      return NextResponse.json(
-        { error: "The beta waitlist is temporarily unavailable. Please try again shortly." },
-        { status: 503 }
-      );
-    }
-
-    if (!supa.used) {
-      const local = await saveLocal(entry);
-      duplicate = local.duplicate;
-    }
-
-    if (!duplicate) {
-      // Fire and forget — do not block the signup response.
-      void notifyFounder({
-        name: entry.name,
-        email: entry.email,
-        referralCode,
-        duplicate: false,
+    const stored = await saveWaitlistEntry(entry);
+    if (!stored.duplicate) {
+      const notification = await notifyFounder({ ...entry, duplicate: false });
+      await recordWaitlistNotification(email, notification).catch((error) => {
+        console.error("waitlist notification status write failed", error);
       });
     }
+    // Await so Vercel does not freeze the isolate before the capture request leaves.
+    const completionProps = {
+      duplicate: stored.duplicate,
+      storage: stored.storage,
+      has_referral: Boolean(referredBy),
+      has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
+    };
+    await Promise.all([
+      captureServerEvent("waitlist_completed", referralCode, completionProps),
+      captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
+      recordGrowthFunnelEvent("waitlist_completed", referralCode),
+    ]);
+    return NextResponse.json({ duplicate: stored.duplicate, saved: true, referralCode });
+  } catch (error) {
+    console.error("waitlist signup failed", error);
+    const failure = publicWaitlistFailure(error);
+    return NextResponse.json(failure, { status: failure.status });
+  }
+}
 
-    return NextResponse.json({ referralCode, duplicate });
-  } catch (err) {
-    console.error("waitlist error", err);
-    return NextResponse.json(
-      { error: "Could not save your entry. Please try again." },
-      { status: 500 }
-    );
+export async function PATCH(req: Request) {
+  if (rateLimited(clientIp(req))) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+  }
+
+  const parsed = waitlistDetailsSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 422 });
+
+  try {
+    const updated = await updateWaitlistDetails(parsed.data.email.toLowerCase(), {
+      tool: parsed.data.tool,
+      experience: parsed.data.experience,
+      message: parsed.data.message,
+    });
+    if (!updated) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
+    return NextResponse.json({ updated: true });
+  } catch (error) {
+    console.error("waitlist details update failed", error);
+    return NextResponse.json({ error: "Could not save details" }, { status: 500 });
   }
 }

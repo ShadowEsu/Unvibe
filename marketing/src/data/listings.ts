@@ -1,0 +1,63 @@
+export const listingBadges = [
+  {
+    name: "Smol Startup",
+    href: "https://smolstartup.com/projects/unvibe",
+    src: "https://smolstartup.com/smolstartup/images/badges/top1-dark.svg",
+    alt: "Smol Startup Top 1 Daily Winner",
+    width: 195,
+    height: 54,
+  },
+  {
+    name: "Tool Index",
+    href: "https://toolindex.net/tools/unvibe?ref=badge",
+    src: "https://toolindex.net/badge/unvibe/medium.svg",
+    alt: "Unvibe listed on Tool Index",
+    width: 180,
+    height: 50,
+  },
+  {
+    name: "Tool Index verify",
+    href: "https://toolindex.net",
+    src: "https://toolindex.net/badge/verify/d8a3d4fa8bba7c93.svg",
+    alt: "Verified by Tool Index",
+    width: 165,
+    height: 40,
+  },
+  {
+    name: "DevRove",
+    href: "https://devrove.com/tools/unvibe-site",
+    src: "https://devrove.com/light.svg",
+    alt: "Unvibe featured on DevRove",
+    width: 156,
+    height: 50,
+  },
+  {
+    name: "AI Tool Discovery",
+    href: "https://www.aitooldiscovery.com/tools/aih_unvibe",
+    src: "https://aitooldiscovery.com/badges/featured-1.svg",
+    alt: "Featured on AI Tool Discovery",
+    width: 200,
+    height: 54,
+  },
+  {
+    name: "LaunchBuff",
+    href: "https://launchbuff.com",
+    src: "https://launchbuff.com/badge-featured-dark.svg",
+    alt: "Featured on LaunchBuff",
+    width: 256,
+    height: 80,
+  },
+] as const;
+
+export const listingLinks = [
+  { name: "Smol Startup #1", href: "https://smolstartup.com/projects/unvibe" },
+  { name: "Product Hunt", href: "https://www.producthunt.com/products/unvibe?launch=unvibe" },
+  { name: "LaunchKiwi", href: "https://launchkiwi.com/p/unvibe" },
+  { name: "DevRove", href: "https://devrove.com/tools/unvibe-site" },
+  { name: "DEV Community", href: "https://dev.to/preston_jaysusanto_22498/how-to-review-ai-generated-code-without-losing-ownership-of-your-project-ndl" },
+  { name: "AI Tool Discovery", href: "https://www.aitooldiscovery.com/tools/aih_unvibe" },
+  { name: "VibeRank", href: "https://viberank.dev/apps/Unvibe" },
+  { name: "SideProjectors", href: "https://www.sideprojectors.com/project/86739/unvibe" },
+  { name: "LaunchBuff", href: "https://launchbuff.com" },
+  { name: "Tool Index", href: "https://toolindex.net/tools/unvibe?ref=badge" },
+] as const;

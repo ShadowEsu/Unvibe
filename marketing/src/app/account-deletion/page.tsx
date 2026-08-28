@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
+import {
+  FOUNDER_EMAIL,
+  SUPPORT_EMAIL,
+  founderMailto,
+  supportMailto,
+} from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Account deletion",
@@ -32,11 +38,11 @@ export default function AccountDeletionPage() {
 
       <LegalSection heading="Timeline">
         <ul className="list-disc space-y-2 pl-5">
-          <li>Local data is removed immediately.</li>
-          <li>Backend data is removed immediately from the primary database.</li>
+          <li>After a successful request, the app wipes its local learning store.</li>
+          <li>Associated rows are removed from the primary application database.</li>
           <li>
-            Encrypted backups may persist for a short rotation window before they age
-            out.
+            Backup and operational-log timelines depend on the final infrastructure and
+            will be published after they are verified.
           </li>
           <li>
             Code already sent to the AI provider during past reviews is governed by that
@@ -56,8 +62,12 @@ export default function AccountDeletionPage() {
       <LegalSection heading="Need help?">
         <p>
           Email{" "}
-          <a href="mailto:hello@unvibe.app">hello@unvibe.app</a> and we will help you
-          delete your account or data.
+          <a href={supportMailto}>{SUPPORT_EMAIL}</a>
+          {" "}
+          or{" "}
+          <a href={founderMailto}>{FOUNDER_EMAIL}</a>
+          {" "}
+          and we will help you delete your account or data.
         </p>
       </LegalSection>
     </LegalLayout>

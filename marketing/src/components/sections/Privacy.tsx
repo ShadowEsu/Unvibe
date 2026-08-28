@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ShieldCheck, EyeOff, Check, Ban, ArrowUpRight } from "lucide-react";
 import { Section } from "../Section";
-import { fadeUp, stagger } from "@/lib/motion";
+import { fadeUp } from "@/lib/motion";
 import { track } from "@/lib/analytics";
 
 const guarantees = [
@@ -15,22 +15,17 @@ const guarantees = [
   },
   {
     Icon: ShieldCheck,
-    title: "You choose what to review",
-    body: "Unvibe starts from the selection you ask it to explain. It does not record your screen or read code in the background.",
+    title: "Cloud use starts with your action",
+    body: "Unvibe builds limited context only when you ask for a review. Full payload preview and per-repository controls are still being completed.",
   },
   {
     Icon: Ban,
-    title: "No repository upload",
-    body: "The product sends review context, not an entire repository. Read the policy for the exact current limits and controls.",
+    title: "Provider terms stay visible",
+    body: "Unvibe does not build a training dataset from your code. The exact provider, retention, and data-use terms will be disclosed before cloud beta access.",
   },
 ];
 
-const included = [
-  "Selected code",
-  "Surrounding function",
-  "Language and relevant imports",
-  "Only the project context you approve",
-];
+const included = ["Your selected snippet", "The scope you approved", "Shallow project structure"];
 const blocked = [".env and .env.*", "*.pem · *.key · id_rsa", "node_modules / build output", "High-entropy secrets"];
 
 export function Privacy() {
@@ -38,31 +33,27 @@ export function Privacy() {
     <Section
       id="privacy"
       eyebrow="Privacy"
-      title="Your code remains under your control."
-      subtitle="You decide what to review. Before a request leaves your Mac, Unvibe scans the selection for common secrets."
+      title="Your code stays yours. By design, not by promise."
+      subtitle="Unvibe builds context locally and filters secrets before any request. The whole repository is never uploaded, and cloud analysis is consent-gated per repo."
+      variant="editorial"
+      surface="brand"
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-10%" }}
-          className="grid gap-4"
-        >
+        <div className="grid gap-3">
           {guarantees.map((g) => (
             <motion.div
               key={g.title}
               variants={fadeUp}
-              className="card-hover flex gap-4 rounded-card border border-line bg-surface p-6"
+              className="flex gap-4 rounded-card border border-line bg-surface p-5"
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                <g.Icon size={21} aria-hidden="true" />
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                <g.Icon size={20} aria-hidden="true" />
               </span>
               <div>
                 <h3 className="text-fluid-base font-semibold text-fg">
                   {g.title}
                 </h3>
-                <p className="mt-1.5 text-fluid-sm leading-relaxed text-fg-muted">
+                <p className="mt-1 text-fluid-sm leading-relaxed text-fg-muted">
                   {g.body}
                 </p>
               </div>
@@ -73,7 +64,7 @@ export function Privacy() {
             <Link
               href="/privacy"
               onClick={() => track("privacy_opened", { target: "privacy" })}
-              className="hover-underline inline-flex items-center gap-1 text-fluid-sm font-medium text-primary"
+              className="inline-flex items-center gap-1 text-fluid-sm font-medium text-primary hover:underline"
             >
               Read the privacy policy
               <ArrowUpRight size={15} aria-hidden="true" />
@@ -81,37 +72,37 @@ export function Privacy() {
             <Link
               href="/data-controls"
               onClick={() => track("privacy_opened", { target: "data-controls" })}
-              className="hover-underline inline-flex items-center gap-1 text-fluid-sm font-medium text-primary"
+              className="inline-flex items-center gap-1 text-fluid-sm font-medium text-primary hover:underline"
             >
               Data controls
               <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Transmission preview visual */}
+        {/* Illustrative filtering scope; not a capture of a live request. */}
         <motion.div
           variants={fadeUp}
           className="overflow-hidden rounded-card border border-line bg-surface"
         >
-          <div className="flex items-center justify-between border-b border-line bg-surface-2/70 px-5 py-3.5">
+          <div className="flex items-center justify-between border-b border-line bg-surface-2/70 px-5 py-3">
             <span className="text-fluid-sm font-medium text-fg">
-              What Unvibe reviews
+              Filtering scope
             </span>
-            <span className="font-mono text-[0.68rem] text-fg-faint">
-              selection-first
+            <span className="font-mono text-[0.66rem] text-fg-faint">
+              illustrative
             </span>
           </div>
           <div className="grid gap-0 sm:grid-cols-2">
             <div className="border-b border-line p-5 sm:border-b-0 sm:border-r">
               <p className="mb-3 flex items-center gap-2 text-fluid-sm font-medium text-green">
-                <Check size={15} aria-hidden="true" /> May be included
+                <Check size={15} aria-hidden="true" /> Sent
               </p>
               <ul className="space-y-2">
                 {included.map((item) => (
                   <li
                     key={item}
-                    className="rounded-lg bg-green/8 px-3 py-2 font-mono text-[0.76rem] text-fg"
+                    className="rounded-lg bg-green/8 px-3 py-2 font-mono text-[0.74rem] text-fg"
                   >
                     {item}
                   </li>
@@ -126,7 +117,7 @@ export function Privacy() {
                 {blocked.map((item) => (
                   <li
                     key={item}
-                    className="rounded-lg bg-red/8 px-3 py-2 font-mono text-[0.76rem] text-fg-muted line-through decoration-red/50"
+                    className="rounded-lg bg-red/8 px-3 py-2 font-mono text-[0.74rem] text-fg-muted line-through decoration-red/50"
                   >
                     {item}
                   </li>
@@ -134,8 +125,8 @@ export function Privacy() {
               </ul>
             </div>
           </div>
-          <p className="border-t border-line px-5 py-3.5 text-fluid-sm text-fg-muted">
-            Exact behavior and current limitations are documented in the privacy policy.
+          <p className="border-t border-line px-5 py-3 text-fluid-sm text-fg-muted">
+            Add your own rules with a <code className="font-mono text-primary">.unvibeignore</code> file.
           </p>
         </motion.div>
       </div>

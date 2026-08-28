@@ -1,11 +1,18 @@
 "use client";
 
-import { ThemeProvider } from "./ThemeProvider";
+import { VisitBeacon } from "@/components/VisitBeacon";
+import { CopyToastProvider } from "@/components/paper/CopyToast";
+import { MixpanelInit } from "@/components/providers/MixpanelInit";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
-/**
- * Client provider tree for the marketing site. Currently just theme, kept as a single
- * wrapper so additional client-only providers can be added without touching the layout.
- */
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <ThemeProvider>{children}</ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <CopyToastProvider>
+        <MixpanelInit />
+        <VisitBeacon />
+        {children}
+      </CopyToastProvider>
+    </ThemeProvider>
+  );
 }
