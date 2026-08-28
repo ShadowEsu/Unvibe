@@ -4,6 +4,7 @@ import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
+import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { ChangelogList } from "@/components/paper/ChangelogList";
@@ -25,15 +26,7 @@ export default function HomePage() {
     <div>
       <PhotoHero />
 
-      <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" />
-        </Reveal>
-      </section>
-
-      <BackingStrip />
-
-      <section className="paper-section paper-section--demo" id="product">
+      <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
           <p className="paper-caption">
@@ -41,6 +34,16 @@ export default function HomePage() {
           </p>
         </Reveal>
       </section>
+
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" showFeedback={false} />
+        </Reveal>
+      </section>
+
+      <BackingStrip />
+
+      <ToolsMarquee />
 
       <section className="paper-section paper-section--loop" id="loop">
         <div className="paper-wrap paper-center">

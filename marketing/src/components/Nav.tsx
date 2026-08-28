@@ -7,7 +7,7 @@ import { Logo } from "@/components/Logo";
 import { JoinWaitlistLink } from "@/components/paper/JoinWaitlistLink";
 
 const links = [
-  { label: "Product", href: "/" },
+  { label: "Product", href: "/#product" },
   { label: "Pricing", href: "/pricing" },
   { label: "Change Log", href: "/releases" },
   { label: "Growth", href: "/build" },
