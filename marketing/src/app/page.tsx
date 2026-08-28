@@ -4,9 +4,11 @@ import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
+import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
+import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { Reveal } from "@/components/redesign/Reveal";
@@ -26,17 +28,9 @@ export default function HomePage() {
     <div>
       <PhotoHero />
 
-      <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" />
-        </Reveal>
-      </section>
-
       <BackingStrip />
 
-      <StoryStage />
-
-      <section className="paper-section paper-section--demo" id="product">
+      <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
           <p className="paper-caption">
@@ -44,6 +38,8 @@ export default function HomePage() {
           </p>
         </Reveal>
       </section>
+
+      <ToolsMarquee />
 
       <section className="paper-section paper-section--loop" id="loop">
         <div className="paper-wrap paper-center">
@@ -59,6 +55,14 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" />
+        </Reveal>
+      </section>
+
+      <StoryStage />
 
       <section className="paper-section">
         <Reveal className="paper-wrap paper-center">
@@ -99,10 +103,12 @@ export default function HomePage() {
         </Reveal>
       </section>
 
+      <BetaSurvey />
+
       <section className="paper-section paper-waitlist">
-        <div className="paper-wrap">
+        <Reveal className="paper-wrap">
           <WaitlistInvite />
-        </div>
+        </Reveal>
       </section>
     </div>
   );
