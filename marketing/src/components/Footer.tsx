@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ListingBadges } from "@/components/paper/ListingBadges";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
@@ -6,7 +9,7 @@ import { Logo } from "@/components/Logo";
 const product = [
   ["Product", "/#product"],
   ["Pricing", "/pricing"],
-  ["Join waitlist", "/#waitlist"],
+  ["Join waitlist", "/waitlist"],
   ["Change Log", "/releases"],
   ["Growth", "/build"],
 ];
@@ -18,6 +21,8 @@ const company = [
 ];
 
 export function Footer() {
+  const pathname = usePathname();
+
   return (
     <footer className="paper-footer">
       <div className="paper-wrap grid gap-10 py-14 sm:grid-cols-[1fr_auto_auto]">
@@ -31,9 +36,11 @@ export function Footer() {
         <FooterLinks heading="Product" links={product} />
         <FooterLinks heading="Company" links={company} />
       </div>
-      <div className="paper-wrap pb-10">
-        <ListingBadges />
-      </div>
+      {pathname !== "/" ? (
+        <div className="paper-wrap pb-10">
+          <ListingBadges />
+        </div>
+      ) : null}
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Perth, Australia.</p>
       </div>

@@ -7,8 +7,6 @@ import { BackingStrip } from "@/components/paper/BackingStrip";
 import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
-import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
-import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { Reveal } from "@/components/redesign/Reveal";
@@ -28,8 +26,6 @@ export default function HomePage() {
     <div>
       <PhotoHero />
 
-      <BackingStrip />
-
       <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
@@ -38,6 +34,14 @@ export default function HomePage() {
           </p>
         </Reveal>
       </section>
+
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" showFeedback={false} />
+        </Reveal>
+      </section>
+
+      <BackingStrip />
 
       <ToolsMarquee />
 
@@ -54,12 +58,6 @@ export default function HomePage() {
             <ShortcutKeys />
           </div>
         </div>
-      </section>
-
-      <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" />
-        </Reveal>
       </section>
 
       <StoryStage />
@@ -100,14 +98,6 @@ export default function HomePage() {
           <div className="mt-10">
             <TypingFaq items={homeFaq} />
           </div>
-        </Reveal>
-      </section>
-
-      <BetaSurvey />
-
-      <section className="paper-section paper-waitlist">
-        <Reveal className="paper-wrap">
-          <WaitlistInvite />
         </Reveal>
       </section>
     </div>

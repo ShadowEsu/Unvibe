@@ -50,7 +50,7 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
-          <JoinWaitlistLink href="/#waitlist" size="nav" />
+          <JoinWaitlistLink href="/waitlist" size="nav" />
         </div>
         <button
           type="button"
@@ -76,7 +76,7 @@ export function Nav() {
                 {link.label}
               </Link>
             ))}
-            <JoinWaitlistLink href="/#waitlist" size="nav" className="mt-4 w-full" onClick={() => setOpen(false)} />
+            <JoinWaitlistLink href="/waitlist" size="nav" className="mt-4 w-full" onClick={() => setOpen(false)} />
           </div>
         </div>
       )}
