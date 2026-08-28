@@ -155,7 +155,8 @@ h2 {
 
 .paper-hero {
   position: relative;
-  min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   align-content: stretch;
@@ -173,10 +174,15 @@ h2 {
   object-position: 60% 48%;
 }
 
+.paper-hero > img {
+  filter: brightness(1.18) saturate(1.1) contrast(1.03);
+  transform: scale(1.012);
+}
+
 .paper-hero__veil {
   position: absolute;
   inset: 0;
-  background: var(--hero-veil);
+  background: rgb(8 12 26 / 0.12);
   pointer-events: none;
 }
 
@@ -187,15 +193,15 @@ h2 {
   align-content: center;
   justify-items: center;
   gap: 1.05rem;
-  padding: 7rem 1.5rem 2.5rem;
+  padding: 5rem 1.5rem 1rem;
   width: min(92rem, 94vw);
   margin-inline: auto;
   text-align: center;
 }
 
 .paper-hero__copy .paper-join-row {
-  margin-top: 0.55rem;
-  margin-bottom: 0.35rem;
+  margin-top: 0.3rem;
+  margin-bottom: 0;
 }
 
 .paper-hero__copy .paper-beta {
@@ -233,7 +239,7 @@ h2 {
   gap: 0.7rem;
   width: min(92rem, 94vw);
   margin-inline: auto;
-  padding: 1rem 1.5rem 2.4rem;
+  padding: 0.5rem 1.5rem 1.2rem;
   text-align: center;
 }
 
@@ -2595,14 +2601,21 @@ h2 {
 }
 
 .release-countdown--hero {
-  width: min(38rem, 100%);
+  width: min(34rem, 100%);
   margin-inline: auto;
-  padding: 0;
+  padding: 0.8rem 1rem 0.95rem;
+  border: 1px solid var(--hero-line);
+  border-radius: 1rem;
+  background: rgb(12 18 38 / 0.24);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--hero-type);
 }
 
 .release-countdown--hero .release-countdown__grid {
-  margin-top: 0.4rem;
+  gap: 0;
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--hero-line);
 }
 
 .release-countdown--hero .release-countdown__heading span,
@@ -2612,15 +2625,22 @@ h2 {
 }
 
 .release-countdown--hero .release-countdown__grid > div {
-  border: 1px solid var(--hero-line);
-  background: var(--hero-glass);
-  border-radius: var(--radius-field);
+  min-height: 0;
+  padding: 0.65rem 0.4rem 0;
+  border: 0;
+  border-left: 1px solid var(--hero-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.release-countdown--hero .release-countdown__grid > div:first-child {
+  border-left: 0;
 }
 
 .release-countdown--hero .release-countdown__grid strong {
   color: var(--hero-type);
   font-family: var(--font-mono);
-  font-size: clamp(1.45rem, 3vw, 2.05rem);
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
   font-variant-numeric: tabular-nums;
 }
 

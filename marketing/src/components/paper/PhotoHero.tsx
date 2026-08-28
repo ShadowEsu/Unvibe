@@ -24,9 +24,9 @@ export function PhotoHero() {
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
         <h1>Learn the code<br />AI shipped.</h1>
         <p className="paper-hero__kicker">Select it. Press Command U. Keep it.</p>
+        <JoinWaitlistRow href="/waitlist" />
       </div>
       <div className={ready ? "paper-hero__foot is-ready" : "paper-hero__foot"}>
-        <JoinWaitlistRow href="/waitlist" />
         <ReleaseCountdown variant="hero" />
       </div>
     </section>

@@ -12,10 +12,12 @@ const ROWS = [
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function noiseRow(row: string): string {
+function noiseRow(row: string, rowIndex: number): string {
   return row
     .split("")
-    .map((char) => (char === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)] ?? char))
+    .map((char, charIndex) => (
+      char === " " ? " " : GLYPHS[(rowIndex * 11 + charIndex * 7 + 5) % GLYPHS.length] ?? char
+    ))
     .join("");
 }
 
