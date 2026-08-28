@@ -9,7 +9,7 @@ import { Logo } from "@/components/Logo";
 const product = [
   ["Product", "/"],
   ["Pricing", "/pricing"],
-  ["Join waitlist", "/waitlist"],
+  ["Join waitlist", "/#waitlist"],
   ["Change Log", "/releases"],
   ["Growth", "/build"],
 ];

@@ -230,7 +230,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
 
   if (variant === "hero") {
     return (
-      <div className="hero-waitlist" id="waitlist">
+      <div className="hero-waitlist">
         {form}
       </div>
     );

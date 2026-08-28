@@ -34,7 +34,12 @@ export function BackingStrip() {
             {[0, 1].map((copy) => (
               <div className="paper-partners__group" aria-hidden={copy === 1} key={copy}>
                 {sponsors.map((sponsor) => (
-                  <div className="paper-partners__item" key={`${copy}-${sponsor.name}`}>
+                  <span
+                    className="paper-partners__item"
+                    role="img"
+                    aria-label={sponsor.name}
+                    key={`${copy}-${sponsor.name}`}
+                  >
                     <span
                       className="paper-partners__logo"
                       style={{
@@ -44,8 +49,7 @@ export function BackingStrip() {
                       }}
                       aria-hidden="true"
                     />
-                    <strong>{sponsor.name}</strong>
-                  </div>
+                  </span>
                 ))}
               </div>
             ))}

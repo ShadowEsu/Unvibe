@@ -811,49 +811,33 @@ h2 {
 .paper-partners__track {
   display: flex;
   width: max-content;
-  animation: paperPartnersMarquee 18s linear infinite;
+  animation: paperPartnersMarquee 36s linear infinite;
 }
 
 .paper-partners__group {
   display: flex;
-  align-items: stretch;
-  gap: clamp(0.8rem, 1.5vw, 1.25rem);
-  padding-right: clamp(0.8rem, 1.5vw, 1.25rem);
+  align-items: center;
+  gap: clamp(1.6rem, 3vw, 3.2rem);
+  padding-right: clamp(1.6rem, 3vw, 3.2rem);
 }
 
 .paper-partners__item {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  min-width: clamp(11.5rem, 16vw, 14rem);
-  min-height: 5.4rem;
-  padding: 1rem 1.35rem;
-  border: 1px solid var(--glass-edge);
-  border-radius: 1rem;
-  background: rgb(255 255 255 / 0.8);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-glass);
-  color: var(--ink);
-  white-space: nowrap;
+  display: grid;
+  place-items: center;
+  width: clamp(6rem, 9vw, 8rem);
+  height: 5rem;
 }
 
 .paper-partners__logo {
   flex: 0 0 auto;
-  width: 3rem;
-  height: 3rem;
+  width: clamp(3.4rem, 5vw, 4.4rem);
+  height: clamp(3.4rem, 5vw, 4.4rem);
   mask-position: center;
   -webkit-mask-position: center;
   mask-repeat: no-repeat;
   -webkit-mask-repeat: no-repeat;
   mask-size: contain;
   -webkit-mask-size: contain;
-}
-
-.paper-partners__item strong {
-  font-size: clamp(1rem, 1.4vw, 1.18rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
 }
 
 .paper-partners__viewport:hover .paper-partners__track {
@@ -1369,6 +1353,7 @@ h2 {
   width: min(36rem, 100%);
   margin-inline: auto;
   padding: 0.2rem 0 0;
+  scroll-margin-top: 6rem;
 }
 
 .paper-invite__bloom {

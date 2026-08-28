@@ -6,6 +6,7 @@ import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
+import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { Reveal } from "@/components/redesign/Reveal";
@@ -96,6 +97,12 @@ export default function HomePage() {
             <TypingFaq items={homeFaq} />
           </div>
         </Reveal>
+      </section>
+
+      <section className="paper-section paper-waitlist">
+        <div className="paper-wrap">
+          <WaitlistInvite />
+        </div>
       </section>
     </div>
   );
