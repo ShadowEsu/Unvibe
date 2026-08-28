@@ -53,7 +53,10 @@ export default function InvestorsPage() {
         <aside className="investor-hero__stage">
           <p>Current stage</p>
           <strong>Private beta</strong>
-          <span>75% to public release</span>
+          <div className="investor-hero__progress">
+            <b>75%</b>
+            <span>to public release</span>
+          </div>
           <a href="/build">Follow the live build <ArrowRight size={13} /></a>
         </aside>
       </header>
@@ -146,9 +149,6 @@ export default function InvestorsPage() {
           ))}
         </div>
       </section>
-
-      <InvestorBriefDemo />
-
       <section className="container-page investor-pipeline">
         <div>
           <p className="launch-label">Company pipeline</p>

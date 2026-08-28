@@ -7,7 +7,7 @@ import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 
 const product = [
-  ["Product", "/#product"],
+  ["Product", "/"],
   ["Pricing", "/pricing"],
   ["Join waitlist", "/waitlist"],
   ["Change Log", "/releases"],
