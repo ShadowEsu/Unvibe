@@ -4,7 +4,6 @@ import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
-import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { ChangelogList } from "@/components/paper/ChangelogList";
@@ -33,8 +32,6 @@ export default function HomePage() {
       </section>
 
       <BackingStrip />
-
-      <ToolsMarquee />
 
       <section className="paper-section paper-section--demo" id="product">
         <Reveal className="paper-wrap paper-center">
