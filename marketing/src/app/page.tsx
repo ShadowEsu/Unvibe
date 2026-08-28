@@ -26,25 +26,6 @@ export default function HomePage() {
     <div>
       <PhotoHero />
 
-      <section className="paper-section" id="product">
-        <Reveal className="paper-wrap paper-center">
-          <PaperDemoVideo />
-          <p className="paper-caption">
-            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills below are current.
-          </p>
-        </Reveal>
-      </section>
-
-      <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" />
-        </Reveal>
-      </section>
-
-      <BackingStrip />
-
-      <ToolsMarquee />
-
       <section className="paper-section paper-section--loop" id="loop">
         <div className="paper-wrap paper-center">
           <Reveal>
@@ -61,6 +42,25 @@ export default function HomePage() {
       </section>
 
       <StoryStage />
+
+      <section className="paper-section paper-section--demo" id="product">
+        <Reveal className="paper-wrap paper-center">
+          <PaperDemoVideo />
+          <p className="paper-caption">
+            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills above are current.
+          </p>
+        </Reveal>
+      </section>
+
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" />
+        </Reveal>
+      </section>
+
+      <BackingStrip />
+
+      <ToolsMarquee />
 
       <section className="paper-section">
         <Reveal className="paper-wrap paper-center">

@@ -19,7 +19,7 @@ export function PhotoHero() {
 
   return (
     <section className="paper-hero" aria-label="Unvibe private beta">
-      <img src="/hero/golden-gate.png" alt="" />
+      <img src="/hero/golden-gate-v2.png" alt="" />
       <div className="paper-hero__veil" />
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
         <h1>Learn the code<br />AI shipped.</h1>
