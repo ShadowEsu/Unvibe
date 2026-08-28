@@ -33,6 +33,8 @@ export default function HomePage() {
 
       <BackingStrip />
 
+      <StoryStage />
+
       <section className="paper-section paper-section--demo" id="product">
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
@@ -56,8 +58,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <StoryStage />
 
       <section className="paper-section">
         <Reveal className="paper-wrap paper-center">
