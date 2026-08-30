@@ -11,7 +11,6 @@ import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
 import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
-import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
 import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
@@ -34,7 +33,6 @@ export default function HomePage() {
         <Reveal className="paper-center">
           <BetaInstall />
           <div className="paper-install__waitlist">
-            <JoinWaitlistRow href="#waitlist" />
             <ReleaseCountdown variant="hero" />
           </div>
         </Reveal>
