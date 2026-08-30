@@ -11,6 +11,8 @@ import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
 import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
+import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
+import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
@@ -27,6 +29,16 @@ export default function HomePage() {
   return (
     <div>
       <PhotoHero />
+
+      <section className="paper-section paper-install paper-install--front" id="install">
+        <Reveal className="paper-center">
+          <BetaInstall />
+          <div className="paper-install__waitlist">
+            <JoinWaitlistRow href="#waitlist" />
+            <ReleaseCountdown variant="hero" />
+          </div>
+        </Reveal>
+      </section>
 
       <BackingStrip />
 
@@ -54,12 +66,6 @@ export default function HomePage() {
             <ShortcutKeys />
           </div>
         </div>
-      </section>
-
-      <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" />
-        </Reveal>
       </section>
 
       <StoryStage />
