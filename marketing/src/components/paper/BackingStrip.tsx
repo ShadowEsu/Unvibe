@@ -16,6 +16,7 @@ export function BackingStrip() {
   return (
     <section className="paper-section paper-backing" aria-label="Startup program support">
       <div className="paper-wrap paper-center">
+        <p className="paper-backing__achievement">5× SmolStartup Startup of the Day</p>
         <p className="paper-backing__amount">$230,000+</p>
         <p className="paper-backing__lead">
           in startup-program subscriptions and credits. Credits are not cash and this is not a funding round.
