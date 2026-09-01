@@ -21,11 +21,14 @@ function noiseRow(row: string): string {
 
 export function DecoderBoard() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [rows, setRows] = useState(() => ROWS.map(noiseRow));
+  const [rows, setRows] = useState<string[]>(ROWS);
   const started = useRef(false);
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduce) {
+      setRows(ROWS.map(noiseRow));
+    }
     const node = rootRef.current;
     if (!node) return;
     if (reduce) {

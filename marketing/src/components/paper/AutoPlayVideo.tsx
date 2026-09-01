@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { armAudioUnlock, isAudioUnlocked, whenAudioUnlocked } from "@/lib/autoplayAudio";
 
@@ -24,6 +24,7 @@ export function AutoPlayVideo({
   controls = true,
 }: AutoPlayVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -61,6 +62,7 @@ export function AutoPlayVideo({
       ([entry]) => {
         visible = Boolean(entry?.isIntersecting);
         if (visible) {
+          setReady(true);
           void playWithSound();
         } else {
           video.pause();
@@ -69,11 +71,10 @@ export function AutoPlayVideo({
       { threshold: 0.35 },
     );
 
-    observer.observe(video);
     if (isAudioUnlocked()) {
       video.muted = false;
     }
-    void playWithSound();
+    observer.observe(video);
 
     return () => {
       release();
@@ -92,7 +93,7 @@ export function AutoPlayVideo({
       loop={loop}
       playsInline
       controls={controls}
-      preload="auto"
+      preload={ready ? "auto" : "none"}
       aria-label={label}
     />
   );
