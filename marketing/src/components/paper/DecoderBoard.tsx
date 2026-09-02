@@ -12,23 +12,23 @@ const ROWS = [
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function noiseRow(row: string): string {
+function initialNoiseRow(row: string, rowIndex: number): string {
   return row
     .split("")
-    .map((char) => (char === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)] ?? char))
+    .map((char, charIndex) => {
+      if (char === " ") return " ";
+      return GLYPHS[(rowIndex * 17 + charIndex * 11) % GLYPHS.length] ?? char;
+    })
     .join("");
 }
 
 export function DecoderBoard() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [rows, setRows] = useState<string[]>(ROWS);
+  const [rows, setRows] = useState(() => ROWS.map(initialNoiseRow));
   const started = useRef(false);
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduce) {
-      setRows(ROWS.map(noiseRow));
-    }
     const node = rootRef.current;
     if (!node) return;
     if (reduce) {

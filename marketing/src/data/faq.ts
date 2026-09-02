@@ -53,7 +53,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What code is sent to AI providers?",
     answer:
-      "Only the filtered context you approve for an explanation: typically the selection plus limited surrounding context. Secrets are scanned on your machine first. Default exclusions cover .env files, keys, node_modules, and build output. Your whole repository is never uploaded.",
+      "Unvibe is not an offline processor. When you request an explanation, the selected code and limited surrounding context you approve are sent to the configured cloud AI provider. Secrets are scanned on your machine first, and default exclusions cover .env files, keys, node_modules, and build output. Unvibe does not crawl or upload your whole repository.",
     category: "privacy",
   },
   {
@@ -81,7 +81,7 @@ export const faqItems: FaqItem[] = [
     id: "training",
     question: "Will my private code be used for training?",
     answer:
-      "Unvibe does not build its own training dataset from your repositories. Before cloud beta access, we will name the configured provider and disclose its applicable retention and data-use terms; do not treat a secret filter as a guarantee that every sensitive value will be found.",
+      "Unvibe does not build its own training dataset from your repositories. Explanation requests are handled by the cloud AI provider configured for the service, currently Anthropic Claude or Google Gemini depending on backend configuration, and are subject to that provider’s retention and data-use terms. Do not treat a secret filter as a guarantee that every sensitive value will be found.",
     category: "privacy",
   },
   {

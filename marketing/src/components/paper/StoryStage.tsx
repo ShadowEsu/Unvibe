@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Image from "next/image";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { track } from "@/lib/analytics";
 
@@ -35,8 +34,8 @@ const beats: StoryBeat[] = [
   },
   {
     meta: "On this Mac",
-    title: "Today stays on your machine.",
-    body: "Home shows what you explained, how many lines you understood, and the next review waiting in the list.",
+    title: "Your learning record starts on this Mac.",
+    body: "Home keeps local reviews, lines understood, and your next lesson together. Signed-in learning records can sync to your account.",
     src: "/product/home-today.jpg",
     alt: "Unvibe companion Home with Today and recent reviews",
     kind: "image",
@@ -67,8 +66,8 @@ const beats: StoryBeat[] = [
   },
   {
     meta: "Privacy",
-    title: "Secrets stay on this Mac.",
-    body: "Every selection is scanned for keys and tokens before it leaves. The service never reads your repo.",
+    title: "Secrets are scanned before sending.",
+    body: "When you request an explanation, selected code and limited context go to the configured cloud AI provider after an on-device secret scan. Unvibe does not crawl or upload your whole repository.",
     src: "/product/privacy-data.jpg",
     alt: "Unvibe Privacy and Data settings with on-device secret scan",
     kind: "image",
@@ -94,7 +93,7 @@ const beats: StoryBeat[] = [
     meta: "In Cursor",
     title: "It sits beside Cursor too.",
     body: "Same shortcut. Same overlay. The editor you already have.",
-    src: "/videos/unvibe-cursor-demo.mp4",
+    src: "/videos/unvibe-cursor-demo.mp4?v=20260902b",
     poster: "/videos/unvibe-cursor-demo-poster.jpg",
     alt: "Unvibe overlay working beside Cursor",
     kind: "video",
@@ -109,11 +108,20 @@ function StoryMedia({ beat, active }: { beat: StoryBeat; active: boolean }) {
         poster={beat.poster}
         label={beat.alt}
         active={active}
+        preload="none"
       />
     );
   }
 
-  return <img src={beat.src} alt={active ? beat.alt : ""} />;
+  return (
+    <Image
+      src={beat.src}
+      alt={active ? beat.alt : ""}
+      fill
+      sizes="(max-width: 900px) calc(100vw - 2rem), 46vw"
+      style={{ objectFit: "contain" }}
+    />
+  );
 }
 
 export function StoryStage() {
@@ -139,33 +147,54 @@ export function StoryStage() {
     const node = rootRef.current;
     if (!node || reduce) return;
 
-    gsap.registerPlugin(ScrollTrigger);
-    const trigger = ScrollTrigger.create({
-      trigger: node,
-      start: "top top",
-      end: () => `+=${beats.length * 280}vh`,
-      pin: true,
-      pinSpacing: true,
-      anticipatePin: 1,
-      scrub: 1.75,
-      invalidateOnRefresh: true,
-      onUpdate: (self) => {
-        const raw = self.progress * beats.length;
-        const next = Math.min(beats.length - 1, Math.floor(raw));
-        const amount = next === beats.length - 1 && self.progress === 1 ? 1 : raw - next;
-        if (fillRef.current) {
-          fillRef.current.style.transform = `scaleX(${amount})`;
-        }
-        setActive((prev) => (prev === next ? prev : next));
-      },
-    });
+    let cancelled = false;
+    let cleanupAnimation: (() => void) | undefined;
+    const loadAnimation = async () => {
+      const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+      ]);
+      if (cancelled) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const trigger = ScrollTrigger.create({
+        trigger: node,
+        start: "top top",
+        end: () => `+=${beats.length * 280}vh`,
+        pin: true,
+        pinSpacing: true,
+        anticipatePin: 1,
+        scrub: 1.75,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const raw = self.progress * beats.length;
+          const next = Math.min(beats.length - 1, Math.floor(raw));
+          const amount = next === beats.length - 1 && self.progress === 1 ? 1 : raw - next;
+          if (fillRef.current) fillRef.current.style.transform = `scaleX(${amount})`;
+          setActive((previous) => (previous === next ? previous : next));
+        },
+      });
+      const refresh = () => ScrollTrigger.refresh();
+      window.addEventListener("load", refresh);
+      requestAnimationFrame(refresh);
+      cleanupAnimation = () => {
+        window.removeEventListener("load", refresh);
+        trigger.kill();
+      };
+    };
 
-    const refresh = () => ScrollTrigger.refresh();
-    window.addEventListener("load", refresh);
-    requestAnimationFrame(refresh);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        void loadAnimation();
+      },
+      { rootMargin: "600px 0px", threshold: 0.01 },
+    );
+    observer.observe(node);
     return () => {
-      window.removeEventListener("load", refresh);
-      trigger.kill();
+      cancelled = true;
+      observer.disconnect();
+      cleanupAnimation?.();
     };
   }, []);
 
@@ -186,14 +215,9 @@ export function StoryStage() {
           ))}
         </div>
         <div className="paper-story__media">
-          {beats.map((beat, index) => (
-            <div
-              key={beat.src}
-              className={index === active ? "paper-story__shot is-active" : "paper-story__shot"}
-            >
-              <StoryMedia beat={beat} active={index === active} />
-            </div>
-          ))}
+          <div className="paper-story__shot is-active" key={beats[active]?.src}>
+            {beats[active] ? <StoryMedia beat={beats[active]} active /> : null}
+          </div>
         </div>
       </div>
       <div className="paper-story__meter">

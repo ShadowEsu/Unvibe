@@ -20,11 +20,11 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
     const reveal = () => {
       element.animate(
         [
-          { opacity: 0, transform: "translate3d(0, 22px, 0)", filter: "blur(8px)" },
-          { opacity: 1, transform: "translate3d(0, 0, 0)", filter: "blur(0)" },
+          { opacity: 0, transform: "translate3d(0, 8px, 0)" },
+          { opacity: 1, transform: "translate3d(0, 0, 0)" },
         ],
         {
-          duration: 1400,
+          duration: 420,
           delay: delay * 1000,
           easing: "cubic-bezier(0.16, 1, 0.3, 1)",
           fill: "both",

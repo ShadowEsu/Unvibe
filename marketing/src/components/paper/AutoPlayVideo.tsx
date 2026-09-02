@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { armAudioUnlock, isAudioUnlocked, whenAudioUnlocked } from "@/lib/autoplayAudio";
 
@@ -12,6 +12,7 @@ interface AutoPlayVideoProps {
   active?: boolean;
   loop?: boolean;
   controls?: boolean;
+  preload?: "none" | "metadata" | "auto";
 }
 
 export function AutoPlayVideo({
@@ -22,9 +23,9 @@ export function AutoPlayVideo({
   active = true,
   loop = true,
   controls = true,
+  preload = "none",
 }: AutoPlayVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -38,7 +39,7 @@ export function AutoPlayVideo({
       return;
     }
 
-    let visible = true;
+    let visible = false;
     const playWithSound = async () => {
       if (!visible || !active) return;
       video.volume = 1;
@@ -62,7 +63,6 @@ export function AutoPlayVideo({
       ([entry]) => {
         visible = Boolean(entry?.isIntersecting);
         if (visible) {
-          setReady(true);
           void playWithSound();
         } else {
           video.pause();
@@ -75,7 +75,6 @@ export function AutoPlayVideo({
       video.muted = false;
     }
     observer.observe(video);
-
     return () => {
       release();
       observer.disconnect();
@@ -89,11 +88,10 @@ export function AutoPlayVideo({
       className={cn(className)}
       src={src}
       poster={poster}
-      autoPlay
       loop={loop}
       playsInline
       controls={controls}
-      preload={ready ? "auto" : "none"}
+      preload={preload}
       aria-label={label}
     />
   );

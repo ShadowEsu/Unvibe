@@ -6,7 +6,6 @@ import {
   compensationCashUsd,
   compensationCreditsUsd,
   compensationLines,
-  compensationTotalLabel,
   formatUsd,
 } from "@/data/compensation";
 
@@ -26,10 +25,12 @@ const pipeline = [
 export default function InvestorsPage() {
   const credits = formatUsd(compensationCreditsUsd());
   const cash = formatUsd(compensationCashUsd());
-  const total = compensationTotalLabel();
   const mixpanel = compensationLines.find((line) => line.name.startsWith("Mixpanel"));
   const mixpanelAmount = mixpanel ? formatUsd(mixpanel.amountUsd) : "$144,000";
   const otherLines = compensationLines.filter((line) => !line.name.startsWith("Mixpanel"));
+  const featuredSupport = ["PostHog", "GitLab", "AWS"]
+    .map((name) => compensationLines.find((line) => line.name.startsWith(name)))
+    .filter((line): line is (typeof compensationLines)[number] => Boolean(line));
 
   return (
     <article className="investor-page">
@@ -59,15 +60,17 @@ export default function InvestorsPage() {
       </header>
 
       <section className="container-page investor-money" aria-label="Total support">
-        <p className="launch-label">Total support raised</p>
-        <p className="investor-money__total">{total}</p>
+        <p className="launch-label">Program support, itemized</p>
+        <p className="investor-money__total">{mixpanelAmount} Mixpanel Pro</p>
         <p className="investor-money__mixpanel">
-          <span>Largest line</span>
-          <strong>Mixpanel for Startups · {mixpanelAmount}</strong>
-          <small>1 year Mixpanel Pro subscription credits</small>
+          <span>Other large lines</span>
+          <strong>
+            {featuredSupport.map((line) => `${line.name} · ${formatUsd(line.amountUsd)}`).join("  /  ")}
+          </strong>
+          <small>Startup-program subscriptions and credits, listed by source below</small>
         </p>
         <p className="investor-money__split">
-          Program credits {credits} · Cash {cash}. Credits are not cash. Not a funding round.
+          Program credits {credits}. Founder-reported cash {cash}, listed separately. Not a funding round.
         </p>
         <a className="investor-money__link" href="#support">
           Full breakdown by source <ArrowRight size={14} />
@@ -97,15 +100,15 @@ export default function InvestorsPage() {
       <section className="container-page investor-support" id="support">
         <div className="investor-section-copy">
           <p className="launch-label">Resource runway</p>
-          <h2>Where the {total} comes from.</h2>
+          <h2>Where the support comes from.</h2>
           <p>
             Every program credit and founder-reported cash line, listed by source.
             Credits are not cash and this is not a funding-round total.
           </p>
           <dl className="investor-support__totals">
             <div>
-              <dt>All support</dt>
-              <dd>{total}</dd>
+              <dt>Largest program line</dt>
+              <dd>{mixpanelAmount}</dd>
             </div>
             <div>
               <dt>Mixpanel for Startups</dt>

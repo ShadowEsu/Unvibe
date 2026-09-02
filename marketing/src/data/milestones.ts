@@ -28,9 +28,9 @@ export const milestones: Milestone[] = [
   {
     date: "24 AUG 2026",
     category: "COMPANY",
-    title: "Startup support total",
-    summary: "Program credits plus founder-reported cash now total $232,700. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.",
-    figure: "$232,700",
+    title: "Startup support, itemized",
+    summary: "Program support is listed source by source: $144K Mixpanel Pro, $50K PostHog, $23.7K GitLab, $5K AWS, and smaller credits. Founder-reported cash is separate. Credits are not cash. Not a round.",
+    figure: "itemized",
     pinned: true,
   },
   {

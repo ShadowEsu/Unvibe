@@ -11,7 +11,7 @@ export default function DataControlsPage() {
   return (
     <LegalLayout
       title="Data controls"
-      updated="July 2026"
+      updated="September 2026"
       intro="What Unvibe keeps, where it lives, and how you stay in control. Private code contents are never written to analytics or application logs, and secrets are filtered on-device before any transmission."
     >
       <LegalSection heading="What is stored and where">
@@ -69,9 +69,10 @@ export default function DataControlsPage() {
 
       <LegalSection heading="AI provider use">
         <p>
-          Unvibe does not build its own training dataset from your code. The configured
-          AI provider, retention window, and applicable data-use terms will be disclosed
-          and reviewed before cloud beta access is enabled.
+          Unvibe does not build its own training dataset from your code. Explanation
+          requests are handled by Anthropic Claude or Google Gemini, depending on the
+          backend provider configured for the request, and are subject to that provider&apos;s
+          applicable retention and data-use terms.
         </p>
       </LegalSection>
     </LegalLayout>

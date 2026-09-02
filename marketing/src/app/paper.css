@@ -795,9 +795,10 @@ h2 {
 }
 
 .paper-backing__amount {
-  margin: 0;
+  max-width: 18ch;
+  margin: 0 auto;
   font-family: var(--font-display);
-  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  font-size: clamp(2.15rem, 5vw, 3.35rem);
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -1343,8 +1344,7 @@ h2 {
 
 .paper-faq p {
   margin: 0.9rem 0 0;
-  min-height: 4.2rem;
-  color: var(--ink-muted);
+  color: var(--ink);
   font-size: 1.12rem;
   line-height: 1.55;
 }
@@ -2015,6 +2015,12 @@ h2 {
   color: var(--ink);
 }
 
+.investor-money__total {
+  max-width: 18ch;
+  font-size: clamp(3rem, 8vw, 7.2rem);
+  line-height: 0.94;
+}
+
 .investor-brief__copy p:last-child {
   color: var(--ink-muted);
 }
@@ -2333,6 +2339,7 @@ h2 {
 .paper-story .paper-lead {
   max-width: 32rem;
   margin: 0 auto;
+  color: var(--ink);
   font-size: 1.18rem;
 }
 

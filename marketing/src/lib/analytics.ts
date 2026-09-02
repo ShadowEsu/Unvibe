@@ -1,8 +1,7 @@
 /**
  * Privacy respecting analytics abstraction.
  *
- * Mixpanel loads via mixpanel-browser (autocapture + session replay inside
- * Mixpanel Pro startup credits). PostHog loads via posthog-js when
+ * Mixpanel loads via mixpanel-browser for named events. PostHog loads when
  * NEXT_PUBLIC_POSTHOG_KEY is set — named events, exception autocapture for
  * Error Tracking, and Surveys. We never send code contents, emails, or other
  * personal data. An anonymous id is kept in localStorage.
@@ -226,16 +225,12 @@ function startPosthog(): void {
         person_profiles: "identified_only",
         capture_pageview: true,
         capture_pageleave: true,
-        // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
+        // Keep error tracking and surveys; avoid recording the page twice.
         capture_exceptions: true,
-        disable_session_recording: false,
+        disable_session_recording: true,
         disable_surveys: false,
-        enable_heatmaps: true,
-        capture_dead_clicks: true,
-        session_recording: {
-          maskAllInputs: true,
-          maskTextSelector: "[data-ph-mask]",
-        },
+        enable_heatmaps: false,
+        capture_dead_clicks: false,
       });
       posthog.identify(anonId());
       posthogClient = posthog;
@@ -252,10 +247,10 @@ function startMixpanel(): void {
   mixpanelStart = import("mixpanel-browser")
     .then((mod) => {
       const mixpanel = mod.default as MixpanelClient;
-      // Mixpanel for Startups Pro credits: autocapture + session replay are included.
+      // Named events are enough for the beta funnel; avoid costly duplicate capture.
       mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
-        autocapture: true,
-        record_sessions_percent: 100,
+        autocapture: false,
+        record_sessions_percent: 0,
         persistence: "localStorage",
         track_pageview: true,
         ip: true,

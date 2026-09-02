@@ -21,7 +21,7 @@ const guarantees = [
   {
     Icon: Ban,
     title: "Provider terms stay visible",
-    body: "Unvibe does not build a training dataset from your code. The exact provider, retention, and data-use terms will be disclosed before cloud beta access.",
+    body: "Unvibe does not build a training dataset from your code. Cloud explanations use Anthropic Claude or Google Gemini, depending on backend configuration, under that provider’s terms.",
   },
 ];
 
