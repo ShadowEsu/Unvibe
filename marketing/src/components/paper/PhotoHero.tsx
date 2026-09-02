@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
 
 export function PhotoHero() {
@@ -18,7 +19,7 @@ export function PhotoHero() {
 
   return (
     <section className="paper-hero" aria-label="Unvibe private beta">
-      <img src="/hero/golden-gate.png" alt="" />
+      <Image src="/hero/golden-gate.png" alt="" fill priority sizes="100vw" />
       <div className="paper-hero__veil" />
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
         <h1>Learn the code<br />AI shipped.</h1>
