@@ -30,6 +30,7 @@ import {
   getOrCreateWidget,
   hideBar,
   positionBar,
+  preloadWidget,
   raiseLimitPause,
   resizeBar,
   showBar,
@@ -470,6 +471,10 @@ app.whenReady().then(() => {
   registerShortcut(s.shortcut);
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
+  // Boot the review panel hidden so ⌘U shows a pre-parsed widget instead
+  // of paying the parse + React-mount cost the first time the user reviews.
+  // Deferred one tick so it doesn't compete with the companion's first paint.
+  setTimeout(preloadWidget, 1500);
   if (pendingExternalReview) {
     const request = pendingExternalReview;
     pendingExternalReview = null;

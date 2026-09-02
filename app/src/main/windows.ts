@@ -232,7 +232,8 @@ export function applyWidgetResize(
   return { x, y, width, height };
 }
 
-function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
+function buildWidgetWindow(bounds: Electron.Rectangle, opts?: { autoShow?: boolean }): BrowserWindow {
+  const autoShow = opts?.autoShow !== false;
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
     minWidth: WIDGET_MIN_W,
@@ -281,9 +282,24 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   });
 
   lockNavigation(win);
-  win.once('ready-to-show', () => win.showInactive());
+  // On preload we parse HTML and boot React immediately, but stay hidden until
+  // the real ⌘U opens the panel — the first review then paints without waiting.
+  if (autoShow) win.once('ready-to-show', () => win.showInactive());
   void win.loadFile(page('widget'));
   return win;
+}
+
+/**
+ * Boot-time warmup: build the review panel hidden so the first ⌘U shows a
+ * pre-parsed widget instead of paying the parse/mount cost on user action.
+ * Safe to call twice — no-op if the widget already exists.
+ */
+export function preloadWidget(): void {
+  if (panelWin && !panelWin.isDestroyed()) return;
+  panelWin = buildWidgetWindow(resolveWidgetBounds(), { autoShow: false });
+  panelWin.on('closed', () => {
+    panelWin = null;
+  });
 }
 
 /** Prefer the existing review panel; create only when needed. */
