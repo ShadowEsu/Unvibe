@@ -306,9 +306,16 @@ function PermRow({ compact }: { compact?: boolean }) {
   const [state, setState] = useState<{ granted: boolean; platform: string } | null>(null);
   const check = () => void window.unvibe.accessibility().then((r) => setState(r as { granted: boolean; platform: string }));
   useEffect(() => {
+    // Re-check when the user returns from System Settings, not on a background timer.
+    // (Older code polled every 2.5s, burning wake events even while the window was hidden.)
     check();
-    const t = setInterval(check, 2500); // reflect a grant made in System Settings without a manual re-check
-    return () => clearInterval(t);
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
   const granted = state?.granted ?? false;
   const na = state?.platform !== 'darwin';
