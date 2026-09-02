@@ -11,17 +11,18 @@ import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
 import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
+import { TeamsPreview } from "@/components/paper/TeamsPreview";
 import { ReleaseCountdown } from "@/components/ReleaseCountdown";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
-  title: "Unvibe. Learn the code AI shipped.",
+  title: "Unvibe. Engineering understanding that keeps up.",
 };
 
 const homeFaq = faqItems.filter((item) =>
-  ["what-is-it", "generator", "editors", "sent", "beta", "windows"].includes(item.id),
+  ["what-is-it", "generator", "editors", "sent", "beta", "windows", "teams"].includes(item.id),
 );
 
 export default function HomePage() {
@@ -31,6 +32,11 @@ export default function HomePage() {
 
       <section className="paper-section paper-install paper-install--front" id="install">
         <Reveal className="paper-center">
+          <div className="paper-wrap paper-install__intro">
+            <p className="paper-meta">Get the private beta</p>
+            <h2>One command. Then stay in your editor.</h2>
+            <p>Choose your platform, copy the command, and open Unvibe. No separate API key.</p>
+          </div>
           <BetaInstall />
           <div className="paper-install__waitlist">
             <ReleaseCountdown variant="hero" />
@@ -65,6 +71,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <TeamsPreview />
 
       <StoryStage />
 

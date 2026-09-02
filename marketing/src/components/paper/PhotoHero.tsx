@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
 
 export function PhotoHero() {
@@ -22,9 +23,11 @@ export function PhotoHero() {
       <Image src="/hero/golden-gate.png" alt="" fill priority sizes="100vw" />
       <div className="paper-hero__veil" />
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
-        <h1>Learn the code<br />AI shipped.</h1>
-        <p className="paper-hero__kicker">Select it. Press Command U. Keep it.</p>
-        <JoinWaitlistRow href="#waitlist" />
+        <p className="paper-meta paper-hero__eyebrow">For developers and engineering teams</p>
+        <h1 className="paper-hero__headline--business">Keep your engineering team ahead of its codebase.</h1>
+        <p className="paper-hero__kicker">Select code → AI explains it → save concepts → learn.</p>
+        <JoinWaitlistRow href="#install" intent="install" />
+        <Link href="/teams" className="paper-hero__teams-link">Explore Unvibe Teams →</Link>
       </div>
     </section>
   );

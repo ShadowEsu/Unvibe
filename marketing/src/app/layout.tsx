@@ -5,6 +5,7 @@ import "./paper.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { PerformanceMode } from "@/components/providers/PerformanceMode";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -36,17 +37,17 @@ const siteUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe. Learn the code AI shipped.",
+    default: "Unvibe. Engineering understanding that keeps up.",
     template: "%s · Unvibe",
   },
   description:
-    "Select code in Cursor, VS Code, or Terminal. Press Command U. Unvibe explains it in place so you keep what you ship.",
+    "Select code, let AI explain it, save the concepts, and keep engineering understanding close to the code.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe. Learn the code AI shipped.",
+    title: "Unvibe. Engineering understanding that keeps up.",
     description:
-      "Select code, press Command U, and keep the explanation on this Mac.",
+      "Select code, let AI explain it, save concepts, and turn changes into durable engineering understanding.",
     siteName: "Unvibe",
     locale: "en_US",
     images: [
@@ -54,16 +55,16 @@ export const metadata: Metadata = {
         url: "/unvibe-social-preview-v6.png",
         width: 1200,
         height: 630,
-        alt: "Unvibe. Learn the code AI shipped.",
+        alt: "Unvibe keeps engineering understanding close to the code.",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe. Learn the code AI shipped.",
+    title: "Unvibe. Engineering understanding that keeps up.",
     description:
-      "A Mac overlay that explains selected code beside the tools you already use.",
+      "A code-understanding layer for developers and engineering teams.",
     images: ["/unvibe-social-preview-v6.png"],
   },
   robots: { index: true, follow: true },
@@ -85,9 +86,9 @@ const softwareJsonLd = {
   "@type": "SoftwareApplication",
   name: "Unvibe",
   applicationCategory: "DeveloperApplication",
-  operatingSystem: "macOS",
+  operatingSystem: "macOS, Windows",
   description:
-    "A Mac desktop overlay that explains selected AI-generated code in place.",
+    "A desktop code-understanding layer that explains selected AI-generated code in place.",
   offers: {
     "@type": "Offer",
     price: "0",
@@ -136,6 +137,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          <PerformanceMode />
           <a href="#main" className="skip-link">
             Skip to content
           </a>

@@ -4,7 +4,7 @@ import { PricingPlans } from "@/components/redesign/PricingPlans";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "You'll spend 15,000 hours+ on vibe coding. Make them count. Free is 30 explanations a month. Pro is $8 a month or $72 a year.",
+  description: "Personal code understanding starts free. Pro is $15 a month, Teams is $15 per seat, and Enterprise is $500 a month including 20 seats.",
 };
 
 export default function PricingPage() {

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { armAudioUnlock, isAudioUnlocked, whenAudioUnlocked } from "@/lib/autoplayAudio";
+import { prefersLiteExperience } from "@/lib/performanceMode";
 
 interface AutoPlayVideoProps {
   src: string;
@@ -32,8 +33,7 @@ export function AutoPlayVideo({
     if (!video) return;
     armAudioUnlock();
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !active) {
+    if (prefersLiteExperience() || !active) {
       video.pause();
       video.muted = true;
       return;

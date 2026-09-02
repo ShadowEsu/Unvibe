@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { track } from "@/lib/analytics";
+import { prefersLiteExperience } from "@/lib/performanceMode";
 
 type StoryBeat = {
   meta: string;
@@ -143,9 +144,8 @@ export function StoryStage() {
   }, [active]);
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const node = rootRef.current;
-    if (!node || reduce) return;
+    if (!node || prefersLiteExperience()) return;
 
     let cancelled = false;
     let cleanupAnimation: (() => void) | undefined;

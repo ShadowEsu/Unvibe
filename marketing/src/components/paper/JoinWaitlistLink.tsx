@@ -8,6 +8,8 @@ interface JoinWaitlistLinkProps {
   href: string;
   platform?: "mac" | "windows";
   size?: "hero" | "nav";
+  label?: string;
+  intent?: "waitlist" | "install";
   className?: string;
   onClick?: () => void;
 }
@@ -38,16 +40,19 @@ export function JoinWaitlistLink({
   href,
   platform,
   size = "hero",
+  label: labelOverride,
+  intent = "waitlist",
   className,
   onClick,
 }: JoinWaitlistLinkProps) {
   const tone = platform === "windows" ? "win" : "mac";
-  const label =
+  const label = labelOverride ?? (
     platform === "mac"
       ? "Waitlist for Mac"
       : platform === "windows"
         ? "Waitlist for Windows"
-        : "Join waitlist";
+        : "Join waitlist"
+  );
 
   return (
     <Link
@@ -56,7 +61,11 @@ export function JoinWaitlistLink({
         track("waitlist_cta_clicked", {
           platform: platform ?? "generic",
           surface: size,
+          intent,
         });
+        if (intent === "install" && platform) {
+          window.dispatchEvent(new CustomEvent("unvibe:install-platform", { detail: platform }));
+        }
         onClick?.();
       }}
       className={cn(
@@ -73,11 +82,11 @@ export function JoinWaitlistLink({
   );
 }
 
-export function JoinWaitlistRow({ href }: { href: string }) {
+export function JoinWaitlistRow({ href, intent = "waitlist" }: { href: string; intent?: "waitlist" | "install" }) {
   return (
     <div className="paper-join-row">
-      <JoinWaitlistLink href={href} platform="mac" />
-      <JoinWaitlistLink href={href} platform="windows" />
+      <JoinWaitlistLink href={href} platform="mac" intent={intent} label={intent === "install" ? "Get Mac beta" : undefined} />
+      <JoinWaitlistLink href={href} platform="windows" intent={intent} label={intent === "install" ? "Get Windows beta" : undefined} />
     </div>
   );
 }

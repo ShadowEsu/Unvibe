@@ -1,14 +1,16 @@
+import Image from "next/image";
+
 const sponsors = [
-  { name: "Mixpanel", src: "/sponsors/mixpanel.svg", color: "#7856ff" },
-  { name: "PostHog", src: "/sponsors/posthog.svg", color: "#f9bd2b" },
-  { name: "Salesforce", src: "/sponsors/salesforce.svg", color: "#00a1e0" },
-  { name: "GitLab", src: "/sponsors/gitlab.svg", color: "#fc6d26" },
-  { name: "AWS", src: "/sponsors/aws.svg", color: "#ff9900" },
-  { name: "Linear", src: "/sponsors/linear.svg", color: "#5e6ad2" },
-  { name: "Google Cloud", src: "/sponsors/googlecloud.svg", color: "#4285f4" },
-  { name: "OpenAI", src: "/sponsors/openai.svg", color: "#10a37f" },
-  { name: "Deepgram", src: "/sponsors/deepgram.svg", color: "#13b981" },
-  { name: "MongoDB", src: "/sponsors/mongodb.svg", color: "#47a248" },
+  { name: "Mixpanel", src: "/sponsors/mixpanel.svg" },
+  { name: "PostHog", src: "/sponsors/posthog.svg" },
+  { name: "Salesforce", src: "/sponsors/salesforce.svg" },
+  { name: "GitLab", src: "/sponsors/gitlab.svg" },
+  { name: "AWS", src: "/sponsors/aws.svg" },
+  { name: "Linear", src: "/sponsors/linear.svg" },
+  { name: "Google Cloud", src: "/sponsors/googlecloud.svg" },
+  { name: "OpenAI", src: "/sponsors/openai.svg" },
+  { name: "Deepgram", src: "/sponsors/deepgram.svg" },
+  { name: "MongoDB", src: "/sponsors/mongodb.svg" },
 ] as const;
 
 /** Compact homepage strip for startup-program subscriptions and credits. */
@@ -31,19 +33,9 @@ export function BackingStrip() {
                 {sponsors.map((sponsor) => (
                   <span
                     className="paper-partners__item"
-                    role="img"
-                    aria-label={sponsor.name}
                     key={`${copy}-${sponsor.name}`}
                   >
-                    <span
-                      className="paper-partners__logo"
-                      style={{
-                        backgroundColor: sponsor.color,
-                        maskImage: `url(${sponsor.src})`,
-                        WebkitMaskImage: `url(${sponsor.src})`,
-                      }}
-                      aria-hidden="true"
-                    />
+                    <Image className={`paper-partners__logo paper-partners__logo--${sponsor.name.toLowerCase().replace(/\s+/g, "-")}`} src={sponsor.src} alt={sponsor.name} width={72} height={72} loading="lazy" />
                   </span>
                 ))}
               </div>

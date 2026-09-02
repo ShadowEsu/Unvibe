@@ -195,7 +195,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <span className="success-pixel"><Check /></span>
           <p className="pixel-label">JOINED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "Joined the waitlist."}</h3>
-          <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
+          <p>Thanks for requesting access. Invitations are being issued gradually for the personal beta, Pro, and the founding Teams pilot.</p>
           {referralCode && (
             <div className="referral-success">
               <Gift size={18} />

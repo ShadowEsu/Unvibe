@@ -30,9 +30,9 @@ export function WaitlistInvite() {
   return (
     <div ref={rootRef} className={lit ? "paper-invite is-lit" : "paper-invite"}>
       <div className="paper-invite__card paper-glass">
-        <p className="paper-meta">Private beta</p>
-        <h2>Save a seat.</h2>
-        <p className="paper-lead">Mac and Windows private beta. 30 AI explanations. Name and email. You can skip the rest.</p>
+        <p className="paper-meta">Personal beta + Teams pilot</p>
+        <h2>Choose your path. Save a seat.</h2>
+        <p className="paper-lead">The personal beta is live on Mac and Windows. Join here for staged beta, Pro, or founding Teams access. Name and email; everything else is optional.</p>
         <div className="paper-invite__form">
           <PixelWaitlist variant="hero" />
         </div>

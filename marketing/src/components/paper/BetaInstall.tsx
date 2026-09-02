@@ -40,6 +40,12 @@ export function BetaInstall({
     const detected = detectInstallOs();
     setOs(detected);
     track("beta_install_viewed", { surface: tone, os: detected });
+    const selectFromCta = (event: Event) => {
+      const platform = (event as CustomEvent<InstallOs>).detail;
+      if (platform === "mac" || platform === "windows") setOs(platform);
+    };
+    window.addEventListener("unvibe:install-platform", selectFromCta);
+    return () => window.removeEventListener("unvibe:install-platform", selectFromCta);
   }, [tone]);
 
   const selectOs = (next: InstallOs) => {
@@ -124,7 +130,7 @@ export function BetaInstall({
       {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
       {showFeedback ? (
         <>
-          <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Waitlist gifts still add on.</p>
+          <p className="paper-beta__offer">Install, open Unvibe, then select code and press the shortcut. After 30 explanations, the feedback form unlocks 1 week of Pro.</p>
           <a
             className="paper-beta__survey"
             href={BETA_FEEDBACK_URL}

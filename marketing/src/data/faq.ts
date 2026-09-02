@@ -93,8 +93,8 @@ export const faqItems: FaqItem[] = [
   },
   {
     id: "pro-annual",
-    question: "Is Pro cheaper annually?",
-    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year, about $6 per month. Team and Enterprise also take 25% off yearly: Team is $90 per seat per year, Enterprise is $450 per year.",
+    question: "How much does Pro cost?",
+    answer: "Pro is $15 per month for one developer. Teams founding-pilot pricing is $15 per seat per month. Enterprise is planned at $500 per month including 20 seats, then $15 for each additional seat.",
     category: "pricing",
   },
   {
@@ -119,9 +119,9 @@ export const faqItems: FaqItem[] = [
   },
   {
     id: "teams",
-    question: "Can educators or teams use it?",
+    question: "What is Unvibe Teams?",
     answer:
-      "Team is $10 per seat, 2 seats minimum, 20 seats maximum, shared in one app. Start Team from /pricing. Enterprise is $50 a month for 1,000 AI questions and integrations. Write preston@unvibe.site for Enterprise. Annual is 25% off for both.",
+      "Unvibe Teams is the GitHub-connected engineering knowledge layer in development: shared context, PR and repository understanding, knowledge freshness, onboarding, and transparent knowledge-risk signals. Teams is a founding pilot at $15 per seat per month. Roadmap capabilities are labeled Pilot or Planned until they ship.",
     category: "platform",
   },
   {

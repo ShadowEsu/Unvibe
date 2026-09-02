@@ -5,14 +5,15 @@ import { Logo } from "@/components/Logo";
 
 const product = [
   ["Product", "/#product"],
+  ["Teams", "/teams"],
   ["Pricing", "/pricing"],
-  ["Join waitlist", "/#waitlist"],
+  ["Get Unvibe", "/#install"],
   ["Change Log", "/releases"],
-  ["Growth", "/build"],
 ];
 
 const company = [
   ["Investors", "/investors"],
+  ["Growth", "/build"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
 ];
@@ -24,7 +25,7 @@ export function Footer() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-4 text-sm leading-relaxed">
-            Select the code. Press Command U. Keep what you learned on this Mac.
+            Select code → AI explains it → save concepts → learn.
           </p>
           <SocialFollowLinks includeMail />
         </div>
