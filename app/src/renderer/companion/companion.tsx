@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { RichText } from '../shared/richText';
@@ -48,6 +48,7 @@ interface Settings {
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
   useOwnAi: boolean;
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
+  sidebarState: 'expanded' | 'compact' | 'hidden';
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
@@ -81,6 +82,10 @@ const IC = {
   clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
   map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
   plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
+  search: 'M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z M17 17l-3.5-3.5',
+  sidebar: 'M3 4h14v12H3z M8 4v12',
+  chat: 'M3 5h14v8H8l-4 3v-3H3z',
+  close: 'M5 5l10 10 M15 5l-10 10',
 };
 
 const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'History' | 'Quiz'>, PageDef> = {
@@ -128,13 +133,13 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'History' | '
   ] },
 };
 
-const NAV: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home },
-  { id: 'Study', icon: IC.study },
-  { id: 'History', icon: IC.history },
-  { id: 'Quiz', icon: IC.quiz },
-  { id: 'Progress', icon: IC.progress },
-  { id: 'Plan', icon: IC.plan },
+const NAV: Array<{ id: PageId; icon: string; label: string }> = [
+  { id: 'Home', icon: IC.home, label: 'Home' },
+  { id: 'Study', icon: IC.study, label: 'Library' },
+  { id: 'History', icon: IC.history, label: 'History' },
+  { id: 'Quiz', icon: IC.quiz, label: 'Quiz' },
+  { id: 'Progress', icon: IC.progress, label: 'Progress' },
+  { id: 'Plan', icon: IC.plan, label: 'Plan' },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
@@ -392,25 +397,123 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
   );
 }
 
-function UsageChip({ usage, onPlan, compact = false }: {
+const USAGE_PIXELS = 10;
+
+function UsageChip({ usage, onPlan, compact = false, dense = false }: {
   usage: { used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null;
   onPlan: () => void;
   compact?: boolean;
+  /** Icon-rail rendering for the collapsed sidebar — a title tooltip carries the detail. */
+  dense?: boolean;
 }) {
   if (!usage) return null;
   const low = usage.remaining <= 5;
   const out = usage.remaining <= 0;
   const planLabel = usage.plan === 'full' ? 'Full' : usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
+  const pct = usage.limit > 0 ? Math.max(0, Math.min(1, usage.remaining / usage.limit)) : 0;
+  const filled = Math.round(pct * USAGE_PIXELS);
+  const title = `${planLabel} · ${usage.remaining}/${usage.limit} left · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
+  const tone = out ? ' usage-chip--out' : low ? ' usage-chip--low' : '';
+
+  if (dense) {
+    return (
+      <button type="button" className={`usage-rail${tone}`} onClick={onPlan} title={title} aria-label={title}>
+        <span className="usage-rail__pixels" aria-hidden="true">
+          {Array.from({ length: USAGE_PIXELS }, (_, i) => <i key={i} className={i < filled ? 'on' : ''} />)}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
-      className={`usage-chip${compact ? ' usage-chip--side' : ''}${out ? ' usage-chip--out' : low ? ' usage-chip--low' : ''}`}
+      className={`usage-chip${compact ? ' usage-chip--side' : ''}${tone}`}
       onClick={onPlan}
-      title={`${planLabel} · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}
+      title={title}
     >
-      <span>{out ? 'No messages left' : `${usage.remaining} messages left`}</span>
-      <small>{usage.used}/{usage.limit} used · {planLabel}</small>
+      <span className="usage-chip__pixels" aria-hidden="true">
+        {Array.from({ length: USAGE_PIXELS }, (_, i) => <i key={i} className={i < filled ? 'on' : ''} />)}
+      </span>
+      <span className="usage-chip__text">
+        <span>{out ? 'No messages left' : `${usage.remaining} left`}</span>
+        <small>{usage.used}/{usage.limit} used · {planLabel}</small>
+      </span>
     </button>
+  );
+}
+
+interface PaletteAction { id: string; label: string; hint?: string; run: () => void }
+
+function CommandPalette({ actions, onClose }: { actions: PaletteAction[]; onClose: () => void }) {
+  const [query, setQuery] = useState('');
+  const [index, setIndex] = useState(0);
+  const filtered = actions.filter((a) => a.label.toLowerCase().includes(query.trim().toLowerCase()));
+
+  useEffect(() => setIndex(0), [query]);
+
+  const onKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setIndex((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0))); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setIndex((i) => Math.max(i - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); const a = filtered[index]; if (a) { a.run(); onClose(); } }
+    else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+  };
+
+  return (
+    <div className="cmdk" role="presentation" onClick={onClose}>
+      <div className="cmdk__panel" role="dialog" aria-modal="true" aria-label="Command palette" onClick={(e) => e.stopPropagation()} onKeyDown={onKey}>
+        <div className="cmdk__field"><Icon d={IC.search} /><input autoFocus className="cmdk__input" placeholder="Search pages and actions…" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
+        <div className="cmdk__list" role="listbox">
+          {filtered.length === 0 ? <div className="cmdk__empty">No matches.</div> : filtered.map((a, i) => (
+            <button key={a.id} type="button" role="option" aria-selected={i === index} className={i === index ? 'on' : ''} onMouseEnter={() => setIndex(i)} onClick={() => { a.run(); onClose(); }}>
+              <span>{a.label}</span>{a.hint && <small>{a.hint}</small>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AskUnvibePopover({ target, onClose }: { target: LearningItem | null; onClose: () => void }) {
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const ask = async () => {
+    if (!target || !question.trim()) return;
+    setBusy(true); setError(''); setAnswer('');
+    const result = await window.unvibe.studyAsk({ eventId: target.id, question }) as { ok: boolean; answer?: string; error?: string };
+    setBusy(false);
+    if (!result.ok) { setError(result.error ?? 'Could not ask.'); return; }
+    setAnswer(result.answer ?? '');
+    setQuestion('');
+  };
+
+  return (
+    <div className="ask-backdrop" role="presentation" onClick={onClose}>
+      <div className="ask-pop" role="dialog" aria-modal="true" aria-label="Ask Unvibe" onClick={(e) => e.stopPropagation()}>
+        <div className="ask-pop__head"><Icon d={IC.chat} /><span>Ask Unvibe</span><button type="button" className="ask-pop__close" onClick={onClose} aria-label="Close"><Icon d={IC.close} /></button></div>
+        {!target ? (
+          <p className="muted">Review some code first — Unvibe answers questions about what you have already looked at.</p>
+        ) : (
+          <>
+            <p className="ask-pop__context">About <b>{target.title}</b></p>
+            <textarea rows={3} placeholder="What do you want to understand?" value={question} onChange={(e) => setQuestion(e.target.value)} disabled={busy} />
+            <button type="button" className="primary-btn" disabled={busy || !question.trim()} onClick={() => void ask()}>{busy ? 'Thinking…' : 'Ask'}</button>
+            {error ? <p className="form-error">{error}</p> : null}
+            {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><div className="lesson-explain__body">{answer}</div></div> : null}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1354,6 +1457,8 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
   const [usageLine, setUsageLine] = useState<{ used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
 
   const refresh = async () => {
     try {
@@ -1419,6 +1524,37 @@ function App() {
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
   const shortcutLabel = prettyAccel(info.shortcut);
+  const sidebarState = settings?.sidebarState ?? 'expanded';
+
+  useEffect(() => {
+    if (gate !== 'app') return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [gate]);
+
+  const cycleSidebar = () => {
+    const order: Settings['sidebarState'][] = ['expanded', 'compact', 'hidden'];
+    const next = order[(order.indexOf(sidebarState) + 1) % order.length]!;
+    void applySettings({ sidebarState: next });
+  };
+  const sidebarToggleLabel = sidebarState === 'expanded' ? 'Collapse sidebar' : sidebarState === 'compact' ? 'Hide sidebar' : 'Show sidebar';
+
+  const latestLesson = history.find((item) => Boolean(item.code)) ?? null;
+
+  const paletteActions: PaletteAction[] = useMemo(() => [
+    ...NAV.map((p) => ({ id: `nav-${p.id}`, label: p.label, hint: 'Go to page', run: () => setPage(p.id) })),
+    { id: 'settings', label: 'Open Settings', hint: 'Preferences', run: () => setSettingsOpen(true) },
+    { id: 'ask', label: 'Ask Unvibe', hint: 'Ask about your last review', run: () => setAskOpen(true) },
+    { id: 'review', label: 'Explain some code', hint: shortcutLabel, run: () => window.unvibe.companionReview() },
+    { id: 'theme', label: themeIsDark ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance', run: () => void applySettings({ theme: themeIsDark ? 'light' : 'dark' }) },
+    { id: 'sidebar', label: sidebarToggleLabel, hint: 'Layout', run: cycleSidebar },
+  ], [shortcutLabel, themeIsDark, sidebarToggleLabel]);
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
@@ -1431,27 +1567,45 @@ function App() {
   return (
     <>
       <div className="titlebar" />
-      <div className="layout">
-        <aside className="side fade-in fade-in--side">
-          <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
-          <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
-          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} onClick={() => setPage(p.id)}><Icon d={p.icon} />{p.id}</button>)}</nav>
-          <div className="spacer" />
-          <button
-            className={`sync-state sync-state--${sync.phase}`}
-            aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
-            onClick={() => void window.unvibe.retrySync()}
-            disabled={sync.phase === 'syncing' || sync.phase === 'local'}
-          >
-            <span className="sync-state__dot" />
-            <span>{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
-            {sync.pending > 0 && <small>{sync.pending} pending</small>}
-          </button>
-          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free · 100 on Pro. AI access included—no provider API key needed.</div></div>
-          <nav className="nav">{FOOT.map((f) => <button key={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{f.id}</button>)}</nav>
-        </aside>
+      <div className={`layout layout--sidebar-${sidebarState}`}>
+        {sidebarState !== 'hidden' && (
+          <aside className={`side fade-in fade-in--side side--${sidebarState}`}>
+            <div className="brand" title="Unvibe">
+              <span className="mark"><LogoMark size={22} /></span>
+              {sidebarState !== 'compact' && <><span className="name">Unvibe</span><span className="badge">Beta</span></>}
+            </div>
+            <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact dense={sidebarState === 'compact'} />
+            <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} title={sidebarState === 'compact' ? p.label : undefined} onClick={() => setPage(p.id)}><Icon d={p.icon} />{sidebarState !== 'compact' && p.label}</button>)}</nav>
+            <div className="spacer" />
+            <button
+              className={`sync-state sync-state--${sync.phase}`}
+              aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
+              title={sidebarState === 'compact' ? `Sync: ${sync.phase}` : undefined}
+              onClick={() => void window.unvibe.retrySync()}
+              disabled={sync.phase === 'syncing' || sync.phase === 'local'}
+            >
+              <span className="sync-state__dot" />
+              {sidebarState !== 'compact' && <>
+                <span>{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
+                {sync.pending > 0 && <small>{sync.pending} pending</small>}
+              </>}
+            </button>
+            {sidebarState !== 'compact' && <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free · 100 on Pro. AI access included—no provider API key needed.</div></div>}
+            <nav className="nav">{FOOT.map((f) => <button key={f.id} title={sidebarState === 'compact' ? f.id : undefined} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{sidebarState !== 'compact' && f.id}</button>)}</nav>
+          </aside>
+        )}
         <main className="content">
           <div className="content-tools">
+            <button type="button" className="bar-tool" aria-label={sidebarToggleLabel} title={sidebarToggleLabel} onClick={cycleSidebar}>
+              <Icon d={IC.sidebar} />
+            </button>
+            <button type="button" className="bar-tool" aria-label="Search pages and actions" title="Search (⌘K)" onClick={() => setPaletteOpen(true)}>
+              <Icon d={IC.search} />
+            </button>
+            <button type="button" className="bar-tool" aria-label="Ask Unvibe" title="Ask Unvibe" onClick={() => setAskOpen(true)}>
+              <Icon d={IC.chat} />
+            </button>
+            <span className="bar-spacer" />
             <button
               type="button"
               className="theme-toggle"
@@ -1506,6 +1660,8 @@ function App() {
           onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
+      {paletteOpen && <CommandPalette actions={paletteActions} onClose={() => setPaletteOpen(false)} />}
+      {askOpen && <AskUnvibePopover target={latestLesson} onClose={() => setAskOpen(false)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </>
   );

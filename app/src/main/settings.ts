@@ -12,6 +12,7 @@ export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom
 export type BarVisibility = 'always' | 'during-review';
 export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
 export type ThemePreference = 'system' | 'light' | 'dark';
+export type SidebarState = 'expanded' | 'compact' | 'hidden';
 
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 7;
@@ -59,6 +60,8 @@ export interface Settings {
   aiModel?: string;
   /** Last folder used for git-diff / nearby-file Pro features. */
   lastProjectRoot?: string;
+  /** Companion sidebar: full labels, icon-only rail, or hidden entirely. Remembered across restarts. */
+  sidebarState: SidebarState;
 }
 
 const DEFAULTS: Settings = {
@@ -84,6 +87,7 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
+  sidebarState: 'expanded',
 };
 
 class SettingsStore {
