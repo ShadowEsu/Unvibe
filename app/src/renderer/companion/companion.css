@@ -273,7 +273,6 @@ html.is-side-resizing * {
   border: 1px solid var(--line);
   box-shadow: 0 1px 0 rgba(255, 255, 255, .45);
   overflow-y: auto;
-  scroll-behavior: smooth;
   container-type: inline-size;
   container-name: pane;
 }
@@ -281,10 +280,9 @@ html.is-side-resizing * {
   background: linear-gradient(180deg, rgb(12 16 28 / 0.12), rgb(12 16 28 / 0.38));
 }
 :root[data-theme="dark"] .content {
-  background: rgb(12 16 28 / 0.42);
+  background: rgb(12 16 28 / 0.72);
   border-color: rgb(247 244 238 / 0.18);
   box-shadow: 0 24px 80px rgb(12 16 28 / 0.28), inset 0 1px rgb(255 255 255 / 0.16);
-  backdrop-filter: blur(28px) saturate(1.35);
 }
 :root[data-theme="dark"] .content-tools {
   background: linear-gradient(to bottom, rgb(12 16 28 / 0.2), transparent);
