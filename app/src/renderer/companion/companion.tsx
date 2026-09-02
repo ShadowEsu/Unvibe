@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
@@ -227,9 +227,9 @@ const FOOT: Array<{ id: string; icon: string; toast: string }> = [
   { id: 'Settings', icon: 'M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M10 2.8l1 2.2 2.4-.6 1.2 2-1.7 1.8.8 2.3-2.2 1-.1 2.5H9.6l-.1-2.5-2.2-1 .8-2.3-1.7-1.8 1.2-2 2.4.6z', toast: '' },
 ];
 
-function Icon({ d }: { d: string }) {
+const Icon = memo(function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
-}
+});
 
 /** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
 function FadeIn({
@@ -525,7 +525,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
   );
 }
 
-function UsageChip({ usage, onPlan, compact = false }: {
+const UsageChip = memo(function UsageChip({ usage, onPlan, compact = false }: {
   usage: AppUsageLine | null;
   onPlan: () => void;
   compact?: boolean;
@@ -548,7 +548,7 @@ function UsageChip({ usage, onPlan, compact = false }: {
       <span className="usage-chip__meter"><i><em style={{ width: `${selectionPct}%` }} /></i><small>Select</small><b>{usage.selections?.remaining ?? 100} left</b><strong>{usage.selections?.used ?? 0}/{usage.selections?.limit ?? 100}</strong></span>
     </button>
   );
-}
+});
 
 function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
   shortcut: string;
@@ -889,9 +889,9 @@ function TrashButton({ label, onClick }: { label: string; onClick: () => void })
   );
 }
 
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+const Toggle = memo(function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <button className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} onClick={onClick}><span className="knob" /></button>;
-}
+});
 
 function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: () => void; onNotice: (message: string) => void }) {
   const [confirming, setConfirming] = useState(false);
