@@ -1,6 +1,6 @@
 "use client";
 
-import { recordBetaSiteEvent, track } from "@/lib/analytics";
+import { track } from "@/lib/analytics";
 import { BETA_FEEDBACK_URL } from "@/lib/betaOffer";
 
 interface BetaSurveyProps {
@@ -23,8 +23,6 @@ export function BetaSurvey({ id = "survey" }: BetaSurveyProps) {
           rel="noreferrer"
           onClick={() => {
             track("survey_opened", { source: "section" });
-            track("feedback_opened", { source: "section" });
-            recordBetaSiteEvent("survey");
           }}
         >
           {BETA_FEEDBACK_URL}

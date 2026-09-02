@@ -16,10 +16,13 @@ try { url = new URL(backend); } catch { fail('UNVIBE_BACKEND must be an absolute
 if (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(url.hostname)) fail('UNVIBE_BACKEND must be a non-local HTTPS URL.');
 if (!existsSync('build/icon.png')) fail('tracked build/icon.png is missing.');
 
+const extraResources = existsSync(join('..', 'extension', 'release', 'unvibe-desktop-bridge-0.1.2.vsix'))
+  ? []
+  : [['--config.extraResources', '[]']];
 const env = { ...process.env, UNVIBE_BACKEND: backend, UNVIBE_TRIAL_TOKEN: trialToken, CSC_IDENTITY_AUTO_DISCOVERY: 'false' };
 for (const [command, args] of [
   [process.execPath, ['scripts/build.mjs']],
-  [join('node_modules', '.bin', 'electron-builder'), ['--win', 'portable', '--x64']],
+  [join('node_modules', '.bin', 'electron-builder'), ['--win', 'portable', '--x64', ...extraResources.flat()]],
 ]) {
   const result = spawnSync(command, args, { stdio: 'inherit', env });
   if (result.status !== 0) process.exit(result.status ?? 1);

@@ -5,7 +5,7 @@
  */
 
 export type Outcome = 'reviewed' | 'understood' | 'needs_review';
-export type ActivityType = 'explanation_completed';
+export type ActivityType = 'explanation_completed' | 'day_active';
 export type SkillState = 'New' | 'Developing' | 'Familiar' | 'Strong' | 'Needs review' | 'Insufficient evidence';
 
 export interface LocalEvent {
@@ -49,7 +49,7 @@ export interface Profile {
   streak: number;
   bestStreak: number;
   usage: Usage[];
-  /** Intensity 0..3 per day, oldest→newest, ending today. Length = HEAT_DAYS. */
+  /** Intensity 0..5 per day from lines explained that day. Oldest to newest, ending today. Length = HEAT_DAYS. */
   heat: number[];
   lastActive?: string;
 }
@@ -83,6 +83,21 @@ export function forSync(event: LocalEvent): LocalEvent {
 }
 
 export const HEAT_DAYS = 182;
+/** Daily heat shades: 5, 25, 50, 100, 200 explained lines. */
+export const HEAT_THRESHOLDS = [5, 25, 50, 100, 200] as const;
+
+export function heatLevel(lines: number): number {
+  if (lines >= 200) return 5;
+  if (lines >= 100) return 4;
+  if (lines >= 50) return 3;
+  if (lines >= 25) return 2;
+  if (lines >= 5) return 1;
+  return 0;
+}
+
+function isLearningEvent(event: LocalEvent): boolean {
+  return event.eventType !== 'day_active' && event.scope !== 'app';
+}
 
 function dayKey(iso: string): string {
   return iso.slice(0, 10);
@@ -143,17 +158,18 @@ function bucket(app?: string): string {
 
 export function computeProfile(events: LocalEvent[], todayKey: string): Profile {
   const days = new Set(events.map(eventDay));
+  const learning = events.filter(isLearningEvent);
 
   const conceptEvents = new Map<string, LocalEvent[]>();
-  for (const e of events) {
-    if (!e.concept) continue;
+  for (const e of learning) {
+    if (!e.concept || e.concept === 'day_active' || e.concept === 'chat') continue;
     const evidence = conceptEvents.get(e.concept) ?? [];
     evidence.push(e);
     conceptEvents.set(e.concept, evidence);
   }
 
   const usageCounts = new Map<string, number>();
-  for (const e of events) {
+  for (const e of learning) {
     const b = bucket(e.sourceApp);
     usageCounts.set(b, (usageCounts.get(b) ?? 0) + 1);
   }
@@ -164,19 +180,18 @@ export function computeProfile(events: LocalEvent[], todayKey: string): Profile 
     .slice(0, 4);
 
   const perDay = new Map<string, number>();
-  for (const e of events) perDay.set(eventDay(e), (perDay.get(eventDay(e)) ?? 0) + 1);
+  for (const e of learning) perDay.set(eventDay(e), (perDay.get(eventDay(e)) ?? 0) + (e.lines || 0));
   const heat: number[] = [];
   for (let i = HEAT_DAYS - 1; i >= 0; i--) {
-    const c = perDay.get(shift(todayKey, -i)) ?? 0;
-    heat.push(c === 0 ? 0 : c === 1 ? 1 : c <= 3 ? 2 : 3);
+    heat.push(heatLevel(perDay.get(shift(todayKey, -i)) ?? 0));
   }
 
   return {
-    reviews: events.length,
-    understood: events.filter((e) => e.outcome === 'understood').length,
-    needsReview: events.filter((e) => e.outcome === 'needs_review').length,
-    linesReviewed: events.reduce((a, e) => a + e.lines, 0),
-    linesUnderstood: events.filter((e) => e.outcome === 'understood').reduce((a, e) => a + e.lines, 0),
+    reviews: learning.filter((e) => e.scope !== 'chat').length,
+    understood: learning.filter((e) => e.outcome === 'understood').length,
+    needsReview: learning.filter((e) => e.outcome === 'needs_review').length,
+    linesReviewed: learning.reduce((a, e) => a + e.lines, 0),
+    linesUnderstood: learning.filter((e) => e.outcome === 'understood').reduce((a, e) => a + e.lines, 0),
     conceptsSeen: conceptEvents.size,
     conceptsDeveloping: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Developing').length,
     conceptsFamiliar: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Familiar').length,
@@ -215,6 +230,7 @@ export function computeFeed(events: LocalEvent[], limit: number): FeedItem[] {
 
 export function computeLearningItems(events: LocalEvent[], limit: number): LearningItem[] {
   return [...events]
+    .filter((e) => e.scope !== 'chat' && isLearningEvent(e))
     .sort((a, b) => b.ts.localeCompare(a.ts))
     .slice(0, limit)
     .map((e) => toLearningItem(e));
@@ -253,11 +269,11 @@ export function computeReviewQueue(events: LocalEvent[], now = new Date(), limit
   const intervalsDays = [1, 3, 7, 14];
 
   const needs = events
-    .filter((e) => e.outcome === 'needs_review')
+    .filter((e) => e.scope !== 'chat' && isLearningEvent(e) && e.outcome === 'needs_review')
     .sort((a, b) => b.ts.localeCompare(a.ts));
 
   const understood = events
-    .filter((e) => e.outcome === 'understood')
+    .filter((e) => e.scope !== 'chat' && isLearningEvent(e) && e.outcome === 'understood')
     .sort((a, b) => a.ts.localeCompare(b.ts));
 
   const dueUnderstood: Array<LocalEvent & { dueLabel: string }> = [];

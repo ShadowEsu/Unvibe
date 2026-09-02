@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
+import { prettyShortcut } from '../shared/prettyShortcut';
+import { playUiTone, type ToneKind } from '../shared/tones';
 
 type Snapshot = {
   shortcut: string;
@@ -22,32 +24,6 @@ function CodeIcon() {
 
 function HomeIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 11.2 12 4.8l7.5 6.4" /><path d="M7.2 10.2V19h9.6v-8.8" /></svg>;
-}
-
-function prettyShortcut(value = 'CommandOrControl+U'): string {
-  return value.replace('CommandOrControl+', '⌘').replace('Shift+', '⇧').replace('Alt+', '⌥');
-}
-
-function playIslandTone(opening: boolean, volume: number, style: 'soft' | 'pixel'): void {
-  if (volume <= 0) return;
-  try {
-    const context = new AudioContext();
-    const gain = context.createGain();
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.075), context.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
-    gain.connect(context.destination);
-    const notes = opening ? [392, 523.25] : [392];
-    notes.forEach((frequency, index) => {
-      const oscillator = context.createOscillator();
-      oscillator.type = style === 'pixel' ? 'square' : 'sine';
-      oscillator.frequency.value = frequency;
-      oscillator.connect(gain);
-      oscillator.start(context.currentTime + index * 0.045);
-      oscillator.stop(context.currentTime + 0.11 + index * 0.045);
-    });
-    window.setTimeout(() => void context.close(), 350);
-  } catch { /* Sound is optional; pointer interaction must never depend on it. */ }
 }
 
 /**
@@ -77,6 +53,23 @@ function Bar() {
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const launchPlayed = useRef(false);
+  const lastHoverTone = useRef(0);
+  const soundRef = useRef({ enabled: true, volume: 0.3, style: 'soft' as 'soft' | 'pixel' });
+  soundRef.current = { enabled: soundEnabled, volume: soundVolume, style: soundStyle };
+  const positionRef = useRef(position);
+  positionRef.current = position;
+
+  const tone = (kind: ToneKind) => {
+    const next = soundRef.current;
+    if (!next.enabled) return;
+    playUiTone(kind, next.volume, next.style);
+  };
+  const playLaunchOnce = () => {
+    if (launchPlayed.current) return;
+    launchPlayed.current = true;
+    tone('launch');
+  };
 
   const refresh = () => {
     setLoading(true);
@@ -95,6 +88,12 @@ function Bar() {
       setSoundEnabled(settings.soundEffects ?? true);
       setSoundVolume(settings.soundVolume ?? 0.3);
       setSoundStyle(settings.soundStyle ?? 'soft');
+      soundRef.current = {
+        enabled: settings.soundEffects ?? true,
+        volume: settings.soundVolume ?? 0.3,
+        style: settings.soundStyle ?? 'soft',
+      };
+      playLaunchOnce();
     });
     const unsubscribe = window.unvibe.onBarNotify((msg) => {
       setNote(msg);
@@ -140,20 +139,20 @@ function Bar() {
       expandedRef.current = true;
       setExpanded(true);
       window.unvibe.setBarExpanded(true);
-      if (withSound && soundEnabled) playIslandTone(true, soundVolume, soundStyle);
+      if (withSound) tone('open');
       return;
     }
     if (!expandedRef.current) return;
     if (closeAnimationTimer.current) return;
     setClosing(true);
+    const closeMs = positionRef.current.startsWith('bottom') ? 380 : 280;
     closeAnimationTimer.current = setTimeout(() => {
       expandedRef.current = false;
       closeAnimationTimer.current = null;
       setClosing(false);
       setExpanded(false);
       window.unvibe.setBarExpanded(false);
-    }, 220);
-    if (withSound && soundEnabled) playIslandTone(false, soundVolume, soundStyle);
+    }, closeMs);
   };
   const open = () => {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
@@ -163,7 +162,7 @@ function Bar() {
     if (!hoverEnabled || expandedRef.current) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     hoverOpenTimer.current = setTimeout(() => {
-      if (document.querySelector('.strip')?.matches(':hover')) setPanelExpanded(true, false);
+      if (document.querySelector('.strip')?.matches(':hover')) setPanelExpanded(true, true);
     }, hoverDelayMs);
   };
   const scheduleClose = () => {
@@ -180,6 +179,7 @@ function Bar() {
   };
 
   const act = (action: 'review' | 'home') => {
+    tone('click');
     actionLockUntil.current = Date.now() + 1400;
     const message = action === 'review' ? 'Selection capture started' : 'Opening your learning space';
     setConfirmation(message);
@@ -190,6 +190,12 @@ function Bar() {
 
   const enter = () => {
     pointerInside.current = true;
+    playLaunchOnce();
+    const now = Date.now();
+    if (now - lastHoverTone.current > 450) {
+      lastHoverTone.current = now;
+      tone('hover');
+    }
     openFromHover();
   };
 
@@ -215,7 +221,7 @@ function Bar() {
   return (
     <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
-        {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} />{expanded ? <span>Open app</span> : null}</button> : <><div className="strip__wing strip__wing--left">
+        {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} /><span>Open app</span></button> : <><div className="strip__wing strip__wing--left">
           <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>
           <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
         </div>

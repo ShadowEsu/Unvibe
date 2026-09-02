@@ -56,3 +56,36 @@ test('reserveTrialAction enforces per-install monthly limit', async () => {
   assert.equal(line?.used, 2);
   assert.equal(line?.remaining, 0);
 });
+
+test('trial default monthly explanation limit is 30', async () => {
+  process.env.UNVIBE_TRIAL_TOKEN = 'trial-secret-value-abcdefghijklmnop';
+  delete process.env.UNVIBE_TRIAL_MONTHLY_LIMIT;
+  process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT = '400';
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = trialInstallKey(`default-limit-${Date.now()}`);
+  const overview = await trialUsageOverview(key);
+  const line = overview.usage.find((u) => u.kind === 'ai_explanation');
+  assert.equal(line?.limit, 30);
+  assert.equal(line?.remaining, 30);
+});
+
+test('trial default allows 30 explanations then denies the 31st', async () => {
+  process.env.UNVIBE_TRIAL_TOKEN = 'trial-secret-value-abcdefghijklmnop';
+  delete process.env.UNVIBE_TRIAL_MONTHLY_LIMIT;
+  process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT = '400';
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = trialInstallKey(`thirty-then-stop-${Date.now()}`);
+  for (let index = 0; index < 30; index += 1) {
+    assert.equal(await reserveTrialAction(key, 'ai_explanation'), null);
+  }
+  const denied = await reserveTrialAction(key, 'ai_explanation');
+  assert.ok(denied);
+  assert.equal(denied.status, 429);
+  const overview = await trialUsageOverview(key);
+  const line = overview.usage.find((u) => u.kind === 'ai_explanation');
+  assert.equal(line?.used, 30);
+  assert.equal(line?.remaining, 0);
+  assert.equal(line?.limit, 30);
+});

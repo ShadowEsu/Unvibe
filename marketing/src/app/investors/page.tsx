@@ -1,14 +1,6 @@
 import type { Metadata } from "next";
 import { ArrowRight, FileText, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
-import { InvestorBriefDemo } from "@/components/paper/InvestorBriefDemo";
-import {
-  compensationCashUsd,
-  compensationCreditsUsd,
-  compensationLines,
-  compensationTotalLabel,
-  formatUsd,
-} from "@/data/compensation";
 
 export const metadata: Metadata = {
   title: "Investors",
@@ -17,6 +9,15 @@ export const metadata: Metadata = {
 
 const DECK_URL = "/investors/unvibe-pitch-deck.pdf";
 
+const support = [
+  { name: "AWS for Startups", value: "$5,000 AWS Activate credits", state: "Secured" },
+  { name: "GitLab for Startups", value: "$23,700 GitLab Ultimate credits", state: "Secured" },
+  { name: "Google AI Startups", value: "$2,000 Google Cloud credits, USD", state: "Secured" },
+  { name: "MongoDB for Startups", value: "$500 program support", state: "Secured" },
+  { name: "Founder capital", value: "$500 committed", state: "Committed" },
+  { name: "Early angel support", value: "$300 committed", state: "Founder-reported" },
+];
+
 const pipeline = [
   ["YC", "Application work in progress"],
   ["Live product directories", "LaunchKiwi, DevRove, Product Hunt, AI Tool Discovery"],
@@ -24,13 +25,6 @@ const pipeline = [
 ];
 
 export default function InvestorsPage() {
-  const credits = formatUsd(compensationCreditsUsd());
-  const cash = formatUsd(compensationCashUsd());
-  const total = compensationTotalLabel();
-  const mixpanel = compensationLines.find((line) => line.name.startsWith("Mixpanel"));
-  const mixpanelAmount = mixpanel ? formatUsd(mixpanel.amountUsd) : "$144,000";
-  const otherLines = compensationLines.filter((line) => !line.name.startsWith("Mixpanel"));
-
   return (
     <article className="investor-page">
       <header className="container-page investor-hero">
@@ -50,31 +44,13 @@ export default function InvestorsPage() {
             </a>
           </div>
         </div>
-        <aside className="investor-hero__stage">
+        <aside>
           <p>Current stage</p>
           <strong>Private beta</strong>
           <span>75% to public release</span>
           <a href="/build">Follow the live build <ArrowRight size={13} /></a>
         </aside>
       </header>
-
-      <section className="container-page investor-money" aria-label="Total support">
-        <p className="launch-label">Total support raised</p>
-        <p className="investor-money__total">{total}</p>
-        <p className="investor-money__mixpanel">
-          <span>Largest line</span>
-          <strong>Mixpanel for Startups · {mixpanelAmount}</strong>
-          <small>1 year Mixpanel Pro subscription credits</small>
-        </p>
-        <p className="investor-money__split">
-          Program credits {credits} · Cash {cash}. Credits are not cash. Not a funding round.
-        </p>
-        <a className="investor-money__link" href="#support">
-          Full breakdown by source <ArrowRight size={14} />
-        </a>
-      </section>
-
-      <InvestorBriefDemo />
 
       <section className="container-page investor-thesis">
         <article>
@@ -94,60 +70,24 @@ export default function InvestorsPage() {
         </article>
       </section>
 
-      <section className="container-page investor-support" id="support">
+      <section className="container-page investor-support">
         <div className="investor-section-copy">
           <p className="launch-label">Resource runway</p>
-          <h2>Where the {total} comes from.</h2>
+          <h2>Startup credits, not a round.</h2>
           <p>
-            Every program credit and founder-reported cash line, listed by source.
-            Credits are not cash and this is not a funding-round total.
+            Cloud and platform credits plus founder-reported committed capital. Credits are not cash and this is not a funding-round total.
           </p>
-          <dl className="investor-support__totals">
-            <div>
-              <dt>All support</dt>
-              <dd>{total}</dd>
-            </div>
-            <div>
-              <dt>Mixpanel for Startups</dt>
-              <dd>{mixpanelAmount}</dd>
-            </div>
-            <div>
-              <dt>Program credits</dt>
-              <dd>{credits}</dd>
-            </div>
-            <div>
-              <dt>Cash committed</dt>
-              <dd>{cash}</dd>
-            </div>
-          </dl>
         </div>
-        <div className="investor-support__table" role="table" aria-label="Support by source">
-          <div className="investor-support__row investor-support__row--head" role="row">
-            <span role="columnheader">Source</span>
-            <span role="columnheader">Amount</span>
-            <span role="columnheader">What it is</span>
-            <span role="columnheader">Status</span>
-          </div>
-          {mixpanel ? (
-            <div className="investor-support__row investor-support__row--lead" role="row">
-              <strong role="cell">{mixpanel.name}</strong>
-              <span role="cell">{formatUsd(mixpanel.amountUsd)}</span>
-              <span role="cell">{mixpanel.detail}</span>
-              <span role="cell">{mixpanel.state}</span>
-            </div>
-          ) : null}
-          {otherLines.map((line) => (
-            <div key={line.name} className="investor-support__row" role="row">
-              <strong role="cell">{line.name}</strong>
-              <span role="cell">{formatUsd(line.amountUsd)}</span>
-              <span role="cell">{line.detail}</span>
-              <span role="cell">{line.state}</span>
+        <div className="investor-support__list">
+          {support.map((item) => (
+            <div key={item.name}>
+              <span>{item.state}</span>
+              <strong>{item.name}</strong>
+              <p>{item.value}</p>
             </div>
           ))}
         </div>
       </section>
-
-      <InvestorBriefDemo />
 
       <section className="container-page investor-pipeline">
         <div>

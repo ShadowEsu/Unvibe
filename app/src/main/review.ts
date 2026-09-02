@@ -16,6 +16,7 @@ import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { raiseLimitPause } from './windows';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
@@ -299,6 +300,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         upgradePath: '/plan',
         message: `You have reached your monthly ${planName} explanation limit (${usage.limit}). Resets on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
       });
+      raiseLimitPause(win);
       return;
     }
 
@@ -329,6 +331,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
             resetsAt: next.resetsAt,
             plan: next.plan,
           });
+          if (next.remaining <= 0) raiseLimitPause(win);
         }).catch(() => undefined);
       } catch (err) {
         if (abort.signal.aborted) {
@@ -366,6 +369,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           resetsAt: body.usage.resetsAt,
           plan: usage.plan,
         });
+        if (body.usage.remaining <= 0) raiseLimitPause(win);
       }
       const message = res.status === 401
         ? 'Sign in to use cloud explanations, or continue with local learning history.'
@@ -400,6 +404,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
               resetsAt: next.resetsAt,
               plan: next.plan,
             });
+            if (next.remaining <= 0) raiseLimitPause(win);
           }).catch(() => undefined);
         }
       }

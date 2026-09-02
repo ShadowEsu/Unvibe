@@ -26,3 +26,5 @@ web/env.local
 
 # Editor
 .vscode-test/
+.vercel
+.env*

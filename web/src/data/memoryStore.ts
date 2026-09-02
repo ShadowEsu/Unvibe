@@ -78,7 +78,7 @@ export class MemoryStore implements Store {
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
-    this.data.users.set(userId, { email });
+    this.data.users.set(userId, { email: email?.trim().toLowerCase() });
     this.data.tokens.set(token, userId);
     return token; // also usable as a browser session
   }
@@ -127,6 +127,11 @@ export class MemoryStore implements Store {
 
   async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
     return { userId, email: this.data.users.get(userId)?.email };
+  }
+
+  async findUserIdByEmail(email: string): Promise<string | null> {
+    const normalized = email.trim().toLowerCase();
+    return [...this.data.users.entries()].find(([, user]) => user.email === normalized)?.[0] ?? null;
   }
 
   async deleteAccount(userId: string): Promise<void> {

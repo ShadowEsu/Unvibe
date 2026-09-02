@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
-import { track } from "@/lib/analytics";
 
 type StoryBeat = {
   meta: string;
@@ -18,73 +17,57 @@ type StoryBeat = {
 
 const beats: StoryBeat[] = [
   {
-    meta: "How to start",
-    title: "Select code. Press Command U.",
-    body: "Unvibe sits beside Cursor and VS Code. Highlight what you want to keep, press the shortcut, and read the explanation in place.",
-    src: "/product/onboarding-welcome.jpg",
-    alt: "Unvibe welcome screen: select code and press Command U",
+    meta: "In the editor",
+    title: "The overlay sits on the code you selected.",
+    body: "Depth from New to Expert. Follow-ups when you want them. Secrets are scanned on this Mac before anything is sent.",
+    src: "/product/overlay-editor.png",
+    alt: "Unvibe overlay explaining selected code beside an editor",
     kind: "image",
   },
   {
-    meta: "The Island",
-    title: "A quiet bar when you need it.",
-    body: "Pin it top, right, bottom, or corner. Dim when idle. Expand on hover or keep it click-only.",
-    src: "/product/island-settings.jpg",
-    alt: "Unvibe Island settings with overlay preview",
+    meta: "The bar",
+    title: "A small bar when you need it.",
+    body: "It sits over the editor, dim when idle. Select code, then press Command U.",
+    src: "/product/island-bar.png",
+    alt: "Unvibe island bar floating over an editor",
     kind: "image",
   },
   {
     meta: "On this Mac",
-    title: "Today stays on your machine.",
-    body: "Home shows what you explained, how many lines you understood, and the next review waiting in the list.",
-    src: "/product/home-today.jpg",
-    alt: "Unvibe companion Home with Today and recent reviews",
+    title: "What you learn stays here.",
+    body: "History, concepts, and a short check so the explanation does not vanish after you close the tab.",
+    src: "/product/overview.png",
+    alt: "Unvibe companion dashboard on a Mac",
     kind: "image",
   },
   {
     meta: "Saved",
-    title: "Every explanation has a place.",
-    body: "History keeps Understood and Review states so you can open a note again without hunting the chat log.",
-    src: "/product/history.jpg",
-    alt: "Unvibe History of saved explanations on this Mac",
+    title: "The record grows as you ship.",
+    body: "Each explanation can be kept, revisited, and used the next time the same idea shows up in your project.",
+    src: "/product/dashboard.png",
+    alt: "Unvibe learning dashboard with saved explanations",
     kind: "image",
   },
   {
-    meta: "Progress",
-    title: "An honest count of what stuck.",
-    body: "Lines understood, concepts developing, streak heat map. Unvibe tracks the app you were in, never the keystrokes.",
-    src: "/product/progress.jpg",
-    alt: "Unvibe Progress dashboard with streak and lines understood",
-    kind: "image",
-  },
-  {
-    meta: "Test me",
+    meta: "Test your knowledge",
     title: "A short check so it sticks.",
-    body: "Pick a lesson. One question fills the screen. Press a letter to answer, then keep building.",
-    src: "/product/quiz.jpg",
-    alt: "Unvibe Quiz list for checking what you learned",
+    body: "After an explanation you can test yourself, then keep the note in your history.",
+    src: "/product-shots/quiz-lessons-dark.png",
+    alt: "Unvibe quiz checking what you just learned",
     kind: "image",
   },
   {
-    meta: "Privacy",
-    title: "Secrets stay on this Mac.",
-    body: "Every selection is scanned for keys and tokens before it leaves. The service never reads your repo.",
-    src: "/product/privacy-data.jpg",
-    alt: "Unvibe Privacy and Data settings with on-device secret scan",
-    kind: "image",
-  },
-  {
-    meta: "Mac access",
-    title: "Accessibility when you need it.",
-    body: "⌘U in Cursor and VS Code uses the Desktop Bridge. Control+U elsewhere needs Accessibility turned on once.",
-    src: "/product/onboarding-access.jpg",
-    alt: "Unvibe Mac access onboarding for Accessibility permission",
+    meta: "Install",
+    title: "Install once. Stay local.",
+    body: "The Mac app owns the network path. Secrets are scanned on this machine before anything is sent.",
+    src: "/product/installer.png",
+    alt: "Unvibe Mac installer window",
     kind: "image",
   },
   {
     meta: "The pass",
-    title: "See the companion move.",
-    body: "A quiet pass through Home and the Island. No extra window to manage.",
+    title: "See the overlay move.",
+    body: "A quiet pass through the product. No extra window to manage.",
     src: "/videos/unvibe-app-tour.mp4",
     poster: "/videos/unvibe-app-tour-poster.jpg",
     alt: "Unvibe product tour playing in place",
@@ -94,8 +77,8 @@ const beats: StoryBeat[] = [
     meta: "In Cursor",
     title: "It sits beside Cursor too.",
     body: "Same shortcut. Same overlay. The editor you already have.",
-    src: "/videos/unvibe-cursor-demo.mp4",
-    poster: "/videos/unvibe-cursor-demo-poster.jpg",
+    src: "/videos/unvibe-cursor-integration-2026.mp4",
+    poster: "/videos/unvibe-cursor-integration-2026-poster.jpg",
     alt: "Unvibe overlay working beside Cursor",
     kind: "video",
   },
@@ -120,19 +103,6 @@ export function StoryStage() {
   const rootRef = useRef<HTMLElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
   const [active, setActive] = useState(0);
-  const lastTracked = useRef(-1);
-
-  useEffect(() => {
-    if (lastTracked.current === active) return;
-    lastTracked.current = active;
-    const beat = beats[active];
-    if (!beat) return;
-    track("story_beat_viewed", {
-      index: active,
-      meta: beat.meta,
-      kind: beat.kind,
-    });
-  }, [active]);
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -6,7 +6,6 @@ import { betaInstallScript, betaWindowsInstallScript } from "./betaInstallScript
 import { parseBetaInstallEvent, recordBetaInstallEvent } from "./betaInstallStats";
 
 const dataFile = path.join(process.cwd(), ".data", "beta-install.json");
-const tmpDataFile = path.join("/tmp", "unvibe-beta-install", "beta-install.json");
 
 describe("betaInstallScript", () => {
   it("installs Unvibe.app and clears Apple quarantine", () => {
@@ -48,13 +47,8 @@ describe("betaInstallStats", () => {
 
   it("counts copied and installed events on disk", async () => {
     const previousBlob = process.env.BLOB_READ_WRITE_TOKEN;
-    const previousUrl = process.env.SUPABASE_URL;
-    const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.BLOB_READ_WRITE_TOKEN;
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     await fs.rm(dataFile, { force: true }).catch(() => undefined);
-    await fs.rm(tmpDataFile, { force: true }).catch(() => undefined);
     try {
       const afterCopy = await recordBetaInstallEvent("copied");
       const afterInstall = await recordBetaInstallEvent("installed");
@@ -66,12 +60,7 @@ describe("betaInstallStats", () => {
     } finally {
       if (previousBlob === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
       else process.env.BLOB_READ_WRITE_TOKEN = previousBlob;
-      if (previousUrl === undefined) delete process.env.SUPABASE_URL;
-      else process.env.SUPABASE_URL = previousUrl;
-      if (previousKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-      else process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey;
       await fs.rm(dataFile, { force: true }).catch(() => undefined);
-      await fs.rm(tmpDataFile, { force: true }).catch(() => undefined);
     }
   });
 });

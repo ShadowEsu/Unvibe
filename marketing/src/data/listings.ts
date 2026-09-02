@@ -1,13 +1,5 @@
 export const listingBadges = [
   {
-    name: "Smol Startup",
-    href: "https://smolstartup.com/projects/unvibe",
-    src: "https://smolstartup.com/smolstartup/images/badges/top1-dark.svg",
-    alt: "Smol Startup Top 1 Daily Winner",
-    width: 195,
-    height: 54,
-  },
-  {
     name: "Tool Index",
     href: "https://toolindex.net/tools/unvibe?ref=badge",
     src: "https://toolindex.net/badge/unvibe/medium.svg",
@@ -50,7 +42,6 @@ export const listingBadges = [
 ] as const;
 
 export const listingLinks = [
-  { name: "Smol Startup #1", href: "https://smolstartup.com/projects/unvibe" },
   { name: "Product Hunt", href: "https://www.producthunt.com/products/unvibe?launch=unvibe" },
   { name: "LaunchKiwi", href: "https://launchkiwi.com/p/unvibe" },
   { name: "DevRove", href: "https://devrove.com/tools/unvibe-site" },

@@ -4,6 +4,7 @@ import { isResponse, requireUser, billingError } from '@/billing/http';
 import { normalizedSeats, TEAMS_CHECKOUT_ENABLED } from '@/billing/plans';
 import { getStripe, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval } from '@/billing/types';
+import { isGiftSubscriptionId } from '@/gifts/codes';
 
 export const runtime = 'nodejs';
 
@@ -34,7 +35,7 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ error: 'forbidden', message: 'Only the workspace owner can start this subscription.' }, { status: 403 });
     }
     const current = await billing.overview(user, workspace.id);
-    if (current.subscription.stripeSubscriptionId && current.subscription.status !== 'canceled') {
+    if (current.subscription.stripeSubscriptionId && !isGiftSubscriptionId(current.subscription.stripeSubscriptionId) && current.subscription.status !== 'canceled') {
       return Response.json({ error: 'subscription_exists', message: 'Use Manage billing to change an existing subscription.' }, { status: 409 });
     }
     const stripe = getStripe();

@@ -30,7 +30,6 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const [savedEmail, setSavedEmail] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [copied, setCopied] = useState(false);
-  const [startedTracked, setStartedTracked] = useState(false);
   const [detailsStatus, setDetailsStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [tool, setTool] = useState<(typeof tools)[number] | "">("");
   const [experience, setExperience] = useState<(typeof experiences)[number] | "">("");
@@ -54,14 +53,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
       utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
     });
-    track("waitlist_viewed", { surface: variant });
-  }, [variant]);
-
-  const markStarted = () => {
-    if (startedTracked) return;
-    setStartedTracked(true);
     track("waitlist_started", { surface: variant });
-  };
+  }, [variant]);
 
   const submit = async (values: WaitlistInput) => {
     setStatus("submitting");
@@ -72,19 +65,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...values, ...tracking }),
       });
-      const data = (await response.json().catch(() => ({}))) as WaitlistResponse & { referralCode?: string };
+      const data = (await response.json().catch(() => ({}))) as WaitlistResponse;
       if (!response.ok) {
         setSubmitError(data.error || "We couldn't save your spot. Please try again.");
         setStatus("error");
-        track("waitlist_failed", {
-          surface: variant,
-          status: response.status,
-          code: data.code ?? "http_error",
-        });
         return;
       }
       setSavedEmail(values.email.trim().toLowerCase());
-      setReferralCode(typeof data.referralCode === "string" ? data.referralCode : "");
+      setReferralCode(typeof (data as WaitlistResponse & { referralCode?: string }).referralCode === "string" ? (data as WaitlistResponse & { referralCode?: string }).referralCode ?? "" : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
       const giverEmail = (values.referredBy ?? "").trim();
@@ -103,41 +91,19 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
-      track("waitlist_failed", { surface: variant, code: "network" });
     }
   };
 
-  const referralUrl = referralCode
-    ? `${typeof window !== "undefined" ? window.location.origin : "https://unvibe.site"}/?ref=${referralCode}`
-    : "";
-
   const copyReferral = async () => {
-    if (!referralCode || !referralUrl) return;
+    if (!referralCode) return;
     try {
-      await navigator.clipboard.writeText(referralUrl);
+      await navigator.clipboard.writeText(`${window.location.origin}/?ref=${referralCode}`);
       setCopied(true);
       track("referral_copied");
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setSubmitError("Couldn't copy the link. Select it below and copy manually.");
+      setSubmitError("Couldn't copy the link. You can copy it from your browser's address bar.");
     }
-  };
-
-  const shareReferral = async () => {
-    if (!referralUrl) return;
-    const shareText = "Unvibe explains AI-written code in your editor so you actually own what you ship. Join the private beta:";
-    try {
-      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        await navigator.share({ title: "Unvibe private beta", text: shareText, url: referralUrl });
-        track("referral_shared", { channel: "native" });
-        return;
-      }
-    } catch {
-      // User cancelled or share failed; fall through to X intent.
-    }
-    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareText} ${referralUrl}`)}`;
-    window.open(intent, "_blank", "noopener,noreferrer");
-    track("referral_shared", { channel: "x_intent" });
   };
 
   const saveDetails = async () => {
@@ -159,7 +125,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const form = (
     <div className={variant === "hero" ? "hero-waitlist-card" : "waitlist-card"}>
       {!complete ? (
-        <form onSubmit={handleSubmit(submit)} noValidate onFocusCapture={markStarted}>
+        <form onSubmit={handleSubmit(submit)} noValidate>
           <div className="form-heading">
             <span className="brand-pixel" />
             <strong>Join the waitlist</strong>
@@ -196,21 +162,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <p className="pixel-label">JOINED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "Joined the waitlist."}</h3>
           <p>Thanks for requesting access. Invitations are being issued gradually during the private Mac beta.</p>
-          {referralCode && (
-            <div className="referral-success">
-              <Gift size={18} />
-              <div>
-                <strong>Your share link is ready. Every 3 verified joins = $5 (up to $25).</strong>
-                <span>Rewards are reviewed before Unvibe credit or wire. Share in the next minute while it is fresh.</span>
-                <code className="referral-success__link" aria-label="Your referral link">{referralUrl}</code>
-                <div className="referral-success__actions">
-                  <button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy link</>}</button>
-                  <button type="button" onClick={shareReferral}>Share</button>
-                  <a href={`/rewards?ref=${referralCode}`}>View reward progress <ArrowUpRight size={14} /></a>
-                </div>
-              </div>
-            </div>
-          )}
+          {referralCode && <div className="referral-success"><Gift size={18} /><div><strong>Invite friends, earn beta rewards.</strong><span>Every 3 verified referrals earns a $5 reward, up to 5 rewards ($25 total). Rewards are reviewed before Unvibe credit or wire transfer.</span><div className="referral-success__actions"><button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy referral link</>}</button><a href={`/rewards?ref=${referralCode}`}>View reward progress <ArrowUpRight size={14} /></a></div></div></div>}
           {variant === "page" && (
             detailsStatus === "saved" ? (
               <div className="details-saved"><Check size={18} /><span>Thanks. Your optional details are saved.</span></div>

@@ -5,6 +5,8 @@ import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
+import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { prettyShortcut } from '../shared/prettyShortcut';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
@@ -76,7 +78,7 @@ function newTab(id: string, label: string): TabState {
 }
 
 function prettyAccel(accel: string): string {
-  return accel.replace('CommandOrControl', '⌘').replace('Control', '⌃').replace('Shift', '⇧').replace('Alt', '⌥');
+  return prettyShortcut(accel);
 }
 
 const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
@@ -219,6 +221,7 @@ interface UsageState {
   remaining: number;
   resetsAt: string;
   plan: string;
+  selections?: { used: number; limit: number; remaining: number; resetsAt: string };
 }
 
 function applyTheme(preference: 'system' | 'light' | 'dark') {
@@ -242,6 +245,8 @@ function Widget() {
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
+  const offer = usage ? limitOfferCopy(usage.plan, usage) : null;
+  const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
   const [revealedText, setRevealedText] = useState('');
 
   useEffect(() => {
@@ -268,18 +273,32 @@ function Widget() {
     return () => mq.removeEventListener('change', onScheme);
   }, []);
 
+  // Keep typography in proportion when someone makes the compact panel smaller.
+  // The native window owns size; the renderer only exposes a bounded visual scale.
+  useEffect(() => {
+    const updateScale = () => {
+      const scale = Math.max(0.92, Math.min(1, Math.min(window.innerWidth / 440, window.innerHeight / 560)));
+      document.documentElement.style.setProperty('--widget-scale', scale.toFixed(3));
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     window.unvibe.onReviewEvent((raw) => {
       const ev = raw as WidgetEvent;
       const tabId = ev.tabId;
       if (ev.type === 'usage') {
-        setUsage({
+        setUsage((current) => ({
           used: ev.used,
           limit: ev.limit,
           remaining: ev.remaining,
           resetsAt: ev.resetsAt,
           plan: ev.plan,
-        });
+          selections: current?.selections,
+        }));
       }
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
@@ -419,7 +438,7 @@ function Widget() {
       setTabs((prev) => patchTab(prev, activeRef.current, {
         phase: 'error',
         error: usage
-          ? `You have used ${usage.used} of ${usage.limit} explanations this month. Upgrade to Pro or wait until ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`
+          ? limitOfferCopy(usage.plan, usage).body
           : 'You have reached your monthly explanation limit. Open Plan to upgrade.',
       }));
       return;
@@ -496,17 +515,26 @@ function Widget() {
           <span className="head__product">Unvibe</span>
           {src}
         </div>
-        <span className="head__spacer" />
         <span className={`head__status head__status--${phase}`}><i />{phaseLabel}</span>
-        <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
-          {collapsed ? '▾' : '▴'}
-        </button>
-        <button aria-label="Close panel" onClick={() => window.unvibe.closeWidget()}>
-          ✕
-        </button>
+        <div className="head__actions">
+          <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
+            {collapsed ? '▾' : '▴'}
+          </button>
+          <button aria-label="Close panel" onClick={() => window.unvibe.closeWidget()}>
+            ✕
+          </button>
+        </div>
+        {usage && (
+          <span
+            className="quota quota--usage"
+            title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
+          >
+            <b>{usage.remaining}/{usage.limit} explanations left</b>
+          </span>
+        )}
       </div>
 
-      {!collapsed && (
+      {!collapsed && !sessionPaused && (
         <div className="tabs" role="tablist" aria-label="Review tabs">
           {tabs.map((t) => (
             <button
@@ -532,7 +560,24 @@ function Widget() {
         </div>
       )}
 
-      {!collapsed && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
+      {!collapsed && sessionPaused && offer ? (
+        <div className="state state--limit state--pause">
+          <div className="big">{offer.title}</div>
+          <div className="sub">{offer.body}</div>
+          <div className="pause-actions">
+            <button className="btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
+              {offer.primary}
+            </button>
+            {offer.showPlan ? (
+              <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
+                Buy a subscription
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {!collapsed && !sessionPaused && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
         <div className="levels" aria-label="Explanation depth">
           <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
@@ -564,7 +609,7 @@ function Widget() {
         </div>
       )}
 
-      {!collapsed && (
+      {!collapsed && !sessionPaused && (
         <>
           {phase === 'boot' && (
             <div className="state">
@@ -622,17 +667,28 @@ function Widget() {
           )}
 
           {phase === 'error' && (
-            <div className="state">
-              <div className="big">{outOfExplanations ? 'Monthly limit reached' : proGate ? 'Pro feature' : "Couldn't explain that"}</div>
+            <div className={`state${outOfExplanations ? ' state--limit' : ''}`}>
+              <div className="big">
+                {outOfExplanations && offer ? offer.title : proGate ? 'Pro feature' : "Couldn't explain that"}
+              </div>
               <div className="sub">{active.error}</div>
               {outOfExplanations || proGate ? (
                 <>
-                  <button className="btn" onClick={() => window.unvibe.openCompanion()}>
-                    {outOfExplanations ? 'Add API key or upgrade' : 'Upgrade to Pro'}
+                  <button className="btn" onClick={() => {
+                    if (offer?.primaryKind === 'survey') void window.unvibe.openUrl(BETA_SURVEY_URL);
+                    else window.unvibe.openPlan();
+                  }}>
+                    {outOfExplanations && offer ? offer.primary : 'Upgrade to Pro'}
                   </button>
-                  <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>
-                    {outOfExplanations ? 'Return to saved learning' : 'Maybe later'}
-                  </button>
+                  {outOfExplanations && offer?.showPlan && offer.primaryKind === 'survey' ? (
+                    <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
+                      Buy a subscription
+                    </button>
+                  ) : (
+                    <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>
+                      {outOfExplanations ? 'Return to saved learning' : 'Maybe later'}
+                    </button>
+                  )}
                 </>
               ) : (
                 <button className="btn" onClick={() => request({})}>
@@ -674,6 +730,18 @@ function Widget() {
                     <i /><i /><i />
                   </div>
                 )}
+            </div>
+          )}
+
+          {outOfExplanations && offer && offer.primaryKind !== 'survey' && (phase === 'done' || phase === 'streaming') && (
+            <div className="limit-strip" role="status">
+              <div>
+                <strong>{offer.title}</strong>
+                <p>{offer.body}</p>
+              </div>
+              <button type="button" className="btn" onClick={() => window.unvibe.openPlan()}>
+                {offer.primary}
+              </button>
             </div>
           )}
 

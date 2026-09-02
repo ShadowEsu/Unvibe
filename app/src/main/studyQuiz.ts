@@ -5,7 +5,7 @@
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
-import type { LocalEvent } from '../core/learning';
+import { localDayKey, type LocalEvent } from '../core/learning';
 import { BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
 import { flush } from './sync';
@@ -274,4 +274,86 @@ export function answerQuizCard(eventId: string, choice: number):
     answerIndex: pending.answerIndex,
     rationale: pending.rationale,
   };
+}
+
+export async function askChat(input: {
+  messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  question: string;
+}): Promise<{ ok: true; answer: string; remaining: number } | { ok: false; error: string; remaining?: number }> {
+  const question = input.question?.trim();
+  if (!question) return { ok: false, error: 'Type a message first.' };
+  if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };
+
+  const usage = await resolveAppUsage();
+  const localKey = readAiKey();
+  if (usage.remaining <= 0 && !localKey) {
+    return { ok: false, error: 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.', remaining: 0 };
+  }
+
+  const prior = (input.messages ?? []).slice(-8)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Unvibe'}: ${m.content.slice(0, 2000)}`)
+    .join('\n\n');
+  const user = prior ? `${prior}\n\nUser: ${question}` : question;
+  const system = 'You are Unvibe Chat on this Mac. Answer whatever the user asks. Be clear and direct. If they paste code, explain it. Do not invent files you have not been shown.';
+
+  try {
+    let text = '';
+    if (localKey) {
+      try {
+        const prefs = settings().all();
+        await streamLocalAi({
+          provider: prefs.aiProvider,
+          apiKey: localKey,
+          system,
+          user,
+          onToken: (chunk) => { text += chunk; },
+        });
+      } catch {
+        text = '';
+      }
+    }
+    if (!text.trim()) {
+      const result = await collectReviewText({
+        scope: 'selection',
+        level: 'intermediate',
+        context: {
+          language: 'text',
+          primaryFile: 'chat',
+          projectStructure: [],
+          imports: [],
+          code: user.slice(0, 12_000),
+        },
+        question: 'Reply as Unvibe Chat to the conversation above.',
+      });
+      text = result.text;
+    }
+    const answer = text.trim();
+    if (!answer) return { ok: false, error: 'The model returned an empty reply. Try again.', remaining: usage.remaining };
+
+    const now = new Date();
+    const lines = question.split(/\r?\n/).filter((line) => line.trim()).length;
+    store().recordReview({
+      id: `chat-${now.getTime()}`,
+      ts: now.toISOString(),
+      eventType: 'explanation_completed',
+      localDate: localDayKey(now),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      scope: 'chat',
+      level: 'intermediate',
+      outcome: 'reviewed',
+      lines,
+      concept: 'chat',
+      conceptLabel: 'Chat',
+      explanation: answer.slice(0, 8_000),
+    });
+    void flush();
+    const next = await resolveAppUsage();
+    return { ok: true, answer, remaining: next.remaining };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Chat could not reply.',
+      remaining: usage.remaining,
+    };
+  }
 }

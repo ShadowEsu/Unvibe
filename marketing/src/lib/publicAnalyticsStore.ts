@@ -1,6 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dayKey, lastNDates } from "@/lib/siteStatsStore";
-import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
 
 export interface PublicWaitlistSummary {
   total: number;
@@ -13,7 +12,6 @@ export interface PublicWaitlistSummary {
 }
 
 interface WaitlistAnalyticsRow {
-  email?: string | null;
   referred_by: string | null;
   utm_source: string | null;
   utm_medium: string | null;
@@ -108,7 +106,7 @@ export async function getPublicAnalytics(): Promise<{
   const [waitlistResult, betaResult] = await Promise.all([
     supabase
       .from("waitlist_entries")
-      .select("email,referred_by,utm_source,utm_medium,utm_campaign,created_at")
+      .select("referred_by,utm_source,utm_medium,utm_campaign,created_at")
       .order("created_at", { ascending: false })
       .limit(10_000)
       .returns<WaitlistAnalyticsRow[]>(),
@@ -119,11 +117,8 @@ export async function getPublicAnalytics(): Promise<{
   // The beta table was added later; keep the rest of the dashboard available
   // if an older environment has not applied that migration yet.
   const betaDownloads = betaResult.error ? 0 : betaResult.count ?? 0;
-  const waitlistRows = (waitlistResult.data ?? []).filter(
-    (row) => !isProbeWaitlistEmail(row.email),
-  );
   return {
-    waitlist: summarizeWaitlist(waitlistRows),
+    waitlist: summarizeWaitlist(waitlistResult.data ?? []),
     betaDownloads,
   };
 }

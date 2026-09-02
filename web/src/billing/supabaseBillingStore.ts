@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { FREE_AI_EXPLANATIONS } from './plans';
 import type {
   BillingOverview,
   BillingStore,
@@ -21,9 +22,21 @@ function asObject(value: unknown): Record<string, unknown> {
 export class SupabaseBillingStore implements BillingStore {
   readonly kind = 'supabase billing';
   private readonly db: SupabaseClient;
+  private alignedFreeCap = false;
 
   constructor(url: string, serviceRoleKey: string) {
     this.db = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+  }
+
+  private async alignFreeExplanationCap(): Promise<void> {
+    if (this.alignedFreeCap) return;
+    const { error } = await this.db
+      .from('plan_entitlements')
+      .update({ ai_explanations: FREE_AI_EXPLANATIONS, updated_at: new Date().toISOString() })
+      .eq('plan', 'free')
+      .neq('ai_explanations', FREE_AI_EXPLANATIONS);
+    if (error) console.warn('align free explanation cap failed', error.message);
+    this.alignedFreeCap = true;
   }
 
   private require(error: { message: string } | null, operation: string): void {
@@ -106,12 +119,14 @@ export class SupabaseBillingStore implements BillingStore {
   }
 
   async overview(userId: string, workspaceId?: string): Promise<BillingOverview> {
+    await this.alignFreeExplanationCap();
     const { data, error } = await this.db.rpc('billing_overview', { p_user_id: userId, p_workspace_id: workspaceId ?? null });
     this.require(error, 'load overview');
     return this.mapOverview(data);
   }
 
   async reserveUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<UsageReservation> {
+    await this.alignFreeExplanationCap();
     const { data, error } = await this.db.rpc('reserve_billing_usage', { p_user_id: userId, p_kind: kind, p_workspace_id: workspaceId ?? null });
     this.require(error, 'reserve usage');
     const row = asObject(data);

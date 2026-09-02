@@ -11,50 +11,6 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
-    date: "26 AUG 2026",
-    category: "DISTRIBUTION",
-    title: "Smol Startup #1 daily",
-    summary: "Unvibe hit #1 on Smol Startup for the day. Public badge lives in the site footer.",
-    figure: "#1",
-    pinned: true,
-  },
-  {
-    date: "26 AUG 2026",
-    category: "COMPANY",
-    title: "Salesforce for Startups",
-    summary: "Affiliated with Salesforce for Startups. Logo added beside the other program partners on the homepage backing strip.",
-    figure: "Salesforce",
-  },
-  {
-    date: "24 AUG 2026",
-    category: "COMPANY",
-    title: "Startup support total",
-    summary: "Program credits plus founder-reported cash now total $232,700. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.",
-    figure: "$232,700",
-    pinned: true,
-  },
-  {
-    date: "24 AUG 2026",
-    category: "PRODUCT",
-    title: "Current Mac app stills on the site",
-    summary: "Homepage scroll story now uses live companion shots: welcome, Island, Home, History, Progress, Quiz, Privacy, and Mac access. Cursor demo stays the long walkthrough.",
-    figure: "app stills",
-  },
-  {
-    date: "20 AUG 2026",
-    category: "COMPANY",
-    title: "AWS for Startups",
-    summary: "Secured $5,000 in AWS Activate credits through AWS for Startups. Credits for Bedrock and related AWS infrastructure during private Mac beta. Not cash. Not a round.",
-    figure: "$5,000",
-  },
-  {
-    date: "18 AUG 2026",
-    category: "COMPANY",
-    title: "Deepgram for Startups",
-    summary: "Secured $1,000 in Deepgram API credits. Not cash. Not a round.",
-    figure: "$1,000",
-  },
-  {
     date: "19 AUG 2026",
     category: "PRODUCT",
     title: "Windows 30 explanation trial",
@@ -73,10 +29,10 @@ export const milestones: Milestone[] = [
     summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site.",
   },
   {
-    date: "17 AUG 2026",
+    date: "18 AUG 2026",
     category: "COMPANY",
     title: "Mixpanel for Startups",
-    summary: "Accepted into Mixpanel for Startups with $144,000 worth of Mixpanel Pro subscription credits for 1 year. Not cash. Not a round.",
+    summary: "Accepted into the program. $144,000 in Mixpanel credits. Not cash. Not a round.",
     figure: "$144,000",
   },
   {
@@ -92,6 +48,13 @@ export const milestones: Milestone[] = [
     title: "Homepage curl sits on its own",
     summary: "The survey form moved above the demo video. The install command is wider, and Command U now says what the Mac download is.",
     figure: "Give a try",
+  },
+  {
+    date: "17 AUG 2026",
+    category: "PRODUCT",
+    title: "Current Mac app stills on the site",
+    summary: "Homepage product shots now match the live companion: island, home, chat, learn, quiz, and progress. The demo videos stay, with a note that they are a little behind.",
+    figure: "app stills",
   },
   {
     date: "17 AUG 2026",
@@ -127,6 +90,7 @@ export const milestones: Milestone[] = [
     title: "GitLab for Startups",
     summary: "Accepted into the program. GitLab Ultimate credits to secure, automate, and scale the developer pipeline. Not cash. Not a round.",
     figure: "$23,700",
+    pinned: true,
   },
   {
     date: "17 AUG 2026",

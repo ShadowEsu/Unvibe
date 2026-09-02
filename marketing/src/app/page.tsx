@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
 import { BetaInstall } from "@/components/paper/BetaInstall";
-import { BackingStrip } from "@/components/paper/BackingStrip";
 import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
+import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
+import { BetaSurvey } from "@/components/paper/BetaSurvey";
 import { ChangelogList } from "@/components/paper/ChangelogList";
-import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
@@ -28,20 +29,18 @@ export default function HomePage() {
 
       <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
-          <PaperDemoVideo />
+          <div className="paper-video">
+            <AutoPlayVideo
+              src="/videos/unvibe-demo.mp4"
+              poster="/product/home.png"
+              label="Unvibe explaining selected code beside an editor"
+            />
+          </div>
           <p className="paper-caption">
-            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills below are current.
+            Highlight code in your editor. Unvibe explains it beside the work, then you can test yourself. The video is a little behind. The stills below are current.
           </p>
         </Reveal>
       </section>
-
-      <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" showFeedback={false} />
-        </Reveal>
-      </section>
-
-      <BackingStrip />
 
       <ToolsMarquee />
 
@@ -58,6 +57,12 @@ export default function HomePage() {
             <ShortcutKeys />
           </div>
         </div>
+      </section>
+
+      <section className="paper-section paper-install" id="install">
+        <Reveal className="paper-wrap paper-center">
+          <BetaInstall tone="page" />
+        </Reveal>
       </section>
 
       <StoryStage />
@@ -98,6 +103,14 @@ export default function HomePage() {
           <div className="mt-10">
             <TypingFaq items={homeFaq} />
           </div>
+        </Reveal>
+      </section>
+
+      <BetaSurvey />
+
+      <section className="paper-section paper-waitlist">
+        <Reveal className="paper-wrap">
+          <WaitlistInvite />
         </Reveal>
       </section>
     </div>

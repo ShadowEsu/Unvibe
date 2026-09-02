@@ -38,6 +38,12 @@ try {
   cpSync(backgroundPath, join(stage, '.background', 'dmg-background.png'));
   cpSync(volumeIconPath, join(stage, '.VolumeIcon.icns'));
   symlinkSync('/Applications', join(stage, 'Applications'));
+  const openerSrc = resolve('build/open-unvibe.command');
+  if (existsSync(openerSrc)) {
+    const openerDest = join(stage, 'Open Unvibe.command');
+    cpSync(openerSrc, openerDest);
+    run('/bin/chmod', ['755', openerDest]);
+  }
 
   run('/usr/bin/hdiutil', [
     'create', '-ov', '-format', 'UDRW', '-fs', 'APFS',
@@ -65,6 +71,9 @@ tell application "Finder"
     end tell
     set position of item "Unvibe.app" to {230, 290}
     set position of item "Applications" to {550, 290}
+    try
+      set position of item "Open Unvibe.command" to {390, 430}
+    end try
     update without registering applications
     delay 2
     close container window

@@ -1,0 +1,9 @@
+---
+description: Commit messages, no agent as contributor, changelog for big product changes.
+alwaysApply: true
+---
+
+1. Every commit message describes what changed and why. Title plus a short body. Match the repo style. Do not write "various fixes" or list files without saying what the user can now do.
+2. Never add Co-authored-by Cursor, never name the agent as a contributor, and never set git author or committer to the agent.
+3. If the change is big and user facing (new page, layout shift, product behavior people will notice), add a dated entry to `marketing/src/data/milestones.ts` whose title and summary match the commit, then include that file in the same commit. Skip the changelog for tiny copy tweaks and internal refactors.
+4. Date changelog entries in the existing form, such as 17 AUG 2026. No em dash or en dash in that copy.

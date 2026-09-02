@@ -49,7 +49,7 @@ export class SupabaseStore implements Store {
     }
     const boundUserId = device.user_id as string | null;
     if (boundUserId && boundUserId !== userId) return null;
-    await this.db.from('users').upsert({ id: userId, email: email ?? null }, { onConflict: 'id' });
+    await this.db.from('users').upsert({ id: userId, email: email ? email.trim().toLowerCase() : null }, { onConflict: 'id' });
     const token = randomUUID();
     await this.db.from('tokens').insert({ token, user_id: userId });
     await this.db
@@ -125,6 +125,17 @@ export class SupabaseStore implements Store {
       .eq('id', userId)
       .maybeSingle();
     return { userId, email: (data?.email as string | undefined) ?? undefined };
+  }
+
+  async findUserIdByEmail(email: string): Promise<string | null> {
+    const { data, error } = await this.db
+      .from('users')
+      .select('id')
+      .eq('email', email.trim().toLowerCase())
+      .limit(1);
+    if (error) throw new Error(`User email lookup failed: ${error.message}`);
+    const id = data?.[0]?.id;
+    return typeof id === 'string' ? id : null;
   }
 
   async deleteAccount(userId: string): Promise<void> {

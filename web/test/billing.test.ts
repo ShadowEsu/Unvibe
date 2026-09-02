@@ -44,6 +44,7 @@ test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
 });
 
 test('Pro and Teams entitlements use configured allowance scaling', () => {
+  assert.equal(planLimit('free', 'ai_explanation'), 30);
   assert.equal(planLimit('pro', 'ai_explanation'), 100);
   assert.equal(planLimit('pro', 'indexed_project'), 10);
   assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
@@ -78,7 +79,7 @@ test('inactive, canceled, unpaid, and expired grace subscriptions fall back to F
   assert.equal(effectivePlan('pro', 'grace_period', '2020-01-01T00:00:00.000Z'), 'free');
 });
 
-test('existing users receive one stable Free workspace and 50 monthly explanations', async () => {
+test('existing users receive one stable Free workspace and 30 monthly explanations', async () => {
   const userId = randomUUID();
   const store = new MemoryBillingStore(() => new Date('2026-07-16T12:00:00.000Z'));
   const first = await store.ensurePersonalWorkspace(userId);
@@ -86,11 +87,13 @@ test('existing users receive one stable Free workspace and 50 monthly explanatio
   assert.equal(first.id, second.id);
   const overview = await store.overview(userId);
   assert.equal(overview.subscription.plan, 'free');
-  for (let index = 0; index < 50; index += 1) assert.equal((await store.reserveUsage(userId, 'ai_explanation')).allowed, true);
+  assert.equal(overview.usage.find((line) => line.kind === 'ai_explanation')?.limit, 30);
+  for (let index = 0; index < 30; index += 1) assert.equal((await store.reserveUsage(userId, 'ai_explanation')).allowed, true);
   const denied = await store.reserveUsage(userId, 'ai_explanation');
   assert.equal(denied.allowed, false);
-  assert.equal(denied.line.used, 50);
+  assert.equal(denied.line.used, 30);
   assert.equal(denied.line.remaining, 0);
+  assert.equal(denied.line.limit, 30);
 });
 
 test('pending invitations reserve paid seats and owners cannot reduce below occupancy', async () => {

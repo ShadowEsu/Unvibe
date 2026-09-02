@@ -1,9 +1,9 @@
 import { getStore } from '@/data/store';
-import { baseUrlFrom } from '@/lib/auth';
+import { activateOriginFrom } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
-  const device = await getStore().createDeviceCode(baseUrlFrom(req));
+  const device = await getStore().createDeviceCode(activateOriginFrom(req));
   return Response.json(device);
 }

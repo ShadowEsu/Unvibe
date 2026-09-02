@@ -10,19 +10,27 @@ import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
-export type InactiveBehavior = 'dim' | 'stay' | 'collapse';
+export type InactiveBehavior = 'dim' | 'stay';
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 /** Bump when a release should re-show onboarding for existing installs. */
-const SETTINGS_REVISION = 7;
+const SETTINGS_REVISION = 8;
+/** Separately migrates the Island's default behavior without restarting onboarding. */
+const ISLAND_BEHAVIOR_REVISION = 2;
+/** Keeps the editor-owned ⌘U migration separate from product onboarding. */
+const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
   settingsRevision?: number;
   /** Internal — migrates the former system-default appearance to dark once. */
   appearanceRevision?: number;
+  /** Internal — tracks the quiet-by-default Island preference migration. */
+  islandBehaviorRevision?: number;
+  /** Internal — tracks the editor bridge shortcut migration. */
+  ideBridgeShortcutRevision?: number;
   onboarded: boolean;
-  /** Electron accelerator. Default is ⌘U. */
+  /** Electron accelerator for the cross-app fallback. ⌘U belongs to the IDE bridge. */
   shortcut: string;
   barPosition: BarPosition;
   /** Keep the learning strip available between reviews, or only show it during a review. */
@@ -51,6 +59,10 @@ export interface Settings {
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
   lastWidgetBounds?: { x: number; y: number; width: number; height: number };
+  /** Local greeting name for chat. Falls back to the Mac account name. */
+  displayName: string;
+  /** Optional local profile email. Not required to use the app. */
+  profileEmail: string;
   /** Prefer the user's own local API key instead of Unvibe cloud AI. */
   useOwnAi: boolean;
   /** Provider for local BYOK calls (cheap default model per provider). */
@@ -59,31 +71,43 @@ export interface Settings {
   aiModel?: string;
   /** Last folder used for git-diff / nearby-file Pro features. */
   lastProjectRoot?: string;
+  /** Companion sidebar width in pixels. */
+  sidebarWidth: number;
+  /** Local 8 character gift code when the Mac is not signed in. */
+  giftCode: string;
 }
 
 const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
   appearanceRevision: 1,
+  islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
+  ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   onboarded: false,
-  shortcut: 'CommandOrControl+U',
+  shortcut: 'Control+U',
   barPosition: 'top-center',
+  // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
-  barHoverPreview: true,
+  barHoverPreview: false,
   barHoverDelayMs: 220,
   rotateIslandStats: true,
   followActiveDisplay: true,
   soundEffects: true,
   soundVolume: 0.3,
   soundStyle: 'soft',
-  widgetOpacityInactive: 0.72,
+  // Enough transparency to show the editor beneath without making text feel disabled.
+  widgetOpacityInactive: 0.84,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
   theme: 'dark',
   defaultExplanationLevel: 'intermediate',
+  displayName: '',
+  profileEmail: '',
   notifications: true,
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
+  sidebarWidth: 232,
+  giftCode: '',
 };
 
 class SettingsStore {
@@ -101,8 +125,16 @@ class SettingsStore {
       /* first run */
     }
     const needsOnboardingReset = (loaded.settingsRevision ?? 0) < SETTINGS_REVISION;
+    // ⌘U is owned by the VS Code / Cursor bridge: it reads the editor selection directly,
+    // rather than asking macOS to synthesize Copy in another process. Move only the legacy
+    // default so deliberately customised shortcuts remain untouched.
+    const needsIdeShortcutMigration = (loaded.ideBridgeShortcutRevision ?? 0) < IDE_BRIDGE_SHORTCUT_REVISION &&
+      (loaded.shortcut === 'CommandOrControl+U' || loaded.shortcut === 'CommandOrControl+Alt+U');
     const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
       (loaded.theme === undefined || loaded.theme === 'system');
+    // Only migrate the exact former defaults. Deliberate custom settings stay intact.
+    const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
+      loaded.barVisibility === 'during-review';
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -114,7 +146,15 @@ class SettingsStore {
       aiProvider,
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 1,
+      islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
+      ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
       ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
+      ...(needsFullscreenIsland
+        ? { barVisibility: 'always' as const, barHoverPreview: false }
+        : {}),
+      // Older builds could collapse the whole panel on blur. Preserve the panel
+      // size and simply dim it when focus returns to Cursor or VS Code.
+      ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
       ...(needsOnboardingReset
         ? {
             onboarded: false,
@@ -122,10 +162,12 @@ class SettingsStore {
             lastWidgetBounds: undefined,
           }
         : {}),
+      ...(needsIdeShortcutMigration ? { shortcut: 'Control+U' } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
-    if (needsOnboardingReset || needsDarkDefault || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
+    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
@@ -161,6 +203,15 @@ class SettingsStore {
       ? undefined
       : Math.min(1, Math.max(0, patch.soundVolume));
     const soundStyle = patch.soundStyle === 'pixel' ? 'pixel' : patch.soundStyle === 'soft' ? 'soft' : undefined;
+    const sidebarWidth = patch.sidebarWidth === undefined
+      ? undefined
+      : Math.min(340, Math.max(168, Math.round(patch.sidebarWidth)));
+    const displayName = patch.displayName === undefined
+      ? undefined
+      : String(patch.displayName).replace(/\s+/g, ' ').trim().slice(0, 48);
+    const profileEmail = patch.profileEmail === undefined
+      ? undefined
+      : String(patch.profileEmail).trim().slice(0, 120);
     this.data = {
       ...this.data,
       ...patch,
@@ -169,6 +220,9 @@ class SettingsStore {
       ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
       ...(soundVolume !== undefined ? { soundVolume } : {}),
       ...(soundStyle ? { soundStyle } : {}),
+      ...(sidebarWidth !== undefined ? { sidebarWidth } : {}),
+      ...(displayName !== undefined ? { displayName } : {}),
+      ...(profileEmail !== undefined ? { profileEmail } : {}),
     };
     delete this.data.aiModel;
     this.persist();
