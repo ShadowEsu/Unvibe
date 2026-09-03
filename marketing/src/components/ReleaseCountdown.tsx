@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const RELEASE_AT = new Date("2026-09-07T00:00:00+08:00").getTime();
+const RELEASE_ISO = "2026-09-15T00:00:00+08:00";
+const RELEASE_LABEL = "SEPTEMBER 15, 2026";
+const RELEASE_AT = new Date(RELEASE_ISO).getTime();
 
 type Remaining = {
   days: number;
@@ -34,7 +36,7 @@ export function ReleaseCountdown({ variant = "page" }: { variant?: "page" | "her
     >
       <div className="release-countdown__heading">
         <span>{released ? "RELEASE DAY" : "PRIVATE BETA RELEASE"}</span>
-        <time dateTime="2026-09-07T00:00:00+08:00">SEPTEMBER 7, 2026</time>
+        <time dateTime={RELEASE_ISO}>{RELEASE_LABEL}</time>
       </div>
       <div className="release-countdown__grid" aria-hidden="true">
         {([
