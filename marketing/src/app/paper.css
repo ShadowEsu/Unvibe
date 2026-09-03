@@ -1183,6 +1183,10 @@ h2 {
 .teams-hero .paper-photo-band__copy > p:not(.paper-meta) { max-width: 42rem; margin-inline: 0; font-size: clamp(1rem, 2vw, 1.25rem); }
 .teams-hero__actions { justify-content: center; }
 .teams-hero .teams-hero__actions { justify-content: flex-start; }
+.teams-page .teams-cta--dark,
+.teams-page .teams-cta--dark:hover { color: #fff; }
+.teams-page .teams-cta--light,
+.teams-page .teams-cta--light:hover { color: #12110f; }
 .teams-roadmap__intro > p:last-child, .teams-enterprise .paper-wrap > p { max-width: 42rem; margin: 0.9rem auto 0; color: var(--ink-muted); line-height: 1.65; }
 .teams-roadmap__grid { display: grid; gap: 1rem; margin-top: 2.5rem; }
 .teams-roadmap__grid article, .teams-principles .paper-glass { padding: clamp(1.3rem, 3vw, 2rem); }

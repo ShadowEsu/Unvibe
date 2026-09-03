@@ -24,7 +24,7 @@ export default function TeamsPage() {
           <p className="paper-meta">Unvibe Teams · GitHub-first</p>
           <h1>Keep your engineering team ahead of its codebase.</h1>
           <p>Unvibe turns meaningful code changes into shared knowledge, then shows where understanding is missing, stale, or concentrated.</p>
-          <div className="teams-hero__actions"><Button href="/?utm_campaign=teams_pilot#waitlist" size="lg">Join the founding pilot</Button><Button href="/#product" variant="secondary" size="lg">See the personal product</Button></div>
+          <div className="teams-hero__actions"><Button href="/?utm_campaign=teams_pilot#waitlist" size="lg" className="teams-cta teams-cta--dark">Join the founding pilot</Button><Button href="/#product" variant="secondary" size="lg" className="teams-cta teams-cta--light">See the personal product</Button></div>
         </div>
       </header>
 
@@ -47,7 +47,7 @@ export default function TeamsPage() {
       </section>
 
       <section className="paper-section teams-enterprise">
-        <div className="paper-wrap paper-center"><p className="paper-meta">Enterprise roadmap</p><h2>Governance comes after the useful foundation.</h2><p>Organization intelligence, policies, permissions, audit events, and retention controls are planned. SSO/SAML, SCIM, BYOK, VPC deployment, data residency, and SLA support are later-stage capabilities—not current claims.</p><div className="teams-hero__actions"><Button href="/pricing" size="lg">See plans and status</Button><Button href="mailto:preston@unvibe.site?subject=Unvibe%20Teams%20pilot" variant="secondary" size="lg">Talk about your team</Button></div></div>
+        <div className="paper-wrap paper-center"><p className="paper-meta">Enterprise roadmap</p><h2>Governance comes after the useful foundation.</h2><p>Organization intelligence, policies, permissions, audit events, and retention controls are planned. SSO/SAML, SCIM, BYOK, VPC deployment, data residency, and SLA support are later-stage capabilities—not current claims.</p><div className="teams-hero__actions"><Button href="/pricing" size="lg" className="teams-cta teams-cta--dark">See plans and status</Button><Button href="mailto:preston@unvibe.site?subject=Unvibe%20Teams%20pilot" variant="secondary" size="lg" className="teams-cta teams-cta--light">Talk about your team</Button></div></div>
       </section>
     </article>
   );
