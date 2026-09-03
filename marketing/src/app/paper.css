@@ -683,8 +683,13 @@ h2 {
 
 .paper-join--win {
   background: var(--ink);
-  color: var(--hero-type);
+  color: #fff;
   border-color: var(--ink);
+}
+
+.paper-join--win:hover,
+.paper-join--win .paper-join__label {
+  color: #fff;
 }
 
 .paper-join__label {
@@ -826,14 +831,16 @@ h2 {
 
 .paper-backing__achievement {
   margin: 0 0 0.85rem;
-  color: var(--brand-deep);
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: clamp(0.78rem, 1.6vw, 0.92rem);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   line-height: 1.4;
   text-transform: uppercase;
 }
+
+.paper-backing__achievement span { display: inline-block; margin-right: 0.2rem; font-size: 1.05em; }
 
 .paper-backing__amount {
   max-width: 18ch;
@@ -852,6 +859,32 @@ h2 {
   font-size: 0.98rem;
   line-height: 1.45;
   color: var(--ink-muted);
+}
+
+.paper-backing__breakdown {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-width: 68rem;
+  margin: clamp(1.5rem, 4vw, 2.3rem) auto 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+}
+
+.paper-backing__breakdown > div { min-width: 0; padding: 1rem clamp(0.65rem, 1.5vw, 1.1rem); }
+.paper-backing__breakdown > div + div { border-left: 1px solid var(--hairline); }
+.paper-backing__breakdown dt { color: var(--ink); font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.paper-backing__breakdown dd { display: grid; gap: 0.35rem; margin: 0.55rem 0 0; }
+.paper-backing__breakdown strong { color: var(--ink); font-family: var(--font-display); font-size: 1.45rem; font-weight: 500; }
+.paper-backing__breakdown span { color: var(--ink-muted); font-size: 0.72rem; line-height: 1.45; }
+.paper-backing__note { margin: 0.8rem auto 0; color: var(--ink-muted); font-size: 0.72rem; line-height: 1.5; }
+
+@media (max-width: 820px) {
+  .paper-backing__breakdown { grid-template-columns: 1fr 1fr; }
+  .paper-backing__breakdown > div + div { border-left: 0; }
+  .paper-backing__breakdown > div:nth-child(even) { border-left: 1px solid var(--hairline); }
+  .paper-backing__breakdown > div:nth-child(n + 3) { border-top: 1px solid var(--hairline); }
+  .paper-backing__breakdown > div:last-child { grid-column: 1 / -1; border-left: 0; }
 }
 
 .paper-partners {

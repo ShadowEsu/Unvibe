@@ -10,7 +10,9 @@ const links = [
   { label: "Product", href: "/#product" },
   { label: "Teams", href: "/teams" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Security", href: "/privacy" },
+  { label: "Change Log", href: "/releases" },
+  { label: "Growth", href: "/build" },
+  { label: "Investors", href: "/investors" },
 ];
 
 export function Nav() {
@@ -43,7 +45,7 @@ export function Nav() {
     <header className={navClass}>
       <nav className="paper-wrap flex h-16 items-center justify-between gap-4" aria-label="Primary">
         <Link href="/" aria-label="Unvibe home"><Logo /></Link>
-        <div className="hidden items-center gap-6 md:flex">
+        <div className="hidden items-center gap-5 lg:flex">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className="text-sm">
               {link.label}
@@ -53,7 +55,7 @@ export function Nav() {
         </div>
         <button
           type="button"
-          className="grid h-10 w-10 place-items-center md:hidden"
+          className="grid h-10 w-10 place-items-center lg:hidden"
           aria-label="Open menu"
           aria-expanded={open}
           onClick={() => setOpen(true)}
@@ -63,7 +65,7 @@ export function Nav() {
       </nav>
 
       {open && (
-        <div className="paper-sheet md:hidden">
+        <div className="paper-sheet lg:hidden">
           <button type="button" aria-label="Close menu" className="paper-sheet__scrim" onClick={() => setOpen(false)} />
           <div className="paper-sheet__panel">
             <div className="paper-sheet__head">
