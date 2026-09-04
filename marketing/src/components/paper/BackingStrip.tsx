@@ -31,10 +31,13 @@ function compactUsd(amount: number): string {
 export function BackingStrip() {
   return (
     <section className="paper-section paper-backing" aria-label="Startup program support">
-      <div className="paper-wrap paper-center">
-        <p className="paper-backing__achievement"><span aria-hidden="true">🏆</span> 5× SmolStartup Startup of the Day</p>
-        <p className="paper-backing__amount">$230K+</p>
-        <p className="paper-backing__lead">in startup-program subscriptions and credits</p>
+      <div className="paper-wrap paper-backing__layout">
+        <div className="paper-backing__summary">
+          <p className="paper-backing__achievement"><span aria-hidden="true">🏆</span> 5× SmolStartup Startup of the Day</p>
+          <p className="paper-backing__amount">$230K+</p>
+          <p className="paper-backing__lead">in startup-program subscriptions and credits</p>
+          <p className="paper-backing__note">$231.9K secured program value. Not cash and not a funding round.</p>
+        </div>
         <dl className="paper-backing__breakdown">
           {namedSupport.map(({ match, label }) => {
             const line = credits.find((item) => item.name.startsWith(match));
@@ -45,7 +48,6 @@ export function BackingStrip() {
             <dd><strong>$9.2K</strong><span>Linear, Google Cloud, OpenAI, Deepgram, and MongoDB</span></dd>
           </div>
         </dl>
-        <p className="paper-backing__note">$231.9K secured program value. Not cash and not a funding round.</p>
       </div>
       <div className="paper-partners" aria-label="Startup programs and company affiliations">
         <p className="paper-meta">Partnering with</p>

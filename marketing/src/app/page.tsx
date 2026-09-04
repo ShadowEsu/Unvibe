@@ -31,8 +31,8 @@ export default function HomePage() {
       <PhotoHero />
 
       <section className="paper-section paper-install paper-install--front" id="install">
-        <Reveal className="paper-center">
-          <div className="paper-wrap paper-install__intro">
+        <Reveal className="paper-wrap paper-install__panel">
+          <div className="paper-install__intro">
             <p className="paper-meta">Get the private beta</p>
             <h2>One command. Then stay in your editor.</h2>
             <p>Choose your platform, copy the command, and open Unvibe. No separate API key.</p>
