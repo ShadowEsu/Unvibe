@@ -25,4 +25,8 @@ export function getStore(): Store {
   return cached;
 }
 
+export function resetStoreCacheForTests(): void {
+  cached = undefined;
+}
+
 export type { Store } from './types';

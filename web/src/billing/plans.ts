@@ -36,13 +36,53 @@ const BILLING_LIMITS: Record<PlanId, Record<BillingUsageKind, number>> = {
 
 export const TEAMS_CHECKOUT_ENABLED = false;
 
+/** Founding Teams seat cap. Above this is Enterprise conversation pricing. */
+export const TEAMS_MAX_SEATS = 20;
+
+/** Published totals in cents. UI copy must stay in lockstep with these numbers. */
+const UNIT_CENTS: Record<PlanId, { monthly: number; annual: number }> = {
+  free: { monthly: 0, annual: 0 },
+  /** Pro $10/mo · $90/yr (25% off). */
+  pro: { monthly: 1_000, annual: 9_000 },
+  /** Teams $8/seat/mo · $72/seat/yr (25% off). */
+  teams: { monthly: 800, annual: 7_200 },
+};
+
+/** Pro Lifetime one-time purchase in cents. */
+export const PRO_LIFETIME_CENTS = 8_000;
+
+export function priceFor(plan: PlanId, interval: 'monthly' | 'annual' | 'lifetime', seats: number): number {
+  if (plan === 'free') return 0;
+  if (interval === 'lifetime') {
+    if (plan !== 'pro') throw new Error('Lifetime is only available for Pro.');
+    return PRO_LIFETIME_CENTS;
+  }
+  const n = plan === 'pro' ? 1 : Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(seats)));
+  return UNIT_CENTS[plan][interval] * n;
+}
+
+export function proAnnualSavingsPercent(): number {
+  return 25;
+}
+
+export function teamsAnnualSavingsPercent(): number {
+  return 25;
+}
+
 export function normalizedSeats(plan: Exclude<PlanId, 'free'>, requested: number): number {
   if (plan === 'pro') return 1;
   if (!Number.isFinite(requested)) return 2;
-  return Math.max(2, Math.min(500, Math.floor(requested)));
+  return Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(requested)));
 }
 
-export function effectivePlan(plan: PlanId, status: SubscriptionStatus, gracePeriodEndsAt?: string, now = new Date()): PlanId {
+export function effectivePlan(
+  plan: PlanId,
+  status: SubscriptionStatus,
+  gracePeriodEndsAt?: string,
+  now = new Date(),
+  currentPeriodEnd?: string,
+): PlanId {
+  if (status === 'trialing' && currentPeriodEnd && new Date(currentPeriodEnd) <= now) return 'free';
   if (plan === 'free' || status === 'trialing' || status === 'active') return plan;
   if (status === 'grace_period' && gracePeriodEndsAt && new Date(gracePeriodEndsAt) > now) return plan;
   return 'free';
@@ -57,7 +97,7 @@ export function monthWindow(now = new Date()): { startsAt: string; resetsAt: str
 export function planLimit(plan: PlanId, kind: BillingUsageKind, seats: number): number {
   const limit = BILLING_LIMITS[plan][kind];
   return plan === 'teams' && (kind === 'ai_explanation' || kind === 'project_question')
-    ? limit * Math.max(2, Math.min(500, Math.floor(seats)))
+    ? limit * Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(seats)))
     : limit;
 }
 

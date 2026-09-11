@@ -5,6 +5,15 @@ const testsOnly = process.argv.includes('--tests');
 const releaseBackend = process.env.UNVIBE_BACKEND?.trim() ?? '';
 const releaseTrialToken = process.env.UNVIBE_TRIAL_TOKEN?.trim() ?? '';
 const releaseFullProduct = process.env.UNVIBE_FULL_PRODUCT === '1';
+const releasePosthogKey =
+  process.env.UNVIBE_POSTHOG_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim() ||
+  '';
+const releasePosthogHost =
+  process.env.UNVIBE_POSTHOG_HOST?.trim() ||
+  process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() ||
+  process.env.POSTHOG_HOST?.trim() ||
+  '';
 
 if (testsOnly) {
   rmSync('dist-test', { recursive: true, force: true });
@@ -21,6 +30,8 @@ if (testsOnly) {
       'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(''),
       'process.env.UNVIBE_RELEASE_TRIAL_TOKEN': JSON.stringify(''),
       'process.env.UNVIBE_RELEASE_FULL_PRODUCT': JSON.stringify(''),
+      'process.env.UNVIBE_RELEASE_POSTHOG_KEY': JSON.stringify(''),
+      'process.env.UNVIBE_RELEASE_POSTHOG_HOST': JSON.stringify(''),
     },
   });
   process.exit(0);
@@ -42,6 +53,8 @@ await build({
     'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(releaseBackend),
     'process.env.UNVIBE_RELEASE_TRIAL_TOKEN': JSON.stringify(releaseTrialToken),
     'process.env.UNVIBE_RELEASE_FULL_PRODUCT': JSON.stringify(releaseFullProduct ? '1' : ''),
+    'process.env.UNVIBE_RELEASE_POSTHOG_KEY': JSON.stringify(releasePosthogKey),
+    'process.env.UNVIBE_RELEASE_POSTHOG_HOST': JSON.stringify(releasePosthogHost),
   },
 });
 

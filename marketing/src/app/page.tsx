@@ -14,11 +14,11 @@ import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
-  title: "Unvibe. Learn the code AI shipped.",
+  title: "Unvibe. Engineering understanding that keeps up.",
 };
 
 const homeFaq = faqItems.filter((item) =>
-  ["what-is-it", "generator", "editors", "sent", "beta", "windows"].includes(item.id),
+  ["what-is-it", "generator", "vs-cursor", "editors", "sent", "beta", "windows", "teams"].includes(item.id),
 );
 
 export default function HomePage() {

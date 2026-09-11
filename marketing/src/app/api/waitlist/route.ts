@@ -33,7 +33,7 @@ function rateLimited(ip: string): boolean {
 }
 
 function referralCodeFor(email: string): string {
-  return createHash("sha256").update(email).digest("hex").slice(0, 8);
+  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 8);
 }
 
 function clientIp(req: Request): string {

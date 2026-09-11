@@ -18,7 +18,10 @@ export async function POST(req: Request): Promise<Response> {
   const store = getBillingStore();
   if (!(await store.claimWebhook(event.id, event.type))) return Response.json({ received: true, duplicate: true });
   try {
-    await processStripeEvent(store, event, { retrieveSubscription: (id) => stripe.subscriptions.retrieve(id) });
+    await processStripeEvent(store, event, {
+      retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      retrieveCheckoutSession: (id) => stripe.checkout.sessions.retrieve(id, { expand: ['line_items.data.price'] }),
+    });
     await store.completeWebhook(event.id);
     return Response.json({ received: true });
   } catch (error) {

@@ -302,4 +302,10 @@ export class SupabaseBillingStore implements BillingStore {
     const { error } = await this.db.rpc('delete_user_billing_data', { p_user_id: userId });
     this.require(error, 'delete user billing data');
   }
+
+  async grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }> {
+    const { data, error } = await this.db.rpc('grant_gift_month', { p_user_id: userId, p_ends_at: endsAt });
+    this.require(error, 'grant gift month');
+    return { applied: Boolean(data) };
+  }
 }

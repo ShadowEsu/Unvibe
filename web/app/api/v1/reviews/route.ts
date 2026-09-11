@@ -26,7 +26,7 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const provider = selectProvider();
+  const provider = selectProvider(payload.model);
   const system = buildSystemPrompt(payload);
   const user = buildUserPrompt(payload);
   const encoder = new TextEncoder();

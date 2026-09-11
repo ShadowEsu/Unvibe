@@ -1,6 +1,7 @@
 /** Durable outbox sync with remote reconciliation and bounded exponential retry. */
 import { pullEvents, pushEvents } from './backend';
 import { store } from './store';
+import { settings } from './settings';
 import { retryDelayMs } from '../core/syncModel';
 
 export type SyncPhase = 'local' | 'syncing' | 'synced' | 'offline' | 'auth_required' | 'error';
@@ -61,7 +62,8 @@ async function runSync(): Promise<void> {
   try {
     const pending = store().pending();
     if (pending.length > 0) {
-      const accepted = await pushEvents(token, pending);
+      const workspaceId = settings().all().activeWorkspaceId;
+      const accepted = await pushEvents(token, pending, workspaceId);
       store().markSynced(accepted);
     }
     const remote = await pullEvents(token, (loaded) => {

@@ -8,6 +8,8 @@ import {
   BETA_INSTALL_COMMAND,
   BETA_INSTALL_LABEL,
   BETA_INSTALL_VERSION,
+  BETA_MAC_DIRECT_DOWNLOAD,
+  BETA_WINDOWS_DIRECT_DOWNLOAD,
   BETA_WINDOWS_INSTALL_COMMAND,
 } from "@/lib/betaOffer";
 
@@ -35,11 +37,23 @@ export function BetaInstall({
   const { showCopyToast } = useCopyToast();
   const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
   const prompt = os === "windows" ? "PS>" : "$";
+  const shellHint =
+    os === "windows"
+      ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
+      : "Paste in Terminal on an Apple silicon Mac (M1–M4).";
+  const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
+  const directLabel = os === "windows" ? "Download Windows .exe instead" : "Download Mac .dmg instead";
 
   useEffect(() => {
     const detected = detectInstallOs();
     setOs(detected);
     track("beta_install_viewed", { surface: tone, os: detected });
+    const selectFromCta = (event: Event) => {
+      const platform = (event as CustomEvent<InstallOs>).detail;
+      if (platform === "mac" || platform === "windows") setOs(platform);
+    };
+    window.addEventListener("unvibe:install-platform", selectFromCta);
+    return () => window.removeEventListener("unvibe:install-platform", selectFromCta);
   }, [tone]);
 
   const selectOs = (next: InstallOs) => {
@@ -65,13 +79,11 @@ export function BetaInstall({
     <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
       <p className="paper-beta__title">{title}</p>
       <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
-      {tone === "page" ? (
-        <p className="paper-beta__blurb">
-          {os === "windows"
-            ? "Windows x64. 30 AI explanations, then it stops. No API key."
-            : "Apple silicon. 30 AI explanations, then it stops. No API key."}
-        </p>
-      ) : null}
+      <p className="paper-beta__blurb">
+        {os === "windows"
+          ? "Windows x64 portable. 30 AI explanations, then it stops. No API key."
+          : "Apple silicon. 30 AI explanations, then it stops. No API key."}
+      </p>
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
         <button
           type="button"
@@ -80,7 +92,8 @@ export function BetaInstall({
           className={os === "mac" ? "is-on" : undefined}
           onClick={() => selectOs("mac")}
         >
-          Mac
+          <span className="paper-beta__os-name">Mac</span>
+          <span className="paper-beta__os-meta">Apple silicon</span>
         </button>
         <button
           type="button"
@@ -89,9 +102,11 @@ export function BetaInstall({
           className={os === "windows" ? "is-on" : undefined}
           onClick={() => selectOs("windows")}
         >
-          Windows
+          <span className="paper-beta__os-name">Windows</span>
+          <span className="paper-beta__os-meta">x64 PowerShell</span>
         </button>
       </div>
+      <p className="paper-beta__shell" role="note">{shellHint}</p>
       <div className="paper-beta__term">
         <pre
           role="button"
@@ -121,10 +136,20 @@ export function BetaInstall({
           {copied ? <CheckIcon /> : <CopyIcon />}
         </button>
       </div>
+      <a
+        className="paper-beta__direct"
+        href={directHref}
+        rel="noreferrer"
+        onClick={() => track("release_download_clicked", { os, surface: tone })}
+      >
+        {directLabel}
+      </a>
       {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
       {showFeedback ? (
         <>
-          <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Waitlist gifts still add on.</p>
+          <p className="paper-beta__offer">
+            Install, open Unvibe, then select code and press {os === "windows" ? "Ctrl+U" : "⌘U"}. After 30 explanations, the feedback form unlocks 1 week of Pro.
+          </p>
           <a
             className="paper-beta__survey"
             href={BETA_FEEDBACK_URL}

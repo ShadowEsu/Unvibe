@@ -25,7 +25,7 @@ export const faqItems: FaqItem[] = [
     id: "what-is-it",
     question: "What is Unvibe?",
     answer:
-      "Unvibe is a desktop AI learning layer for code. It lives beside your editor: select code, choose a depth, and get an explanation that stays open while you work. It also helps you save notes, track concepts, and turn real projects into study material. It is not a course platform or another chat window.",
+      "Unvibe is a desktop overlay that explains AI-generated code in place. Select code in Cursor or VS Code, press ⌘U / Ctrl+U, and get a leveled explanation beside your editor. You can save it, follow up, and quiz yourself later. It is not a code generator and not another chat window.",
     category: "product",
   },
   {
@@ -33,6 +33,13 @@ export const faqItems: FaqItem[] = [
     question: "Is Unvibe a code generator?",
     answer:
       "No. Unvibe does not write features for you. AI agents can write the code; Unvibe helps you understand, review, and remember it.",
+    category: "product",
+  },
+  {
+    id: "vs-cursor",
+    question: "Why not just ask the agent to explain itself?",
+    answer:
+      "Agent chat answers live in that conversation and disappear when you move on. Unvibe opens beside the code, offers five depths, and saves the explanation so you can reopen it, follow up, and take a Test me quiz later. Coding agents answer “can I build this?” Unvibe answers “will I still understand this in three weeks?”",
     category: "product",
   },
   {

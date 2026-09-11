@@ -29,7 +29,7 @@ export class MockProvider implements Provider {
       `the code shows from what is inferred, cites references like ${cite}, and ends with what ` +
       `would break if the code were removed.\n\n` +
       `Uncertain: nothing further can be said without the model.\n\n` +
-      `To enable real analysis: set GEMINI_API_KEY or ANTHROPIC_API_KEY in web/.env.local and restart.`;
+      `To enable real analysis: set OPENROUTER_API_KEY (preferred), or GEMINI_API_KEY / ANTHROPIC_API_KEY in web/.env.local and restart.`;
 
     for (const chunk of text.match(/.{1,24}/gs) ?? []) {
       if (signal?.aborted) {

@@ -21,8 +21,8 @@ export function PhotoHero() {
       <img src="/hero/golden-gate.png" alt="" />
       <div className="paper-hero__veil" />
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
-        <h1>Learn the code<br />AI shipped.</h1>
-        <p className="paper-hero__kicker">Select it. Press Command U. Keep it.</p>
+        <h1>Understand the AI-generated code you ship.</h1>
+        <p className="paper-hero__kicker">Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.</p>
       </div>
       <div className={ready ? "paper-hero__foot is-ready" : "paper-hero__foot"}>
         <ReleaseCountdown variant="hero" />

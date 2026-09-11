@@ -102,9 +102,26 @@ const api = {
   aiSetKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
   aiClearKey: () => ipcRenderer.invoke('ai:clearKey'),
   aiModels: () => ipcRenderer.invoke('ai:models'),
+  aiCloudModels: () => ipcRenderer.invoke('ai:cloudModels'),
   aiCostOverview: (model?: string) => ipcRenderer.invoke('ai:costOverview', model),
   startBillingCheckout: (input: unknown) => ipcRenderer.invoke('billing:checkout', input),
   openBillingPortal: (workspaceId: string) => ipcRenderer.invoke('billing:portal', workspaceId),
+  teamsListWorkspaces: () => ipcRenderer.invoke('teams:listWorkspaces'),
+  teamsSetActiveWorkspace: (workspaceId: string) => ipcRenderer.invoke('teams:setActiveWorkspace', workspaceId),
+  teamsCreate: (name: string) => ipcRenderer.invoke('teams:create', name),
+  teamsMembers: (workspaceId: string) => ipcRenderer.invoke('teams:members', workspaceId),
+  teamsInvite: (input: { workspaceId: string; email: string; role?: 'admin' | 'member' }) => ipcRenderer.invoke('teams:invite', input),
+  teamsAcceptInvite: (inviteToken: string) => ipcRenderer.invoke('teams:acceptInvite', inviteToken),
+  teamsHistory: (workspaceId: string) => ipcRenderer.invoke('teams:history', workspaceId),
+  teamsProjects: (workspaceId: string) => ipcRenderer.invoke('teams:projects', workspaceId),
+  giftMine: () => ipcRenderer.invoke('gifts:mine'),
+  copyText: (text: string) => ipcRenderer.invoke('clipboard:write', text),
+  openPlan: () => ipcRenderer.send('companion:openPage', 'Plan'),
+  onCompanionPage: (cb: (page: string) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, page: string) => cb(page);
+    ipcRenderer.on('companion:page', listener);
+    return () => ipcRenderer.removeListener('companion:page', listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('unvibe', api);

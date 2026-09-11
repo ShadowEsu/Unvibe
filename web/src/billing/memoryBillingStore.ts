@@ -100,7 +100,13 @@ export class MemoryBillingStore implements BillingStore {
   async overview(userId: string, workspaceId?: string): Promise<BillingOverview> {
     const workspace = await this.requireAccess(userId, workspaceId);
     const subscription = this.data.subscriptions.get(workspace.id) ?? defaultSubscription(workspace.id);
-    const plan = effectivePlan(subscription.plan, subscription.status, subscription.gracePeriodEndsAt, this.now());
+    const plan = effectivePlan(
+      subscription.plan,
+      subscription.status,
+      subscription.gracePeriodEndsAt,
+      this.now(),
+      subscription.currentPeriodEnd,
+    );
     const { startsAt, resetsAt } = monthWindow(this.now());
     const occupiedSeats = [...this.data.memberships.keys()].filter((key) => key.startsWith(`${workspace.id}:`)).length;
     const pendingInvitations = [...this.data.invitations.values()].filter((invite) => invite.workspaceId === workspace.id && invite.status === 'pending' && new Date(invite.expiresAt) > this.now()).length;
@@ -143,7 +149,7 @@ export class MemoryBillingStore implements BillingStore {
 
   async listMembers(userId: string, workspaceId: string): Promise<WorkspaceMember[]> {
     const access = await this.requireAccess(userId, workspaceId);
-    if (!canManageMembers(access.role)) throw new Error('Only owners and admins can view members.');
+    if (!access) throw new Error('Workspace not found or access denied.');
     return [...this.data.memberships.entries()].flatMap(([key, role]) => {
       const [candidateWorkspaceId, memberUserId] = key.split(':');
       return candidateWorkspaceId === workspaceId ? [{ userId: memberUserId, role, joinedAt: this.now().toISOString() }] : [];
@@ -178,7 +184,7 @@ export class MemoryBillingStore implements BillingStore {
     const access = await this.requireAccess(userId, workspaceId);
     if (!canManageMembers(access.role) || access.type !== 'team') throw new Error('Only team owners and admins can invite members.');
     const overview = await this.overview(userId, workspaceId);
-    if (overview.occupiedSeats + overview.pendingInvitations >= overview.subscription.seats && overview.subscription.plan === 'teams') {
+    if (access.type === 'team' && overview.occupiedSeats + overview.pendingInvitations >= overview.subscription.seats) {
       throw new Error('Add a paid seat before sending another invitation.');
     }
     const invitation: WorkspaceInvitation & { tokenHash: string } = {
@@ -287,5 +293,27 @@ export class MemoryBillingStore implements BillingStore {
         for (const [inviteId, invite] of [...this.data.invitations]) if (invite.workspaceId === id) this.data.invitations.delete(inviteId);
       }
     }
+  }
+
+  async grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }> {
+    const workspace = await this.ensurePersonalWorkspace(userId);
+    const current = this.data.subscriptions.get(workspace.id) ?? defaultSubscription(workspace.id);
+    if (current.stripeSubscriptionId && (current.status === 'active' || current.status === 'trialing')) {
+      return { applied: false };
+    }
+    const now = this.now();
+    const requestedEnd = new Date(endsAt);
+    const existingEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : now;
+    const later = requestedEnd > existingEnd ? requestedEnd : existingEnd;
+    this.data.subscriptions.set(workspace.id, {
+      ...current,
+      plan: 'pro',
+      interval: 'monthly',
+      status: 'trialing',
+      seats: 1,
+      currentPeriodStart: now.toISOString(),
+      currentPeriodEnd: later.toISOString(),
+    });
+    return { applied: true };
   }
 }

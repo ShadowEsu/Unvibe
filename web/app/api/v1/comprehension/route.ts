@@ -9,13 +9,13 @@ import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
-  const provider = selectProvider();
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
+  const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
+  const provider = selectProvider(payload?.model);
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();
   }
-  const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
   if (!payload?.context) {
     return Response.json({ error: 'missing context' }, { status: 400 });
   }

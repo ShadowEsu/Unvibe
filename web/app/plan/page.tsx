@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { currentUserId } from '@/lib/session';
 import { getBillingStore } from '@/billing/store';
-import { stripeIsConfigured } from '@/billing/stripe';
+import { stripeIsConfigured, stripeLifetimeConfigured } from '@/billing/stripe';
 import { PlanManager } from './PlanManager';
 import { publicBillingOverview } from '@/billing/presentation';
 
@@ -13,5 +13,12 @@ export default async function PlanPage() {
   const billing = getBillingStore();
   const workspaces = await billing.listWorkspaces(userId);
   const overview = await billing.overview(userId, workspaces[0]?.id);
-  return <PlanManager initialOverview={publicBillingOverview(overview)} initialWorkspaces={workspaces} checkoutAvailable={stripeIsConfigured()} />;
+  return (
+    <PlanManager
+      initialOverview={publicBillingOverview(overview)}
+      initialWorkspaces={workspaces}
+      checkoutAvailable={stripeIsConfigured()}
+      lifetimeAvailable={stripeLifetimeConfigured()}
+    />
+  );
 }

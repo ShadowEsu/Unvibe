@@ -35,6 +35,8 @@ export interface ReviewRequestPayload {
   question?: string;
   variant?: 'default' | 'different';
   quizMode?: QuizMode;
+  /** Optional OpenRouter free-chat model id. Ignored unless the backend key is OpenRouter. */
+  model?: string;
 }
 
 export type StreamEvent =

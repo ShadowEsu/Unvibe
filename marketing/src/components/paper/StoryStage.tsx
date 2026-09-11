@@ -67,8 +67,8 @@ const beats: StoryBeat[] = [
   },
   {
     meta: "Privacy",
-    title: "Secrets stay on this Mac.",
-    body: "Every selection is scanned for keys and tokens before it leaves. The service never reads your repo.",
+    title: "Secrets are scanned before sending.",
+    body: "When you request an explanation, selected code and limited context go to the configured cloud AI provider after an on-device secret scan. Unvibe does not crawl or upload your whole repository.",
     src: "/product/privacy-data.jpg",
     alt: "Unvibe Privacy and Data settings with on-device secret scan",
     kind: "image",

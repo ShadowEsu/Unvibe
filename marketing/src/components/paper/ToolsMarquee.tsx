@@ -19,7 +19,11 @@ export function ToolsMarquee() {
       <div className="paper-marquee mt-8">
         <div className="paper-marquee__track">
           {loop.map((app, index) => (
-            <div className="paper-marquee__item" key={`${app.name}-${index}`}>
+            <div
+              className={`paper-marquee__item${index >= apps.length ? " paper-marquee__dup" : ""}`}
+              key={`${app.name}-${index}`}
+              aria-hidden={index >= apps.length ? true : undefined}
+            >
               <img src={app.src} alt="" />
               <span>{app.name}</span>
             </div>

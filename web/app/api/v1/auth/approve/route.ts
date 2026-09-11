@@ -1,3 +1,4 @@
+import { applyGiftsForEmail } from '@/billing/gifts';
 import { getStore } from '@/data/store';
 import { createClient } from '@supabase/supabase-js';
 
@@ -22,6 +23,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });
   }
+  if (data.user.email) await applyGiftsForEmail(data.user.email);
   // Secure only over HTTPS (so local http dev still works).
   const isHttps = new URL(req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';
   const cookie =

@@ -7,8 +7,10 @@ import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protoc
 import { store } from './store';
 import { bakedTrialToken } from './trial';
 import { resolveBackendUrl } from './backendUrl';
+import { specialCharForEmail } from './giftCode';
 
 export { resolveBackendUrl } from './backendUrl';
+export { specialCharForEmail } from './giftCode';
 
 /** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
 function loadAppEnv(): void {
@@ -86,7 +88,7 @@ async function json<T>(res: Response): Promise<T> {
 export interface BillingUsageLine { kind: string; used: number; limit: number; remaining: number; resetsAt: string }
 export interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: 'owner' | 'admin' | 'member' };
-  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };
+  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | 'lifetime' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };
   usage: BillingUsageLine[];
   occupiedSeats: number;
   pendingInvitations: number;
@@ -95,11 +97,11 @@ export interface BillingOverview {
   hasBillingAccount: boolean;
 }
 
-export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean }> {
+export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean; lifetimeAvailable: boolean }> {
   return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
 }
 
-export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
+export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual' | 'lifetime'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
   if (input.plan === 'teams') {
     throw new Error('Teams is not available right now. Choose Pro for a personal plan.');
   }
@@ -114,6 +116,35 @@ export async function startBillingPortal(token: string, workspaceId: string): Pr
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ workspaceId }),
   }));
   return result.url;
+}
+
+export interface GiftMine {
+  email: string;
+  code: string;
+  joined: number;
+  remaining: number;
+  max: number;
+  shareUrl: string;
+}
+
+export async function giftCardForEmail(email: string): Promise<GiftMine> {
+  const code = specialCharForEmail(email);
+  const shareUrl = `https://unvibe.site/?ref=${encodeURIComponent(code)}&from=${encodeURIComponent(email)}`;
+  try {
+    const res = await request(`${BACKEND}/api/v1/gifts/progress/${encodeURIComponent(code)}`, {});
+    if (!res.ok) return { email, code, joined: 0, remaining: 5, max: 5, shareUrl };
+    const data = await res.json() as { joined?: number; used?: number; remaining?: number; max?: number; limit?: number; shareUrl?: string };
+    const joined = Number(data.joined ?? data.used ?? 0);
+    const max = Number(data.max ?? data.limit ?? 5);
+    const remaining = Number(data.remaining ?? Math.max(0, max - joined));
+    return { email, code, joined, remaining, max, shareUrl: typeof data.shareUrl === 'string' ? data.shareUrl : shareUrl };
+  } catch {
+    return { email, code, joined: 0, remaining: 5, max: 5, shareUrl };
+  }
+}
+
+export async function giftMine(token: string): Promise<GiftMine> {
+  return json<GiftMine>(await request(`${BACKEND}/api/v1/gifts/mine`, { headers: { authorization: `Bearer ${token}` } }));
 }
 
 export interface Account {
@@ -176,15 +207,101 @@ export async function signOut(token: string): Promise<void> {
 }
 
 /** Best-effort event sync. Returns the ids the backend accepted (for outbox clearing). */
-export async function pushEvents(token: string, events: LocalEvent[]): Promise<string[]> {
+export async function pushEvents(token: string, events: LocalEvent[], workspaceId?: string): Promise<string[]> {
   if (events.length === 0) return [];
   const res = await request(`${BACKEND}/api/v1/events`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ events: events.map(forSync) }),
+    body: JSON.stringify({ events: events.map(forSync), ...(workspaceId ? { workspaceId } : {}) }),
   });
   await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);
+}
+
+export interface WorkspaceAccess {
+  id: string;
+  name: string;
+  type: 'personal' | 'team';
+  role: 'owner' | 'admin' | 'member';
+  ownerUserId: string;
+}
+
+export interface WorkspaceMember {
+  userId: string;
+  email?: string;
+  role: 'owner' | 'admin' | 'member';
+  joinedAt: string;
+}
+
+export interface TeamActivityEvent {
+  id: string;
+  ts: string;
+  scope: string;
+  level: string;
+  outcome: 'reviewed' | 'understood' | 'needs_review';
+  file?: string;
+  project?: string;
+  concept?: string;
+  conceptLabel?: string;
+  userId: string;
+  authorUserId?: string;
+  authorEmail?: string;
+  workspaceId?: string;
+}
+
+export async function listWorkspaces(token: string): Promise<WorkspaceAccess[]> {
+  const result = await json<{ workspaces: WorkspaceAccess[] }>(await request(`${BACKEND}/api/v1/workspaces`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  return result.workspaces;
+}
+
+export async function createTeamWorkspace(token: string, name: string): Promise<WorkspaceAccess> {
+  const result = await json<{ workspace: WorkspaceAccess }>(await request(`${BACKEND}/api/v1/workspaces`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name }),
+  }));
+  return result.workspace;
+}
+
+export async function listWorkspaceMembers(token: string, workspaceId: string): Promise<WorkspaceMember[]> {
+  const result = await json<{ members: WorkspaceMember[] }>(await request(`${BACKEND}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/members`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  return result.members;
+}
+
+export async function inviteWorkspaceMember(token: string, workspaceId: string, email: string, role: 'admin' | 'member' = 'member'): Promise<{ invitation: { id: string; email: string }; inviteUrl: string }> {
+  return json(await request(`${BACKEND}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/invitations`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, role }),
+  }));
+}
+
+export async function acceptWorkspaceInvite(token: string, inviteToken: string): Promise<WorkspaceAccess> {
+  const result = await json<{ workspace: WorkspaceAccess }>(await request(`${BACKEND}/api/v1/workspaces/invitations/accept`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ token: inviteToken }),
+  }));
+  return result.workspace;
+}
+
+export async function pullTeamHistory(token: string, workspaceId: string, limit = 50): Promise<TeamActivityEvent[]> {
+  const params = new URLSearchParams({ limit: String(Math.min(Math.max(limit, 1), 200)) });
+  const result = await json<{ events: TeamActivityEvent[] }>(await request(`${BACKEND}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/history?${params}`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  return result.events;
+}
+
+export async function pullTeamProjects(token: string, workspaceId: string): Promise<Array<{ name: string; reviews: number; lastActive: string }>> {
+  const result = await json<{ projects: Array<{ name: string; reviews: number; lastActive: string }> }>(await request(`${BACKEND}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/projects`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  return result.projects;
 }
 
 interface HistoryPage {

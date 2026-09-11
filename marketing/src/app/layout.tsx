@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     title: "Unvibe. Learn the code AI shipped.",
     description:
-      "Select code, press Command U, and keep the explanation on this Mac.",
+      "Select code, press Command U, and keep an explanation you can reopen and quiz yourself on.",
     siteName: "Unvibe",
     locale: "en_US",
     images: [

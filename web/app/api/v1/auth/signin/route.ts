@@ -1,3 +1,4 @@
+import { applyGiftsForEmail } from '@/billing/gifts';
 import { getStore } from '@/data/store';
 import { withSessionCookie } from '@/lib/auth';
 
@@ -19,5 +20,6 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'a valid email is required' }, { status: 400 });
   }
   const account = await getStore().signIn(email);
+  if (account.email) await applyGiftsForEmail(account.email);
   return withSessionCookie(Response.json(account), account.token, req);
 }

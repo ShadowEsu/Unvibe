@@ -19,3 +19,7 @@ export function getBillingStore(): BillingStore {
   cached ??= createBillingStoreFromEnv();
   return cached;
 }
+
+export function resetBillingStoreCacheForTests(): void {
+  cached = undefined;
+}

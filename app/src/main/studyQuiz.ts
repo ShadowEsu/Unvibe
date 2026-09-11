@@ -77,7 +77,7 @@ async function collectReviewText(payload: ReviewRequestPayload): Promise<{ text:
         'content-type': 'application/json',
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, model: prefs.cloudModel }),
       signal: abort.signal,
     });
     if (!res.ok || !res.body) {

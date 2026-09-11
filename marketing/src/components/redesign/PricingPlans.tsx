@@ -1,78 +1,53 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { track } from '@/lib/analytics';
 
-type Interval = 'monthly' | 'annual';
-type PlanId = 'free' | 'pro' | 'team' | 'enterprise';
-
-const cards = {
-  free: [
-    '30 explanations each month',
-    'Selected-code explanations',
-    'Core explanation levels',
-    'Spaced study / revisit queue',
-    'Saved explanations and progress',
-    'No credit card required',
-  ],
-  pro: [
-    '100 explanations each month',
-    'Git diff explanations',
-    'Agent change briefs',
-    'Nearby-file context',
-    'Since-last-understood compares',
-    'Expert explanations',
-  ],
-  team: [
-    'Shared workspace in one app',
-    'Notes and explanations visible to every seat',
-    '2 seat minimum, 20 seat maximum',
-    '$10 per seat each month',
-  ],
-  enterprise: [
-    '1,000 AI questions and integrations a month',
-    'One company workspace',
-    'More room than Team',
-  ],
-};
+const corePlans = [
+  { id: 'free', name: 'Free', badge: 'Private beta', eyebrow: 'Understand the code in front of you.', price: '$0', detail: 'Limited monthly explanations. Included cloud models. No card or separate API key.', features: ['Selected-code explanations', 'Core explanation levels', 'Saved explanations and progress', 'On-device secret filtering'], cta: 'Get the beta', href: '/#install' },
+  { id: 'pro', name: 'Pro', badge: 'Individual', eyebrow: 'Keep the context, not just the answer.', price: '$10/month', detail: 'One developer account, billed monthly. Annual is $90/year (25% off).', features: ['File, diff, and project context', 'Five explanation depths', 'Follow-up and Test me', 'Saved concepts, history, and study'], cta: 'Join the Pro waitlist', href: '/?utm_campaign=pro_pricing#waitlist', featured: true },
+  { id: 'lifetime', name: 'Pro Lifetime', badge: 'One-time', eyebrow: 'Own the personal core.', price: '$80', detail: 'One-time. Local and core personal features forever. Checkout from the Unvibe app Plan page.', features: ['Personal understanding loop', 'Saved explanations and study', 'No monthly Pro bill', 'Does not include Teams GitHub intelligence'], cta: 'Get Lifetime in the app', href: '/#install' },
+  { id: 'teams', name: 'Teams', badge: 'Founding pilot', eyebrow: 'Share a workspace and see who reviewed what.', price: '$8/seat/month', detail: 'Founding price. 2–20 seats. Shared activity with authorship in the app. Explanation text stays on each device. GitHub intelligence stays Pilot.', features: ['Shared workspace and invites', 'Who reviewed what (metadata)', '2–20 founding seats', 'GitHub intelligence still Pilot'], cta: 'Request Teams seats', href: 'mailto:preston@unvibe.site?subject=Unvibe%20Teams%20founding%20pilot&body=Company%20email%3A%20%0ASeats%20wanted%20(2%E2%80%9320)%3A%20%0A%0AWe%20want%20the%20Teams%20founding%20pilot%20(workspace%20%2B%20who%20reviewed%20what).' },
+] as const;
 
 export function PricingPlans() {
-  const [interval, setInterval] = useState<Interval>('monthly');
   const trackedView = useRef(false);
-  const annual = interval === 'annual';
-  useEffect(() => { if (!trackedView.current) { trackedView.current = true; track('pricing_viewed'); } }, []);
-  const chooseInterval = (next: Interval) => { setInterval(next); track('billing_interval_selected', { interval: next }); };
+  useEffect(() => {
+    if (!trackedView.current) {
+      trackedView.current = true;
+      track('pricing_viewed');
+    }
+  }, []);
+
   return (
     <div className="pricing-plans">
-      <div className="marketing-billing-toggle" aria-label="Billing interval">
-        <button type="button" className={!annual ? 'active' : ''} onClick={() => chooseInterval('monthly')} aria-pressed={!annual}>Monthly</button>
-        <button type="button" className={annual ? 'active' : ''} onClick={() => chooseInterval('annual')} aria-pressed={annual}>Annual <span>Save 25%</span></button>
+      <div className="pricing-plans__intro">
+        <p className="paper-meta">Simple monthly pricing</p>
+        <h2>Start personal. Add shared understanding when the team is ready.</h2>
+        <p>
+          Teams founding pilot includes a shared workspace and who-reviewed-what activity.
+          GitHub-connected dashboards stay labeled Pilot — not current availability.
+        </p>
       </div>
-      <p className="annual-savings-note">Annual is 25% off for Pro, Team, and Enterprise. Pro is $72/year. Team is $90 per seat per year, $180 for two seats, up to $1,800 for twenty. Enterprise is $450/year.</p>
-      <div className="marketing-plan-grid">
-        <PlanCard plan="free" interval={interval} name="Free" eyebrow="Learn the code in front of you." price="$0" detail="No card required" features={cards.free} cta="Join waitlist" />
-        <PlanCard plan="pro" interval={interval} name="Pro" eyebrow="Understand the change around it." price={annual ? '$72/year' : '$8/month'} detail={annual ? 'About $6/month, billed once yearly' : 'For one personal account, billed monthly'} features={cards.pro} cta="Join waitlist" featured />
-        <PlanCard plan="team" interval={interval} name="Team" eyebrow="Share the record in one app." price={annual ? '$90/seat/year' : '$10/seat'} detail={annual ? '2 seats $180/year. 20 seats $1,800/year.' : '2 seats minimum ($20). 20 seats maximum ($200).'} features={cards.team} cta="Join waitlist" soon />
-        <PlanCard plan="enterprise" interval={interval} name="Enterprise" eyebrow="More room for the company." price={annual ? '$450/year' : '$50/month'} detail={annual ? 'About $37.50/month, billed once yearly' : '1,000 AI questions and integrations a month'} features={cards.enterprise} cta="Join waitlist" soon />
+      <div className="marketing-plan-grid marketing-plan-grid--core">
+        {corePlans.map((plan) => (
+          <article key={plan.id} className={`marketing-plan-card${'featured' in plan && plan.featured ? ' featured' : ''}`}>
+            <span className="plan-badge">{plan.badge}</span>
+            <h3>{plan.name}</h3>
+            <p className="plan-kicker">{plan.eyebrow}</p>
+            <strong className="marketing-plan-price">{plan.price}</strong>
+            <small>{plan.detail}</small>
+            <ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
+            <Button href={plan.href} size="lg" className="pricing-button" onClick={() => track('plan_cta_clicked', { plan: plan.id })}>{plan.cta}</Button>
+          </article>
+        ))}
       </div>
-      <p className="pricing-disclosure">Free and Pro are for one person. Team is a shared workspace for 2 to 20 seats. Enterprise is one company workspace with 1,000 AI questions and integrations a month. Team and Enterprise are priced, and coming soon. Private code is filtered locally before approved context is sent.</p>
+      <p className="pricing-disclosure">
+        Prices are monthly in USD. “Pilot,” “Planned,” and “Later” are not claims of current availability.
+        Full explanation text is not shared across seats.
+      </p>
     </div>
-  );
-}
-
-function PlanCard({ plan, interval, name, eyebrow, price, detail, savings, features, cta, featured = false, soon = false }: { plan: PlanId; interval: Interval; name: string; eyebrow: string; price: string; detail: string; savings?: string; features: string[]; cta: string; featured?: boolean; soon?: boolean }) {
-  return (
-    <article className={`marketing-plan-card${featured ? ' featured' : ''}${soon ? ' is-soon' : ''}`}>
-      <span className="plan-badge">{soon ? 'Coming soon' : eyebrow}</span>
-      <h3>{name}</h3>
-      {soon ? <p className="plan-kicker">{eyebrow}</p> : null}
-      <strong className="marketing-plan-price">{price}</strong>
-      <small>{detail}</small>
-      {savings ? <b className="savings-badge">{savings}</b> : null}
-      <ul>{features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
-      <Button href="/#waitlist" size="lg" className="pricing-button" onClick={() => track('plan_cta_clicked', { plan, interval, soon })}>{cta}</Button>
-    </article>
   );
 }

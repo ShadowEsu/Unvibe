@@ -5,6 +5,10 @@ Git, the marketing browser bundle, or the desktop app. Fill the values in the
 hosting dashboards / secret manager only. Do **not** paste them into this file,
 commit them, or send them to testers.
 
+**Fast path to charge money:** use `docs/release/founder-paste-list.md` and reply
+with the Stripe / OpenRouter / support blanks. Checkout stays disabled until
+those env vars exist on the API.
+
 ## 1. Backend and desktop API (`web/`)
 
 Set these on the deployed backend project (the service the desktop app calls,
@@ -16,8 +20,9 @@ currently intended to be `https://api.unvibe.site`).
 | `WEB_BASE_URL` | The backend's public HTTPS URL, for example `https://api.unvibe.site`. | Yes |
 | `PUBLIC_APP_URL` | The trusted HTTPS return URL for Billing Checkout/Portal. Use the public web app origin that hosts `/plan`. | Yes for billing |
 | `ENABLE_MOCK_AI` | `false` for real explanations. | Yes |
-| `ANTHROPIC_API_KEY` **or** `GEMINI_API_KEY` | One server-only AI-provider key. Start with a restricted key and a spend limit. | Yes |
-| `UNCODE_MODEL` or `GEMINI_MODEL` | The approved model name for the selected provider. | Yes |
+| `OPENROUTER_API_KEY` | Preferred launch path: server-only OpenRouter key for included free models. | Yes (or Anthropic/Gemini below) |
+| `ANTHROPIC_API_KEY` **or** `GEMINI_API_KEY` | Fallback server-only AI-provider key. Start with a restricted key and a spend limit. | If not using OpenRouter |
+| `UNCODE_MODEL` or `GEMINI_MODEL` / `OPENROUTER_MODEL` | The approved model name for the selected provider. | Yes |
 | `SUPABASE_URL` | Your production Supabase project URL. | Yes |
 | `SUPABASE_ANON_KEY` | The Supabase publishable/anon key. | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | The server-only Supabase service-role key. Never expose it to a browser or Electron. | Yes |
@@ -47,15 +52,20 @@ required value is missing.
 | --- | --- |
 | `STRIPE_SECRET_KEY` | Server-only Stripe key. Use an `sk_test_...` key first; never expose it in client code. |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret from the exact deployed `/api/v1/billing/webhook` endpoint. |
-| `STRIPE_PRICE_PRO_MONTHLY` | Trusted Stripe Price ID for Pro: `$8/month`. |
-| `STRIPE_PRICE_PRO_ANNUAL` | Trusted Stripe Price ID for Pro: `$72/year` (about `$6/month`, 25% savings). |
-| `STRIPE_PRICE_TEAMS_MONTHLY` | Optional. Only if Teams checkout is re-enabled. |
+| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Price ID for Pro: **`$10/month`**. |
+| `STRIPE_PRICE_PRO_ANNUAL` | Stripe Price ID for Pro: **`$90/year`** (about `$7.50/month`, 25% savings). |
+| `STRIPE_PRICE_PRO_LIFETIME` | Stripe Price ID for Pro Lifetime: **`$80` one-time**. Optional for monthly/annual; required to enable Lifetime checkout. |
+| `STRIPE_PRICE_TEAMS_MONTHLY` | Optional. Only if Teams checkout is re-enabled (`$8/seat`). |
 | `STRIPE_PRICE_TEAMS_ANNUAL` | Optional. Only if Teams checkout is re-enabled. |
 
 Do not enable live billing until you have completed a real test checkout,
 verified signed webhooks (including cancellation and failed payment), tested
 the customer portal, and explicitly approved the live prices. The UI price
 switch is implemented, but it is not authorization to make live charges.
+
+Teams self-serve checkout stays paused; Plan UI collects company email + seat
+interest via mailto until you create Teams prices and flip
+`TEAMS_CHECKOUT_ENABLED`.
 
 ## 3. Marketing website (`marketing/`)
 

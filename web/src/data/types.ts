@@ -18,6 +18,9 @@ export interface IncomingEvent {
 
 export interface EventRecord extends IncomingEvent {
   userId: string;
+  workspaceId?: string;
+  authorUserId?: string;
+  authorEmail?: string;
 }
 
 export interface ProfileSummary {
@@ -107,14 +110,18 @@ export interface Store {
   signIn(email: string): Promise<Account>;
   signUp(email: string): Promise<Account | null>; // null = already exists
   accountInfo(userId: string): Promise<{ userId: string; email?: string }>;
+  userIdForEmail(email: string): Promise<string | null>;
   deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
 
   // Data
-  upsertEvents(userId: string, events: IncomingEvent[]): Promise<void>;
+  upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void>;
   profile(userId: string): Promise<ProfileSummary>;
   history(userId: string, limit: number): Promise<EventRecord[]>;
   historyPage(userId: string, limit: number, cursor?: string): Promise<HistoryPage>;
   projects(userId: string): Promise<ProjectSummary[]>;
+  /** Team feed: all members' metadata events in a workspace, with authorship. Caller must verify membership. */
+  workspaceHistoryPage(workspaceId: string, limit: number, cursor?: string): Promise<HistoryPage>;
+  workspaceProjects(workspaceId: string): Promise<ProjectSummary[]>;
 
   // Beta usage metering (see src/billing/plans.ts)
   usage(userId: string): Promise<UsageSummary>;

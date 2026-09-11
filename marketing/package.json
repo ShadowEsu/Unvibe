@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/*.test.ts",
+    "test": "tsx --test src/lib/*.test.ts src/data/*.test.ts",
     "send:beta-invites": "tsx scripts/send-beta-invites.ts",
     "diagnose:waitlist": "tsx scripts/diagnose-waitlist.ts",
     "verify:supabase-waitlist": "tsx scripts/verify-supabase-waitlist.ts"

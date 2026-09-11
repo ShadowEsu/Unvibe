@@ -9,6 +9,10 @@ export const runtime = 'nodejs';
 
 interface CheckoutBody { plan?: unknown; interval?: unknown; seats?: unknown; workspaceId?: unknown; workspaceName?: unknown }
 
+function isBillingInterval(value: unknown): value is BillingInterval {
+  return value === 'monthly' || value === 'annual' || value === 'lifetime';
+}
+
 export async function POST(req: Request): Promise<Response> {
   const user = await requireUser(req);
   if (isResponse(user)) return user;
@@ -17,12 +21,18 @@ export async function POST(req: Request): Promise<Response> {
     if (body.plan === 'teams' && !TEAMS_CHECKOUT_ENABLED) {
       return Response.json({ error: 'teams_unavailable', message: 'Teams is not available right now. Choose Pro for a personal plan.' }, { status: 403 });
     }
-    if ((body.plan !== 'pro' && body.plan !== 'teams') || (body.interval !== 'monthly' && body.interval !== 'annual')) {
+    if ((body.plan !== 'pro' && body.plan !== 'teams') || !isBillingInterval(body.interval)) {
       return Response.json({ error: 'invalid_checkout', message: 'Choose Pro and a valid billing interval.' }, { status: 400 });
+    }
+    if (body.interval === 'lifetime' && body.plan !== 'pro') {
+      return Response.json({ error: 'invalid_checkout', message: 'Lifetime is only available for Pro.' }, { status: 400 });
+    }
+    if (body.interval === 'lifetime' && !process.env.STRIPE_PRICE_PRO_LIFETIME?.trim()) {
+      return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime checkout is not configured yet.' }, { status: 503 });
     }
     const billing = getBillingStore();
     const requestedSeats = typeof body.seats === 'number' ? body.seats : Number(body.seats ?? (body.plan === 'teams' ? 2 : 1));
-    const seats = normalizedSeats(body.plan, requestedSeats);
+    const seats = body.interval === 'lifetime' ? 1 : normalizedSeats(body.plan, requestedSeats);
     const personal = body.plan === 'pro';
     let workspace = personal ? await billing.ensurePersonalWorkspace(user) : null;
     if (!personal && typeof body.workspaceId === 'string') workspace = await billing.getWorkspaceAccess(user, body.workspaceId);
@@ -34,7 +44,10 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ error: 'forbidden', message: 'Only the workspace owner can start this subscription.' }, { status: 403 });
     }
     const current = await billing.overview(user, workspace.id);
-    if (current.subscription.stripeSubscriptionId && current.subscription.status !== 'canceled') {
+    if (current.subscription.interval === 'lifetime' && current.subscription.status === 'active') {
+      return Response.json({ error: 'lifetime_active', message: 'This account already has Pro Lifetime.' }, { status: 409 });
+    }
+    if (body.interval !== 'lifetime' && current.subscription.stripeSubscriptionId && current.subscription.status !== 'canceled') {
       return Response.json({ error: 'subscription_exists', message: 'Use Manage billing to change an existing subscription.' }, { status: 409 });
     }
     const stripe = getStripe();
@@ -49,20 +62,45 @@ export async function POST(req: Request): Promise<Response> {
     const intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
     const account = await getStore().accountInfo(user);
     const appUrl = publicAppUrl(req);
-    const metadata = { workspace_id: workspace.id, user_id: user, plan: body.plan, interval: body.interval, checkout_intent_id: intent.id };
+    const metadata = {
+      workspace_id: workspace.id,
+      user_id: user,
+      plan: body.plan,
+      interval: body.interval,
+      checkout_intent_id: intent.id,
+    };
+    const price = stripePriceId(body.plan, body.interval);
     let session;
-    try { session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{ price: stripePriceId(body.plan, body.interval as BillingInterval), quantity: seats }],
-      success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/plan?checkout=canceled`,
-      client_reference_id: intent.id,
-      customer_email: account.email,
-      metadata,
-      subscription_data: { metadata },
-      allow_promotion_codes: true,
-    }, { idempotencyKey: `uncode-checkout-${intent.id}` }); }
-    catch (error) { await billing.expireCheckoutIntent(intent.id); await billing.recordAudit(user, workspace.id, 'checkout.failed', { plan: body.plan, interval: body.interval }); throw error; }
+    try {
+      session = body.interval === 'lifetime'
+        ? await stripe.checkout.sessions.create({
+          mode: 'payment',
+          line_items: [{ price, quantity: 1 }],
+          success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${appUrl}/plan?checkout=canceled`,
+          client_reference_id: intent.id,
+          customer_email: account.email,
+          customer_creation: 'always',
+          metadata,
+          payment_intent_data: { metadata },
+          allow_promotion_codes: true,
+        }, { idempotencyKey: `uncode-checkout-${intent.id}` })
+        : await stripe.checkout.sessions.create({
+          mode: 'subscription',
+          line_items: [{ price, quantity: seats }],
+          success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${appUrl}/plan?checkout=canceled`,
+          client_reference_id: intent.id,
+          customer_email: account.email,
+          metadata,
+          subscription_data: { metadata },
+          allow_promotion_codes: true,
+        }, { idempotencyKey: `uncode-checkout-${intent.id}` });
+    } catch (error) {
+      await billing.expireCheckoutIntent(intent.id);
+      await billing.recordAudit(user, workspace.id, 'checkout.failed', { plan: body.plan, interval: body.interval });
+      throw error;
+    }
     if (!session.url) throw new Error('Stripe did not return a checkout URL.');
     await billing.attachCheckoutSession(intent.id, session.id);
     await billing.recordAudit(user, workspace.id, 'checkout.created', { plan: body.plan, interval: body.interval, seats });

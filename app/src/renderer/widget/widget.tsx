@@ -627,7 +627,7 @@ function Widget() {
               <div className="sub">{active.error}</div>
               {outOfExplanations || proGate ? (
                 <>
-                  <button className="btn" onClick={() => window.unvibe.openCompanion()}>
+                  <button className="btn" onClick={() => window.unvibe.openPlan()}>
                     {outOfExplanations ? 'Add API key or upgrade' : 'Upgrade to Pro'}
                   </button>
                   <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>

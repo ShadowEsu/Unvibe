@@ -29,7 +29,7 @@ export function Footer() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-4 text-sm leading-relaxed">
-            Select the code. Press Command U. Keep what you learned on this Mac.
+            Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.
           </p>
           <SocialFollowLinks includeMail />
         </div>

@@ -11,7 +11,9 @@ usage reservations; the migration seeds it to the same initial values:
 
 - Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
 - Pro: $8/month or $72/year (about $6/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
-- Teams checkout is paused (`TEAMS_CHECKOUT_ENABLED = false` in `web/src/billing/plans.ts`). Product surfaces offer Free and Pro only. Backend Teams plan math remains for any existing workspace support.
+- Teams checkout is paused (`TEAMS_CHECKOUT_ENABLED = false` in `web/src/billing/plans.ts`). Product surfaces offer Free, Pro ($10/mo or $90/yr), and Pro Lifetime ($80 one-time). Teams interest is collected via company email + seat request (mailto) until Stripe Teams prices exist. Backend Teams plan math remains for any existing workspace support.
+- Founding Teams collab (no Stripe required): create team workspace, invite seats, shared activity feed with authorship (`GET /api/v1/workspaces/:id/history`). Explanation/code bodies stay on-device. GitHub intelligence remains out of scope.
+- Founder env paste list: `docs/release/founder-paste-list.md`.
 
 The server always chooses a trusted Stripe price ID. Browser-supplied amounts, price IDs,
 customer IDs, subscription IDs, and entitlements are ignored. The database also rejects Pro on

@@ -6,6 +6,7 @@ import { app } from 'electron';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
+import { DEFAULT_CLOUD_MODEL, normalizeCloudModel } from './cloudModels';
 import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
@@ -55,10 +56,19 @@ export interface Settings {
   useOwnAi: boolean;
   /** Provider for local BYOK calls (cheap default model per provider). */
   aiProvider: LocalAiProviderId;
+  /** Free OpenRouter chat model id used for Unvibe cloud explanations. */
+  cloudModel: string;
   /** @deprecated Legacy field — migrated into aiProvider. */
   aiModel?: string;
   /** Last folder used for git-diff / nearby-file Pro features. */
   lastProjectRoot?: string;
+  /** Active billing workspace for learning sync + Teams activity (personal or team). */
+  activeWorkspaceId?: string;
+  /**
+   * Anonymous product usage (app opens, reviews completed). Metadata only —
+   * never code, emails, or prompts. Off disables PostHog capture from this install.
+   */
+  shareUsageAnalytics: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -84,6 +94,8 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
+  cloudModel: DEFAULT_CLOUD_MODEL,
+  shareUsageAnalytics: true,
 };
 
 class SettingsStore {
@@ -107,11 +119,13 @@ class SettingsStore {
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
     );
+    const cloudModel = normalizeCloudModel(loaded.cloudModel ?? DEFAULT_CLOUD_MODEL);
     this.data = {
       ...DEFAULTS,
       ...loaded,
       quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
       aiProvider,
+      cloudModel,
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 1,
       ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
@@ -154,6 +168,9 @@ class SettingsStore {
       : patch.aiModel !== undefined
         ? normalizeLocalAiProvider(patch.aiModel)
         : undefined;
+    const nextCloudModel = patch.cloudModel !== undefined
+      ? normalizeCloudModel(patch.cloudModel)
+      : undefined;
     const hoverDelay = patch.barHoverDelayMs === undefined
       ? undefined
       : Math.min(600, Math.max(120, Math.round(patch.barHoverDelayMs / 20) * 20));
@@ -166,6 +183,7 @@ class SettingsStore {
       ...patch,
       quietHours: { ...this.data.quietHours, ...patch.quietHours },
       ...(nextProvider ? { aiProvider: nextProvider } : {}),
+      ...(nextCloudModel ? { cloudModel: nextCloudModel } : {}),
       ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
       ...(soundVolume !== undefined ? { soundVolume } : {}),
       ...(soundStyle ? { soundStyle } : {}),

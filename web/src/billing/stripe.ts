@@ -11,12 +11,19 @@ export function getStripe(): Stripe {
 }
 
 export function stripePriceId(plan: Exclude<PlanId, 'free'>, interval: BillingInterval): string {
+  if (interval === 'lifetime') {
+    if (plan !== 'pro') throw new Error('Lifetime checkout is only configured for Pro.');
+    const value = process.env.STRIPE_PRICE_PRO_LIFETIME?.trim();
+    if (!value) throw new Error('STRIPE_PRICE_PRO_LIFETIME is not configured.');
+    return value;
+  }
   const key = `STRIPE_PRICE_${plan.toUpperCase()}_${interval.toUpperCase()}`;
   const value = process.env[key]?.trim();
   if (!value) throw new Error(`${key} is not configured.`);
   return value;
 }
 
+/** Pro monthly + annual checkout can go live without Lifetime configured. */
 export function stripeIsConfigured(): boolean {
   return Boolean(
     process.env.STRIPE_SECRET_KEY?.trim() &&
@@ -24,6 +31,11 @@ export function stripeIsConfigured(): boolean {
       process.env.STRIPE_PRICE_PRO_MONTHLY?.trim() &&
       process.env.STRIPE_PRICE_PRO_ANNUAL?.trim(),
   );
+}
+
+/** One-time Pro Lifetime requires its own trusted Price ID. */
+export function stripeLifetimeConfigured(): boolean {
+  return stripeIsConfigured() && Boolean(process.env.STRIPE_PRICE_PRO_LIFETIME?.trim());
 }
 
 export function publicAppUrl(req: Request): string {

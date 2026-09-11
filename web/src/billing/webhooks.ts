@@ -2,6 +2,9 @@ import type Stripe from 'stripe';
 import type { BillingStore, BillingInterval, PlanId, SubscriptionStatus } from './types';
 import { stripePriceId } from './stripe';
 
+/** Far-future end date used for Pro Lifetime grants (effectively permanent). */
+export const LIFETIME_PERIOD_END = '2099-12-31T23:59:59.000Z';
+
 function mappedStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
   if (status === 'trialing' || status === 'active' || status === 'past_due' || status === 'unpaid' || status === 'canceled') return status;
   return 'inactive';
@@ -48,6 +51,44 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   });
 }
 
+async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Checkout.Session): Promise<void> {
+  const workspaceId = session.metadata?.workspace_id;
+  const plan = session.metadata?.plan;
+  const interval = session.metadata?.interval;
+  if (!workspaceId || plan !== 'pro' || interval !== 'lifetime') {
+    throw new Error('Stripe lifetime checkout metadata is incomplete.');
+  }
+  const expectedPrice = stripePriceId('pro', 'lifetime');
+  const linePrice = session.line_items?.data?.[0]?.price;
+  const priceId = typeof linePrice === 'string' ? linePrice : linePrice?.id;
+  if (priceId && priceId !== expectedPrice) {
+    throw new Error('Stripe lifetime price does not match the trusted plan configuration.');
+  }
+  const customerId = providerId(session.customer);
+  const paymentId = session.payment_intent
+    ? providerId(session.payment_intent)
+    : `lifetime_${session.id}`;
+  const now = new Date().toISOString();
+  await store.syncSubscription({
+    workspaceId,
+    plan: 'pro',
+    interval: 'lifetime',
+    status: 'active',
+    seats: 1,
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: paymentId,
+    stripePriceId: expectedPrice,
+    currentPeriodStart: now,
+    currentPeriodEnd: LIFETIME_PERIOD_END,
+    cancelAtPeriodEnd: false,
+  });
+  await store.completeCheckoutIntent(session.id);
+  await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.completed', {
+    mode: 'payment',
+    interval: 'lifetime',
+  });
+}
+
 function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
   const subscription = invoice.parent?.subscription_details?.subscription;
   return subscription ? providerId(subscription) : null;
@@ -55,12 +96,20 @@ function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
 
 export interface StripeWebhookDependencies {
   retrieveSubscription(id: string): Promise<Stripe.Subscription>;
+  retrieveCheckoutSession?(id: string): Promise<Stripe.Checkout.Session>;
 }
 
 export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies): Promise<void> {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
+      if (session.mode === 'payment' && session.metadata?.interval === 'lifetime') {
+        const full = deps.retrieveCheckoutSession
+          ? await deps.retrieveCheckoutSession(session.id)
+          : session;
+        await grantLifetimeFromCheckout(store, full);
+        return;
+      }
       if (session.mode !== 'subscription' || !session.subscription) return;
       const subscription = await deps.retrieveSubscription(providerId(session.subscription));
       await syncStripeSubscription(store, subscription);

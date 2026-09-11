@@ -216,14 +216,14 @@ function Bar() {
     <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
         {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} />{expanded ? <span>Open app</span> : null}</button> : <><div className="strip__wing strip__wing--left">
-          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>
+          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={(event) => { event.stopPropagation(); act('review'); }}><CodeIcon /></button>
           <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
         </div>
         <span className="strip__camera-gap" aria-hidden="true" />
         <div className="strip__wing strip__wing--right">
           <span className="strip__compact-stat" data-tone={compactStat.tone} key={rotateStats ? statIndex : 0}><b>{compactStat.value}</b> <span>{compactStat.label}</span></span>
           <span className="strip__privacy"><i />local scan</span>
-          <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
+          <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={(event) => { event.stopPropagation(); act('home'); }}><HomeIcon /></button>
         </div></>}
       </div>
       {expanded && !bottom && (
@@ -244,8 +244,8 @@ function Bar() {
           </div>
           <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 days</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
           <div className="strip__actions">
-            <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
-            <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); act('review'); }}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); act('home'); }}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
           </div>
         </div>
       )}

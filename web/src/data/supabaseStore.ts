@@ -127,6 +127,12 @@ export class SupabaseStore implements Store {
     return { userId, email: (data?.email as string | undefined) ?? undefined };
   }
 
+  async userIdForEmail(email: string): Promise<string | null> {
+    const normalized = email.trim().toLowerCase();
+    const { data } = await this.db.from('users').select('id').eq('email', normalized).maybeSingle();
+    return typeof data?.id === 'string' ? data.id : null;
+  }
+
   async deleteAccount(userId: string): Promise<void> {
     // Order matters if FKs are enforced: children before the user row.
     await this.db.from('events').delete().eq('user_id', userId);
@@ -137,7 +143,7 @@ export class SupabaseStore implements Store {
     await this.db.from('users').delete().eq('id', userId);
   }
 
-  async upsertEvents(userId: string, events: IncomingEvent[]): Promise<void> {
+  async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
     const rows = events.map((e) => ({
       id: e.id,
       user_id: userId,
@@ -149,8 +155,44 @@ export class SupabaseStore implements Store {
       concept: e.concept ?? null,
       concept_label: e.conceptLabel ?? null,
       project: e.project ?? null,
+      event_type: e.eventType ?? 'explanation_completed',
+      local_date: e.localDate ?? null,
+      timezone: e.timezone ?? null,
+      lines: e.lines ?? null,
+      language: e.language ?? null,
+      source_app: e.sourceApp ?? null,
+      ...(workspaceId ? { workspace_id: workspaceId } : {}),
     }));
     await this.db.from('events').upsert(rows, { onConflict: 'id' });
+  }
+
+  private mapEventRow(r: Record<string, unknown>): EventRecord {
+    const userId = String(r.user_id);
+    const authorEmail = typeof r.author_email === 'string'
+      ? r.author_email
+      : typeof r.email === 'string'
+        ? r.email
+        : undefined;
+    return {
+      id: String(r.id),
+      userId,
+      authorUserId: userId,
+      authorEmail,
+      workspaceId: typeof r.workspace_id === 'string' ? r.workspace_id : undefined,
+      ts: String(r.ts),
+      scope: String(r.scope),
+      level: String(r.level),
+      file: typeof r.file === 'string' ? r.file : undefined,
+      outcome: r.outcome as EventRecord['outcome'],
+      concept: typeof r.concept === 'string' ? r.concept : undefined,
+      conceptLabel: typeof r.concept_label === 'string' ? r.concept_label : undefined,
+      project: typeof r.project === 'string' ? r.project : undefined,
+      localDate: typeof r.local_date === 'string' ? r.local_date : undefined,
+      timezone: typeof r.timezone === 'string' ? r.timezone : undefined,
+      lines: typeof r.lines === 'number' ? r.lines : undefined,
+      language: typeof r.language === 'string' ? r.language : undefined,
+      sourceApp: typeof r.source_app === 'string' ? r.source_app : undefined,
+    };
   }
 
   private async eventsFor(userId: string): Promise<EventRecord[]> {
@@ -159,18 +201,7 @@ export class SupabaseStore implements Store {
       .select('*')
       .eq('user_id', userId)
       .order('ts', { ascending: true });
-    return (data ?? []).map((r) => ({
-      id: r.id,
-      userId: r.user_id,
-      ts: r.ts,
-      scope: r.scope,
-      level: r.level,
-      file: r.file ?? undefined,
-      outcome: r.outcome,
-      concept: r.concept ?? undefined,
-      conceptLabel: r.concept_label ?? undefined,
-      project: r.project ?? undefined,
-    }));
+    return (data ?? []).map((r) => this.mapEventRow(r as Record<string, unknown>));
   }
 
   async profile(userId: string): Promise<ProfileSummary> {
@@ -193,6 +224,32 @@ export class SupabaseStore implements Store {
 
   async projects(userId: string): Promise<ProjectSummary[]> {
     return computeProjects(await this.eventsFor(userId));
+  }
+
+  async workspaceHistoryPage(workspaceId: string, limit: number, cursor?: string): Promise<import('./types').HistoryPage> {
+    const offset = cursor ? Number.parseInt(cursor, 10) : 0;
+    if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid history cursor.');
+    const { data, error } = await this.db.rpc('workspace_history_page', {
+      p_workspace_id: workspaceId,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new Error(error.message || 'workspace history failed');
+    const rows = Array.isArray(data) ? data : [];
+    const events = rows.map((r) => this.mapEventRow(r as Record<string, unknown>));
+    const nextOffset = offset + events.length;
+    const hasMore = events.length === limit;
+    return { events, ...(hasMore ? { nextCursor: String(nextOffset) } : {}) };
+  }
+
+  async workspaceProjects(workspaceId: string): Promise<ProjectSummary[]> {
+    const { data, error } = await this.db
+      .from('events')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('ts', { ascending: true });
+    if (error) throw new Error(error.message || 'workspace projects failed');
+    return computeProjects((data ?? []).map((r) => this.mapEventRow(r as Record<string, unknown>)));
   }
 
   async usage(userId: string): Promise<UsageSummary> {

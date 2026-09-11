@@ -32,6 +32,13 @@ export const compensationLines: CompensationLine[] = [
     state: "Secured",
   },
   {
+    name: "Salesforce Launchpad",
+    amountUsd: 13_500,
+    detail: "30 Starter Suite seats, confirmed 2-year program value",
+    kind: "credits",
+    state: "Secured",
+  },
+  {
     name: "AWS for Startups",
     amountUsd: 5_000,
     detail: "AWS Activate credits",

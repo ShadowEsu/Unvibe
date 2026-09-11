@@ -1,5 +1,5 @@
 export type PlanId = 'free' | 'pro' | 'teams';
-export type BillingInterval = 'monthly' | 'annual';
+export type BillingInterval = 'monthly' | 'annual' | 'lifetime';
 export type WorkspaceType = 'personal' | 'team';
 export type WorkspaceRole = 'owner' | 'admin' | 'member';
 export type SubscriptionStatus =
@@ -77,6 +77,7 @@ export interface BillingOverview {
   minimumBillableSeats: number;
   canManageBilling: boolean;
   canManageMembers: boolean;
+  hasBillingAccount?: boolean;
 }
 
 export interface UsageReservation {
@@ -166,4 +167,5 @@ export interface BillingStore {
   failWebhook(eventId: string, message: string): Promise<void>;
   recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata?: Record<string, unknown>): Promise<void>;
   deleteUserBilling(userId: string): Promise<void>;
+  grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }>;
 }

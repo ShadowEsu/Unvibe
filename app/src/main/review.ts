@@ -16,6 +16,7 @@ import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { track } from './analytics';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
@@ -223,6 +224,12 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
     });
     return;
   }
+  void track('review_completed', {
+    scope: ev.scope,
+    level: ev.level,
+    language: ev.language,
+    lines: ev.lines,
+  });
   session.onRecorded?.();
   void flush();
 }
@@ -263,6 +270,12 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     send(win, session, { type: 'consent', findings });
     return;
   }
+
+  void track('review_started', {
+    scope: payload.scope,
+    level: opts.level,
+    mode: session.mode ?? 'selection',
+  });
 
   session.abort?.abort();
   const abort = new AbortController();
@@ -349,7 +362,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         'content-type': 'application/json',
         ...aiAuthHeaders(token),
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, model: prefs.cloudModel }),
       signal: abort.signal,
     });
     if (!res.ok || !res.body) {

@@ -15,18 +15,21 @@ import {
   teamsAnnualSavingsPercent,
   TEAMS_CHECKOUT_ENABLED,
 } from '../src/billing/plans';
-import { syncStripeSubscription } from '../src/billing/webhooks';
+import { processStripeEvent, syncStripeSubscription } from '../src/billing/webhooks';
 import { publicBillingOverview } from '../src/billing/presentation';
 import { stripePriceId } from '../src/billing/stripe';
 
 test('pricing math matches every published total', () => {
   assert.equal(priceFor('free', 'monthly', 1), 0);
-  assert.equal(priceFor('pro', 'monthly', 1), 800);
-  assert.equal(priceFor('pro', 'annual', 1), 7_200);
+  assert.equal(priceFor('pro', 'monthly', 1), 1_000);
+  assert.equal(priceFor('pro', 'annual', 1), 9_000);
+  assert.equal(priceFor('pro', 'lifetime', 1), 8_000);
   assert.equal(priceFor('teams', 'monthly', 2), 1_600);
   assert.equal(priceFor('teams', 'monthly', 5), 4_000);
   assert.equal(priceFor('teams', 'annual', 2), 14_400);
   assert.equal(priceFor('teams', 'annual', 5), 36_000);
+  assert.equal(priceFor('teams', 'monthly', 20), 16_000);
+  assert.equal(priceFor('teams', 'monthly', 500), 16_000);
   assert.equal(proAnnualSavingsPercent(), 25);
   assert.equal(teamsAnnualSavingsPercent(), 25);
 });
@@ -35,17 +38,18 @@ test('Teams checkout stays paused for private launch', () => {
   assert.equal(TEAMS_CHECKOUT_ENABLED, false);
 });
 
-test('Teams rejects abusive seat quantities while Pro stays one-person', () => {
-  assert.throws(() => normalizedSeats('teams', 1), /at least 2/i);
-  assert.throws(() => normalizedSeats('teams', 2.5), /whole number/i);
+test('Teams clamps abusive seat quantities while Pro stays one-person', () => {
+  assert.equal(normalizedSeats('teams', 1), 2);
+  assert.equal(normalizedSeats('teams', 2.5), 2);
   assert.equal(normalizedSeats('teams', 2), 2);
+  assert.equal(normalizedSeats('teams', 500), 20);
   assert.equal(normalizedSeats('pro', 300), 1);
   assert.equal(minimumSeatsForUsage(3, 2), 5);
 });
 
 test('Pro and Teams entitlements use configured allowance scaling', () => {
-  assert.equal(planLimit('pro', 'ai_explanation'), 100);
-  assert.equal(planLimit('pro', 'indexed_project'), 10);
+  assert.equal(planLimit('pro', 'ai_explanation', 1), 100);
+  assert.equal(planLimit('pro', 'indexed_project', 1), 10);
   assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
   assert.equal(planLimit('teams', 'project_question', 5), 2_500);
   assert.equal(planLimit('teams', 'indexed_project', 5), 10);
@@ -76,6 +80,8 @@ test('inactive, canceled, unpaid, and expired grace subscriptions fall back to F
   assert.equal(effectivePlan('pro', 'canceled'), 'free');
   assert.equal(effectivePlan('pro', 'unpaid'), 'free');
   assert.equal(effectivePlan('pro', 'grace_period', '2020-01-01T00:00:00.000Z'), 'free');
+  assert.equal(effectivePlan('pro', 'trialing', undefined, new Date('2026-08-26T00:00:00.000Z'), '2026-07-01T00:00:00.000Z'), 'free');
+  assert.equal(effectivePlan('pro', 'trialing', undefined, new Date('2026-08-26T00:00:00.000Z'), '2026-09-01T00:00:00.000Z'), 'pro');
 });
 
 test('existing users receive one stable Free workspace and 50 monthly explanations', async () => {
@@ -206,4 +212,36 @@ test('Stripe subscription sync validates trusted price and quantities', async ()
 
   const tampered = { ...subscription, id: 'sub_bad', items: { data: [{ quantity: 2, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] } } as unknown as Stripe.Subscription;
   await assert.rejects(syncStripeSubscription(store, tampered), /exactly one/i);
+});
+
+test('lifetime checkout grants permanent Pro', async () => {
+  process.env.STRIPE_PRICE_PRO_LIFETIME = 'price_pro_lifetime';
+  const userId = randomUUID();
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  const intent = await store.createCheckoutIntent({
+    userId, workspaceId: workspace.id, plan: 'pro', interval: 'lifetime', seats: 1,
+  });
+  await store.attachCheckoutSession(intent.id, 'cs_lifetime');
+  const session = {
+    id: 'cs_lifetime',
+    mode: 'payment',
+    customer: 'cus_lifetime',
+    payment_intent: 'pi_lifetime',
+    metadata: { workspace_id: workspace.id, user_id: userId, plan: 'pro', interval: 'lifetime', checkout_intent_id: intent.id },
+    line_items: { data: [{ price: { id: 'price_pro_lifetime' } }] },
+  } as unknown as Stripe.Checkout.Session;
+  await processStripeEvent(store, {
+    id: 'evt_lifetime',
+    type: 'checkout.session.completed',
+    data: { object: session },
+  } as Stripe.Event, {
+    retrieveSubscription: async () => { throw new Error('subscription should not be retrieved for lifetime'); },
+    retrieveCheckoutSession: async () => session,
+  });
+  const overview = await store.overview(userId);
+  assert.equal(overview.subscription.plan, 'pro');
+  assert.equal(overview.subscription.interval, 'lifetime');
+  assert.equal(overview.subscription.status, 'active');
+  assert.equal(overview.subscription.currentPeriodEnd?.startsWith('2099'), true);
 });

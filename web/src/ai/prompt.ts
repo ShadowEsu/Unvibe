@@ -24,6 +24,8 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
     'Rules:',
     '- Use ONLY the provided context. Do not invent files, symbols, or behaviour you cannot see.',
     '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
+    '- Write a DETAILED explanation the reader can reopen later. Prefer several short sections over a one-line summary.',
+    '- Cover: what this code is, how it works step by step, why it is here, risks or edge cases, and what to check next.',
     '- Prefer short paragraphs or simple markdown bullets (* item). Bold sparingly with **words**.',
     '- When citing a real file from the context, you may use [[cite:FILE:LINE]] or [[cite:FILE:START-END]].',
     '  The app renders these as small chips — never invent files. For clipboard/selection-only',
