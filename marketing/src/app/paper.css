@@ -304,6 +304,9 @@ h2 {
 }
 
 .paper-beta--hero {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: stretch;
   width: min(46rem, 100%);
 }
 
@@ -341,28 +344,95 @@ h2 {
 }
 
 .paper-beta__os {
-  display: flex;
-  justify-content: center;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  width: min(100%, 22rem);
+  margin-top: 0.35rem;
 }
 
 .paper-beta__os button {
   appearance: none;
   margin: 0;
-  padding: 0.2rem 0.7rem;
-  border: 1px solid currentColor;
-  border-radius: 0.25rem;
+  display: grid;
+  gap: 0.12rem;
+  justify-items: start;
+  padding: 0.72rem 0.9rem;
+  border: 1.5px solid currentColor;
+  border-radius: 0.7rem;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.78rem;
   letter-spacing: -0.02em;
   cursor: pointer;
-  opacity: 0.5;
+  opacity: 0.58;
+  transition: opacity 140ms ease, background-color 140ms ease, border-width 140ms ease, transform 140ms ease;
+}
+
+.paper-beta__os button:hover {
+  opacity: 0.88;
 }
 
 .paper-beta__os button.is-on {
   opacity: 1;
+  border-width: 2.5px;
+  background: rgb(255 255 255 / 0.42);
+  transform: translateY(-1px);
+}
+
+.paper-beta__os-name {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.paper-beta__os-meta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.72;
+}
+
+.paper-beta__blurb,
+.paper-beta__shell {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: inherit;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+
+.paper-beta__blurb {
+  font-size: clamp(0.82rem, 1.5vw, 0.95rem);
+  opacity: 0.88;
+}
+
+.paper-beta__shell {
+  margin-top: 0.15rem;
+  max-width: 34rem;
+  font-size: clamp(0.78rem, 1.4vw, 0.9rem);
+  opacity: 0.78;
+}
+
+.paper-beta__direct {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.15rem;
+  font-family: var(--font-display);
+  font-size: clamp(0.82rem, 1.4vw, 0.95rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.paper-beta__direct:hover {
+  opacity: 0.78;
 }
 
 .paper-beta__offer {
@@ -414,16 +484,6 @@ h2 {
 .paper-beta-feedback .paper-beta__offer,
 .paper-beta-feedback .paper-beta__survey {
   color: var(--hero-type);
-}
-
-.paper-beta__blurb {
-  margin: 0.1rem 0 0.35rem;
-  max-width: 32rem;
-  justify-self: center;
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.45;
 }
 
 .paper-beta__term {
@@ -563,6 +623,8 @@ h2 {
 .paper-beta--page .paper-beta__version,
 .paper-beta--page .paper-beta__offer,
 .paper-beta--page .paper-beta__blurb,
+.paper-beta--page .paper-beta__shell,
+.paper-beta--page .paper-beta__direct,
 .paper-beta--page .paper-beta__cmd,
 .paper-beta--page .paper-beta__error,
 .paper-beta--page .paper-beta__term button,
@@ -876,13 +938,29 @@ h2 {
 .paper-install--front .paper-beta__term button,
 .paper-install--front .paper-beta__os button,
 .paper-install--front .paper-beta__survey,
-.paper-install--front .paper-beta__error {
+.paper-install--front .paper-beta__error,
+.paper-install--front .paper-beta__blurb,
+.paper-install--front .paper-beta__shell,
+.paper-install--front .paper-beta__direct {
   color: var(--ink);
   text-shadow: none;
 }
 
 .paper-install--front .paper-beta__os {
   justify-content: flex-start;
+  width: min(100%, 24rem);
+}
+
+.paper-install--front .paper-beta__os button.is-on {
+  background: rgb(255 255 255 / 0.72);
+  border-color: var(--ink);
+}
+
+.paper-install--front .paper-beta__blurb,
+.paper-install--front .paper-beta__shell,
+.paper-install--front .paper-beta__direct {
+  color: var(--ink);
+  text-shadow: none;
 }
 
 .paper-install--front .paper-beta__term,
@@ -2807,9 +2885,106 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   }
 }
 
+.paper-pricing .marketing-plan-grid--core {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 720px) {
+  .paper-pricing .marketing-plan-grid--core {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (min-width: 1120px) {
-  .paper-pricing .marketing-plan-grid {
+  .paper-pricing .marketing-plan-grid,
+  .paper-pricing .marketing-plan-grid--core {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.paper-pricing .marketing-plan-card--enterprise {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr) auto;
+  gap: 1.25rem 1.75rem;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  transform: none;
+  padding: clamp(1.35rem, 2.4vw, 1.9rem) clamp(1.35rem, 2.8vw, 2.2rem);
+}
+
+.paper-pricing .marketing-plan-card--enterprise:hover {
+  transform: none;
+  border-color: var(--brand);
+}
+
+.paper-pricing .enterprise-band__lead {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.paper-pricing .enterprise-band__lead h3 {
+  margin: 0.15rem 0 0;
+}
+
+.paper-pricing .enterprise-band__lead .marketing-plan-price {
+  min-height: 0;
+  margin-top: 0.2rem;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+}
+
+.paper-pricing .enterprise-band__lead > small {
+  min-height: 0;
+  max-width: 34rem;
+}
+
+.paper-pricing .enterprise-band__features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paper-pricing .enterprise-band__features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.paper-pricing .enterprise-band__cta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 11.5rem;
+}
+
+.paper-pricing .enterprise-band__cta .pricing-button {
+  width: max-content;
+  min-width: 11.5rem;
+}
+
+@media (max-width: 980px) {
+  .paper-pricing .marketing-plan-card--enterprise {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .paper-pricing .enterprise-band__features {
+    grid-template-columns: 1fr;
+  }
+
+  .paper-pricing .enterprise-band__cta {
+    justify-content: flex-start;
   }
 }
 

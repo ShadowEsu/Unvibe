@@ -11,6 +11,14 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "7 SEP 2026",
+    category: "PRODUCT",
+    title: "Launch pricing and Teams founding pilot",
+    summary: "Public pricing is now Free, Pro at $10/month or $90/year, Pro Lifetime at $80 one-time (checkout from the app Plan page once Stripe is configured), Teams at $8/seat/month for 2–20 founding seats, and Enterprise starting at $199/month. Teams founding pilot today means shared workspace, invites, and who-reviewed-what activity (explanation text stays on-device). GitHub-connected understanding dashboards, Understanding Gap, and knowledge-risk screens stay Pilot—not included in this release.",
+    figure: "$10 / $8",
+    pinned: true,
+  },
+  {
     date: "26 AUG 2026",
     category: "DISTRIBUTION",
     title: "Smol Startup #1 daily",

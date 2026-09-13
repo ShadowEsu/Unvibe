@@ -33,7 +33,7 @@ function rateLimited(ip: string): boolean {
 }
 
 function referralCodeFor(email: string): string {
-  return createHash("sha256").update(email).digest("hex").slice(0, 8);
+  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 8);
 }
 
 function clientIp(req: Request): string {
@@ -63,8 +63,8 @@ export async function POST(req: Request) {
   const referralInput = parsed.data.referredBy?.trim();
   const referredBy = referralInput?.includes("@")
     ? await referralCodeForEmail(referralInput)
-    : referralInput;
-  const promoCode = parsed.data.promoCode?.trim().toUpperCase();
+    : referralInput?.toLowerCase();
+  const promoCode = parsed.data.promoCode?.trim().toLowerCase();
   const entry: WaitlistEntry = {
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,

@@ -27,12 +27,18 @@ describe("betaWindowsInstallScript", () => {
   it("downloads the portable Windows trial and unblocks it", () => {
     const script = betaWindowsInstallScript();
     assert.match(script, /Unvibe-0\.1\.11-win-x64-portable\.exe/);
+    assert.match(script, /curl\.exe/);
     assert.match(script, /Invoke-WebRequest/);
+    assert.match(script, /Tls12/);
+    assert.match(script, /UserAgent/);
     assert.match(script, /Unblock-File/);
     assert.match(script, /LOCALAPPDATA/);
     assert.match(script, /install\.ps1/);
     assert.match(script, /unvibe\.site\/api\/install\/event/);
     assert.match(script, /SmartScreen/);
+    assert.match(script, /not Command Prompt/);
+    assert.match(script, /Checking release asset/);
+    assert.match(script, /Method Head/);
     assert.doesNotMatch(script, /[—–]/);
   });
 });

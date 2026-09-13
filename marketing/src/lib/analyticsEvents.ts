@@ -12,6 +12,7 @@ export const ANALYTICS_EVENTS = [
   "faq_opened",
   "referral_copied",
   "referral_shared",
+  "gift_claimed",
   "outbound_social_clicked",
   "privacy_opened",
   "pricing_viewed",

@@ -34,9 +34,9 @@ export function BackingStrip() {
       <div className="paper-wrap paper-backing__layout">
         <div className="paper-backing__summary">
           <p className="paper-backing__achievement"><span aria-hidden="true">🏆</span> 5× SmolStartup Startup of the Day</p>
-          <p className="paper-backing__amount">$230K+</p>
-          <p className="paper-backing__lead">in startup-program subscriptions and credits</p>
-          <p className="paper-backing__note">$231.9K secured program value. Not cash and not a funding round.</p>
+          <p className="paper-backing__amount">Startup credits</p>
+          <p className="paper-backing__lead">Itemized program support, not a funding round</p>
+          <p className="paper-backing__note">Credits and subscriptions only. Not cash. Mixpanel Pro is the largest line item at $144K for one year.</p>
         </div>
         <dl className="paper-backing__breakdown">
           {namedSupport.map(({ match, label }) => {

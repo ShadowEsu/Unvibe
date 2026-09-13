@@ -1,0 +1,28 @@
+/Unvibe-1
+/Unvibe
+/app
+/web
+/extension
+/server
+/tmp
+/output
+/outputs
+/docs
+/outreach
+/support
+node_modules
+**/node_modules
+.next
+**/.next
+.DS_Store
+.env*
+!.env.example
+*.log
+*.tsbuildinfo
+.git
+# CLI upload of 9–15MB mp4s fails on this network (fetch failed). Keep them out until
+# a Git-connected deploy or manual blob upload restores them. Homepage temporarily
+# uses unvibe-brief-demo.mp4 which is already on the CDN.
+marketing/public/videos/unvibe-cursor-demo.mp4
+marketing/public/videos/unvibe-cursor-integration-2026.mp4
+marketing/public/videos/unvibe-app-cloud.mp4

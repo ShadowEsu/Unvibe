@@ -23,9 +23,9 @@ export function PhotoHero() {
       <Image src="/hero/golden-gate.png" alt="" fill priority sizes="100vw" />
       <div className="paper-hero__veil" />
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
-        <p className="paper-meta paper-hero__eyebrow">For developers and engineering teams</p>
-        <h1 className="paper-hero__headline--business">Keep your engineering team ahead of its codebase.</h1>
-        <p className="paper-hero__kicker">Select code → AI explains it → save concepts → learn.</p>
+        <p className="paper-meta paper-hero__eyebrow">Desktop overlay for Cursor, VS Code, and more</p>
+        <h1 className="paper-hero__headline--business">Understand the AI-generated code you ship.</h1>
+        <p className="paper-hero__kicker">Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.</p>
         <JoinWaitlistRow href="#install" intent="install" />
         <Link href="/teams" className="paper-hero__teams-link">Explore Unvibe Teams →</Link>
       </div>

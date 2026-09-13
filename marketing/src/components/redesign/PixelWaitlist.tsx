@@ -27,6 +27,7 @@ type Variant = "page" | "hero";
 export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const [status, setStatus] = useState<Status>("idle");
   const [submitError, setSubmitError] = useState("");
+  const [giftNotice, setGiftNotice] = useState("");
   const [savedEmail, setSavedEmail] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -35,11 +36,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const [tool, setTool] = useState<(typeof tools)[number] | "">("");
   const [experience, setExperience] = useState<(typeof experiences)[number] | "">("");
   const [message, setMessage] = useState("");
-  const [tracking, setTracking] = useState({ referredBy: "", utmSource: "", utmMedium: "", utmCampaign: "" });
+  const [utm, setUtm] = useState({ utmSource: "", utmMedium: "", utmCampaign: "" });
+  const [refCode, setRefCode] = useState("");
+  const [offerOpen, setOfferOpen] = useState(false);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistSchema),
@@ -48,14 +52,24 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setTracking({
-      referredBy: (params.get("ref") ?? "").slice(0, 32),
+    const ref = (params.get("ref") ?? "").trim().toLowerCase().slice(0, 32);
+    const fromEmail = (params.get("from") ?? params.get("giver") ?? "").trim().toLowerCase().slice(0, 120);
+    setUtm({
       utmSource: (params.get("utm_source") ?? "").slice(0, 64),
       utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
       utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
     });
+    setRefCode(ref);
+    if (ref) {
+      setValue("promoCode", ref);
+      setOfferOpen(true);
+    }
+    if (fromEmail.includes("@")) {
+      setValue("referredBy", fromEmail);
+      setOfferOpen(true);
+    }
     track("waitlist_viewed", { surface: variant });
-  }, [variant]);
+  }, [variant, setValue]);
 
   const markStarted = () => {
     if (startedTracked) return;
@@ -66,11 +80,22 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   const submit = async (values: WaitlistInput) => {
     setStatus("submitting");
     setSubmitError("");
+    setGiftNotice("");
     try {
+      const friendEmail = (values.referredBy ?? "").trim();
+      const promoCode = (values.promoCode ?? "").trim() || refCode;
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, ...tracking }),
+        body: JSON.stringify({
+          ...values,
+          // Cash attribution uses the referral code. Friend email stays for gift claim only.
+          referredBy: friendEmail.includes("@") ? friendEmail : (promoCode || refCode || friendEmail),
+          promoCode: promoCode || undefined,
+          utmSource: utm.utmSource || undefined,
+          utmMedium: utm.utmMedium || undefined,
+          utmCampaign: utm.utmCampaign || undefined,
+        }),
       });
       const data = (await response.json().catch(() => ({}))) as WaitlistResponse & { referralCode?: string };
       if (!response.ok) {
@@ -87,18 +112,30 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       setReferralCode(typeof data.referralCode === "string" ? data.referralCode : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
-      const giverEmail = (values.referredBy ?? "").trim();
-      const promoCode = (values.promoCode ?? "").trim();
-      if (giverEmail && promoCode) {
-        void fetch("/api/gifts/claim", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            recipientEmail: values.email.trim(),
-            giverEmail,
-            promoCode,
-          }),
-        });
+
+      if (friendEmail.includes("@") && promoCode) {
+        try {
+          const giftRes = await fetch("/api/gifts/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipientEmail: values.email.trim(),
+              giverEmail: friendEmail,
+              promoCode,
+            }),
+          });
+          const giftData = (await giftRes.json().catch(() => ({}))) as { ok?: boolean; message?: string; error?: string };
+          if (giftRes.ok && giftData.ok !== false) {
+            setGiftNotice("Gift recorded. Both of you get 1 month of Pro after each person creates an Unvibe account (up to five gifts).");
+            track("gift_claimed", { surface: variant });
+          } else {
+            setGiftNotice(giftData.message || "Waitlist saved. The gift code could not be claimed — check the friend email and 8-character code.");
+          }
+        } catch {
+          setGiftNotice("Waitlist saved. Gift claim could not reach the Unvibe service right now.");
+        }
+      } else if (promoCode && !friendEmail.includes("@")) {
+        setGiftNotice("Referral link counted for rewards. To also claim the Pro gift, add your friend’s email with the 8-character code.");
       }
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
@@ -108,7 +145,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   };
 
   const referralUrl = referralCode
-    ? `${typeof window !== "undefined" ? window.location.origin : "https://unvibe.site"}/?ref=${referralCode}`
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://unvibe.site"}/?ref=${referralCode}${savedEmail ? `&from=${encodeURIComponent(savedEmail)}` : ""}`
     : "";
 
   const copyReferral = async () => {
@@ -176,12 +213,12 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <Field label="Email" error={errors.email?.message}>
             <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
           </Field>
-          <details className="referral-offer">
+          <details className="referral-offer" open={offerOpen} onToggle={(e) => setOfferOpen((e.target as HTMLDetailsElement).open)}>
             <summary>Referral or promo code</summary>
-            <p>Optional. Friend email and SPECIAL CHAR if you have them. Both of you get 1 month of Pro, up to five gifts.</p>
+            <p>Optional. Friend&apos;s email and their 8-character code. Both get 1 month of Pro after creating an Unvibe account, up to five gifts.</p>
             <div className="referral-offer__fields">
               <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
-              <label><span>Promo code</span><input placeholder="SPECIAL CHAR" {...register("promoCode")} /></label>
+              <label><span>8-character code</span><input placeholder="e.g. a1b2c3d4" {...register("promoCode")} /></label>
             </div>
           </details>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
@@ -196,6 +233,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <p className="pixel-label">JOINED</p>
           <h3>{status === "duplicate" ? "You were already on the list." : "Joined the waitlist."}</h3>
           <p>Thanks for requesting access. Invitations are being issued gradually for the personal beta, Pro, and the founding Teams pilot.</p>
+          {giftNotice && <p className="form-legal" role="status">{giftNotice}</p>}
           {referralCode && (
             <div className="referral-success">
               <Gift size={18} />

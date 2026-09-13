@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_2LU9GaG533LjzQzyVaOY7rxcA3SF",
+  "orgId": "team_Q6QNWAdrTSwC1sWLzSzPxzyi",
+  "projectName": "unvibe-site",
+  "settings": {
+    "createdAt": 1784336941968,
+    "framework": "nextjs",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": "marketing",
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

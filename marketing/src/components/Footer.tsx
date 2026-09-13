@@ -25,7 +25,7 @@ export function Footer() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-4 text-sm leading-relaxed">
-            Select code → AI explains it → save concepts → learn.
+            Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.
           </p>
           <SocialFollowLinks includeMail />
         </div>

@@ -567,7 +567,10 @@ export async function referralCodeForEmail(email: string): Promise<string | unde
   const normalized = email.trim().toLowerCase();
   if (!normalized) return undefined;
   const entries = await listWaitlistEntries(10_000);
-  return entries.find((entry) => entry.email.trim().toLowerCase() === normalized)?.referralCode;
+  const fromList = entries.find((entry) => entry.email.trim().toLowerCase() === normalized)?.referralCode;
+  if (fromList) return fromList;
+  // App-only givers never joined the waitlist; still resolve the same SPECIAL CHAR.
+  return createHash("sha256").update(normalized).digest("hex").slice(0, 8);
 }
 
 /** Public referral progress deliberately exposes only aggregate counts for a code, never identities. */
@@ -575,11 +578,11 @@ export async function referralProgress(code: string): Promise<{ found: boolean; 
   const normalized = code.trim().toLowerCase();
   if (!/^[a-f0-9]{8}$/.test(normalized)) return { found: false, joinedReferrals: 0 };
   const entries = await listWaitlistEntries(10_000);
-  const found = entries.some((entry) => entry.referralCode.toLowerCase() === normalized);
-  if (!found) return { found: false, joinedReferrals: 0 };
+  const joinedReferrals = entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length;
+  // Accept valid 8-hex codes even when the giver has not joined the waitlist yet (app-only givers).
   return {
     found: true,
-    joinedReferrals: entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length,
+    joinedReferrals,
   };
 }
 

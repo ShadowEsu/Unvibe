@@ -6,7 +6,7 @@ const tools = [
   { name: "VS Code", state: "Validated", src: "/tools/vscode.svg" },
   { name: "JetBrains", state: "Testing", src: "/tools/jetbrains.svg" },
   { name: "Claude Code", state: "Workflow", src: "/tools/claude.svg" },
-  { name: "GitHub", state: "Project context", src: "/tools/github.svg" },
+  { name: "GitHub", state: "Planned", src: "/tools/github.svg" },
 ] as const;
 
 export function ToolOrbit() {

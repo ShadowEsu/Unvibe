@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 const homeFaq = faqItems.filter((item) =>
-  ["what-is-it", "generator", "editors", "sent", "beta", "windows", "teams"].includes(item.id),
+  ["what-is-it", "generator", "vs-cursor", "editors", "sent", "beta", "windows", "teams"].includes(item.id),
 );
 
 export default function HomePage() {
@@ -35,7 +35,7 @@ export default function HomePage() {
           <div className="paper-install__intro">
             <p className="paper-meta">Get the private beta</p>
             <h2>One command. Then stay in your editor.</h2>
-            <p>Choose your platform, copy the command, and open Unvibe. No separate API key.</p>
+            <p>Pick Mac or Windows, copy the command, and open Unvibe. Windows needs PowerShell. No separate API key.</p>
           </div>
           <BetaInstall />
           <div className="paper-install__waitlist">

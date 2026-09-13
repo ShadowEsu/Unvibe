@@ -1,0 +1,366 @@
+{"kind":"deck","id":"pr/9dtycr","name":"Deck"}
+{"kind":"layout","layoutId":"7afa18d0-1df7-4f46-a718-326d5a2fd608","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"91086254-b157-4cd8-b97a-da148a87ca7d","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/whbtd4","slide":1,"title":"UNVIBE · PRIVATE MAC BETA","textShapes":9}
+{"kind":"shape","id":"sh/lob69o3i","slide":1,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/ylknetkr","slide":1,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/zmto7elc","slide":1,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/cj25cj2l","slide":1,"text":"UNVIBE · PRIVATE MAC BETA","textPreview":"UNVIBE · PRIVATE MAC BETA","textChars":25,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/xkb65o36","slide":1,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"shape","id":"sh/ax0na9kv","slide":1,"bbox":[64,48,50,50]}
+{"kind":"textbox","id":"sh/wfmpo325","slide":1,"text":"UNVIBE","textPreview":"UNVIBE","textChars":6,"textLines":1,"bbox":[128,60,150,24]}
+{"kind":"textbox","id":"sh/hgv6h8jq","slide":1,"text":"THE COMPREHENSION LAYER FOR AI-WRITTEN CODE","textPreview":"THE COMPREHENSION LAYER FOR AI-WRITTEN CODE","textChars":43,"textLines":1,"bbox":[64,142,600,28]}
+{"kind":"textbox","id":"sh/lkzyts72","slide":1,"text":"Unvibe makes AI-written\ncode understandable.","textPreview":"Unvibe makes AI-written | code understandable.","textChars":44,"textLines":2,"bbox":[64,186,600,152]}
+{"kind":"textbox","id":"sh/0jqxkn6h","slide":1,"text":"A Mac-first product that turns every AI-generated change into understanding, verification, and retained project knowledge.","textPreview":"A Mac-first product that turns every AI-generated change into understanding, verification, and retained project knowledge.","textChars":122,"textLines":1,"bbox":[64,360,550,92]}
+{"kind":"shape","id":"sh/zihgripw","slide":1,"bbox":[64,478,382,34]}
+{"kind":"textbox","id":"sh/yhofixob","slide":1,"text":"SELECT → EXPLAIN → ASK → TEST → SAVE","textPreview":"SELECT → EXPLAIN → ASK → TEST → SAVE","textChars":36,"textLines":1,"bbox":[74,486,362,18]}
+{"kind":"textbox","id":"sh/dgfyps7q","slide":1,"text":"Preston Susanto · Founder","textPreview":"Preston Susanto · Founder","textChars":25,"textLines":1,"bbox":[64,545,360,24]}
+{"kind":"textbox","id":"sh/cf6xgn65","slide":1,"text":"Private beta · August 2026","textPreview":"Private beta · August 2026","textChars":26,"textLines":1,"bbox":[64,574,360,22]}
+{"kind":"image","id":"im/it8zil4n","slide":1,"name":"","geometry":"roundRect","alt":"Unvibe logo","bbox":[72,56,34,34]}
+{"kind":"image","id":"im/kzihs7yx","slide":1,"name":"","geometry":"roundRect","alt":"Unvibe progress dashboard","bbox":[700,104,500,500]}
+{"kind":"notes","id":"nt/whbtd4","slide":1,"text":"Open with the category: AI code generation is abundant; code ownership is becoming scarce.\n\n[Sources]\n- User-provided product screenshot: /Users/prestonjaysusanto/Desktop/Unvibe Resources/new app/Screenshot 2026-08-17 at 6.50.24 PM.png\n- Brand asset: /Users/prestonjaysusanto/Unvibe/marketing/public/brand/icon-1024.png\n- Prior pitch source: /Users/prestonjaysusanto/Desktop/Unvibe Resources/Unvibe_Pitch_Deck.pdf\n- https://sequoiacap.com/article/writing-a-business-plan\n- https://www.ycombinator.com/blog/guide-to-demo-day-pitches/\n[/Sources]"}
+{"kind":"slide","id":"sl/wdmlfw","slide":2,"title":"UNVIBE · INVESTOR DECK","textShapes":16}
+{"kind":"shape","id":"sh/50bu1kri","slide":2,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/id0vqpsr","slide":2,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/3etczu9c","slide":2,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/gbidofal","slide":2,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/hcruxkr6","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/u90vm5sv","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/va9cva90","slide":2,"text":"WHY NOW","textPreview":"WHY NOW","textChars":7,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/07md0zq5","slide":2,"text":"The faster AI ships code,\nthe harder ownership becomes.","textPreview":"The faster AI ships code, | the harder ownership becomes.","textChars":55,"textLines":2,"bbox":[64,90,690,116]}
+{"kind":"textbox","id":"sh/18ve94ra","slide":2,"text":"The bottleneck moved from generating code to verifying, explaining, and remembering what shipped.","textPreview":"The bottleneck moved from generating code to verifying, explaining, and remembering what shipped.","textChars":97,"textLines":1,"bbox":[64,232,600,74]}
+{"kind":"textbox","id":"sh/hob21o3u","slide":2,"text":"84%","textPreview":"84%","textChars":3,"textLines":1,"bbox":[64,350,230,58]}
+{"kind":"textbox","id":"sh/gn218jmp","slide":2,"text":"use or plan to use AI in development","textPreview":"use or plan to use AI in development","textChars":36,"textLines":1,"bbox":[64,402,230,44]}
+{"kind":"textbox","id":"sh/fmtkzel4","slide":2,"text":"66%","textPreview":"66%","textChars":3,"textLines":1,"bbox":[330,350,230,58]}
+{"kind":"textbox","id":"sh/ul0j694j","slide":2,"text":"say AI answers are almost right","textPreview":"say AI answers are almost right","textChars":31,"textLines":1,"bbox":[330,402,230,44]}
+{"kind":"textbox","id":"sh/tkr2x43y","slide":2,"text":"45%","textPreview":"45%","textChars":3,"textLines":1,"bbox":[596,350,220,58]}
+{"kind":"textbox","id":"sh/sji14zmd","slide":2,"text":"spend longer debugging AI code","textPreview":"spend longer debugging AI code","textChars":30,"textLines":1,"bbox":[596,402,220,44]}
+{"kind":"textbox","id":"sh/7i90vuls","slide":2,"text":"3%","textPreview":"3%","textChars":2,"textLines":1,"bbox":[862,350,220,58]}
+{"kind":"textbox","id":"sh/6x0j2p47","slide":2,"text":"highly trust AI output","textPreview":"highly trust AI output","textChars":22,"textLines":1,"bbox":[862,402,220,44]}
+{"kind":"shape","id":"sh/dgv29832","slide":2,"bbox":[64,514,1050,90]}
+{"kind":"textbox","id":"sh/cfm1g32h","slide":2,"text":"Generation is solved. Ownership is not.","textPreview":"Generation is solved. Ownership is not.","textChars":39,"textLines":1,"bbox":[94,539,830,42]}
+{"kind":"textbox","id":"sh/wzulc7at","slide":2,"text":"That gap becomes a learning, reliability, and governance problem.","textPreview":"That gap becomes a learning, reliability, and governance problem.","textChars":65,"textLines":1,"bbox":[760,538,320,44]}
+{"kind":"notes","id":"nt/wdmlfw","slide":2,"text":"Establish a structural market shift, not a temporary feature gap.\n\n[Sources]\n- https://survey.stackoverflow.co/2025/ai\n- https://www.ycombinator.com/blog/this-brief-guide-is-a-summary-of-what-startup-founders-need-to-know-about-raising-the-seed-funds-critical-to-getting-their-company-off-the-ground\n- https://email.docsend.com/hubfs/The%20Pre-Seed%20Round%20Defined.pdf\n[/Sources]"}
+{"kind":"slide","id":"sl/gwu19m","slide":3,"title":"UNVIBE · INVESTOR DECK","textShapes":26}
+{"kind":"shape","id":"sh/0fqh4ra9","slide":3,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/zehgvmto","slide":3,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/ed8z2hs3","slide":3,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/dcfytcbi","slide":3,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/cb6x07ax","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/raxgr2tc","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/q9ofyxsr","slide":3,"text":"PRODUCT","textPreview":"PRODUCT","textChars":7,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/x8jy5wrm","slide":3,"text":"Review the change.\nLearn it before it ships.","textPreview":"Review the change. | Learn it before it ships.","textChars":44,"textLines":2,"bbox":[64,84,560,116]}
+{"kind":"textbox","id":"sh/w7ahcbah","slide":3,"text":"Highlight code in Cursor or VS Code, press ⌘U, and get a contextual explanation without leaving the project.","textPreview":"Highlight code in Cursor or VS Code, press ⌘U, and get a contextual explanation without leaving the project.","textChars":108,"textLines":1,"bbox":[64,228,500,88]}
+{"kind":"shape","id":"sh/mhwf298r","slide":3,"bbox":[64,380,196,154]}
+{"kind":"textbox","id":"sh/ni5wbe9c","slide":3,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[82,398,46,22]}
+{"kind":"textbox","id":"sh/8jyx4jqx","slide":3,"text":"SELECT","textPreview":"SELECT","textChars":6,"textLines":1,"bbox":[82,434,150,26]}
+{"kind":"textbox","id":"sh/9k7edori","slide":3,"text":"Exact code, file, or change","textPreview":"Exact code, file, or change","textChars":27,"textLines":1,"bbox":[82,478,156,44]}
+{"kind":"textbox","id":"sh/ydwvyp8v","slide":3,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[260,438,22,24]}
+{"kind":"shape","id":"sh/ze5w7u9g","slide":3,"bbox":[282,380,196,154]}
+{"kind":"textbox","id":"sh/0fex0zql","slide":3,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[300,398,46,22]}
+{"kind":"textbox","id":"sh/lgne94r6","slide":3,"text":"EXPLAIN","textPreview":"EXPLAIN","textChars":7,"textLines":1,"bbox":[300,434,150,26]}
+{"kind":"textbox","id":"sh/i9gfat8z","slide":3,"text":"Five depth levels","textPreview":"Five depth levels","textChars":17,"textLines":1,"bbox":[300,478,156,44]}
+{"kind":"textbox","id":"sh/ja9wjy9k","slide":3,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[478,438,22,24]}
+{"kind":"shape","id":"sh/fu1cbqpw","slide":3,"bbox":[500,380,196,154]}
+{"kind":"textbox","id":"sh/etsb2lob","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[518,398,46,22]}
+{"kind":"textbox","id":"sh/1wjud072","slide":3,"text":"ASK","textPreview":"ASK","textChars":3,"textLines":1,"bbox":[518,434,150,26]}
+{"kind":"textbox","id":"sh/gvat4v6h","slide":3,"text":"Context-aware follow-up","textPreview":"Context-aware follow-up","textChars":23,"textLines":1,"bbox":[518,478,156,44]}
+{"kind":"textbox","id":"sh/3i1cfqp8","slide":3,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[696,438,22,24]}
+{"kind":"shape","id":"sh/2hsb65on","slide":3,"bbox":[718,380,196,154]}
+{"kind":"textbox","id":"sh/pk3uh07y","slide":3,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[736,398,46,22]}
+{"kind":"textbox","id":"sh/ojat8v6d","slide":3,"text":"TEST","textPreview":"TEST","textChars":4,"textLines":1,"bbox":[736,434,150,26]}
+{"kind":"textbox","id":"sh/bmlcjap4","slide":3,"text":"One comprehension check","textPreview":"One comprehension check","textChars":23,"textLines":1,"bbox":[736,478,156,44]}
+{"kind":"textbox","id":"sh/qlcba5oj","slide":3,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[914,438,22,24]}
+{"kind":"shape","id":"sh/8ret0fmx","slide":3,"bbox":[936,380,196,154]}
+{"kind":"textbox","id":"sh/9snatk3i","slide":3,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[954,398,46,22]}
+{"kind":"textbox","id":"sh/mpcby54r","slide":3,"text":"SAVE","textPreview":"SAVE","textChars":4,"textLines":1,"bbox":[954,434,150,26]}
+{"kind":"textbox","id":"sh/nqlsralc","slide":3,"text":"Learning becomes history","textPreview":"Learning becomes history","textChars":24,"textLines":1,"bbox":[954,478,156,44]}
+{"kind":"shape","id":"sh/0nutwfml","slide":3,"bbox":[64,564,430,34]}
+{"kind":"textbox","id":"sh/lo3ap036","slide":3,"text":"LOCAL SECRET FILTER BEFORE EVERY REMOTE REQUEST","textPreview":"LOCAL SECRET FILTER BEFORE EVERY REMOTE REQUEST","textChars":47,"textLines":1,"bbox":[74,572,410,18]}
+{"kind":"notes","id":"nt/gwu19m","slide":3,"text":"Explain the full loop in under 30 seconds. Emphasize that Unvibe is not another generator.\n\n[Sources]\n- /Users/prestonjaysusanto/Unvibe/AGENTS.md\n- /Users/prestonjaysusanto/Unvibe/docs/architecture.md\n- /Users/prestonjaysusanto/Unvibe/docs/privacy.md\n[/Sources]"}
+{"kind":"slide","id":"sl/nnw5t8","slide":4,"title":"UNVIBE · INVESTOR DECK","textShapes":9}
+{"kind":"shape","id":"sh/q1kzat8f","slide":4,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/d4by5orq","slide":4,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/c32hcjq5","slide":4,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/z6dg7y9w","slide":4,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/e54zet8b","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/18vy98r2","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/07mhg3qh","slide":4,"text":"PRODUCT IN HANDS","textPreview":"PRODUCT IN HANDS","textChars":16,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/nadgbi9s","slide":4,"text":"One layer. Three moments of value.","textPreview":"One layer. Three moments of value.","textChars":34,"textLines":1,"bbox":[64,82,760,116]}
+{"kind":"textbox","id":"sh/m94zid87","slide":4,"text":"Review the change now. Revisit it later. Prove you retained it.","textPreview":"Review the change now. Revisit it later. Prove you retained it.","textChars":63,"textLines":1,"bbox":[64,170,650,40]}
+{"kind":"shape","id":"sh/bmh0r6tc","slide":4,"bbox":[155,607,168,34]}
+{"kind":"textbox","id":"sh/krahovat","slide":4,"text":"UNDERSTAND","textPreview":"UNDERSTAND","textChars":10,"textLines":1,"bbox":[165,615,148,18]}
+{"kind":"shape","id":"sh/lsjix0be","slide":4,"bbox":[556,607,168,34]}
+{"kind":"textbox","id":"sh/yp8zmlsn","slide":4,"text":"RETAIN","textPreview":"RETAIN","textChars":6,"textLines":1,"bbox":[566,615,148,18]}
+{"kind":"shape","id":"sh/jqh0vqt8","slide":4,"bbox":[957,607,168,34]}
+{"kind":"textbox","id":"sh/8fa1sva5","slide":4,"text":"PROVE","textPreview":"PROVE","textChars":5,"textLines":1,"bbox":[967,615,148,18]}
+{"kind":"image","id":"im/nmd0fix0","slide":4,"name":"","geometry":"roundRect","alt":"Ask Unvibe AI surface","bbox":[64,242,350,350]}
+{"kind":"image","id":"im/ml4z6xgf","slide":4,"name":"","geometry":"roundRect","alt":"Unvibe learning library","bbox":[465,242,350,350]}
+{"kind":"image","id":"im/9ovihsf6","slide":4,"name":"","geometry":"roundRect","alt":"Unvibe quiz surface","bbox":[866,242,350,350]}
+{"kind":"notes","id":"nt/nnw5t8","slide":4,"text":"These are current product screenshots, not mockups. Walk left to right.\n\n[Sources]\n- User-provided screenshot: /Users/prestonjaysusanto/Desktop/Unvibe Resources/new app/Screenshot 2026-08-17 at 6.50.21 PM.png\n- User-provided screenshot: /Users/prestonjaysusanto/Desktop/Unvibe Resources/new app/Screenshot 2026-08-17 at 6.50.10 PM.png\n- User-provided screenshot: /Users/prestonjaysusanto/Desktop/Unvibe Resources/new app/Screenshot 2026-08-17 at 6.50.17 PM.png\n[/Sources]"}
+{"kind":"slide","id":"sl/wa43uj","slide":5,"title":"UNVIBE · INVESTOR DECK","textShapes":18}
+{"kind":"shape","id":"sh/8z2tgvmp","slide":5,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/nets7ql4","slide":5,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/mdkbel4z","slide":5,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/lcba5g3e","slide":5,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/0b2tcbmt","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/zats3ql8","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/e90bal4n","slide":5,"text":"POSITIONING","textPreview":"POSITIONING","textChars":11,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/58fuhk3i","slide":5,"text":"Generation creates output.\nUnvibe creates ownership.","textPreview":"Generation creates output. | Unvibe creates ownership.","textChars":52,"textLines":2,"bbox":[64,85,690,116]}
+{"kind":"shape","id":"sh/k7mtof2x","slide":5,"bbox":[64,286,1110,60]}
+{"kind":"textbox","id":"sh/21grqhwr","slide":5,"text":"Coding agents","textPreview":"Coding agents","textChars":13,"textLines":1,"bbox":[86,305,200,24]}
+{"kind":"textbox","id":"sh/32psjmxw","slide":5,"text":"Generate and edit code","textPreview":"Generate and edit code","textChars":22,"textLines":1,"bbox":[330,305,355,24]}
+{"kind":"textbox","id":"sh/o3y9sreh","slide":5,"text":"Do not build learning memory","textPreview":"Do not build learning memory","textChars":28,"textLines":1,"bbox":[730,305,410,24]}
+{"kind":"shape","id":"sh/p47alcf2","slide":5,"bbox":[64,360,1110,60]}
+{"kind":"textbox","id":"sh/exwrmxwf","slide":5,"text":"Generic chat","textPreview":"Generic chat","textChars":12,"textLines":1,"bbox":[86,379,200,24]}
+{"kind":"textbox","id":"sh/fy58f2x0","slide":5,"text":"Explain pasted snippets","textPreview":"Explain pasted snippets","textChars":23,"textLines":1,"bbox":[330,379,355,24]}
+{"kind":"textbox","id":"sh/gze9o7el","slide":5,"text":"Misses workflow and project context","textPreview":"Misses workflow and project context","textChars":35,"textLines":1,"bbox":[730,379,410,24]}
+{"kind":"shape","id":"sh/10nahcf6","slide":5,"bbox":[64,434,1110,60]}
+{"kind":"textbox","id":"sh/yt0ry1wj","slide":5,"text":"Course platforms","textPreview":"Course platforms","textChars":16,"textLines":1,"bbox":[86,453,200,24]}
+{"kind":"textbox","id":"sh/zu9sr6x4","slide":5,"text":"Teach fixed curricula","textPreview":"Teach fixed curricula","textChars":21,"textLines":1,"bbox":[330,453,355,24]}
+{"kind":"textbox","id":"sh/ve1ojydw","slide":5,"text":"Disconnected from what shipped","textPreview":"Disconnected from what shipped","textChars":30,"textLines":1,"bbox":[730,453,410,24]}
+{"kind":"shape","id":"sh/uds7qtcb","slide":5,"bbox":[64,508,1110,60]}
+{"kind":"textbox","id":"sh/h0j6lovm","slide":5,"text":"Unvibe","textPreview":"Unvibe","textChars":6,"textLines":1,"bbox":[86,527,200,24]}
+{"kind":"textbox","id":"sh/wzaps3u1","slide":5,"text":"Explains your selected change","textPreview":"Explains your selected change","textChars":29,"textLines":1,"bbox":[330,527,355,24]}
+{"kind":"textbox","id":"sh/j2lonyds","slide":5,"text":"Tests, saves, and tracks ownership","textPreview":"Tests, saves, and tracks ownership","textChars":34,"textLines":1,"bbox":[730,527,410,24]}
+{"kind":"shape","id":"sh/i1s7utc7","slide":5,"bbox":[64,606,420,34]}
+{"kind":"textbox","id":"sh/5436p8vy","slide":5,"text":"WORKFLOW CONTEXT + ACTIVE RECALL + RETENTION","textPreview":"WORKFLOW CONTEXT + ACTIVE RECALL + RETENTION","textChars":44,"textLines":1,"bbox":[74,614,400,18]}
+{"kind":"notes","id":"nt/wa43uj","slide":5,"text":"Position Unvibe against adjacent categories without claiming feature-for-feature parity.\n\n[Sources]\n- Prior competition framing: /Users/prestonjaysusanto/Desktop/Unvibe Resources/Unvibe_Pitch_Deck.pdf\n- /Users/prestonjaysusanto/Unvibe/AGENTS.md\n- https://sequoiacap.com/article/writing-a-business-plan\n[/Sources]"}
+{"kind":"slide","id":"sl/5pl0y0","slide":6,"title":"UNVIBE · INVESTOR DECK","textShapes":18}
+{"kind":"shape","id":"sh/etkb2ds3","slide":6,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/1wvuxsbu","slide":6,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/0vmt4na9","slide":6,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/nydcz2tk","slide":6,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/mx4b6xsf","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/9kvu1sbq","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/8zmt8na5","slide":6,"text":"EARLY PROOF","textPreview":"EARLY PROOF","textChars":11,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/329snytg","slide":6,"text":"Small launch. Real signal.","textPreview":"Small launch. Real signal.","textChars":26,"textLines":1,"bbox":[64,86,600,116]}
+{"kind":"textbox","id":"sh/210butcv","slide":6,"text":"30+","textPreview":"30+","textChars":3,"textLines":1,"bbox":[64,230,210,58]}
+{"kind":"textbox","id":"sh/0v210nmt","slide":6,"text":"historical early-access signups*","textPreview":"historical early-access signups*","textChars":32,"textLines":1,"bbox":[64,282,210,44]}
+{"kind":"textbox","id":"sh/1wbits3e","slide":6,"text":"62","textPreview":"62","textChars":2,"textLines":1,"bbox":[310,230,210,58]}
+{"kind":"textbox","id":"sh/etkjyd43","slide":6,"text":"Smol Startup upvotes","textPreview":"Smol Startup upvotes","textChars":20,"textLines":1,"bbox":[310,282,210,44]}
+{"kind":"textbox","id":"sh/fut0rilo","slide":6,"text":"#1","textPreview":"#1","textChars":2,"textLines":1,"bbox":[556,230,230,58]}
+{"kind":"textbox","id":"sh/oz214nm5","slide":6,"text":"Smol Startup Daily Winner","textPreview":"Smol Startup Daily Winner","textChars":25,"textLines":1,"bbox":[556,282,230,44]}
+{"kind":"textbox","id":"sh/90bixs3q","slide":6,"text":"136","textPreview":"136","textChars":3,"textLines":1,"bbox":[822,230,210,58]}
+{"kind":"textbox","id":"sh/mxkj2x4z","slide":6,"text":"unique site visitors","textPreview":"unique site visitors","textChars":20,"textLines":1,"bbox":[822,282,210,44]}
+{"kind":"shape","id":"sh/nyt0v2lk","slide":6,"bbox":[64,402,540,180]}
+{"kind":"textbox","id":"sh/43ihs3m1","slide":6,"text":"“The test option is very useful to recap what was learnt.”","textPreview":"“The test option is very useful to recap what was learnt.”","textChars":58,"textLines":1,"bbox":[90,426,470,72]}
+{"kind":"textbox","id":"sh/54ril836","slide":6,"text":"Sharice Gustian · private beta · 9/10","textPreview":"Sharice Gustian · private beta · 9/10","textChars":37,"textLines":1,"bbox":[90,530,430,22]}
+{"kind":"shape","id":"sh/5kjypkfa","slide":6,"bbox":[636,402,540,180]}
+{"kind":"textbox","id":"sh/kjaxwzep","slide":6,"text":"“The explanation depth and customization felt genuinely creative.”","textPreview":"“The explanation depth and customization felt genuinely creative.”","textChars":66,"textLines":1,"bbox":[662,426,470,72]}
+{"kind":"textbox","id":"sh/jy1gnux4","slide":6,"text":"Om Anand Khaunte · private beta · 7/10","textPreview":"Om Anand Khaunte · private beta · 7/10","textChars":38,"textLines":1,"bbox":[662,530,430,22]}
+{"kind":"textbox","id":"sh/ix8fupwj","slide":6,"text":"*Founder-reported across the pre-reset waitlist and early beta intake; current live store is tracked separately.","textPreview":"*Founder-reported across the pre-reset waitlist and early beta intake; current live store is tracked separately.","textChars":112,"textLines":1,"bbox":[64,618,900,20]}
+{"kind":"notes","id":"nt/5pl0y0","slide":6,"text":"Lead with external proof, then show qualitative retention signals. Do not present credits as traction.\n\n[Sources]\n- https://smolstartup.com/projects/unvibe\n- https://unvibe.site/api/stats?include=waitlist\n- User-provided beta feedback: Sharice Gustian, 29 Jul 2026\n- User-provided beta feedback: Om Anand Khaunte, 25 Jul 2026\n- Founder-reported historical early-access total supplied in this request; live store count checked 31 Aug 2026\n- https://www.docsend.com/blog/data-driven-answers-to-frequently-asked-questions-on-startup-fundraising/\n[/Sources]"}
+{"kind":"slide","id":"sl/6gpvfk","slide":7,"title":"UNVIBE · INVESTOR DECK","textShapes":18}
+{"kind":"shape","id":"sh/0jqdw3e5","slide":7,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/zihcnyxk","slide":7,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/yh8vutwz","slide":7,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/dgfulofe","slide":7,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/cf6dsjet","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/bexcjyx8","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/qdovqtgn","slide":7,"text":"MARKET WEDGE","textPreview":"MARKET WEDGE","textChars":12,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/xcjexsfi","slide":7,"text":"Start where AI speed\ncreates the sharpest pain.","textPreview":"Start where AI speed | creates the sharpest pain.","textChars":47,"textLines":2,"bbox":[64,86,630,116]}
+{"kind":"shape","id":"sh/wbad4ned","slide":7,"bbox":[64,326,250,196]}
+{"kind":"textbox","id":"sh/upsbipcr","slide":7,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[84,346,44,24]}
+{"kind":"textbox","id":"sh/fq1crudc","slide":7,"text":"AI-first students","textPreview":"AI-first students","textChars":17,"textLines":1,"bbox":[84,392,205,46]}
+{"kind":"textbox","id":"sh/gratkzux","slide":7,"text":"Ship quickly, learn unevenly","textPreview":"Ship quickly, learn unevenly","textChars":28,"textLines":1,"bbox":[84,452,205,48]}
+{"kind":"shape","id":"sh/1sjut4bi","slide":7,"bbox":[346,326,250,196]}
+{"kind":"textbox","id":"sh/6l8be5cv","slide":7,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[366,346,44,24]}
+{"kind":"textbox","id":"sh/7mhcnadg","slide":7,"text":"Solo builders","textPreview":"Solo builders","textChars":13,"textLines":1,"bbox":[366,392,205,46]}
+{"kind":"textbox","id":"sh/snatgfu1","slide":7,"text":"Own every line they deploy","textPreview":"Own every line they deploy","textChars":26,"textLines":1,"bbox":[366,452,205,48]}
+{"kind":"shape","id":"sh/tojupkvm","slide":7,"bbox":[628,326,250,196]}
+{"kind":"textbox","id":"sh/qhcvq9cz","slide":7,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[648,346,44,24]}
+{"kind":"textbox","id":"sh/bilczetk","slide":7,"text":"Developer teams","textPreview":"Developer teams","textChars":15,"textLines":1,"bbox":[648,392,205,46]}
+{"kind":"textbox","id":"sh/n2d8b6tw","slide":7,"text":"Need shared comprehension","textPreview":"Need shared comprehension","textChars":25,"textLines":1,"bbox":[648,452,205,48]}
+{"kind":"shape","id":"sh/m14ri1sr","slide":7,"bbox":[910,326,250,196]}
+{"kind":"textbox","id":"sh/94fqdgb2","slide":7,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[930,346,44,24]}
+{"kind":"textbox","id":"sh/83m9kbah","slide":7,"text":"Regulated teams","textPreview":"Regulated teams","textChars":15,"textLines":1,"bbox":[930,392,205,46]}
+{"kind":"textbox","id":"sh/vqx8f6t8","slide":7,"text":"Need evidence and review","textPreview":"Need evidence and review","textChars":24,"textLines":1,"bbox":[930,452,205,48]}
+{"kind":"textbox","id":"sh/aporm1sn","slide":7,"text":"The recurring unit is a review, not a course. The expansion path follows code responsibility from individual learning to team assurance.","textPreview":"The recurring unit is a review, not a course. The expansion path follows code responsibility from individual learning to team assurance.","textChars":136,"textLines":1,"bbox":[64,564,980,54]}
+{"kind":"notes","id":"nt/6gpvfk","slide":7,"text":"Describe a credible beachhead before discussing enterprise expansion.\n\n[Sources]\n- https://survey.stackoverflow.co/2025/ai\n- Market framing adapted from /Users/prestonjaysusanto/Desktop/Unvibe Resources/Unvibe_Pitch_Deck.pdf\n- https://sequoiacap.com/article/writing-a-business-plan\n[/Sources]"}
+{"kind":"slide","id":"sl/jyq2mg","slide":8,"title":"UNVIBE · INVESTOR DECK","textShapes":20}
+{"kind":"shape","id":"sh/kba9wz29","slide":8,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/za1s3u14","slide":8,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/y98rupkj","slide":8,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/t0ja9oj6","slide":8,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/8za90j2l","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/7y1s7e10","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/mxsry9kf","slide":8,"text":"BUSINESS MODEL","textPreview":"BUSINESS MODEL","textChars":14,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/p4zqxkjm","slide":8,"text":"Free to build the habit.\nPaid when the project grows.","textPreview":"Free to build the habit. | Paid when the project grows.","textChars":53,"textLines":2,"bbox":[64,84,660,116]}
+{"kind":"shape","id":"sh/o3q9of2h","slide":8,"bbox":[64,308,250,254]}
+{"kind":"textbox","id":"sh/axs7u983","slide":8,"text":"FREE","textPreview":"FREE","textChars":4,"textLines":1,"bbox":[84,330,180,22]}
+{"kind":"textbox","id":"sh/vy1one9o","slide":8,"text":"$0","textPreview":"$0","textChars":2,"textLines":1,"bbox":[84,382,205,50]}
+{"kind":"textbox","id":"sh/wzapwzq9","slide":8,"text":"Core selected-code review\nSaved learning + study","textPreview":"Core selected-code review | Saved learning + study","textChars":48,"textLines":2,"bbox":[84,462,205,72]}
+{"kind":"shape","id":"sh/x03qp4ru","slide":8,"bbox":[346,308,250,254]}
+{"kind":"textbox","id":"sh/i1c7y98z","slide":8,"text":"PRO","textPreview":"PRO","textChars":3,"textLines":1,"bbox":[366,330,180,22]}
+{"kind":"textbox","id":"sh/j2l8re9k","slide":8,"text":"$8/mo","textPreview":"$8/mo","textChars":5,"textLines":1,"bbox":[366,382,205,50]}
+{"kind":"textbox","id":"sh/k3up0jq5","slide":8,"text":"More reviews + AI questions\nPersonal learning history","textPreview":"More reviews + AI questions | Personal learning history","textChars":53,"textLines":2,"bbox":[366,462,205,72]}
+{"kind":"shape","id":"sh/543qtorq","slide":8,"bbox":[628,308,250,254]}
+{"kind":"textbox","id":"sh/65c72t8b","slide":8,"text":"TEAM","textPreview":"TEAM","textChars":4,"textLines":1,"bbox":[648,330,180,22]}
+{"kind":"textbox","id":"sh/76l8vy9w","slide":8,"text":"$8/seat","textPreview":"$8/seat","textChars":7,"textLines":1,"bbox":[648,382,205,50]}
+{"kind":"textbox","id":"sh/3u5ojy54","slide":8,"text":"Shared workspace\n2-seat minimum","textPreview":"Shared workspace | 2-seat minimum","textChars":31,"textLines":2,"bbox":[648,462,205,72]}
+{"kind":"shape","id":"sh/2tw7atoj","slide":8,"bbox":[648,526,130,34]}
+{"kind":"textbox","id":"sh/pwn6l8nu","slide":8,"text":"COMING SOON","textPreview":"COMING SOON","textChars":11,"textLines":1,"bbox":[658,534,110,18]}
+{"kind":"shape","id":"sh/4vepc369","slide":8,"bbox":[910,308,250,254]}
+{"kind":"textbox","id":"sh/f6lofeps","slide":8,"text":"ENTERPRISE","textPreview":"ENTERPRISE","textChars":10,"textLines":1,"bbox":[930,330,180,22]}
+{"kind":"textbox","id":"sh/u5cn69o7","slide":8,"text":"Custom","textPreview":"Custom","textChars":6,"textLines":1,"bbox":[930,382,205,50]}
+{"kind":"textbox","id":"sh/h8n6hony","slide":8,"text":"Annual contract\nIntegrations + support","textPreview":"Annual contract | Integrations + support","textChars":38,"textLines":2,"bbox":[930,462,205,72]}
+{"kind":"shape","id":"sh/g7e58j6d","slide":8,"bbox":[930,526,130,34]}
+{"kind":"textbox","id":"sh/72lobepw","slide":8,"text":"CONTACT SALES","textPreview":"CONTACT SALES","textChars":13,"textLines":1,"bbox":[940,534,110,18]}
+{"kind":"textbox","id":"sh/61cn29ob","slide":8,"text":"Annual plans discount 25%. Model access is included—no provider API key required.","textPreview":"Annual plans discount 25%. Model access is included—no provider API key required.","textChars":81,"textLines":1,"bbox":[64,606,930,24]}
+{"kind":"notes","id":"nt/jyq2mg","slide":8,"text":"Show monetization clarity while separating currently available tiers from planned tiers.\n\n[Sources]\n- /Users/prestonjaysusanto/Unvibe/marketing/src/components/redesign/PricingPlans.tsx\n- /Users/prestonjaysusanto/Unvibe/marketing/src/data/faq.ts\n- https://www.ycombinator.com/blog/this-brief-guide-is-a-summary-of-what-startup-founders-need-to-know-about-raising-the-seed-funds-critical-to-getting-their-company-off-the-ground\n[/Sources]"}
+{"kind":"slide","id":"sl/7wp8b3","slide":9,"title":"UNVIBE · INVESTOR DECK","textShapes":19}
+{"kind":"shape","id":"sh/xoj21gv6","slide":9,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/a1sjq1wf","slide":9,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/bm1kz6d0","slide":9,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/kru1wveh","slide":9,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/ls3250v2","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/ypcjulwr","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/jqlk3qdc","slide":9,"text":"DISTRIBUTION","textPreview":"DISTRIBUTION","textChars":12,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/8vu10vet","slide":9,"text":"Go where AI-first builders\nalready share what they ship.","textPreview":"Go where AI-first builders | already share what they ship.","textChars":56,"textLines":2,"bbox":[64,84,720,116]}
+{"kind":"textbox","id":"sh/tw3290ve","slide":9,"text":"A founder-led motion that turns public building, directories, hackathons, and student communities into beta conversations.","textPreview":"A founder-led motion that turns public building, directories, hackathons, and student communities into beta conversations.","textChars":122,"textLines":1,"bbox":[64,228,630,80]}
+{"kind":"shape","id":"sh/t0fyxgza","slide":9,"bbox":[64,356,250,34]}
+{"kind":"textbox","id":"sh/8z6xobyp","slide":9,"text":"SMOL STARTUP","textPreview":"SMOL STARTUP","textChars":12,"textLines":1,"bbox":[74,364,230,18]}
+{"kind":"shape","id":"sh/7yxgv6h4","slide":9,"bbox":[344,356,250,34]}
+{"kind":"textbox","id":"sh/6xofm1gz","slide":9,"text":"PRODUCT HUNT","textPreview":"PRODUCT HUNT","textChars":12,"textLines":1,"bbox":[354,364,230,18]}
+{"kind":"shape","id":"sh/h4zy1gzm","slide":9,"bbox":[624,356,250,34]}
+{"kind":"textbox","id":"sh/g3qxsby1","slide":9,"text":"DEV COMMUNITY","textPreview":"DEV COMMUNITY","textChars":13,"textLines":1,"bbox":[634,364,230,18]}
+{"kind":"shape","id":"sh/v2hgz6hg","slide":9,"bbox":[64,414,250,34]}
+{"kind":"textbox","id":"sh/u18fqlgv","slide":9,"text":"LAUNCHKIWI","textPreview":"LAUNCHKIWI","textChars":10,"textLines":1,"bbox":[74,422,230,18]}
+{"kind":"shape","id":"sh/x8vepwz2","slide":9,"bbox":[344,414,250,34]}
+{"kind":"textbox","id":"sh/c7mxgryh","slide":9,"text":"TOOL INDEX","textPreview":"TOOL INDEX","textChars":10,"textLines":1,"bbox":[354,422,230,18]}
+{"kind":"shape","id":"sh/obqxwr6d","slide":9,"bbox":[624,414,250,34]}
+{"kind":"textbox","id":"sh/pczy5w7y","slide":9,"text":"DEVROVE","textPreview":"DEVROVE","textChars":7,"textLines":1,"bbox":[634,422,230,18]}
+{"kind":"shape","id":"sh/2p8fuh8n","slide":9,"bbox":[64,472,250,34]}
+{"kind":"textbox","id":"sh/3ahg3mps","slide":9,"text":"AI TOOL DISCOVERY","textPreview":"AI TOOL DISCOVERY","textChars":17,"textLines":1,"bbox":[74,480,230,18]}
+{"kind":"shape","id":"sh/cfax0b6p","slide":9,"bbox":[344,472,250,34]}
+{"kind":"textbox","id":"sh/dgjy9w7a","slide":9,"text":"VIBERANK","textPreview":"VIBERANK","textChars":8,"textLines":1,"bbox":[354,480,230,18]}
+{"kind":"shape","id":"sh/qd8fy1oj","slide":9,"bbox":[624,472,250,34]}
+{"kind":"textbox","id":"sh/be1g76p4","slide":9,"text":"SIDEPROJECTORS","textPreview":"SIDEPROJECTORS","textChars":14,"textLines":1,"bbox":[634,480,230,18]}
+{"kind":"shape","id":"sh/kjax4b6l","slide":9,"bbox":[930,240,246,324]}
+{"kind":"textbox","id":"sh/lkjydg76","slide":9,"text":"NEXT","textPreview":"NEXT","textChars":4,"textLines":1,"bbox":[954,264,90,20]}
+{"kind":"textbox","id":"sh/ve503a98","slide":9,"text":"500","textPreview":"500","textChars":3,"textLines":1,"bbox":[954,316,180,58]}
+{"kind":"textbox","id":"sh/udwja58n","slide":9,"text":"beta builders","textPreview":"beta builders","textChars":13,"textLines":1,"bbox":[954,370,180,28]}
+{"kind":"textbox","id":"sh/h0ni5kre","slide":9,"text":"Measure activation:\nselect → understand → save → return.","textPreview":"Measure activation: | select → understand → save → return.","textChars":56,"textLines":2,"bbox":[954,430,180,90]}
+{"kind":"notes","id":"nt/7wp8b3","slide":9,"text":"The go-to-market strategy is community-led and measurable, not paid acquisition dependent.\n\n[Sources]\n- /Users/prestonjaysusanto/Unvibe/marketing/src/data/listings.ts\n- https://smolstartup.com/projects/unvibe\n- https://www.producthunt.com/products/unvibe?launch=unvibe\n- https://dev.to/preston_jaysusanto_22498/how-to-review-ai-generated-code-without-losing-ownership-of-your-project-ndl\n[/Sources]"}
+{"kind":"slide","id":"sl/euhp7e","slide":10,"title":"UNVIBE · INVESTOR DECK","textShapes":18}
+{"kind":"shape","id":"sh/c7ypcfu1","slide":10,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/r6p83adg","slide":10,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/q5w7a5cv","slide":10,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/p4nq10va","slide":10,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/43ep8vup","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/3258zqd4","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/2hw76lwj","slide":10,"text":"EXECUTION","textPreview":"EXECUTION","textChars":9,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/hgnqx0ve","slide":10,"text":"Seven weeks from pivot\nto working private beta.","textPreview":"Seven weeks from pivot | to working private beta.","textChars":47,"textLines":2,"bbox":[64,84,650,116]}
+{"kind":"shape","id":"sh/gfep4vet","slide":10,"bbox":[104,402,1010,0]}
+{"kind":"shape","id":"sh/itkn250n","slide":10,"bbox":[92,390,24,24]}
+{"kind":"textbox","id":"sh/jut4ba1s","slide":10,"text":"11 JUL","textPreview":"11 JUL","textChars":6,"textLines":1,"bbox":[80,430,110,22]}
+{"kind":"textbox","id":"sh/4v254fid","slide":10,"text":"Desktop pivot","textPreview":"Desktop pivot","textChars":13,"textLines":1,"bbox":[80,466,145,48]}
+{"kind":"shape","id":"sh/5wbmdkzy","slide":10,"bbox":[296,390,24,24]}
+{"kind":"textbox","id":"sh/up0nyl0b","slide":10,"text":"14 JUL","textPreview":"14 JUL","textChars":6,"textLines":1,"bbox":[284,430,110,22]}
+{"kind":"textbox","id":"sh/vq947q1w","slide":10,"text":"unvibe.site live","textPreview":"unvibe.site live","textChars":16,"textLines":1,"bbox":[284,466,145,48]}
+{"kind":"shape","id":"sh/wri50vih","slide":10,"bbox":[500,390,24,24]}
+{"kind":"textbox","id":"sh/hsbm90j2","slide":10,"text":"24 JUL","textPreview":"24 JUL","textChars":6,"textLines":1,"bbox":[488,430,110,22]}
+{"kind":"textbox","id":"sh/m10nul0f","slide":10,"text":"Private Mac beta","textPreview":"Private Mac beta","textChars":16,"textLines":1,"bbox":[488,466,145,48]}
+{"kind":"shape","id":"sh/72943q10","slide":10,"bbox":[704,390,24,24]}
+{"kind":"textbox","id":"sh/b65kbmhs","slide":10,"text":"27 JUL","textPreview":"27 JUL","textChars":6,"textLines":1,"bbox":[692,430,110,22]}
+{"kind":"textbox","id":"sh/q5wj2hg7","slide":10,"text":"⌘U auto review","textPreview":"⌘U auto review","textChars":14,"textLines":1,"bbox":[692,466,145,48]}
+{"kind":"shape","id":"sh/x8n2dwzi","slide":10,"bbox":[908,390,24,24]}
+{"kind":"textbox","id":"sh/c7e14ryx","slide":10,"text":"17 AUG","textPreview":"17 AUG","textChars":6,"textLines":1,"bbox":[896,430,110,22]}
+{"kind":"textbox","id":"sh/zupkfmho","slide":10,"text":"Pricing + gifting","textPreview":"Pricing + gifting","textChars":17,"textLines":1,"bbox":[896,466,145,48]}
+{"kind":"shape","id":"sh/y9gj6hg3","slide":10,"bbox":[1112,390,24,24]}
+{"kind":"textbox","id":"sh/lw72hwzu","slide":10,"text":"26 AUG","textPreview":"26 AUG","textChars":6,"textLines":1,"bbox":[1100,430,110,22]}
+{"kind":"textbox","id":"sh/kvyl8ry9","slide":10,"text":"#1 daily winner","textPreview":"#1 daily winner","textChars":15,"textLines":1,"bbox":[1100,466,145,48]}
+{"kind":"shape","id":"sh/fylk32hk","slide":10,"bbox":[64,556,1110,64]}
+{"kind":"textbox","id":"sh/edcjuxgz","slide":10,"text":"Selection bridge · secret filtering · streaming AI · study loop · usage meters · Google sign-in · durable waitlist","textPreview":"Selection bridge · secret filtering · streaming AI · study loop · usage meters · Google sign-in · durable waitlist","textChars":114,"textLines":1,"bbox":[84,577,1070,24]}
+{"kind":"notes","id":"nt/euhp7e","slide":10,"text":"This is the strongest founder signal: speed with a functioning product and reliability work, not a prototype-only sprint.\n\n[Sources]\n- /Users/prestonjaysusanto/Unvibe/marketing/src/data/milestones.ts\n- Repository git history in /Users/prestonjaysusanto/Unvibe\n- https://www.docsend.com/blog/seed-round-fundraising-tips-to-make-your-pitch-deck-a-hit-with-vc-investors/\n[/Sources]"}
+{"kind":"slide","id":"sl/r65tpe","slide":11,"title":"UNVIBE · INVESTOR DECK","textShapes":26}
+{"kind":"shape","id":"sh/4fit0bmd","slide":11,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/3e9sr6ls","slide":11,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/2d0by147","slide":11,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/hcrapwnm","slide":11,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/gbitwrmh","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/fa9snm5w","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/u9gbu14b","slide":11,"text":"CAPITAL EFFICIENCY","textPreview":"CAPITAL EFFICIENCY","textChars":18,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/t87alwnq","slide":11,"text":"$232.7K in startup support.\nBuilt without a priced round.","textPreview":"$232.7K in startup support. | Built without a priced round.","textChars":57,"textLines":2,"bbox":[64,84,760,116]}
+{"kind":"textbox","id":"sh/s7ytsrm5","slide":11,"text":"$231.9K is program and platform credit; $800 is founder-reported cash support. Credits are not cash and not investment proceeds.","textPreview":"$231.9K is program and platform credit; $800 is founder-reported cash support. Credits are not cash and not investment proceeds.","textChars":128,"textLines":1,"bbox":[64,224,720,74]}
+{"kind":"textbox","id":"sh/i50ry98n","slide":11,"text":"Mixpanel","textPreview":"Mixpanel","textChars":8,"textLines":1,"bbox":[64,354,170,26]}
+{"kind":"textbox","id":"sh/j698reps","slide":11,"text":"$144K","textPreview":"$144K","textChars":5,"textLines":1,"bbox":[234,354,75,26]}
+{"kind":"shape","id":"sh/47i90jqd","slide":11,"bbox":[64,392,245,0]}
+{"kind":"textbox","id":"sh/58rqto7y","slide":11,"text":"PostHog","textPreview":"PostHog","textChars":7,"textLines":1,"bbox":[334,354,170,26]}
+{"kind":"textbox","id":"sh/ahg7u98b","slide":11,"text":"$50K","textPreview":"$50K","textChars":4,"textLines":1,"bbox":[504,354,75,26]}
+{"kind":"shape","id":"sh/vip8ne9w","slide":11,"bbox":[334,392,245,0]}
+{"kind":"textbox","id":"sh/wjypwjqh","slide":11,"text":"GitLab","textPreview":"GitLab","textChars":6,"textLines":1,"bbox":[604,354,170,26]}
+{"kind":"textbox","id":"sh/h47qpo72","slide":11,"text":"$23.7K","textPreview":"$23.7K","textChars":6,"textLines":1,"bbox":[774,354,75,26]}
+{"kind":"shape","id":"sh/mdg7qp8f","slide":11,"bbox":[604,392,245,0]}
+{"kind":"textbox","id":"sh/nep8ju90","slide":11,"text":"AWS","textPreview":"AWS","textChars":3,"textLines":1,"bbox":[64,424,170,26]}
+{"kind":"textbox","id":"sh/r61wb6lg","slide":11,"text":"$5K","textPreview":"$5K","textChars":3,"textLines":1,"bbox":[234,424,75,26]}
+{"kind":"shape","id":"sh/q5sf21kv","slide":11,"bbox":[64,462,245,0]}
+{"kind":"textbox","id":"sh/d83edgj6","slide":11,"text":"Linear","textPreview":"Linear","textChars":6,"textLines":1,"bbox":[334,424,170,26]}
+{"kind":"textbox","id":"sh/c7ax4b21","slide":11,"text":"$4.5K","textPreview":"$4.5K","textChars":5,"textLines":1,"bbox":[504,424,75,26]}
+{"kind":"shape","id":"sh/zalwf61c","slide":11,"bbox":[334,462,245,0]}
+{"kind":"textbox","id":"sh/e9cf61kr","slide":11,"text":"Google","textPreview":"Google","textChars":6,"textLines":1,"bbox":[604,424,170,26]}
+{"kind":"textbox","id":"sh/1c3ehgji","slide":11,"text":"$2K","textPreview":"$2K","textChars":3,"textLines":1,"bbox":[774,424,75,26]}
+{"kind":"shape","id":"sh/0bux8b2x","slide":11,"bbox":[604,462,245,0]}
+{"kind":"textbox","id":"sh/fehw3ml8","slide":11,"text":"OpenAI","textPreview":"OpenAI","textChars":6,"textLines":1,"bbox":[64,494,170,26]}
+{"kind":"textbox","id":"sh/ud8vuhkn","slide":11,"text":"$1.2K","textPreview":"$1.2K","textChars":5,"textLines":1,"bbox":[234,494,75,26]}
+{"kind":"shape","id":"sh/kj6t4nil","slide":11,"bbox":[64,532,245,0]}
+{"kind":"textbox","id":"sh/5kfudsj6","slide":11,"text":"Deepgram","textPreview":"Deepgram","textChars":8,"textLines":1,"bbox":[334,494,170,26]}
+{"kind":"textbox","id":"sh/ih4b2d0f","slide":11,"text":"$1K","textPreview":"$1K","textChars":3,"textLines":1,"bbox":[504,494,75,26]}
+{"kind":"shape","id":"sh/jixcbi10","slide":11,"bbox":[334,532,245,0]}
+{"kind":"textbox","id":"sh/wfmt03i9","slide":11,"text":"MongoDB","textPreview":"MongoDB","textChars":7,"textLines":1,"bbox":[604,494,170,26]}
+{"kind":"textbox","id":"sh/xgva98ju","slide":11,"text":"$500","textPreview":"$500","textChars":4,"textLines":1,"bbox":[774,494,75,26]}
+{"kind":"shape","id":"sh/ad4byd0j","slide":11,"bbox":[604,532,245,0]}
+{"kind":"shape","id":"sh/veds7y1o","slide":11,"bbox":[900,346,276,214]}
+{"kind":"textbox","id":"sh/gbqtc7it","slide":11,"text":"WHAT THIS BUYS","textPreview":"WHAT THIS BUYS","textChars":14,"textLines":1,"bbox":[924,372,210,20]}
+{"kind":"textbox","id":"sh/hczulczy","slide":11,"text":"Runway for analytics, infra, AI evaluation, and secure developer operations.","textPreview":"Runway for analytics, infra, AI evaluation, and secure developer operations.","textChars":76,"textLines":1,"bbox":[924,416,210,108]}
+{"kind":"notes","id":"nt/r65tpe","slide":11,"text":"Be explicit that credits are operating leverage, not fundraising traction.\n\n[Sources]\n- /Users/prestonjaysusanto/Unvibe/marketing/src/data/compensation.ts\n- /Users/prestonjaysusanto/Unvibe/marketing/src/data/milestones.ts\n[/Sources]"}
+{"kind":"slide","id":"sl/bw6hpx","slide":12,"title":"UNVIBE · INVESTOR DECK","textShapes":16}
+{"kind":"shape","id":"sh/pszedwbu","slide":12,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/2povi1s3","slide":12,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/3qxwbmto","slide":12,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/cvqxobal","slide":12,"text":"UNVIBE · INVESTOR DECK","textPreview":"UNVIBE · INVESTOR DECK","textChars":22,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/dwzehgbq","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/qt8fm1sf","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/buhwf6t0","slide":12,"text":"NEXT 12 MONTHS","textPreview":"NEXT 12 MONTHS","textChars":14,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/0zaxsbah","slide":12,"text":"Turn a working loop\ninto a repeatable habit.","textPreview":"Turn a working loop | into a repeatable habit.","textChars":44,"textLines":2,"bbox":[64,84,620,116]}
+{"kind":"shape","id":"sh/l0jelgb2","slide":12,"bbox":[64,308,330,230]}
+{"kind":"textbox","id":"sh/dw7ytgju","slide":12,"text":"NOW","textPreview":"NOW","textChars":3,"textLines":1,"bbox":[86,330,80,20]}
+{"kind":"textbox","id":"sh/cvex0bi9","slide":12,"text":"Reliability","textPreview":"Reliability","textChars":11,"textLines":1,"bbox":[86,376,260,34]}
+{"kind":"textbox","id":"sh/bu5gr614","slide":12,"text":"Notarize the Mac app. Harden capture, streaming, and offline recovery.","textPreview":"Notarize the Mac app. Harden capture, streaming, and offline recovery.","textChars":70,"textLines":1,"bbox":[86,430,280,82]}
+{"kind":"shape","id":"sh/qtwfy10j","slide":12,"bbox":[424,308,330,230]}
+{"kind":"textbox","id":"sh/l07yxgz6","slide":12,"text":"NEXT","textPreview":"NEXT","textChars":4,"textLines":1,"bbox":[446,330,80,20]}
+{"kind":"textbox","id":"sh/0zyx4vil","slide":12,"text":"Retention","textPreview":"Retention","textChars":9,"textLines":1,"bbox":[446,376,260,34]}
+{"kind":"textbox","id":"sh/zypgvqh0","slide":12,"text":"Weekly review rhythm, stronger concepts, personal notes, visual learning aids.","textPreview":"Weekly review rhythm, stronger concepts, personal notes, visual learning aids.","textChars":78,"textLines":1,"bbox":[446,430,280,82]}
+{"kind":"shape","id":"sh/yxgf2l0f","slide":12,"bbox":[784,308,330,230]}
+{"kind":"textbox","id":"sh/143elwjm","slide":12,"text":"THEN","textPreview":"THEN","textChars":4,"textLines":1,"bbox":[806,330,80,20]}
+{"kind":"textbox","id":"sh/g3uxsri1","slide":12,"text":"Distribution","textPreview":"Distribution","textChars":12,"textLines":1,"bbox":[806,376,260,34]}
+{"kind":"textbox","id":"sh/sjipovu9","slide":12,"text":"Open VSX extension, beta communities, referrals, and first paid teams.","textPreview":"Open VSX extension, beta communities, referrals, and first paid teams.","textChars":70,"textLines":1,"bbox":[806,430,280,82]}
+{"kind":"shape","id":"sh/tkr6x0vu","slide":12,"bbox":[64,578,430,34]}
+{"kind":"textbox","id":"sh/6h07mlc3","slide":12,"text":"$50K–$100K PRE-SEED / ACCELERATOR SUPPORT","textPreview":"$50K–$100K PRE-SEED / ACCELERATOR SUPPORT","textChars":41,"textLines":1,"bbox":[74,586,410,18]}
+{"kind":"textbox","id":"sh/ri9ovqdo","slide":12,"text":"Also seeking introductions to AI-first builders, student developer communities, and design partners.","textPreview":"Also seeking introductions to AI-first builders, student developer communities, and design partners.","textChars":100,"textLines":1,"bbox":[532,584,620,34]}
+{"kind":"notes","id":"nt/bw6hpx","slide":12,"text":"The ask preserves the range from the original deck while tying it to concrete milestones.\n\n[Sources]\n- Prior ask and roadmap: /Users/prestonjaysusanto/Desktop/Unvibe Resources/Unvibe_Pitch_Deck.pdf\n- /Users/prestonjaysusanto/Unvibe/AGENTS.md\n- https://a16z.com/raising-capital-this-is-the-advice-we-give-our-founders/\n- https://a16z.com/the-insiders-guide-to-data-rooms-what-to-know-before-you-raise/\n[/Sources]"}
+{"kind":"slide","id":"sl/en4zrd","slide":13,"title":"UNVIBE · PRESTON@UNVIBE.SITE","textShapes":17}
+{"kind":"shape","id":"sh/zup4bixo","slide":13,"bbox":[0,0,8,720]}
+{"kind":"shape","id":"sh/0vylkne9","slide":13,"bbox":[8,0,1272,5]}
+{"kind":"shape","id":"sh/1w7mdsfu","slide":13,"bbox":[64,658,1152,0]}
+{"kind":"textbox","id":"sh/q5w3edw7","slide":13,"text":"UNVIBE · PRESTON@UNVIBE.SITE","textPreview":"UNVIBE · PRESTON@UNVIBE.SITE","textChars":28,"textLines":1,"bbox":[64,682,300,18]}
+{"kind":"textbox","id":"sh/r6547ixs","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1190,681,28,18]}
+{"kind":"textbox","id":"sh/c7elg3ed","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1162,38,58,30]}
+{"kind":"textbox","id":"sh/dsnm98fy","slide":13,"text":"FOUNDER","textPreview":"FOUNDER","textChars":7,"textLines":1,"bbox":[64,44,520,28]}
+{"kind":"textbox","id":"sh/a103qxwb","slide":13,"text":"Built by someone\ninside the problem.","textPreview":"Built by someone | inside the problem.","textChars":36,"textLines":2,"bbox":[64,92,600,116]}
+{"kind":"textbox","id":"sh/b294j2dw","slide":13,"text":"Preston Susanto is a solo technical founder building Unvibe while using AI coding tools every day—and feeling the ownership gap firsthand.","textPreview":"Preston Susanto is a solo technical founder building Unvibe while using AI coding tools every day—and feeling the ownership gap firsthand.","textChars":138,"textLines":1,"bbox":[64,244,540,96]}
+{"kind":"textbox","id":"sh/7654fi5c","slide":13,"text":"◆","textPreview":"◆","textChars":1,"textLines":1,"bbox":[66,386,18,20]}
+{"kind":"textbox","id":"sh/m5wnmdor","slide":13,"text":"Product, desktop, backend, and launch motion built end-to-end","textPreview":"Product, desktop, backend, and launch motion built end-to-end","textChars":61,"textLines":1,"bbox":[96,382,500,34]}
+{"kind":"textbox","id":"sh/98nmhsn2","slide":13,"text":"◆","textPreview":"◆","textChars":1,"textLines":1,"bbox":[66,432,18,20]}
+{"kind":"textbox","id":"sh/87e5on6x","slide":13,"text":"Rapid user-feedback loop with public build records","textPreview":"Rapid user-feedback loop with public build records","textChars":50,"textLines":1,"bbox":[96,428,500,34]}
+{"kind":"textbox","id":"sh/vu54ji58","slide":13,"text":"◆","textPreview":"◆","textChars":1,"textLines":1,"bbox":[66,478,18,20]}
+{"kind":"textbox","id":"sh/u9wnqdon","slide":13,"text":"Google Developers Group DVC founder and hackathon organizer","textPreview":"Google Developers Group DVC founder and hackathon organizer","textChars":59,"textLines":1,"bbox":[96,474,500,34]}
+{"kind":"textbox","id":"sh/hwnmlsne","slide":13,"text":"◆","textPreview":"◆","textChars":1,"textLines":1,"bbox":[66,524,18,20]}
+{"kind":"textbox","id":"sh/wve5sn6t","slide":13,"text":"Mission: make AI development understandable, verifiable, and retainable","textPreview":"Mission: make AI development understandable, verifiable, and retainable","textChars":71,"textLines":1,"bbox":[96,520,500,34]}
+{"kind":"shape","id":"sh/jyp4n25k","slide":13,"bbox":[700,116,480,476]}
+{"kind":"textbox","id":"sh/et07m187","slide":13,"text":"Make AI development\nunderstandable.","textPreview":"Make AI development | understandable.","textChars":35,"textLines":2,"bbox":[754,336,372,90]}
+{"kind":"textbox","id":"sh/fu98v6ps","slide":13,"text":"unvibe.site","textPreview":"unvibe.site","textChars":11,"textLines":1,"bbox":[754,476,372,28]}
+{"kind":"textbox","id":"sh/0vipobqx","slide":13,"text":"preston@unvibe.site","textPreview":"preston@unvibe.site","textChars":19,"textLines":1,"bbox":[754,522,372,24]}
+{"kind":"image","id":"im/p8nu1srm","slide":13,"name":"","geometry":"roundRect","alt":"Unvibe logo","bbox":[878,164,124,124]}
+{"kind":"notes","id":"nt/en4zrd","slide":13,"text":"Close on founder-market fit and the category ambition.\n\n[Sources]\n- Founder biography adapted from /Users/prestonjaysusanto/Desktop/Unvibe Resources/Unvibe_Pitch_Deck.pdf\n- Brand asset: /Users/prestonjaysusanto/Unvibe/marketing/public/brand/icon-1024.png\n- https://unvibe.site\n- https://www.ycombinator.com/blog/aaron-harris-on-fundraising-and-meeting-with-investors\n[/Sources]"}

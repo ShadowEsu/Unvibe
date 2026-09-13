@@ -25,7 +25,7 @@ export const faqItems: FaqItem[] = [
     id: "what-is-it",
     question: "What is Unvibe?",
     answer:
-      "Unvibe is a desktop AI learning layer for code. It lives beside your editor: select code, choose a depth, and get an explanation that stays open while you work. It also helps you save notes, track concepts, and turn real projects into study material. It is not a course platform or another chat window.",
+      "Unvibe is a desktop overlay that explains AI-generated code in place. Select code in Cursor or VS Code, press ⌘U / Ctrl+U, and get a leveled explanation beside your editor. You can save it, follow up, and quiz yourself later. It is not a code generator and not another chat window.",
     category: "product",
   },
   {
@@ -33,6 +33,13 @@ export const faqItems: FaqItem[] = [
     question: "Is Unvibe a code generator?",
     answer:
       "No. Unvibe does not write features for you. AI agents can write the code; Unvibe helps you understand, review, and remember it.",
+    category: "product",
+  },
+  {
+    id: "vs-cursor",
+    question: "Why not just ask the agent to explain itself?",
+    answer:
+      "Agent chat answers live in that conversation and disappear when you move on. Unvibe opens beside the code, offers five depths, and saves the explanation so you can reopen it, follow up, and take a Test me quiz later. Coding agents answer “can I build this?” Unvibe answers “will I still understand this in three weeks?”",
     category: "product",
   },
   {
@@ -53,7 +60,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What code is sent to AI providers?",
     answer:
-      "Unvibe is not an offline processor. When you request an explanation, the selected code and limited surrounding context you approve are sent to the configured cloud AI provider. Secrets are scanned on your machine first, and default exclusions cover .env files, keys, node_modules, and build output. Unvibe does not crawl or upload your whole repository.",
+      "Unvibe is not an offline processor. When you request an explanation, the selected code and limited surrounding context you approve leave the machine after a local secret scan. They go to Unvibe’s backend, which calls the configured cloud model (OpenRouter free chat models by default, or Anthropic/Gemini if those keys are set). If you paste your own provider key in Settings, that request stays on your Mac and goes only to your provider. Unvibe does not crawl or upload your whole repository. Default exclusions cover .env files, keys, node_modules, and build output.",
     category: "privacy",
   },
   {
@@ -81,7 +88,7 @@ export const faqItems: FaqItem[] = [
     id: "training",
     question: "Will my private code be used for training?",
     answer:
-      "Unvibe does not build its own training dataset from your repositories. Explanation requests are handled by the cloud AI provider configured for the service, currently Anthropic Claude or Google Gemini depending on backend configuration, and are subject to that provider’s retention and data-use terms. Do not treat a secret filter as a guarantee that every sensitive value will be found.",
+      "Unvibe does not build its own training dataset from your repositories. Explanation requests are handled by the cloud provider configured for the service (OpenRouter by default, or Anthropic/Gemini if those keys are set) and are subject to that provider’s retention and data-use terms. Do not treat a secret filter as a guarantee that every sensitive value will be found.",
     category: "privacy",
   },
   {
@@ -94,7 +101,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "How much does Pro cost?",
-    answer: "Pro is $15 per month for one developer. Teams founding-pilot pricing is $15 per seat per month. Enterprise is planned at $500 per month including 20 seats, then $15 for each additional seat.",
+    answer: "Pro is $10 per month for one developer, or $90 per year. Pro Lifetime is $80 one-time for local and core personal features — buy it from Plan in the Unvibe app. Teams founding-pilot pricing is $8 per seat per month, 2 seat minimum and 20 seat maximum. Enterprise starts at $199 per month.",
     category: "pricing",
   },
   {
@@ -114,14 +121,14 @@ export const faqItems: FaqItem[] = [
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from PowerShell with irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
+      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from Windows PowerShell only, not cmd.exe: irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Choose More info, then Run anyway. Select code in your editor, then press Ctrl+U. Unvibe copies the selection and explains it beside the editor.",
     category: "platform",
   },
   {
     id: "teams",
     question: "What is Unvibe Teams?",
     answer:
-      "Unvibe Teams is the GitHub-connected engineering knowledge layer in development: shared context, PR and repository understanding, knowledge freshness, onboarding, and transparent knowledge-risk signals. Teams is a founding pilot at $15 per seat per month. Roadmap capabilities are labeled Pilot or Planned until they ship.",
+      "Unvibe Teams founding pilot is a shared workspace: invite teammates and see who reviewed or understood which file, concept, and project. Full explanation text stays on each person’s device. GitHub intelligence screens (PR understanding, knowledge-risk) are not shipped yet and stay labeled Pilot or Planned. Paid seat checkout is $8/seat/month for 2–20 seats when Stripe Teams billing is enabled.",
     category: "platform",
   },
   {

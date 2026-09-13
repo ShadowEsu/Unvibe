@@ -21,5 +21,8 @@ web/env.local
 *.log
 .DS_Store
 
+# Local customer-support operations (may contain minimal customer metadata)
+support/
+
 # Editor
 .vscode-test/

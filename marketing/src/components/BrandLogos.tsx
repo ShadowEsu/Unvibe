@@ -9,7 +9,7 @@ const apps = [
   { name: "VS Code", detail: "Select + ⌘U", src: "/tools/vscode.svg" },
   { name: "JetBrains", detail: "Testing", src: "/tools/jetbrains.svg" },
   { name: "Claude Code", detail: "Workflow context", src: "/tools/claude.svg" },
-  { name: "GitHub", detail: "Project context", src: "/tools/github.svg" },
+  { name: "GitHub", detail: "Planned", src: "/tools/github.svg" },
 ] as const;
 
 export function BrandLogos({ className }: { className?: string }) {
