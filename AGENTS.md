@@ -68,9 +68,14 @@ docs/        architecture.md · design-system.md · privacy.md
   mock output as real.
 
 ## Design rules (see docs/design-system.md)
-Strict black / white / restrained grays. No gradients, no color status, no AI glow, no
-shadow-heavy cards. Calm, minimal, high-readability. Every surface handles loading, empty,
-error, and offline states. Keyboard-operable. Respects editor light/dark.
+Preserve the latest approved app and marketing design. Earlier monochrome rules and old
+screenshots in this repository are historical, not instructions to restore an older UI.
+Keep current colors, fonts, images, backgrounds, layouts and widgets. A specific feedback
+item or demonstrated usability defect may justify a targeted improvement, not a full reset.
+Before visual edits, identify the current branch/build and capture its appearance; compare
+the result against that baseline. Never replace a current surface with an old full-file UI.
+Every surface handles loading, empty, error and offline states and is keyboard-operable.
+See `docs/feedback-improvement-plan.md` for the current improvement boundaries.
 
 ## Privacy rules (see docs/privacy.md)
 Default-exclude `.env`, keys, tokens, `node_modules`, build output, binaries. Support

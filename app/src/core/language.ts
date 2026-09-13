@@ -1,6 +1,8 @@
 /** Crude content-based language guess for captured selections (no file path available). */
 export function guessLanguage(code: string): string {
-  if (/^\s*#include\b|::\w+\(|std::/m.test(code)) return 'cpp';
+  // Captured class methods often omit includes and namespace qualifiers. Check
+  // C++ declarations before JavaScript's much weaker `const` signal.
+  if (/^\s*#include\b|::\w+\(|std::|\bconstexpr\s+\w+|\benum\s+class\s+\w+|\bvector\s*<[^;\n{}]+>\s*(?:const\s*)?[&*]/m.test(code)) return 'cpp';
   if (/\bfn\s+\w+\s*\(|\blet\s+mut\b|::<|\bimpl\b/.test(code)) return 'rust';
   if (/\bdef\s+\w+\s*\(|\bimport\s+\w+$|\bself\b/m.test(code)) return 'python';
   if (/\bfunc\s+\w+\s*\(|\bpackage\s+\w+$/m.test(code)) return 'go';
