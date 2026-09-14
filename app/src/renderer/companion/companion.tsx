@@ -320,7 +320,7 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
-      <div className="perm-why">In VS Code and Cursor, the Unvibe Desktop Bridge uses ⌘U and reads the selection directly. Everywhere else, select code and press Control+U. That path needs Accessibility.</div>
+      <div className="perm-why">The Unvibe Desktop Bridge handles ⌘U inside VS Code and Cursor. In Terminal and other Mac apps, Control+U reads your selection through Accessibility.</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
@@ -336,18 +336,11 @@ function playSetupTone(kind: 'step' | 'success', volume = 0.3, style: 'soft' | '
   playUiTone(kind, volume, style);
 }
 
-function looksLikeEmail(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-}
-
-function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }: { shortcut: string; soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; onDone: () => void }) {
+function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
   const [nameError, setNameError] = useState('');
-  const steps = ['Welcome', 'Your profile', 'Mac access'];
+  const steps = ['How it works', 'Your name', 'Ready'];
 
   const next = () => {
     if (soundEffects) playSetupTone('step', soundVolume, soundStyle);
@@ -357,17 +350,12 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
   const finish = () => { if (soundEffects) playSetupTone('success', soundVolume, soundStyle); void window.unvibe.completeOnboarding(); onDone(); };
   const saveProfile = () => {
     const name = displayName.replace(/\s+/g, ' ').trim();
-    const email = profileEmail.trim();
     if (!name) {
       setNameError('Add a name so chat can greet you.');
       return false;
     }
-    if (!looksLikeEmail(email)) {
-      setNameError('Email needs an @ and a domain, or leave it blank.');
-      return false;
-    }
     setNameError('');
-    void window.unvibe.setSettings({ displayName: name, profileEmail: email });
+    void window.unvibe.setSettings({ displayName: name });
     return true;
   };
   const advanceName = () => {
@@ -411,7 +399,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
         <div className="ob__scene-strip">
           <div><b>▶</b><LogoMark size={15} stroke={2} /></div>
           <span className="ob__scene-camera" />
-          <div><span>{step === 0 ? '⌘U' : step === 1 ? 'hi' : 'Mac'}</span><b>⌂</b></div>
+          <div><span>{step === 0 ? '⌘U' : step === 1 ? 'you' : 'ready'}</span><b>⌂</b></div>
         </div>
         <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
       </div>
@@ -423,23 +411,26 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
           {step === 0 && (
             <>
               <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
-              <div className="ob__eyebrow">HOW TO START</div>
-              <h2 className="ob__title">Select code. Press Command U.</h2>
-              <p className="ob__sub">Unvibe sits beside Cursor and VS Code. Highlight the code you want to keep, press the shortcut, and read the explanation in place. Nothing is sent until the on-device secret scan finishes.</p>
-              <ol className="ob__list">
-                <li>Select the code an AI just wrote.</li>
-                <li>Press <span className="kbd-lg">⌘U</span> in Cursor or VS Code, or <span className="kbd-lg">{prettyAccel(shortcut)}</span> in other Mac apps.</li>
-                <li>Read it, then keep building.</li>
-              </ol>
-              {nav('Get started')}
+              <div className="ob__eyebrow">ONE SHORTCUT · ONE LEARNING LOOP</div>
+              <h2 className="ob__title">Understand what AI changed.</h2>
+              <p className="ob__sub">Select code and press <span className="kbd-lg">⌘U</span>. Unvibe explains it beside your work, then helps you check that it makes sense.</p>
+              <div className="ob__sample" aria-label="Example Unvibe explanation">
+                <div className="ob__sample-code"><span>Selected code</span><br />return users.filter(user =&gt; user.active);</div>
+                <div className="ob__sample-answer"><b>Keeps the active users.</b><p>This filters the list before the next step, so inactive accounts never enter the result.</p></div>
+              </div>
+              <div className="ob__sample-actions" aria-label="Learning actions">
+                <span className="on">I understand</span><span>Explain differently</span><span>Test me</span>
+              </div>
+              <div className="ob__signal"><i className="ob__pixel" />Secret scan happens first, on this Mac</div>
+              {nav('Continue')}
             </>
           )}
 
           {step === 1 && (
             <>
-              <div className="ob__eyebrow">YOUR PROFILE</div>
-              <h2 className="ob__title">Name and profile, on this Mac.</h2>
-              <p className="ob__sub">Chat will say Hello again, then your name. Email is optional and stays on this laptop.</p>
+              <div className="ob__eyebrow">MAKE IT YOURS</div>
+              <h2 className="ob__title">What should Unvibe call you?</h2>
+              <p className="ob__sub">This is only used for greetings and stays on this Mac. You can change it later.</p>
               <form className="ob__form" onSubmit={(event) => { event.preventDefault(); advanceName(); }}>
                 <label>
                   Name
@@ -452,17 +443,6 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
                     placeholder="Your name"
                   />
                 </label>
-                <label>
-                  Email, optional
-                  <input
-                    className="field"
-                    type="email"
-                    value={profileEmail}
-                    onChange={(event) => { setProfileEmail(event.target.value); if (nameError) setNameError(''); }}
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                  />
-                </label>
                 {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
               </form>
               {nav('Continue', advanceName, displayName.trim().length === 0)}
@@ -471,17 +451,11 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
 
           {step === 2 && (
             <>
-              <div className="ob__eyebrow">MAC ACCESS</div>
-              <h2 className="ob__title">Allow Unvibe on this laptop.</h2>
-              <p className="ob__sub">Cursor and VS Code already work with Command U. For Terminal and the rest of your Mac, turn Unvibe on in Accessibility so it can read the code you select.</p>
-              <ol className="ob__list">
-                <li>Open <b>System Settings</b>.</li>
-                <li>Open <b>Privacy and Security</b>.</li>
-                <li>Open <b>Accessibility</b>.</li>
-                <li>Find <b>Unvibe</b> and turn it on.</li>
-              </ol>
+              <div className="ob__eyebrow">READY TO LEARN</div>
+              <h2 className="ob__title">Ready for your editor.</h2>
+              <p className="ob__sub">The Desktop Bridge gives Cursor and VS Code the cleanest Command U flow. Accessibility adds selection capture in Terminal and other Mac apps.</p>
               <PermRow />
-              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
+              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Start using Unvibe</button></div>
             </>
           )}
         </FadeIn>
@@ -1426,7 +1400,7 @@ function App() {
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
-    return (<><div className="titlebar" /><Onboarding shortcut={settings?.shortcut ?? 'CommandOrControl+U'} soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} onDone={async () => { await refresh(); setGate('app'); }} /></>);
+    return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);
