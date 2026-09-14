@@ -19,6 +19,8 @@ const SETTINGS_REVISION = 8;
 const ISLAND_BEHAVIOR_REVISION = 2;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
+/** Makes the companion navigation quieter without overriding custom widths. */
+const SIDEBAR_DENSITY_REVISION = 1;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -29,6 +31,8 @@ export interface Settings {
   islandBehaviorRevision?: number;
   /** Internal — tracks the editor bridge shortcut migration. */
   ideBridgeShortcutRevision?: number;
+  /** Internal — tracks the compact companion sidebar migration. */
+  sidebarDensityRevision?: number;
   onboarded: boolean;
   /** Electron accelerator for the cross-app fallback. ⌘U belongs to the IDE bridge. */
   shortcut: string;
@@ -73,6 +77,8 @@ export interface Settings {
   lastProjectRoot?: string;
   /** Companion sidebar width in pixels. */
   sidebarWidth: number;
+  /** Hide the companion sidebar while keeping its small reveal control available. */
+  sidebarHidden: boolean;
   /** Local 8 character gift code when the Mac is not signed in. */
   giftCode: string;
 }
@@ -82,6 +88,7 @@ const DEFAULTS: Settings = {
   appearanceRevision: 1,
   islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
   ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
+  sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
   onboarded: false,
   shortcut: 'Control+U',
   barPosition: 'top-center',
@@ -106,7 +113,8 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
-  sidebarWidth: 232,
+  sidebarWidth: 216,
+  sidebarHidden: false,
   giftCode: '',
 };
 
@@ -135,6 +143,8 @@ class SettingsStore {
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
     const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
       loaded.barVisibility === 'during-review';
+    const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
+      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 232);
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -148,6 +158,7 @@ class SettingsStore {
       appearanceRevision: 1,
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
       ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
+      sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
       ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
       ...(needsFullscreenIsland
         ? { barVisibility: 'always' as const, barHoverPreview: false }
@@ -163,11 +174,12 @@ class SettingsStore {
           }
         : {}),
       ...(needsIdeShortcutMigration ? { shortcut: 'Control+U' } : {}),
+      ...(needsSidebarDensity ? { sidebarWidth: 216 } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {

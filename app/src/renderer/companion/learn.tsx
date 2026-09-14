@@ -77,6 +77,7 @@ export function Learn({
   onReview,
   onRestudy,
   onRefresh,
+  initialOpenId,
 }: {
   history: LearningItem[];
   queue: LearningItem[];
@@ -85,6 +86,7 @@ export function Learn({
   onReview: () => void;
   onRestudy: (item: LearningItem, level: string) => void | Promise<void>;
   onRefresh: () => void | Promise<void>;
+  initialOpenId?: string | null;
 }) {
   const catalog = useMemo(() => {
     const seen = new Set<string>();
@@ -99,7 +101,7 @@ export function Learn({
 
   const [filter, setFilter] = useState<'all' | 'understood' | 'needs_review'>('all');
   const [query, setQuery] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId ?? null);
   const feedRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef(0);
   const [mode, setMode] = useState<LessonMode>('read');

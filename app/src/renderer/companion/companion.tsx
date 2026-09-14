@@ -7,6 +7,7 @@ import { Gift } from './gift';
 import { playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
+import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -56,6 +57,7 @@ interface Settings {
   useOwnAi: boolean;
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
   sidebarWidth: number;
+  sidebarHidden: boolean;
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
@@ -1258,6 +1260,10 @@ function App() {
   const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
   const [sideWidth, setSideWidth] = useState(232);
   const sideLive = useRef(232);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [lessonSeedId, setLessonSeedId] = useState<string | null>(null);
+  const [lessonSeedRevision, setLessonSeedRevision] = useState(0);
 
   const refresh = async () => {
     try {
@@ -1305,8 +1311,20 @@ function App() {
       const allowed: PageId[] = ['Home', 'Learn', 'Study', 'History', 'Quiz', 'Chat', 'Progress', 'Plan', 'Gift', 'Projects', 'Concepts', 'Notebook', 'Briefings', 'Library', 'Profile'];
       if (allowed.includes(next as PageId)) setPage(next as PageId);
     });
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchQuery('');
+        setSearchOpen(true);
+      }
+      if (event.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const [themeIsDark, setThemeIsDark] = useState(false);
@@ -1342,6 +1360,43 @@ function App() {
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
   const sideCompact = sideWidth < 200;
+  const sideHidden = settings?.sidebarHidden ?? false;
+  const searchGroups = (() => {
+    const query = searchQuery.trim().toLowerCase();
+    const matches = (value: string) => !query || value.toLowerCase().includes(query);
+    const close = () => { setSearchOpen(false); setSearchQuery(''); };
+    const lessons = history
+      .filter((item) => matches([item.title, item.meta, item.file, item.project, item.language, item.concept].filter(Boolean).join(' ')))
+      .slice(0, 10)
+      .map((item) => ({
+        id: `lesson-${item.id}`,
+        title: item.title,
+        detail: item.meta || [item.file, item.language, item.level].filter(Boolean).join(' · '),
+        run: () => {
+          setLessonSeedId(item.id);
+          setLessonSeedRevision((revision) => revision + 1);
+          setPage('History');
+          close();
+        },
+      }));
+    const pages = NAV
+      .map((item) => ({
+        id: `page-${item.id}`,
+        title: item.id === 'Gift' ? 'Gift Unvibe' : item.id,
+        detail: item.id === 'History' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about your code' : 'Open page',
+        run: () => { setLessonSeedId(null); setPage(item.id); close(); },
+      }))
+      .filter((item) => matches(`${item.title} ${item.detail}`));
+    const actions = [
+      { id: 'action-review', title: 'Explain selected code', detail: `Select code and press ${shortcutLabel}`, run: () => { window.unvibe.companionReview(); close(); } },
+      { id: 'action-settings', title: 'Open Settings', detail: 'Appearance, Island, AI, privacy, and account', run: () => { setSettingsTab('General'); setSettingsOpen(true); close(); } },
+    ].filter((item) => matches(`${item.title} ${item.detail}`));
+    return [
+      { label: 'Lessons', items: lessons },
+      { label: 'Navigation', items: pages },
+      { label: 'Actions', items: actions },
+    ].filter((group) => group.items.length > 0) as SearchPaletteGroup[];
+  })();
 
   const startSideResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -1379,17 +1434,26 @@ function App() {
 
   return (
     <>
-      <div className="titlebar" />
-      <div className={`layout${navOpen ? ' layout--nav-open' : ''}`}>
+      <div className="titlebar">
+        <div className="shell-tools">
+          <button type="button" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar' : 'Hide sidebar'} onClick={() => void applySettings({ sidebarHidden: !sideHidden })}>
+            <Icon d="M4 4h12v12H4z M7 4v12" />
+          </button>
+          <button type="button" aria-label="Search" title="Search (⌘K or Ctrl K)" onClick={() => { setSearchQuery(''); setSearchOpen(true); }}>
+            <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
+          </button>
+        </div>
+      </div>
+      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}`}>
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
-        <aside className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
+        <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
           <nav className="nav">{NAV.map((p) => {
             const on = p.id === page || (p.id === 'Learn' && page === 'Study');
             const label = p.id === 'Gift' ? 'Gift Unvibe' : p.id;
             return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setPage(p.id); setNavOpen(false); }}>
+              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
                 <Icon d={p.icon} /><span className="nav-label">{label}</span>
               </button>
             );
@@ -1444,10 +1508,12 @@ function App() {
             <FadeIn animKey={page} stagger={!fillPage}>
               {page === 'Home' ? <Home shortcut={shortcutLabel} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} onRefresh={() => void refresh()} />
                 : isLearnPage ? <Learn
+                  key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
                   queue={queue}
                   shortcut={shortcutLabel}
                   intent={page === 'History' ? 'history' : page === 'Quiz' ? 'quiz' : 'learn'}
+                  initialOpenId={lessonSeedId}
                   onReview={() => window.unvibe.companionReview()}
                   onRefresh={() => void refresh()}
                   onRestudy={async (item, level) => {
@@ -1472,6 +1538,7 @@ function App() {
           </div>
         </main>
       </div>
+      {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}
           initialTab={settingsTab}
