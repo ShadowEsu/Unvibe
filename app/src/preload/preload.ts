@@ -49,6 +49,13 @@ const api = {
   collapse: (collapsed: boolean) => ipcRenderer.send('widget:collapse', collapsed),
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
+  openPlan: () => ipcRenderer.send('companion:openPlan'),
+  openUrl: (url: string) => ipcRenderer.invoke('app:openUrl', url),
+  onShowPage: (cb: (page: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, page: string) => cb(page);
+    ipcRenderer.on('companion:showPage', listener);
+    return () => ipcRenderer.removeListener('companion:showPage', listener);
+  },
   widgetResizeStart: (edge: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') =>
     ipcRenderer.send('widget:resizeStart', edge),
   widgetResizeEnd: () => ipcRenderer.send('widget:resizeEnd'),
@@ -60,11 +67,14 @@ const api = {
   feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
   history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
   learningItem: (id: string) => ipcRenderer.invoke('learning:item', id),
+  forgetLearning: (id: string) => ipcRenderer.invoke('learning:forget', id),
   studyAskStatus: () => ipcRenderer.invoke('study:askStatus'),
   studyAsk: (input: { eventId: string; question: string }) => ipcRenderer.invoke('study:ask', input),
   quizStatus: () => ipcRenderer.invoke('quiz:status'),
   quizStart: (input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) => ipcRenderer.invoke('quiz:start', input),
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
+  chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+    ipcRenderer.invoke('chat:ask', input),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
   onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),
@@ -81,6 +91,7 @@ const api = {
 
   // privacy
   openPrivacy: () => ipcRenderer.invoke('app:openPrivacy'),
+  reportFeedback: (context: { screen: string; version: string }) => ipcRenderer.invoke('app:reportFeedback', context),
 
   // onboarding
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
@@ -98,30 +109,14 @@ const api = {
   // plans + usage (network stays in the main process)
   billingOverview: () => ipcRenderer.invoke('billing:overview'),
   usageGet: () => ipcRenderer.invoke('usage:get'),
+  giftStatus: () => ipcRenderer.invoke('gift:status'),
   aiKeyStatus: () => ipcRenderer.invoke('ai:keyStatus'),
   aiSetKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
   aiClearKey: () => ipcRenderer.invoke('ai:clearKey'),
   aiModels: () => ipcRenderer.invoke('ai:models'),
-  aiCloudModels: () => ipcRenderer.invoke('ai:cloudModels'),
   aiCostOverview: (model?: string) => ipcRenderer.invoke('ai:costOverview', model),
   startBillingCheckout: (input: unknown) => ipcRenderer.invoke('billing:checkout', input),
   openBillingPortal: (workspaceId: string) => ipcRenderer.invoke('billing:portal', workspaceId),
-  teamsListWorkspaces: () => ipcRenderer.invoke('teams:listWorkspaces'),
-  teamsSetActiveWorkspace: (workspaceId: string) => ipcRenderer.invoke('teams:setActiveWorkspace', workspaceId),
-  teamsCreate: (name: string) => ipcRenderer.invoke('teams:create', name),
-  teamsMembers: (workspaceId: string) => ipcRenderer.invoke('teams:members', workspaceId),
-  teamsInvite: (input: { workspaceId: string; email: string; role?: 'admin' | 'member' }) => ipcRenderer.invoke('teams:invite', input),
-  teamsAcceptInvite: (inviteToken: string) => ipcRenderer.invoke('teams:acceptInvite', inviteToken),
-  teamsHistory: (workspaceId: string) => ipcRenderer.invoke('teams:history', workspaceId),
-  teamsProjects: (workspaceId: string) => ipcRenderer.invoke('teams:projects', workspaceId),
-  giftMine: () => ipcRenderer.invoke('gifts:mine'),
-  copyText: (text: string) => ipcRenderer.invoke('clipboard:write', text),
-  openPlan: () => ipcRenderer.send('companion:openPage', 'Plan'),
-  onCompanionPage: (cb: (page: string) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, page: string) => cb(page);
-    ipcRenderer.on('companion:page', listener);
-    return () => ipcRenderer.removeListener('companion:page', listener);
-  },
 };
 
 contextBridge.exposeInMainWorld('unvibe', api);

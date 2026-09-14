@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { costOverview, emitGeminiTokens, estimateCost, normalizeLocalAiProvider } from '../src/main/localAi';
+import { costOverview, estimateCost, normalizeLocalAiProvider } from '../src/main/localAi';
 
 describe('localAi cost estimates', () => {
   it('gemini estimates stay far below a cent for small selections', () => {
@@ -24,16 +24,5 @@ describe('localAi cost estimates', () => {
     const rows = costOverview('gemini');
     assert.equal(rows.length, 4);
     assert.deepEqual(rows[0]!.samples.map((s) => s.lines), [50, 200, 500]);
-  });
-});
-
-describe('gemini stream parse', () => {
-  it('reads SSE and JSON-array fallbacks', () => {
-    const sse: string[] = [];
-    emitGeminiTokens('data: {"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}\n\n', (t) => sse.push(t));
-    assert.equal(sse.join(''), 'Hello');
-    const arr: string[] = [];
-    emitGeminiTokens('[{"candidates":[{"content":{"parts":[{"text":"JSON"}]}}]}]', (t) => arr.push(t));
-    assert.equal(arr.join(''), 'JSON');
   });
 });

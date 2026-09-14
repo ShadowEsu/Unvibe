@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
-import { RichText } from '../shared/richText';
+import { Learn } from './learn';
+import { Chat } from './chat';
+import { Gift } from './gift';
+import { playUiTone } from '../shared/tones';
+import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { prettyShortcut } from '../shared/prettyShortcut';
 
-type PageId = 'Home' | 'Study' | 'History' | 'Quiz' | 'Progress' | 'Gift' | 'Plan' | 'Team' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
+type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -46,27 +51,104 @@ interface Settings {
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
+  displayName: string;
+  profileEmail: string;
   useOwnAi: boolean;
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
-  cloudModel: string;
-  shareUsageAnalytics: boolean;
+  sidebarWidth: number;
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
-  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | 'lifetime' | null; status: string; seats: number; currentPeriodEnd?: string };
+  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string };
   usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
   canManageBilling: boolean;
   hasBillingAccount: boolean;
 }
 
-const PLAN_FEATURES = {
-  free: ['50 explanations each month', '1 active project', 'Core explanation levels', 'Selected-code explanations', 'No credit card required'],
-  pro: ['100 explanations each month', 'Git diff + agent change briefs', 'Nearby-file context', 'Since-last-understood compares', 'Expert explanations'],
-} as const;
+interface AppUsageLine {
+  used: number;
+  limit: number;
+  remaining: number;
+  resetsAt: string;
+  plan?: string;
+  selections?: { used: number; limit: number; remaining: number; resetsAt: string };
+}
 
-const NAV_LABEL: Partial<Record<PageId, string>> = {
-  Study: 'Learn',
-};
+type PlanId = 'free' | 'pro' | 'teams' | 'local' | 'trial' | 'full';
+
+function asPlanId(value: string | undefined): PlanId {
+  if (value === 'pro' || value === 'teams' || value === 'full' || value === 'trial' || value === 'local') return value;
+  return 'free';
+}
+
+function planDisplayName(plan: PlanId): string {
+  if (plan === 'pro' || plan === 'full') return 'Pro';
+  if (plan === 'teams') return 'Team';
+  if (plan === 'trial') return 'Trial';
+  return 'Free';
+}
+
+function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
+  if (plan === 'full') return 'Included';
+  if (plan === 'pro') return interval === 'annual' ? '$72/yr' : '$8/mo';
+  if (plan === 'teams') return interval === 'annual' ? '$90/seat/yr' : '$10/seat';
+  return '$0';
+}
+
+function daysUntil(iso: string): number {
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
+}
+
+function resetLabel(iso: string): string {
+  const date = new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const days = daysUntil(iso);
+  return `Usage limits reset on ${date} (${days} day${days === 1 ? '' : 's'} left)`;
+}
+
+function percentLeft(remaining: number, limit: number): number {
+  if (limit <= 0) return 100;
+  return Math.max(0, Math.min(100, Math.round((remaining / limit) * 100)));
+}
+
+function percentUsed(used: number, limit: number): number {
+  if (limit <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((used / limit) * 100)));
+}
+
+function usageKindLabel(kind: string): string {
+  if (kind === 'ai_explanation') return 'Explanations';
+  if (kind === 'project_question') return 'Follow-up questions';
+  if (kind === 'indexed_project') return 'Active projects';
+  if (kind === 'selected_code') return 'Selected code';
+  return kind.replaceAll('_', ' ');
+}
+
+type UsageMeter = { kind: string; used: number; limit: number; remaining: number; resetsAt: string };
+
+function collectUsageMeters(
+  overview: BillingOverview | null,
+  local: AppUsageLine | null,
+): UsageMeter[] {
+  const meters: UsageMeter[] = [];
+  const fromOverview = overview?.usage.filter((line) =>
+    line.kind === 'ai_explanation' || line.kind === 'project_question',
+  ) ?? [];
+  if (fromOverview.length) {
+    meters.push(...fromOverview);
+  } else if (local) {
+    meters.push({
+      kind: 'ai_explanation',
+      used: local.used,
+      limit: local.limit,
+      remaining: local.remaining,
+      resetsAt: local.resetsAt,
+    });
+  }
+  if (local?.selections) {
+    meters.push({ kind: 'selected_code', ...local.selections });
+  }
+  return meters;
+}
 
 const IC = {
   home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
@@ -75,6 +157,7 @@ const IC = {
   study: 'M4 4h9a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H4z M4 4v9',
   history: 'M10 3a7 7 0 1 0 7 7 M10 6v4l3 2',
   quiz: 'M10 3a7 7 0 1 0 7 7 M8.2 8.1a2 2 0 1 1 3.4 1.4c-.8.7-1.6 1.1-1.6 2.3 M10 15h.01',
+  chat: 'M4 5h12v8H8l-4 4z',
   concepts: 'M10 3l2.1 4.9L17 10l-4.9 2.1L10 17l-2.1-4.9L3 10l4.9-2.1z',
   notebook: 'M5 3h9a1 1 0 0 1 1 1v13l-3-2-3 2-3-2V4a1 1 0 0 1 1-1z M8 7h5 M8 10h5',
   briefings: 'M5 3h10v14H5z M8 7h4 M8 10h4 M8 13h2',
@@ -86,23 +169,16 @@ const IC = {
   check: 'M4 10l4 4 8-9',
   clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
   map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
-  gift: 'M10 3l1.5 3.2L15 7.2l-2.7 2.4.8 3.4L10 11.6 6.9 13l.8-3.4L5 7.2l3.5-1z',
   plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
-  team: 'M7 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M13 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M2 17c.6-2.6 2.6-4 5-4s4.4 1.4 5 4 M12 13c2 .2 3.6 1.4 4 4',
+  gift: 'M4 9h12v8H4z M10 9v8 M4 9l6-5 6 5 M7 5c0-1.4 3-1.4 3 1.2 M13 5c0-1.4-3-1.4-3 1.2',
 };
 
-const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'History' | 'Quiz' | 'Team'>, PageDef> = {
+const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
     { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
     { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
     { icon: IC.check, t: 'How much you grasp', d: 'A running sense of which corners you understand and which you have not opened yet.' },
     { icon: IC.map, t: 'Where to start reading', d: 'Unvibe points you at the file a newcomer should open first.' },
-  ] },
-  Study: { id: 'Study', icon: IC.study, lead: 'Guided tracks built from your own repositories — Unvibe teaches the parts that matter, one short lesson at a time.', features: [
-    { icon: IC.map, t: 'Paths from your code', d: 'Frontend, backend, security, architecture, databases, testing — drawn from what you actually ship.' },
-    { icon: IC.check, t: 'One lesson at a time', d: 'Bite-sized steps you can finish between commits, not a 40-hour course.' },
-    { icon: IC.spark, t: 'Tuned to your level', d: 'Lessons meet you where you are and climb only as fast as you do.' },
-    { icon: IC.clock, t: 'Pick up where you left off', d: 'Every track remembers your place, so momentum survives a busy week.' },
   ] },
   Concepts: { id: 'Concepts', icon: IC.concepts, lead: 'Your growing handbook of ideas — each one explained once, well, and tied back to the code where you met it.', features: [
     { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
@@ -138,12 +214,13 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'His
 
 const NAV: Array<{ id: PageId; icon: string }> = [
   { id: 'Home', icon: IC.home },
-  { id: 'Study', icon: IC.study },
+  { id: 'Learn', icon: IC.study },
+  { id: 'History', icon: IC.history },
   { id: 'Quiz', icon: IC.quiz },
+  { id: 'Chat', icon: IC.chat },
   { id: 'Progress', icon: IC.progress },
-  { id: 'Team', icon: IC.team },
-  { id: 'Gift', icon: IC.gift },
   { id: 'Plan', icon: IC.plan },
+  { id: 'Gift', icon: IC.gift },
 ];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
@@ -177,7 +254,7 @@ function FadeIn({
 }
 
 function prettyAccel(a: string): string {
-  return a.replace('CommandOrControl', '⌘').replace('Command', '⌘').replace('Control', '⌃').replace('Alt', '⌥').replace('Shift', '⇧').replace(/\+/g, '');
+  return prettyShortcut(a);
 }
 function accelFromEvent(e: KeyboardEvent): string | null {
   const mods: string[] = [];
@@ -195,6 +272,15 @@ function accelFromEvent(e: KeyboardEvent): string | null {
 }
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+function dayGroup(iso: string): string {
+  const when = new Date(iso);
+  const today = new Date();
+  const start = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((start(today) - start(when)) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return when.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 function SignInForm({ onDone }: { onDone: (email: string) => void }) {
@@ -232,7 +318,7 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
-      <div className="perm-why">Lets Unvibe read the code you have selected in another app when you press the shortcut. Without it, select-code capture is unavailable; you can still choose a file or deliberately use the clipboard from the source picker. If the toggle is already on, quit Unvibe fully and reopen it — macOS only applies the grant to the next launch.</div>
+      <div className="perm-why">In VS Code and Cursor, the Unvibe Desktop Bridge uses ⌘U and reads the selection directly. Everywhere else, select code and press Control+U. That path needs Accessibility.</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
@@ -244,37 +330,22 @@ function PermRow({ compact }: { compact?: boolean }) {
   );
 }
 
-function Choice({ selected, title, detail, onClick }: { selected: boolean; title: string; detail: string; onClick: () => void }) {
-  return <button className={`ob__choice${selected ? ' selected' : ''}`} aria-pressed={selected} onClick={onClick}><span className="ob__choice-check">✓</span><span><b>{title}</b><small>{detail}</small></span></button>;
+function playSetupTone(kind: 'step' | 'success', volume = 0.3, style: 'soft' | 'pixel' = 'soft'): void {
+  playUiTone(kind, volume, style);
 }
 
-function playSetupTone(kind: 'step' | 'success', volume = 0.3, style: 'soft' | 'pixel' = 'soft'): void {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  try {
-    const context = new AudioContext();
-    const gain = context.createGain();
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.11 * volume), context.currentTime + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (kind === 'success' ? 0.32 : 0.16));
-    gain.connect(context.destination);
-    const notes = kind === 'success' ? [523.25, 659.25] : [440];
-    notes.forEach((frequency, index) => {
-      const oscillator = context.createOscillator();
-      oscillator.type = style === 'pixel' ? 'square' : 'sine';
-      oscillator.frequency.value = frequency;
-      oscillator.connect(gain);
-      oscillator.start(context.currentTime + index * 0.09);
-      oscillator.stop(context.currentTime + 0.15 + index * 0.09);
-    });
-    setTimeout(() => void context.close(), 500);
-  } catch { /* Optional local sound; onboarding remains complete without it. */ }
+function looksLikeEmail(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
 
 function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }: { shortcut: string; soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; onDone: () => void }) {
   const [step, setStep] = useState(0);
-  const [level, setLevel] = useState('intermediate');
-  const [sampleDetail, setSampleDetail] = useState<'simple' | 'technical'>('simple');
-  const steps = ['Welcome', 'Try it', 'Your depth', 'Use anywhere'];
+  const [displayName, setDisplayName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [nameError, setNameError] = useState('');
+  const steps = ['Welcome', 'Your profile', 'Mac access'];
 
   const next = () => {
     if (soundEffects) playSetupTone('step', soundVolume, soundStyle);
@@ -282,7 +353,33 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
   };
   const back = () => setStep((s) => Math.max(s - 1, 0));
   const finish = () => { if (soundEffects) playSetupTone('success', soundVolume, soundStyle); void window.unvibe.completeOnboarding(); onDone(); };
-  const advance = () => step === steps.length - 1 ? finish() : next();
+  const saveProfile = () => {
+    const name = displayName.replace(/\s+/g, ' ').trim();
+    const email = profileEmail.trim();
+    if (!name) {
+      setNameError('Add a name so chat can greet you.');
+      return false;
+    }
+    if (!looksLikeEmail(email)) {
+      setNameError('Email needs an @ and a domain, or leave it blank.');
+      return false;
+    }
+    setNameError('');
+    void window.unvibe.setSettings({ displayName: name, profileEmail: email });
+    return true;
+  };
+  const advanceName = () => {
+    if (!saveProfile()) return;
+    next();
+  };
+  const advance = () => {
+    if (step === 1) {
+      advanceName();
+      return;
+    }
+    if (step === steps.length - 1) finish();
+    else next();
+  };
 
   // This is a presentation-sized first-run experience, but it should still feel
   // quick for keyboard-first developers. Inputs retain their own native keys.
@@ -297,19 +394,22 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const nav = (continueLabel = 'Continue') => <div className="ob__actions"><button className="ob__skip" disabled={step === 0} onClick={back}>Back</button><button className="field-btn inline" onClick={next}>{continueLabel}</button></div>;
+  const nav = (continueLabel = 'Continue', onContinue = next, continueDisabled = false) => (
+    <div className="ob__actions">
+      <button className="ob__skip" disabled={step === 0} onClick={back}>Back</button>
+      <button className="field-btn inline" disabled={continueDisabled} onClick={onContinue}>{continueLabel}</button>
+    </div>
+  );
 
   return (
     <div className={`ob ob--scene-${step}`}>
       <div className="ob__scene" aria-hidden="true">
-        <div className="ob__ribbon ob__ribbon--one" />
-        <div className="ob__ribbon ob__ribbon--two" />
-        <div className="ob__glow" />
+        <div className="sanFranWash" />
         <div className="ob__scene-grid" />
         <div className="ob__scene-strip">
           <div><b>▶</b><LogoMark size={15} stroke={2} /></div>
           <span className="ob__scene-camera" />
-          <div><span>{step === 0 ? '1d 🔥' : step === 1 ? '142 📖' : step === 2 ? '8 ✅' : 'local'}</span><b>⌂</b></div>
+          <div><span>{step === 0 ? '⌘U' : step === 1 ? 'hi' : 'Mac'}</span><b>⌂</b></div>
         </div>
         <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
       </div>
@@ -321,45 +421,63 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
           {step === 0 && (
             <>
               <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
-              <div className="ob__eyebrow">YOUR UNDERSTANDING LAYER</div>
-              <h2 className="ob__title">Understand the code you ship.</h2>
-              <p className="ob__sub">Unvibe sits beside your work, explains the exact code you choose, and helps you retain it. Nothing is sent until the on-device secret scan finishes.</p>
-              <div className="ob__signal"><span className="ob__pixel" />Local filter on <span>·</span> You stay in control</div>
+              <div className="ob__eyebrow">HOW TO START</div>
+              <h2 className="ob__title">Select code. Press Command U.</h2>
+              <p className="ob__sub">Unvibe sits beside Cursor and VS Code. Highlight the code you want to keep, press the shortcut, and read the explanation in place. Nothing is sent until the on-device secret scan finishes.</p>
+              <ol className="ob__list">
+                <li>Select the code an AI just wrote.</li>
+                <li>Press <span className="kbd-lg">⌘U</span> in Cursor or VS Code, or <span className="kbd-lg">{prettyAccel(shortcut)}</span> in other Mac apps.</li>
+                <li>Read it, then keep building.</li>
+              </ol>
               {nav('Get started')}
             </>
           )}
 
           {step === 1 && (
             <>
-              <div className="ob__eyebrow">GUIDED EXAMPLE</div>
-              <h2 className="ob__title">See the learning loop.</h2>
-              <div className="ob__sample">
-                <div className="ob__sample-code"><span>if</span> (!user.isVerified) {'{'}<br />&nbsp;&nbsp;return redirect('/verify-email');<br />{'}'}</div>
-                <div className="ob__sample-answer">
-                  <b>{sampleDetail === 'simple' ? 'Why this exists' : 'Control-flow rationale'}</b>
-                  <p>{sampleDetail === 'simple' ? 'It stops unverified users from entering an area that requires a confirmed email.' : 'The guard clause exits early, preserving the verified-only invariant before protected work begins.'}</p>
-                </div>
-              </div>
-              <div className="ob__sample-actions"><button className={sampleDetail === 'simple' ? 'on' : ''} onClick={() => setSampleDetail('simple')}>Understand</button><button className={sampleDetail === 'technical' ? 'on' : ''} onClick={() => setSampleDetail('technical')}>Explain differently</button><span>Then test yourself and save it.</span></div>
-              {nav()}
+              <div className="ob__eyebrow">YOUR PROFILE</div>
+              <h2 className="ob__title">Name and profile, on this Mac.</h2>
+              <p className="ob__sub">Chat will say Hello again, then your name. Email is optional and stays on this laptop.</p>
+              <form className="ob__form" onSubmit={(event) => { event.preventDefault(); advanceName(); }}>
+                <label>
+                  Name
+                  <input
+                    className="field"
+                    value={displayName}
+                    onChange={(event) => { setDisplayName(event.target.value); if (nameError) setNameError(''); }}
+                    autoComplete="given-name"
+                    autoFocus
+                    placeholder="Your name"
+                  />
+                </label>
+                <label>
+                  Email, optional
+                  <input
+                    className="field"
+                    type="email"
+                    value={profileEmail}
+                    onChange={(event) => { setProfileEmail(event.target.value); if (nameError) setNameError(''); }}
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                  />
+                </label>
+                {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
+              </form>
+              {nav('Continue', advanceName, displayName.trim().length === 0)}
             </>
           )}
 
           {step === 2 && (
             <>
-              <div className="ob__eyebrow">DEFAULT LEARNING DEPTH</div>
-              <h2 className="ob__title">Start at the right level.</h2>
-              <p className="ob__sub">You can change depth inside every explanation. This simply sets your starting point.</p>
-              <div className="ob__choices ob__depths"><Choice selected={level === 'new'} title="New" detail="Plain language and the core idea." onClick={() => setLevel('new')} /><Choice selected={level === 'beginner'} title="Beginner" detail="A guided walkthrough." onClick={() => setLevel('beginner')} /><Choice selected={level === 'intermediate'} title="Intermediate" detail="Practical detail and trade-offs." onClick={() => setLevel('intermediate')} /><Choice selected={level === 'advanced'} title="Advanced" detail="Architecture and edge cases." onClick={() => setLevel('advanced')} /></div>
-              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={() => { void window.unvibe.setSettings({ defaultExplanationLevel: level }); next(); }}>Continue</button></div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <div className="ob__eyebrow">OPTIONAL, MACOS ONLY</div>
-              <h2 className="ob__title">Use selected code anywhere.</h2>
-              <p className="ob__sub">Enable this when you want to highlight code in another app and press <span className="kbd-lg">{prettyAccel(shortcut)}</span>. You can skip it and still paste code, choose files, and learn locally.</p>
+              <div className="ob__eyebrow">MAC ACCESS</div>
+              <h2 className="ob__title">Allow Unvibe on this laptop.</h2>
+              <p className="ob__sub">Cursor and VS Code already work with Command U. For Terminal and the rest of your Mac, turn Unvibe on in Accessibility so it can read the code you select.</p>
+              <ol className="ob__list">
+                <li>Open <b>System Settings</b>.</li>
+                <li>Open <b>Privacy and Security</b>.</li>
+                <li>Open <b>Accessibility</b>.</li>
+                <li>Find <b>Unvibe</b> and turn it on.</li>
+              </ol>
               <PermRow />
               <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Enter Unvibe</button></div>
             </>
@@ -373,8 +491,7 @@ function Onboarding({ shortcut, soundEffects, soundVolume, soundStyle, onDone }:
 function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: string) => void; onSkip: () => void; shortcut: string }) {
   return (
     <div className="login">
-      <div className="login__ribbon login__ribbon--one" aria-hidden="true" />
-      <div className="login__ribbon login__ribbon--two" aria-hidden="true" />
+      <div className="sanFranWash" aria-hidden="true" />
       <div className="login__grid" aria-hidden="true" />
       <div className="login__island" aria-hidden="true"><LogoMark size={15} stroke={2} /><span>learning follows your workflow</span><i /><i /><i /></div>
       <FadeIn animKey="login" className="login__layout">
@@ -402,7 +519,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
 }
 
 function UsageChip({ usage, onPlan, compact = false }: {
-  usage: { used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null;
+  usage: AppUsageLine | null;
   onPlan: () => void;
   compact?: boolean;
 }) {
@@ -410,6 +527,8 @@ function UsageChip({ usage, onPlan, compact = false }: {
   const low = usage.remaining <= 5;
   const out = usage.remaining <= 0;
   const planLabel = usage.plan === 'full' ? 'Full' : usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
+  const aiPct = Math.min(100, Math.round((usage.used / Math.max(1, usage.limit)) * 100));
+  const selectionPct = Math.min(100, Math.round(((usage.selections?.used ?? 0) / Math.max(1, usage.selections?.limit ?? 100)) * 100));
   return (
     <button
       type="button"
@@ -417,56 +536,92 @@ function UsageChip({ usage, onPlan, compact = false }: {
       onClick={onPlan}
       title={`${planLabel} · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}
     >
-      <span>{out ? 'No messages left' : `${usage.remaining} messages left`}</span>
-      <small>{usage.used}/{usage.limit} used · {planLabel}</small>
+      <span className="usage-chip__title"><b>Usage</b><small>{planLabel}</small></span>
+      <span className="usage-chip__meter"><i><em style={{ width: `${aiPct}%` }} /></i><small>AI</small><b>{usage.remaining} left</b><strong>{usage.used}/{usage.limit}</strong></span>
+      <span className="usage-chip__meter"><i><em style={{ width: `${selectionPct}%` }} /></i><small>Select</small><b>{usage.selections?.remaining ?? 100} left</b><strong>{usage.selections?.used ?? 0}/{usage.selections?.limit ?? 100}</strong></span>
     </button>
   );
 }
 
-function Home({ shortcut, profile, feed, usage, onPlan }: {
+function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
   shortcut: string;
   profile: Profile | null;
   feed: FeedItem[];
-  usage: { used: number; limit: number; remaining: number; resetsAt: string } | null;
+  usage: AppUsageLine | null;
   onPlan: () => void;
+  onRefresh: () => void | Promise<void>;
 }) {
+  const groups: Array<{ label: string; items: FeedItem[] }> = [];
+  for (const item of feed) {
+    const label = dayGroup(item.ts);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(item);
+    else groups.push({ label, items: [item] });
+  }
+  const daily = feed.length > 0;
   return (
     <>
       <div className="topline">
-        <h1>Keep it local.</h1>
+        <h1>{daily ? 'Today' : 'Keep it local.'}</h1>
       </div>
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
           <div>
-            <strong>You have reached your monthly explanation limit.</strong>
-            <p>Your saved history and projects remain available. Allowance resets on {new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.</p>
+            <strong>{limitOfferCopy(usage.plan, usage).title}</strong>
+            <p>{limitOfferCopy(usage.plan, usage).body}</p>
           </div>
-          <button type="button" className="primary-btn" onClick={onPlan}>Upgrade to Pro</button>
+          <div className="limit-banner__actions">
+            {limitOfferCopy(usage.plan, usage).primaryKind === 'survey' ? (
+              <button type="button" className="primary-btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
+                {limitOfferCopy(usage.plan, usage).primary}
+              </button>
+            ) : (
+              <button type="button" className="primary-btn" onClick={onPlan}>{limitOfferCopy(usage.plan, usage).primary}</button>
+            )}
+            {limitOfferCopy(usage.plan, usage).showPlan && limitOfferCopy(usage.plan, usage).primaryKind === 'survey' ? (
+              <button type="button" className="soft-btn" onClick={onPlan}>Buy a subscription</button>
+            ) : null}
+          </div>
         </div>
       )}
-      <div className="cols">
+      <div className={`cols${daily ? ' cols--daily' : ''}`}>
         <div className="main-col">
-          <div className="hero">
-            <h2>Understand everything you ship.</h2>
-            <p>Highlight code in any app and Unvibe explains it right where you are working — pitched to how much you already know, and quiet until you ask.</p>
+          <div className={`hero${daily ? ' hero--quiet' : ''}`}>
+            <h2>{daily ? 'Keep going.' : 'Understand everything you ship.'}</h2>
+            <p>{daily ? `Select code and press ${shortcut}. New reviews land in the list below.` : `Highlight code in any app and Unvibe explains it where you are working, pitched to how much you already know. Quiet until you ask.`}</p>
             <div className="row">
               <button onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
               <span className="kbd">or press {shortcut} anywhere</span>
             </div>
           </div>
-          <div className="feed-label">LATELY</div>
           {feed.length === 0 ? (
-            <div className="feed-empty"><div className="t">Nothing reviewed yet</div><div className="d">Highlight some code and press {shortcut}. The things you review will gather here so you can return to any of them.</div></div>
-          ) : (
-            <div className="feed">
-              {feed.map((f) => (
-                <div className="feed-row" key={f.id}>
-                  <div className="feed-time">{fmtTime(f.ts)}</div>
-                  <div className="feed-main"><div className="feed-title">{f.title}</div><div className="feed-meta">{f.meta}</div></div>
-                  <span className={`tag tag--${f.outcome}`}>{f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}</span>
-                </div>
-              ))}
+            <div className="feed-empty">
+              <div className="t">Nothing reviewed yet</div>
+              <div className="d">Highlight some code and press {shortcut}. Reviews gather here so you can return to them.</div>
+              <button type="button" className="primary-btn" onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
             </div>
+          ) : (
+            groups.map((group) => (
+              <div className="feed-block" key={group.label}>
+                <div className="feed-label">{group.label}</div>
+                <div className="feed">
+                  {group.items.map((f) => (
+                    <div className="feed-row" key={f.id}>
+                      <div className="feed-time">{fmtTime(f.ts)}</div>
+                      <div className="feed-main"><div className="feed-title">{f.title}</div><div className="feed-meta">{f.meta}</div></div>
+                      <span className={`tag tag--${f.outcome}`}>{f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}</span>
+                      <TrashButton
+                        label={`Remove ${f.title}`}
+                        onClick={() => {
+                          if (!window.confirm('Remove this lesson from this Mac?')) return;
+                          void window.unvibe.forgetLearning(f.id).then(() => void onRefresh());
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
           )}
         </div>
         <div className="rail">
@@ -475,8 +630,12 @@ function Home({ shortcut, profile, feed, usage, onPlan }: {
             <div className="stat"><span className="v">{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</span><span className="l">concepts familiar or strong</span></div>
             <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
           </div>
-          <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
-          <div className="rail-card"><div className="t">How it works</div><div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div></div>
+          {!daily && (
+            <>
+              <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
+              <div className="rail-card"><div className="t">How it works</div><div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div></div>
+            </>
+          )}
         </div>
       </div>
     </>
@@ -488,7 +647,7 @@ function Progress({ profile }: { profile: Profile | null }) {
   return (
     <>
       <div className="topline"><h1>Progress</h1></div>
-      <p className="lead">The honest measure of what you have understood — not lines typed, but lines you could explain to someone else.</p>
+      <p className="lead">The honest measure of what you have understood. Lines you could explain to someone else.</p>
       <div className="tiles">
         <div className="tile"><div className="v">{profile?.linesUnderstood ?? 0}</div><div className="l">lines understood</div><div className="note">of {profile?.linesReviewed ?? 0} reviewed</div></div>
         <div className="tile"><div className="v">{profile?.conceptsDeveloping ?? 0}</div><div className="l">concepts developing</div><div className="note">{profile?.conceptsSeen ?? 0} encountered · {profile?.conceptsNeedReview ?? 0} to revisit</div></div>
@@ -498,7 +657,7 @@ function Progress({ profile }: { profile: Profile | null }) {
       <div className="panel-card">
         <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
         <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
-        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><span>More</span><span style={{ marginLeft: 'auto' }}>Review code on a day to light it up.</span></div>
+        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
       </div>
       <div className="two">
         <div className="panel-card" style={{ marginBottom: 0 }}>
@@ -519,544 +678,53 @@ function Progress({ profile }: { profile: Profile | null }) {
   );
 }
 
-function outcomeName(outcome: string): string {
-  return outcome === 'understood' ? 'Understood' : outcome === 'needs_review' ? 'To revisit' : 'Reviewed';
-}
 
-function LessonCode({ code, language }: { code: string; language?: string }) {
-  return (
-    <div className="lesson-code">
-      <div className="lesson-code__bar"><span>{language || 'code'}</span><span>{code.split('\n').length} lines</span></div>
-      <pre><code>{code}</code></pre>
-    </div>
-  );
-}
-
-function Study({ history, queue, shortcut, onReview, onRestudy, onRefresh, onQuiz }: {
-  history: LearningItem[]; queue: LearningItem[]; shortcut: string; onReview: () => void;
-  onRestudy: (item: LearningItem, level: string) => void | Promise<void>;
-  onRefresh: () => void | Promise<void>;
-  onQuiz: (item: LearningItem) => void;
+function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
+  compact?: boolean;
+  signedIn: boolean;
+  onSignedIn?: () => void;
 }) {
-  const lessons = history.filter((item) => Boolean(item.code));
-  const [selectedId, setSelectedId] = useState<string | null>(lessons[0]?.id ?? queue[0]?.id ?? null);
-  const selected = history.find((item) => item.id === selectedId) ?? queue.find((item) => item.id === selectedId) ?? null;
-  const [level, setLevel] = useState(selected?.level || 'intermediate');
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
+  const [overview, setOverview] = useState<BillingOverview | null>(null);
+  const [localUsage, setLocalUsage] = useState<AppUsageLine | null>(null);
+  const [available, setAvailable] = useState(false);
+  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [message, setMessage] = useState(compact ? '' : 'Loading plan…');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [askLeft, setAskLeft] = useState<number | null>(null);
 
-  useEffect(() => {
-    void window.unvibe.studyAskStatus().then((s) => {
-      const status = s as { remaining: number };
-      setAskLeft(status.remaining);
-    });
-  }, [selectedId]);
-
-  useEffect(() => {
-    if (selected?.level) setLevel(selected.level);
-  }, [selected?.id, selected?.level]);
-
-  const ask = async () => {
-    if (!selected) return;
-    setBusy(true); setError(''); setAnswer('');
-    const result = await window.unvibe.studyAsk({ eventId: selected.id, question }) as { ok: boolean; answer?: string; error?: string; remaining?: number };
-    setBusy(false);
-    if (result.remaining !== undefined) setAskLeft(result.remaining);
-    if (!result.ok) { setError(result.error ?? 'Could not ask.'); return; }
-    setAnswer(result.answer ?? '');
-    setQuestion('');
-    void onRefresh();
-  };
-
-  const revisit = queue.filter((item) => item.outcome === 'needs_review').length;
-  const catalog = lessons.length > 0 ? lessons : queue;
-
-  return <>
-    <div className="topline"><h1>Learn</h1></div>
-    <p className="lead">Everything you have already reviewed stays here. Re-open the code, pick a level again, ask a follow-up, or start a Quiz on the same lesson.</p>
-    {catalog.length === 0 ? <LearningEmpty title="Your study shelf is empty." detail={`Select code and press ${shortcut}. After an explanation finishes, the code and teaching text land here for later study.`} onReview={onReview} /> : (
-      <div className="study-layout">
-        <aside className="study-rail">
-          <div className="learning-summary study-summary">
-            <div><strong>{revisit}</strong><span>needs review</span></div>
-            <div><strong>{catalog.length}</strong><span>saved lessons</span></div>
-          </div>
-          <div className="learning-list">
-            {catalog.slice(0, 40).map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`learning-card learning-card--pick ${item.id === selectedId ? 'on' : ''}`}
-                onClick={() => { setSelectedId(item.id); setAnswer(''); setError(''); }}
-              >
-                <div>
-                  <span className="learning-kicker">{item.dueLabel ?? item.level}</span>
-                  <h2>{item.title}</h2>
-                  <p>{item.meta || `${item.lines} lines · ${item.level}`}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </aside>
-        <section className="study-pane">
-          {!selected ? <p className="muted">Pick a lesson from the left.</p> : <>
-            <div className="study-pane__head">
-              <div>
-                <span className="learning-kicker">{outcomeName(selected.outcome)}</span>
-                <h2>{selected.title}</h2>
-                <p>{selected.meta || `${selected.lines} lines · ${selected.level}`}</p>
-              </div>
-            </div>
-            {selected.code ? <LessonCode code={selected.code} language={selected.language} /> : <p className="muted">No saved code on this item yet — restudy will try to reopen the file.</p>}
-            {selected.explanation ? <div className="lesson-explain"><span className="learning-kicker">Last explanation</span><RichText className="lesson-explain__body" text={selected.explanation} /></div> : null}
-            <div className="study-levels">
-              <span className="learning-kicker">Restudy level</span>
-              <div className="level-row">
-                {STUDY_LEVELS.map((opt) => (
-                  <button key={opt.id} type="button" className={level === opt.id ? 'on' : ''} onClick={() => setLevel(opt.id)}>{opt.label}</button>
-                ))}
-              </div>
-              <button className="primary-btn" type="button" onClick={() => void onRestudy(selected, level)}>Explain again at this level</button>
-              {selected.code ? <button className="soft-btn" type="button" onClick={() => onQuiz(selected)}>Quiz this lesson</button> : null}
-            </div>
-            <div className="study-assistant">
-              <div className="study-assistant__head">
-                <span className="learning-kicker">Study assistant</span>
-                <span className="muted">{askLeft === null ? '' : `${askLeft} questions left today`}</span>
-              </div>
-              <p className="muted">Ask about this lesson only — short clarifying questions work best.</p>
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                rows={3}
-                placeholder="e.g. Why does this return early here?"
-                disabled={busy || !selected.code}
-              />
-              <button className="soft-btn" type="button" disabled={busy || !question.trim() || !selected.code} onClick={() => void ask()}>
-                {busy ? 'Thinking…' : 'Ask'}
-              </button>
-              {error ? <p className="form-error">{error}</p> : null}
-              {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><div className="lesson-explain__body">{answer}</div></div> : null}
-            </div>
-          </>}
-        </section>
-      </div>
-    )}
-  </>;
-}
-
-function Quiz({ history, queue, onReview, onRefresh, initialSelectedId }: {
-  history: LearningItem[]; queue: LearningItem[]; onReview: () => void; onRefresh: () => void | Promise<void>;
-  initialSelectedId?: string | null;
-}) {
-  const candidates = [
-    ...queue.filter((item) => item.code),
-    ...history.filter((item) => item.code && !queue.some((q) => q.id === item.id)),
-  ];
-  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? candidates[0]?.id ?? null);
-  const selected = candidates.find((item) => item.id === selectedId) ?? null;
-  const [card, setCard] = useState<{ question: string; options: string[]; conceptLabel: string; key: number } | null>(null);
-  const [result, setResult] = useState<{ correct: boolean; rationale: string; answerIndex?: number } | null>(null);
-  const [wrongPicks, setWrongPicks] = useState<number[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [left, setLeft] = useState<number | null>(null);
-  const [cardKey, setCardKey] = useState(0);
-  const [mode, setMode] = useState<'quick-check' | 'recall' | 'scenario'>('quick-check');
-
-  useEffect(() => {
-    void window.unvibe.quizStatus().then((s) => setLeft((s as { remaining: number }).remaining));
-  }, []);
-
-  useEffect(() => {
-    if (initialSelectedId && candidates.some((item) => item.id === initialSelectedId)) {
-      setSelectedId(initialSelectedId);
-    } else if (!selectedId && candidates[0]) {
-      setSelectedId(candidates[0].id);
-    }
-  }, [candidates, selectedId, initialSelectedId]);
-
-  const selectLesson = (item: LearningItem) => {
-    if (busy) return;
-    setSelectedId(item.id);
-    setError('');
-    setCard(null);
-    setResult(null);
-    setWrongPicks([]);
-  };
-
-  const start = async (item: LearningItem) => {
-    setSelectedId(item.id);
-    setBusy(true); setError(''); setCard(null); setResult(null); setWrongPicks([]);
-    const r = await window.unvibe.quizStart({ eventId: item.id, mode }) as {
-      ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number;
-    };
-    setBusy(false);
-    if (r.remaining !== undefined) setLeft(r.remaining);
-    if (!r.ok || !r.question || !r.options) { setError(r.error ?? 'Could not start quiz.'); return; }
-    const nextKey = cardKey + 1;
-    setCardKey(nextKey);
-    setCard({ question: r.question, options: r.options, conceptLabel: r.conceptLabel ?? item.title, key: nextKey });
-  };
-
-  const answer = async (choice: number) => {
-    if (!selected || result?.correct || wrongPicks.includes(choice)) return;
-    setBusy(true); setError('');
-    const r = await window.unvibe.quizAnswer({ eventId: selected.id, choice }) as {
-      ok: boolean; correct?: boolean; rationale?: string; answerIndex?: number; error?: string;
-    };
-    setBusy(false);
-    if (!r.ok) { setError(r.error ?? 'Could not grade.'); return; }
-    if (!r.correct) {
-      setWrongPicks((prev) => (prev.includes(choice) ? prev : [...prev, choice]));
-      setResult({ correct: false, rationale: r.rationale ?? 'Sorry — wrong. Pick another option.' });
-      void onRefresh();
+  const load = async () => {
+    const usage = await window.unvibe.usageGet() as { ok: boolean; data?: AppUsageLine };
+    if (usage.ok && usage.data) setLocalUsage(usage.data);
+    if (!signedIn) {
+      setOverview(null);
+      setAvailable(false);
+      setMessage('');
       return;
     }
-    setResult({
-      correct: true,
-      rationale: r.rationale ?? 'You got it.',
-      answerIndex: r.answerIndex ?? choice,
-    });
-    void onRefresh();
-  };
-
-  const letters = 'ABCDEFGH';
-
-  return (
-    <div className="learn-page">
-      <div className="topline learn-topline">
-        <div>
-          <h1>Quiz</h1>
-          <p className="lead lead--tight">Choose a lesson, then start a card. Wrong answers stay open so you can keep trying.</p>
-        </div>
-        {left !== null ? <span className="learn-quota">{left} left today</span> : null}
-      </div>
-
-      {candidates.length === 0 ? <LearningEmpty title="Nothing to quiz yet." detail="Finish an explanation so Unvibe can keep the code locally. Then quiz cards can be built from that lesson." onReview={onReview} /> : (
-        <div className="learn-shell learn-shell--quiz">
-          <aside className="learn-rail" aria-label="Lessons to quiz">
-            <p className="learn-rail__label">Lessons</p>
-            {candidates.slice(0, 24).map((item) => {
-              const active = item.id === selectedId;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`learn-item ${active ? 'on' : ''}`}
-                  disabled={busy}
-                  onClick={() => selectLesson(item)}
-                >
-                  <div className="learn-item__top">
-                    <span className="learning-kicker">{item.level}</span>
-                    {active && card ? <span className="pill pill--live">Active</span> : null}
-                    {active && busy ? <span className="pill pill--live">Building</span> : null}
-                  </div>
-                  <strong>{item.title}</strong>
-                  <span className="learn-item__meta">{item.dueLabel ? `${item.dueLabel} · ` : ''}{item.lines} lines</span>
-                </button>
-              );
-            })}
-          </aside>
-
-          <section className="learn-stage quiz-stage" aria-live="polite">
-            <div className="quiz-mode-bar" role="radiogroup" aria-label="Quiz mode">
-              {([
-                ['quick-check', 'Quick check'],
-                ['recall', 'Recall'],
-                ['scenario', 'Scenario'],
-              ] as const).map(([id, label]) => <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? 'on' : ''} disabled={busy} onClick={() => setMode(id)}>{label}</button>)}
-              <span className="quiz-mode-bar__note">Adaptive to your last result</span>
-            </div>
-            {card ? (
-              <div className="quiz-card" key={card.key}>
-                <header className="quiz-card__head">
-                  <span className="learning-kicker">{card.conceptLabel || 'Check'}</span>
-                  {selected ? (
-                    <button className="ghost-link" type="button" disabled={busy} onClick={() => selected && void start(selected)}>
-                      New card
-                    </button>
-                  ) : null}
-                </header>
-                <h2>{card.question}</h2>
-                {selected?.code ? (
-                  <details className="quiz-code">
-                    <summary>Show the code</summary>
-                    <LessonCode code={selected.code.slice(0, 2_400)} language={selected.language} />
-                  </details>
-                ) : null}
-                <div className="quiz-options" role="list">
-                  {card.options.map((opt, idx) => {
-                    const isWrong = wrongPicks.includes(idx);
-                    const isCorrect = Boolean(result?.correct && result.answerIndex === idx);
-                    let cls = '';
-                    if (isCorrect) cls = 'correct';
-                    else if (isWrong) cls = 'wrong';
-                    else if (result?.correct) cls = 'dimmed';
-                    return (
-                      <button
-                        key={`${card.key}-${idx}`}
-                        type="button"
-                        className={cls}
-                        disabled={busy || isWrong || Boolean(result?.correct)}
-                        onClick={() => void answer(idx)}
-                      >
-                        <span className="quiz-opt-letter" aria-hidden="true">{letters[idx] ?? String(idx + 1)}</span>
-                        <span className="quiz-opt-text">{opt}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {result ? (
-                  <div
-                    className={`quiz-result ${result.correct ? 'ok' : 'bad'}`}
-                    key={result.correct ? 'ok' : `try-${wrongPicks.join('-')}`}
-                  >
-                    <span className="quiz-result__eyebrow">{result.correct ? 'Nice work' : 'Keep going'}</span>
-                    <strong>{result.correct ? 'Congrats!' : 'Not that one'}</strong>
-                    <p>{result.rationale || (result.correct ? 'You got it. That one sticks a little better now.' : 'No stress — pick another option. The card stays open.')}</p>
-                    {result.correct ? (
-                      <button className="soft-btn" type="button" onClick={() => selected && void start(selected)}>Another card</button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="learn-stage__empty quiz-stage__idle">
-                <span className="quiz-stage__mark" aria-hidden="true"><Icon d={IC.quiz} /></span>
-                <h2>{busy ? 'Building your card…' : selected ? selected.title : 'Ready when you are'}</h2>
-                <p>
-                  {busy
-                    ? 'Unvibe is writing a short check from the code you already reviewed.'
-                    : selected
-                      ? 'Start a card for this lesson. Wrong answers stay open so you can keep trying.'
-                      : 'Choose a lesson on the left, then start a card.'}
-                </p>
-                {error ? <p className="form-error quiz-stage__error">{error}</p> : null}
-                {selected && !busy ? (
-                  <button className="primary-btn" type="button" onClick={() => void start(selected)}>
-                    Quiz this lesson
-                  </button>
-                ) : null}
-              </div>
-            )}
-          </section>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
-  return <div className="learning-empty"><div className="stub__icon"><Icon d={IC.spark} /></div><h2>{title}</h2><p>{detail}</p><button className="primary-btn" onClick={onReview}>Explain some code</button></div>;
-}
-
-function Team() {
-  const [message, setMessage] = useState('Loading team…');
-  const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string; type: 'personal' | 'team'; role: string }>>([]);
-  const [activeId, setActiveId] = useState('');
-  const [members, setMembers] = useState<Array<{ userId: string; email?: string; role: string }>>([]);
-  const [events, setEvents] = useState<Array<{
-    id: string; ts: string; outcome: string; file?: string; project?: string; concept?: string; conceptLabel?: string;
-    authorEmail?: string; authorUserId?: string; userId: string; level: string; scope: string;
-  }>>([]);
-  const [me, setMe] = useState<{ userId?: string; email?: string } | null>(null);
-  const [localBodies, setLocalBodies] = useState<Record<string, { explanation?: string; code?: string }>>({});
-  const [teamName, setTeamName] = useState('Engineering');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteUrl, setInviteUrl] = useState('');
-  const [acceptToken, setAcceptToken] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const teamWorkspaces = workspaces.filter((w) => w.type === 'team');
-  const active = teamWorkspaces.find((w) => w.id === activeId) ?? teamWorkspaces[0];
-
-  const load = async () => {
-    const account = await window.unvibe.account() as { userId?: string; email?: string } | null;
-    setMe(account);
-    const list = await window.unvibe.teamsListWorkspaces() as {
-      ok: boolean;
-      data?: { workspaces: Array<{ id: string; name: string; type: 'personal' | 'team'; role: string }>; activeWorkspaceId?: string };
-      error?: string;
-    };
-    if (!list.ok || !list.data) { setMessage(list.error ?? 'Sign in to use Teams.'); return; }
-    setWorkspaces(list.data.workspaces);
-    const teams = list.data.workspaces.filter((w) => w.type === 'team');
-    const preferred = teams.find((w) => w.id === list.data?.activeWorkspaceId)?.id ?? teams[0]?.id ?? '';
-    setActiveId(preferred);
-    if (!preferred) { setMembers([]); setEvents([]); setMessage(''); return; }
-    const [memberResult, historyResult] = await Promise.all([
-      window.unvibe.teamsMembers(preferred) as Promise<{ ok: boolean; data?: { members: Array<{ userId: string; email?: string; role: string }> }; error?: string }>,
-      window.unvibe.teamsHistory(preferred) as Promise<{ ok: boolean; data?: { events: typeof events }; error?: string }>,
-    ]);
-    if (memberResult.ok && memberResult.data) setMembers(memberResult.data.members);
-    if (historyResult.ok && historyResult.data) {
-      setEvents(historyResult.data.events);
-      const bodies: Record<string, { explanation?: string; code?: string }> = {};
-      await Promise.all(historyResult.data.events.map(async (event) => {
-        const item = await window.unvibe.learningItem(event.id) as { explanation?: string; code?: string } | null;
-        if (item && (item.explanation || item.code)) bodies[event.id] = { explanation: item.explanation, code: item.code };
-      }));
-      setLocalBodies(bodies);
+    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean }; error?: string };
+    if (!result.ok || !result.data) {
+      setOverview(null);
+      setMessage(result.error ?? 'Could not load cloud plan. Local limits still apply.');
+      return;
     }
-    setMessage('');
-  };
-
-  useEffect(() => { void load(); }, []);
-
-  const switchWorkspace = async (workspaceId: string) => {
-    setBusy(true); setMessage('');
-    await window.unvibe.teamsSetActiveWorkspace(workspaceId);
-    setActiveId(workspaceId);
-    const [memberResult, historyResult] = await Promise.all([
-      window.unvibe.teamsMembers(workspaceId) as Promise<{ ok: boolean; data?: { members: Array<{ userId: string; email?: string; role: string }> }; error?: string }>,
-      window.unvibe.teamsHistory(workspaceId) as Promise<{ ok: boolean; data?: { events: typeof events }; error?: string }>,
-    ]);
-    if (memberResult.ok && memberResult.data) setMembers(memberResult.data.members);
-    else setMessage(memberResult.error ?? 'Members could not load.');
-    if (historyResult.ok && historyResult.data) setEvents(historyResult.data.events);
-    else setMessage(historyResult.error ?? 'Activity could not load.');
-    setBusy(false);
-  };
-
-  const createTeam = async () => {
-    setBusy(true); setMessage('');
-    const result = await window.unvibe.teamsCreate(teamName.trim() || 'Team') as { ok: boolean; error?: string };
-    if (!result.ok) setMessage(result.error ?? 'Team could not be created.');
-    else await load();
-    setBusy(false);
-  };
-
-  const invite = async () => {
-    if (!active) return;
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email.includes('@')) { setMessage('Enter a teammate email.'); return; }
-    setBusy(true); setMessage('');
-    const result = await window.unvibe.teamsInvite({ workspaceId: active.id, email }) as { ok: boolean; data?: { inviteUrl: string }; error?: string };
-    if (!result.ok || !result.data) setMessage(result.error ?? 'Invite failed.');
-    else {
-      setInviteUrl(result.data.inviteUrl);
-      setInviteEmail('');
-      setMessage(`Invite ready for ${email}.`);
-    }
-    setBusy(false);
-  };
-
-  const acceptInvite = async () => {
-    setBusy(true); setMessage('');
-    const result = await window.unvibe.teamsAcceptInvite(acceptToken) as { ok: boolean; error?: string };
-    if (!result.ok) setMessage(result.error ?? 'Invite could not be accepted.');
-    else { setAcceptToken(''); await load(); setMessage('Joined the team workspace.'); }
-    setBusy(false);
-  };
-
-  const selected = events.find((e) => e.id === selectedId);
-  const selectedMine = selected && me?.userId && (selected.authorUserId ?? selected.userId) === me.userId;
-  const selectedBody = selected ? localBodies[selected.id] : undefined;
-
-  return <div className="team-view">
-    <div className="page-head"><div><div className="eyebrow">Teams</div><h1>Share the platform. See who reviewed what.</h1><p>Teammates see metadata activity with authorship. Full explanation text stays on each person’s device.</p></div></div>
-    {message && <div className="plan-message" role="status">{message}</div>}
-
-    <section className="team-panel-card">
-      <h2>Join with an invite</h2>
-      <div className="plan-team-inputs" style={{ maxWidth: 560, gridTemplateColumns: '1fr auto' }}>
-        <input type="text" placeholder="Paste invite link or token" value={acceptToken} onChange={(e) => setAcceptToken(e.target.value)} aria-label="Invite token" />
-        <button className="soft-btn" type="button" disabled={busy || !acceptToken.trim()} onClick={() => void acceptInvite()}>Accept</button>
-      </div>
-    </section>
-
-    {!active && <section className="team-panel-card">
-      <h2>Create a team workspace</h2>
-      <p className="plan-price-note">Founding pilot: 2 seats to start. Shared activity only — no GitHub intelligence yet.</p>
-      <div className="plan-team-inputs" style={{ maxWidth: 480, gridTemplateColumns: '1fr auto' }}>
-        <input type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)} aria-label="Team name" />
-        <button className="primary-btn" type="button" disabled={busy} onClick={() => void createTeam()}>Create team</button>
-      </div>
-    </section>}
-
-    {active && <>
-      <section className="team-panel-card">
-        <div className="team-toolbar">
-          <label>Workspace
-            <select value={active.id} onChange={(e) => void switchWorkspace(e.target.value)} disabled={busy}>
-              {teamWorkspaces.map((w) => <option key={w.id} value={w.id}>{w.name} · {w.role}</option>)}
-            </select>
-          </label>
-          <button className="soft-btn" type="button" disabled={busy} onClick={() => void createTeam()}>New team</button>
-        </div>
-        <h3>Members</h3>
-        <ul className="team-member-list">{members.map((m) => <li key={m.userId}><strong>{m.email ?? m.userId.slice(0, 8)}</strong><span>{m.role}</span></li>)}</ul>
-        {(active.role === 'owner' || active.role === 'admin') && <div className="plan-team-inputs" style={{ maxWidth: 520, gridTemplateColumns: '1fr auto' }}>
-          <input type="email" placeholder="teammate@company.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} aria-label="Invite email" />
-          <button className="primary-btn" type="button" disabled={busy} onClick={() => void invite()}>Invite</button>
-        </div>}
-        {inviteUrl && <div className="invite-link-row"><code>{inviteUrl}</code><button className="soft-btn" type="button" onClick={() => void window.unvibe.copyText(inviteUrl)}>Copy link</button></div>}
-      </section>
-
-      <section className="team-panel-card">
-        <h2>Team activity</h2>
-        <p className="plan-price-note">Who reviewed or understood which file, concept, and project.</p>
-        {events.length === 0 ? <p className="plan-message quiet">No shared activity yet. Explain some code while this workspace is active.</p> : (
-          <div className="team-activity-grid">
-            <ul className="team-activity-list">
-              {events.map((event) => {
-                const author = event.authorEmail ?? event.authorUserId ?? event.userId.slice(0, 8);
-                const title = event.conceptLabel ?? event.concept ?? (event.file ? event.file.split('/').pop() : event.scope);
-                return <li key={event.id}>
-                  <button type="button" className={selectedId === event.id ? 'on' : ''} onClick={() => setSelectedId(event.id)}>
-                    <span className="team-author">{author}</span>
-                    <strong>{title}</strong>
-                    <span>{event.outcome.replaceAll('_', ' ')} · {new Date(event.ts).toLocaleString()}</span>
-                  </button>
-                </li>;
-              })}
-            </ul>
-            <div className="team-activity-detail">
-              {!selected && <p>Select an activity row.</p>}
-              {selected && <>
-                <p><span className="team-author">{selected.authorEmail ?? 'Teammate'}</span></p>
-                <h3>{selected.conceptLabel ?? selected.concept ?? selected.file ?? selected.scope}</h3>
-                <p>{selected.project ?? 'Project'} · {selected.level} · {selected.outcome.replaceAll('_', ' ')}</p>
-                {selected.file && <p className="mono">{selected.file}</p>}
-                {selectedMine && selectedBody?.explanation ? <div className="team-local-body"><RichText text={selectedBody.explanation} /></div>
-                  : <p className="plan-message quiet">Metadata only — explanation stayed on their device.</p>}
-              </>}
-            </div>
-          </div>
-        )}
-      </section>
-    </>}
-  </div>;
-}
-
-function Plan() {
-  const [overview, setOverview] = useState<BillingOverview | null>(null);
-  const [available, setAvailable] = useState(false);
-  const [lifetimeAvailable, setLifetimeAvailable] = useState(false);
-  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
-  const [message, setMessage] = useState('Loading plan…');
-  const [busy, setBusy] = useState(false);
-  const [companyEmail, setCompanyEmail] = useState('');
-  const [teamSeatsWanted, setTeamSeatsWanted] = useState(5);
-
-  const load = async () => {
-    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean; lifetimeAvailable?: boolean }; error?: string };
-    if (!result.ok || !result.data) { setMessage(result.error ?? 'Could not load plan.'); return; }
     setOverview(result.data.overview);
     setAvailable(result.data.checkoutAvailable);
-    setLifetimeAvailable(Boolean(result.data.lifetimeAvailable));
+    if (result.data.overview.subscription.interval) setInterval(result.data.overview.subscription.interval);
     setMessage('');
   };
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+    const onFocus = () => void load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [signedIn]);
 
-  const checkout = async (nextInterval: 'monthly' | 'annual' | 'lifetime' = interval) => {
+  const checkout = async () => {
+    if (!signedIn) {
+      setMessage('Sign in to upgrade. Google approval happens in the browser.');
+      return;
+    }
     setBusy(true); setMessage('');
-    const result = await window.unvibe.startBillingCheckout({ plan: 'pro', interval: nextInterval, seats: 1 }) as { ok: boolean; error?: string };
+    const result = await window.unvibe.startBillingCheckout({ plan: 'pro', interval, seats: 1 }) as { ok: boolean; error?: string };
     if (!result.ok) setMessage(result.error ?? 'Checkout could not start.');
     setBusy(false);
   };
@@ -1069,104 +737,120 @@ function Plan() {
     setBusy(false);
   };
 
-  const requestTeams = () => {
-    const email = companyEmail.trim().toLowerCase();
-    if (!email.includes('@')) { setMessage('Enter a company email so we can follow up on paid Teams seats.'); return; }
-    const seats = Math.max(2, Math.min(20, Math.floor(teamSeatsWanted) || 2));
-    const subject = encodeURIComponent(`Unvibe Teams paid seats · ${seats} seats`);
-    const body = encodeURIComponent(`Company email: ${email}\nSeats wanted: ${seats}\n\nWe want paid Teams seats beyond the founding pilot workspace.`);
-    window.open(`mailto:preston@unvibe.site?subject=${subject}&body=${body}`, '_blank', 'noopener,noreferrer');
-  };
+  const currentPlan = asPlanId(overview?.subscription.plan ?? localUsage?.plan);
+  const currentInterval = overview?.subscription.interval ?? null;
+  const gifted = currentPlan === 'pro' && overview && !overview.hasBillingAccount;
+  const paid = Boolean(overview?.hasBillingAccount && (currentPlan === 'pro' || currentPlan === 'teams'));
+  const canPortal = Boolean(overview?.canManageBilling && overview.hasBillingAccount);
+  const showUpgrade = currentPlan !== 'teams';
+  const upgradeIsPro = currentPlan === 'free' || currentPlan === 'local' || currentPlan === 'trial';
+  const meters = collectUsageMeters(overview, localUsage);
+  const resetIso = meters[0]?.resetsAt ?? localUsage?.resetsAt;
+  const unlimited = currentPlan === 'full';
 
-  const isLifetime = overview?.subscription.interval === 'lifetime' && overview.subscription.status === 'active';
+  return (
+    <section className={`plan-board${compact ? ' plan-board--compact' : ''}`} aria-label="Plan and usage">
+      {!compact && (
+        <div className="page-head">
+          <div>
+            <div className="eyebrow">Plan & usage</div>
+            <h1>Start free. Grow when your projects do.</h1>
+            <p>Your AI model access is included. You never need to paste in your own provider API key.</p>
+          </div>
+        </div>
+      )}
+      {compact && <div className="settings-section-label">PLAN & USAGE</div>}
+      {message && <div className={`plan-message${message.startsWith('Sign in') || message.includes('Local limits') || message.includes('Checkout is disabled') ? ' quiet' : ''}`} role="status">{message}</div>}
 
-  return <div className="plan-view">
-    <div className="page-head"><div><div className="eyebrow">Plan & usage</div><h1>Start free. Grow when your projects do.</h1><p>Your AI model access is included. You never need to paste in your own provider API key.</p></div></div>
-    {message && <div className="plan-message" role="status">{message}</div>}
-    {overview && <>
-      <div className="plan-current"><div><span>Current plan</span><strong>{overview.subscription.plan}</strong></div><div><span>Interval</span><strong>{overview.subscription.interval === 'lifetime' ? 'lifetime' : (overview.subscription.interval ?? 'no billing')}</strong></div><div><span>Status</span><strong>{overview.subscription.plan === 'free' ? 'ready' : overview.subscription.status.replaceAll('_', ' ')}</strong></div><div><span>Renews</span><strong>{isLifetime ? 'never · paid once' : (overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString() : 'not applicable')}</strong></div><div><span>Workspace</span><strong>{overview.workspace.name}</strong></div>{overview.canManageBilling && overview.hasBillingAccount && !isLifetime && <button className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>}</div>
-      <div className="plan-usage">{overview.usage.slice(0, 3).map((line) => <div key={line.kind}><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong><progress value={line.used} max={line.limit} /></div>)}</div>
-      {!isLifetime && <>
-        <div className="plan-billing-control">
-          <div className="plan-toggle" aria-label="Billing interval"><button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div>
-          <p><strong>Pro annual:</strong> $90/year — about $7.50/month. Save 25% vs $10/month billed monthly.</p>
-        </div>
-        {!available && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
-        <div className="plan-options plan-options--two">
-          <article><b>Free · understand the code in front of you</b><h2>$0</h2><p className="plan-price-note">No credit card required</p><ul className="plan-feature-list">{PLAN_FEATURES.free.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="soft-btn" disabled>Included</button></article>
-          <article className="featured"><b>Pro · understand the complete project</b><h2>{interval === 'monthly' ? '$10/month' : '$90/year'}</h2><p className="plan-price-note">{interval === 'monthly' ? 'Best for individuals · billed monthly' : 'About $7.50/month · billed $90/year · save 25%'}</p><ul className="plan-feature-list">{PLAN_FEATURES.pro.map((feature) => <li key={feature}><Icon d={IC.check} />{feature}</li>)}</ul><button className="primary-btn" onClick={() => void checkout()} disabled={busy || !available}>Upgrade to Pro</button></article>
-        </div>
-        <article className="plan-lifetime-card">
-          <div>
-            <b>Pro Lifetime</b>
-            <h2>$80</h2>
-            <p className="plan-price-note">One-time. Personal Pro forever. No monthly bill.</p>
-          </div>
-          <button className="primary-btn" type="button" onClick={() => void checkout('lifetime')} disabled={busy || !lifetimeAvailable}>{lifetimeAvailable ? 'Buy Lifetime · $80' : 'Lifetime soon'}</button>
+      <div className="plan-pick">
+        <article className="plan-pick__card is-current">
+          <span>Current plan</span>
+          <h2>{planDisplayName(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
+          <p>
+            {gifted ? 'Pro from a gift. Limits follow the Pro plan.'
+              : unlimited ? 'This build is not metered locally.'
+                : resetIso ? resetLabel(resetIso)
+                  : 'Monthly explanation limits apply to this Mac.'}
+          </p>
+          {canPortal
+            ? <button type="button" className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>
+            : <button type="button" className="soft-btn" disabled>{gifted ? 'Included with a gift' : paid ? 'Active' : 'Included'}</button>}
         </article>
-        <article className="plan-lifetime-card plan-teams-request">
-          <div>
-            <b>Teams founding pilot</b>
-            <h2>$8/seat</h2>
-            <p className="plan-price-note">Create a shared workspace and see who reviewed what in the Team page. Self-serve checkout stays paused — request paid seats here if you need more than the pilot.</p>
-            <div className="plan-team-inputs">
-              <input type="email" placeholder="company@email.com" value={companyEmail} onChange={(event) => setCompanyEmail(event.target.value)} aria-label="Company email" />
-              <input type="number" min={2} max={20} value={teamSeatsWanted} onChange={(event) => setTeamSeatsWanted(Number(event.target.value))} aria-label="Seats wanted" />
-            </div>
-          </div>
-          <button className="soft-btn" type="button" onClick={requestTeams}>Request paid seats</button>
-        </article>
-      </>}
-      {isLifetime && <div className="plan-message quiet">You have Pro Lifetime. Included cloud models stay ready. No renewal.</div>}
-    </>}
-    </div>;
+
+        {showUpgrade && (
+          <article className="plan-pick__card is-upgrade">
+            <span>Upgrade available</span>
+            {upgradeIsPro ? (
+              <>
+                <h2>Pro {interval === 'annual' ? '$72/yr' : '$8/mo'}</h2>
+                <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
+                <div className="plan-toggle" aria-label="Billing interval">
+                  <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
+                  <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
+                </div>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => void checkout()}
+                  disabled={busy || (signedIn && !available)}
+                >
+                  {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
+                </button>
+              </>
+            ) : (
+              <>
+                <h2>Team $10/seat</h2>
+                <p>Shared workspace and seat billing. Coming soon.</p>
+                <button type="button" className="soft-btn" disabled>Coming soon</button>
+              </>
+            )}
+          </article>
+        )}
+      </div>
+
+      {!signedIn && (
+        <div className="plan-board__signin">
+          <p>Sign in to sync this Mac with your cloud plan and Stripe billing.</p>
+          <SignInForm onDone={onSignedIn ?? (() => undefined)} />
+        </div>
+      )}
+      {signedIn && !available && upgradeIsPro && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
+
+      <div className="plan-usage-block">
+        <h3>Usage this month</h3>
+        <div className="plan-usage-card">
+          {meters.length === 0 && <p className="plan-usage-empty">Usage appears after the first explanation on this Mac.</p>}
+          {meters.map((line) => {
+            const open = line.limit >= 100_000;
+            const left = percentLeft(line.remaining, line.limit);
+            const usedPct = percentUsed(line.used, line.limit);
+            return (
+              <div className="plan-usage-row" key={line.kind}>
+                <div>
+                  <strong>{usageKindLabel(line.kind)}</strong>
+                  <small>
+                    {open
+                      ? 'Unlimited on this build'
+                      : `${line.used} of ${line.limit} used · ${line.remaining} left`}
+                  </small>
+                </div>
+                <b>{open ? 'Open' : `${left}% left`}</b>
+                <i aria-hidden="true"><em style={{ width: open ? '8%' : `${usedPct}%` }} /></i>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function Gift() {
-  const [message, setMessage] = useState('Loading your gift code…');
-  const [progress, setProgress] = useState<{ email: string; code: string; joined: number; remaining: number; max: number; shareUrl: string } | null>(null);
-  const [copied, setCopied] = useState<'code' | 'link' | ''>('');
-
-  const load = async () => {
-    const result = await window.unvibe.giftMine() as { ok: boolean; data?: { email: string; code: string; joined: number; remaining: number; max: number; shareUrl: string }; error?: string };
-    if (!result.ok || !result.data) { setProgress(null); setMessage(result.error ?? 'Sign in to get your gift code.'); return; }
-    setProgress(result.data); setMessage('');
-  };
-  useEffect(() => { void load(); }, []);
-
-  const copy = async (kind: 'code' | 'link', value: string) => {
-    const result = await window.unvibe.copyText(value) as { ok?: boolean };
-    if (!result?.ok) { setMessage('Could not copy. Select the text instead.'); return; }
-    setCopied(kind);
-    window.setTimeout(() => setCopied(''), 1400);
-  };
-
-  const filled = progress ? Math.min(progress.max, progress.joined) : 0;
-
-  return <div className="plan-view gift-view">
-    <div className="page-head"><div><div className="eyebrow">Gift Unvibe</div><h1>Give a friend a month of Pro.</h1><p>Share your 8-character code. They join with your email and this code. Both of you get 1 month of Pro, up to five gifts.</p></div></div>
-    {message && <div className="plan-message" role="status">{message}</div>}
-    {progress && <>
-      <div className="gift-code-card">
-        <span>Your SPECIAL CHAR</span>
-        <strong>{progress.code}</strong>
-        <small>{progress.email}</small>
-        <div className="gift-actions">
-          <button className="primary-btn" type="button" onClick={() => void copy('code', progress.code)}>{copied === 'code' ? 'Copied' : 'Copy code'}</button>
-          <button className="soft-btn" type="button" onClick={() => void copy('link', progress.shareUrl)}>{copied === 'link' ? 'Link copied' : 'Copy waitlist link'}</button>
-        </div>
-      </div>
-      <div className="gift-meter" aria-label={`${filled} of ${progress.max} gifts used`}>
-        {Array.from({ length: progress.max }, (_, index) => <i key={index} className={index < filled ? 'on' : ''} />)}
-        <p><strong>{progress.joined}/{progress.max}</strong> gifts used · {progress.remaining} left</p>
-      </div>
-      <ol className="gift-steps">
-        <li>Send a friend your email and the 8-character code.</li>
-        <li>They join at unvibe.site with both fields filled.</li>
-        <li>Each verified gift adds 1 month of Pro for both of you. Stripe checkout still works after a gift month.</li>
-      </ol>
-    </>}
-  </div>;
+function Plan({ signedIn, onSignedIn }: { signedIn: boolean; onSignedIn: () => void }) {
+  return (
+    <div className="plan-view">
+      <PlanUsageBoard signedIn={signedIn} onSignedIn={onSignedIn} />
+    </div>
+  );
 }
 
 function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
@@ -1180,11 +864,21 @@ function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
         ))}
       </div>
       <div className="stub">
-        <div className="stub__icon"><svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 3v14 M3 10h14 M6 6l8 8 M14 6l-8 8" /></svg></div>
+        <div className="stub__icon"><svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v14 M3 10h14 M6 6l8 8 M14 6l-8 8" /></svg></div>
         <div className="stub__text"><b>Your {page.id.toLowerCase()} will appear here.</b> Review code with <b>{shortcut}</b> and each concept, track, and highlight builds itself from what you learn.</div>
         <button className="stub__cta" onClick={() => window.unvibe.companionReview()}>Review some code</button>
       </div>
     </>
+  );
+}
+
+function TrashButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="row-trash" aria-label={label} title="Remove" onClick={onClick}>
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M5 6h10M8 6V4.5h4V6M7 6l.5 10h5L13 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
   );
 }
 
@@ -1197,23 +891,40 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  if (!account) {
-    return (
-      <div className="setrow" style={{ display: 'block' }}>
-        <div className="sl">Sign in</div>
-        <div className="sd" style={{ marginBottom: 14 }}>Sync your learning across devices. You are using Unvibe locally right now.</div>
-        <SignInForm onDone={onChange} />
-      </div>
-    );
-  }
   const del = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string };
     setBusy(false);
     if (r.ok) onDeleted(); else setErr(r.error ?? 'Could not delete the account.');
   };
+  if (!account) {
+    return (
+      <>
+        <PlanUsageBoard compact signedIn={false} onSignedIn={onChange} />
+        <div className="settings-section-label">ACCOUNT</div>
+        <div className="setrow" style={{ display: 'block' }}>
+          <div className="sl">This Mac</div>
+          <div className="sd">You are using Unvibe locally right now. Sign in above to attach a cloud plan.</div>
+        </div>
+        <div className="setrow" style={{ display: 'block' }}>
+          <div className="sl">Erase learning on this Mac</div>
+          <div className="sd" style={{ marginBottom: 12 }}>Removes every saved explanation on this Mac. This cannot be undone.</div>
+          {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Erase everything…</button> : (
+            <div className="danger-row">
+              <input className="field delete-confirm" aria-label="Type DELETE to confirm" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
+              <button className="act danger" disabled={busy || phrase !== 'DELETE'} onClick={del}>{busy ? 'Erasing…' : 'Erase everything'}</button>
+              <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+            </div>
+          )}
+          {err && <div className="field-err">{err}</div>}
+        </div>
+      </>
+    );
+  }
   return (
     <>
+      <PlanUsageBoard compact signedIn onSignedIn={onChange} />
+      <div className="settings-section-label">ACCOUNT</div>
       <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
         <button className="act" onClick={async () => {
           const result = (await window.unvibe.signOut()) as { ok: boolean; error?: string; warning?: string };
@@ -1250,20 +961,14 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
   const [err, setErr] = useState('');
   const [costs, setCosts] = useState<Array<{ level: string; samples: Array<{ lines: number; label: string }> }> | null>(null);
   const [providers, setProviders] = useState<Array<{ id: Settings['aiProvider']; label: string; blurb: string; model?: string }>>([]);
-  const [cloudModels, setCloudModels] = useState<Array<{ id: string; label: string; tag: string; blurb: string; recommendedForCode?: boolean }>>([]);
-  const [modelQuery, setModelQuery] = useState('');
   const provider = settings.aiProvider ?? 'gemini';
-  const cloudModel = settings.cloudModel ?? 'liquid/lfm-2.5-2.6b:free';
   const selected = providers.find((m) => m.id === provider);
-  const selectedCloud = cloudModels.find((m) => m.id === cloudModel);
 
   const refresh = async () => {
     const status = await window.unvibe.aiKeyStatus() as { ok: boolean; data?: { present: boolean; hint: string | null } };
     if (status.ok && status.data) { setPresent(status.data.present); setHint(status.data.hint); }
     const catalog = await window.unvibe.aiModels() as { ok: boolean; data?: Array<{ id: Settings['aiProvider']; label: string; blurb: string; model?: string }> };
     if (catalog.ok && catalog.data) setProviders(catalog.data);
-    const cloud = await window.unvibe.aiCloudModels() as { ok: boolean; data?: { models: Array<{ id: string; label: string; tag: string; blurb: string; recommendedForCode?: boolean }> } };
-    if (cloud.ok && cloud.data?.models) setCloudModels(cloud.data.models);
     const overview = await window.unvibe.aiCostOverview(provider) as { ok: boolean; data?: Array<{ level: string; samples: Array<{ lines: number; label: string }> }> };
     if (overview.ok && overview.data) setCosts(overview.data);
   };
@@ -1287,54 +992,12 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
     await refresh();
   };
 
-  const filteredCloud = cloudModels.filter((m) => {
-    const q = modelQuery.trim().toLowerCase();
-    if (!q) return true;
-    return [m.label, m.tag, m.blurb, m.id].join(' ').toLowerCase().includes(q);
-  });
-
   return (
     <>
       <section className="ai-container" aria-label="AI settings">
       <div className="ai-container__intro">
         <span>AI on your terms</span>
-        <p>Included Unvibe AI uses free OpenRouter chat models. Or connect your own provider key kept on this Mac.</p>
-      </div>
-      <div className="setrow" style={{ display: 'block' }}>
-        <div className="sl">Included model</div>
-        <div className="sd" style={{ marginBottom: 12 }}>
-          Free chat models only on the company key. Default is the cheapest. Pick another anytime.
-        </div>
-        <input
-          className="field"
-          type="search"
-          placeholder="Search models"
-          value={modelQuery}
-          onChange={(e) => setModelQuery(e.target.value)}
-          aria-label="Search free models"
-        />
-        <div className="model-picker" role="listbox" aria-label="Free chat models">
-          <button
-            type="button"
-            className={`model-picker__row${cloudModel === 'liquid/lfm-2.5-2.6b:free' ? ' on' : ''}`}
-            onClick={() => void onSettings({ cloudModel: 'liquid/lfm-2.5-2.6b:free' })}
-          >
-            <span><b>Auto</b><small>Cheapest free chat model</small></span>
-            <em>Default</em>
-          </button>
-          {filteredCloud.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`model-picker__row${cloudModel === m.id ? ' on' : ''}`}
-              onClick={() => void onSettings({ cloudModel: m.id })}
-            >
-              <span><b>{m.label}</b><small>{m.blurb}</small></span>
-              <em>{m.recommendedForCode ? 'Code' : m.tag}</em>
-            </button>
-          ))}
-        </div>
-        {selectedCloud ? <p className="cost-note">Selected: {selectedCloud.label} · {selectedCloud.tag}</p> : null}
+        <p>Use included Unvibe AI, or securely connect a provider key kept on this Mac.</p>
       </div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl">Your own API key</div>
@@ -1365,7 +1028,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       </div>
       <div className="setrow">
         <div>
-          <div className="sl">BYOK provider</div>
+          <div className="sl">Provider</div>
           <div className="sd">Each option uses a cheap default model. Cost estimates update below.</div>
         </div>
         <select
@@ -1421,17 +1084,53 @@ function OverlayPreview({ position, dimmed }: { position: string; dimmed: number
 }
 
 function IntegrationsPanel() {
-  const [items, setItems] = useState<Array<{ id: string; name: string; detail: string; state: 'detected' | 'available' | 'not-installed' }> | null>(null);
+  const [items, setItems] = useState<Array<{
+    id: string;
+    name: string;
+    group: string;
+    detail: string;
+    blurb: string;
+    state: 'detected' | 'available' | 'not-installed';
+  }> | null>(null);
   useEffect(() => { void window.unvibe.integrations().then((result) => setItems(result as typeof items)); }, []);
   if (!items) return <div className="settings-empty">Checking this Mac…</div>;
-  return <div className="integration-list">{items.map((item) => <div className="integration-row" key={item.id}><div><b>{item.name}</b><small>{item.detail}</small></div><span className={`integration-state ${item.state}`}>{item.state === 'not-installed' ? 'Not installed' : item.state === 'detected' ? 'Detected' : 'Available'}</span></div>)}</div>;
+  const groups = ['Editors', 'Agents', 'Shell', 'Workspace'].map((group) => ({
+    group,
+    rows: items.filter((item) => item.group === group),
+  })).filter((item) => item.rows.length > 0);
+  return (
+    <div className="integ">
+      <p className="integ__lead">Unvibe sits beside tools you already have. It never writes into their settings. Detected means that app is on this Mac, so a selection there can be explained.</p>
+      {groups.map(({ group, rows }) => (
+        <section key={group} className="integ__group">
+          <h3>{group}</h3>
+          <div className="integ__grid">
+            {rows.map((item) => (
+              <article key={item.id} className={`integ-card integ-card--${item.state}`}>
+                <span className="integ-card__mark" aria-hidden="true">{item.name.slice(0, 1)}</span>
+                <div className="integ-card__body">
+                  <div className="integ-card__row">
+                    <b>{item.name}</b>
+                    <span className={`integration-state ${item.state}`}>{item.state === 'not-installed' ? 'Not installed' : item.state === 'detected' ? 'Detected' : 'Available'}</span>
+                  </div>
+                  <small>{item.blurb}</small>
+                  <p>{item.detail}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
 }
 
-function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice }: {
+function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice, initialTab = 'General' }: {
   info: { version: string }; account: Account; settings: Settings;
   onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void; onNotice: (message: string) => void;
+  initialTab?: string;
 }) {
-  const [tab, setTab] = useState('General');
+  const [tab, setTab] = useState(initialTab);
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
   const recRef = useRef(recording); recRef.current = recording;
@@ -1455,10 +1154,14 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="mside">
           <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
-          <div className="mh">PREFERENCES</div>
-          {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Island' ? '◒' : t === 'Sound & alerts' ? '♪' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
-          <div className="mh" style={{ paddingTop: 18 }}>UNVIBE</div>
-          {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'Integrations' ? '↗' : t === 'AI' ? '◌' : t === 'Account & Plan' ? '◈' : 'i'}</span>{t}</button>)}
+          <div className="mside-group">
+            <div className="mh">PREFERENCES</div>
+            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Island' ? '◒' : t === 'Sound & alerts' ? '♪' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
+          </div>
+          <div className="mside-group">
+            <div className="mh">UNVIBE</div>
+            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'Integrations' ? '↗' : t === 'AI' ? '◌' : t === 'Account & Plan' ? '◈' : 'i'}</span>{t}</button>)}
+          </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
         <div className="mbody">
@@ -1468,7 +1171,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'General' && (
             <>
+              <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
+              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this Mac for your profile.</div></div><input className="field setrow-field" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
+              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this. Control+U is always registered as well.</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
+              <PermRow compact />
             </>
           )}
 
@@ -1482,14 +1189,14 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
                   {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
                 </div>
               </div>
-              <div className="setrow"><div><div className="sl">Learning strip visibility</div><div className="sd">Keep it ready between reviews, or only show it while you are learning.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
-              <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Turn this off for click-only expansion. Click and keyboard controls always work.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Recommended: show it only while learning. Select code anywhere and press {prettyAccel(settings.shortcut)} whenever you want to start.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
+              <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
               <div className="setrow"><div><div className="sl">Rotate learning stats</div><div className="sd">Cycle through streak, lines understood, and completed reviews in the compact top Island.</div></div><Toggle on={settings.rotateIslandStats} onClick={() => onSettings({ rotateIslandStats: !settings.rotateIslandStats })} /></div>
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
                 <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
-                  <option value="dim">Dim</option><option value="stay">Stay solid</option><option value="collapse">Collapse</option>
+                  <option value="dim">Dim (keep size)</option><option value="stay">Stay solid</option>
                 </select>
               </div>
               <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
@@ -1501,25 +1208,17 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Sound & alerts' && (
             <>
               <div className="settings-section-label">LOCAL SOUND</div>
-              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Short synthesized cues for setup and completed learning. Nothing is recorded or downloaded.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
+              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Cues when Unvibe starts, when you hover or open the island, and when you click island actions. Nothing is recorded or downloaded.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
-              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this Mac.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => playSetupTone('success', settings.soundVolume, settings.soundStyle)}>Preview</button></div></div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this Mac.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => playUiTone('success', settings.soundVolume, settings.soundStyle)}>Preview</button></div></div>
               <div className="settings-section-label">NOTIFICATIONS</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
-              <div className="setrow"><div><div className="sl">Share usage analytics</div><div className="sd">Anonymous opens and review counts only. Never code, emails, or prompts.</div></div><Toggle on={settings.shareUsageAnalytics !== false} onClick={() => onSettings({ shareUsageAnalytics: settings.shareUsageAnalytics === false })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
               {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>
           )}
 
-          {tab === 'Shortcut & Capture' && (
-            <>
-              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code, then press this to open an explanation.</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
-              <PermRow compact />
-            </>
-          )}
-
-          {tab === 'Learning' && <><div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div><div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this Mac.</div></div></div></>}
+          {tab === 'Learning' && <><div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div><div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this Mac. Use the trash on History to remove a single lesson.</div></div></div></>}
 
           {tab === 'Integrations' && <IntegrationsPanel />}
 
@@ -1528,6 +1227,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your Mac. Always on.</div></div><button className="act" disabled>On</button></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
+              <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
               <div className="setrow"><div><div className="sl">Support</div><div className="sd">support@unvibe.site · preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</button></div>
             </>
           )}
@@ -1542,7 +1242,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
 function App() {
   const [page, setPage] = useState<PageId>('Home');
+  const [navOpen, setNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
   const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌘U' });
   const [account, setAccount] = useState<Account>(null);
@@ -1553,28 +1255,32 @@ function App() {
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
-  const [usageLine, setUsageLine] = useState<{ used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null>(null);
-  const [sideCollapsed, setSideCollapsed] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [quizSeedId, setQuizSeedId] = useState<string | null>(null);
+  const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
+  const [sideWidth, setSideWidth] = useState(232);
+  const sideLive = useRef(232);
 
   const refresh = async () => {
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q] = await Promise.all([
+      const [acct, prof, fd, hist, st, syncState, usage, q, appInfo] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.feed(8) as Promise<FeedItem[]>,
         window.unvibe.history(100) as Promise<LearningItem[]>,
         window.unvibe.getSettings() as Promise<Settings>,
         window.unvibe.syncStatus() as Promise<SyncStatus>,
-        window.unvibe.usageGet() as Promise<{ ok: boolean; data?: { used: number; limit: number; remaining: number; resetsAt: string; plan: string } }>,
+        window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
+        window.unvibe.appInfo() as Promise<{ version: string; user: string; shortcut: string }>,
       ]);
       setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
+      setInfo(appInfo);
+      if (typeof st.sidebarWidth === 'number') {
+        setSideWidth(st.sidebarWidth);
+        sideLive.current = st.sidebarWidth;
+      }
       setUsageLine(usage.ok && usage.data
-        ? { used: usage.data.used, limit: usage.data.limit, remaining: usage.data.remaining, resetsAt: usage.data.resetsAt, plan: usage.data.plan }
-        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local' });
+        ? usage.data
+        : { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
@@ -1595,27 +1301,12 @@ function App() {
     })();
     const onFocus = () => void refresh();
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
-    const offPage = window.unvibe.onCompanionPage((next) => {
-      const allowed: PageId[] = ['Home', 'Study', 'History', 'Quiz', 'Progress', 'Gift', 'Plan', 'Team'];
-      if (allowed.includes(next as PageId)) {
-        setGate((current) => current === 'checking' || current === 'onboarding' ? current : 'app');
-        setPage(next === 'History' ? 'Study' : next as PageId);
-      }
+    window.unvibe.onShowPage((next) => {
+      const allowed: PageId[] = ['Home', 'Learn', 'Study', 'History', 'Quiz', 'Chat', 'Progress', 'Plan', 'Gift', 'Projects', 'Concepts', 'Notebook', 'Briefings', 'Library', 'Profile'];
+      if (allowed.includes(next as PageId)) setPage(next as PageId);
     });
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setSearchOpen(true);
-      }
-      if (event.key === 'Escape') setSearchOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
     window.addEventListener('focus', onFocus);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('keydown', onKey);
-      offPage();
-    };
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const [themeIsDark, setThemeIsDark] = useState(false);
@@ -1637,70 +1328,46 @@ function App() {
     const r = (await window.unvibe.setSettings(patch)) as { settings: Settings; shortcutError?: string };
     setSettings(r.settings);
     if (r.settings.shortcut) setInfo((i) => ({ ...i, shortcut: r.settings.shortcut }));
+    if (patch.displayName !== undefined) {
+      void window.unvibe.appInfo().then((next) => setInfo(next as typeof info));
+    }
     return r.shortcutError;
   };
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
   const shortcutLabel = prettyAccel(info.shortcut);
+  const isLearnPage = page === 'Learn' || page === 'Study' || page === 'History' || page === 'Quiz';
+  const fillPage = isLearnPage || page === 'Chat';
+  const chatLabel = settings?.useOwnAi
+    ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
+    : 'Unvibe AI';
+  const sideCompact = sideWidth < 200;
 
-  const searchHits = (() => {
-    const q = searchQuery.trim().toLowerCase();
-    const matches = (text: string) => !q || text.toLowerCase().includes(q);
-    const general = [
-      { id: 'review', title: 'Start a review', subtitle: `Select code and press ${shortcutLabel}`, run: () => { window.unvibe.companionReview(); setSearchOpen(false); } },
-      { id: 'new-quiz', title: 'Open Quiz', subtitle: 'Understanding check from a saved lesson', run: () => { setPage('Quiz'); setSearchOpen(false); } },
-    ].filter((item) => matches(`${item.title} ${item.subtitle}`));
-    const learn = history.filter((item) => matches([item.title, item.meta, item.project, item.file, item.explanation].filter(Boolean).join(' ')))
-      .slice(0, 8)
-      .map((item) => ({
-        id: `learn-${item.id}`,
-        title: item.title,
-        subtitle: item.meta || `${item.project ?? 'Lesson'} · ${item.level}`,
-        run: () => { setPage('Study'); setSearchOpen(false); },
-      }));
-    const quiz = history.filter((item) => item.code && matches(item.title))
-      .slice(0, 5)
-      .map((item) => ({
-        id: `quiz-${item.id}`,
-        title: `Quiz: ${item.title}`,
-        subtitle: 'Start an Understanding Check on this lesson',
-        run: () => { setQuizSeedId(item.id); setPage('Quiz'); setSearchOpen(false); },
-      }));
-    const people = [
-      {
-        id: 'profile',
-        title: account?.email ?? 'Your profile',
-        subtitle: account ? 'Signed in' : 'Local only — sign in from Settings',
-        run: () => { setSettingsOpen(true); setSearchOpen(false); },
-      },
-    ].filter((item) => matches(`${item.title} ${item.subtitle}`));
-    const company = [
-      {
-        id: 'company',
-        title: 'Company / workspace',
-        subtitle: 'Plan, seats, and Teams founding pilot',
-        run: () => { setPage('Plan'); setSearchOpen(false); },
-      },
-    ].filter((item) => matches(`${item.title} ${item.subtitle}`));
-    const navigation = [
-      { id: 'nav-home', title: 'Go to Home', subtitle: 'Companion home', run: () => { setPage('Home'); setSearchOpen(false); } },
-      { id: 'nav-learn', title: 'Go to Learn', subtitle: 'Saved explanations and restudy', run: () => { setPage('Study'); setSearchOpen(false); } },
-      { id: 'nav-quiz', title: 'Go to Quiz', subtitle: 'Understanding checks', run: () => { setPage('Quiz'); setSearchOpen(false); } },
-      { id: 'nav-progress', title: 'Go to Progress', subtitle: 'Evidence and streaks', run: () => { setPage('Progress'); setSearchOpen(false); } },
-      { id: 'nav-gift', title: 'Go to Gift', subtitle: 'Refer a friend', run: () => { setPage('Gift'); setSearchOpen(false); } },
-      { id: 'nav-plan', title: 'Go to Plan', subtitle: 'Usage and billing', run: () => { setPage('Plan'); setSearchOpen(false); } },
-      { id: 'nav-team', title: 'Go to Team', subtitle: 'Shared workspace and who reviewed what', run: () => { setPage('Team'); setSearchOpen(false); } },
-      { id: 'nav-settings', title: 'Open Settings', subtitle: 'AI models, account, Island', run: () => { setSettingsOpen(true); setSearchOpen(false); } },
-    ].filter((item) => matches(`${item.title} ${item.subtitle}`));
-    return [
-      { label: 'General', items: general },
-      { label: 'Learn', items: learn },
-      { label: 'Quiz', items: quiz },
-      { label: 'People', items: people },
-      { label: 'Company', items: company },
-      { label: 'Navigation', items: navigation },
-    ].filter((group) => group.items.length > 0);
-  })();
+  const startSideResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startW = sideLive.current;
+    const move = (moveEvent: PointerEvent) => {
+      const next = Math.min(340, Math.max(168, Math.round(startW + (moveEvent.clientX - startX))));
+      sideLive.current = next;
+      setSideWidth(next);
+    };
+    const up = () => {
+      document.documentElement.classList.remove('is-side-resizing');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      void applySettings({ sidebarWidth: sideLive.current });
+    };
+    document.documentElement.classList.add('is-side-resizing');
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  useEffect(() => {
+    if (gate !== 'app') return;
+    if (!(settings?.soundEffects ?? true)) return;
+    playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
+  }, [gate]);
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
@@ -1713,40 +1380,53 @@ function App() {
   return (
     <>
       <div className="titlebar" />
-      <div className={`layout${sideCollapsed ? ' layout--side-collapsed' : ''}`}>
-        <aside className={`side fade-in fade-in--side${sideCollapsed ? ' side--collapsed' : ''}`}>
-          <div className="brand">
-            <span className="mark"><LogoMark size={22} /></span>
-            {!sideCollapsed && <><span className="name">Unvibe</span><span className="badge">Beta</span></>}
-            <div className="brand-tools">
-              <button type="button" className="side-tool" aria-label={sideCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sideCollapsed ? 'Expand' : 'Collapse'} onClick={() => setSideCollapsed((v) => !v)}>
-                <Icon d="M4 4h12v12H4z M7 4v12" />
+      <div className={`layout${navOpen ? ' layout--nav-open' : ''}`}>
+        {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
+        <aside className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
+          <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
+          <nav className="nav">{NAV.map((p) => {
+            const on = p.id === page || (p.id === 'Learn' && page === 'Study');
+            const label = p.id === 'Gift' ? 'Gift Unvibe' : p.id;
+            return (
+              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setPage(p.id); setNavOpen(false); }}>
+                <Icon d={p.icon} /><span className="nav-label">{label}</span>
               </button>
-              <button type="button" className="side-tool" aria-label="Search" title="Search (⌘K)" onClick={() => setSearchOpen(true)}>
-                <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
-              </button>
-            </div>
-          </div>
-          {!sideCollapsed && <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />}
-          <nav className="nav">{NAV.map((p) => <button key={p.id} className={p.id === page ? 'on' : ''} title={NAV_LABEL[p.id] ?? p.id} onClick={() => setPage(p.id)}><Icon d={p.icon} />{!sideCollapsed && (NAV_LABEL[p.id] ?? p.id)}</button>)}</nav>
+            );
+          })}</nav>
           <div className="spacer" />
-          {!sideCollapsed && <>
-            <button
-              className={`sync-state sync-state--${sync.phase}`}
-              aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
-              onClick={() => void window.unvibe.retrySync()}
-              disabled={sync.phase === 'syncing' || sync.phase === 'local'}
-            >
-              <span className="sync-state__dot" />
-              <span>{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
-              {sync.pending > 0 && <small>{sync.pending} pending</small>}
+          <button
+            className={`sync-state sync-state--${sync.phase}`}
+            aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
+            onClick={() => void window.unvibe.retrySync()}
+            disabled={sync.phase === 'syncing' || sync.phase === 'local'}
+          >
+            <span className="sync-state__dot" />
+            <span className="sync-state__copy">{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
+            {sync.pending > 0 && <small>{sync.pending} pending</small>}
+          </button>
+          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">30 explanations each month on Free. 100 on Pro. AI access included, no provider API key needed.</div></div>
+          <nav className="nav">{FOOT.map((f) => (
+            <button key={f.id} type="button" aria-label={f.id} title={sideCompact ? f.id : undefined} onClick={() => {
+              setNavOpen(false);
+              if (f.id === 'Settings') { setSettingsTab('General'); setSettingsOpen(true); }
+              else flash(f.toast);
+            }}>
+              <Icon d={f.icon} /><span className="nav-label">{f.id}</span>
             </button>
-            <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">50 explanations each month on Free · 100 on Pro · $10/mo. AI access included—no provider API key needed.</div></div>
-          </>}
-          <nav className="nav">{FOOT.map((f) => <button key={f.id} title={f.id} onClick={() => (f.id === 'Settings' ? setSettingsOpen(true) : flash(f.toast))}><Icon d={f.icon} />{!sideCollapsed && f.id}</button>)}</nav>
+          ))}</nav>
+          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize" onPointerDown={startSideResize} />
         </aside>
         <main className="content">
           <div className="content-tools">
+            <button
+              type="button"
+              className="nav-toggle"
+              aria-label="Open menu"
+              onClick={() => setNavOpen(true)}
+            >
+              <Icon d="M3 6h14 M3 10h14 M3 14h14" />
+            </button>
             <button
               type="button"
               className="theme-toggle"
@@ -1760,78 +1440,41 @@ function App() {
               <LogoMark size={22} stroke={1.8} />
             </span>
           </div>
-          <div className={`page${page === 'History' || page === 'Quiz' ? ' page--learn' : ''}`}>
-            <FadeIn animKey={page} stagger={page !== 'History' && page !== 'Quiz'}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} />
-                : page === 'Study' ? <Study
+          <div className={`page${fillPage ? ' page--learn' : ''}`}>
+            <FadeIn animKey={page} stagger={!fillPage}>
+              {page === 'Home' ? <Home shortcut={shortcutLabel} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} onRefresh={() => void refresh()} />
+                : isLearnPage ? <Learn
                   history={history}
                   queue={queue}
                   shortcut={shortcutLabel}
+                  intent={page === 'History' ? 'history' : page === 'Quiz' ? 'quiz' : 'learn'}
                   onReview={() => window.unvibe.companionReview()}
                   onRefresh={() => void refresh()}
-                  onQuiz={(item) => { setQuizSeedId(item.id); setPage('Quiz'); }}
                   onRestudy={async (item, level) => {
                     const r = await window.unvibe.reopenLearningItem({ ...item, level }) as { ok?: boolean; cancelled?: boolean; error?: string };
                     if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that lesson.');
                   }}
                 />
-                : page === 'Quiz' ? <Quiz
-                  key={quizSeedId ?? 'quiz'}
-                  history={history}
-                  queue={queue}
-                  initialSelectedId={quizSeedId}
-                  onReview={() => window.unvibe.companionReview()}
+                : page === 'Chat' ? <Chat
+                  providerLabel={chatLabel}
+                  usingOwnAi={Boolean(settings?.useOwnAi)}
+                  providerId={settings?.aiProvider ?? 'gemini'}
+                  userName={info.user}
+                  usage={usageLine}
                   onRefresh={() => void refresh()}
+                  onOpenAiSettings={() => { setSettingsTab('AI'); setSettingsOpen(true); }}
                 />
                 : page === 'Progress' ? <Progress profile={profile} />
+                : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
-                : page === 'Plan' ? <Plan />
-                : page === 'Team' ? <Team />
-                : page in PAGES ? <Explainer page={PAGES[page as keyof typeof PAGES]} shortcut={shortcutLabel} />
-                : <Study
-                  history={history}
-                  queue={queue}
-                  shortcut={shortcutLabel}
-                  onReview={() => window.unvibe.companionReview()}
-                  onRefresh={() => void refresh()}
-                  onQuiz={(item) => { setQuizSeedId(item.id); setPage('Quiz'); }}
-                  onRestudy={async (item, level) => {
-                    const r = await window.unvibe.reopenLearningItem({ ...item, level }) as { ok?: boolean; cancelled?: boolean; error?: string };
-                    if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that lesson.');
-                  }}
-                />}
+                : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>
         </main>
       </div>
-      {searchOpen && (
-        <div className="command-overlay" role="dialog" aria-label="Search" onClick={() => setSearchOpen(false)}>
-          <div className="command-palette" onClick={(e) => e.stopPropagation()}>
-            <input
-              className="command-palette__input"
-              autoFocus
-              placeholder="Search Learn, Quiz, people, company, or settings"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="command-palette__body">
-              {searchHits.length === 0 ? <p className="command-palette__empty">No matches.</p> : searchHits.map((group) => (
-                <div key={group.label} className="command-palette__group">
-                  <div className="command-palette__label">{group.label}</div>
-                  {group.items.map((item) => (
-                    <button key={item.id} type="button" className="command-palette__row" onClick={item.run}>
-                      <span>{item.title}</span>
-                      <small>{item.subtitle}</small>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}
+          initialTab={settingsTab}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
           onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />

@@ -1,5 +1,17 @@
 # Uncode
 
+## Authoritative app baseline — user confirmed 2026-09-13
+The approved product is Unvibe v0.1.11 from `unvibe-studio-redesign` at `cdaa4fd`,
+including the user's local widget refinements. Preserve Newsreader/JetBrains Mono,
+Golden Gate imagery and coral/blue glass surfaces, separate Learn/History/Quiz/Chat
+pages, usage meters, and the learning-pulse Island. The user screenshots in
+`Desktop/Unvibe Resources/new app` identify the approved appearance.
+The DM Sans app previously on main at `9df8e45` is NOT the approved design.
+Never use branch recency alone to select a visual baseline or port its full UI over this app.
+This section overrides historical naming, monochrome and design notes below.
+Before improvements, compare the running build to this approved source. Keep marketing untouched.
+See `docs/approved-app-baseline.md` for source provenance and change boundaries.
+
 > Codename during design: "Unvibe". Product name: **Uncode**. Rename is trivial (search `uncode`).
 
 ## Product purpose

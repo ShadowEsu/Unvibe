@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.2",
+  "version": "0.1.11",
   "private": true,
   "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
@@ -10,9 +10,11 @@
     "dev": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
-    "dist": "npm run build && electron-builder --mac dir",
-    "dist:mac": "npm run build && electron-builder --mac",
+    "prepare:bridge": "npm --prefix ../extension run package",
+    "dist": "npm run prepare:bridge && npm run build && electron-builder --mac dir",
+    "dist:mac": "npm run prepare:bridge && npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
+    "package:beta:win": "node scripts/package-beta-windows.mjs",
     "dist:all": "npm run build && electron-builder --mac --win",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
   },
@@ -34,6 +36,12 @@
     "productName": "Unvibe",
     "copyright": "Copyright © 2026 Unvibe",
     "files": ["dist/**/*", "package.json"],
+    "extraResources": [
+      {
+        "from": "../extension/release/unvibe-desktop-bridge-0.1.2.vsix",
+        "to": "Unvibe Desktop Bridge.vsix"
+      }
+    ],
     "directories": { "output": "release", "buildResources": "build" },
     "icon": "build/icon.png",
     "afterSign": "scripts/afterSignHook.cjs",
@@ -51,6 +59,12 @@
       "extendInfo": {
         "CFBundleDisplayName": "Unvibe",
         "CFBundleName": "Unvibe",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Unvibe review link",
+            "CFBundleURLSchemes": ["unvibe"]
+          }
+        ],
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
         "LSUIElement": false
       }

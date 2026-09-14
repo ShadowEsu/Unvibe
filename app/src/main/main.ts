@@ -30,6 +30,7 @@ import {
   getOrCreateWidget,
   hideBar,
   positionBar,
+  raiseLimitPause,
   resizeBar,
   showBar,
   type WidgetResizeEdge,
@@ -48,6 +49,7 @@ import {
 } from './review';
 import { store } from './store';
 import { settings, type Settings } from './settings';
+import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT } from './gift';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
@@ -61,15 +63,7 @@ import {
   billingOverview,
   startBillingCheckout,
   startBillingPortal,
-  giftCardForEmail,
-  giftMine,
-  listWorkspaces,
-  createTeamWorkspace,
-  listWorkspaceMembers,
-  inviteWorkspaceMember,
-  acceptWorkspaceInvite,
-  pullTeamHistory,
-  pullTeamProjects,
+  resolveBackendUrl,
   type Account as BackendAccount,
 } from './backend';
 import { setBar, notify } from './notify';
@@ -83,7 +77,6 @@ import {
   normalizeLocalAiProvider,
   type LocalAiProviderId,
 } from './localAi';
-import { listCloudChatModels, normalizeCloudModel } from './cloudModels';
 import {
   buildComparePayload,
   buildDiffPayload,
@@ -91,9 +84,8 @@ import {
   isProPlan,
   resolveRepoRoot,
 } from './contextBuilder';
-import { answerQuizCard, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
+import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
 import { integrationStatus } from './integrations';
-import { track, trackAppOpened } from './analytics';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -102,6 +94,12 @@ function firstName(): Promise<string> {
       resolve(full.split(/\s+/)[0] || process.env.USER || 'there');
     });
   });
+}
+
+function greetingName(osName: string): string {
+  const saved = (settings().all().displayName ?? '').trim();
+  if (saved) return saved.split(/\s+/)[0];
+  return osName;
 }
 
 const todayKey = () => localDayKey(new Date());
@@ -116,6 +114,36 @@ const tabSessions = new Map<string, ReviewSession>();
 let activeTabId = '1';
 let panelReady = false;
 const normalBounds = new Map<number, Electron.Rectangle>();
+let pendingExternalReview: { preferClipboard: boolean } | null = null;
+
+/**
+ * The IDE bridge deliberately carries no code. The desktop app captures the current selection
+ * locally through a trusted, on-device clipboard handoff, so a selection never appears in a
+ * URL, log, extension setting, or third-party process.
+ */
+function parseExternalReviewUrl(rawUrl: string): { preferClipboard: boolean } | null {
+  try {
+    const url = new URL(rawUrl);
+    const isReview = url.protocol === 'unvibe:' && url.hostname === 'review' &&
+      (url.pathname === '' || url.pathname === '/') && url.hash === '';
+    if (!isReview) return null;
+    // This is an intent flag only — a URL must never contain selected source text.
+    if (url.search === '') return { preferClipboard: false };
+    if (url.searchParams.size === 1 && url.searchParams.get('source') === 'ide') {
+      return { preferClipboard: true };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function handleExternalReviewUrl(rawUrl: string): void {
+  const request = parseExternalReviewUrl(rawUrl);
+  if (!request) return;
+  if (app.isReady()) void startReview(request);
+  else pendingExternalReview = request;
+}
 
 function makeSession(
   tabId: string,
@@ -244,24 +272,35 @@ function accessibilityGranted(prompt = false): boolean {
   return systemPreferences.isTrustedAccessibilityClient(prompt);
 }
 
-/** At most one Accessibility Settings open per session from the shortcut path. */
-let accessibilitySettingsOpenedThisSession = false;
-
-function openCompanion(page?: string): void {
-  const existed = Boolean(companion && !companion.isDestroyed());
+function openCompanion(): void {
   if (companion && !companion.isDestroyed()) {
     companion.show();
     companion.focus();
-  } else {
-    companion = createCompanion();
-    companion.on('closed', () => (companion = null));
+    return;
   }
-  if (!page || !companion || companion.isDestroyed()) return;
+  companion = createCompanion();
+  companion.on('closed', () => (companion = null));
+}
+
+function openCompanionPage(page: string): void {
+  openCompanion();
   const send = () => {
-    if (companion && !companion.isDestroyed()) companion.webContents.send('companion:page', page);
+    if (companion && !companion.isDestroyed()) companion.webContents.send('companion:showPage', page);
   };
-  if (existed && !companion.webContents.isLoading()) send();
-  else companion.webContents.once('did-finish-load', send);
+  if (companion && companion.webContents.isLoading()) companion.webContents.once('did-finish-load', send);
+  else send();
+}
+
+function allowedExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    return parsed.hostname === 'unvibe.site'
+      || parsed.hostname === 'unvibe.live'
+      || parsed.hostname === '5fmnqm5vw5o.typeform.com';
+  } catch {
+    return false;
+  }
 }
 
 function broadcastShortcut(): void {
@@ -272,29 +311,46 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
-async function startReview(): Promise<void> {
+async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
-  // ⌘U must only raise the aisle + explanation panel — never System Settings.
-  // On a fresh install, make the required macOS permission actionable instead of
-  // silently falling through to a clipboard-only picker.
-  if (isMac && !accessibilityGranted(false) && !accessibilitySettingsOpenedThisSession) {
-    accessibilitySettingsOpenedThisSession = true;
-    accessibilityGranted(true);
-    void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
-    notify('Enable Accessibility for Unvibe, return to your editor, then press ⌘U again');
+  const usage = await resolveAppUsage();
+  if (usage.remaining <= 0) {
     showBar(bar);
+    const win = getOrCreateWidget();
+    raiseLimitPause(win);
+    win.webContents.send('review:event', {
+      type: 'usage',
+      tabId: '1',
+      used: usage.used,
+      limit: usage.limit,
+      remaining: usage.remaining,
+      resetsAt: usage.resetsAt,
+      plan: usage.plan,
+    });
+    win.webContents.send('review:event', {
+      type: 'error',
+      tabId: '1',
+      code: 'plan_limit_reached',
+      upgradePath: '/plan',
+      message: 'You have reached your monthly explanation limit.',
+    });
     return;
   }
+  // The macOS TCC preflight can report a false negative for a freshly rebuilt,
+  // locally installed app even after its Accessibility switch is enabled. Try
+  // the on-device capture first; System Events is the real permission boundary.
+  // This prevents ⌘U from trapping someone in System Settings when capture is
+  // already allowed.
+  // Capture before showing any Unvibe surface. This preserves the active editor selection
+  // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
+  const code = await captureSelection(options);
+  const sourceApp = await frontmostApp();
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
-  // captureSelection restores/focuses the app that held the selection, so read the source
-  // afterwards rather than racing the synthetic ⌘C operation.
-  const code = await captureSelection();
-  const sourceApp = await frontmostApp();
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
-      notify('Private beta limit reached: 30 selected-code prompts this month. Your saved learning is still available.');
+      notify(`Private beta limit reached: ${store().betaSelectedCodeUsage().limit} selected-code prompts this month. Your saved learning is still available.`);
       return;
     }
   }
@@ -318,11 +374,16 @@ async function startReview(): Promise<void> {
 
 function registerShortcut(accel: string): boolean {
   globalShortcut.unregisterAll();
-  try {
-    return globalShortcut.register(accel, () => void startReview());
-  } catch {
-    return false;
+  const keys = new Set<string>([accel, 'Control+U']);
+  let any = false;
+  for (const key of keys) {
+    try {
+      if (globalShortcut.register(key, () => void startReview())) any = true;
+    } catch {
+      /* shortcut taken by another app */
+    }
   }
+  return any;
 }
 
 function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): BrowserWindow | null {
@@ -331,11 +392,33 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 
 app.setName('Unvibe');
 
+// One process owns the global fallback shortcut and the `unvibe://` protocol. Without this,
+// two copies (for example, one in Applications and one opened from a mounted DMG) can race for
+// ⌘U and leave a review panel open with no captured selection.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.quit();
+app.on('second-instance', () => openCompanion());
+
+// Register before Electron becomes ready: macOS can deliver an open-url event during launch.
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleExternalReviewUrl(url);
+});
+
+// CFBundleURLTypes below registers packaged builds. This additionally makes local development
+// and a manually installed app respond to the same privacy-safe desktop bridge.
+if (process.defaultApp) {
+  const entry = process.argv[1];
+  if (entry) app.setAsDefaultProtocolClient('unvibe', process.execPath, [path.resolve(entry)]);
+} else {
+  app.setAsDefaultProtocolClient('unvibe');
+}
+
 app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
-  trackAppOpened();
+  store().ensureDayActive();
   const s = settings().all();
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
   void flush();
@@ -356,7 +439,8 @@ app.whenReady().then(() => {
   tray.setToolTip('Unvibe');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Open Unvibe', click: () => openCompanion() },
+      { label: 'Explain selected code', click: () => void startReview() },
+      { label: 'Open Unvibe', click: openCompanion },
       { type: 'separator' },
       { label: 'Show learning island', click: () => showBar(bar) },
       { label: 'Hide learning island', click: () => hideBar(bar) },
@@ -386,11 +470,15 @@ app.whenReady().then(() => {
   registerShortcut(s.shortcut);
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
+  if (pendingExternalReview) {
+    const request = pendingExternalReview;
+    pendingExternalReview = null;
+    void startReview(request);
+  }
 
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
   ipcMain.on('bar:openCompanion', () => openCompanion());
-  ipcMain.on('companion:openPage', (_e, page: string) => openCompanion(page));
   ipcMain.on('bar:setExpanded', (_e, expanded: boolean) => {
     // Click and keyboard expansion remain available when hover expansion is off.
     // The renderer decides whether a pointer entering the Island requests this.
@@ -400,15 +488,16 @@ app.whenReady().then(() => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
       { label: 'Explain selected code', click: () => void startReview() },
-      ...(state.hasRecent ? [{ label: 'Open last explanation', click: () => openCompanion() }] : []),
+      ...(state.hasRecent ? [{ label: 'Open last explanation', click: openCompanion }] : []),
       { type: 'separator' },
-      { label: 'Open Unvibe', click: () => openCompanion() },
+      { label: 'Open Unvibe', click: openCompanion },
       { label: 'Hide Island', click: () => hideBar(bar) },
       { type: 'separator' },
       { label: 'Quit Unvibe', role: 'quit' },
     ]).popup({ window: bar });
   });
   ipcMain.handle('bar:snapshot', () => {
+    store().ensureDayActive();
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
     return {
@@ -598,7 +687,8 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
-  ipcMain.on('widget:openStudy', () => openCompanion('Study'));
+  ipcMain.on('widget:openStudy', () => openCompanion());
+  ipcMain.on('companion:openPlan', () => openCompanionPage('Plan'));
 
   // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
   let resizeTick: ReturnType<typeof setInterval> | null = null;
@@ -650,10 +740,13 @@ app.whenReady().then(() => {
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
     version: app.getVersion(),
-    user: await firstName(),
+    user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
   }));
-  ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
+  ipcMain.handle('learning:profile', () => {
+    store().ensureDayActive();
+    return computeProfile(store().events(), todayKey());
+  });
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
@@ -662,6 +755,11 @@ app.whenReady().then(() => {
     if (!event) return null;
     return computeLearningItems([event], 1)[0] ?? null;
   });
+  ipcMain.handle('learning:forget', (_e, id: string) => {
+    if (typeof id !== 'string' || !id) return { ok: false, error: 'Missing lesson.' };
+    store().forgetEvent(id);
+    return { ok: true };
+  });
   ipcMain.handle('study:askStatus', () => studyAskStatus());
   ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string }) => askStudyAssistant(input));
   ipcMain.handle('quiz:status', () => quizCardStatus());
@@ -669,6 +767,8 @@ app.whenReady().then(() => {
     startQuizCard(input.eventId, input.mode),
   );
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
+  ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+    askChat(input));
 
   ipcMain.handle('project:pickRoot', async () => {
     const picked = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -840,6 +940,30 @@ app.whenReady().then(() => {
     void shell.openExternal('https://unvibe.site/privacy');
     return { ok: true };
   });
+  ipcMain.handle('app:openUrl', (_event, url: unknown) => {
+    if (typeof url !== 'string' || !allowedExternalUrl(url)) return { ok: false };
+    void shell.openExternal(url);
+    return { ok: true };
+  });
+  ipcMain.handle('app:reportFeedback', (_event, context: { screen?: unknown; version?: unknown }) => {
+    const screen = typeof context.screen === 'string' ? context.screen.slice(0, 120) : 'Unknown screen';
+    const version = typeof context.version === 'string' ? context.version.slice(0, 48) : app.getVersion();
+    const subject = encodeURIComponent('Unvibe beta feedback');
+    const body = encodeURIComponent([
+      'Hi Preston,',
+      '',
+      'What happened, and what were you trying to do?',
+      '',
+      'Context (added by Unvibe):',
+      `• App version: ${version}`,
+      `• Screen: ${screen}`,
+      `• Platform: ${process.platform}`,
+      '',
+      'Optional: attach a screenshot if it makes the issue easier to see.',
+    ].join('\n'));
+    void shell.openExternal(`mailto:support@unvibe.site?subject=${subject}&body=${body}`);
+    return { ok: true };
+  });
 
   // --- permissions ---
   ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));
@@ -854,7 +978,6 @@ app.whenReady().then(() => {
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     if (next.barVisibility === 'always') showBar(bar);
-    void track('onboarding_completed');
     return next;
   });
 
@@ -867,8 +990,32 @@ app.whenReady().then(() => {
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load plan.' }; }
   });
   ipcMain.handle('usage:get', async () => {
-    try { return { ok: true, data: await resolveAppUsage() }; }
+    try { return { ok: true, data: { ...await resolveAppUsage(), selections: store().betaSelectedCodeUsage() } }; }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load usage.' }; }
+  });
+  ipcMain.handle('gift:status', async () => {
+    const email = store().account()?.email ?? null;
+    if (!email) {
+      return { ok: true, needsSignIn: true, code: '', used: 0, limit: GIFT_LIMIT, email: null };
+    }
+    const code = giftCodeFromEmail(email);
+    let used = 0;
+    const urls = [
+      `${resolveBackendUrl()}/api/v1/gifts/progress/${code}`,
+      `https://unvibe.site/api/gifts/progress/${code}`,
+    ];
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) continue;
+        const data = await response.json() as { used?: number };
+        used = capGiftUsed(Number(data.used) || 0);
+        break;
+      } catch {
+        /* try the next origin */
+      }
+    }
+    return { ok: true, needsSignIn: false, code, used, limit: GIFT_LIMIT, email };
   });
   ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));
   ipcMain.handle('ai:setKey', (_e, key: string) => {
@@ -884,18 +1031,11 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('ai:clearKey', () => { clearAiKey(); return { ok: true, data: aiKeyStatus() }; });
   ipcMain.handle('ai:models', () => ({ ok: true, data: listLocalAiProviders() }));
-  ipcMain.handle('ai:cloudModels', () => ({
-    ok: true,
-    data: {
-      defaultModel: normalizeCloudModel(settings().all().cloudModel),
-      models: listCloudChatModels(),
-    },
-  }));
   ipcMain.handle('ai:costOverview', (_e, provider?: LocalAiProviderId) => {
     const id = normalizeLocalAiProvider(provider ?? settings().all().aiProvider);
     return { ok: true, data: costOverview(id) };
   });
-  ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual' | 'lifetime'; seats: number; workspaceId?: string; workspaceName?: string }) => {
+  ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }) => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in before starting checkout.' };
     try { const url = await startBillingCheckout(token, input); await shell.openExternal(url); return { ok: true }; }
@@ -907,88 +1047,11 @@ app.whenReady().then(() => {
     try { const url = await startBillingPortal(token, workspaceId); await shell.openExternal(url); return { ok: true }; }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Billing could not open.' }; }
   });
-  ipcMain.handle('teams:listWorkspaces', async () => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in to manage workspaces.' };
-    try {
-      return { ok: true, data: { workspaces: await listWorkspaces(token), activeWorkspaceId: settings().all().activeWorkspaceId } };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Workspaces could not load.' }; }
-  });
-  ipcMain.handle('teams:setActiveWorkspace', (_e, workspaceId: string) => {
-    const id = String(workspaceId ?? '').trim();
-    settings().set({ activeWorkspaceId: id || undefined });
-    return { ok: true, data: { activeWorkspaceId: settings().all().activeWorkspaceId } };
-  });
-  ipcMain.handle('teams:create', async (_e, name: string) => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in to create a team workspace.' };
-    try {
-      const workspace = await createTeamWorkspace(token, String(name ?? 'Team'));
-      settings().set({ activeWorkspaceId: workspace.id });
-      return { ok: true, data: { workspace } };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Team could not be created.' }; }
-  });
-  ipcMain.handle('teams:members', async (_e, workspaceId: string) => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in to view members.' };
-    try { return { ok: true, data: { members: await listWorkspaceMembers(token, String(workspaceId)) } }; }
-    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Members could not load.' }; }
-  });
-  ipcMain.handle('teams:invite', async (_e, input: { workspaceId: string; email: string; role?: 'admin' | 'member' }) => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in to invite teammates.' };
-    try {
-      const result = await inviteWorkspaceMember(token, String(input.workspaceId), String(input.email), input.role === 'admin' ? 'admin' : 'member');
-      return { ok: true, data: result };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Invite could not be sent.' }; }
-  });
-  ipcMain.handle('teams:acceptInvite', async (_e, inviteToken: string) => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in with the invited email to accept.' };
-    const raw = String(inviteToken ?? '').trim();
-    const match = raw.match(/\/invite\/([^/?#]+)/);
-    const invite = match?.[1] ?? raw;
-    try {
-      const workspace = await acceptWorkspaceInvite(token, invite);
-      settings().set({ activeWorkspaceId: workspace.id });
-      return { ok: true, data: { workspace } };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Invite could not be accepted.' }; }
-  });
-  ipcMain.handle('teams:history', async (_e, workspaceId: string) => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in to view team activity.' };
-    try {
-      const events = await pullTeamHistory(token, String(workspaceId), 80);
-      return { ok: true, data: { events } };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Team activity could not load.' }; }
-  });
-  ipcMain.handle('teams:projects', async (_e, workspaceId: string) => {
-    const token = store().token();
-    if (!token) return { ok: false, error: 'Sign in to view team projects.' };
-    try { return { ok: true, data: { projects: await pullTeamProjects(token, String(workspaceId)) } }; }
-    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Team projects could not load.' }; }
-  });
-  ipcMain.handle('gifts:mine', async () => {
-    const account = store().account();
-    if (!account?.email) return { ok: false, error: 'Sign in to get your gift code.' };
-    const token = store().token();
-    if (token) {
-      try { return { ok: true, data: await giftMine(token) }; }
-      catch { /* mine is not on this backend yet; fall through to the public code card */ }
-    }
-    try { return { ok: true, data: await giftCardForEmail(account.email) }; }
-    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Gift details could not load.' }; }
-  });
-  ipcMain.handle('clipboard:write', (_e, text: string) => {
-    clipboard.writeText(String(text ?? ''));
-    return { ok: true };
-  });
   ipcMain.handle('account:signIn', async (_e, email: string) => {
     try {
       const acct = await signIn(email);
       await persistAccount(acct);
       void flush();
-      void track('account_signed_in', { method: 'email' });
       return { ok: true, email: acct.email };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-in failed.' };
@@ -999,7 +1062,6 @@ app.whenReady().then(() => {
       const acct = await signUp(email);
       await persistAccount(acct);
       void flush();
-      void track('account_signed_in', { method: 'signup' });
       return { ok: true, email: acct.email };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed.' };
@@ -1025,7 +1087,6 @@ app.whenReady().then(() => {
           });
           if (devicePoll) clearInterval(devicePoll); devicePoll = null;
           void flush();
-          void track('account_signed_in', { method: 'device' });
           companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user' });
         } catch { /* polling retries until expiry */ }
       })(), Math.max(2, device.interval) * 1000);

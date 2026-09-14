@@ -37,8 +37,6 @@ export interface ReviewRequestPayload {
   question?: string;
   variant?: 'default' | 'different';
   quizMode?: QuizMode;
-  /** Optional OpenRouter free-chat model id when using Unvibe cloud AI. */
-  model?: string;
 }
 
 /**

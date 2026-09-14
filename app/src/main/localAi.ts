@@ -157,9 +157,9 @@ export function buildLocalSystemPrompt(payload: ReviewRequestPayload): string {
   return [
     'You are Unvibe, a code-comprehension tutor. Help the developer UNDERSTAND code — do not rewrite it unless asked.',
     'Use ONLY the provided context. Separate what the code SHOWS, what you INFER, and what is UNCERTAIN.',
-    'Write a DETAILED explanation the reader can reopen later. Prefer several short sections over a one-line summary.',
-    'Cover: what this code is, how it works, why it is here, risks or edge cases, and what to check next.',
     'Write clean readable prose. Short paragraphs or simple markdown bullets (* item) are fine.',
+    'Use these four markdown headings in this exact order: ## What changed, ## Why it matters, ## What to watch, ## Check yourself.',
+    'For a selection rather than a diff, “What changed” means what the selected code does. Keep Check yourself to one short question and do not answer it.',
     'Do NOT use [[cite:...]] markers, HTML, XML, curly-brace templates, or raw markup like {}<>?.',
     'When referring to code, say "line 12" or name the function in plain words.',
     'Be direct. No preamble.',
@@ -285,38 +285,25 @@ async function streamGemini(
   });
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${await res.text().catch(() => '')}`);
   const raw = await res.text();
-  const emitted = emitGeminiTokens(raw, onToken);
+  let emitted = 0;
+  for (const event of raw.split('\n\n')) {
+    const dataLine = event.split('\n').find((l) => l.startsWith('data: '));
+    if (!dataLine) continue;
+    const data = dataLine.slice(6).trim();
+    if (!data) continue;
+    try {
+      const json = JSON.parse(data) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
+      for (const part of json.candidates?.[0]?.content?.parts ?? []) {
+        if (part.thought || !part.text) continue;
+        onToken(part.text);
+        emitted += part.text.length;
+      }
+    } catch {
+      /* skip */
+    }
+  }
   if (emitted === 0) throw new Error('Gemini returned an empty response. Check the key and try again.');
   return `gemini:${info.model}`;
-}
-
-export function emitGeminiTokens(raw: string, onToken: (text: string) => void): number {
-  let emitted = 0;
-  const take = (chunk: { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> }) => {
-    for (const part of chunk.candidates?.[0]?.content?.parts ?? []) {
-      if (part.thought || !part.text) continue;
-      onToken(part.text);
-      emitted += part.text.length;
-    }
-  };
-  if (raw.trim().startsWith('[')) {
-    try {
-      const chunks = JSON.parse(raw) as Array<{ candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> }>;
-      for (const chunk of chunks) take(chunk);
-      if (emitted > 0) return emitted;
-    } catch {
-      /* fall through to SSE */
-    }
-  }
-  for (const event of raw.split(/\r?\n\r?\n/)) {
-    const dataLine = event.split(/\r?\n/).find((l) => l.startsWith('data:'));
-    if (!dataLine) continue;
-    const data = dataLine.replace(/^data:\s?/, '').trim();
-    if (!data || data === '[DONE]') continue;
-    try { take(JSON.parse(data) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> }); }
-    catch { /* skip */ }
-  }
-  return emitted;
 }
 
 async function streamAnthropic(

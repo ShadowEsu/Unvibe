@@ -95,6 +95,7 @@ export function renderInline(text: string): ReactNode[] {
 }
 
 const LIST_RE = /^\s*(?:[-*•]|\d+[.)])\s+/;
+const HEADING_RE = /^\s*#{1,6}\s+(.+?)\s*$/;
 
 function renderList(lines: string[], key: string): ReactNode {
   const ordered = /^\s*\d+[.)]\s+/.test(lines[0] ?? '');
@@ -116,6 +117,12 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
   while (i < lines.length) {
     while (i < lines.length && lines[i]!.trim() === '') i += 1;
     if (i >= lines.length) break;
+    const heading = lines[i]!.match(HEADING_RE);
+    if (heading) {
+      nodes.push(<h2 key={`${key}-h${p++}`} className="rich-heading">{renderInline(heading[1]!)}</h2>);
+      i += 1;
+      continue;
+    }
     if (LIST_RE.test(lines[i]!)) {
       const group: string[] = [];
       while (i < lines.length && (LIST_RE.test(lines[i]!) || (group.length && lines[i]!.startsWith('  ') && lines[i]!.trim()))) {
@@ -127,7 +134,7 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
       continue;
     }
     const para: string[] = [];
-    while (i < lines.length && lines[i]!.trim() !== '' && !LIST_RE.test(lines[i]!)) {
+    while (i < lines.length && lines[i]!.trim() !== '' && !LIST_RE.test(lines[i]!) && !HEADING_RE.test(lines[i]!)) {
       para.push(lines[i]!.trim());
       i += 1;
     }
