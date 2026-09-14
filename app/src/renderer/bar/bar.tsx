@@ -18,6 +18,11 @@ type Snapshot = {
   heat: number[];
 };
 
+type IslandMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 function CodeIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
 }
@@ -46,6 +51,11 @@ function Bar() {
   const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [drawerView, setDrawerView] = useState<'pulse' | 'ask'>('pulse');
+  const [askDraft, setAskDraft] = useState('');
+  const [askMessages, setAskMessages] = useState<IslandMessage[]>([]);
+  const [askBusy, setAskBusy] = useState(false);
+  const [askError, setAskError] = useState('');
   const expandedRef = useRef(false);
   const pointerInside = useRef(false);
   const actionLockUntil = useRef(0);
@@ -154,6 +164,15 @@ function Bar() {
       window.unvibe.setBarExpanded(false);
     }, closeMs);
   };
+  useEffect(() => {
+    const onWindowKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !expandedRef.current) return;
+      event.preventDefault();
+      setPanelExpanded(false);
+    };
+    window.addEventListener('keydown', onWindowKey);
+    return () => window.removeEventListener('keydown', onWindowKey);
+  }, []);
   const open = () => {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
     setPanelExpanded(true);
@@ -188,6 +207,32 @@ function Bar() {
     else window.unvibe.openCompanion();
   };
 
+  const askUnvibe = async (prompt?: string) => {
+    const question = (prompt ?? askDraft).trim();
+    if (!question || askBusy) return;
+    const prior = askMessages;
+    setAskDraft('');
+    setAskError('');
+    setAskMessages((messages) => [...messages, { role: 'user' as const, content: question }].slice(-6));
+    setAskBusy(true);
+    try {
+      const result = snapshot?.recent
+        ? await window.unvibe.studyAsk({ eventId: snapshot.recent.id, question, messages: prior })
+        : await window.unvibe.chatAsk({ messages: prior, question });
+      const response = result as { ok: boolean; answer?: string; error?: string };
+      if (!response.ok || !response.answer?.trim()) {
+        setAskError(response.error ?? 'Unvibe could not answer that. Try again.');
+        return;
+      }
+      setAskMessages((messages) => [...messages, { role: 'assistant' as const, content: response.answer!.trim() }].slice(-6));
+      refresh();
+    } catch {
+      setAskError('Unvibe is offline. Your question stayed on this Mac.');
+    } finally {
+      setAskBusy(false);
+    }
+  };
+
   const enter = () => {
     pointerInside.current = true;
     playLaunchOnce();
@@ -219,7 +264,7 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
+    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, textarea, select, a, [role="tab"]')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
       <div className="strip__main" title={note || 'Unvibe is ready'}>
         {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} /><span>Open app</span></button> : <><div className="strip__wing strip__wing--left">
           <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>
@@ -235,24 +280,66 @@ function Bar() {
       {expanded && !bottom && (
         <div className="strip__drawer">
           <div className="strip__drawer-head">
-            <div><span className="pixel-label">Learning pulse</span><strong>Your understanding, right now.</strong></div>
+            <div>
+              <span className="pixel-label">{drawerView === 'pulse' ? 'Learning pulse' : 'Ask Unvibe'}</span>
+              <strong>{drawerView === 'pulse' ? 'Your understanding, right now.' : snapshot?.recent ? `About ${snapshot.recent.title}` : 'Ask a quick question.'}</strong>
+            </div>
             {loading ? <div className="pixel-loader" aria-label="Refreshing learning stats">{Array.from({ length: 7 }, (_, index) => <i key={index} />)}</div> : <span className="strip__live"><i />local data</span>}
           </div>
-          <div className="strip__metric-grid" aria-label="Actual learning statistics">
-            <article data-tone="streak"><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
-            <article data-tone="understood"><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
-            <article data-tone="lines"><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
-            <article data-tone="revisit"><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
+          <div className="strip__viewbar">
+            <div className="strip__views" role="tablist" aria-label="Island views">
+              <button type="button" role="tab" aria-selected={drawerView === 'pulse'} className={drawerView === 'pulse' ? 'on' : ''} onClick={() => setDrawerView('pulse')}>Pulse</button>
+              <button type="button" role="tab" aria-selected={drawerView === 'ask'} className={drawerView === 'ask' ? 'on' : ''} onClick={() => setDrawerView('ask')}>Ask</button>
+            </div>
+            <button type="button" className="strip__collapse" aria-label="Collapse Island" title="Collapse Island" onClick={() => setPanelExpanded(false)}>⌃</button>
           </div>
-          <div className="strip__learning-row">
-            <div className="strip__recent"><span className="pixel-label">Last learning</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
-            <div className="strip__concepts"><span><b>{snapshot?.conceptsSeen ?? 0}</b> concepts</span><span><b>{snapshot?.conceptsStrong ?? 0}</b> strong</span><small>{snapshot?.usage ? `${snapshot.usage.label} · ${snapshot.usage.pct}%` : 'No workflow data yet'}</small></div>
-          </div>
-          <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 days</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
-          <div className="strip__actions">
-            <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
-            <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
-          </div>
+          {drawerView === 'pulse' ? (
+            <>
+              <div className="strip__metric-grid" aria-label="Actual learning statistics">
+                <article data-tone="streak"><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
+                <article data-tone="understood"><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
+                <article data-tone="lines"><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
+                <article data-tone="revisit"><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
+              </div>
+              <div className="strip__learning-row">
+                <div className="strip__recent"><span className="pixel-label">Last learning</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
+                <div className="strip__concepts"><span><b>{snapshot?.conceptsSeen ?? 0}</b> concepts</span><span><b>{snapshot?.conceptsStrong ?? 0}</b> strong</span><small>{snapshot?.usage ? `${snapshot.usage.label} · ${snapshot.usage.pct}%` : 'No workflow data yet'}</small></div>
+              </div>
+              <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 days</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
+              <div className="strip__actions">
+                <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
+                <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
+              </div>
+            </>
+          ) : (
+            <div className="island-ask">
+              <div className="island-ask__thread" aria-live="polite">
+                {askMessages.length === 0 ? (
+                  <div className="island-ask__empty">
+                    <p>{snapshot?.recent ? 'Ask about the code, the explanation, or what to check next.' : 'Ask Unvibe a question, or select code to give it exact context.'}</p>
+                    <div>
+                      {(snapshot?.recent
+                        ? ['What should I verify?', 'Explain the risky part', 'Give me a quick check']
+                        : ['How do I review AI code?', 'What should I learn next?']
+                      ).map((suggestion) => <button type="button" key={suggestion} onClick={() => void askUnvibe(suggestion)}>{suggestion}</button>)}
+                    </div>
+                  </div>
+                ) : askMessages.map((message, index) => (
+                  <div key={`${message.role}-${index}`} className={`island-ask__message island-ask__message--${message.role}`}>
+                    <span>{message.role === 'user' ? 'You' : 'Unvibe'}</span>
+                    <p>{message.content}</p>
+                  </div>
+                ))}
+                {askBusy ? <div className="island-ask__thinking" role="status"><i /><i /><i /><span>Thinking with your saved context…</span></div> : null}
+                {askError ? <p className="island-ask__error" role="alert">{askError}</p> : null}
+              </div>
+              <form className="island-ask__composer" onSubmit={(event) => { event.preventDefault(); void askUnvibe(); }}>
+                <input aria-label="Ask Unvibe" placeholder={snapshot?.recent ? 'Ask about this explanation…' : 'Ask Unvibe…'} value={askDraft} disabled={askBusy} onChange={(event) => setAskDraft(event.target.value)} autoFocus />
+                <button type="submit" aria-label="Send question" disabled={askBusy || !askDraft.trim()}>↑</button>
+              </form>
+              <div className="island-ask__hint"><span>{snapshot?.recent ? 'Latest explanation attached' : 'No code attached yet'}</span><span>Return to send</span></div>
+            </div>
+          )}
         </div>
       )}
     </div>

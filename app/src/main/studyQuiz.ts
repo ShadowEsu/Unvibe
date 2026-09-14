@@ -119,6 +119,7 @@ export function quizCardStatus(): { used: number; limit: number; remaining: numb
 export async function askStudyAssistant(input: {
   eventId: string;
   question: string;
+  messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }): Promise<{ ok: true; answer: string; remaining: number } | { ok: false; error: string; remaining?: number }> {
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Ask a short question about this lesson.' };
@@ -133,11 +134,20 @@ export async function askStudyAssistant(input: {
   }
 
   const prior = built.event.explanation?.slice(0, 4_000);
+  const conversation = (input.messages ?? [])
+    .filter((message) => (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string')
+    .slice(-4)
+    .map((message) => `${message.role === 'user' ? 'Learner' : 'Unvibe'}: ${message.content.trim().slice(0, 600)}`)
+    .filter((message) => !message.endsWith(': '))
+    .join('\n\n')
+    .slice(-2_000);
   const payload: ReviewRequestPayload = {
     ...built.payload,
     question: prior
-      ? `The learner already saw this explanation:\n\n${prior}\n\nTheir follow-up question:\n${question}`
-      : question,
+      ? `The learner already saw this explanation:\n\n${prior}${conversation ? `\n\nRecent conversation:\n${conversation}` : ''}\n\nTheir follow-up question:\n${question}`
+      : conversation
+        ? `Recent conversation:\n${conversation}\n\nTheir follow-up question:\n${question}`
+        : question,
   };
 
   try {

@@ -82,6 +82,11 @@ body { font-family: "Newsreader", Georgia, serif; font-weight: 500; letter-spaci
 
 .strip__drawer { position:relative; z-index:1; border-top:1px solid rgba(255,255,255,.1); padding:14px 16px 15px; -webkit-app-region:no-drag; animation:drawerReveal .2s cubic-bezier(.16,1,.3,1) both; will-change:transform,opacity; }
 .strip__drawer-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:11px; }.strip__drawer-head > div:first-child { display:grid; gap:4px; }.strip__drawer-head strong { font-size:15px; letter-spacing:-.02em; }.strip__live { display:flex; align-items:center; gap:6px; color:rgba(244,240,250,.52); font-size:8px; white-space:nowrap; }.strip__live i { width:5px; height:5px; border-radius:50%; background:#8bdbb5; }
+.strip__viewbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:-1px 0 11px; }
+.strip__views { display:flex; gap:3px; width:max-content; padding:3px; border:1px solid rgba(255,255,255,.1); border-radius:8px; background:rgba(255,255,255,.045); }
+.strip__views button { min-width:60px; padding:4px 10px; border:0; border-radius:5px; background:transparent; color:rgba(255,255,255,.5); font:600 9px "SF Mono",Menlo,monospace; cursor:pointer; }
+.strip__views button:hover { color:#fff; }.strip__views button.on { background:rgba(255,255,255,.12); color:#fff; }
+.strip__collapse { width:26px; height:26px; border:1px solid rgba(255,255,255,.1); border-radius:7px; background:transparent; color:rgba(255,255,255,.5); cursor:pointer; }.strip__collapse:hover { border-color:rgba(255,255,255,.28); color:#fff; background:rgba(255,255,255,.05); }
 .pixel-loader { height:18px; display:flex; align-items:flex-end; gap:3px; }.pixel-loader i { width:4px; height:4px; background:#a78bfa; animation:pixelLoad .8s steps(2,end) infinite; }.pixel-loader i:nth-child(2),.pixel-loader i:nth-child(6) { animation-delay:.1s; }.pixel-loader i:nth-child(3),.pixel-loader i:nth-child(5) { animation-delay:.2s; }.pixel-loader i:nth-child(4) { animation-delay:.3s; }
 .strip__metric-grid { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px 16px; margin-bottom:10px; }.strip__metric-grid article { min-width:0; display:flex; align-items:baseline; gap:4px; }.strip__metric-grid b { color:#fff; font-size:18px; letter-spacing:-.04em; }.strip__metric-grid article[data-tone="streak"] b { color:#f5a524; }.strip__metric-grid article[data-tone="understood"] b { color:#55c99c; }.strip__metric-grid article[data-tone="lines"] b { color:#c4b5fd; }.strip__metric-grid span { color:rgba(255,255,255,.58); font-size:10px; white-space:nowrap; }
 .strip__learning-row { display:grid; grid-template-columns:1.45fr 1fr; gap:10px; padding:10px 0; border-top:1px solid rgba(255,255,255,.08); border-bottom:1px solid rgba(255,255,255,.08); }
@@ -95,6 +100,26 @@ body { font-family: "Newsreader", Georgia, serif; font-weight: 500; letter-spaci
 .strip__actions button { min-width:0; min-height:35px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:transparent; color:#f4f0fa; padding:7px 10px; text-align:left; font-size:10px; cursor:pointer; }
 .strip__actions button:first-child { background:#6f45d2; border-color:#6f45d2; }.strip__actions button:first-child:hover { background:#805be3; border-color:#805be3; }.strip__actions button:last-child:hover { border-color:rgba(255,255,255,.34); background:rgba(255,255,255,.05); }
 .strip__actions kbd { float:right; border:1px solid rgba(255,255,255,.16); border-radius:4px; padding:1px 4px; color:#c4b5fd; font:8px "SF Mono",Menlo,monospace; }
+.island-ask { min-height:210px; display:flex; flex-direction:column; }
+.island-ask__thread { min-height:0; flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:1px 2px 9px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.18) transparent; }
+.island-ask__empty { margin:auto 0; padding:11px 12px; border:1px solid rgba(255,255,255,.09); border-radius:10px; background:rgba(255,255,255,.035); }
+.island-ask__empty p { color:rgba(255,255,255,.68); font-size:11px; line-height:1.45; }
+.island-ask__empty > div { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.island-ask__empty button { padding:6px 9px; border:1px solid rgba(255,255,255,.13); border-radius:999px; background:transparent; color:#eee9f7; font:10px "Newsreader",Georgia,serif; cursor:pointer; }
+.island-ask__empty button:hover { border-color:rgba(196,181,253,.6); background:rgba(167,139,250,.1); }
+.island-ask__message { max-width:88%; padding:8px 10px; border-radius:10px; }
+.island-ask__message span { display:block; margin-bottom:3px; color:rgba(255,255,255,.44); font:7px "SF Mono",Menlo,monospace; letter-spacing:.08em; text-transform:uppercase; }
+.island-ask__message p { color:rgba(255,255,255,.82); font-size:11px; line-height:1.42; white-space:pre-wrap; }
+.island-ask__message--user { align-self:flex-end; background:rgba(167,139,250,.16); border:1px solid rgba(196,181,253,.2); }
+.island-ask__message--assistant { align-self:flex-start; background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.08); }
+.island-ask__thinking { display:flex; align-items:center; gap:4px; color:rgba(255,255,255,.55); font-size:9px; }
+.island-ask__thinking i { width:4px; height:4px; background:#a78bfa; animation:pixelLoad .8s steps(2,end) infinite; }.island-ask__thinking i:nth-child(2) { animation-delay:.12s; }.island-ask__thinking i:nth-child(3) { animation-delay:.24s; }.island-ask__thinking span { margin-left:4px; }
+.island-ask__error { padding:7px 9px; border:1px solid rgba(255,184,174,.22); border-radius:8px; background:rgba(133,48,40,.18); color:#ffd2cc; font-size:10px; line-height:1.35; }
+.island-ask__composer { display:flex; gap:7px; margin-top:3px; }
+.island-ask__composer input { min-width:0; flex:1; height:35px; padding:0 11px; border:1px solid rgba(255,255,255,.14); border-radius:9px; outline:0; background:rgba(255,255,255,.065); color:#fff; font:11px "Newsreader",Georgia,serif; }
+.island-ask__composer input::placeholder { color:rgba(255,255,255,.38); }.island-ask__composer input:focus { border-color:#a78bfa; box-shadow:0 0 0 2px rgba(167,139,250,.14); }
+.island-ask__composer button { width:35px; height:35px; border:0; border-radius:9px; background:#6f45d2; color:#fff; font-size:16px; cursor:pointer; }.island-ask__composer button:hover:not(:disabled) { background:#805be3; }.island-ask__composer button:disabled { opacity:.36; cursor:default; }
+.island-ask__hint { display:flex; justify-content:space-between; gap:12px; margin-top:6px; color:rgba(255,255,255,.38); font:7px "SF Mono",Menlo,monospace; }
 @keyframes statSwap { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 @keyframes drawerReveal { from { opacity:0; transform:translateY(-7px) scaleY(.985); } to { opacity:1; transform:translateY(0) scaleY(1); } }
 @keyframes islandExpand { from { clip-path:inset(0 140px 286px round 0 0 19px 19px); } to { clip-path:inset(0 0 0 round 0 0 24px 24px); } }

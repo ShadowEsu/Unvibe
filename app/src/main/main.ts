@@ -761,7 +761,7 @@ app.whenReady().then(() => {
     return { ok: true };
   });
   ipcMain.handle('study:askStatus', () => studyAskStatus());
-  ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string }) => askStudyAssistant(input));
+  ipcMain.handle('study:ask', (_e, input: { eventId: string; question: string; messages?: Array<{ role: 'user' | 'assistant'; content: string }> }) => askStudyAssistant(input));
   ipcMain.handle('quiz:status', () => quizCardStatus());
   ipcMain.handle('quiz:start', (_e, input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) =>
     startQuizCard(input.eventId, input.mode),

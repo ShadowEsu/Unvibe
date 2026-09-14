@@ -62,9 +62,9 @@ const BOTTOM_BAR_COMPACT_W = 48;
 const BOTTOM_BAR_W = 160;
 const BAR_H = 44;
 const BAR_EXPANDED_W = 620;
-// The drawer contains recent learning, stats, and two actions. Keep transparent
-// window chrome larger than its visual card so no interactive content is clipped.
-const BAR_EXPANDED_H = 324;
+// The drawer contains learning pulse and contextual conversation views. Keep
+// transparent window chrome large enough that the composer is never clipped.
+const BAR_EXPANDED_H = 360;
 
 function compactBarWidth(position: BarPosition): number {
   if (position === 'top-center') return TOP_BAR_W;
