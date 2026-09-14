@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, heatLevel, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, bestStreak, currentStreak, deriveSkillState, forSync, heatLevel, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -117,6 +117,7 @@ test('computeLearningItems includes on-device code and explanation when present'
       outcome: 'needs_review',
       code: 'const f = () => x;',
       explanation: 'This closes over x.',
+      note: 'Remember that x comes from the outer scope.',
     }),
   ], 10);
   assert.equal(items[0]!.id, 'latest');
@@ -127,7 +128,16 @@ test('computeLearningItems includes on-device code and explanation when present'
   assert.equal(items[0]!.lines, 12);
   assert.equal(items[0]!.code, 'const f = () => x;');
   assert.equal(items[0]!.explanation, 'This closes over x.');
+  assert.equal(items[0]!.note, 'Remember that x comes from the outer scope.');
   assert.equal(items[1]!.code, undefined);
+});
+
+test('personal lesson notes never enter the cloud sync payload', () => {
+  const local = ev({ code: 'const x = 1;', explanation: 'Sets x.', note: 'Ask why this is const.' });
+  const payload = forSync(local);
+  assert.equal(payload.code, undefined);
+  assert.equal(payload.explanation, undefined);
+  assert.equal(payload.note, undefined);
 });
 
 test('computeReviewQueue prioritizes needs_review then spaced understood items', () => {

@@ -7,6 +7,7 @@ interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
   language?: string; code?: string; explanation?: string;
+  note?: string;
 }
 
 const STUDY_LEVELS = [
@@ -120,6 +121,10 @@ export function Learn({
   const [quizLeft, setQuizLeft] = useState<number | null>(null);
   const [cardKey, setCardKey] = useState(0);
   const [cleared, setCleared] = useState(0);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [savedNote, setSavedNote] = useState('');
+  const [noteStatus, setNoteStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [noteError, setNoteError] = useState('');
   const letters = 'ABCDEFGH';
   const forgetLesson = async (id: string) => {
     if (!window.confirm('Remove this lesson from this Mac?')) return;
@@ -131,7 +136,7 @@ export function Learn({
 
   const filtered = catalog.filter((item) => {
     const matchesFilter = filter === 'all' || (filter === 'understood' ? item.outcome === 'understood' : item.outcome === 'needs_review');
-    const haystack = [item.title, item.meta, item.file, item.project, item.language, item.concept, item.explanation].filter(Boolean).join(' ').toLowerCase();
+    const haystack = [item.title, item.meta, item.file, item.project, item.language, item.concept, item.explanation, item.note].filter(Boolean).join(' ').toLowerCase();
     return matchesFilter && haystack.includes(query.trim().toLowerCase());
   });
 
@@ -167,6 +172,10 @@ export function Learn({
     setWrongPicks([]);
     setQuizError('');
     setCleared(0);
+    setNoteDraft(item.note ?? '');
+    setSavedNote(item.note ?? '');
+    setNoteStatus('idle');
+    setNoteError('');
   };
 
   const closeLesson = () => {
@@ -177,6 +186,38 @@ export function Learn({
     setWrongPicks([]);
     setCleared(0);
   };
+
+  const saveNote = async () => {
+    if (!open || noteStatus === 'saving') return;
+    setNoteStatus('saving');
+    setNoteError('');
+    try {
+      const result = await window.unvibe.setLearningNote({ id: open.id, note: noteDraft }) as { ok?: boolean; error?: string };
+      if (!result?.ok) {
+        setNoteStatus('error');
+        setNoteError(result?.error ?? 'Could not save this note. Your draft is still here.');
+        return;
+      }
+    } catch {
+      setNoteStatus('error');
+      setNoteError('Could not save this note. Your draft is still here.');
+      return;
+    }
+    const normalized = noteDraft.trim();
+    setSavedNote(normalized);
+    setNoteDraft(normalized);
+    setNoteStatus('saved');
+    void onRefresh();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const note = open.note ?? '';
+    setNoteDraft(note);
+    setSavedNote(note);
+    setNoteStatus('idle');
+    setNoteError('');
+  }, [open?.id]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -341,6 +382,31 @@ export function Learn({
               ) : (
                 <p className="muted">No explanation text on file yet for this one.</p>
               )}
+              <section className="lesson-note" aria-labelledby="lesson-note-title">
+                <div className="lesson-note__head">
+                  <div>
+                    <span className="learning-kicker" id="lesson-note-title">My note</span>
+                    <p>Capture what you want to remember. This stays on this Mac.</p>
+                  </div>
+                  <span className={`lesson-note__status lesson-note__status--${noteStatus}`} role="status">
+                    {noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved locally' : noteStatus === 'error' ? 'Not saved' : ''}
+                  </span>
+                </div>
+                <textarea
+                  value={noteDraft}
+                  maxLength={4000}
+                  rows={4}
+                  placeholder="Add your own explanation, reminder, or question…"
+                  onChange={(event) => { setNoteDraft(event.target.value); setNoteStatus('idle'); setNoteError(''); }}
+                />
+                <div className="lesson-note__actions">
+                  <span>{noteDraft.length.toLocaleString()} / 4,000</span>
+                  <button type="button" className="soft-btn" disabled={noteStatus === 'saving' || noteDraft.trim() === savedNote} onClick={() => void saveNote()}>
+                    {noteStatus === 'saving' ? 'Saving' : 'Save note'}
+                  </button>
+                </div>
+                {noteError ? <p className="form-error">{noteError}</p> : null}
+              </section>
             </>
           ) : null}
 

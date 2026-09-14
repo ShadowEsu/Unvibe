@@ -755,6 +755,16 @@ app.whenReady().then(() => {
     if (!event) return null;
     return computeLearningItems([event], 1)[0] ?? null;
   });
+  ipcMain.handle('learning:setNote', (_e, input: { id?: unknown; note?: unknown } | undefined) => {
+    if (typeof input?.id !== 'string' || !input.id) return { ok: false, error: 'Missing lesson.' };
+    if (typeof input?.note !== 'string') return { ok: false, error: 'Note must be text.' };
+    try {
+      const saved = store().updateLesson(input.id, { note: input.note });
+      return saved ? { ok: true } : { ok: false, error: 'That lesson is no longer on this Mac.' };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Could not save this note.' };
+    }
+  });
   ipcMain.handle('learning:forget', (_e, id: string) => {
     if (typeof id !== 'string' || !id) return { ok: false, error: 'Missing lesson.' };
     store().forgetEvent(id);

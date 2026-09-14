@@ -27,6 +27,7 @@ interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
   language?: string; code?: string; explanation?: string;
+  note?: string;
 }
 
 const STUDY_LEVELS = [

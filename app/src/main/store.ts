@@ -131,13 +131,19 @@ class Store {
   }
 
   /** Update on-device lesson body without forcing a cloud re-upload of code. */
-  updateLesson(id: string, patch: { code?: string; explanation?: string; level?: string }): void {
+  updateLesson(id: string, patch: { code?: string; explanation?: string; level?: string; note?: string }): boolean {
     const ev = this.data.events.find((e) => e.id === id);
-    if (!ev) return;
+    if (!ev) return false;
     if (patch.code !== undefined) ev.code = patch.code.slice(0, 40_000);
     if (patch.explanation !== undefined) ev.explanation = patch.explanation.slice(0, 60_000);
     if (patch.level) ev.level = patch.level;
+    if (patch.note !== undefined) {
+      const note = patch.note.trim().slice(0, 4_000);
+      if (note) ev.note = note;
+      else delete ev.note;
+    }
     this.save();
+    return true;
   }
 
   eventById(id: string): LocalEvent | undefined {

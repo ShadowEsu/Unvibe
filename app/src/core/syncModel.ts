@@ -25,6 +25,7 @@ export function mergeRemoteEvents(
         ...event,
         code: previous.code ?? event.code,
         explanation: previous.explanation ?? event.explanation,
+        note: previous.note,
       };
       merged += 1;
     }

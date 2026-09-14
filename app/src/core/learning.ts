@@ -28,6 +28,8 @@ export interface LocalEvent {
   code?: string;
   /** Local-only explanation text — never synced to the cloud. */
   explanation?: string;
+  /** Optional personal note attached to this lesson. Local only — never synced. */
+  note?: string;
 }
 
 export interface Usage {
@@ -74,11 +76,12 @@ export interface LearningItem extends FeedItem {
   language?: string;
   code?: string;
   explanation?: string;
+  note?: string;
 }
 
 /** Strip local-only lesson bodies before any remote sync. */
 export function forSync(event: LocalEvent): LocalEvent {
-  const { code: _code, explanation: _explanation, ...rest } = event;
+  const { code: _code, explanation: _explanation, note: _note, ...rest } = event;
   return rest;
 }
 
@@ -252,6 +255,7 @@ function toLearningItem(e: LocalEvent, dueLabel?: string): LearningItem {
     language: e.language,
     code: e.code,
     explanation: e.explanation,
+    note: e.note,
     ...(dueLabel ? { dueLabel } : {}),
   };
 }

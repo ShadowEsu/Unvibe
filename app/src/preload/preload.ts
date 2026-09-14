@@ -67,6 +67,7 @@ const api = {
   feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
   history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
   learningItem: (id: string) => ipcRenderer.invoke('learning:item', id),
+  setLearningNote: (input: { id: string; note: string }) => ipcRenderer.invoke('learning:setNote', input),
   forgetLearning: (id: string) => ipcRenderer.invoke('learning:forget', id),
   studyAskStatus: () => ipcRenderer.invoke('study:askStatus'),
   studyAsk: (input: { eventId: string; question: string; messages?: Array<{ role: 'user' | 'assistant'; content: string }> }) => ipcRenderer.invoke('study:ask', input),
