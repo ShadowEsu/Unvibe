@@ -1686,6 +1686,7 @@ h1 { font-family: var(--font-display); font-size: 30px; font-weight: 400; letter
 .integration-state { white-space:nowrap; border-radius:999px; padding:4px 8px; font:10px var(--font-mono); font-weight:700; }.integration-state.detected { background:var(--accent-soft); color:var(--accent-strong); }.integration-state.available { background:var(--hover); color:var(--muted); }.integration-state.not-installed { background:transparent; border:1px solid var(--line); color:var(--faint); }.settings-empty { color:var(--muted); font:13px var(--font-sans); padding:20px 0; }.settings-about-mark { color:var(--accent); margin:4px 0 20px; }
 .integ { display: grid; gap: 22px; }
 .integ__lead { margin: -8px 0 4px; color: var(--muted); font: 14px/1.5 var(--font-sans); max-width: 38rem; }
+.integ__message { margin-top:-10px; padding:9px 11px; border:1px solid var(--line); border-radius:9px; background:var(--paper); color:var(--muted); font:12px/1.45 var(--font-sans); }
 .integ__group h3 {
   margin: 0 0 10px;
   color: var(--faint);
@@ -1713,6 +1714,7 @@ h1 { font-family: var(--font-display); font-size: 30px; font-weight: 400; letter
   color: var(--accent-strong);
   font: 750 14px/1 var(--font-sans);
 }
+.integ-card__action { margin-top:10px; width:auto; }
 .integ-card--not-installed .integ-card__mark { background: var(--hover); color: var(--muted); }
 .integ-card__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .integ-card__body b { font-size: 14.5px; letter-spacing: -.02em; }

@@ -1068,8 +1068,27 @@ function IntegrationsPanel() {
     detail: string;
     blurb: string;
     state: 'detected' | 'available' | 'not-installed';
+    bridgeInstalled?: boolean;
+    bridgeAvailable?: boolean;
   }> | null>(null);
-  useEffect(() => { void window.unvibe.integrations().then((result) => setItems(result as typeof items)); }, []);
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const load = () => void window.unvibe.integrations().then((result) => setItems(result as typeof items));
+  useEffect(load, []);
+  const installBridge = async (id: string, name: string) => {
+    if (id !== 'cursor' && id !== 'vscode') return;
+    if (installing) return;
+    setInstalling(id);
+    setMessage('');
+    const result = await window.unvibe.installDesktopBridge(id) as { ok?: boolean; error?: string };
+    setInstalling(null);
+    if (!result?.ok) {
+      setMessage(result?.error ?? `Could not install the ${name} bridge.`);
+      return;
+    }
+    setMessage(`${name} bridge installed. Reload ${name} if it is open.`);
+    load();
+  };
   if (!items) return <div className="settings-empty">Checking this Mac…</div>;
   const groups = ['Editors', 'Agents', 'Shell', 'Workspace'].map((group) => ({
     group,
@@ -1077,7 +1096,8 @@ function IntegrationsPanel() {
   })).filter((item) => item.rows.length > 0);
   return (
     <div className="integ">
-      <p className="integ__lead">Unvibe sits beside tools you already have. It never writes into their settings. Detected means that app is on this Mac, so a selection there can be explained.</p>
+      <p className="integ__lead">Unvibe sits beside tools you already have. Detected means the app is on this Mac. Bridge ready means Command U can send the editor selection directly.</p>
+      {message ? <div className="integ__message" role="status">{message}</div> : null}
       {groups.map(({ group, rows }) => (
         <section key={group} className="integ__group">
           <h3>{group}</h3>
@@ -1088,10 +1108,20 @@ function IntegrationsPanel() {
                 <div className="integ-card__body">
                   <div className="integ-card__row">
                     <b>{item.name}</b>
-                    <span className={`integration-state ${item.state}`}>{item.state === 'not-installed' ? 'Not installed' : item.state === 'detected' ? 'Detected' : 'Available'}</span>
+                    <span className={`integration-state ${item.state}`}>{item.bridgeInstalled ? 'Bridge ready' : item.state === 'not-installed' ? 'Not installed' : item.state === 'detected' ? 'Detected' : 'Available'}</span>
                   </div>
                   <small>{item.blurb}</small>
                   <p>{item.detail}</p>
+                  {(item.id === 'cursor' || item.id === 'vscode') && item.state === 'detected' && !item.bridgeInstalled ? (
+                    <button
+                      type="button"
+                      className="act integ-card__action"
+                      disabled={Boolean(installing) || !item.bridgeAvailable}
+                      onClick={() => void installBridge(item.id, item.name)}
+                    >
+                      {installing === item.id ? 'Installing…' : item.bridgeAvailable ? 'Install Desktop Bridge' : 'Bridge package unavailable'}
+                    </button>
+                  ) : null}
                 </div>
               </article>
             ))}

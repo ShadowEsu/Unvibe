@@ -84,6 +84,7 @@ const api = {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
   integrations: () => ipcRenderer.invoke('integrations:status'),
+  installDesktopBridge: (editor: 'cursor' | 'vscode') => ipcRenderer.invoke('integrations:installBridge', editor),
 
   // permissions
   accessibility: () => ipcRenderer.invoke('perms:accessibility'),
