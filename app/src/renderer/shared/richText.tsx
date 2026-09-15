@@ -95,7 +95,7 @@ export function renderInline(text: string): ReactNode[] {
 }
 
 const LIST_RE = /^\s*(?:[-*•]|\d+[.)])\s+/;
-const HEADING_RE = /^\s*#{1,6}\s+(.+?)\s*$/;
+const HEADING_RE = /^\s*(#{1,6})\s+(.+?)\s*$/;
 
 function renderList(lines: string[], key: string): ReactNode {
   const ordered = /^\s*\d+[.)]\s+/.test(lines[0] ?? '');
@@ -119,7 +119,9 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
     if (i >= lines.length) break;
     const heading = lines[i]!.match(HEADING_RE);
     if (heading) {
-      nodes.push(<h2 key={`${key}-h${p++}`} className="rich-heading">{renderInline(heading[1]!)}</h2>);
+      const depth = Math.min(4, Math.max(2, heading[1]!.length)) as 2 | 3 | 4;
+      const Heading = `h${depth}` as 'h2' | 'h3' | 'h4';
+      nodes.push(<Heading key={`${key}-h${p++}`} className={`rich-heading rich-heading--${depth}`}>{renderInline(heading[2]!)}</Heading>);
       i += 1;
       continue;
     }
@@ -150,7 +152,8 @@ export function renderRich(raw: string, streaming = false): ReactNode[] {
   if (streaming) {
     text = text
       .replace(/\[\[(?:c(?:i(?:t(?:e(?::[^\]]*)?)?)?)?)?$/, '')
-      .replace(/\{\{[^}]*$/, '');
+      .replace(/\{\{[^}]*$/, '')
+      .replace(/(^|\n)#{1,6}\s*$/, '$1');
   }
 
   const nodes: ReactNode[] = [];

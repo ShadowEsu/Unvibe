@@ -120,6 +120,7 @@ export function Learn({
   const [quizError, setQuizError] = useState('');
   const [quizLeft, setQuizLeft] = useState<number | null>(null);
   const [cardKey, setCardKey] = useState(0);
+  const quizRequestRef = useRef(false);
   const [cleared, setCleared] = useState(0);
   const [noteDraft, setNoteDraft] = useState('');
   const [savedNote, setSavedNote] = useState('');
@@ -258,16 +259,24 @@ export function Learn({
   };
 
   const startQuiz = async (item: LearningItem) => {
+    if (quizRequestRef.current) return;
+    quizRequestRef.current = true;
     setQuizBusy(true); setQuizError(''); setCard(null); setResult(null); setWrongPicks([]);
-    const r = await window.unvibe.quizStart({ eventId: item.id, mode: quizMode }) as {
-      ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number;
-    };
-    setQuizBusy(false);
-    if (r.remaining !== undefined) setQuizLeft(r.remaining);
-    if (!r.ok || !r.question || !r.options) { setQuizError(r.error ?? 'Could not start quiz.'); return; }
-    const nextKey = cardKey + 1;
-    setCardKey(nextKey);
-    setCard({ question: r.question, options: r.options, conceptLabel: r.conceptLabel ?? item.title, key: nextKey });
+    try {
+      const r = await window.unvibe.quizStart({ eventId: item.id, mode: quizMode }) as {
+        ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number;
+      };
+      if (r.remaining !== undefined) setQuizLeft(r.remaining);
+      if (!r.ok || !r.question || !r.options) { setQuizError(r.error ?? 'Could not start quiz.'); return; }
+      const nextKey = cardKey + 1;
+      setCardKey(nextKey);
+      setCard({ question: r.question, options: r.options, conceptLabel: r.conceptLabel ?? item.title, key: nextKey });
+    } catch {
+      setQuizError('Could not start the next question. Try again.');
+    } finally {
+      quizRequestRef.current = false;
+      setQuizBusy(false);
+    }
   };
 
   const answerQuiz = async (choice: number) => {
