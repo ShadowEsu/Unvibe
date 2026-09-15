@@ -218,7 +218,6 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
 const NAV: Array<{ id: PageId; icon: string }> = [
   { id: 'Home', icon: IC.home },
   { id: 'Learn', icon: IC.study },
-  { id: 'History', icon: IC.history },
   { id: 'Quiz', icon: IC.quiz },
   { id: 'Chat', icon: IC.chat },
   { id: 'Progress', icon: IC.progress },
@@ -483,7 +482,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
           </div>
         </section>
         <aside className="login__card">
-          <div className="login__mark"><LogoMark size={42} stroke={1.7} /></div>
+          <div className="login__mark"><LogoMark size={34} stroke={1.7} /></div>
           <div className="login__brand">UNVIBE</div>
           <h2 className="login__tag">Carry your learning forward.</h2>
           <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
@@ -1225,7 +1224,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             </>
           )}
 
-          {tab === 'Learning' && <><div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div><div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this Mac. Use the trash on History to remove a single lesson.</div></div></div></>}
+          {tab === 'Learning' && <><div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div><div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this Mac. Open Learn to search, revisit, or remove a lesson.</div></div></div></>}
 
           {tab === 'Integrations' && <IntegrationsPanel />}
 
@@ -1364,7 +1363,7 @@ function App() {
   const chatLabel = settings?.useOwnAi
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
-  const sideCompact = sideWidth < 200;
+  const sideCompact = sideWidth < 178;
   const sideHidden = settings?.sidebarHidden ?? false;
   const searchGroups = (() => {
     const query = searchQuery.trim().toLowerCase();
@@ -1380,7 +1379,7 @@ function App() {
         run: () => {
           setLessonSeedId(item.id);
           setLessonSeedRevision((revision) => revision + 1);
-          setPage('History');
+          setPage('Learn');
           close();
         },
       }));

@@ -20,7 +20,7 @@ const ISLAND_BEHAVIOR_REVISION = 2;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 /** Makes the companion navigation quieter without overriding custom widths. */
-const SIDEBAR_DENSITY_REVISION = 1;
+const SIDEBAR_DENSITY_REVISION = 2;
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -113,7 +113,7 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
-  sidebarWidth: 216,
+  sidebarWidth: 204,
   sidebarHidden: false,
   giftCode: '',
 };
@@ -144,7 +144,7 @@ class SettingsStore {
     const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
       loaded.barVisibility === 'during-review';
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
-      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 232);
+      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -174,7 +174,7 @@ class SettingsStore {
           }
         : {}),
       ...(needsIdeShortcutMigration ? { shortcut: 'Control+U' } : {}),
-      ...(needsSidebarDensity ? { sidebarWidth: 216 } : {}),
+      ...(needsSidebarDensity ? { sidebarWidth: 204 } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
