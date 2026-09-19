@@ -1,22 +1,53 @@
 import { useEffect, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
+import type { ChangeBrief } from '../../core/changeBrief';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  ts?: string;
+}
+
+interface SavedThread {
+  id: string;
+  title: string;
+  startedAt: string;
+  updatedAt: string;
+  turns: Array<{ role: 'user' | 'assistant'; content: string; ts: string }>;
+}
+
+function newThreadId(): string {
+  return `ask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function threadTitle(messages: ChatMessage[]): string {
+  const first = messages.find((item) => item.role === 'user')?.content ?? 'Question';
+  return first.replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
+function whenLabel(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return '';
+  const today = new Date();
+  const sameDay = then.toDateString() === today.toDateString();
+  if (sameDay) return then.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  if (then.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  const sameYear = then.getFullYear() === today.getFullYear();
+  return then.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 const STARTERS = [
-  'Why does this return early?',
-  'Explain this like I am new to the file.',
-  'What would break if I deleted this?',
+  'What just changed in this repo?',
+  'What should I understand before committing?',
+  'Which files are most likely to go stale?',
 ];
 
 function greetName(name?: string): string {
   const clean = (name ?? '').trim();
-  if (!clean || clean.toLowerCase() === 'there') return 'Hello again.';
-  return `Hello again, ${clean}.`;
+  if (!clean || clean.toLowerCase() === 'there') return 'Ask Unvibe';
+  return `Ask Unvibe, ${clean.split(/\s+/)[0]}`;
 }
 
 function usageTone(pct: number): 'ok' | 'warn' | 'hot' {
@@ -105,6 +136,10 @@ export function Chat({
   const [left, setLeft] = useState(usage?.remaining ?? null);
   const [copied, setCopied] = useState<number | null>(null);
   const [modelName, setModelName] = useState('');
+  const [brief, setBrief] = useState<ChangeBrief | null>(null);
+  const [saved, setSaved] = useState<SavedThread[]>([]);
+  const threadRef = useRef(newThreadId());
+  const startedRef = useRef(new Date().toISOString());
   const endRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -132,9 +167,52 @@ export function Chat({
     });
   }, [usingOwnAi, providerId]);
 
+  const loadSaved = () => {
+    void window.unvibe.chatThreads().then((result) => {
+      const next = result as { ok?: boolean; threads?: SavedThread[] };
+      setSaved(next?.threads ?? []);
+    });
+  };
+
   useEffect(() => {
     areaRef.current?.focus();
+    loadSaved();
+    void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
+      const next = result as { ok?: boolean; brief?: ChangeBrief; branch?: string };
+      if (next?.ok && next.brief && !next.brief.empty) setBrief(next.brief);
+    });
   }, []);
+
+  const persist = (next: ChatMessage[]) => {
+    if (next.length === 0) return;
+    const now = new Date().toISOString();
+    void window.unvibe
+      .saveChatThread({
+        id: threadRef.current,
+        title: threadTitle(next),
+        startedAt: startedRef.current,
+        updatedAt: now,
+        turns: next.map((item) => ({ role: item.role, content: item.content, ts: item.ts ?? now })),
+      })
+      .then(loadSaved);
+  };
+
+  const startNew = () => {
+    threadRef.current = newThreadId();
+    startedRef.current = new Date().toISOString();
+    setMessages([]);
+    setError('');
+    loadSaved();
+    areaRef.current?.focus();
+  };
+
+  const resume = (thread: SavedThread) => {
+    threadRef.current = thread.id;
+    startedRef.current = thread.startedAt;
+    setMessages(thread.turns.map((turn) => ({ role: turn.role, content: turn.content, ts: turn.ts })));
+    setError('');
+    areaRef.current?.focus();
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
@@ -155,10 +233,10 @@ export function Chat({
     setDraft('');
     setError('');
     setBusy(true);
-    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question }];
+    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question, ts: new Date().toISOString() }];
     setMessages(nextMessages);
     const result = await window.unvibe.chatAsk({
-      messages: nextMessages.slice(0, -1),
+      messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
       question,
     }) as { ok: boolean; answer?: string; error?: string; remaining?: number };
     setBusy(false);
@@ -167,7 +245,9 @@ export function Chat({
       setError(result.error ?? 'Chat could not reply.');
       return;
     }
-    setMessages((prev) => [...prev, { role: 'assistant', content: result.answer ?? '' }]);
+    const answered: ChatMessage[] = [...nextMessages, { role: 'assistant', content: result.answer, ts: new Date().toISOString() }];
+    setMessages(answered);
+    persist(answered);
     void onRefresh();
     areaRef.current?.focus();
   };
@@ -180,8 +260,8 @@ export function Chat({
       <header className="chat-top">
         <AiPicker label={aiLabel} usingOwnAi={usingOwnAi} onOpenSettings={onOpenAiSettings} />
         {!empty ? (
-          <button type="button" className="ghost-link" onClick={() => { setMessages([]); setError(''); areaRef.current?.focus(); }}>
-            New chat
+          <button type="button" className="ghost-link" onClick={startNew}>
+            New question
           </button>
         ) : null}
       </header>
@@ -190,7 +270,28 @@ export function Chat({
         {empty ? (
           <div className="chat-hello">
             <h2>{greetName(userName)}</h2>
-            <p>Type a question about the code you are in. Replies use {aiLabel}.</p>
+            <p>Ask Unvibe anything about this codebase. Replies use {aiLabel}.</p>
+            <div className="chat-context">
+              {brief?.repo ? <span>Repository {brief.repo}</span> : <span>Repository on this Mac</span>}
+              <span>{brief ? `${brief.filesChanged} files in the working tree` : 'No current change'}</span>
+              {brief?.files[0] ? <span>Current file {brief.files[0].path}</span> : null}
+            </div>
+            {saved.length > 0 ? (
+              <section className="chat-saved" aria-label="Saved conversations">
+                <h3>Saved conversations</h3>
+                <ul>
+                  {saved.slice(0, 6).map((thread) => (
+                    <li key={thread.id}>
+                      <button type="button" onClick={() => resume(thread)}>
+                        <strong>{thread.title}</strong>
+                        <small>{thread.turns.length} messages</small>
+                      </button>
+                      <time dateTime={thread.updatedAt}>{whenLabel(thread.updatedAt)}</time>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
         ) : (
           <div className="chat-log" role="log" aria-live="polite">
@@ -238,7 +339,7 @@ export function Chat({
               rows={empty ? 3 : 1}
               value={draft}
               disabled={busy}
-              placeholder={empty ? 'Ask Unvibe' : 'Follow up'}
+              placeholder={empty ? 'Ask Unvibe anything about this codebase…' : 'Follow up'}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

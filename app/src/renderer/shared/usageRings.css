@@ -1,0 +1,59 @@
+.usage-rings {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: default;
+}
+button.usage-rings { cursor: pointer; }
+.usage-ring {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: max-content;
+}
+.usage-ring__dial {
+  position: relative;
+  display: block;
+}
+.usage-ring__dial svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.usage-ring__track {
+  stroke: currentColor;
+  stroke-opacity: 0.16;
+}
+.usage-ring__value {
+  stroke: currentColor;
+  transition: stroke-dasharray 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.usage-ring[data-tone="low"] .usage-ring__value { stroke: #f5a524; }
+.usage-ring[data-tone="out"] .usage-ring__value { stroke: #ef6f6c; }
+.usage-ring__dial b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  pointer-events: none;
+}
+.usage-ring small {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.66;
+}
+.usage-ring--tiny .usage-ring__dial b { font-size: 10.5px; }
+.usage-ring--tiny { gap: 4px; }
+.usage-ring--tiny small { font-size: 9.5px; }
+.usage-rings--tiny { justify-content: flex-start; gap: 14px; }

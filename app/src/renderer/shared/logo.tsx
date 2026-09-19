@@ -6,10 +6,10 @@ export function LogoMark({
 }: {
   size?: number;
   stroke?: number;
-  tone?: 'brand' | 'onFill';
+  tone?: 'brand' | 'onFill' | 'island';
 }) {
   const shadowStroke = Math.max(1.2, stroke * 0.95);
-  const main = tone === 'onFill' ? '#ffffff' : '#6f45d2';
+  const main = tone === 'onFill' ? '#ffffff' : tone === 'island' ? '#c4b5fd' : '#6f45d2';
   const shadowA = tone === 'onFill' ? 'rgba(255,255,255,0.28)' : 'rgba(61,32,128,0.22)';
   const shadowB = tone === 'onFill' ? 'rgba(255,255,255,0.14)' : 'rgba(61,32,128,0.12)';
   return (

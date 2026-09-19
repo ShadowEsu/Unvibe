@@ -1,14 +1,14 @@
 import { BrowserWindow, screen, shell } from 'electron';
 import path from 'node:path';
-import { settings, type BarPosition } from './settings';
+import { settings, type BarPosition, type BarSize } from './settings';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
 /** Opening size for the review panel. Big enough to read, not a full window. */
-const DEFAULT_WIDGET_W = 540;
-const DEFAULT_WIDGET_H = 720;
+const DEFAULT_WIDGET_W = 460;
+const DEFAULT_WIDGET_H = 596;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
@@ -39,8 +39,6 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
   const centerArea = position === 'top-center' ? bounds : workArea;
   const cx = centerArea.x + Math.round((centerArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
-  // Top-center is the attached Island position; the other top placement keeps
-  // a small floating inset so the two modes remain visually distinct.
   const top = position === 'top-center' ? bounds.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
   switch (position) {
@@ -56,27 +54,46 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 }
 
 /** Compact landscape aisle: play · logo · home. */
-const TOP_BAR_W = 340;
-const FLOATING_BAR_W = 196;
+const FLOATING_BAR_W = 220;
 const BOTTOM_BAR_COMPACT_W = 48;
-const BOTTOM_BAR_W = 160;
-const BAR_H = 44;
-const BAR_EXPANDED_W = 620;
-// The drawer contains learning pulse and contextual conversation views. Keep
-// transparent window chrome large enough that the composer is never clipped.
-const BAR_EXPANDED_H = 360;
+const BOTTOM_BAR_W = 168;
+const BAR_EXPANDED_W = 420;
+const BAR_EXPANDED_H = 348;
+
+function islandMetrics(): { w: number; h: number } {
+  const size: BarSize = settings().all().barSize ?? 'medium';
+  if (size === 'small') return { w: 360, h: 34 };
+  if (size === 'large') return { w: 480, h: 42 };
+  return { w: 428, h: 38 };
+}
 
 function compactBarWidth(position: BarPosition): number {
-  if (position === 'top-center') return TOP_BAR_W;
+  if (position === 'top-center') return islandMetrics().w;
   if (position.startsWith('bottom')) return BOTTOM_BAR_COMPACT_W;
   return FLOATING_BAR_W;
+}
+
+/**
+ * The attached Island stays inside the menu-bar strip. Hanging below it looks lower but
+ * covers the title bar of whatever window is underneath, so the drop is zero on purpose.
+ */
+const ISLAND_DROP = 0;
+
+function compactBarHeight(position: BarPosition): number {
+  if (position.startsWith('bottom')) return 48;
+  if (position !== 'top-center') return islandMetrics().h;
+  const display = settings().all().followActiveDisplay
+    ? screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    : screen.getPrimaryDisplay();
+  const menuBar = Math.max(islandMetrics().h, display.workArea.y - display.bounds.y);
+  return (menuBar || islandMetrics().h) + ISLAND_DROP;
 }
 
 export function createBar(): BrowserWindow {
   barIsExpanded = false;
   const position = settings().all().barPosition;
   const compactWidth = compactBarWidth(position);
-  const compactHeight = position.startsWith('bottom') ? 48 : BAR_H;
+  const compactHeight = compactBarHeight(position);
   const { x, y } = barBounds(position, compactWidth, compactHeight);
   const win = new BrowserWindow({
     width: compactWidth,
@@ -86,18 +103,23 @@ export function createBar(): BrowserWindow {
     frame: false,
     transparent: true,
     resizable: false,
-    movable: true,
+    movable: position !== 'top-center',
     focusable: false,
     skipTaskbar: true,
     hasShadow: false,
     alwaysOnTop: true,
+    fullscreenable: false,
+    enableLargerThanScreen: true,
+    roundedCorners: false,
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     show: false,
     webPreferences: secureWebPrefs(),
   });
-  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setAlwaysOnTop(true, 'screen-saver', 1);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
+  if (process.platform === 'darwin') win.setWindowButtonVisibility(false);
   lockNavigation(win);
   void win.loadFile(page('bar'));
   return win;
@@ -111,12 +133,12 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
   const width = expanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : (bottom ? 48 : BAR_H);
+  const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : compactBarHeight(position);
   const { x, y } = barBounds(position, width, height);
   win.setFocusable(expanded);
   const prev = win.getBounds();
   if (force || prev.x !== x || prev.y !== y || prev.width !== width || prev.height !== height) {
-    win.setBounds({ x, y, width, height }, false);
+    win.setBounds({ x, y, width, height }, true);
   }
   win.moveTop();
 }
@@ -126,9 +148,10 @@ export function positionBar(win: BrowserWindow): void {
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
   const width = barIsExpanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = bottom ? 48 : (barIsExpanded ? BAR_EXPANDED_H : BAR_H);
+  const height = barIsExpanded ? (bottom ? 48 : BAR_EXPANDED_H) : compactBarHeight(position);
   const { x, y } = barBounds(position, width, height);
   win.setBounds({ x, y, width, height });
+  if (position === 'top-center') win.setPosition(x, y);
 }
 
 /** Quiet aisle — only show while a review is active. */
@@ -136,7 +159,7 @@ export function showBar(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   // macOS can lower an auxiliary window while an editor enters a full-screen
   // Space. Reassert both flags whenever the Island is shown.
-  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setAlwaysOnTop(true, 'screen-saver', 1);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   positionBar(win);
   if (!win.isVisible()) win.showInactive();
@@ -199,7 +222,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
     (saved.width === 340 && saved.height === 440) ||
     (saved.width === 360 && saved.height === 480) ||
     (saved.width === 440 && saved.height === 560) ||
-    (saved.width === 480 && saved.height === 600);
+    (saved.width === 480 && saved.height === 600) ||
+    (saved.width === 540 && saved.height === 720);
   if (stockTiny) {
     return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
   }
@@ -209,8 +233,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
 /** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
 export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-const WIDGET_MIN_W = 420;
-const WIDGET_MIN_H = 520;
+const WIDGET_MIN_W = 380;
+const WIDGET_MIN_H = 440;
 
 export function applyWidgetResize(
   start: Electron.Rectangle,

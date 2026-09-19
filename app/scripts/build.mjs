@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync, readdirSync, writeFileSync } from 'node:fs';
 
 const testsOnly = process.argv.includes('--tests');
 const releaseBackend = process.env.UNVIBE_BACKEND?.trim() ?? '';
@@ -57,9 +57,11 @@ for (const name of ['bar', 'widget', 'companion']) {
     define: { 'process.env.NODE_ENV': '"production"' },
   });
   mkdirSync(`dist/renderer/${name}`, { recursive: true });
-  for (const ext of ['html', 'css']) {
-    cpSync(`src/renderer/${name}/${name}.${ext}`, `dist/renderer/${name}/${name}.${ext}`);
-  }
+  cpSync(`src/renderer/${name}/${name}.html`, `dist/renderer/${name}/${name}.html`);
+  const tokens = readFileSync('src/renderer/shared/tokens.css', 'utf8');
+  const rings = readFileSync('src/renderer/shared/usageRings.css', 'utf8');
+  const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
+  writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${css}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => f.endsWith('.png'))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }

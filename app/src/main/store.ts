@@ -26,6 +26,20 @@ interface FileSnapshot {
   savedAt: string;
 }
 
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+  ts: string;
+}
+
+export interface ChatThread {
+  id: string;
+  title: string;
+  startedAt: string;
+  updatedAt: string;
+  turns: ChatTurn[];
+}
+
 interface Data {
   events: LocalEvent[];
   outbox: string[]; // event ids awaiting sync
@@ -41,7 +55,12 @@ interface Data {
   betaPromptUsage?: { month: string; selectedCodePrompts: number };
   /** Event ids the user removed. Local only, so a later sync cannot restore them. */
   deletedIds?: string[];
+  /** Saved Ask Unvibe conversations. Local only — never synced to the backend. */
+  chatThreads?: ChatThread[];
 }
+
+const CHAT_THREAD_CAP = 30;
+const CHAT_TURN_CAP = 80;
 
 export const STUDY_ASK_DAILY_LIMIT = 20;
 export const QUIZ_DAILY_LIMIT = 30;
@@ -312,6 +331,29 @@ class Store {
 
   wipeEverything(): void {
     this.data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
+    this.save();
+  }
+
+  // ---- saved Ask conversations ----
+  chatThreads(): ChatThread[] {
+    return [...(this.data.chatThreads ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  saveChatThread(thread: ChatThread): void {
+    const turns = thread.turns.slice(-CHAT_TURN_CAP);
+    if (turns.length === 0) return;
+    const next: ChatThread = { ...thread, turns };
+    const threads = [...(this.data.chatThreads ?? [])];
+    const idx = threads.findIndex((item) => item.id === thread.id);
+    if (idx >= 0) threads[idx] = next;
+    else threads.push(next);
+    threads.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    this.data.chatThreads = threads.slice(0, CHAT_THREAD_CAP);
+    this.save();
+  }
+
+  deleteChatThread(id: string): void {
+    this.data.chatThreads = (this.data.chatThreads ?? []).filter((item) => item.id !== id);
     this.save();
   }
 

@@ -17,7 +17,8 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   seat counts, and aggregate usage. Source code, repository contents, prompts, explanations, and
   invitation tokens are not written to analytics or billing audit metadata.
 - Real-provider endpoints require a valid server-side bearer session. The mock provider remains
-  available without an account for local development.
+  available without an account for local development. `/api/v1/reviews` now matches comprehension:
+  session or sealed trial when a cloud provider is configured, plus a 120,000 character context cap.
 - Desktop account tokens are persisted only through Electron `safeStorage`. If OS-backed
   encryption is unavailable, account mode fails closed and local-only use remains available.
 - Sign-out revokes the current server token. Opaque sessions expire after 30 days. Account

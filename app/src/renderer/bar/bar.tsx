@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
+import { UsageRings } from '../shared/usageRings';
+import '../shared/tokens.css';
 
 type Snapshot = {
   shortcut: string;
@@ -15,13 +17,12 @@ type Snapshot = {
   conceptsSeen: number;
   conceptsStrong: number;
   usage: { label: string; pct: number } | null;
+  quota?: { used: number; limit: number; remaining: number };
+  selections?: { used: number; limit: number; remaining: number };
   heat: number[];
 };
 
-type IslandMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+type PulsePhase = 'idle' | 'working' | 'ready' | 'understood' | 'error';
 
 function CodeIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
@@ -31,31 +32,33 @@ function HomeIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 11.2 12 4.8l7.5 6.4" /><path d="M7.2 10.2V19h9.6v-8.8" /></svg>;
 }
 
-/**
- * The learning strip is intentionally not a Dynamic Island clone. It is a small, persistent
- * Unvibe status surface that expands into recent learning and honest local-privacy context.
- */
+function Wave() {
+  return (
+    <span className="strip__wave" aria-hidden="true">
+      <i /><i /><i /><i /><i />
+    </span>
+  );
+}
+
+function PixelFlame({ hot, size = 'sm' }: { hot: boolean; size?: 'sm' | 'md' }) {
+  return <span className={`pxflame pxflame--${size}${hot ? ' pxflame--hot' : ' pxflame--cold'}`} aria-hidden="true" />;
+}
+
 function Bar() {
   const [note, setNote] = useState('');
+  const [phase, setPhase] = useState<PulsePhase>('idle');
+  const [pulseLabel, setPulseLabel] = useState('Ready');
   const [expanded, setExpanded] = useState(false);
   const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(220);
   const [attached, setAttached] = useState(true);
   const [position, setPosition] = useState('top-center');
-  const [rotateStats, setRotateStats] = useState(true);
-  const [statIndex, setStatIndex] = useState(0);
+  const [barSize, setBarSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(0.3);
   const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
-  const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [drawerView, setDrawerView] = useState<'pulse' | 'ask'>('pulse');
-  const [askDraft, setAskDraft] = useState('');
-  const [askMessages, setAskMessages] = useState<IslandMessage[]>([]);
-  const [askBusy, setAskBusy] = useState(false);
-  const [askError, setAskError] = useState('');
   const expandedRef = useRef(false);
   const pointerInside = useRef(false);
   const actionLockUntil = useRef(0);
@@ -63,6 +66,7 @@ function Bar() {
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const understoodTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const launchPlayed = useRef(false);
   const lastHoverTone = useRef(0);
   const soundRef = useRef({ enabled: true, volume: 0.3, style: 'soft' as 'soft' | 'pixel' });
@@ -82,19 +86,51 @@ function Bar() {
   };
 
   const refresh = () => {
-    setLoading(true);
-    void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot)).finally(() => setLoading(false));
+    void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
   };
+
+  const applyPulse = (next: PulsePhase, label: string) => {
+    if (understoodTimer.current && next === 'working') {
+      clearTimeout(understoodTimer.current);
+      understoodTimer.current = null;
+    }
+    setPhase(next);
+    setPulseLabel(label);
+    if (next === 'understood') {
+      tone('success');
+      refresh();
+      if (understoodTimer.current) clearTimeout(understoodTimer.current);
+      understoodTimer.current = setTimeout(() => {
+        setPhase('idle');
+        setPulseLabel('Ready');
+      }, 2600);
+    } else if (next === 'ready') {
+      refresh();
+      if (understoodTimer.current) clearTimeout(understoodTimer.current);
+      understoodTimer.current = setTimeout(() => {
+        setPhase('idle');
+        setPulseLabel('Ready');
+      }, 1800);
+    } else if (next === 'idle') {
+      refresh();
+    } else if (next === 'error') {
+      if (understoodTimer.current) clearTimeout(understoodTimer.current);
+      understoodTimer.current = setTimeout(() => {
+        setPhase('idle');
+        setPulseLabel('Ready');
+      }, 3200);
+    }
+  };
+
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
-      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
-      const enabled = Boolean(settings.barHoverPreview ?? true);
-      setHoverEnabled(enabled);
+      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; barSize?: 'small' | 'medium' | 'large'; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
+      setHoverEnabled(Boolean(settings.barHoverPreview ?? true));
       setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 220)));
       setAttached(settings.barPosition === 'top-center');
       setPosition(settings.barPosition ?? 'top-center');
-      setRotateStats(settings.rotateIslandStats ?? true);
+      setBarSize(settings.barSize ?? 'medium');
       setSoundEnabled(settings.soundEffects ?? true);
       setSoundVolume(settings.soundVolume ?? 0.3);
       setSoundStyle(settings.soundStyle ?? 'soft');
@@ -111,32 +147,31 @@ function Bar() {
       if (noteTimer.current) clearTimeout(noteTimer.current);
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
+    const unsubscribePulse = window.unvibe.onBarPulse((pulse) => {
+      applyPulse((pulse.phase as PulsePhase) || 'idle', pulse.label || 'Ready');
+    });
     const unsubscribeCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false));
     const unsubscribeSettings = window.unvibe.onBarSettings((settings) => {
       if (settings.barPosition) { setAttached(settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
+      if (settings.barSize) setBarSize(settings.barSize);
       if (settings.barHoverPreview !== undefined) setHoverEnabled(settings.barHoverPreview);
       if (settings.barHoverDelayMs !== undefined) setHoverDelayMs(settings.barHoverDelayMs);
-      if (settings.rotateIslandStats !== undefined) setRotateStats(settings.rotateIslandStats);
       if (settings.soundEffects !== undefined) setSoundEnabled(settings.soundEffects);
       if (settings.soundVolume !== undefined) setSoundVolume(settings.soundVolume);
       if (settings.soundStyle !== undefined) setSoundStyle(settings.soundStyle);
     });
     return () => {
       unsubscribe();
+      unsubscribePulse();
       unsubscribeCollapse();
       unsubscribeSettings();
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
       if (closeAnimationTimer.current) clearTimeout(closeAnimationTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
+      if (understoodTimer.current) clearTimeout(understoodTimer.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!rotateStats) { setStatIndex(0); return; }
-    const timer = window.setInterval(() => setStatIndex((index) => (index + 1) % 3), 3000);
-    return () => window.clearInterval(timer);
-  }, [rotateStats]);
 
   const setPanelExpanded = (next: boolean, withSound = true) => {
     if (next) {
@@ -148,6 +183,7 @@ function Bar() {
       if (expandedRef.current) return;
       expandedRef.current = true;
       setExpanded(true);
+      refresh();
       window.unvibe.setBarExpanded(true);
       if (withSound) tone('open');
       return;
@@ -155,13 +191,13 @@ function Bar() {
     if (!expandedRef.current) return;
     if (closeAnimationTimer.current) return;
     setClosing(true);
-    const closeMs = positionRef.current.startsWith('bottom') ? 380 : 280;
+    window.unvibe.setBarExpanded(false);
+    const closeMs = positionRef.current.startsWith('bottom') ? 380 : 240;
     closeAnimationTimer.current = setTimeout(() => {
       expandedRef.current = false;
       closeAnimationTimer.current = null;
       setClosing(false);
       setExpanded(false);
-      window.unvibe.setBarExpanded(false);
     }, closeMs);
   };
   useEffect(() => {
@@ -200,37 +236,10 @@ function Bar() {
   const act = (action: 'review' | 'home') => {
     tone('click');
     actionLockUntil.current = Date.now() + 1400;
-    const message = action === 'review' ? 'Selection capture started' : 'Opening your learning space';
-    setConfirmation(message);
-    window.setTimeout(() => setConfirmation(''), 1100);
-    if (action === 'review') window.unvibe.reviewSelection();
-    else window.unvibe.openCompanion();
-  };
-
-  const askUnvibe = async (prompt?: string) => {
-    const question = (prompt ?? askDraft).trim();
-    if (!question || askBusy) return;
-    const prior = askMessages;
-    setAskDraft('');
-    setAskError('');
-    setAskMessages((messages) => [...messages, { role: 'user' as const, content: question }].slice(-6));
-    setAskBusy(true);
-    try {
-      const result = snapshot?.recent
-        ? await window.unvibe.studyAsk({ eventId: snapshot.recent.id, question, messages: prior })
-        : await window.unvibe.chatAsk({ messages: prior, question });
-      const response = result as { ok: boolean; answer?: string; error?: string };
-      if (!response.ok || !response.answer?.trim()) {
-        setAskError(response.error ?? 'Unvibe could not answer that. Try again.');
-        return;
-      }
-      setAskMessages((messages) => [...messages, { role: 'assistant' as const, content: response.answer!.trim() }].slice(-6));
-      refresh();
-    } catch {
-      setAskError('Unvibe is offline. Your question stayed on this Mac.');
-    } finally {
-      setAskBusy(false);
-    }
+    if (action === 'review') {
+      applyPulse('working', 'Explaining');
+      window.unvibe.reviewSelection();
+    } else window.unvibe.openCompanion();
   };
 
   const enter = () => {
@@ -245,12 +254,15 @@ function Bar() {
   };
 
   const bottom = position.startsWith('bottom');
-  const compactStats = [
-    { value: `${snapshot?.streak ?? 0}d`, label: 'streak', tone: 'streak' },
-    { value: `${snapshot?.linesUnderstood ?? 0}`, label: 'lines', tone: 'lines' },
-    { value: `${snapshot?.understood ?? 0}`, label: 'understood', tone: 'understood' },
-  ];
-  const compactStat = compactStats[rotateStats ? statIndex : 0]!;
+  const shortcut = prettyShortcut(snapshot?.shortcut ?? 'Control+U');
+  const heat = snapshot?.heat ?? [];
+  const streak = snapshot?.streak ?? 0;
+  const understood = snapshot?.understood ?? 0;
+  const lines = snapshot?.linesUnderstood ?? 0;
+  const left = snapshot?.quota?.remaining ?? 0;
+  const working = phase === 'working';
+  const justUnderstood = phase === 'understood';
+  const statusText = note || pulseLabel;
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && expanded) {
@@ -264,82 +276,102 @@ function Bar() {
   };
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, textarea, select, a, [role="tab"]')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
-      <div className="strip__main" title={note || 'Unvibe is ready'}>
-        {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} /><span>Open app</span></button> : <><div className="strip__wing strip__wing--left">
-          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>
-          <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
-        </div>
-        <span className="strip__camera-gap" aria-hidden="true" />
-        <div className="strip__wing strip__wing--right">
-          <span className="strip__compact-stat" data-tone={compactStat.tone} key={rotateStats ? statIndex : 0}><b>{compactStat.value}</b> <span>{compactStat.label}</span></span>
-          <span className="strip__privacy"><i />local scan</span>
-          <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
-        </div></>}
+    <div
+      className={`strip strip--size-${barSize}${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${working ? ' strip--working' : ''}${justUnderstood ? ' strip--got' : ''}${phase === 'error' ? ' strip--note' : ''}`}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, textarea, select, a, [role="tab"]')) setPanelExpanded(!expandedRef.current); }}
+      onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }}
+      onMouseEnter={enter}
+      onMouseLeave={scheduleClose}
+    >
+      <div className="strip__main" title={statusText}>
+        {bottom ? (
+          <button className="strip__bottom-open" type="button" onClick={() => act('home')}>
+            <LogoMark size={16} stroke={2} tone="island" />
+            <span>Unvibe</span>
+          </button>
+        ) : (
+          <>
+            <div className="strip__wing strip__wing--left">
+              <button className="chip chip--play" aria-label="Explain selected code" title={`Explain selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>
+              <span className="mark" aria-hidden="true"><LogoMark size={16} stroke={2.05} tone="island" /></span>
+              <span className="strip__word">Unvibe</span>
+              {!expanded && !working && !justUnderstood ? (
+                <span className="strip__tip-fire" title={`${streak} day streak`}>
+                  <PixelFlame hot />
+                </span>
+              ) : null}
+            </div>
+            <span className="strip__camera-gap" aria-hidden="true" />
+            <div className="strip__wing strip__wing--right">
+              <span className="strip__stat" data-tone="streak" title={`${streak} day streak`}>
+                <PixelFlame hot={streak > 0 || (!working && !justUnderstood)} />
+                <b>{streak}</b>
+                streak
+              </span>
+              {working ? (
+                <span className="strip__live-status" aria-live="polite"><Wave />Explaining</span>
+              ) : justUnderstood ? (
+                <span className="strip__live-status strip__live-status--ok" aria-live="polite">Understood</span>
+              ) : phase === 'error' ? (
+                <span className="strip__live-status strip__live-status--err" aria-live="polite">{pulseLabel}</span>
+              ) : phase === 'ready' ? (
+                <span className="strip__live-status" aria-live="polite">Explained</span>
+              ) : (
+                <span className="strip__stat" data-tone="understood" title="Understood"><b>{understood}</b> got</span>
+              )}
+              <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
+            </div>
+          </>
+        )}
       </div>
       {expanded && !bottom && (
         <div className="strip__drawer">
           <div className="strip__drawer-head">
             <div>
-              <span className="pixel-label">{drawerView === 'pulse' ? 'Learning pulse' : 'Ask Unvibe'}</span>
-              <strong>{drawerView === 'pulse' ? 'Your understanding, right now.' : snapshot?.recent ? `About ${snapshot.recent.title}` : 'Ask a quick question.'}</strong>
+              <strong>{working ? 'Explaining now' : justUnderstood ? 'Saved as understood' : 'Learning pulse'}</strong>
+              <div className="strip__live"><i aria-hidden="true" />{statusText} · on this Mac</div>
             </div>
-            {loading ? <div className="pixel-loader" aria-label="Refreshing learning stats">{Array.from({ length: 7 }, (_, index) => <i key={index} />)}</div> : <span className="strip__live"><i />local data</span>}
+            <button className="strip__collapse" type="button" aria-label="Collapse Island" onClick={() => setPanelExpanded(false)}>–</button>
           </div>
-          <div className="strip__viewbar">
-            <div className="strip__views" role="tablist" aria-label="Island views">
-              <button type="button" role="tab" aria-selected={drawerView === 'pulse'} className={drawerView === 'pulse' ? 'on' : ''} onClick={() => setDrawerView('pulse')}>Pulse</button>
-              <button type="button" role="tab" aria-selected={drawerView === 'ask'} className={drawerView === 'ask' ? 'on' : ''} onClick={() => setDrawerView('ask')}>Ask</button>
-            </div>
-            <button type="button" className="strip__collapse" aria-label="Collapse Island" title="Collapse Island" onClick={() => setPanelExpanded(false)}>⌃</button>
+          {working ? <div className="strip__working"><Wave /><span>Reading the selection and writing an explanation.</span></div> : null}
+          <div className="strip__metric-grid">
+            <article data-tone="streak"><PixelFlame hot={streak > 0} size="md" /><b>{streak}</b><span>day streak</span></article>
+            <article data-tone="understood"><b>{understood}</b><span>understood</span></article>
+            <article data-tone="lines"><b>{lines}</b><span>lines</span></article>
+            <article><b>{left}</b><span>AI left</span></article>
           </div>
-          {drawerView === 'pulse' ? (
-            <>
-              <div className="strip__metric-grid" aria-label="Actual learning statistics">
-                <article data-tone="streak"><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
-                <article data-tone="understood"><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
-                <article data-tone="lines"><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
-                <article data-tone="revisit"><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
-              </div>
-              <div className="strip__learning-row">
-                <div className="strip__recent"><span className="pixel-label">Last learning</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
-                <div className="strip__concepts"><span><b>{snapshot?.conceptsSeen ?? 0}</b> concepts</span><span><b>{snapshot?.conceptsStrong ?? 0}</b> strong</span><small>{snapshot?.usage ? `${snapshot.usage.label} · ${snapshot.usage.pct}%` : 'No workflow data yet'}</small></div>
-              </div>
-              <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 days</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
-              <div className="strip__actions">
-                <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
-                <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
-              </div>
-            </>
-          ) : (
-            <div className="island-ask">
-              <div className="island-ask__thread" aria-live="polite">
-                {askMessages.length === 0 ? (
-                  <div className="island-ask__empty">
-                    <p>{snapshot?.recent ? 'Ask about the code, the explanation, or what to check next.' : 'Ask Unvibe a question, or select code to give it exact context.'}</p>
-                    <div>
-                      {(snapshot?.recent
-                        ? ['What should I verify?', 'Explain the risky part', 'Give me a quick check']
-                        : ['How do I review AI code?', 'What should I learn next?']
-                      ).map((suggestion) => <button type="button" key={suggestion} onClick={() => void askUnvibe(suggestion)}>{suggestion}</button>)}
-                    </div>
-                  </div>
-                ) : askMessages.map((message, index) => (
-                  <div key={`${message.role}-${index}`} className={`island-ask__message island-ask__message--${message.role}`}>
-                    <span>{message.role === 'user' ? 'You' : 'Unvibe'}</span>
-                    <p>{message.content}</p>
-                  </div>
-                ))}
-                {askBusy ? <div className="island-ask__thinking" role="status"><i /><i /><i /><span>Thinking with your saved context…</span></div> : null}
-                {askError ? <p className="island-ask__error" role="alert">{askError}</p> : null}
-              </div>
-              <form className="island-ask__composer" onSubmit={(event) => { event.preventDefault(); void askUnvibe(); }}>
-                <input aria-label="Ask Unvibe" placeholder={snapshot?.recent ? 'Ask about this explanation…' : 'Ask Unvibe…'} value={askDraft} disabled={askBusy} onChange={(event) => setAskDraft(event.target.value)} autoFocus />
-                <button type="submit" aria-label="Send question" disabled={askBusy || !askDraft.trim()}>↑</button>
-              </form>
-              <div className="island-ask__hint"><span>{snapshot?.recent ? 'Latest explanation attached' : 'No code attached yet'}</span><span>Return to send</span></div>
+          <div className="strip__learning-row">
+            <div className="strip__recent">
+              <span className="pixel-label">Latest</span>
+              <strong>{snapshot?.recent?.title ?? 'Nothing explained yet'}</strong>
+              <small>{snapshot?.recent?.detail ?? `Select code and press ${shortcut}`}</small>
             </div>
-          )}
+            <div className="strip__concepts">
+              <span>Reviews</span><b>{snapshot?.explanations ?? 0}</b>
+              <span>Revisit</span><b>{snapshot?.needsReview ?? 0}</b>
+              <small>{snapshot?.conceptsSeen ? `${snapshot.conceptsSeen} concepts seen` : 'Concepts appear after reviews'}</small>
+            </div>
+          </div>
+          {heat.length > 0 ? (
+            <div className="strip__heat" aria-hidden="true">
+              <span>14d</span>
+              <div>{heat.map((level, i) => <i key={i} data-level={level} />)}</div>
+            </div>
+          ) : null}
+          <div className="strip__usage-inline">
+            <UsageRings
+              ai={snapshot?.quota ?? { used: 0, limit: 30, remaining: 30 }}
+              selections={snapshot?.selections}
+              tiny
+              onOpen={() => act('home')}
+            />
+          </div>
+          <div className="strip__actions">
+            <button type="button" onClick={() => act('review')}>Understand change <kbd>{shortcut}</kbd></button>
+            <button type="button" onClick={() => act('home')}>Open Unvibe</button>
+          </div>
         </div>
       )}
     </div>

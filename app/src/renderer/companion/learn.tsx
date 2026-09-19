@@ -41,6 +41,12 @@ function dayGroup(iso: string): string {
   return when.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
+function clockTime(iso: string): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return '';
+  return when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 function LessonCode({ code, language, tall = false }: { code: string; language?: string; tall?: boolean }) {
   return (
     <div className={`lesson-code${tall ? ' lesson-code--tall' : ''}`}>
@@ -552,13 +558,11 @@ export function Learn({
     <div className="learn-page">
       <div className="topline learn-topline">
         <div>
-          <h1>{intent === 'history' ? 'History' : intent === 'quiz' ? 'Quiz' : 'Learn'}</h1>
+          <h1>{intent === 'quiz' ? 'Understanding Check' : 'Knowledge'}</h1>
           <p className="lead lead--tight">
-            {intent === 'history'
-              ? 'Every explanation saved on this Mac. Open one to read it again.'
-              : intent === 'quiz'
-                ? 'Pick a lesson. One question fills the screen, like a short survey. Press a letter to answer.'
-                : 'Lessons from reviews on this Mac. Open one to read, restudy, or check yourself.'}
+            {intent === 'quiz'
+              ? 'Recent concepts worth revisiting. Check that you can still explain them.'
+              : 'Saved explanations on this Mac, with source and freshness where we have it.'}
           </p>
         </div>
         {catalog.length > 0 && intent !== 'quiz' ? (
@@ -591,7 +595,7 @@ export function Learn({
           </label>
           {continueItem ? (
             <button type="button" className="history-continue" onClick={() => openLesson(continueItem, intent === 'quiz' ? 'check' : continueItem.outcome === 'needs_review' ? 'restudy' : 'read')}>
-              {intent === 'quiz' ? 'Continue this check' : 'Continue where you left off'}
+              {intent === 'quiz' ? 'Check understanding' : 'Continue where you left off'}
             </button>
           ) : null}
         </div>
@@ -599,7 +603,7 @@ export function Learn({
 
       {catalog.length === 0 ? (
         <LearningEmpty
-          title={intent === 'quiz' ? 'Nothing to quiz yet.' : intent === 'history' ? 'No history yet.' : 'Nothing to learn yet.'}
+          title={intent === 'quiz' ? 'Nothing to check yet.' : 'Nothing saved yet.'}
           detail={`Select code and press ${shortcut}. After an explanation finishes, it lands here.`}
           onReview={onReview}
         />
@@ -622,18 +626,27 @@ export function Learn({
                         <>
                           <span className="survey-pick__body">
                             <strong>{item.title}</strong>
-                            <span>{item.file || item.project || item.meta || `${item.lines} lines`}, {item.level}</span>
+                            <span>
+                              {item.file || item.project || item.meta || `${item.lines} lines`}
+                              {' · '}
+                              {dayGroup(item.ts)}
+                            </span>
                           </span>
-                          <span className="survey-pick__go">Start</span>
+                          <span className="survey-pick__go">Check understanding</span>
                         </>
                       ) : (
                         <>
-                          <time dateTime={item.ts}>{new Date(item.ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</time>
                           <span className="lib-row__body">
                             <strong>{item.title}</strong>
-                            <span>{item.file || item.project || item.meta || `${item.lines} lines`}{item.language ? `, ${item.language}` : ''}, {item.level}</span>
+                            <span className="know-meta">
+                              <span>{item.project || 'This Mac'}</span>
+                              <span>{item.file || item.scope || 'Selection'}</span>
+                            </span>
                           </span>
-                          <span className={`pill pill--${item.outcome}`}>{outcomeName(item.outcome)}</span>
+                          <time dateTime={item.ts}>{clockTime(item.ts)}</time>
+                          <span className="status-pill" data-tone={item.outcome === 'needs_review' ? 'review' : 'current'}>
+                            {item.outcome === 'needs_review' ? 'Review' : 'Current'}
+                          </span>
                         </>
                       )}
                     </button>

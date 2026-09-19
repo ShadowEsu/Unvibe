@@ -47,7 +47,7 @@ import {
   type ReviewSession,
   type RequestOpts,
 } from './review';
-import { store } from './store';
+import { store, type ChatThread } from './store';
 import { settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT } from './gift';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
@@ -66,7 +66,7 @@ import {
   resolveBackendUrl,
   type Account as BackendAccount,
 } from './backend';
-import { setBar, notify } from './notify';
+import { setBar, notify, pulseBar } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
 import { resolveAppUsage } from './usage';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
@@ -86,6 +86,13 @@ import {
 } from './contextBuilder';
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
 import { installDesktopBridge, integrationStatus } from './integrations';
+import { startLiveWatch } from './liveWatch';
+import { knowledgeStore } from './knowledgeStore';
+import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
+import { buildOriginReport } from '../core/codeOrigin';
+import { gradeTeachBack } from '../core/teachBack';
+import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
+import { productEvent } from '../core/productEvents';
 
 function firstName(): Promise<string> {
   return new Promise((resolve) => {
@@ -313,8 +320,10 @@ function asset(...parts: string[]): string {
 
 async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
+  pulseBar({ phase: 'working', label: 'Explaining' });
   const usage = await resolveAppUsage();
   if (usage.remaining <= 0) {
+    pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);
     const win = getOrCreateWidget();
     raiseLimitPause(win);
@@ -345,6 +354,7 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
   const code = await captureSelection(options);
   const sourceApp = await frontmostApp();
+  if (!code) pulseBar({ phase: 'error', label: 'Select code first' });
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
@@ -423,6 +433,7 @@ app.whenReady().then(() => {
   if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
   void flush();
   startFrontmostWatch();
+  startLiveWatch();
 
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
   if (isMac) {
@@ -496,10 +507,17 @@ app.whenReady().then(() => {
       { label: 'Quit Unvibe', role: 'quit' },
     ]).popup({ window: bar });
   });
-  ipcMain.handle('bar:snapshot', () => {
+  ipcMain.handle('bar:snapshot', async () => {
     store().ensureDayActive();
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
+    let quota = { used: 0, limit: 30, remaining: 30 };
+    let selections = { used: 0, limit: 30, remaining: 30 };
+    try {
+      const appUsage = await resolveAppUsage();
+      quota = { used: appUsage.used, limit: appUsage.limit, remaining: appUsage.remaining };
+      selections = store().betaSelectedCodeUsage();
+    } catch { /* keep local defaults */ }
     return {
       shortcut: settings().all().shortcut,
       recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
@@ -511,6 +529,8 @@ app.whenReady().then(() => {
       conceptsSeen: profile.conceptsSeen,
       conceptsStrong: profile.conceptsStrong,
       usage: profile.usage[0] ?? null,
+      quota,
+      selections,
       heat: profile.heat.slice(-14),
     };
   });
@@ -779,6 +799,15 @@ app.whenReady().then(() => {
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
   ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
     askChat(input));
+  ipcMain.handle('chat:threads', () => ({ ok: true, threads: store().chatThreads() }));
+  ipcMain.handle('chat:saveThread', (_e, thread: ChatThread) => {
+    store().saveChatThread(thread);
+    return { ok: true };
+  });
+  ipcMain.handle('chat:deleteThread', (_e, id: string) => {
+    store().deleteChatThread(id);
+    return { ok: true };
+  });
 
   ipcMain.handle('project:pickRoot', async () => {
     const picked = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -788,7 +817,7 @@ app.whenReady().then(() => {
     return { ok: true, root };
   });
 
-  ipcMain.handle('review:explainDiff', async (e, opts?: { brief?: boolean; level?: ExplanationLevel }) => {
+  ipcMain.handle('review:explainDiff', async (e, opts?: { brief?: boolean; level?: ExplanationLevel; scope?: BriefScope }) => {
     const win = widgetOf(e) ?? getOrCreateWidget();
     showBar(bar);
     const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level ?? 'intermediate');
@@ -802,16 +831,115 @@ app.whenReady().then(() => {
     }
     if (!root) return { ok: false, error: 'Pick a git repository to explain changes.' };
     const brief = Boolean(opts?.brief);
-    const feature = brief ? 'Agent change briefs' : 'Git diff explanations';
+    const feature = brief ? 'Change briefs' : 'Git diff explanations';
     if (!(await requireProOrError(win, session, feature))) {
       return { ok: false, error: 'Pro required' };
     }
+    const scope = opts?.scope ?? 'working';
     return startBuiltReview(
       win,
       session,
-      () => buildDiffPayload({ repoRoot: root!, level: session.level, mode: brief ? 'brief' : 'diff' }),
-      brief ? 'Agent brief' : 'Git diff',
+      () => buildDiffPayload({ repoRoot: root!, level: session.level, mode: brief ? 'brief' : 'diff', scope }),
+      brief ? 'Change brief' : 'Git diff',
     );
+  });
+
+  ipcMain.handle('brief:build', async (_e, input?: { scope?: BriefScope; pick?: boolean }) => {
+    const scope = input?.scope ?? 'working';
+    let root = await resolveRepoRoot();
+    // Only ever open a folder dialog when the user asked for it. Background refreshes stay silent.
+    if (input?.pick) {
+      const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
+      if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+      root = await resolveRepoRoot(picked.filePaths[0]);
+    }
+    if (!root) return { ok: false, needsRepo: true, error: 'Choose a git project to build a change brief.' };
+    try {
+      const head = await gitHeadState(root);
+      const hunks = capHunks(await collectDiffHunks(root, scope));
+      const brief = buildChangeBrief({ repo: root, scope, hunks });
+      productEvent('change_brief_opened', { files: brief.filesChanged });
+      return { ok: true, brief, branch: head.branch, detached: head.detached };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Could not read git changes.' };
+    }
+  });
+
+  ipcMain.handle('origin:lookup', async () => {
+    const session = sessionFor();
+    const file = session?.payload?.context.primaryFile ?? session?.file;
+    const root = await resolveRepoRoot(session?.sourceFilePath ? path.dirname(session.sourceFilePath) : undefined);
+    if (!root || !file) {
+      return { ok: false, error: 'Unvibe could not find documented history for this code.' };
+    }
+    const start = session?.payload?.context.selection?.startLine ?? 1;
+    const end = session?.payload?.context.selection?.endLine ?? start;
+    const blame = await blameRange(root, file, start, end);
+    const history = await fileHistory(root, file, 8);
+    const first = history.at(-1);
+    const report = buildOriginReport({
+      file,
+      lineStart: start,
+      lineEnd: end,
+      blameAuthor: blame?.author,
+      blameDate: blame?.date,
+      firstCommit: first ? `${first.hash} · ${first.date}` : blame?.commit,
+      firstSubject: first?.subject || blame?.summary,
+      laterSubjects: history.slice(0, 4).map((row) => `${row.hash} ${row.subject}`),
+    });
+    productEvent('origin_opened');
+    return { ok: true, report };
+  });
+
+  ipcMain.handle('knowledge:list', async () => {
+    const root = settings().all().lastProjectRoot;
+    const repo = root ? path.basename(root) : undefined;
+    const items = knowledgeStore().list();
+    return { ok: true, items, repo };
+  });
+
+  ipcMain.handle('knowledge:verify', (_e, input: { id?: string; status?: 'HUMAN_CONFIRMED' | 'HUMAN_CORRECTED' }) => {
+    if (!input?.id || !input.status) return { ok: false, error: 'Missing knowledge id.' };
+    const item = knowledgeStore().verify(input.id, input.status);
+    return item ? { ok: true, item } : { ok: false, error: 'That knowledge object was not found.' };
+  });
+
+  ipcMain.handle('knowledge:refresh', async (_e, id: string) => {
+    const item = knowledgeStore().list().find((row) => row.id === id);
+    if (!item?.file) return { ok: false, error: 'That knowledge object has no file to refresh against.' };
+    const root = settings().all().lastProjectRoot;
+    if (!root) return { ok: false, error: 'Pick a git repository first.' };
+    const code = await readRepoFile(root, item.file);
+    if (code == null) return { ok: false, error: 'Unvibe could not read the current file.' };
+    const next = knowledgeStore().refreshAgainst(id, code);
+    productEvent('knowledge_refreshed');
+    return next ? { ok: true, item: next } : { ok: false, error: 'Could not refresh that knowledge object.' };
+  });
+
+  ipcMain.handle('teachback:grade', (_e, input: { answer?: string }) => {
+    const session = sessionFor();
+    const explanation = session?.explanationText?.trim() ?? '';
+    const answer = String(input?.answer ?? '');
+    const result = gradeTeachBack(explanation, answer);
+    if (result.evidence !== 'NOT_ENOUGH') {
+      knowledgeStore().recordTeachBack({
+        concept: session?.file ?? 'current explanation',
+        file: session?.file,
+        question: 'Explain this change in your own words.',
+        answer,
+        evidence: result.evidence,
+        checks: result.checks,
+        codeVersion: session?.reviewId ?? '',
+      });
+      productEvent('teachback_completed');
+    }
+    return { ok: true, result };
+  });
+
+  ipcMain.handle('live:snooze', (_e, hours: number) => {
+    const ms = Math.min(24, Math.max(1, Number(hours) || 1)) * 60 * 60 * 1000;
+    settings().set({ liveSnoozeUntil: new Date(Date.now() + ms).toISOString() });
+    return { ok: true, until: settings().all().liveSnoozeUntil };
   });
 
   ipcMain.handle('review:explainCompare', async (e, opts?: { level?: ExplanationLevel }) => {
@@ -920,16 +1048,17 @@ app.whenReady().then(() => {
         return { settings: settings().all(), shortcutError: 'That shortcut is taken or invalid.' };
       }
     }
-    if (patch.barPosition && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barSize) && bar && !bar.isDestroyed()) {
       resizeBar(bar, false, true);
       bar.webContents.send('bar:collapse');
       positionBar(bar);
     } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
-    if ((patch.barPosition || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
+        barSize: next.barSize,
         barHoverPreview: next.barHoverPreview,
         barHoverDelayMs: next.barHoverDelayMs,
         rotateIslandStats: next.rotateIslandStats,
@@ -1133,6 +1262,7 @@ app.whenReady().then(() => {
     }
     try {
       store().wipeEverything();
+      knowledgeStore().wipe();
     } catch (err) {
       return {
         ok: false,

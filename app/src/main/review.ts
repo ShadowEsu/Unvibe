@@ -17,6 +17,9 @@ import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
 import { raiseLimitPause } from './windows';
+import { pulseBar } from './notify';
+import { knowledgeStore } from './knowledgeStore';
+import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
@@ -65,6 +68,12 @@ function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
     win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
   }
+  const typed = ev as { type?: string };
+  if (typed.type === 'status') pulseBar({ phase: 'working', label: 'Explaining' });
+  else if (typed.type === 'done') pulseBar({ phase: 'ready', label: 'Ready' });
+  else if (typed.type === 'understood') pulseBar({ phase: 'understood', label: 'Understood' });
+  else if (typed.type === 'error' || typed.type === 'blocked') pulseBar({ phase: 'error', label: 'Could not explain' });
+  else if (typed.type === 'cancelled') pulseBar({ phase: 'idle', label: 'Ready' });
 }
 
 async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise<ReviewRequestPayload> {
@@ -223,6 +232,28 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
       message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
     });
     return;
+  }
+  try {
+    if (explanation && session.file) {
+      knowledgeStore().upsert({
+        objectType: session.mode === 'brief' ? 'change_brief' : 'file',
+        objectId: `${session.project ?? 'local'}:${session.file}:${session.reviewId}`,
+        title: session.file,
+        summary: explanation.slice(0, 240),
+        body: explanation,
+        sourceType: 'review',
+        sourceRefs: [session.file],
+        visibility: 'PRIVATE',
+        verificationStatus: 'AI_GENERATED',
+        code: session.snapshotText ?? session.code ?? explanation,
+        repositoryId: session.project,
+        file: session.file,
+      });
+      productEvent('knowledge_saved');
+    }
+    productEvent('explanation_completed');
+  } catch {
+    /* learning already saved */
   }
   session.onRecorded?.();
   void flush();

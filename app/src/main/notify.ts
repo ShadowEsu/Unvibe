@@ -15,10 +15,22 @@ export function notify(message: string): void {
   if (!settings().all().notifications) return;
   if (settings().inQuietHours()) return;
   const now = Date.now();
-  if (now - lastAt < MIN_GAP_MS) return; // never spammy
+  if (now - lastAt < MIN_GAP_MS) return;
   lastAt = now;
   if (bar && !bar.isDestroyed()) {
     showBar(bar);
     bar.webContents.send('bar:notify', message);
   }
+}
+
+export type BarPulse = {
+  phase: 'idle' | 'working' | 'ready' | 'understood' | 'error';
+  label: string;
+};
+
+/** Island activity. Not rate limited. Never includes source. */
+export function pulseBar(pulse: BarPulse): void {
+  if (!bar || bar.isDestroyed()) return;
+  showBar(bar);
+  bar.webContents.send('bar:pulse', pulse);
 }

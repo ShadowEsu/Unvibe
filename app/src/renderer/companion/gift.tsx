@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LogoMark } from '../shared/logo';
+import { GoogleMark } from '../shared/googleMark';
 
 export function Gift() {
   const [code, setCode] = useState('');
@@ -95,7 +96,8 @@ export function Gift() {
 
       {needsSignIn ? (
         <section className="gift-signin" aria-label="Sign in to gift Unvibe">
-          <button className="field-btn" type="button" disabled={signInBusy} onClick={() => void startSignIn()}>
+          <button className="field-btn field-btn--google" type="button" disabled={signInBusy} onClick={() => void startSignIn()}>
+            <GoogleMark />
             {signInBusy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
           </button>
           {signInError && <div className="field-err">{signInError}</div>}

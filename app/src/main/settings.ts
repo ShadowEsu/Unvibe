@@ -10,8 +10,35 @@ import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
+export type BarSize = 'small' | 'medium' | 'large';
 export type InactiveBehavior = 'dim' | 'stay';
 export type ThemePreference = 'system' | 'light' | 'dark';
+
+export interface FeatureFlags {
+  changeBrief: boolean;
+  whyExists: boolean;
+  voice: boolean;
+  teachBack: boolean;
+  live: boolean;
+  teamKnowledge: boolean;
+  githubTeams: boolean;
+  localModels: boolean;
+}
+
+export const DEFAULT_FEATURES: FeatureFlags = {
+  changeBrief: true,
+  whyExists: true,
+  voice: false,
+  teachBack: true,
+  live: false,
+  teamKnowledge: false,
+  githubTeams: false,
+  localModels: false,
+};
+
+function mergeFeatures(loaded?: Partial<FeatureFlags>): FeatureFlags {
+  return { ...DEFAULT_FEATURES, ...loaded };
+}
 
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 8;
@@ -45,6 +72,8 @@ export interface Settings {
   barHoverDelayMs: number;
   /** Cycle compact Island learning stats automatically. */
   rotateIslandStats: boolean;
+  /** Compact Island scale. Medium matches a Mac notch. */
+  barSize: BarSize;
   /** Follow the display under the pointer when positioning the learning strip. */
   followActiveDisplay: boolean;
   /** Locally synthesized UI cues. Never records or plays remote audio. */
@@ -81,6 +110,10 @@ export interface Settings {
   sidebarHidden: boolean;
   /** Local 8 character gift code when the Mac is not signed in. */
   giftCode: string;
+  /** Incomplete B2B work stays behind flags so existing users keep the current loop. */
+  features: FeatureFlags;
+  /** ISO timestamp while Live mode is snoozed. */
+  liveSnoozeUntil?: string;
 }
 
 const DEFAULTS: Settings = {
@@ -97,6 +130,7 @@ const DEFAULTS: Settings = {
   barHoverPreview: false,
   barHoverDelayMs: 220,
   rotateIslandStats: true,
+  barSize: 'medium',
   followActiveDisplay: true,
   soundEffects: true,
   soundVolume: 0.3,
@@ -116,6 +150,7 @@ const DEFAULTS: Settings = {
   sidebarWidth: 204,
   sidebarHidden: false,
   giftCode: '',
+  features: DEFAULT_FEATURES,
 };
 
 class SettingsStore {
@@ -154,6 +189,7 @@ class SettingsStore {
       ...loaded,
       quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
       aiProvider,
+      features: mergeFeatures(loaded.features),
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 1,
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
@@ -215,6 +251,7 @@ class SettingsStore {
       ? undefined
       : Math.min(1, Math.max(0, patch.soundVolume));
     const soundStyle = patch.soundStyle === 'pixel' ? 'pixel' : patch.soundStyle === 'soft' ? 'soft' : undefined;
+    const barSize = patch.barSize === 'small' || patch.barSize === 'large' || patch.barSize === 'medium' ? patch.barSize : undefined;
     const sidebarWidth = patch.sidebarWidth === undefined
       ? undefined
       : Math.min(340, Math.max(168, Math.round(patch.sidebarWidth)));
@@ -228,10 +265,12 @@ class SettingsStore {
       ...this.data,
       ...patch,
       quietHours: { ...this.data.quietHours, ...patch.quietHours },
+      features: mergeFeatures({ ...this.data.features, ...patch.features }),
       ...(nextProvider ? { aiProvider: nextProvider } : {}),
       ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
       ...(soundVolume !== undefined ? { soundVolume } : {}),
       ...(soundStyle ? { soundStyle } : {}),
+      ...(barSize ? { barSize } : {}),
       ...(sidebarWidth !== undefined ? { sidebarWidth } : {}),
       ...(displayName !== undefined ? { displayName } : {}),
       ...(profileEmail !== undefined ? { profileEmail } : {}),

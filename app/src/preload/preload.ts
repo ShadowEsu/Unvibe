@@ -12,13 +12,18 @@ const api = {
     ipcRenderer.on('bar:notify', listener);
     return () => ipcRenderer.removeListener('bar:notify', listener);
   },
+  onBarPulse: (cb: (pulse: { phase: string; label: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, pulse: { phase: string; label: string }) => cb(pulse);
+    ipcRenderer.on('bar:pulse', listener);
+    return () => ipcRenderer.removeListener('bar:pulse', listener);
+  },
   onBarCollapse: (cb: () => void) => {
     const listener = () => cb();
     ipcRenderer.on('bar:collapse', listener);
     return () => ipcRenderer.removeListener('bar:collapse', listener);
   },
-  onBarSettings: (cb: (settings: { barPosition?: string; barHoverPreview?: boolean; barHoverDelayMs?: number; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barHoverPreview?: boolean; barHoverDelayMs?: number; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => cb(settings);
+  onBarSettings: (cb: (settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => cb(settings);
     ipcRenderer.on('bar:settings', listener);
     return () => ipcRenderer.removeListener('bar:settings', listener);
   },
@@ -39,6 +44,13 @@ const api = {
   usePaste: (opts: unknown) => ipcRenderer.send('widget:usePaste', opts),
   explainDiff: (opts?: unknown) => ipcRenderer.invoke('review:explainDiff', opts),
   explainCompare: (opts?: unknown) => ipcRenderer.invoke('review:explainCompare', opts),
+  buildChangeBrief: (opts?: unknown) => ipcRenderer.invoke('brief:build', opts),
+  lookupOrigin: () => ipcRenderer.invoke('origin:lookup'),
+  listKnowledge: () => ipcRenderer.invoke('knowledge:list'),
+  verifyKnowledge: (input: unknown) => ipcRenderer.invoke('knowledge:verify', input),
+  refreshKnowledge: (id: string) => ipcRenderer.invoke('knowledge:refresh', id),
+  gradeTeachBack: (input: unknown) => ipcRenderer.invoke('teachback:grade', input),
+  snoozeLive: (hours: number) => ipcRenderer.invoke('live:snooze', hours),
   pickProjectRoot: () => ipcRenderer.invoke('project:pickRoot'),
   reviewQueue: (limit: number) => ipcRenderer.invoke('learning:queue', limit),
   reopenLearningItem: (item: unknown) => ipcRenderer.invoke('review:reopenItem', item),
@@ -76,6 +88,15 @@ const api = {
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
   chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
     ipcRenderer.invoke('chat:ask', input),
+  chatThreads: () => ipcRenderer.invoke('chat:threads'),
+  saveChatThread: (thread: {
+    id: string;
+    title: string;
+    startedAt: string;
+    updatedAt: string;
+    turns: Array<{ role: 'user' | 'assistant'; content: string; ts: string }>;
+  }) => ipcRenderer.invoke('chat:saveThread', thread),
+  deleteChatThread: (id: string) => ipcRenderer.invoke('chat:deleteThread', id),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
   onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),

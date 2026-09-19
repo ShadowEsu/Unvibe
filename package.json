@@ -2,6 +2,8 @@
   "name": "unvibe-workspace",
   "private": true,
   "scripts": {
+    "dev": "npm --prefix app run dev",
+    "start": "npm --prefix app start",
     "verify:beta": "node scripts/verify-beta.mjs",
     "verify:staging": "npm --prefix web run verify:staging",
     "test:rls:staging": "npm --prefix web run test:rls:staging",

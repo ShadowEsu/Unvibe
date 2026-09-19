@@ -1,8 +1,10 @@
 import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
-import { userFromRequest } from '@/lib/auth';
+import { unauthorized, userFromRequest } from '@/lib/auth';
+import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { getStore } from '@/data/store';
 import { quotaMessage } from '@/billing/plans';
+import { trialInstallFromRequest, reserveTrialAction } from '@/lib/trialAccess';
 
 export const runtime = 'nodejs';
 
@@ -11,10 +13,17 @@ export async function POST(req: Request): Promise<Response> {
   if (!payload?.scope || !payload?.level || !payload?.context) {
     return Response.json({ error: 'missing scope, level, or context' }, { status: 400 });
   }
+  if (JSON.stringify(payload.context).length > 120_000) {
+    return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
+  }
 
-  // Metering only applies to signed-in beta testers. Anonymous, unsynced use is unaffected —
-  // see the change note in the app-release summary for the tradeoff this leaves open.
-  const userId = await userFromRequest(req);
+  const trialInstall = trialInstallFromRequest(req);
+  const userId = trialInstall ? null : await userFromRequest(req);
+  const provider = selectProvider(payload.model);
+  if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
+    return unauthorized();
+  }
+
   if (userId) {
     const kind: 'selection' | 'ask' = payload.question || payload.variant === 'different' ? 'ask' : 'selection';
     const usage = await getStore().consumeUsage(userId, kind);
@@ -24,9 +33,11 @@ export async function POST(req: Request): Promise<Response> {
         { status: 402 }
       );
     }
+  } else if (!provider.mock && trialInstall) {
+    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
+    if (denied) return denied;
   }
 
-  const provider = selectProvider(payload.model);
   const system = buildSystemPrompt(payload);
   const user = buildUserPrompt(payload);
   const encoder = new TextEncoder();

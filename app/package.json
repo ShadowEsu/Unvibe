@@ -66,6 +66,7 @@
           }
         ],
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
+        "NSMicrophoneUsageDescription": "Unvibe uses the microphone only when you hold the voice button to ask a question. Recording never starts in the background.",
         "LSUIElement": false
       }
     },

@@ -1,4 +1,7 @@
 /** Provider abstraction so the model can be swapped without touching the server or extension. */
+export type ModelProvider = Provider;
+export type ModelRoute = 'LOCAL' | 'CLOUD' | 'BYOK';
+
 export interface Provider {
   readonly name: string;
   readonly mock: boolean;
