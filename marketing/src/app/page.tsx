@@ -9,6 +9,7 @@ import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
+import { WaitlistInvite } from "@/components/paper/WaitlistInvite";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
@@ -30,7 +31,7 @@ export default function HomePage() {
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
           <p className="paper-caption">
-            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills below are current.
+            Highlight code, get an explanation beside your editor, then quiz yourself. Stills below are from the current Mac app.
           </p>
         </Reveal>
       </section>
@@ -99,6 +100,12 @@ export default function HomePage() {
             <TypingFaq items={homeFaq} />
           </div>
         </Reveal>
+      </section>
+
+      <section className="paper-section">
+        <div className="paper-wrap">
+          <WaitlistInvite />
+        </div>
       </section>
     </div>
   );

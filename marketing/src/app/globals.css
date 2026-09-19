@@ -1349,7 +1349,7 @@
   --hero-type-muted: rgb(247 244 238 / 0.7);
   --hero-glass: rgb(18 12 32 / 0.32);
   --hero-line: rgb(247 244 238 / 0.22);
-  --hero-veil: linear-gradient(180deg, rgb(12 16 28 / 0.14) 0%, rgb(12 16 28 / 0.1) 38%, rgb(18 12 32 / 0.62) 100%);
+  --hero-veil: linear-gradient(180deg, rgb(12 16 28 / 0.22) 0%, rgb(12 16 28 / 0.28) 42%, rgb(18 12 32 / 0.62) 100%);
   --brand: #6f45d2;
   --brand-deep: #3d2080;
   --brand-soft: #e8dff8;

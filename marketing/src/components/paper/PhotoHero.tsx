@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ReleaseCountdown } from "@/components/ReleaseCountdown";
+import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
 
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
@@ -22,10 +22,8 @@ export function PhotoHero() {
       <div className="paper-hero__veil" />
       <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
         <h1>Understand the AI-generated code you ship.</h1>
-        <p className="paper-hero__kicker">Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.</p>
-      </div>
-      <div className={ready ? "paper-hero__foot is-ready" : "paper-hero__foot"}>
-        <ReleaseCountdown variant="hero" />
+        <p className="paper-hero__kicker">Select code. Unvibe explains it beside your editor. Save it, then quiz yourself.</p>
+        <JoinWaitlistRow href="/#waitlist" />
       </div>
     </section>
   );

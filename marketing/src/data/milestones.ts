@@ -11,6 +11,18 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "19 SEP 2026",
+    category: "DISTRIBUTION",
+    title: "Release day countdown removed",
+    summary: "The 7 SEP 2026 private beta countdown is off the homepage hero. No new public date is listed.",
+  },
+  {
+    date: "19 SEP 2026",
+    category: "DISTRIBUTION",
+    title: "Homepage waitlist at the bottom",
+    summary: "Join waitlist in the nav and footer now opens the homepage form. Install platform tabs and the Mac download link sit centered under the command.",
+  },
+  {
     date: "26 AUG 2026",
     category: "DISTRIBUTION",
     title: "Smol Startup #1 daily",
