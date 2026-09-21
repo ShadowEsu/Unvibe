@@ -24,7 +24,8 @@ export function notify(message: string): void {
 }
 
 export type BarPulse = {
-  phase: 'idle' | 'working' | 'ready' | 'understood' | 'error';
+  phase: 'idle' | 'working' | 'analyzing' | 'searching' | 'thinking' | 'generating' |
+    'contextualizing' | 'finalizing' | 'ready' | 'understood' | 'error' | 'offline';
   label: string;
 };
 

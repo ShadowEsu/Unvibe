@@ -54,18 +54,17 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
   }
 }
 
-/** Compact landscape aisle: play · logo · home. */
+/** Compact top surface. Width leaves independent controls on both sides of a Mac notch. */
 const FLOATING_BAR_W = 220;
 const BOTTOM_BAR_COMPACT_W = 184;
 const BOTTOM_BAR_W = 356;
-const BAR_EXPANDED_W = 500;
-const BAR_EXPANDED_H = 348;
+const BAR_EXPANDED_BODY_H = 192;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
-  if (size === 'small') return { w: 460, h: 34 };
-  if (size === 'large') return { w: 600, h: 42 };
-  return { w: 520, h: 38 };
+  if (size === 'small') return { w: 284, h: 34 };
+  if (size === 'large') return { w: 360, h: 42 };
+  return { w: 320, h: 38 };
 }
 
 function compactBarWidth(position: BarPosition): number {
@@ -83,7 +82,7 @@ function islandSafeTop(position: BarPosition): number {
 }
 
 function compactBarHeight(position: BarPosition): number {
-  return position.startsWith('bottom') ? 56 : Math.max(42, islandSafeTop(position) + 4);
+  return position.startsWith('bottom') ? 38 : Math.max(islandMetrics().h, islandSafeTop(position));
 }
 
 export function createBar(): BrowserWindow {
@@ -129,10 +128,11 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   barIsExpanded = expanded;
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
-  const width = expanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = expanded ? (bottom ? 56 : BAR_EXPANDED_H + islandSafeTop(position)) : compactBarHeight(position);
+  const width = bottom && expanded ? BOTTOM_BAR_W : compactBarWidth(position);
+  const height = expanded ? (bottom ? 56 : BAR_EXPANDED_BODY_H + islandSafeTop(position)) : compactBarHeight(position);
   const { x, y } = barBounds(position, width, height);
-  win.setFocusable(expanded);
+  // Hover previews must never activate the app or interrupt typing in the editor.
+  win.setFocusable(false);
   const prev = win.getBounds();
   if (force || prev.x !== x || prev.y !== y || prev.width !== width || prev.height !== height) {
     win.setBounds({ x, y, width, height }, true);
@@ -144,8 +144,8 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
 export function positionBar(win: BrowserWindow): void {
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
-  const width = barIsExpanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = barIsExpanded ? (bottom ? 56 : BAR_EXPANDED_H + islandSafeTop(position)) : compactBarHeight(position);
+  const width = bottom && barIsExpanded ? BOTTOM_BAR_W : compactBarWidth(position);
+  const height = barIsExpanded ? (bottom ? 56 : BAR_EXPANDED_BODY_H + islandSafeTop(position)) : compactBarHeight(position);
   const { x, y } = barBounds(position, width, height);
   win.setBounds({ x, y, width, height });
   if (position === 'top-center') win.setPosition(x, y);

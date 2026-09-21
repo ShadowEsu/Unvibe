@@ -45,6 +45,8 @@ export interface ReviewSession {
   level: ExplanationLevel;
   /** Accumulated streamed explanation for local history (on-device only). */
   explanationText?: string;
+  /** Prevents a pulse event for every streamed token. */
+  islandStreaming?: boolean;
   payload?: ReviewRequestPayload;
   file?: string;
   project?: string;
@@ -68,11 +70,19 @@ function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
     win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
   }
-  const typed = ev as { type?: string };
-  if (typed.type === 'status') pulseBar({ phase: 'working', label: 'Explaining' });
-  else if (typed.type === 'done') pulseBar({ phase: 'ready', label: 'Ready' });
+  const typed = ev as { type?: string; message?: string };
+  if (typed.type === 'status') pulseBar({ phase: 'thinking', label: 'Thinking' });
+  else if (typed.type === 'token' && !session.islandStreaming) {
+    session.islandStreaming = true;
+    pulseBar({ phase: 'generating', label: 'Generating' });
+  }
+  else if (typed.type === 'done') pulseBar({ phase: 'finalizing', label: 'Finalizing' });
   else if (typed.type === 'understood') pulseBar({ phase: 'understood', label: 'Understood' });
-  else if (typed.type === 'error' || typed.type === 'blocked') pulseBar({ phase: 'error', label: 'Could not explain' });
+  else if (typed.type === 'error') {
+    const offline = /could not reach|network|offline|connection/i.test(typed.message ?? '');
+    pulseBar({ phase: offline ? 'offline' : 'error', label: offline ? 'Offline' : 'Issue' });
+  }
+  else if (typed.type === 'blocked') pulseBar({ phase: 'error', label: 'Blocked' });
   else if (typed.type === 'cancelled') pulseBar({ phase: 'idle', label: 'Ready' });
 }
 
@@ -266,6 +276,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
   session.level = opts.level;
   session.explanationText = '';
+  session.islandStreaming = false;
+  pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 
   const usageEarly = await resolveAppUsage();
   if (opts.level === 'expert' && !isProPlan(usageEarly.plan)) {
@@ -286,6 +298,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     return;
   }
 
+  pulseBar({ phase: 'analyzing', label: 'Analyzing' });
   const findings = scanPayload(payload);
   if (hasBlocking(findings)) {
     send(win, session, { type: 'blocked', findings });
@@ -363,7 +376,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
             plan: next.plan,
           });
           if (next.remaining <= 0) raiseLimitPause(win);
-        }).catch(() => undefined);
+          pulseBar({ phase: 'ready', label: 'Ready' });
+        }).catch(() => pulseBar({ phase: 'ready', label: 'Ready' }));
       } catch (err) {
         if (abort.signal.aborted) {
           if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });
@@ -436,7 +450,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
               plan: next.plan,
             });
             if (next.remaining <= 0) raiseLimitPause(win);
-          }).catch(() => undefined);
+            pulseBar({ phase: 'ready', label: 'Ready' });
+          }).catch(() => pulseBar({ phase: 'ready', label: 'Ready' }));
         }
       }
     }
@@ -459,6 +474,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
 export async function startComprehension(win: BrowserWindow, session: ReviewSession): Promise<void> {
   if (!session.code && !session.payload) return;
   try {
+    pulseBar({ phase: 'thinking', label: 'Thinking' });
     const payload = await ensurePayload(session, { level: session.level });
     const q = await fetchQuestion(payload, store().token());
     session.pendingAnswer = {
@@ -473,6 +489,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
       options: q.options,
       conceptLabel: q.conceptLabel,
     });
+    pulseBar({ phase: 'ready', label: 'Ready' });
   } catch {
     send(win, session, { type: 'error', message: 'Could not build a question for this one. Try again.' });
   }

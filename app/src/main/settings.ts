@@ -43,7 +43,7 @@ function mergeFeatures(loaded?: Partial<FeatureFlags>): FeatureFlags {
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 8;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
-const ISLAND_BEHAVIOR_REVISION = 3;
+const ISLAND_BEHAVIOR_REVISION = 4;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 /** Makes the companion navigation quieter without overriding custom widths. */
@@ -54,7 +54,7 @@ export interface Settings {
   settingsRevision?: number;
   /** Internal — migrates the former system-default appearance to light once. */
   appearanceRevision?: number;
-  /** Internal — tracks the bottom-center, always-available Island migration. */
+  /** Internal — tracks the top-attached, always-available Island migration. */
   islandBehaviorRevision?: number;
   /** Internal — tracks the editor bridge shortcut migration. */
   ideBridgeShortcutRevision?: number;
@@ -124,11 +124,11 @@ const DEFAULTS: Settings = {
   sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
   onboarded: false,
   shortcut: 'Control+U',
-  barPosition: 'bottom-center',
+  barPosition: 'top-center',
   // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
   barHoverPreview: true,
-  barHoverDelayMs: 220,
+  barHoverDelayMs: 160,
   rotateIslandStats: true,
   barSize: 'medium',
   followActiveDisplay: true,
@@ -177,8 +177,11 @@ class SettingsStore {
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
     const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
       loaded.barVisibility === 'during-review';
-    const needsBottomIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
-      (loaded.barPosition === undefined || loaded.barPosition === 'top-center');
+    const needsIslandRevision = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION;
+    const needsTopIsland = needsIslandRevision &&
+      (loaded.barPosition === undefined || loaded.barPosition === 'bottom-center');
+    const needsIslandTiming = needsIslandRevision &&
+      (loaded.barHoverDelayMs === undefined || loaded.barHoverDelayMs === 220);
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
       (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
     this.freshStart = needsOnboardingReset;
@@ -200,7 +203,8 @@ class SettingsStore {
       ...(needsFullscreenIsland
         ? { barVisibility: 'always' as const, barHoverPreview: true }
         : {}),
-      ...(needsBottomIsland ? { barPosition: 'bottom-center' as const, barHoverPreview: true } : {}),
+      ...(needsTopIsland ? { barPosition: 'top-center' as const, barHoverPreview: true } : {}),
+      ...(needsIslandTiming ? { barHoverDelayMs: 160 } : {}),
       // Older builds could collapse the whole panel on blur. Preserve the panel
       // size and simply dim it when focus returns to Cursor or VS Code.
       ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
@@ -217,7 +221,7 @@ class SettingsStore {
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsBottomIsland || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {

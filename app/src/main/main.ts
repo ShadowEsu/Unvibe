@@ -320,7 +320,7 @@ function asset(...parts: string[]): string {
 
 async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
-  pulseBar({ phase: 'working', label: 'Explaining' });
+  pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
   const usage = await resolveAppUsage();
   if (usage.remaining <= 0) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
@@ -855,12 +855,16 @@ app.whenReady().then(() => {
     }
     if (!root) return { ok: false, needsRepo: true, error: 'Choose a git project to build a change brief.' };
     try {
+      pulseBar({ phase: 'searching', label: 'Searching' });
       const head = await gitHeadState(root);
       const hunks = capHunks(await collectDiffHunks(root, scope));
+      pulseBar({ phase: 'analyzing', label: 'Analyzing' });
       const brief = buildChangeBrief({ repo: root, scope, hunks });
       productEvent('change_brief_opened', { files: brief.filesChanged });
+      pulseBar({ phase: 'ready', label: 'Ready' });
       return { ok: true, brief, branch: head.branch, detached: head.detached };
     } catch (error) {
+      pulseBar({ phase: 'error', label: 'Issue' });
       return { ok: false, error: error instanceof Error ? error.message : 'Could not read git changes.' };
     }
   });
@@ -872,6 +876,7 @@ app.whenReady().then(() => {
     if (!root || !file) {
       return { ok: false, error: 'Unvibe could not find documented history for this code.' };
     }
+    pulseBar({ phase: 'searching', label: 'Searching' });
     const start = session?.payload?.context.selection?.startLine ?? 1;
     const end = session?.payload?.context.selection?.endLine ?? start;
     const blame = await blameRange(root, file, start, end);
@@ -888,6 +893,7 @@ app.whenReady().then(() => {
       laterSubjects: history.slice(0, 4).map((row) => `${row.hash} ${row.subject}`),
     });
     productEvent('origin_opened');
+    pulseBar({ phase: 'ready', label: 'Ready' });
     return { ok: true, report };
   });
 
