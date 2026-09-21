@@ -320,7 +320,7 @@ function asset(...parts: string[]): string {
 
 async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
-  pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
+  pulseBar({ phase: 'loading', label: 'Loading' });
   const usage = await resolveAppUsage();
   if (usage.remaining <= 0) {
     pulseBar({ phase: 'error', label: 'Limit reached' });

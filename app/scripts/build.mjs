@@ -62,7 +62,7 @@ for (const name of ['bar', 'widget', 'companion']) {
   const rings = readFileSync('src/renderer/shared/usageRings.css', 'utf8');
   const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
   writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${css}`);
-  for (const file of readdirSync(`src/renderer/${name}`).filter((f) => f.endsWith('.png'))) {
+  for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }
 }

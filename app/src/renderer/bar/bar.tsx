@@ -22,7 +22,7 @@ type Snapshot = {
 };
 
 type PulsePhase =
-  | 'idle' | 'working' | 'analyzing' | 'searching' | 'thinking'
+  | 'idle' | 'loading' | 'working' | 'analyzing' | 'searching' | 'thinking'
   | 'generating' | 'contextualizing' | 'finalizing' | 'ready'
   | 'understood' | 'error' | 'offline';
 
@@ -34,10 +34,19 @@ function StatusDots() {
   return <span className="island__dots" aria-hidden="true"><i /><i /><i /><i /></span>;
 }
 
+function FlameIcon() {
+  return (
+    <svg className="island__flame" width="12" height="14" viewBox="0 0 16 18" fill="none" aria-hidden="true">
+      <path d="M9.1 1.2c.45 2.3-.48 3.55-1.45 4.55-.8.83-1.63 1.68-1.54 3.02.04.55.23 1.02.57 1.4-.06-1.61.8-2.7 1.84-3.61.4 1.45 1.88 2.44 1.88 4.5 0 1.72-1.13 3.03-2.7 3.03-2.52 0-4.35-1.83-4.35-4.53 0-2.54 1.56-4.54 3.05-6.08.02 1.03.23 1.74.63 2.35C7.9 4.72 8.84 3.54 9.1 1.2Z" fill="currentColor" />
+      <path d="M10.1 6.4c1.63 1.1 2.55 2.79 2.55 4.63 0 3.2-2.05 5.77-5.13 5.77-2.9 0-5.17-2.2-5.17-5.24 0-.73.12-1.43.36-2.1.2 3.32 2.28 5.46 5.1 5.46 2.18 0 3.67-1.67 3.67-3.95 0-1.62-.61-3.02-1.38-4.57Z" fill="currentColor" opacity=".62" />
+    </svg>
+  );
+}
+
 const STATUS_WORD: Record<PulsePhase, string> = {
-  idle: 'ready', working: 'working', analyzing: 'analyzing', searching: 'searching',
-  thinking: 'thinking', generating: 'generating', contextualizing: 'defining',
-  finalizing: 'finalizing', ready: 'ready', understood: 'ready', error: 'issue', offline: 'offline',
+  idle: 'ready', loading: 'loading', working: 'working', analyzing: 'analyzing', searching: 'searching',
+  thinking: 'thinking', generating: 'generating', contextualizing: 'understanding',
+  finalizing: 'finalising', ready: 'ready', understood: 'understood', error: 'issue', offline: 'offline',
 };
 
 function notchSafeTop(): number {
@@ -217,7 +226,7 @@ function Bar() {
         </div>
         <span className="island__notch" aria-hidden="true" />
         <div className="island__wing island__wing--right" aria-live="polite">
-          {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : <span className="island__streak"><b>{value(snapshot?.streak)}</b><span aria-hidden="true">🔥</span></span>}
+          {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : expanded ? null : <span className="island__streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>}
         </div>
       </div>
 
@@ -225,7 +234,7 @@ function Bar() {
         <div className="island__overview">
           <header className="island__header">
             <div><strong>Unvibe</strong><span>your personal learning layer</span></div>
-            <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><span aria-hidden="true">🔥</span></span>
+            <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>
           </header>
           <div className="island__metrics" aria-label="Learning metrics">
             <span><b>{value(snapshot?.explanations)}</b> reviews</span>
