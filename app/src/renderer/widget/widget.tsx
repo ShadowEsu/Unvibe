@@ -70,6 +70,17 @@ const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'expert', label: 'Expert' },
 ];
 
+function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' }) {
+  const paths = {
+    explain: 'M7 4 3 8l4 4 M13 4l4 4-4 4 M11 2 9 14',
+    depth: 'M3 4h14 M5 8h10 M7 12h6',
+    quiz: 'M6.5 6a3.5 3.5 0 1 1 5.1 3.1c-1.7.9-2.1 1.6-2.1 2.9 M9.5 16h.01',
+    ask: 'M4 15 16 3 M8 3h8v8',
+    library: 'M4 3h10a2 2 0 0 1 2 2v11H6a2 2 0 0 0-2 2V3z M6 16h10',
+  } as const;
+  return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
+}
+
 function newTab(id: string, label: string): TabState {
   return {
     id,
@@ -196,17 +207,21 @@ function EmptyPicker({
 
   return (
     <div className="state empty-picker">
-      <div className="big">What should we explain?</div>
+      <div className="big">Ready when you are.</div>
       <div className="sub">
-        No selection was captured. Highlight code and press {shortcut}, or choose another source below.
+        Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
       </div>
       <div className="empty-actions">
         <button className="btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
-          Use clipboard
+          Explain my clipboard
         </button>
         <button className="btn ghost" disabled={picking} onClick={() => void chooseFile()}>
           {picking ? 'Opening…' : 'Choose a file…'}
         </button>
+      </div>
+      <details className="empty-more">
+        <summary>Review project changes</summary>
+        <div className="empty-actions">
         <button className="btn ghost" disabled={picking} onClick={() => void runPro('diff')}>
           Explain git diff · Pro
         </button>
@@ -216,7 +231,8 @@ function EmptyPicker({
         <button className="btn ghost" disabled={picking} onClick={() => void runPro('compare')}>
           Since last understood · Pro
         </button>
-      </div>
+        </div>
+      </details>
       <label className="paste-label" htmlFor="paste-code">
         Or paste code
       </label>
@@ -282,6 +298,7 @@ function Widget() {
   const [shortcut, setShortcut] = useState('⌘U');
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [proGate, setProGate] = useState(false);
+  const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
@@ -326,7 +343,7 @@ function Widget() {
   // The native window owns size; the renderer only exposes a bounded visual scale.
   useEffect(() => {
     const updateScale = () => {
-      const scale = Math.max(0.92, Math.min(1, Math.min(window.innerWidth / 440, window.innerHeight / 560)));
+      const scale = Math.max(0.78, Math.min(1, Math.min(window.innerWidth / 560, window.innerHeight / 640)));
       document.documentElement.style.setProperty('--widget-scale', scale.toFixed(3));
     };
     updateScale();
@@ -588,6 +605,32 @@ function Widget() {
           </span>
         )}
       </div>
+
+      {!collapsed ? (
+        <div className="widget-workspace">
+          <aside className="widget-tools" aria-label="Review tools">
+            <div className="widget-tools__title"><LogoMark size={19} stroke={2} /><span>Review tools</span></div>
+            <button className={activeTool === 'explain' ? 'on' : ''} type="button" title="Explanation" onClick={() => {
+              setActiveTool('explain');
+              document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}><ToolIcon name="explain" /><b>Walkthrough</b></button>
+            <button className={activeTool === 'depth' ? 'on' : ''} type="button" title="Difficulty" onClick={() => {
+              setActiveTool('depth');
+              document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }}><ToolIcon name="depth" /><b>Depth</b></button>
+            <button className={activeTool === 'quiz' ? 'on' : ''} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => {
+              setActiveTool('quiz');
+              setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
+              window.unvibe.testMe();
+            }}><ToolIcon name="quiz" /><b>Quick Quiz</b></button>
+            <button className={activeTool === 'ask' ? 'on' : ''} type="button" title="Ask a follow-up" onClick={() => {
+              setActiveTool('ask');
+              requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
+            }}><ToolIcon name="ask" /><b>Ask Unvibe</b></button>
+            <div className="widget-tools__spacer" />
+            <button type="button" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Memory</b></button>
+          </aside>
+          <section className="widget-main">
 
       {!collapsed && !sessionPaused && (
         <div className="tabs" role="tablist" aria-label="Review tabs">
@@ -1063,6 +1106,9 @@ function Widget() {
           )}
         </>
       )}
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

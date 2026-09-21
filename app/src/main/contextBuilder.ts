@@ -82,6 +82,8 @@ export async function resolveRepoRoot(preferred?: string): Promise<string | null
       settings().set({ lastProjectRoot: root });
       return root;
     }
+    // An explicit invalid choice must never fall back to a different repository.
+    return null;
   }
   const remembered = settings().all().lastProjectRoot;
   if (remembered) {

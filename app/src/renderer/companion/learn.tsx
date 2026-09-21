@@ -558,10 +558,10 @@ export function Learn({
     <div className="learn-page">
       <div className="topline learn-topline">
         <div>
-          <h1>{intent === 'quiz' ? 'Understanding Check' : 'Knowledge'}</h1>
+          <h1>{intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'}</h1>
           <p className="lead lead--tight">
             {intent === 'quiz'
-              ? 'Recent concepts worth revisiting. Check that you can still explain them.'
+              ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'
               : 'Saved explanations on this Mac, with source and freshness where we have it.'}
           </p>
         </div>

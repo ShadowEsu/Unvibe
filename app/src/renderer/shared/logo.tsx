@@ -1,4 +1,4 @@
-/** Unvibe mark — purple hexagon U with baked 45° shadow, or white for on-fill badges. */
+/** Unvibe mark — single-color hexagon U; inherits the surface foreground. */
 export function LogoMark({
   size = 22,
   stroke = 1.9,
@@ -9,9 +9,9 @@ export function LogoMark({
   tone?: 'brand' | 'onFill' | 'island';
 }) {
   const shadowStroke = Math.max(1.2, stroke * 0.95);
-  const main = tone === 'onFill' ? '#ffffff' : tone === 'island' ? '#c4b5fd' : '#6f45d2';
-  const shadowA = tone === 'onFill' ? 'rgba(255,255,255,0.28)' : 'rgba(61,32,128,0.22)';
-  const shadowB = tone === 'onFill' ? 'rgba(255,255,255,0.14)' : 'rgba(61,32,128,0.12)';
+  const main = tone === 'onFill' ? '#ffffff' : tone === 'island' ? '#c4b5fd' : '#a78bfa';
+  const shadowA = tone === 'onFill' ? 'rgba(255,255,255,0.28)' : 'transparent';
+  const shadowB = tone === 'onFill' ? 'rgba(255,255,255,0.14)' : 'transparent';
   return (
     <svg
       width={size}

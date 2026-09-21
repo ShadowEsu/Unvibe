@@ -16,11 +16,14 @@ export function Briefings() {
   const [branch, setBranch] = useState('');
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
+  const [needsRepo, setNeedsRepo] = useState(false);
   const [openFile, setOpenFile] = useState<string | null>(null);
 
   const loadKnowledge = async () => {
-    const result = await window.unvibe.listKnowledge() as { ok?: boolean; items?: KnowledgeObject[] };
-    if (result?.ok) setKnowledge(result.items ?? []);
+    try {
+      const result = await window.unvibe.listKnowledge() as { ok?: boolean; items?: KnowledgeObject[] };
+      if (result?.ok) setKnowledge(result.items ?? []);
+    } catch { setError('Saved knowledge could not be loaded. Try refreshing.'); }
   };
 
   const build = async (pick = false) => {
@@ -30,12 +33,15 @@ export function Briefings() {
       const result = await window.unvibe.buildChangeBrief({ scope, pick }) as {
         ok?: boolean;
         cancelled?: boolean;
+        needsRepo?: boolean;
         error?: string;
         brief?: ChangeBrief;
         branch?: string;
         detached?: boolean;
       };
       if (result?.cancelled) return;
+      setNeedsRepo(Boolean(result?.needsRepo));
+      if (result?.needsRepo) { setBrief(null); return; }
       if (!result?.ok || !result.brief) {
         setError(result?.error ?? 'Unvibe could not read git changes.');
         setBrief(null);
@@ -43,6 +49,8 @@ export function Briefings() {
       }
       setBrief(result.brief);
       setBranch(result.detached ? 'detached HEAD' : (result.branch ?? ''));
+    } catch {
+      setError('Unvibe could not complete this request. Try again.');
     } finally {
       setBusy(false);
     }
@@ -58,6 +66,8 @@ export function Briefings() {
     try {
       const result = await window.unvibe.explainDiff({ brief: true, scope }) as { ok?: boolean; cancelled?: boolean; error?: string };
       if (!result?.ok && !result?.cancelled) setError(result?.error ?? 'Could not start that review.');
+    } catch {
+      setError('Unvibe could not complete this request. Try again.');
     } finally {
       setBusy(false);
     }
@@ -69,7 +79,7 @@ export function Briefings() {
         <div>
           <div className="kicker">Change Brief</div>
           <h1>Briefings</h1>
-          <p>Built from local git. Unvibe does not invent whether an agent wrote these edits.</p>
+          <p>A clear recap of what changed in your project. Available offline from local git.</p>
         </div>
         <div className="briefings__actions">
           <button type="button" className="btn ghost" disabled={busy} onClick={() => void build(true)}>Choose repo</button>
@@ -83,6 +93,7 @@ export function Briefings() {
             key={item.id}
             type="button"
             role="tab"
+            disabled={busy}
             aria-selected={scope === item.id}
             className={scope === item.id ? 'on' : ''}
             onClick={() => setScope(item.id)}
@@ -92,7 +103,15 @@ export function Briefings() {
         ))}
       </div>
 
-      {error ? <div className="briefings__empty" role="status">{error}</div> : null}
+      {error ? <div className="briefings__empty" role="alert">{error}</div> : null}
+      {busy && <p role="status">Reading your project…</p>}
+      {needsRepo && !busy && (
+        <section className="briefings__empty">
+          <h2>Your next change, made clear.</h2>
+          <p>Choose a local git project to see its recent changes. Reading a brief stays on this Mac; AI explanations ask for your consent separately.</p>
+          <button className="btn" onClick={() => void build(true)}>Choose a project</button>
+        </section>
+      )}
 
       {brief && !brief.empty ? (
         <article className="briefings__card">
@@ -128,7 +147,7 @@ export function Briefings() {
             ))}
           </ul>
         </article>
-      ) : !error ? (
+      ) : !error && !needsRepo && !busy ? (
         <div className="briefings__empty">No documented changes in this git scope.</div>
       ) : null}
 

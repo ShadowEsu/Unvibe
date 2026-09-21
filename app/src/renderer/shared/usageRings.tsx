@@ -1,4 +1,5 @@
 import './usageRings.css';
+import { LogoMark } from './logo';
 
 export type UsageSlice = {
   used: number;
@@ -15,6 +16,7 @@ function tone(pct: number): 'ok' | 'low' | 'out' {
 function Ring({
   label,
   remaining,
+  used,
   limit,
   size,
   tiny,
@@ -29,7 +31,9 @@ function Ring({
     <span
       className={`usage-ring${tiny ? ' usage-ring--tiny' : ''}`}
       data-tone={tone(pct)}
-      title={`${label}: ${left} of ${safeLimit} left`}
+      tabIndex={0}
+      aria-label={`${label}: ${left} of ${safeLimit} remaining, ${used} used`}
+
     >
       <span className="usage-ring__dial" style={{ width: size, height: size }}>
         <svg viewBox="0 0 36 36" aria-hidden="true">
@@ -46,9 +50,16 @@ function Ring({
             transform="rotate(-90 18 18)"
           />
         </svg>
-        <b>{left}</b>
+        <span className="usage-ring__brand"><LogoMark size={tiny ? 13 : 21} /></span>
+        <b>{pct}%</b>
       </span>
-      <small>{label}</small>
+      <small>{label} · {left} left</small>
+      <span className="usage-ring__detail" role="tooltip">
+        <strong>{label === 'AI' ? '✨ AI explanations' : '⌘ Code selections'}</strong>
+        <span>{Math.max(0, used)} used · {left} remaining</span>
+        <span className="usage-ring__bar"><i style={{ width: `${pct}%` }} /></span>
+        <span>{pct}% of your {safeLimit} allowance left</span>
+      </span>
     </span>
   );
 }
@@ -74,12 +85,8 @@ export function UsageRings({
       {selections ? <Ring label="Select" size={dialSize} tiny={tiny} {...selections} /> : null}
     </>
   );
-  if (onOpen) {
-    return (
-      <button type="button" className={className} onClick={onOpen} aria-label="Open usage">
-        {body}
-      </button>
-    );
-  }
-  return <div className={className} aria-label="Usage remaining">{body}</div>;
+  return <div className="usage-cluster">
+    <div className={className} aria-label="Usage remaining">{body}</div>
+    {onOpen && <button type="button" className="usage-plan" onClick={onOpen}>View allowance ↗</button>}
+  </div>;
 }

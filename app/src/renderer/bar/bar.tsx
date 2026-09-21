@@ -40,10 +40,6 @@ function Wave() {
   );
 }
 
-function PixelFlame({ hot, size = 'sm' }: { hot: boolean; size?: 'sm' | 'md' }) {
-  return <span className={`pxflame pxflame--${size}${hot ? ' pxflame--hot' : ' pxflame--cold'}`} aria-hidden="true" />;
-}
-
 function Bar() {
   const [note, setNote] = useState('');
   const [phase, setPhase] = useState<PulsePhase>('idle');
@@ -256,7 +252,6 @@ function Bar() {
   const bottom = position.startsWith('bottom');
   const shortcut = prettyShortcut(snapshot?.shortcut ?? 'Control+U');
   const heat = snapshot?.heat ?? [];
-  const streak = snapshot?.streak ?? 0;
   const understood = snapshot?.understood ?? 0;
   const lines = snapshot?.linesUnderstood ?? 0;
   const left = snapshot?.quota?.remaining ?? 0;
@@ -278,6 +273,7 @@ function Bar() {
   return (
     <div
       className={`strip strip--size-${barSize}${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${working ? ' strip--working' : ''}${justUnderstood ? ' strip--got' : ''}${phase === 'error' ? ' strip--note' : ''}`}
+      style={{ paddingTop: attached && expanded ? Math.max(38, ((window.screen as Screen & { availTop?: number }).availTop ?? window.screenY + 38) - window.screenY) : 0 }}
       tabIndex={0}
       onKeyDown={onKeyDown}
       onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, textarea, select, a, [role="tab"]')) setPanelExpanded(!expandedRef.current); }}
@@ -287,29 +283,30 @@ function Bar() {
     >
       <div className="strip__main" title={statusText}>
         {bottom ? (
-          <button className="strip__bottom-open" type="button" onClick={() => act('home')}>
-            <LogoMark size={16} stroke={2} tone="island" />
-            <span>Unvibe</span>
-          </button>
+          <div className="strip__bottom-shell">
+            <button className="strip__bottom-open" type="button" onClick={() => setPanelExpanded(!expandedRef.current)} aria-expanded={expanded}>
+              <span className="strip__bottom-mark"><LogoMark size={18} stroke={2} tone="island" /></span>
+              <span className="strip__bottom-copy">
+                <b>Unvibe</b>
+                <small><span aria-hidden="true">🔥</span> {working ? 'Explaining' : justUnderstood ? 'Saved' : 'Ready'}</small>
+              </span>
+              <span className="strip__bottom-chevron" aria-hidden="true">⌃</span>
+            </button>
+            <div className="strip__bottom-actions" aria-hidden={!expanded}>
+              <button type="button" onClick={() => act('review')} title={`Explain selected code · ${shortcut}`}><CodeIcon /><span>Review</span></button>
+              <button type="button" onClick={() => act('home')} title="Open your learning space"><HomeIcon /><span>Open</span></button>
+            </div>
+          </div>
         ) : (
           <>
             <div className="strip__wing strip__wing--left">
               <button className="chip chip--play" aria-label="Explain selected code" title={`Explain selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>
               <span className="mark" aria-hidden="true"><LogoMark size={16} stroke={2.05} tone="island" /></span>
               <span className="strip__word">Unvibe</span>
-              {!expanded && !working && !justUnderstood ? (
-                <span className="strip__tip-fire" title={`${streak} day streak`}>
-                  <PixelFlame hot />
-                </span>
-              ) : null}
             </div>
             <span className="strip__camera-gap" aria-hidden="true" />
             <div className="strip__wing strip__wing--right">
-              <span className="strip__stat" data-tone="streak" title={`${streak} day streak`}>
-                <PixelFlame hot={streak > 0 || (!working && !justUnderstood)} />
-                <b>{streak}</b>
-                streak
-              </span>
+              <span className="strip__flame" aria-hidden="true">🔥</span>
               {working ? (
                 <span className="strip__live-status" aria-live="polite"><Wave />Explaining</span>
               ) : justUnderstood ? (
@@ -319,7 +316,7 @@ function Bar() {
               ) : phase === 'ready' ? (
                 <span className="strip__live-status" aria-live="polite">Explained</span>
               ) : (
-                <span className="strip__stat" data-tone="understood" title="Understood"><b>{understood}</b> got</span>
+                <span className="strip__live-status" aria-live="polite">Ready</span>
               )}
               <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
             </div>
@@ -337,7 +334,7 @@ function Bar() {
           </div>
           {working ? <div className="strip__working"><Wave /><span>Reading the selection and writing an explanation.</span></div> : null}
           <div className="strip__metric-grid">
-            <article data-tone="streak"><PixelFlame hot={streak > 0} size="md" /><b>{streak}</b><span>day streak</span></article>
+            <article><b>{snapshot?.explanations ?? 0}</b><span>reviews</span></article>
             <article data-tone="understood"><b>{understood}</b><span>understood</span></article>
             <article data-tone="lines"><b>{lines}</b><span>lines</span></article>
             <article><b>{left}</b><span>AI left</span></article>
@@ -369,8 +366,8 @@ function Bar() {
             />
           </div>
           <div className="strip__actions">
-            <button type="button" onClick={() => act('review')}>Understand change <kbd>{shortcut}</kbd></button>
-            <button type="button" onClick={() => act('home')}>Open Unvibe</button>
+            <button type="button" onClick={() => act('review')}>Explain selection <kbd>{shortcut}</kbd></button>
+            <button type="button" onClick={() => act('home')}>Open learning space</button>
           </div>
         </div>
       )}

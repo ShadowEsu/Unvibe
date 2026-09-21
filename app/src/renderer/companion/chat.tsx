@@ -113,6 +113,7 @@ function AiPicker({
 }
 
 export function Chat({
+  initialDraft = '',
   providerLabel,
   usingOwnAi,
   providerId,
@@ -121,6 +122,7 @@ export function Chat({
   onRefresh,
   onOpenAiSettings,
 }: {
+  initialDraft?: string;
   providerLabel: string;
   usingOwnAi: boolean;
   providerId: string;
@@ -130,7 +132,7 @@ export function Chat({
   onOpenAiSettings: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [left, setLeft] = useState(usage?.remaining ?? null);
@@ -142,6 +144,9 @@ export function Chat({
   const startedRef = useRef(new Date().toISOString());
   const endRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const seededRef = useRef(false);
+
+  useEffect(() => { areaRef.current?.focus(); }, []);
 
   const used = usage?.used ?? 0;
   const limit = Math.max(1, usage?.limit ?? 1);
@@ -252,6 +257,13 @@ export function Chat({
     areaRef.current?.focus();
   };
 
+  useEffect(() => {
+    const seed = initialDraft.trim();
+    if (!seed || seededRef.current) return;
+    seededRef.current = true;
+    void send(seed);
+  }, []);
+
   const empty = messages.length === 0 && !busy;
   const tone = usageTone(pct);
 
@@ -336,7 +348,7 @@ export function Chat({
             <textarea
               id="chatDraft"
               ref={areaRef}
-              rows={empty ? 3 : 1}
+              rows={1}
               value={draft}
               disabled={busy}
               placeholder={empty ? 'Ask Unvibe anything about this codebase…' : 'Follow up'}

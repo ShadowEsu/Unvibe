@@ -7,8 +7,8 @@ const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}
 
 const SNAP = 18;
 /** Opening size for the review panel. Big enough to read, not a full window. */
-const DEFAULT_WIDGET_W = 460;
-const DEFAULT_WIDGET_H = 596;
+const DEFAULT_WIDGET_W = 560;
+const DEFAULT_WIDGET_H = 640;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
@@ -39,6 +39,7 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
   const centerArea = position === 'top-center' ? bounds : workArea;
   const cx = centerArea.x + Math.round((centerArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
+  // Keep every interactive pixel below the macOS camera/menu-bar safe area.
   const top = position === 'top-center' ? bounds.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
   switch (position) {
@@ -55,16 +56,16 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 
 /** Compact landscape aisle: play · logo · home. */
 const FLOATING_BAR_W = 220;
-const BOTTOM_BAR_COMPACT_W = 48;
-const BOTTOM_BAR_W = 168;
-const BAR_EXPANDED_W = 420;
+const BOTTOM_BAR_COMPACT_W = 184;
+const BOTTOM_BAR_W = 356;
+const BAR_EXPANDED_W = 500;
 const BAR_EXPANDED_H = 348;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
-  if (size === 'small') return { w: 360, h: 34 };
-  if (size === 'large') return { w: 480, h: 42 };
-  return { w: 428, h: 38 };
+  if (size === 'small') return { w: 460, h: 34 };
+  if (size === 'large') return { w: 600, h: 42 };
+  return { w: 520, h: 38 };
 }
 
 function compactBarWidth(position: BarPosition): number {
@@ -73,20 +74,16 @@ function compactBarWidth(position: BarPosition): number {
   return FLOATING_BAR_W;
 }
 
-/**
- * The attached Island stays inside the menu-bar strip. Hanging below it looks lower but
- * covers the title bar of whatever window is underneath, so the drop is zero on purpose.
- */
-const ISLAND_DROP = 0;
+/** The black cap attaches to the screen; controls start below the camera safe area. */
+function islandSafeTop(position: BarPosition): number {
+  if (position !== 'top-center') return 0;
+  const display = settings().all().followActiveDisplay
+    ? screen.getDisplayNearestPoint(screen.getCursorScreenPoint()) : screen.getPrimaryDisplay();
+  return Math.max(process.platform === 'darwin' ? 38 : 0, display.workArea.y - display.bounds.y);
+}
 
 function compactBarHeight(position: BarPosition): number {
-  if (position.startsWith('bottom')) return 48;
-  if (position !== 'top-center') return islandMetrics().h;
-  const display = settings().all().followActiveDisplay
-    ? screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-    : screen.getPrimaryDisplay();
-  const menuBar = Math.max(islandMetrics().h, display.workArea.y - display.bounds.y);
-  return (menuBar || islandMetrics().h) + ISLAND_DROP;
+  return position.startsWith('bottom') ? 56 : Math.max(42, islandSafeTop(position) + 4);
 }
 
 export function createBar(): BrowserWindow {
@@ -133,7 +130,7 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
   const width = expanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = expanded ? (bottom ? 48 : BAR_EXPANDED_H) : compactBarHeight(position);
+  const height = expanded ? (bottom ? 56 : BAR_EXPANDED_H + islandSafeTop(position)) : compactBarHeight(position);
   const { x, y } = barBounds(position, width, height);
   win.setFocusable(expanded);
   const prev = win.getBounds();
@@ -148,7 +145,7 @@ export function positionBar(win: BrowserWindow): void {
   const position = settings().all().barPosition;
   const bottom = position.startsWith('bottom');
   const width = barIsExpanded ? (bottom ? BOTTOM_BAR_W : BAR_EXPANDED_W) : compactBarWidth(position);
-  const height = barIsExpanded ? (bottom ? 48 : BAR_EXPANDED_H) : compactBarHeight(position);
+  const height = barIsExpanded ? (bottom ? 56 : BAR_EXPANDED_H + islandSafeTop(position)) : compactBarHeight(position);
   const { x, y } = barBounds(position, width, height);
   win.setBounds({ x, y, width, height });
   if (position === 'top-center') win.setPosition(x, y);
@@ -223,7 +220,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
     (saved.width === 360 && saved.height === 480) ||
     (saved.width === 440 && saved.height === 560) ||
     (saved.width === 480 && saved.height === 600) ||
-    (saved.width === 540 && saved.height === 720);
+    (saved.width === 540 && saved.height === 720) ||
+    (saved.width === 680 && saved.height === 720);
   if (stockTiny) {
     return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
   }
@@ -233,8 +231,8 @@ function resolveWidgetBounds(): Electron.Rectangle {
 /** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
 export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-const WIDGET_MIN_W = 380;
-const WIDGET_MIN_H = 440;
+const WIDGET_MIN_W = 420;
+const WIDGET_MIN_H = 460;
 
 export function applyWidgetResize(
   start: Electron.Rectangle,

@@ -43,7 +43,7 @@ function mergeFeatures(loaded?: Partial<FeatureFlags>): FeatureFlags {
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 8;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
-const ISLAND_BEHAVIOR_REVISION = 2;
+const ISLAND_BEHAVIOR_REVISION = 3;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 /** Makes the companion navigation quieter without overriding custom widths. */
@@ -52,9 +52,9 @@ const SIDEBAR_DENSITY_REVISION = 2;
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
   settingsRevision?: number;
-  /** Internal — migrates the former system-default appearance to dark once. */
+  /** Internal — migrates the former system-default appearance to light once. */
   appearanceRevision?: number;
-  /** Internal — tracks the quiet-by-default Island preference migration. */
+  /** Internal — tracks the bottom-center, always-available Island migration. */
   islandBehaviorRevision?: number;
   /** Internal — tracks the editor bridge shortcut migration. */
   ideBridgeShortcutRevision?: number;
@@ -118,16 +118,16 @@ export interface Settings {
 
 const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
-  appearanceRevision: 1,
+  appearanceRevision: 2,
   islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
   ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
   onboarded: false,
   shortcut: 'Control+U',
-  barPosition: 'top-center',
+  barPosition: 'bottom-center',
   // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
-  barHoverPreview: false,
+  barHoverPreview: true,
   barHoverDelayMs: 220,
   rotateIslandStats: true,
   barSize: 'medium',
@@ -139,7 +139,7 @@ const DEFAULTS: Settings = {
   widgetOpacityInactive: 0.84,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
-  theme: 'dark',
+  theme: 'light',
   defaultExplanationLevel: 'intermediate',
   displayName: '',
   profileEmail: '',
@@ -173,11 +173,12 @@ class SettingsStore {
     // default so deliberately customised shortcuts remain untouched.
     const needsIdeShortcutMigration = (loaded.ideBridgeShortcutRevision ?? 0) < IDE_BRIDGE_SHORTCUT_REVISION &&
       (loaded.shortcut === 'CommandOrControl+U' || loaded.shortcut === 'CommandOrControl+Alt+U');
-    const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
-      (loaded.theme === undefined || loaded.theme === 'system');
+    const needsLightDefault = (loaded.appearanceRevision ?? 0) < 2;
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
     const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
       loaded.barVisibility === 'during-review';
+    const needsBottomIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
+      (loaded.barPosition === undefined || loaded.barPosition === 'top-center');
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
       (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
     this.freshStart = needsOnboardingReset;
@@ -191,14 +192,15 @@ class SettingsStore {
       aiProvider,
       features: mergeFeatures(loaded.features),
       settingsRevision: SETTINGS_REVISION,
-      appearanceRevision: 1,
+      appearanceRevision: 2,
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
       ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
       sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
-      ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
+      ...(needsLightDefault ? { theme: 'light' as const } : {}),
       ...(needsFullscreenIsland
-        ? { barVisibility: 'always' as const, barHoverPreview: false }
+        ? { barVisibility: 'always' as const, barHoverPreview: true }
         : {}),
+      ...(needsBottomIsland ? { barPosition: 'bottom-center' as const, barHoverPreview: true } : {}),
       // Older builds could collapse the whole panel on blur. Preserve the panel
       // size and simply dim it when focus returns to Cursor or VS Code.
       ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
@@ -215,7 +217,7 @@ class SettingsStore {
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsBottomIsland || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
