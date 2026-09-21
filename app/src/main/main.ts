@@ -243,6 +243,7 @@ async function startBuiltReview(
   sourceLabel: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
     const built = await builder();
     session.abort?.abort();
     session.sourceApp = sourceLabel;
@@ -252,6 +253,7 @@ async function startBuiltReview(
     void runReview(win, session, { level: session.level });
     return { ok: true };
   } catch (err) {
+    pulseBar({ phase: 'error', label: 'Issue' });
     return { ok: false, error: err instanceof Error ? err.message : 'Could not start that review.' };
   }
 }

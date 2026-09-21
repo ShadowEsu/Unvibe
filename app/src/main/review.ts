@@ -196,8 +196,8 @@ function appendExplanation(session: ReviewSession, text: string): void {
   session.explanationText = (session.explanationText ?? '') + text;
 }
 
-function recordReview(win: BrowserWindow, session: ReviewSession): void {
-  if (!session.code) return;
+function recordReview(win: BrowserWindow, session: ReviewSession): boolean {
+  if (!session.code) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
     try {
@@ -211,8 +211,9 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
         type: 'error',
         message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
       });
+      return false;
     }
-    return;
+    return true;
   }
   session.recorded = true;
   const now = new Date();
@@ -241,7 +242,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
       type: 'error',
       message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
     });
-    return;
+    return false;
   }
   try {
     if (explanation && session.file) {
@@ -267,6 +268,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
   }
   session.onRecorded?.();
   void flush();
+  return true;
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
@@ -306,6 +308,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
   if (findings.length > 0 && !opts.consented) {
     send(win, session, { type: 'consent', findings });
+    pulseBar({ phase: 'idle', label: 'Ready' });
     return;
   }
 
@@ -365,7 +368,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           signal: abort.signal,
         });
         send(win, session, { type: 'done', model, mock: false });
-        recordReview(win, session);
+        if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
         void resolveAppUsage().then((next) => {
           send(win, session, {
             type: 'usage',
@@ -376,8 +379,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
             plan: next.plan,
           });
           if (next.remaining <= 0) raiseLimitPause(win);
-          pulseBar({ phase: 'ready', label: 'Ready' });
-        }).catch(() => pulseBar({ phase: 'ready', label: 'Ready' }));
+        }).catch(() => undefined);
       } catch (err) {
         if (abort.signal.aborted) {
           if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });
@@ -432,6 +434,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     const parser = new SseParser();
+    let completed = false;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -439,7 +442,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
         send(win, session, ev);
         if (ev.type === 'done') {
-          recordReview(win, session);
+          completed = true;
+          if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
           void resolveAppUsage().then((next) => {
             send(win, session, {
               type: 'usage',
@@ -450,11 +454,11 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
               plan: next.plan,
             });
             if (next.remaining <= 0) raiseLimitPause(win);
-            pulseBar({ phase: 'ready', label: 'Ready' });
-          }).catch(() => pulseBar({ phase: 'ready', label: 'Ready' }));
+          }).catch(() => undefined);
         }
       }
     }
+    if (!completed) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
   } catch (err) {
     if (abort.signal.aborted) {
       if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });

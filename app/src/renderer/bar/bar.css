@@ -54,6 +54,8 @@ button { font: inherit; }
 .island__streak { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 650; white-space: nowrap; }
 .island__flame { color: #ff7448; flex: 0 0 auto; filter: drop-shadow(0 0 4px rgba(255,92,52,.4)); }
 .island__status { color: #efeff2; font-size: 13px; line-height: 1; font-weight: 560; letter-spacing: 0; white-space: nowrap; text-transform: lowercase; }
+.island--small .island__status { font-size: 11px; }
+.island--large .island__status { font-size: 14px; }
 .island__dots { display: inline-flex; align-items: center; gap: 2px; width: 18px; }
 .island__dots i { width: 2px; height: 2px; border-radius: 50%; background: #8b5cf6; opacity: .26; animation: island-dot 1.3s ease-in-out infinite; }
 .island__dots i:nth-child(2) { animation-delay: 130ms; }

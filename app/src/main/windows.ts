@@ -62,9 +62,11 @@ const BAR_EXPANDED_BODY_H = 192;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
-  if (size === 'small') return { w: 284, h: 34 };
-  if (size === 'large') return { w: 360, h: 42 };
-  return { w: 320, h: 38 };
+  // The longest live word is “understanding”. Keep its full width and the
+  // animated dots in the right wing, outside the protected camera gap.
+  if (size === 'small') return { w: 360, h: 34 };
+  if (size === 'large') return { w: 456, h: 42 };
+  return { w: 412, h: 38 };
 }
 
 function compactBarWidth(position: BarPosition): number {
