@@ -1408,6 +1408,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   initialTab?: string;
 }) {
   const [tab, setTab] = useState(initialTab);
+  useEffect(() => setTab(initialTab), [initialTab]);
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -1605,6 +1606,11 @@ function App() {
     const onFocus = () => void refresh();
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
     window.unvibe.onShowPage((next) => {
+      if (next === 'Settings') {
+        setSettingsTab('Island');
+        setSettingsOpen(true);
+        return;
+      }
       const allowed: PageId[] = ['Home', 'Learn', 'Study', 'History', 'Quiz', 'Chat', 'Progress', 'Plan', 'Gift', 'Projects', 'Concepts', 'Notebook', 'Briefings', 'Library', 'Profile'];
       if (!allowed.includes(next as PageId)) return;
       setPage(next === 'History' || next === 'Study' ? 'Learn' : next as PageId);

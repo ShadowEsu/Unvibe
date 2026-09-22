@@ -5,6 +5,7 @@ const api = {
   // bar + companion
   reviewSelection: () => ipcRenderer.send('bar:review'),
   openCompanion: () => ipcRenderer.send('bar:openCompanion'),
+  openSettings: () => ipcRenderer.send('bar:openSettings'),
   companionReview: () => ipcRenderer.send('companion:review'),
   appInfo: (): Promise<{ version: string; user: string; shortcut: string }> => ipcRenderer.invoke('app:info'),
   onBarNotify: (cb: (msg: string) => void) => {

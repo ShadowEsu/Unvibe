@@ -58,15 +58,15 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 const FLOATING_BAR_W = 220;
 const BOTTOM_BAR_COMPACT_W = 184;
 const BOTTOM_BAR_W = 356;
-const BAR_EXPANDED_BODY_H = 192;
+const BAR_EXPANDED_BODY_H = 196;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
-  // The longest live word is “understanding”. Keep its full width and the
-  // animated dots in the right wing, outside the protected camera gap.
-  if (size === 'small') return { w: 360, h: 34 };
-  if (size === 'large') return { w: 456, h: 42 };
-  return { w: 412, h: 38 };
+  // The built-in 14-inch M4 screen reports a 185-point camera housing through
+  // NSScreen's auxiliary top areas. The renderer reserves 193 points for it.
+  if (size === 'small') return { w: 402, h: 38 };
+  if (size === 'large') return { w: 466, h: 39 };
+  return { w: 432, h: 38 };
 }
 
 function compactBarWidth(position: BarPosition): number {

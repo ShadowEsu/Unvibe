@@ -492,6 +492,7 @@ app.whenReady().then(() => {
   // --- bar / companion ---
   ipcMain.on('bar:review', () => void startReview());
   ipcMain.on('bar:openCompanion', () => openCompanion());
+  ipcMain.on('bar:openSettings', () => openCompanionPage('Settings'));
   ipcMain.on('bar:setExpanded', (_e, expanded: boolean) => {
     // Click and keyboard expansion remain available when hover expansion is off.
     // The renderer decides whether a pointer entering the Island requests this.
@@ -504,6 +505,7 @@ app.whenReady().then(() => {
       ...(state.hasRecent ? [{ label: 'Open last explanation', click: openCompanion }] : []),
       { type: 'separator' },
       { label: 'Open Unvibe', click: openCompanion },
+      { label: 'Settings', click: () => openCompanionPage('Settings') },
       { label: 'Hide Island', click: () => hideBar(bar) },
       { type: 'separator' },
       { label: 'Quit Unvibe', role: 'quit' },

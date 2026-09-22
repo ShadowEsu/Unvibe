@@ -30,6 +30,10 @@ function CodeIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
 }
 
+function SettingsIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3h3.4l.6 2.1 1.6.7 1.9-1 2.4 2.4-1 1.9.7 1.6 2.1.6v3.4l-2.1.6-.7 1.6 1 1.9-2.4 2.4-1.9-1-1.6.7-.6 2.1h-3.4l-.6-2.1-1.6-.7-1.9 1-2.4-2.4 1-1.9-.7-1.6-2.1-.6v-3.4l2.1-.6.7-1.6-1-1.9 2.4-2.4 1.9 1 1.6-.7z"/><circle cx="12" cy="12" r="2.7"/></svg>;
+}
+
 function StatusDots() {
   return <span className="island__dots" aria-hidden="true"><i /><i /><i /><i /></span>;
 }
@@ -45,14 +49,14 @@ function FlameIcon() {
 
 const STATUS_WORD: Record<PulsePhase, string> = {
   idle: 'ready', loading: 'loading', working: 'working', analyzing: 'analyzing', searching: 'searching',
-  thinking: 'thinking', generating: 'generating', contextualizing: 'understanding',
+  thinking: 'thinking', generating: 'generating', contextualizing: 'learning',
   finalizing: 'finalising', ready: 'ready', understood: 'understood', error: 'issue', offline: 'offline',
 };
 
 function notchSafeTop(): number {
   const display = window.screen as Screen & { availTop?: number };
   const inset = (display.availTop ?? window.screenY + 38) - window.screenY;
-  return Math.max(34, Math.min(48, Math.round(inset || 38)));
+  return Math.max(38, Math.min(48, Math.round(inset || 38)));
 }
 
 function Bar() {
@@ -190,13 +194,14 @@ function Bar() {
       if (!document.querySelector('.island')?.matches(':hover')) setPanelExpanded(false, false);
     }, Math.max(140, lock + 40));
   };
-  const act = (action: 'review' | 'home') => {
+  const act = (action: 'review' | 'home' | 'settings') => {
     tone('click');
     actionLockUntil.current = Date.now() + 1000;
     if (action === 'review') {
       applyPulse('contextualizing');
       window.unvibe.reviewSelection();
-    } else window.unvibe.openCompanion();
+    } else if (action === 'settings') window.unvibe.openSettings();
+    else window.unvibe.openCompanion();
   };
 
   const bottom = position.startsWith('bottom');
@@ -234,7 +239,10 @@ function Bar() {
         <div className="island__overview">
           <header className="island__header">
             <div><strong>Unvibe</strong><span>your personal learning layer</span></div>
-            <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>
+            <div className="island__header-actions">
+              <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>
+              <button className="island__settings" type="button" aria-label="Island settings" title="Island settings" onClick={() => act('settings')}><SettingsIcon /></button>
+            </div>
           </header>
           <div className="island__metrics" aria-label="Learning metrics">
             <span><b>{value(snapshot?.explanations)}</b> reviews</span>

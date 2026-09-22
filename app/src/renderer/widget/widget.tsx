@@ -591,25 +591,12 @@ function Widget() {
             ✕
           </button>
         </div>
-        {usage && (
-          <span
-            className="quota quota--usage"
-            title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
-          >
-            <UsageRings
-              ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }}
-              selections={usage.selections}
-              size={28}
-              tiny
-            />
-          </span>
-        )}
       </div>
 
       {!collapsed ? (
         <div className="widget-workspace">
           <aside className="widget-tools" aria-label="Review tools">
-            <div className="widget-tools__title"><LogoMark size={19} stroke={2} /><span>Review tools</span></div>
+            <div className="widget-tools__title"><LogoMark size={19} stroke={2} /><span>Workspace</span></div>
             <button className={activeTool === 'explain' ? 'on' : ''} type="button" title="Explanation" onClick={() => {
               setActiveTool('explain');
               document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -629,6 +616,12 @@ function Widget() {
             }}><ToolIcon name="ask" /><b>Ask Unvibe</b></button>
             <div className="widget-tools__spacer" />
             <button type="button" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Memory</b></button>
+            {usage && (
+              <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
+                <span>Available</span>
+                <UsageRings ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }} selections={usage.selections} size={26} tiny />
+              </div>
+            )}
           </aside>
           <section className="widget-main">
 
