@@ -222,10 +222,10 @@ test('lifetime checkout grants permanent Pro', async () => {
   const intent = await store.createCheckoutIntent({
     userId, workspaceId: workspace.id, plan: 'pro', interval: 'lifetime', seats: 1,
   });
-  await store.attachCheckoutSession(intent.id, 'cs_lifetime');
   const session = {
     id: 'cs_lifetime',
     mode: 'payment',
+    payment_status: 'paid',
     customer: 'cus_lifetime',
     payment_intent: 'pi_lifetime',
     metadata: { workspace_id: workspace.id, user_id: userId, plan: 'pro', interval: 'lifetime', checkout_intent_id: intent.id },
@@ -244,4 +244,28 @@ test('lifetime checkout grants permanent Pro', async () => {
   assert.equal(overview.subscription.interval, 'lifetime');
   assert.equal(overview.subscription.status, 'active');
   assert.equal(overview.subscription.currentPeriodEnd?.startsWith('2099'), true);
+  assert.equal((await store.findCheckoutIntent('cs_lifetime'))?.status, 'completed');
+});
+
+test('lifetime checkout does not grant Pro until an asynchronous payment succeeds', async () => {
+  process.env.STRIPE_PRICE_PRO_LIFETIME = 'price_pro_lifetime';
+  const userId = randomUUID();
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  const intent = await store.createCheckoutIntent({ userId, workspaceId: workspace.id, plan: 'pro', interval: 'lifetime', seats: 1 });
+  await store.attachCheckoutSession(intent.id, 'cs_delayed');
+  const session = {
+    id: 'cs_delayed', mode: 'payment', payment_status: 'unpaid', customer: 'cus_delayed',
+    metadata: { workspace_id: workspace.id, user_id: userId, plan: 'pro', interval: 'lifetime' },
+    line_items: { data: [{ price: { id: 'price_pro_lifetime' } }] },
+  } as unknown as Stripe.Checkout.Session;
+  const deps = {
+    retrieveSubscription: async (): Promise<Stripe.Subscription> => { throw new Error('unexpected subscription'); },
+    retrieveCheckoutSession: async () => session,
+  };
+  await processStripeEvent(store, { type: 'checkout.session.completed', data: { object: session } } as Stripe.Event, deps);
+  assert.equal((await store.overview(userId)).subscription.plan, 'free');
+  session.payment_status = 'paid';
+  await processStripeEvent(store, { type: 'checkout.session.async_payment_succeeded', data: { object: session } } as Stripe.Event, deps);
+  assert.equal((await store.overview(userId)).subscription.plan, 'pro');
 });

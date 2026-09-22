@@ -60,7 +60,8 @@ export default function ActivatePage() {
     return createClient(url, key, {
       auth: {
         flowType: 'pkce',
-        detectSessionInUrl: true,
+        // The callback below performs the PKCE exchange exactly once.
+        detectSessionInUrl: false,
         persistSession: true,
         autoRefreshToken: true,
       },
@@ -104,7 +105,7 @@ export default function ActivatePage() {
     async function bootstrap() {
       const params = new URLSearchParams(window.location.search);
       const oauthCode = params.get('code');
-      // OAuth auth codes are long; device user codes are short (8 chars).
+      // OAuth auth codes are distinct from the user_code query parameter.
       if (oauthCode && oauthCode.length > 16) {
         const { error } = await client!.auth.exchangeCodeForSession(oauthCode);
         if (error && !cancelled) {
@@ -348,7 +349,7 @@ export default function ActivatePage() {
                 className="activate-field activate-field--code"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="XXXXXXXX"
+                placeholder="XXXXXXXXXXXXXXXX"
                 aria-label="Device code"
                 autoCapitalize="characters"
                 spellCheck={false}

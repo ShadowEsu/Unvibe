@@ -47,7 +47,7 @@ export async function POST(req: Request): Promise<Response> {
     if (current.subscription.interval === 'lifetime' && current.subscription.status === 'active') {
       return Response.json({ error: 'lifetime_active', message: 'This account already has Pro Lifetime.' }, { status: 409 });
     }
-    if (body.interval !== 'lifetime' && current.subscription.stripeSubscriptionId && current.subscription.status !== 'canceled') {
+    if (current.subscription.stripeSubscriptionId && current.subscription.status !== 'canceled') {
       return Response.json({ error: 'subscription_exists', message: 'Use Manage billing to change an existing subscription.' }, { status: 409 });
     }
     const stripe = getStripe();
@@ -69,6 +69,11 @@ export async function POST(req: Request): Promise<Response> {
       interval: body.interval,
       checkout_intent_id: intent.id,
     };
+    // Reuse the Stripe customer after cancellation or a prior purchase. Email is only a
+    // starting hint for a first checkout; it is never the authority for account ownership.
+    const customer = current.subscription.stripeCustomerId
+      ? { customer: current.subscription.stripeCustomerId }
+      : { customer_email: account.email };
     const price = stripePriceId(body.plan, body.interval);
     let session;
     try {
@@ -79,8 +84,8 @@ export async function POST(req: Request): Promise<Response> {
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
           client_reference_id: intent.id,
-          customer_email: account.email,
-          customer_creation: 'always',
+          ...customer,
+          ...(!current.subscription.stripeCustomerId ? { customer_creation: 'always' as const } : {}),
           metadata,
           payment_intent_data: { metadata },
           allow_promotion_codes: true,
@@ -91,7 +96,7 @@ export async function POST(req: Request): Promise<Response> {
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
           client_reference_id: intent.id,
-          customer_email: account.email,
+          ...customer,
           metadata,
           subscription_data: { metadata },
           allow_promotion_codes: true,

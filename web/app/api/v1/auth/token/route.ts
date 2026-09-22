@@ -23,5 +23,5 @@ export async function POST(req: Request): Promise<Response> {
   if (result === 'pending') {
     return Response.json({ status: 'pending' }, { status: 202 });
   }
-  return Response.json(result);
+  return Response.json(result, { headers: { 'cache-control': 'no-store' } });
 }

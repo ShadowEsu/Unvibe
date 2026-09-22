@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   Account,
@@ -25,59 +25,49 @@ export class SupabaseStore implements Store {
   readonly kind = 'supabase';
   private readonly db: SupabaseClient;
 
-  constructor(url: string, serviceRoleKey: string) {
-    this.db = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+  constructor(url: string, serviceRoleKey: string, fetcher?: typeof fetch) {
+    this.db = createClient(url, serviceRoleKey, {
+      auth: { persistSession: false },
+      ...(fetcher ? { global: { fetch: fetcher } } : {}),
+    });
   }
 
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
-    const userCode = randomUUID().slice(0, 8).toUpperCase();
-    await this.db.from('device_codes').insert({ device_code: deviceCode, user_code: userCode });
+    const userCode = randomBytes(8).toString('hex').toUpperCase();
+    const { error } = await this.db.from('device_codes').insert({ device_code: deviceCode, user_code: userCode });
+    if (error) throw new Error(`Could not create device authorization: ${error.message}`);
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }
 
   async approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null> {
-    const { data: device } = await this.db
-      .from('device_codes')
-      .select('device_code, user_id')
-      .eq('user_code', userCode.toUpperCase())
-      .is('used_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-    if (!device) {
-      return null;
-    }
-    const boundUserId = device.user_id as string | null;
-    if (boundUserId && boundUserId !== userId) return null;
-    await this.db.from('users').upsert({ id: userId, email: email ?? null }, { onConflict: 'id' });
-    const token = randomUUID();
-    await this.db.from('tokens').insert({ token, user_id: userId });
-    await this.db
-      .from('device_codes')
-      .update({ user_id: userId, token, used_at: new Date().toISOString() })
-      .eq('device_code', device.device_code);
-    return token;
+    // The RPC locks the device row and creates the session in one transaction. A read followed
+    // by separate writes can approve an already redeemed code or mint multiple sessions.
+    const { data, error } = await this.db.rpc('approve_device_code', {
+      p_user_code: userCode.toUpperCase(), p_user_id: userId, p_email: email ?? null,
+    });
+    if (error) throw new Error(`Could not approve device authorization: ${error.message}`);
+    return typeof data === 'string' ? data : null;
   }
 
-  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown'> {
-    const { data } = await this.db
-      .from('device_codes')
-      .select('token, expires_at')
-      .eq('device_code', deviceCode)
-      .maybeSingle();
-    if (!data) {
-      return 'unknown';
-    }
-    if (new Date(data.expires_at as string).getTime() < Date.now()) return 'unknown';
-    return data.token ? { token: data.token as string } : 'pending';
+  async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
+    // One-time redemption is enforced by PostgreSQL, including concurrent pollers.
+    const { data, error } = await this.db.rpc('redeem_device_code', { p_device_code: deviceCode }).single();
+    if (error) throw new Error(`Could not redeem device authorization: ${error.message}`);
+    const result = data as { redeemed_token: string | null; redemption_status: string };
+    if (result.redemption_status === 'approved' && result.redeemed_token) return { token: result.redeemed_token };
+    if (result.redemption_status === 'pending' || result.redemption_status === 'expired' || result.redemption_status === 'used') return result.redemption_status;
+    return 'unknown';
   }
 
   async userForToken(token: string): Promise<string | null> {
-    const { data } = await this.db
+    const { data, error } = await this.db
       .from('tokens')
       .select('user_id')
       .eq('token', token)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle();
+    if (error) throw new Error(`Could not validate session: ${error.message}`);
     return (data?.user_id as string | undefined) ?? null;
   }
 

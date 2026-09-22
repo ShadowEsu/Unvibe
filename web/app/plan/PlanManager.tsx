@@ -96,10 +96,32 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
     if (params.get('checkout') !== 'success' || !sessionId) return;
     checkoutRefreshRef.current = true;
     setBusy(true); setNotice('Confirming your subscription with Stripe…');
-    void requestJson<{ overview?: BillingOverview; pending?: boolean }>('/api/v1/billing/refresh', { method: 'POST', body: JSON.stringify({ sessionId }) })
-      .then((data) => { if (data.overview) { setOverview(data.overview); setNotice('Your plan is active.'); } else setNotice('Payment is still processing. Your plan will update automatically.'); })
-      .catch((error: unknown) => setNotice(error instanceof Error ? error.message : 'Plan refresh is still pending.'))
-      .finally(() => { setBusy(false); window.history.replaceState({}, '', '/plan'); });
+    let cancelled = false;
+    const confirm = async () => {
+      try {
+        // Wait for the signed webhook, not merely the Checkout success redirect.
+        for (let attempt = 0; attempt < 15 && !cancelled; attempt += 1) {
+          const response = await fetch('/api/v1/billing/refresh', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sessionId }), cache: 'no-store',
+          });
+          if (response.status !== 202) {
+            if (!response.ok) throw new Error('We could not confirm your payment yet. Refresh Plan & usage to check again.');
+            const data = await response.json() as { overview: BillingOverview };
+            if (!cancelled) { setOverview(data.overview); setNotice('Your plan is active.'); }
+            return;
+          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 2_000));
+        }
+        if (!cancelled) setNotice('Payment is still processing. Refresh Plan & usage shortly to check your plan.');
+      } catch (error) {
+        if (!cancelled) setNotice(error instanceof Error ? error.message : 'Plan confirmation is still pending.');
+      } finally {
+        if (!cancelled) { setBusy(false); window.history.replaceState({}, '', '/plan'); }
+      }
+    };
+    void confirm();
+    return () => { cancelled = true; };
   }, []);
 
   const checkout = async (nextInterval: BillingInterval = interval) => {

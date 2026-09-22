@@ -10,7 +10,7 @@ does not activate production billing.
 usage reservations; the migration seeds it to the same initial values:
 
 - Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
-- Pro: $8/month or $72/year (about $6/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
+- Pro: $10/month or $90/year (about $7.50/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
 - Teams checkout is paused (`TEAMS_CHECKOUT_ENABLED = false` in `web/src/billing/plans.ts`). Product surfaces offer Free, Pro ($10/mo or $90/yr), and Pro Lifetime ($80 one-time). Teams interest is collected via company email + seat request (mailto) until Stripe Teams prices exist. Backend Teams plan math remains for any existing workspace support.
 - Founding Teams collab (no Stripe required): create team workspace, invite seats, shared activity feed with authorship (`GET /api/v1/workspaces/:id/history`). Explanation/code bodies stay on-device. GitHub intelligence remains out of scope.
 - Founder env paste list: `docs/release/founder-paste-list.md`.
@@ -33,11 +33,11 @@ privileges are also restricted to `service_role`.
 
 ## Stripe test-mode setup
 
-1. Create two recurring Stripe Prices in test mode: Pro monthly ($8) and Pro annual ($72).
+1. Create two recurring Stripe Prices in test mode: Pro monthly ($10) and Pro annual ($90).
 2. Set the server-only values in `web/.env.example`: secret key, webhook secret, and both Pro
    price IDs. Set `PUBLIC_APP_URL` to the dashboard HTTPS origin outside local development.
 3. Register `POST /api/v1/billing/webhook` and subscribe to:
-   `checkout.session.completed`, `customer.subscription.created`,
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`,
    `customer.subscription.updated`, `customer.subscription.deleted`,
    `invoice.payment_failed`, and `invoice.paid`.
 4. Keep the Customer Portal configured for payment-method updates and cancellation. Do not enable
@@ -46,7 +46,7 @@ privileges are also restricted to `service_role`.
    Prices require a separate founder release decision.
 
 Checkout redirects do not grant access. The webhook is authoritative; the success-page refresh
-only accelerates state by retrieving the Checkout Session and Subscription directly from Stripe.
+waits for the completed checkout intent and paid entitlement written by the signed webhook.
 Webhook claims are idempotent, completed events cannot replay, and failed processing can retry.
 
 ## Lifecycle behavior

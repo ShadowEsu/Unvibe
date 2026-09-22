@@ -52,6 +52,8 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
 }
 
 async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Checkout.Session): Promise<void> {
+  // Delayed payment methods can complete Checkout before funds settle.
+  if (session.payment_status !== 'paid') return;
   const workspaceId = session.metadata?.workspace_id;
   const plan = session.metadata?.plan;
   const interval = session.metadata?.interval;
@@ -101,8 +103,14 @@ export interface StripeWebhookDependencies {
 
 export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies): Promise<void> {
   switch (event.type) {
-    case 'checkout.session.completed': {
+    case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded': {
       const session = event.data.object;
+      // Stripe may deliver the webhook before the Checkout API response has been attached
+      // to the intent. The server-created intent ID in session metadata closes that race.
+      if (session.metadata?.checkout_intent_id) {
+        await store.attachCheckoutSession(session.metadata.checkout_intent_id, session.id);
+      }
       if (session.mode === 'payment' && session.metadata?.interval === 'lifetime') {
         const full = deps.retrieveCheckoutSession
           ? await deps.retrieveCheckoutSession(session.id)
