@@ -52,9 +52,16 @@ export class SupabaseStore implements Store {
 
   async redeemDeviceCode(deviceCode: string): Promise<{ token: string } | 'pending' | 'unknown' | 'expired' | 'used'> {
     // One-time redemption is enforced by PostgreSQL, including concurrent pollers.
-    const { data, error } = await this.db.rpc('redeem_device_code', { p_device_code: deviceCode }).single();
+    // PostgreSQL functions declared as `returns table` are encoded by PostgREST as an
+    // array, even when the function always returns exactly one row. Avoid `.single()`
+    // here: it asks PostgREST to coerce the response to an object and turns a normal
+    // pending authorization into a server error.
+    const { data, error } = await this.db.rpc('redeem_device_code', { p_device_code: deviceCode });
     if (error) throw new Error(`Could not redeem device authorization: ${error.message}`);
-    const result = data as { redeemed_token: string | null; redemption_status: string };
+    const result = (Array.isArray(data) ? data[0] : data) as
+      | { redeemed_token: string | null; redemption_status: string }
+      | null;
+    if (!result) return 'unknown';
     if (result.redemption_status === 'approved' && result.redeemed_token) return { token: result.redeemed_token };
     if (result.redemption_status === 'pending' || result.redemption_status === 'expired' || result.redemption_status === 'used') return result.redemption_status;
     return 'unknown';

@@ -83,7 +83,7 @@ test('persistent device redemption uses the atomic one-time RPC and rejects a re
       ? { redeemed_token: null, redemption_status: 'used' }
       : { redeemed_token: token, redemption_status: 'approved' };
     redeemed = true;
-    return new Response(JSON.stringify(row), { status: 200, headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify([row]), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   const store = new SupabaseStore('https://example.test', 'service-key', fetcher);
   const deviceCode = crypto.randomUUID();
