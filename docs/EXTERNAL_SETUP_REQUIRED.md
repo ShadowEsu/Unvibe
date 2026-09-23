@@ -13,7 +13,7 @@ The application cannot create or inspect provider credentials in a founder-owned
 ## Stripe
 
 1. Create/confirm the actual test-mode Prices corresponding to `web/src/billing/plans.ts`: Pro monthly $10, annual $90, optional lifetime one-time $80. Confirm currency, recurrence, tax and legal copy before enabling; do not copy historical prices from older docs. Teams checkout is currently disabled.
-2. Set backend-only `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`, optionally `STRIPE_PRICE_PRO_LIFETIME`, and HTTPS `PUBLIC_APP_URL` (the backend/dashboard origin). Configure Customer Portal for the supported cancellation/payment-method behavior.
+2. Set backend-only `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`, optionally `STRIPE_PRICE_PRO_LIFETIME`, and HTTPS `APP_URL` (the backend/dashboard origin). Configure Customer Portal for the supported cancellation/payment-method behavior.
 3. Set signed webhook endpoint `https://<actual-backend-origin>/api/v1/billing/webhook`. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, and `invoice.paid`. Use the webhook signing secret for this exact endpoint and environment.
 4. Verify a test checkout creates a single customer, the webhook completes the intent and grants Pro, a second checkout reuses the customer after cancellation, and the Portal reflects server state. A success URL alone must leave the account pending. Do not switch to live keys until legal, taxes, refunds, pricing and test evidence are approved.
 

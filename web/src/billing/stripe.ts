@@ -39,9 +39,11 @@ export function stripeLifetimeConfigured(): boolean {
 }
 
 export function publicAppUrl(req: Request): string {
-  const configured = process.env.PUBLIC_APP_URL?.trim();
+  // APP_URL is deliberately server-only. The old PUBLIC_APP_URL name is kept
+  // as a migration fallback for existing deployments.
+  const configured = process.env.APP_URL?.trim() || process.env.PUBLIC_APP_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
-  if (process.env.NODE_ENV === 'production') throw new Error('PUBLIC_APP_URL is required in production.');
+  if (process.env.NODE_ENV === 'production') throw new Error('APP_URL is required in production.');
   const url = new URL(req.url);
   return `${url.protocol}//${url.host}`;
 }
