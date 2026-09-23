@@ -3937,6 +3937,49 @@ html.dark body {
   box-shadow: 0 36px 120px rgba(4, 2, 10, .48);
 }
 
+.beta-download-panel h1 {
+  color: #fffdf8;
+  text-shadow: none;
+}
+
+.beta-download-panel .pixel-label {
+  color: #cdbbff;
+}
+
+.beta-download-panel .paper-beta {
+  margin-top: 2rem;
+  color: #fffdf8;
+  text-align: left;
+}
+
+.beta-download-panel .paper-beta__title,
+.beta-download-panel .paper-beta__version,
+.beta-download-panel .paper-beta__offer,
+.beta-download-panel .paper-beta__os,
+.beta-download-panel .paper-beta__blurb,
+.beta-download-panel .paper-beta__shell,
+.beta-download-panel .paper-beta__direct,
+.beta-download-panel .paper-beta__cmd,
+.beta-download-panel .paper-beta__term button {
+  color: #fffdf8;
+  text-shadow: none;
+}
+
+.beta-download-panel .paper-beta__os button,
+.beta-download-panel .paper-beta__term {
+  border-color: rgba(199, 174, 255, .3);
+  background: rgba(8, 5, 13, .5);
+}
+
+.beta-download-panel .paper-beta__os button.is-on {
+  border-color: #cdbbff;
+  background: rgba(184, 149, 255, .18);
+}
+
+.beta-download-panel .paper-beta__direct {
+  color: #cdbbff;
+}
+
 /* Beta access is intentionally an email handoff: one identity, one release record,
    one useful follow-up instead of an unmeasurable anonymous file link. */
 .beta-access-form {

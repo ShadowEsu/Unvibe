@@ -17,5 +17,5 @@ export const BETA_WINDOWS_INSTALL_COMMAND = `irm ${BETA_INSTALL_HOST}/install.ps
 export const BETA_MAC_DIRECT_DOWNLOAD = BETA_MAC_DOWNLOAD_URL;
 export const BETA_WINDOWS_DIRECT_DOWNLOAD = BETA_WINDOWS_DOWNLOAD_URL;
 export const BETA_INSTALL_VERSION = "v0.1.11";
-export const BETA_INSTALL_LABEL = "Mac and Windows private beta · 30 explanations";
+export const BETA_INSTALL_LABEL = "Mac and Windows public beta · 30 free explanations";
 export const BETA_INVESTOR_LABEL = "Try the beta testing version (30 AI explanations)";

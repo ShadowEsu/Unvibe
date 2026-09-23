@@ -666,6 +666,40 @@ h2 {
   font-weight: 500;
 }
 
+/* The dedicated public-beta page sits on the dark launch surface. Keep every
+   installer control legible after the generic page treatment above. */
+.beta-download-panel .paper-beta--page .paper-beta__title,
+.beta-download-panel .paper-beta--page .paper-beta__version,
+.beta-download-panel .paper-beta--page .paper-beta__offer,
+.beta-download-panel .paper-beta--page .paper-beta__blurb,
+.beta-download-panel .paper-beta--page .paper-beta__shell,
+.beta-download-panel .paper-beta--page .paper-beta__direct,
+.beta-download-panel .paper-beta--page .paper-beta__cmd,
+.beta-download-panel .paper-beta--page .paper-beta__error,
+.beta-download-panel .paper-beta--page .paper-beta__term button,
+.beta-download-panel .paper-beta--page .paper-beta__os button,
+.beta-download-panel .paper-beta--page .paper-beta__survey {
+  color: #fffdf8;
+  text-shadow: none;
+}
+
+.beta-download-panel .paper-beta--page .paper-beta__os button,
+.beta-download-panel .paper-beta--page .paper-beta__term,
+.beta-download-panel .paper-beta--page .paper-beta__survey {
+  border-color: rgba(199, 174, 255, .3);
+  background: rgba(8, 5, 13, .5);
+}
+
+.beta-download-panel .paper-beta--page .paper-beta__os button.is-on {
+  border-color: #cdbbff;
+  background: rgba(184, 149, 255, .18);
+}
+
+.beta-download-panel .paper-beta--page .paper-beta__direct,
+.beta-download-panel .paper-beta--page .paper-beta__survey {
+  color: #cdbbff;
+}
+
 .paper-install {
   padding-top: 0.7rem;
 }
@@ -2303,6 +2337,18 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 .release-countdown__heading time {
   font-family: var(--font-mono);
   color: var(--ink-faint);
+}
+
+.release-countdown__status {
+  max-width: 20rem;
+  margin: 0.7rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.paper-install--front .release-countdown__status {
+  color: var(--ink-muted);
 }
 
 .launch-subpage,

@@ -48,9 +48,9 @@ export function JoinWaitlistLink({
   const tone = platform === "windows" ? "win" : "mac";
   const label = labelOverride ?? (
     platform === "mac"
-      ? "Waitlist for Mac"
+      ? intent === "install" ? "Download for Mac" : "Waitlist for Mac"
       : platform === "windows"
-        ? "Waitlist for Windows"
+        ? intent === "install" ? "Download for Windows" : "Waitlist for Windows"
         : "Join waitlist"
   );
 
@@ -58,7 +58,7 @@ export function JoinWaitlistLink({
     <Link
       href={href}
       onClick={() => {
-        track("waitlist_cta_clicked", {
+        track(intent === "install" ? "release_download_clicked" : "waitlist_cta_clicked", {
           platform: platform ?? "generic",
           surface: size,
           intent,
@@ -85,8 +85,8 @@ export function JoinWaitlistLink({
 export function JoinWaitlistRow({ href, intent = "waitlist" }: { href: string; intent?: "waitlist" | "install" }) {
   return (
     <div className="paper-join-row">
-      <JoinWaitlistLink href={href} platform="mac" intent={intent} label={intent === "install" ? "Get Mac beta" : undefined} />
-      <JoinWaitlistLink href={href} platform="windows" intent={intent} label={intent === "install" ? "Get Windows beta" : undefined} />
+      <JoinWaitlistLink href={href} platform="mac" intent={intent} />
+      <JoinWaitlistLink href={href} platform="windows" intent={intent} />
     </div>
   );
 }

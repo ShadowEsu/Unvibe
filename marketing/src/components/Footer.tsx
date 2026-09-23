@@ -7,7 +7,7 @@ const product = [
   ["Product", "/#product"],
   ["Teams", "/teams"],
   ["Pricing", "/pricing"],
-  ["Get Unvibe", "/#install"],
+  ["Download Unvibe", "/#install"],
   ["Change Log", "/releases"],
 ];
 

@@ -51,7 +51,7 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
-          <JoinWaitlistLink href="/#install" size="nav" label="Get Unvibe" intent="install" />
+          <JoinWaitlistLink href="/#install" size="nav" label="Download" intent="install" />
         </div>
         <button
           type="button"
@@ -77,7 +77,7 @@ export function Nav() {
                 {link.label}
               </Link>
             ))}
-            <JoinWaitlistLink href="/#install" size="nav" label="Get Unvibe" intent="install" className="mt-4 w-full" onClick={() => setOpen(false)} />
+            <JoinWaitlistLink href="/#install" size="nav" label="Download" intent="install" className="mt-4 w-full" onClick={() => setOpen(false)} />
           </div>
         </div>
       )}

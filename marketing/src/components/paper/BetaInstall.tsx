@@ -42,7 +42,7 @@ export function BetaInstall({
       ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
       : "Paste in Terminal on an Apple silicon Mac (M1–M4).";
   const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
-  const directLabel = os === "windows" ? "Download Windows .exe instead" : "Download Mac .dmg instead";
+  const directLabel = os === "windows" ? "Download Windows .exe" : "Download Mac .dmg";
 
   useEffect(() => {
     const detected = detectInstallOs();

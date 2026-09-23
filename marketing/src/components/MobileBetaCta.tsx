@@ -4,9 +4,9 @@ import { ArrowRight, Play } from "lucide-react";
 export function MobileBetaCta() {
   return (
     <>
-      <div className="mobile-beta-cta" aria-label="Private beta actions">
+      <div className="mobile-beta-cta" aria-label="Public beta actions">
         <a href="#how-it-works"><Play size={15} aria-hidden="true" /> See demo</a>
-        <a href="#waitlist">Join beta <ArrowRight size={15} aria-hidden="true" /></a>
+        <a href="#install">Download <ArrowRight size={15} aria-hidden="true" /></a>
       </div>
       <div className="mobile-beta-cta-spacer" aria-hidden="true" />
     </>
