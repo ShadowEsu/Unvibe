@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "./paper.css";
 import { Providers } from "@/components/providers/Providers";
@@ -7,22 +7,26 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { PerformanceMode } from "@/components/providers/PerformanceMode";
 
-const sans = Inter({
-  subsets: ["latin"],
+// These fonts are deliberately packaged with the app instead of fetched at build
+// time. Vercel builds must stay reproducible when the Google Fonts metadata service
+// is unavailable.
+const sans = localFont({
+  src: "./og/Inter-SemiBold.ttf",
   variable: "--font-sans-face",
   display: "swap",
 });
 
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
+const mono = localFont({
+  src: "./og/JetBrainsMono-Regular.ttf",
   variable: "--font-mono-face",
   display: "swap",
 });
 
-const display = Newsreader({
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: ["400", "500", "600", "700"],
+const display = localFont({
+  src: [
+    { path: "./og/Newsreader-Regular.ttf", weight: "400", style: "normal" },
+    { path: "./og/Newsreader-Italic.ttf", weight: "400", style: "italic" },
+  ],
   variable: "--font-display-face",
   display: "swap",
 });
