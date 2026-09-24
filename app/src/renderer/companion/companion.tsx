@@ -93,7 +93,7 @@ function planDisplayName(plan: PlanId): string {
 
 function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
   if (plan === 'full') return 'Included';
-  if (plan === 'pro') return interval === 'annual' ? '$72/yr' : '$8/mo';
+  if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
   if (plan === 'teams') return interval === 'annual' ? '$90/seat/yr' : '$10/seat';
   return '$0';
 }
@@ -758,7 +758,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             <span>Upgrade available</span>
             {upgradeIsPro ? (
               <>
-                <h2>Pro {interval === 'annual' ? '$72/yr' : '$8/mo'}</h2>
+                <h2>Pro {interval === 'annual' ? '$81/yr' : '$9/mo'}</h2>
                 <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
                 <div className="plan-toggle" aria-label="Billing interval">
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
