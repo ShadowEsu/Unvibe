@@ -11,7 +11,7 @@ const tmpDataFile = path.join("/tmp", "unvibe-beta-install", "beta-install.json"
 describe("betaInstallScript", () => {
   it("installs Unvibe.app and clears Apple quarantine", () => {
     const script = betaInstallScript();
-    assert.match(script, /Unvibe-0\.1\.11-beta-arm64-unsigned\.dmg/);
+    assert.match(script, /Unvibe-0\.1\.12-beta-arm64-unsigned\.dmg/);
     assert.match(script, /xattr -cr "\$work\/Unvibe\.dmg"/);
     assert.match(script, /xattr -cr "\$DEST"/);
     assert.match(script, /ditto "\$mountPoint\/Unvibe\.app" "\$DEST"/);
@@ -26,7 +26,7 @@ describe("betaInstallScript", () => {
 describe("betaWindowsInstallScript", () => {
   it("downloads the portable Windows trial and unblocks it", () => {
     const script = betaWindowsInstallScript();
-    assert.match(script, /Unvibe-0\.1\.11-win-x64-portable\.exe/);
+    assert.match(script, /Unvibe-0\.1\.12-win-x64-portable\.exe/);
     assert.match(script, /curl\.exe/);
     assert.match(script, /Invoke-WebRequest/);
     assert.match(script, /Tls12/);

@@ -42,7 +42,7 @@ export function BetaInstall({
       ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
       : "Paste in Terminal on an Apple silicon Mac (M1–M4).";
   const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
-  const directLabel = os === "windows" ? "Download Windows .exe" : "Download Mac .dmg";
+  const directLabel = os === "windows" ? "Download Windows preview .exe" : "Download Mac .dmg";
 
   useEffect(() => {
     const detected = detectInstallOs();
@@ -81,7 +81,7 @@ export function BetaInstall({
       <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
       <p className="paper-beta__blurb">
         {os === "windows"
-          ? "Windows x64 portable. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."
+          ? "Windows x64 portable preview. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."
           : "Apple silicon. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."}
       </p>
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
@@ -103,7 +103,7 @@ export function BetaInstall({
           onClick={() => selectOs("windows")}
         >
           <span className="paper-beta__os-name">Windows</span>
-          <span className="paper-beta__os-meta">x64 PowerShell</span>
+          <span className="paper-beta__os-meta">x64 preview · PowerShell</span>
         </button>
       </div>
       <p className="paper-beta__shell" role="note">{shellHint}</p>
