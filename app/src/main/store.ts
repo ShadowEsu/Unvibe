@@ -37,15 +37,18 @@ interface Data {
   snapshots?: FileSnapshot[];
   /** Daily counters for companion Study assistant / Quiz cards (local only). */
   dailyUsage?: { day: string; studyAsks: number; quizzes: number };
-  /** Monthly selected-code prompt counter for a sealed private-beta build. */
-  betaPromptUsage?: { month: string; selectedCodePrompts: number };
+  /** Selected-code prompt counter for a sealed public-beta trial. */
+  betaPromptUsage?: { selectedCodePrompts: number };
+  /** Starts the public-beta entitlement on this device. */
+  trialStartedAt?: string;
   /** Event ids the user removed. Local only, so a later sync cannot restore them. */
   deletedIds?: string[];
 }
 
 export const STUDY_ASK_DAILY_LIMIT = 20;
 export const QUIZ_DAILY_LIMIT = 30;
-export const BETA_SELECTED_CODE_PROMPT_LIMIT = 30;
+export const BETA_SELECTED_CODE_PROMPT_LIMIT = 50;
+export const BETA_TRIAL_DURATION_DAYS = 30;
 
 class Store {
   private data: Data = { events: [], outbox: [] };
@@ -202,30 +205,42 @@ class Store {
     return { ok: true, remaining: QUIZ_DAILY_LIMIT - u.quizzes };
   }
 
-  private betaMonthUsage(now = new Date()): { month: string; selectedCodePrompts: number } {
-    const month = now.toISOString().slice(0, 7);
+  /** The 30-day beta window begins when this device first opens a beta action. */
+  betaTrialWindow(now = new Date()): { startedAt: string; expiresAt: string; expired: boolean } {
+    const current = this.data.trialStartedAt;
+    const started = current ? new Date(current) : now;
+    const validStart = Number.isNaN(started.getTime()) ? now : started;
+    if (!current || Number.isNaN(started.getTime())) {
+      this.data.trialStartedAt = validStart.toISOString();
+      this.save();
+    }
+    const expires = new Date(validStart.getTime() + BETA_TRIAL_DURATION_DAYS * 86_400_000);
+    return { startedAt: validStart.toISOString(), expiresAt: expires.toISOString(), expired: now >= expires };
+  }
+
+  private betaPromptUsage(): { selectedCodePrompts: number } {
     const current = this.data.betaPromptUsage;
-    if (!current || current.month !== month) this.data.betaPromptUsage = { month, selectedCodePrompts: 0 };
+    if (!current) this.data.betaPromptUsage = { selectedCodePrompts: 0 };
     return this.data.betaPromptUsage!;
   }
 
-  /** Private-beta selection credit. It is local-only and never contains the selected code. */
-  betaSelectedCodeUsage(): { used: number; limit: number; remaining: number; resetsAt: string } {
-    const usage = this.betaMonthUsage();
-    const now = new Date();
-    const resetsAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
+  /** Public-beta selection credit. It is local-only and never contains selected code. */
+  betaSelectedCodeUsage(now = new Date()): { used: number; limit: number; remaining: number; resetsAt: string } {
+    const usage = this.betaPromptUsage();
+    const trial = this.betaTrialWindow(now);
     return {
       used: usage.selectedCodePrompts,
       limit: BETA_SELECTED_CODE_PROMPT_LIMIT,
-      remaining: Math.max(0, BETA_SELECTED_CODE_PROMPT_LIMIT - usage.selectedCodePrompts),
-      resetsAt,
+      remaining: trial.expired ? 0 : Math.max(0, BETA_SELECTED_CODE_PROMPT_LIMIT - usage.selectedCodePrompts),
+      resetsAt: trial.expiresAt,
     };
   }
 
-  /** Private-beta selection credit. It is local-only and never contains the selected code. */
-  consumeBetaSelectedCodePrompt(): { ok: true; remaining: number } | { ok: false; remaining: number } {
-    const usage = this.betaMonthUsage();
-    if (usage.selectedCodePrompts >= BETA_SELECTED_CODE_PROMPT_LIMIT) return { ok: false, remaining: 0 };
+  /** Public-beta selection credit. It is local-only and never contains selected code. */
+  consumeBetaSelectedCodePrompt(now = new Date()): { ok: true; remaining: number } | { ok: false; remaining: number } {
+    const usage = this.betaPromptUsage();
+    const trial = this.betaTrialWindow(now);
+    if (trial.expired || usage.selectedCodePrompts >= BETA_SELECTED_CODE_PROMPT_LIMIT) return { ok: false, remaining: 0 };
     usage.selectedCodePrompts += 1;
     this.save();
     return { ok: true, remaining: BETA_SELECTED_CODE_PROMPT_LIMIT - usage.selectedCodePrompts };

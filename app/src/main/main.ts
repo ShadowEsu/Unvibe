@@ -350,7 +350,7 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
-      notify(`Private beta limit reached: ${store().betaSelectedCodeUsage().limit} selected-code prompts this month. Your saved learning is still available.`);
+      notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
       return;
     }
   }

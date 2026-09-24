@@ -1,6 +1,7 @@
 import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { userFromRequest } from '@/lib/auth';
+import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 import { getStore } from '@/data/store';
 import { quotaMessage } from '@/billing/plans';
 
@@ -14,8 +15,12 @@ export async function POST(req: Request): Promise<Response> {
 
   // Metering only applies to signed-in beta testers. Anonymous, unsynced use is unaffected —
   // see the change note in the app-release summary for the tradeoff this leaves open.
-  const userId = await userFromRequest(req);
-  if (userId) {
+  const trialInstall = trialInstallFromRequest(req);
+  const userId = trialInstall ? null : await userFromRequest(req);
+  if (trialInstall) {
+    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
+    if (denied) return denied;
+  } else if (userId) {
     const kind: 'selection' | 'ask' = payload.question || payload.variant === 'different' ? 'ask' : 'selection';
     const usage = await getStore().consumeUsage(userId, kind);
     if (!usage.allowed) {

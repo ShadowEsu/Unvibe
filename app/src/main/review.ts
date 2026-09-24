@@ -298,7 +298,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         type: 'error',
         code: 'plan_limit_reached',
         upgradePath: '/plan',
-        message: `You have reached your monthly ${planName} explanation limit (${usage.limit}). Resets on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
+        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'The beta access period ends' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
       });
       raiseLimitPause(win);
       return;

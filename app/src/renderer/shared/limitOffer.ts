@@ -17,7 +17,7 @@ export function limitOfferCopy(plan: string | undefined, usage: {
   if (plan === 'trial' || plan === 'local' || plan === 'free' || !plan) {
     return {
       title: 'Session paused',
-      body: 'Finish the survey for 1 week of Pro, free. Or buy a subscription on Plan for more explanations.',
+      body: 'Finish the survey for 1 week of Pro, free. Or upgrade on Plan for more explanations.',
       primary: 'Open the survey',
       primaryKind: 'survey',
       showPlan: true,
@@ -34,7 +34,7 @@ export function limitOfferCopy(plan: string | undefined, usage: {
   }
   return {
     title: 'Monthly limit reached',
-    body: `You used all ${usage.limit} Free explanations this month. Open Plan to upgrade to Pro.`,
+    body: `You used all ${usage.limit} Free explanations this month. Open Plan to upgrade.`,
     primary: 'Open Plan',
     primaryKind: 'plan',
     showPlan: true,

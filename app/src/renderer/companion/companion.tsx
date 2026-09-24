@@ -1290,7 +1290,7 @@ function App() {
       }
       setUsageLine(usage.ok && usage.data
         ? usage.data
-        : { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
+        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
@@ -1473,7 +1473,7 @@ function App() {
             <span className="sync-state__copy">{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
             {sync.pending > 0 && <small>{sync.pending} pending</small>}
           </button>
-          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">30 explanations each month on Free. 100 on Pro. AI access included, no provider API key needed.</div></div>
+          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">Public beta includes 50 AI explanations and 50 code selections for 30 days. AI access included, no provider API key needed.</div></div>
           <nav className="nav">{FOOT.map((f) => (
             <button key={f.id} type="button" aria-label={f.id} title={sideCompact ? f.id : undefined} onClick={() => {
               setNavOpen(false);
