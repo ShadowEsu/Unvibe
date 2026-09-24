@@ -4,7 +4,7 @@ import { PricingPlans } from "@/components/redesign/PricingPlans";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Personal code understanding starts free. Pro is $10 a month, Pro Lifetime is $80 once, Teams is $8 per seat for 2–20 founding seats, and Enterprise starts at $199 a month.",
+  description: "Personal code understanding starts free. Pro is $9 a month, Pro Lifetime is $80 once, Teams is $8 per seat for 2–20 founding seats, and Enterprise starts at $199 a month.",
 };
 
 export default function PricingPage() {

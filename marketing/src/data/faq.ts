@@ -101,7 +101,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "How much does Pro cost?",
-    answer: "Pro is $10 per month for one developer, or $90 per year. Pro Lifetime is $80 one-time for local and core personal features — buy it from Plan in the Unvibe app. Teams founding-pilot pricing is $8 per seat per month, 2 seat minimum and 20 seat maximum. Enterprise starts at $199 per month.",
+    answer: "Pro is $9 per month for one developer, or $81 per year. Pro Lifetime is $80 one-time for local and core personal features — buy it from Plan in the Unvibe app. Teams founding-pilot pricing is $8 per seat per month, 2 seat minimum and 20 seat maximum. Enterprise starts at $199 per month.",
     category: "pricing",
   },
   {
