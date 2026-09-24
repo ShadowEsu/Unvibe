@@ -7,7 +7,7 @@ import { BETA_CURL, BETA_FEEDBACK_URL } from "../emails/betaShared";
 describe("beta waitlist invite email", () => {
   it("includes curl, feedback, and the live reward rule", () => {
     const text = betaInviteText("Ohm");
-    assert.match(BETA_INVITE_SUBJECT, /private beta/);
+    assert.match(BETA_INVITE_SUBJECT, /public beta/);
     assert.match(text, /Thank you so much for waitlisting/);
     assert.match(text, /💜/);
     assert.match(text, new RegExp(BETA_CURL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -16,7 +16,7 @@ describe("beta waitlist invite email", () => {
     assert.match(text, new RegExp(BETA_FEEDBACK_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
-    assert.match(text, /1 week of Pro/);
+    assert.match(text, /50 AI explanations/);
     assert.match(text, /Every 3 verified referrals/);
     assert.doesNotMatch(text, /[—–]/);
     assert.doesNotMatch(betaInviteHtml("Ohm"), /[—–]/);
@@ -37,7 +37,7 @@ describe("beta download email", () => {
     assert.match(text, new RegExp(BETA_FEEDBACK_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
-    assert.match(text, /1 week of Pro/);
+    assert.match(text, /50 AI explanations/);
     assert.match(text, /Every 3 verified referrals/);
     assert.match(text, /AB12CD34/);
     assert.match(text, /\$25/);

@@ -9,7 +9,7 @@ export function ReleaseCountdown({ variant = "page" }: { variant?: "page" | "her
         <span>PUBLIC BETA</span>
         <time dateTime="2026-09-23">AVAILABLE NOW</time>
       </div>
-      <p className="release-countdown__status">Download for Mac or Windows. Start with 30 free explanations.</p>
+      <p className="release-countdown__status">Download for Mac or Windows. Start with 30 days, 50 AI explanations, and 50 selected-code reviews.</p>
     </div>
   );
 }

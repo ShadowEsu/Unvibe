@@ -69,7 +69,7 @@ export const BETA_MAC_DOWNLOAD_URL =
 
 /** Public-beta installer. Downloads a portable Windows exe with the same 30-explanation trial. */
 export function betaWindowsInstallScript(): string {
-  return `# Unvibe public-beta installer for Windows. 30 AI explanations. Unsigned.
+  return `# Unvibe public-beta installer for Windows. 30 days, 50 AI explanations, and 50 selected-code reviews. Unsigned.
 # Paste this in Windows PowerShell or pwsh (not Command Prompt, not Git Bash):
 # irm https://unvibe.site/install.ps1 | iex
 \$ErrorActionPreference = "Stop"

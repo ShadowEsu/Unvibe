@@ -285,7 +285,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <ul>
             <li><Check size={16} />Mac and Windows downloads, available now</li>
             <li><Check size={16} />Selected-code explanations, saved learning, and early feature feedback</li>
-            <li><Check size={16} />One week of Pro after a completed feedback survey</li>
+            <li><Check size={16} />30-day beta access: 50 AI explanations and 50 selected-code reviews</li>
             <li><Check size={16} />No credit card required to download</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>

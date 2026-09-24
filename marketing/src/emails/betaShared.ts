@@ -23,7 +23,7 @@ export function betaEarlyNoteText(): string {
 }
 
 export function betaInstallText(): string {
-  return `Install (${BETA_INSTALL_VERSION}). 30 AI explanations, then it stops.
+  return `Install (${BETA_INSTALL_VERSION}). 30 days with 50 AI explanations and 50 selected-code reviews.
 
 Apple silicon Mac:
 ${BETA_CURL}
@@ -35,10 +35,10 @@ macOS may warn that Unvibe is unsigned. Windows SmartScreen may say the same. Th
 }
 
 export function betaFeedbackText(): string {
-  return `The beta includes 30 AI explanations. After you try it, fill the feedback form:
+  return `Your public-beta access starts with 30 days, 50 AI explanations, and 50 selected-code reviews. After you try it, fill the feedback form:
 ${BETA_FEEDBACK_URL}
 
-The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. Every 3 verified referrals earns $5, up to 5 rewards ($25). You can take Unvibe credit instead of a wire. We check eligibility first.`;
+The form is the best place to share feedback. Waitlist gifts still add on. Every 3 verified referrals earns $5, up to 5 rewards ($25). You can take Unvibe credit instead of a wire. We check eligibility first.`;
 }
 
 export function betaSignOffText(): string {

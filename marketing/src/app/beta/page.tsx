@@ -13,7 +13,7 @@ export default function BetaDownloadsPage() {
     <main className="beta-download-page">
       <section className="beta-download-panel">
         <div className="beta-download-brand"><Image src="/brand/icon.png" alt="Unvibe" width={52} height={52} priority /><div><p className="pixel-label">UNVIBE / PUBLIC BETA</p><h1>Download Unvibe and start with one selection.</h1></div></div>
-        <p className="beta-download-intro">Choose macOS or Windows below. Your beta build includes the full desktop learning flow, and Unvibe only analyzes code you explicitly select.</p>
+        <p className="beta-download-intro">Choose macOS or Windows below. Your 30-day public-beta access includes 50 AI explanations and 50 selected-code reviews. Unvibe only analyzes code you explicitly select.</p>
         <div className="beta-download-preview">
           <Image
             src="/product/home-today.jpg"

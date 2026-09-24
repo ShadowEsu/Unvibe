@@ -81,8 +81,8 @@ export function BetaInstall({
       <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
       <p className="paper-beta__blurb">
         {os === "windows"
-          ? "Windows x64 portable. Start with 30 free AI explanations. No API key."
-          : "Apple silicon. Start with 30 free AI explanations. No API key."}
+          ? "Windows x64 portable. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."
+          : "Apple silicon. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."}
       </p>
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
         <button
@@ -148,7 +148,7 @@ export function BetaInstall({
       {showFeedback ? (
         <>
           <p className="paper-beta__offer">
-            Install, open Unvibe, then select code and press {os === "windows" ? "Ctrl+U" : "⌘U"}. After 30 explanations, the feedback form unlocks 1 week of Pro.
+            Install, open Unvibe, then select code and press {os === "windows" ? "Ctrl+U" : "⌘U"}. Your public-beta access includes 30 days, 50 AI explanations, and 50 selected-code reviews.
           </p>
           <a
             className="paper-beta__survey"
@@ -172,7 +172,7 @@ export function BetaInstall({
 export function BetaFeedback({ source }: { source: string }) {
   return (
     <div className="paper-beta-feedback">
-      <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Referral gifts still add on.</p>
+      <p className="paper-beta__offer">Community sign-up keeps you in the loop for product notes and feedback. Referral gifts still add on.</p>
       <a
         className="paper-beta__survey"
         href={BETA_FEEDBACK_URL}
