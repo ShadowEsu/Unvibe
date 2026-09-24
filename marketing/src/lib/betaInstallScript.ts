@@ -3,10 +3,10 @@ export const BETA_INSTALL_ASSET = "Unvibe-0.1.11-beta-arm64-unsigned.dmg";
 export const BETA_WINDOWS_ASSET = "Unvibe-0.1.11-win-x64-portable.exe";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 
-/** Private beta installer. Curl download so macOS never quarantines the app. */
+/** Public-beta installer. The direct .dmg is also available from the download page. */
 export function betaInstallScript(): string {
   return `#!/usr/bin/env bash
-# Private beta installer. Downloads with curl so macOS never quarantines the app.
+# Unvibe public-beta installer. The direct .dmg is also available from unvibe.site.
 set -euo pipefail
 
 TAG="\${UNVIBE_BETA_TAG:-${BETA_INSTALL_TAG}}"
@@ -67,9 +67,9 @@ export const BETA_WINDOWS_DOWNLOAD_URL =
 export const BETA_MAC_DOWNLOAD_URL =
   `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/${BETA_INSTALL_ASSET}`;
 
-/** Private beta installer. Downloads a portable Windows exe with the same 30 explanation trial. */
+/** Public-beta installer. Downloads a portable Windows exe with the same 30-explanation trial. */
 export function betaWindowsInstallScript(): string {
-  return `# Unvibe private beta installer for Windows. 30 AI explanations. Unsigned.
+  return `# Unvibe public-beta installer for Windows. 30 AI explanations. Unsigned.
 # Paste this in Windows PowerShell or pwsh (not Command Prompt, not Git Bash):
 # irm https://unvibe.site/install.ps1 | iex
 \$ErrorActionPreference = "Stop"
