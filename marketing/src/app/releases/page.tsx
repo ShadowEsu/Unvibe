@@ -25,12 +25,12 @@ export default async function ReleasesPage() {
           <h1>What shipped.</h1>
           <p>
             {latest
-              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Join the waitlist for an invite.`
+              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Download the current public beta for Mac or Windows.`
               : error
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}
           </p>
-          <JoinWaitlistRow href="/#waitlist" />
+          <JoinWaitlistRow href="/beta" intent="install" />
         </div>
       </header>
 

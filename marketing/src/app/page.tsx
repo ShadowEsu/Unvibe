@@ -33,7 +33,7 @@ export default function HomePage() {
       <section className="paper-section paper-install paper-install--front" id="install">
         <Reveal className="paper-wrap paper-install__panel">
           <div className="paper-install__intro">
-            <p className="paper-meta">Unvibe is live</p>
+            <p className="paper-meta">Released · available now</p>
             <h2>Download it. Then stay in your editor.</h2>
             <p>Pick Mac or Windows, download directly or copy the installer command, and open Unvibe. Windows uses PowerShell. No separate API key.</p>
           </div>

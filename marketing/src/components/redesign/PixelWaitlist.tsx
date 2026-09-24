@@ -138,7 +138,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         setGiftNotice("Referral link counted for rewards. To also claim the Pro gift, add your friend’s email with the 8-character code.");
       }
     } catch {
-      setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
+      setSubmitError("We couldn't reach community signup. Check your connection and try again.");
       setStatus("error");
       track("waitlist_failed", { surface: variant, code: "network" });
     }
@@ -162,10 +162,10 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
 
   const shareReferral = async () => {
     if (!referralUrl) return;
-    const shareText = "Unvibe explains AI-written code in your editor so you actually own what you ship. Join the private beta:";
+    const shareText = "Unvibe explains AI-written code in your editor so you actually own what you ship. Download it here:";
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        await navigator.share({ title: "Unvibe private beta", text: shareText, url: referralUrl });
+      await navigator.share({ title: "Unvibe", text: shareText, url: referralUrl });
         track("referral_shared", { channel: "native" });
         return;
       }
@@ -199,8 +199,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         <form onSubmit={handleSubmit(submit)} noValidate onFocusCapture={markStarted}>
           <div className="form-heading">
             <span className="brand-pixel" />
-            <strong>Join the waitlist</strong>
-            <small>Name and email. You can skip the rest.</small>
+            <strong>Join the community</strong>
+            <small>Get product notes and feedback invitations. You can skip the rest.</small>
           </div>
           <div className="name-row">
             <Field label="First name" error={errors.firstName?.message}>
@@ -223,7 +223,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           </details>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
           <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
-            {status === "submitting" ? <><Loader2 className="spin" size={18} />Saving your spot</> : <>Join the waitlist <Send size={17} /></>}
+            {status === "submitting" ? <><Loader2 className="spin" size={18} />Joining</> : <>Join the community <Send size={17} /></>}
           </button>
           <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
         </form>
@@ -231,8 +231,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         <div className="success-panel" role="status">
           <span className="success-pixel"><Check /></span>
           <p className="pixel-label">JOINED</p>
-          <h3>{status === "duplicate" ? "You were already on the list." : "Joined the waitlist."}</h3>
-          <p>Thanks for requesting access. Invitations are being issued gradually for the personal beta, Pro, and the founding Teams pilot.</p>
+          <h3>{status === "duplicate" ? "You are already in the community." : "You are in."}</h3>
+          <p>Thanks for joining. We will send product notes, feedback invitations, and Teams updates without adding a download gate.</p>
           {giftNotice && <p className="form-legal" role="status">{giftNotice}</p>}
           {referralCode && (
             <div className="referral-success">
@@ -256,7 +256,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
               <div className="optional-details">
                 <label>Where you work<select value={tool} onChange={(event) => setTool(event.target.value as typeof tool)}><option value="">Skip</option>{tools.map((item) => <option key={item} value={item}>{toolLabels[item]}</option>)}</select></label>
                 <label>Your experience<select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)}><option value="">Skip</option>{experiences.map((item) => <option key={item} value={item}>{experienceLabels[item]}</option>)}</select></label>
-                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details were not saved. Your waitlist spot is still safe.</p>}
+                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details were not saved. Your community signup is still safe.</p>}
                 <button type="button" className="details-button" disabled={detailsStatus === "saving"} onClick={saveDetails}>{detailsStatus === "saving" ? "Saving" : "Save optional details"}</button>
               </div>
             )
@@ -279,14 +279,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       <div className="waitlist-pixels" aria-hidden="true" />
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
-          <p className="section-number light">10 / PRIVATE BETA</p>
-          <h2>Private beta access, <em>with a real role in the product.</em></h2>
-          <p>Join the waitlist to request access. Beta members help shape the reviews, learning flow, integrations, and release priorities.</p>
+          <p className="section-number light">10 / COMMUNITY</p>
+          <h2>Keep a real role in what we build next.</h2>
+          <p>Download the app now. Join the community for product notes, feedback invitations, and a direct line on what improves next.</p>
           <ul>
-            <li><Check size={16} />Private Mac beta. Working product.</li>
-            <li><Check size={16} />Selected-code explanations, saved learning, and early feature voting</li>
-            <li><Check size={16} />Referral rewards: $5 per 3 verified referrals, up to $25</li>
-            <li><Check size={16} />Invite-only access · no credit card required</li>
+            <li><Check size={16} />Mac and Windows downloads, available now</li>
+            <li><Check size={16} />Selected-code explanations, saved learning, and early feature feedback</li>
+            <li><Check size={16} />One week of Pro after a completed feedback survey</li>
+            <li><Check size={16} />No credit card required to download</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>
         </div>

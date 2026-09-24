@@ -2,7 +2,7 @@
  * FAQ content.
  *
  * Answers match the product as actually scoped:
- * Mac and Windows private beta; selection based (not screen OCR); no local-only mode yet;
+ * Mac and Windows public beta; selection based (not screen OCR); no local-only mode yet;
  * no enterprise certifications; AI explanations can be wrong.
  */
 
@@ -114,14 +114,14 @@ export const faqItems: FaqItem[] = [
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "The private beta is live for Apple silicon Mac and Windows x64. 30 AI explanations, then it stops. Copy the install command on unvibe.site. For partnerships, contact preston@unvibe.site.",
+      "The public beta is available now for Apple silicon Mac and Windows x64. Start with 30 free AI explanations and no API key. Download the direct .dmg or .exe, or copy the installer command, from unvibe.site. For partnerships, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from Windows PowerShell only, not cmd.exe: irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Choose More info, then Run anyway. Select code in your editor, then press Ctrl+U. Unvibe copies the selection and explains it beside the editor.",
+      "Yes. Windows x64 is available with the same 30 free AI explanations as Mac. Download the portable .exe or install from Windows PowerShell only, not cmd.exe: irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Choose More info, then Run anyway. Select code in your editor, then press Ctrl+U. Unvibe copies the selection and explains it beside the editor.",
     category: "platform",
   },
   {

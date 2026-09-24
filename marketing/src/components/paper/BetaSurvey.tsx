@@ -12,7 +12,7 @@ export function BetaSurvey({ id = "survey" }: BetaSurveyProps) {
     <section className="paper-section" id={id}>
       <div className="paper-wrap paper-center">
         <p className="paper-meta">Beta survey</p>
-        <h2 className="mt-3">After 30 explanations, a short survey.</h2>
+        <h2 className="mt-3">Tell us what clicked. Get a week of Pro.</h2>
         <p className="paper-lead mt-4">
           Finish the survey for 1 week of Pro, free. Gifts still add on.
         </p>

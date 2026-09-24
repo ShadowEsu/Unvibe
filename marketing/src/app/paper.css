@@ -164,7 +164,7 @@ h2 {
 
 .paper-hero {
   position: relative;
-  min-height: 100svh;
+  min-height: clamp(39rem, 78svh, 52rem);
   display: grid;
   grid-template-rows: 1fr auto;
   align-content: stretch;
@@ -241,9 +241,9 @@ h2 {
 }
 
 .paper-hero h1.paper-hero__headline--business {
-  max-width: 19ch;
-  font-size: clamp(3.15rem, 6.5vw, 5.8rem);
-  line-height: 0.98;
+  max-width: 27ch;
+  font-size: clamp(3rem, 5.4vw, 5.35rem);
+  line-height: 0.94;
   word-spacing: 0;
 }
 

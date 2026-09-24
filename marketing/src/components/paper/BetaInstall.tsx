@@ -81,8 +81,8 @@ export function BetaInstall({
       <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
       <p className="paper-beta__blurb">
         {os === "windows"
-          ? "Windows x64 portable. 30 AI explanations, then it stops. No API key."
-          : "Apple silicon. 30 AI explanations, then it stops. No API key."}
+          ? "Windows x64 portable. Start with 30 free AI explanations. No API key."
+          : "Apple silicon. Start with 30 free AI explanations. No API key."}
       </p>
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
         <button
@@ -172,7 +172,7 @@ export function BetaInstall({
 export function BetaFeedback({ source }: { source: string }) {
   return (
     <div className="paper-beta-feedback">
-      <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Waitlist gifts still add on.</p>
+      <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Referral gifts still add on.</p>
       <a
         className="paper-beta__survey"
         href={BETA_FEEDBACK_URL}
