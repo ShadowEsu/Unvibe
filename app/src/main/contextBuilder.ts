@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { capHunks, findGitRoot, getWorkingTreeDiff } from '../core/gitDiff';
 import { extractImports, relativeImportPaths } from '../core/parse';
-import { guessLanguage } from '../core/language';
+import { detectLanguage, guessLanguage } from '../core/language';
 import type { DiffHunk, ExplanationLevel, ReviewRequestPayload, ReviewScope } from '../core/protocol';
 import { store } from './store';
 import { settings } from './settings';
@@ -113,9 +113,7 @@ export async function buildSelectionPayload(opts: {
     enclosing = nearby.enclosing;
   }
 
-  const language = opts.filePath
-    ? guessLanguage(opts.code) // keep simple; path-aware later
-    : guessLanguage(opts.code);
+  const language = detectLanguage(opts.code, opts.filePath).language;
 
   const payload: ReviewRequestPayload = {
     scope: 'selection',
