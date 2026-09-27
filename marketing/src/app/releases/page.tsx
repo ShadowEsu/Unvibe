@@ -25,7 +25,7 @@ export default async function ReleasesPage() {
           <h1>What shipped.</h1>
           <p>
             {latest
-              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Download the current public beta for Mac or Windows.`
+              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Public downloads remain paused until platform release checks pass.`
               : error
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}

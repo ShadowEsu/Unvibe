@@ -2,7 +2,7 @@
  * FAQ content.
  *
  * Answers match the product as actually scoped:
- * Mac and Windows public beta; selection based (not screen OCR); no local-only mode yet;
+ * Mac and Windows public release preparation; selection based (not screen OCR); no local-only mode yet;
  * no enterprise certifications; AI explanations can be wrong.
  */
 
@@ -114,14 +114,14 @@ export const faqItems: FaqItem[] = [
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "The public beta is available now for Apple silicon Mac and Windows x64. Every install starts with 30 days, 50 AI explanations, and 50 selected-code reviews—no API key or card required. Download the direct .dmg or .exe, or copy the installer command, from unvibe.site. For partnerships, contact preston@unvibe.site.",
+      "Public downloads are paused while the Mac build completes Developer ID signing and notarization and the Windows build completes a clean-machine sign-in test. Join the community at unvibe.site/waitlist for verified availability updates. The planned introductory allowance is 30 days, 50 AI explanations, and 50 selected-code reviews, with no card required.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Yes. Windows x64 is available with the same 30-day beta allowance as Mac: 50 AI explanations and 50 selected-code reviews. Download the portable .exe or install from Windows PowerShell only, not cmd.exe: irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Choose More info, then Run anyway. Select code in your editor, then press Ctrl+U. Unvibe copies the selection and explains it beside the editor.",
+      "Windows x64 is in release preparation. We are repairing device sign-in and require a signed installer plus a clean-machine test before reopening downloads. Join the community at unvibe.site/waitlist for verified availability updates.",
     category: "platform",
   },
   {

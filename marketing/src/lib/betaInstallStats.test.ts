@@ -9,36 +9,26 @@ const dataFile = path.join(process.cwd(), ".data", "beta-install.json");
 const tmpDataFile = path.join("/tmp", "unvibe-beta-install", "beta-install.json");
 
 describe("betaInstallScript", () => {
-  it("installs Unvibe.app and clears Apple quarantine", () => {
+  it("verifies a signed macOS release without clearing quarantine or tracking install telemetry", () => {
     const script = betaInstallScript();
     assert.match(script, /Unvibe-0\.1\.12-beta-arm64-unsigned\.dmg/);
-    assert.match(script, /xattr -cr "\$work\/Unvibe\.dmg"/);
-    assert.match(script, /xattr -cr "\$DEST"/);
+    assert.match(script, /\.sha256/);
+    assert.match(script, /shasum -a 256/);
+    assert.match(script, /spctl --assess/);
     assert.match(script, /ditto "\$mountPoint\/Unvibe\.app" "\$DEST"/);
-    assert.match(script, /open "\$DEST"/);
-    assert.match(script, /unvibe\.site\/api\/install\/event/);
-    assert.match(script, /"event":"installed"/);
-    assert.match(script, /On Windows run/);
-    assert.match(script, /This installer is for macOS/);
+    assert.doesNotMatch(script, /xattr|quarantine|install\/event|curl -fsSL.*\| bash/);
   });
 });
 
 describe("betaWindowsInstallScript", () => {
-  it("downloads the portable Windows trial and unblocks it", () => {
+  it("verifies the Windows artifact and Authenticode signature before launch", () => {
     const script = betaWindowsInstallScript();
     assert.match(script, /Unvibe-0\.1\.12-win-x64-portable\.exe/);
-    assert.match(script, /curl\.exe/);
     assert.match(script, /Invoke-WebRequest/);
-    assert.match(script, /Tls12/);
-    assert.match(script, /UserAgent/);
-    assert.match(script, /Unblock-File/);
-    assert.match(script, /LOCALAPPDATA/);
-    assert.match(script, /install\.ps1/);
-    assert.match(script, /unvibe\.site\/api\/install\/event/);
-    assert.match(script, /SmartScreen/);
-    assert.match(script, /not Command Prompt/);
-    assert.match(script, /Checking release asset/);
-    assert.match(script, /Method Head/);
+    assert.match(script, /Get-FileHash -Algorithm SHA256/);
+    assert.match(script, /Get-AuthenticodeSignature/);
+    assert.match(script, /Status -ne "Valid"/);
+    assert.doesNotMatch(script, /Unblock-File|Run anyway|install\/event|\| iex/);
     assert.doesNotMatch(script, /[—–]/);
   });
 });

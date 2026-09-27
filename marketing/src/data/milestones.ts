@@ -65,14 +65,14 @@ export const milestones: Milestone[] = [
   {
     date: "19 AUG 2026",
     category: "PRODUCT",
-    title: "Windows 30 explanation trial",
-    summary: "Private beta now includes a Windows x64 trial with the same 30 AI explanations as Mac. Install from PowerShell. The app is unsigned, so SmartScreen may warn.",
+    title: "Windows release verification",
+    summary: "Windows release access is paused while device sign-in is repaired and a signed installer completes a clean-machine verification.",
   },
   {
     date: "18 AUG 2026",
     category: "DISTRIBUTION",
-    title: "Beta waitlist email",
-    summary: "Waitlist and download mails now include the install curl and the Typeform feedback link. Survey still unlocks 1 week of Pro. Nothing is sent until a dry run is approved.",
+    title: "Verified release updates",
+    summary: "Release updates direct people to verified availability rather than terminal install commands. Feedback remains available without an installer.",
   },
   {
     date: "18 AUG 2026",

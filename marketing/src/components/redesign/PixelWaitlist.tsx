@@ -281,12 +281,12 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         <div className="waitlist-copy">
           <p className="section-number light">10 / COMMUNITY</p>
           <h2>Keep a real role in what we build next.</h2>
-          <p>Download the app now. Join the community for product notes, feedback invitations, and a direct line on what improves next.</p>
+          <p>Join the community for verified release availability, product notes, feedback invitations, and a direct line on what improves next.</p>
           <ul>
-            <li><Check size={16} />Mac and Windows downloads, available now</li>
+            <li><Check size={16} />Verified Mac and Windows release updates</li>
             <li><Check size={16} />Selected-code explanations, saved learning, and early feature feedback</li>
-            <li><Check size={16} />30-day beta access: 50 AI explanations and 50 selected-code reviews</li>
-            <li><Check size={16} />No credit card required to download</li>
+            <li><Check size={16} />Planned introductory access: 30 days, 50 AI explanations, and 50 selected-code reviews</li>
+            <li><Check size={16} />No card required when verified downloads reopen</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>
         </div>

@@ -3,13 +3,13 @@ export function ReleaseCountdown({ variant = "page" }: { variant?: "page" | "her
     <div
       className={variant === "hero" ? "release-countdown release-countdown--hero" : "release-countdown"}
       role="status"
-      aria-label="Unvibe public beta is available now"
+      aria-label="Unvibe verified release status"
     >
       <div className="release-countdown__heading">
-        <span>PUBLIC BETA</span>
-        <time dateTime="2026-09-23">AVAILABLE NOW</time>
+        <span>VERIFIED RELEASE</span>
+        <time dateTime="2026-09-23">IN PREPARATION</time>
       </div>
-      <p className="release-countdown__status">Download for Mac or Windows. Start with 30 days, 50 AI explanations, and 50 selected-code reviews.</p>
+      <p className="release-countdown__status">Mac signing and Windows sign-in verification are underway. Join the community for verified availability updates.</p>
     </div>
   );
 }

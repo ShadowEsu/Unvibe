@@ -86,7 +86,7 @@ export default function PrivacyPage() {
 
       <LegalSection heading="Platforms and scope">
         <p>
-          Unvibe private beta is Mac (Apple silicon) and Windows x64. Linux is not available yet. We claim no
+          Unvibe is preparing verified Mac (Apple silicon) and Windows x64 releases. Public downloads remain paused while platform release checks are completed. Linux is not available yet. We claim no
           security certifications. Explanations are a learning aid, not a security audit.
           See the <a href="/terms">terms</a> for the AI limitations disclaimer.
         </p>

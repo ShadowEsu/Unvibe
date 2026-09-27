@@ -33,9 +33,9 @@ export default function HomePage() {
       <section className="paper-section paper-install paper-install--front" id="install">
         <Reveal className="paper-wrap paper-install__panel">
           <div className="paper-install__intro">
-            <p className="paper-meta">Released · available now</p>
-            <h2>Download it. Then stay in your editor.</h2>
-            <p>Pick Mac or Windows, download directly or copy the installer command, and open Unvibe. Windows uses PowerShell. No separate API key.</p>
+            <p className="paper-meta">PUBLIC RELEASE STATUS</p>
+            <h2>Get verified release updates.</h2>
+            <p>Mac signing and Windows sign-in verification are in progress. Join the community for verified download availability and release notes.</p>
           </div>
           <BetaInstall />
           <div className="paper-install__waitlist">

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { JoinWaitlistLink } from "@/components/paper/JoinWaitlistLink";
-import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
@@ -28,8 +27,8 @@ export function PhotoHero() {
         <h1 className="paper-hero__headline--business">Understand the AI-generated code you ship.</h1>
         <p className="paper-hero__kicker">Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.</p>
         <div className="paper-join-row">
-          <JoinWaitlistLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" intent="install" />
-          <JoinWaitlistLink href={BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" intent="install" />
+          <JoinWaitlistLink href="/waitlist" platform="mac" intent="waitlist" />
+          <JoinWaitlistLink href="/waitlist" platform="windows" intent="waitlist" />
         </div>
         <Link href="/teams" className="paper-hero__teams-link">Explore Unvibe Teams →</Link>
       </div>

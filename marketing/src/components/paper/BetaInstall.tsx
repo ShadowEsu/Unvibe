@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useCopyToast } from "@/components/paper/CopyToast";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import {
   BETA_FEEDBACK_URL,
-  BETA_INSTALL_COMMAND,
   BETA_INSTALL_LABEL,
   BETA_INSTALL_VERSION,
-  BETA_MAC_DIRECT_DOWNLOAD,
-  BETA_WINDOWS_DIRECT_DOWNLOAD,
-  BETA_WINDOWS_INSTALL_COMMAND,
 } from "@/lib/betaOffer";
+import { PLATFORM_STATUS } from "@/lib/platformStatus";
 
 interface BetaInstallProps {
   tone?: "hero" | "page";
@@ -31,18 +27,8 @@ export function BetaInstall({
   showFeedback = true,
   title = BETA_INSTALL_LABEL,
 }: BetaInstallProps) {
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState("");
   const [os, setOs] = useState<InstallOs>("mac");
-  const { showCopyToast } = useCopyToast();
-  const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
-  const prompt = os === "windows" ? "PS>" : "$";
-  const shellHint =
-    os === "windows"
-      ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
-      : "Paste in Terminal on an Apple silicon Mac (M1–M4).";
-  const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
-  const directLabel = os === "windows" ? "Download Windows preview .exe" : "Download Mac .dmg";
+  const status = PLATFORM_STATUS[os];
 
   useEffect(() => {
     const detected = detectInstallOs();
@@ -61,28 +47,12 @@ export function BetaInstall({
     track("beta_install_os_selected", { os: next, surface: tone });
   };
 
-  const copyCommand = async () => {
-    setError("");
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      showCopyToast(os === "windows" ? "Copied the Windows install command" : "Copied the Mac install command");
-      track("beta_install_copied", { os, surface: tone });
-      recordBetaSiteEvent("copied");
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setError("Copy failed. Select the command and copy it yourself.");
-    }
-  };
-
   return (
     <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
       <p className="paper-beta__title">{title}</p>
       <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
       <p className="paper-beta__blurb">
-        {os === "windows"
-          ? "Windows x64 portable preview. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."
-          : "Apple silicon. Start with 30 days, 50 AI explanations, and 50 selected-code reviews. No API key."}
+        {status.label}
       </p>
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
         <button
@@ -93,7 +63,7 @@ export function BetaInstall({
           onClick={() => selectOs("mac")}
         >
           <span className="paper-beta__os-name">Mac</span>
-          <span className="paper-beta__os-meta">Apple silicon</span>
+          <span className="paper-beta__os-meta">Signed build in preparation</span>
         </button>
         <button
           type="button"
@@ -103,52 +73,17 @@ export function BetaInstall({
           onClick={() => selectOs("windows")}
         >
           <span className="paper-beta__os-name">Windows</span>
-          <span className="paper-beta__os-meta">x64 preview · PowerShell</span>
+          <span className="paper-beta__os-meta">Authentication repair in progress</span>
         </button>
       </div>
-      <p className="paper-beta__shell" role="note">{shellHint}</p>
-      <div className="paper-beta__term">
-        <pre
-          role="button"
-          tabIndex={0}
-          aria-label={`Copy ${os === "windows" ? "Windows" : "Mac"} install command`}
-          onClick={() => void copyCommand()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              void copyCommand();
-            }
-          }}
-        >
-          <code>
-            <span className="paper-beta__cmd">
-              <span className="paper-beta__prompt">{prompt}</span>
-              {command}
-            </span>
-          </code>
-        </pre>
-        <button
-          type="button"
-          className={copied ? "is-copied" : undefined}
-          onClick={() => void copyCommand()}
-          aria-label={copied ? "Copied" : "Copy command"}
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-        </button>
-      </div>
-      <a
-        className="paper-beta__direct"
-        href={directHref}
-        rel="noreferrer"
-        onClick={() => track("release_download_clicked", { os, surface: tone })}
-      >
-        {directLabel}
+      <p className="paper-beta__shell" role="note">{status.detail}</p>
+      <a className="paper-beta__direct" href="/waitlist" onClick={() => track("waitlist_cta_clicked", { os, surface: tone })}>
+        Get verified release updates
       </a>
-      {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
       {showFeedback ? (
         <>
           <p className="paper-beta__offer">
-            Install, open Unvibe, then select code and press {os === "windows" ? "Ctrl+U" : "⌘U"}. Your public-beta access includes 30 days, 50 AI explanations, and 50 selected-code reviews.
+            Join the community to receive release notes, verified-download availability, and a short feedback check-in when this platform reopens.
           </p>
           <a
             className="paper-beta__survey"
@@ -187,22 +122,5 @@ export function BetaFeedback({ source }: { source: string }) {
         {BETA_FEEDBACK_URL}
       </a>
     </div>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3.5 8.5 6.5 11.5 12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
