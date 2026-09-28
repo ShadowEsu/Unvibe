@@ -9,7 +9,7 @@ export function escapeEmailHtml(value: string): string {
 }
 
 export function safeFirstName(firstName: string): string { return firstName.trim() || "there"; }
-export function betaThanksText(): string { return "Thank you so much for waitlisting, and for your support 💜"; }
+export function betaThanksText(): string { return "Thank you for joining the Unvibe community, and for your support 💜"; }
 export function betaEarlyNoteText(): string { return "We paused public installs while we finish signed Mac distribution and repair Windows sign-in reliability."; }
 export function betaInstallText(): string {
   return "Mac will reopen after Developer ID signing and notarization. Windows will reopen after a clean-machine sign-in test passes. We will email the verified release page when your platform is ready.";

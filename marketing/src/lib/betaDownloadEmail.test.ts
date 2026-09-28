@@ -8,7 +8,7 @@ describe("beta waitlist invite email", () => {
   it("routes beta recipients to the verified-release update and feedback", () => {
     const text = betaInviteText("Ohm");
     assert.match(BETA_INVITE_SUBJECT, /release update/);
-    assert.match(text, /Thank you so much for waitlisting/);
+    assert.match(text, /Thank you for joining the Unvibe community/);
     assert.match(text, /💜/);
     assert.match(text, /Developer ID signing/);
     assert.match(text, /clean-machine sign-in test/);
