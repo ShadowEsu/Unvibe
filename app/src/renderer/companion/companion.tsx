@@ -784,18 +784,25 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
                   <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
                 </div>
+                <p className="plan-pick__terms" id="pro-renewal-terms">
+                  {interval === 'annual'
+                    ? 'Pro renews at $81 per year until canceled.'
+                    : 'Pro renews at $9 per month until canceled.'}
+                  {' '}Review today’s total and any promotion in Stripe Checkout. Manage or cancel later from this page.
+                </p>
                 <button
                   type="button"
                   className="primary-btn"
                   onClick={() => void checkout()}
                   disabled={busy || (signedIn && !available)}
+                  aria-describedby="pro-renewal-terms"
                 >
                   {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
                 </button>
               </>
             ) : (
               <>
-                <h2>Team $10/seat</h2>
+                <h2>Teams</h2>
                 <p>Shared workspace and seat billing. Coming soon.</p>
                 <button type="button" className="soft-btn" disabled>Coming soon</button>
               </>

@@ -88,6 +88,11 @@ export async function POST(req: Request): Promise<Response> {
         : await stripe.checkout.sessions.create({
           mode: 'subscription',
           line_items: [{ price, quantity: seats }],
+          custom_text: {
+            submit: {
+              message: 'Your subscription renews automatically at the price shown above until canceled. Manage or cancel it from Unvibe Plan.',
+            },
+          },
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
           client_reference_id: intent.id,
