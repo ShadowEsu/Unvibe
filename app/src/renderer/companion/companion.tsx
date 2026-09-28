@@ -111,7 +111,7 @@ function planDisplayName(plan: PlanId): string {
 
 function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
   if (plan === 'full') return 'Included';
-  if (plan === 'pro') return interval === 'annual' ? '$72/yr' : '$8/mo';
+  if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
   if (plan === 'teams') return interval === 'annual' ? '$90/seat/yr' : '$10/seat';
   return '$0';
 }
@@ -320,11 +320,26 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+  const [browserOpened, setBrowserOpened] = useState(true);
   useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
   const startDevice = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; error?: string };
-    if (r.ok && r.userCode) setCode(r.userCode); else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
+    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    if (r.ok && r.userCode && r.verificationUri) {
+      setCode(r.userCode);
+      setVerificationUrl(r.verificationUri);
+      setBrowserOpened(r.browserOpened !== false);
+    } else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
+  };
+  const openBrowser = async () => {
+    const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };
+    if (!result.ok) setErr(result.error ?? 'Could not open your browser.');
+    else setBrowserOpened(true);
+  };
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(verificationUrl); }
+    catch { setErr('Could not copy the sign-in link.'); }
   };
   return (
     <div className="signin">
@@ -333,7 +348,12 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
         {busy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
       </button>
       {err && <div className="field-err">{err}</div>}
-      <div className="field-note">{code ? `Browser open — sign in with Google, then approve code ${code}.` : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}</div>
+      <div className="field-note">
+        {code
+          ? `${browserOpened ? 'Finish in your browser' : 'Your browser did not open'} — sign in with Google, then approve code ${code}.`
+          : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
+      </div>
+      {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startDevice()}>Retry</button></div> : null}
     </div>
   );
 }
@@ -1039,24 +1059,31 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             <span>Upgrade available</span>
             {upgradeIsPro ? (
               <>
-                <h2>Pro {interval === 'annual' ? '$72/yr' : '$8/mo'}</h2>
+                <h2>Pro {interval === 'annual' ? '$81/yr' : '$9/mo'}</h2>
                 <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
                 <div className="plan-toggle" aria-label="Billing interval">
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
                   <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
                 </div>
+                <p className="plan-pick__terms" id="pro-renewal-terms">
+                  {interval === 'annual'
+                    ? 'Pro renews at $81 per year until canceled.'
+                    : 'Pro renews at $9 per month until canceled.'}
+                  {' '}Review today’s total and any promotion in Stripe Checkout. Manage or cancel later from this page.
+                </p>
                 <button
                   type="button"
                   className="primary-btn"
                   onClick={() => void checkout()}
                   disabled={busy || (signedIn && !available)}
+                  aria-describedby="pro-renewal-terms"
                 >
                   {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
                 </button>
               </>
             ) : (
               <>
-                <h2>Team $10/seat</h2>
+                <h2>Teams</h2>
                 <p>Shared workspace and seat billing. Coming soon.</p>
                 <button type="button" className="soft-btn" disabled>Coming soon</button>
               </>
@@ -1584,7 +1611,7 @@ function App() {
       }
       setUsageLine(usage.ok && usage.data
         ? usage.data
-        : { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
+        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
@@ -1782,7 +1809,7 @@ function App() {
             <span className="sync-state__copy">{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
             {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
           </button>
-          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">30 explanations each month on Free. 100 on Pro. AI access included, no provider API key needed.</div></div>
+          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">Public beta includes 50 AI explanations and 50 code selections for 30 days. AI access included, no provider API key needed.</div></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
           <nav className="nav nav--foot">{FOOT.map((f) => (
             <button key={f.id} type="button" aria-label={f.id} title={sideCompact ? f.id : undefined} onClick={() => {

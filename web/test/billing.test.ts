@@ -21,8 +21,8 @@ import { stripePriceId } from '../src/billing/stripe';
 
 test('pricing math matches every published total', () => {
   assert.equal(priceFor('free', 'monthly', 1), 0);
-  assert.equal(priceFor('pro', 'monthly', 1), 1_000);
-  assert.equal(priceFor('pro', 'annual', 1), 9_000);
+  assert.equal(priceFor('pro', 'monthly', 1), 900);
+  assert.equal(priceFor('pro', 'annual', 1), 8_100);
   assert.equal(priceFor('pro', 'lifetime', 1), 8_000);
   assert.equal(priceFor('teams', 'monthly', 2), 1_600);
   assert.equal(priceFor('teams', 'monthly', 5), 4_000);

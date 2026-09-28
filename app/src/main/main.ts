@@ -50,6 +50,7 @@ import {
 import { store, type ChatThread } from './store';
 import { settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT } from './gift';
+import { deviceVerificationUrl } from '../core/deviceAuth';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
@@ -116,6 +117,7 @@ let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
 let devicePoll: NodeJS.Timeout | null = null;
+let currentDeviceVerificationUrl: string | null = null;
 /** Per-tab review sessions inside the single shared panel. */
 const tabSessions = new Map<string, ReviewSession>();
 let activeTabId = '1';
@@ -362,7 +364,7 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
     const quota = store().consumeBetaSelectedCodePrompt();
     if (!quota.ok) {
-      notify(`Private beta limit reached: ${store().betaSelectedCodeUsage().limit} selected-code prompts this month. Your saved learning is still available.`);
+      notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
       return;
     }
   }
@@ -1224,11 +1226,26 @@ app.whenReady().then(() => {
     try {
       const device = await startDeviceAuth();
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
-      void shell.openExternal(`${device.verificationUri}?user_code=${encodeURIComponent(device.userCode)}`);
+      const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
+      currentDeviceVerificationUrl = verificationUrl;
+      let browserOpened = true;
+      try {
+        await shell.openExternal(verificationUrl);
+        console.info('[auth] opened device verification browser');
+      } catch {
+        browserOpened = false;
+        console.warn('[auth] could not open device verification browser');
+      }
       if (devicePoll) clearInterval(devicePoll);
       const expires = Date.now() + 10 * 60_000;
       devicePoll = setInterval(() => void (async () => {
-        if (Date.now() > expires) { if (devicePoll) clearInterval(devicePoll); devicePoll = null; companion?.webContents.send('account:device', { ok: false, error: 'Sign-in timed out. Start again.' }); return; }
+        if (Date.now() > expires) {
+          if (devicePoll) clearInterval(devicePoll);
+          devicePoll = null;
+          currentDeviceVerificationUrl = null;
+          companion?.webContents.send('account:device', { ok: false, error: 'Sign-in timed out. Use Retry to create a new secure link.' });
+          return;
+        }
         try {
           const redeemed = await redeemDeviceAuth(device.deviceCode);
           if (!redeemed) return;
@@ -1239,12 +1256,32 @@ app.whenReady().then(() => {
             token: redeemed.token,
           });
           if (devicePoll) clearInterval(devicePoll); devicePoll = null;
+          currentDeviceVerificationUrl = null;
           void flush();
           companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user' });
-        } catch { /* polling retries until expiry */ }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'The secure sign-in request ended.';
+          if (/expired|unknown|already redeemed/i.test(message)) {
+            if (devicePoll) clearInterval(devicePoll);
+            devicePoll = null;
+            currentDeviceVerificationUrl = null;
+            companion?.webContents.send('account:device', { ok: false, error: 'This sign-in link is no longer valid. Use Retry to create a new one.' });
+          }
+        }
       })(), Math.max(2, device.interval) * 1000);
-      return { ok: true, userCode: device.userCode, verificationUri: device.verificationUri };
+      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl, browserOpened };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
+  });
+  ipcMain.handle('account:openDeviceAuth', async () => {
+    if (!currentDeviceVerificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
+    try {
+      await shell.openExternal(currentDeviceVerificationUrl);
+      console.info('[auth] reopened device verification browser');
+      return { ok: true };
+    } catch {
+      console.warn('[auth] could not reopen device verification browser');
+      return { ok: false, error: 'Could not open your browser. Copy the link and open it yourself.' };
+    }
   });
   ipcMain.handle('account:signOut', async () => {
     const token = store().token();

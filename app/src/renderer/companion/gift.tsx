@@ -11,6 +11,8 @@ export function Gift() {
   const [signInBusy, setSignInBusy] = useState(false);
   const [signInError, setSignInError] = useState('');
   const [deviceCode, setDeviceCode] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+  const [browserOpened, setBrowserOpened] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -66,12 +68,25 @@ export function Gift() {
   const startSignIn = async () => {
     setSignInBusy(true);
     setSignInError('');
-    const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; error?: string };
-    if (result.ok && result.userCode) setDeviceCode(result.userCode);
+    const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    if (result.ok && result.userCode && result.verificationUri) {
+      setDeviceCode(result.userCode);
+      setVerificationUrl(result.verificationUri);
+      setBrowserOpened(result.browserOpened !== false);
+    }
     else {
       setSignInBusy(false);
       setSignInError(result.error ?? 'Could not start secure sign-in.');
     }
+  };
+  const openBrowser = async () => {
+    const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };
+    if (!result.ok) setSignInError(result.error ?? 'Could not open your browser.');
+    else setBrowserOpened(true);
+  };
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(verificationUrl); }
+    catch { setSignInError('Could not copy the sign-in link.'); }
   };
 
   const remaining = Math.max(0, 5 - used);
@@ -103,9 +118,10 @@ export function Gift() {
           {signInError && <div className="field-err">{signInError}</div>}
           <p className="field-note">
             {deviceCode
-              ? `Browser open. Sign in with Google, then approve code ${deviceCode}.`
+              ? `${browserOpened ? 'Finish in your browser.' : 'Your browser did not open.'} Sign in with Google, then approve code ${deviceCode}.`
               : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
           </p>
+          {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startSignIn()}>Retry</button></div> : null}
         </section>
       ) : (
         <section className="gift-share" aria-label="Your SPECIAL CHAR">

@@ -126,6 +126,7 @@ const api = {
   signIn: (email: string) => ipcRenderer.invoke('account:signIn', email),
   signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
+  openDeviceAuth: () => ipcRenderer.invoke('account:openDeviceAuth'),
   onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
