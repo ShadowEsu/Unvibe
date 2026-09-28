@@ -6,6 +6,8 @@ import {
   BETA_FEEDBACK_URL,
   BETA_INSTALL_LABEL,
   BETA_INSTALL_VERSION,
+  BETA_MAC_DIRECT_DOWNLOAD,
+  BETA_WINDOWS_DIRECT_DOWNLOAD,
 } from "@/lib/betaOffer";
 import { PLATFORM_STATUS } from "@/lib/platformStatus";
 
@@ -29,6 +31,8 @@ export function BetaInstall({
 }: BetaInstallProps) {
   const [os, setOs] = useState<InstallOs>("mac");
   const status = PLATFORM_STATUS[os];
+  const downloadHref = os === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD;
+  const downloadLabel = os === "mac" ? "Download Mac beta (.dmg)" : "Download Windows beta (.exe)";
 
   useEffect(() => {
     const detected = detectInstallOs();
@@ -63,7 +67,7 @@ export function BetaInstall({
           onClick={() => selectOs("mac")}
         >
           <span className="paper-beta__os-name">Mac</span>
-          <span className="paper-beta__os-meta">Signed build in preparation</span>
+          <span className="paper-beta__os-meta">Apple silicon · unsigned beta</span>
         </button>
         <button
           type="button"
@@ -73,17 +77,24 @@ export function BetaInstall({
           onClick={() => selectOs("windows")}
         >
           <span className="paper-beta__os-name">Windows</span>
-          <span className="paper-beta__os-meta">Authentication repair in progress</span>
+          <span className="paper-beta__os-meta">x64 · unsigned beta</span>
         </button>
       </div>
       <p className="paper-beta__shell" role="note">{status.detail}</p>
-      <a className="paper-beta__direct" href="/#waitlist" onClick={() => track("waitlist_cta_clicked", { os, surface: tone })}>
-        Get verified release updates
+      <a
+        className="paper-beta__direct"
+        href={downloadHref}
+        onClick={() => track("release_download_clicked", { os, surface: tone, channel: "unsigned_beta" })}
+      >
+        {downloadLabel}
+      </a>
+      <a className="paper-beta__survey" href={`${downloadHref}.sha256`} onClick={() => track("release_download_clicked", { os, surface: tone, asset: "checksum" })}>
+        Download SHA-256 checksum
       </a>
       {showFeedback ? (
         <>
           <p className="paper-beta__offer">
-            Join the community to receive release notes, verified-download availability, and a short feedback check-in when this platform reopens.
+            This is an unsigned public beta while platform signing is in progress. Verify the SHA-256 file beside the download, then share feedback after trying it.
           </p>
           <a
             className="paper-beta__survey"

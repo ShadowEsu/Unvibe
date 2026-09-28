@@ -1,21 +1,21 @@
-export type Platform = 'mac' | 'windows';
+export type Platform = "mac" | "windows";
 
 export interface PlatformStatus {
-  availability: 'paused';
+  availability: "unsigned_beta";
   label: string;
   detail: string;
 }
 
-/** The sole public source of platform availability. Update this only after release health passes. */
+/** The sole public source of platform availability. Both downloads are clearly labelled beta builds until platform signing is complete. */
 export const PLATFORM_STATUS: Record<Platform, PlatformStatus> = {
   mac: {
-    availability: 'paused',
-    label: 'Mac public download paused',
-    detail: 'A Developer ID signed and notarized Mac build is in preparation. Join the product updates list for the verified release.',
+    availability: "unsigned_beta",
+    label: "Mac public beta",
+    detail: "Apple-silicon beta DMG. Developer ID signing and notarization are in progress; download only from this page and use macOS's normal identified-developer confirmation flow.",
   },
   windows: {
-    availability: 'paused',
-    label: 'Windows preview paused',
-    detail: 'Windows sign-in reliability is under active repair. We will reopen access after a clean-machine sign-in test passes.',
+    availability: "unsigned_beta",
+    label: "Windows public beta",
+    detail: "Windows x64 portable beta. Authenticode signing and a clean-machine sign-in check are in progress; download only from this page and keep Windows security protections enabled.",
   },
 };

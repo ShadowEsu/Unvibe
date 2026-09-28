@@ -33,9 +33,9 @@ export default function HomePage() {
       <section className="paper-section paper-install paper-install--front" id="install">
         <Reveal className="paper-wrap paper-install__panel">
           <div className="paper-install__intro">
-            <p className="paper-meta">PUBLIC RELEASE STATUS</p>
-            <h2>Get verified release updates.</h2>
-            <p>Mac signing and Windows sign-in verification are in progress. Join the community for verified download availability and release notes.</p>
+            <p className="paper-meta">PUBLIC BETA DOWNLOADS</p>
+            <h2>Try Unvibe on your machine.</h2>
+            <p>Mac and Windows beta downloads are available below. Platform signing is still in progress, so each download is clearly marked unsigned and includes a SHA-256 check.</p>
           </div>
           <BetaInstall />
           <div className="paper-install__waitlist">
