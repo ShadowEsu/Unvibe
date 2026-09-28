@@ -199,8 +199,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         <form onSubmit={handleSubmit(submit)} noValidate onFocusCapture={markStarted}>
           <div className="form-heading">
             <span className="brand-pixel" />
-            <strong>Join the community</strong>
-            <small>Get product notes and feedback invitations. You can skip the rest.</small>
+            <strong>Join the waitlist</strong>
+            <small>Get verified-download availability, product notes, and feedback invitations. You can skip the rest.</small>
           </div>
           <div className="name-row">
             <Field label="First name" error={errors.firstName?.message}>
@@ -223,7 +223,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           </details>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
           <button className="waitlist-submit" type="submit" disabled={status === "submitting"}>
-            {status === "submitting" ? <><Loader2 className="spin" size={18} />Joining</> : <>Join the community <Send size={17} /></>}
+            {status === "submitting" ? <><Loader2 className="spin" size={18} />Joining</> : <>Join the waitlist <Send size={17} /></>}
           </button>
           <p className="form-legal">By joining, you agree to the <a href="/terms">terms</a> and acknowledge the <a href="/privacy">privacy policy</a>.</p>
         </form>
@@ -231,8 +231,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
         <div className="success-panel" role="status">
           <span className="success-pixel"><Check /></span>
           <p className="pixel-label">JOINED</p>
-          <h3>{status === "duplicate" ? "You are already in the community." : "You are in."}</h3>
-          <p>Thanks for joining. We will send product notes, feedback invitations, and Teams updates without adding a download gate.</p>
+          <h3>{status === "duplicate" ? "You are already on the waitlist." : "You are on the waitlist."}</h3>
+          <p>Thanks for joining. We will send verified availability, product notes, feedback invitations, and Teams updates.</p>
           {giftNotice && <p className="form-legal" role="status">{giftNotice}</p>}
           {referralCode && (
             <div className="referral-success">
@@ -256,7 +256,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
               <div className="optional-details">
                 <label>Where you work<select value={tool} onChange={(event) => setTool(event.target.value as typeof tool)}><option value="">Skip</option>{tools.map((item) => <option key={item} value={item}>{toolLabels[item]}</option>)}</select></label>
                 <label>Your experience<select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)}><option value="">Skip</option>{experiences.map((item) => <option key={item} value={item}>{experienceLabels[item]}</option>)}</select></label>
-                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details were not saved. Your community signup is still safe.</p>}
+                {detailsStatus === "error" && <p className="form-error" role="alert">Optional details were not saved. Your waitlist place is still safe.</p>}
                 <button type="button" className="details-button" disabled={detailsStatus === "saving"} onClick={saveDetails}>{detailsStatus === "saving" ? "Saving" : "Save optional details"}</button>
               </div>
             )
@@ -268,20 +268,20 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
 
   if (variant === "hero") {
     return (
-      <div className="hero-waitlist" id="community">
+      <div className="hero-waitlist" id="waitlist">
         {form}
       </div>
     );
   }
 
   return (
-    <section className="waitlist-field" id="community">
+    <section className="waitlist-field" id="waitlist">
       <div className="waitlist-pixels" aria-hidden="true" />
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
-          <p className="section-number light">10 / COMMUNITY</p>
-          <h2>Keep a real role in what we build next.</h2>
-          <p>Join the community for verified release availability, product notes, feedback invitations, and a direct line on what improves next.</p>
+          <p className="section-number light">10 / PRIVATE BETA WAITLIST</p>
+          <h2>Get verified access when downloads reopen.</h2>
+          <p>Join the waitlist for verified release availability, product notes, feedback invitations, and a direct line on what improves next.</p>
           <ul>
             <li><Check size={16} />Verified Mac and Windows release updates</li>
             <li><Check size={16} />Selected-code explanations, saved learning, and early feature feedback</li>

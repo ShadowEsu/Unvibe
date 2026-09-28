@@ -30,9 +30,9 @@ export function WaitlistInvite() {
   return (
     <div ref={rootRef} className={lit ? "paper-invite is-lit" : "paper-invite"}>
       <div className="paper-invite__card paper-glass">
-        <p className="paper-meta">Unvibe community</p>
-        <h2>Stay close to what ships next.</h2>
-        <p className="paper-lead">Public downloads reopen only after their signed installers pass verification. Leave your name and email for verified availability, product notes, feedback invitations, and Teams updates. Everything beyond that is optional.</p>
+        <p className="paper-meta">Private beta waitlist</p>
+        <h2>Save your place for verified downloads.</h2>
+        <p className="paper-lead">Join the waitlist for verified Mac and Windows download availability, product notes, feedback invitations, and Teams updates. Everything beyond that is optional.</p>
         <div className="paper-invite__form">
           <PixelWaitlist variant="hero" />
         </div>

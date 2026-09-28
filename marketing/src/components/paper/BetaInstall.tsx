@@ -77,7 +77,7 @@ export function BetaInstall({
         </button>
       </div>
       <p className="paper-beta__shell" role="note">{status.detail}</p>
-      <a className="paper-beta__direct" href="/#community" onClick={() => track("waitlist_cta_clicked", { os, surface: tone })}>
+      <a className="paper-beta__direct" href="/#waitlist" onClick={() => track("waitlist_cta_clicked", { os, surface: tone })}>
         Get verified release updates
       </a>
       {showFeedback ? (

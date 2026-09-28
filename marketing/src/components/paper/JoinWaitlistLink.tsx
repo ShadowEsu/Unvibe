@@ -48,10 +48,10 @@ export function JoinWaitlistLink({
   const tone = platform === "windows" ? "win" : "mac";
   const label = labelOverride ?? (
     platform === "mac"
-      ? intent === "install" ? "Download for Mac" : "Get Mac updates"
+      ? intent === "install" ? "Download for Mac" : "Join Mac waitlist"
       : platform === "windows"
-        ? intent === "install" ? "Download for Windows" : "Get Windows updates"
-        : "Get release updates"
+        ? intent === "install" ? "Download for Windows" : "Join Windows waitlist"
+        : "Join waitlist"
   );
 
   return (
