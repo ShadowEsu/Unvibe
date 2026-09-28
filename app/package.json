@@ -16,7 +16,8 @@
     "dist:win": "npm run build && electron-builder --win",
     "package:beta:win": "node scripts/package-beta-windows.mjs",
     "dist:all": "npm run build && electron-builder --mac --win",
-    "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\""
+    "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\"",
+    "dist:win:release": "node scripts/package-release-windows.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -71,9 +72,8 @@
           ]
         }
       ],
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "identity": null,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": true,
       "extendInfo": {
         "CFBundleDisplayName": "Unvibe",
         "CFBundleName": "Unvibe",
@@ -87,7 +87,9 @@
         ],
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
         "LSUIElement": false
-      }
+      },
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
       "sign": false
