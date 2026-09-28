@@ -164,9 +164,9 @@ h2 {
 
 .paper-hero {
   position: relative;
-  min-height: clamp(39rem, 78svh, 52rem);
+  min-height: 100svh;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 1fr;
   align-content: stretch;
   overflow: hidden;
   color: var(--hero-type);
@@ -205,6 +205,15 @@ h2 {
 .paper-hero__copy .paper-join-row {
   margin-top: 0.55rem;
   margin-bottom: 0.35rem;
+}
+
+.paper-hero__download-note {
+  margin: -0.3rem 0 0;
+  color: var(--hero-type);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  opacity: 0.82;
+  text-shadow: var(--glow-hero);
 }
 
 .paper-hero__copy .paper-beta {

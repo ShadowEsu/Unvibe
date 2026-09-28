@@ -12,8 +12,8 @@ export default function BetaDownloadsPage() {
   return (
     <main className="beta-download-page">
       <section className="beta-download-panel">
-        <div className="beta-download-brand"><Image src="/brand/icon.png" alt="Unvibe" width={52} height={52} priority /><div><p className="pixel-label">UNVIBE / VERIFIED RELEASE</p><h1>Get verified release updates.</h1></div></div>
-        <p className="beta-download-intro">Public downloads are paused while Mac signing and Windows sign-in verification are completed. Join the community below for verified availability. Unvibe only analyzes code you explicitly select.</p>
+        <div className="beta-download-brand"><Image src="/brand/icon.png" alt="Unvibe" width={52} height={52} priority /><div><p className="pixel-label">UNVIBE / PUBLIC BETA</p><h1>Download Unvibe.</h1></div></div>
+        <p className="beta-download-intro">Mac and Windows public beta downloads are available below. These builds are unsigned while platform signing and Windows sign-in verification continue. Unvibe only analyzes code you explicitly select.</p>
         <div className="beta-download-preview">
           <Image
             src="/product/home-today.jpg"

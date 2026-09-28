@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +54,7 @@ export function JoinWaitlistLink({
   );
 
   return (
-    <Link
+    <a
       href={href}
       onClick={() => {
         track(intent === "install" ? "release_download_clicked" : "waitlist_cta_clicked", {
@@ -78,7 +77,7 @@ export function JoinWaitlistLink({
       {platform === "mac" ? <AppleMark /> : null}
       {platform === "windows" ? <WindowsMark /> : null}
       <span className="paper-join__label">{label}</span>
-    </Link>
+    </a>
   );
 }
 

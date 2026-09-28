@@ -11,5 +11,5 @@ export const BETA_FEEDBACK_URL = `${BETA_INSTALL_HOST}/feedback`;
 export const POSTHOG_SURVEY_ID = "01a03aa5-ab81-0000-b791-03561d8f4f7d";
 
 export const BETA_INSTALL_VERSION = "v0.1.12";
-export const BETA_INSTALL_LABEL = "Verified public release updates";
+export const BETA_INSTALL_LABEL = "Download the Unvibe public beta";
 export const BETA_INVESTOR_LABEL = "Join the verified release updates";
