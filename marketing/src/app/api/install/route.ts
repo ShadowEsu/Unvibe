@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 /** Public installers remain unavailable until the signed-release checks pass. */
 export async function GET() {
   return new Response(
-    "Unvibe public installers are temporarily paused while signed-release verification is completed. Join the community at https://unvibe.site/waitlist for verified availability updates.\n",
+    "Unvibe public installers are temporarily paused while signed-release verification is completed. Join the community at https://unvibe.site/#community for verified availability updates.\n",
     {
       status: 410,
       headers: {

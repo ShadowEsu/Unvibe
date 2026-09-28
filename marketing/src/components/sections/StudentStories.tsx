@@ -42,7 +42,7 @@ export function StudentStories() {
       id="students"
       eyebrow="Who it is for"
       title="For anyone learning faster than they are understanding."
-      subtitle="Not testimonials — the real situations Unvibe was built for. If one of these is you, the waitlist is open."
+      subtitle="Not testimonials — the real situations Unvibe was built for. If one of these is you, join the community."
     >
       <div className="grid gap-4 sm:grid-cols-2">
         {stories.map((s) => (

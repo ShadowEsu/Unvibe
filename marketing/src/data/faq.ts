@@ -114,14 +114,14 @@ export const faqItems: FaqItem[] = [
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "Public downloads are paused while the Mac build completes Developer ID signing and notarization and the Windows build completes a clean-machine sign-in test. Join the community at unvibe.site/waitlist for verified availability updates. The planned introductory allowance is 30 days, 50 AI explanations, and 50 selected-code reviews, with no card required.",
+      "Public downloads are paused while the Mac build completes Developer ID signing and notarization and the Windows build completes a clean-machine sign-in test. Join the community at unvibe.site/#community for verified availability updates. The planned introductory allowance is 30 days, 50 AI explanations, and 50 selected-code reviews, with no card required.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Windows x64 is in release preparation. We are repairing device sign-in and require a signed installer plus a clean-machine test before reopening downloads. Join the community at unvibe.site/waitlist for verified availability updates.",
+      "Windows x64 is in release preparation. We are repairing device sign-in and require a signed installer plus a clean-machine test before reopening downloads. Join the community at unvibe.site/#community for verified availability updates.",
     category: "platform",
   },
   {

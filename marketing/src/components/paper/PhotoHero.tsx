@@ -27,8 +27,8 @@ export function PhotoHero() {
         <h1 className="paper-hero__headline--business">Understand the AI-generated code you ship.</h1>
         <p className="paper-hero__kicker">Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.</p>
         <div className="paper-join-row">
-          <JoinWaitlistLink href="/waitlist" platform="mac" intent="waitlist" />
-          <JoinWaitlistLink href="/waitlist" platform="windows" intent="waitlist" />
+          <JoinWaitlistLink href="/#community" platform="mac" intent="waitlist" />
+          <JoinWaitlistLink href="/#community" platform="windows" intent="waitlist" />
         </div>
         <Link href="/teams" className="paper-hero__teams-link">Explore Unvibe Teams →</Link>
       </div>

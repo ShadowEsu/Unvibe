@@ -268,14 +268,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
 
   if (variant === "hero") {
     return (
-      <div className="hero-waitlist" id="waitlist">
+      <div className="hero-waitlist" id="community">
         {form}
       </div>
     );
   }
 
   return (
-    <section className="waitlist-field" id="waitlist">
+    <section className="waitlist-field" id="community">
       <div className="waitlist-pixels" aria-hidden="true" />
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">

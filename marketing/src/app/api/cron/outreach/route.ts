@@ -40,8 +40,8 @@ function founderSummaryText(sent: DispatchableOutreachMessage[]): string {
  */
 export async function GET(req: Request) {
   if (!cronAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (process.env.OUTREACH_SENDING_ENABLED !== "true") {
-    return NextResponse.json({ enabled: false, sent: 0, reason: "Outbound outreach is disabled." });
+  if (process.env.OUTREACH_SENDING_ENABLED !== "true" || process.env.OUTREACH_CRON_ENABLED !== "true") {
+    return NextResponse.json({ enabled: false, sent: 0, reason: "Outbound outreach is disabled until both explicit sending gates are enabled." });
   }
 
   const postalAddress = process.env.OUTREACH_POSTAL_ADDRESS?.trim();
