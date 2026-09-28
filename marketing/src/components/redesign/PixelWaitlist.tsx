@@ -200,7 +200,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <div className="form-heading">
             <span className="brand-pixel" />
             <strong>Join the waitlist</strong>
-            <small>Get verified-download availability, product notes, and feedback invitations. You can skip the rest.</small>
+            <small>Get signed-release news and product updates. The unsigned beta is available to download now.</small>
           </div>
           <div className="name-row">
             <Field label="First name" error={errors.firstName?.message}>
@@ -232,7 +232,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <span className="success-pixel"><Check /></span>
           <p className="pixel-label">JOINED</p>
           <h3>{status === "duplicate" ? "You are already on the waitlist." : "You are on the waitlist."}</h3>
-          <p>Thanks for joining. We will send verified availability, product notes, feedback invitations, and Teams updates.</p>
+          <p>Thanks for joining. We will send signed-release news, product notes, feedback invitations, and Teams updates.</p>
           {giftNotice && <p className="form-legal" role="status">{giftNotice}</p>}
           {referralCode && (
             <div className="referral-success">
@@ -279,14 +279,14 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       <div className="waitlist-pixels" aria-hidden="true" />
       <Reveal className="container-page waitlist-layout">
         <div className="waitlist-copy">
-          <p className="section-number light">10 / PRIVATE BETA WAITLIST</p>
-          <h2>Get verified access when downloads reopen.</h2>
-          <p>Join the waitlist for verified release availability, product notes, feedback invitations, and a direct line on what improves next.</p>
+          <p className="section-number light">10 / RELEASE UPDATES</p>
+          <h2>Be first to know when signed builds arrive.</h2>
+          <p>The unsigned public beta is available now. Join the waitlist for signed-release availability, product notes, and a direct line on what improves next.</p>
           <ul>
             <li><Check size={16} />Verified Mac and Windows release updates</li>
             <li><Check size={16} />Selected-code explanations, saved learning, and early feature feedback</li>
             <li><Check size={16} />Planned introductory access: 30 days, 50 AI explanations, and 50 selected-code reviews</li>
-            <li><Check size={16} />No card required when verified downloads reopen</li>
+            <li><Check size={16} />No card required to download the public beta</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>
         </div>
