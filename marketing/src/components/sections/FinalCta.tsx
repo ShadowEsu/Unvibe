@@ -22,7 +22,7 @@ export function FinalCta() {
             No credit card. No pricing page. No catch.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button href="#waitlist" size="lg">
+            <Button href="#community" size="lg">
               Join the free beta
             </Button>
             <Button href="#demo" variant="secondary" size="lg">

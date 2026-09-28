@@ -63,7 +63,7 @@ export function Hero() {
               }}
               className="mt-8 flex flex-wrap items-center gap-3"
             >
-              <Button href="#waitlist" size="lg">
+              <Button href="#community" size="lg">
                 Join the free beta
               </Button>
               <Button href="#demo" variant="secondary" size="lg">
