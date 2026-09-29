@@ -411,7 +411,22 @@ app.setName('Unvibe');
 // ⌘U and leave a review panel open with no captured selection.
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) app.quit();
-app.on('second-instance', () => openCompanion());
+/** Windows and Linux deliver `unvibe://` links as command-line arguments, not via open-url. */
+function protocolUrlFrom(argv: readonly string[]): string | null {
+  return argv.find((arg) => arg.toLowerCase().startsWith('unvibe://')) ?? null;
+}
+
+app.on('second-instance', (_event, argv) => {
+  const url = protocolUrlFrom(argv);
+  if (url) handleExternalReviewUrl(url);
+  else openCompanion();
+});
+
+// A protocol link can also cold-start the app on Windows; macOS uses open-url for this.
+if (!isMac) {
+  const launchUrl = protocolUrlFrom(process.argv);
+  if (launchUrl) handleExternalReviewUrl(launchUrl);
+}
 
 // Register before Electron becomes ready: macOS can deliver an open-url event during launch.
 app.on('open-url', (event, url) => {

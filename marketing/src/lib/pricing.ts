@@ -1,6 +1,6 @@
 /**
- * Public prices, set by the founder on 2026-09-28. web/src/billing/plans.ts and the desktop
- * Plan page still charge $9/$81 for Pro and must be brought in line before checkout goes live.
+ * Public prices, set by the founder on 2026-09-28. Keep in lockstep with
+ * web/src/billing/plans.ts and the Stripe price IDs checkout uses.
  */
 export const PRICING = {
   proMonthly: 8,

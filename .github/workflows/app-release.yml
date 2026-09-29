@@ -42,7 +42,20 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Without these the packaged app talks to http://localhost:8787 and sign-in cannot work.
+      - name: Require release backend settings
+        shell: bash
+        env:
+          UNVIBE_BACKEND: ${{ secrets.UNVIBE_BACKEND }}
+          UNVIBE_TRIAL_TOKEN: ${{ secrets.UNVIBE_TRIAL_TOKEN }}
+        run: |
+          if [[ "$UNVIBE_BACKEND" != https://* ]]; then echo "Set the UNVIBE_BACKEND repository secret to the HTTPS API origin."; exit 1; fi
+          if [ "${#UNVIBE_TRIAL_TOKEN}" -lt 24 ]; then echo "Set the UNVIBE_TRIAL_TOKEN repository secret to the production trial token."; exit 1; fi
+
       - name: Build app bundle
+        env:
+          UNVIBE_BACKEND: ${{ secrets.UNVIBE_BACKEND }}
+          UNVIBE_TRIAL_TOKEN: ${{ secrets.UNVIBE_TRIAL_TOKEN }}
         run: npm run build
 
       - name: Package (publish to release)

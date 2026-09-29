@@ -4,6 +4,36 @@ import { useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const DEVICE_CODE_KEY = 'unvibe_device_user_code';
+const DEVICE_CODE_TTL_MS = 15 * 60_000;
+
+/** Remember the device code across tabs so an emailed sign-in link can still finish approval. */
+function rememberDeviceCode(code: string): void {
+  try {
+    window.localStorage.setItem(DEVICE_CODE_KEY, JSON.stringify({ code, at: Date.now() }));
+  } catch {
+    /* storage blocked: the code stays in the field for this tab */
+  }
+}
+
+function recallDeviceCode(): string {
+  try {
+    const raw = window.localStorage.getItem(DEVICE_CODE_KEY);
+    if (!raw) return '';
+    const saved = JSON.parse(raw) as { code?: string; at?: number };
+    if (!saved.code || !saved.at || Date.now() - saved.at > DEVICE_CODE_TTL_MS) return '';
+    return saved.code;
+  } catch {
+    return '';
+  }
+}
+
+function forgetDeviceCode(): void {
+  try {
+    window.localStorage.removeItem(DEVICE_CODE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 function LogoMark() {
   return (
@@ -78,18 +108,10 @@ export default function ActivatePage() {
     if (fromDevice) {
       const normalized = fromDevice.trim().toUpperCase();
       setCode(normalized);
-      try {
-        window.sessionStorage.setItem(DEVICE_CODE_KEY, normalized);
-      } catch {
-        /* ignore */
-      }
+      rememberDeviceCode(normalized);
     } else {
-      try {
-        const saved = window.sessionStorage.getItem(DEVICE_CODE_KEY);
-        if (saved) setCode(saved);
-      } catch {
-        /* ignore */
-      }
+      const saved = recallDeviceCode();
+      if (saved) setCode(saved);
     }
   }, []);
 
@@ -157,11 +179,7 @@ export default function ActivatePage() {
         );
         return;
       }
-      try {
-        window.sessionStorage.removeItem(DEVICE_CODE_KEY);
-      } catch {
-        /* ignore */
-      }
+      forgetDeviceCode();
       setStatus('done');
     } catch {
       setStatus('error');
@@ -174,13 +192,7 @@ export default function ActivatePage() {
     setAuthBusy(true);
     setAuthMessage('');
     try {
-      if (code.trim()) {
-        try {
-          window.sessionStorage.setItem(DEVICE_CODE_KEY, code.trim().toUpperCase());
-        } catch {
-          /* ignore */
-        }
-      }
+      if (code.trim()) rememberDeviceCode(code.trim().toUpperCase());
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -208,13 +220,7 @@ export default function ActivatePage() {
     setAuthBusy(true);
     setAuthMessage('');
     try {
-      if (code.trim()) {
-        try {
-          window.sessionStorage.setItem(DEVICE_CODE_KEY, code.trim().toUpperCase());
-        } catch {
-          /* ignore */
-        }
-      }
+      if (code.trim()) rememberDeviceCode(code.trim().toUpperCase());
       const { error } = await client.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: activateOrigin() },
@@ -256,12 +262,14 @@ export default function ActivatePage() {
               <span className="activate-kicker__dot" aria-hidden="true" />
               Device approval
             </div>
-            <h1 className="activate-title">Make this Mac yours.</h1>
+            <h1 className="activate-title">{accessToken ? 'One last step.' : 'Connect Unvibe to your account.'}</h1>
             <p className="activate-sub">
-              Sign in once, approve the short code, and return straight to your
-              flow.
+              {accessToken
+                ? 'You are signed in. Click Connect this device so the Unvibe app can finish. It is waiting for this.'
+                : 'Sign in once, connect this device, and Unvibe finishes on its own.'}
             </p>
 
+            {!accessToken && (
             <div className="activate-steps" aria-hidden="true">
               <div className="activate-step">
                 <span className="activate-step__n">1</span>
@@ -275,9 +283,9 @@ export default function ActivatePage() {
               <div className="activate-step">
                 <span className="activate-step__n">2</span>
                 <div>
-                  <div className="activate-step__t">Enter the device code</div>
+                  <div className="activate-step__t">Click Connect this device</div>
                   <div className="activate-step__d">
-                    Copy it from the desktop app or the shortcut prompt.
+                    The code from the Unvibe app is filled in for you.
                   </div>
                 </div>
               </div>
@@ -286,11 +294,12 @@ export default function ActivatePage() {
                 <div>
                   <div className="activate-step__t">Return to Unvibe</div>
                   <div className="activate-step__d">
-                    The app completes sign-in automatically.
+                    The app finishes signing in within a few seconds.
                   </div>
                 </div>
               </div>
             </div>
+            )}
 
             {!accessToken && (
               <div className="activate-section">
@@ -358,6 +367,7 @@ export default function ActivatePage() {
                 className="activate-btn"
                 type="button"
                 onClick={approve}
+                autoFocus={Boolean(accessToken)}
                 disabled={
                   status === 'working' || code.length < 4 || !accessToken || bootstrapping
                 }
@@ -377,7 +387,9 @@ export default function ActivatePage() {
               )}
               {accessToken && (
                 <p className="activate-note activate-note--ok">
-                  Signed in. Enter the device code to finish.
+                  {code.length >= 4
+                    ? 'Signed in. Check the code matches the one in the Unvibe app, then click Connect this device.'
+                    : 'Signed in. Type the code shown in the Unvibe app, then click Connect this device.'}
                 </p>
               )}
             </div>
@@ -386,7 +398,7 @@ export default function ActivatePage() {
       </div>
 
       <p className="activate-foot">
-        Private by design · Secrets stay on your Mac · Free during beta
+        Private by design · Secrets stay on your computer · Free during beta
       </p>
     </div>
   );
