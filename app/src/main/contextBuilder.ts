@@ -3,9 +3,9 @@
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { capHunks, findGitRoot, getWorkingTreeDiff } from '../core/gitDiff';
+import { capHunks, collectDiffHunks, findGitRoot, type GitDiffScope } from '../core/gitDiff';
 import { extractImports, relativeImportPaths } from '../core/parse';
-import { guessLanguage } from '../core/language';
+import { detectLanguage, guessLanguage } from '../core/language';
 import type { DiffHunk, ExplanationLevel, ReviewRequestPayload, ReviewScope } from '../core/protocol';
 import { store } from './store';
 import { settings } from './settings';
@@ -82,6 +82,8 @@ export async function resolveRepoRoot(preferred?: string): Promise<string | null
       settings().set({ lastProjectRoot: root });
       return root;
     }
+    // An explicit invalid choice must never fall back to a different repository.
+    return null;
   }
   const remembered = settings().all().lastProjectRoot;
   if (remembered) {
@@ -113,9 +115,7 @@ export async function buildSelectionPayload(opts: {
     enclosing = nearby.enclosing;
   }
 
-  const language = opts.filePath
-    ? guessLanguage(opts.code) // keep simple; path-aware later
-    : guessLanguage(opts.code);
+  const language = detectLanguage(opts.code, opts.filePath).language;
 
   const payload: ReviewRequestPayload = {
     scope: 'selection',
@@ -159,15 +159,20 @@ export async function buildDiffPayload(opts: {
   level: ExplanationLevel;
   mode: 'diff' | 'brief';
   question?: string;
+  scope?: GitDiffScope;
 }): Promise<BuiltReview> {
-  const hunks = capHunks(await getWorkingTreeDiff(opts.repoRoot));
+  const scope = opts.scope ?? 'working';
+  const hunks = capHunks(await collectDiffHunks(opts.repoRoot, scope));
   if (hunks.length === 0) {
+    if (scope === 'staged') throw new Error('Nothing is staged in this repository.');
+    if (scope === 'latest') throw new Error('Unvibe could not read a latest-commit diff.');
+    if (scope === 'branch') throw new Error('Unvibe could not compare this branch to a base branch.');
     throw new Error('No uncommitted changes in this repository.');
   }
   const displayCode = diffAsDisplay(hunks);
   const primary = hunks[0]!.file;
   const briefQuestion = opts.mode === 'brief'
-    ? 'Agent change brief: Summarize what an AI agent or developer changed, why it matters, risks, and the top concepts to learn. Keep it skimmable.'
+    ? 'Change brief: Summarize what these git changes do, why they matter, risks, and the top concepts to understand. Do not claim an AI agent wrote the code unless the diff itself proves it. Keep it skimmable.'
     : opts.question;
 
   const payload: ReviewRequestPayload = {

@@ -6,7 +6,8 @@ import { OpenRouterProvider } from './openrouter';
 import { normalizeOpenRouterModel } from './openrouterModels';
 
 export { buildSystemPrompt, buildUserPrompt, buildComprehensionPrompt } from './prompt';
-export type { Provider } from './provider';
+export type { Provider, ModelProvider, ModelRoute } from './provider';
+export type { SpeechToTextProvider, TextToSpeechProvider, EmbeddingProvider } from './speech';
 export {
   DEFAULT_OPENROUTER_MODEL,
   FREE_CHAT_MODELS,

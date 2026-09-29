@@ -1,0 +1,37 @@
+:root {
+  --uv-bg: #161616;
+  --uv-surface: rgba(24, 24, 24, 0.96);
+  --uv-surface-2: rgba(32, 32, 32, 0.96);
+  --uv-border: rgba(255, 255, 255, 0.1);
+  --uv-border-strong: rgba(255, 255, 255, 0.22);
+  --uv-text: #f4f3ef;
+  --uv-text-2: #c4c3be;
+  --uv-text-3: #a09f9a;
+  --uv-purple: #e6e4df;
+  --uv-purple-2: #e6e4df;
+  --uv-indigo: #d6d4cf;
+  --uv-blue: #4f7cff;
+  --uv-warm: #f5a524;
+  --uv-ok: #55c99c;
+  --uv-danger: #e08b82;
+  --uv-space-1: 4px;
+  --uv-space-2: 8px;
+  --uv-space-3: 12px;
+  --uv-space-4: 16px;
+  --uv-space-5: 20px;
+  --uv-space-6: 24px;
+  --uv-space-7: 32px;
+  --uv-radius-s: 8px;
+  --uv-radius-m: 14px;
+  --uv-radius-l: 16px;
+  --uv-radius-pill: 999px;
+  --uv-shadow: 0 10px 28px rgba(6, 4, 16, 0.28);
+  --uv-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --uv-fast: 140ms;
+  --uv-normal: 200ms;
+  --uv-slow: 280ms;
+  --uv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  /* Newsreader when the companion has loaded it, otherwise the macOS system serif. */
+  --uv-display: "Newsreader", ui-serif, "New York", Georgia, serif;
+  --uv-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+}

@@ -8,6 +8,12 @@ import { playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
+import { UsageRings } from '../shared/usageRings';
+import { GoogleMark } from '../shared/googleMark';
+import { Briefings } from './briefings';
+import type { ChangeBrief } from '../../core/changeBrief';
+import type { KnowledgeObject } from '../../core/knowledge';
+import '../shared/tokens.css';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -47,6 +53,7 @@ interface Settings {
   barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
   barHoverDelayMs: number;
   rotateIslandStats: boolean;
+  barSize: 'small' | 'medium' | 'large';
   followActiveDisplay: boolean; soundEffects: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
   widgetOpacityInactive: number; inactiveBehavior: string;
@@ -59,6 +66,17 @@ interface Settings {
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
   sidebarWidth: number;
   sidebarHidden: boolean;
+  features: {
+    changeBrief: boolean;
+    whyExists: boolean;
+    voice: boolean;
+    teachBack: boolean;
+    live: boolean;
+    teamKnowledge: boolean;
+    githubTeams: boolean;
+    localModels: boolean;
+  };
+  liveSnoozeUntil?: string;
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
@@ -93,7 +111,7 @@ function planDisplayName(plan: PlanId): string {
 
 function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
   if (plan === 'full') return 'Included';
-  if (plan === 'pro') return interval === 'annual' ? '$72/yr' : '$8/mo';
+  if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
   if (plan === 'teams') return interval === 'annual' ? '$90/seat/yr' : '$10/seat';
   return '$0';
 }
@@ -174,6 +192,26 @@ const IC = {
   map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
   plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
   gift: 'M4 9h12v8H4z M10 9v8 M4 9l6-5 6 5 M7 5c0-1.4 3-1.4 3 1.2 M13 5c0-1.4-3-1.4-3 1.2',
+  general: 'M4 5h12 M7 3v4 M4 10h12 M13 8v4 M4 15h12 M9 13v4',
+  island: 'M4 7.5C4 5.6 5.6 4 7.5 4h5C14.4 4 16 5.6 16 7.5v5c0 1.9-1.6 3.5-3.5 3.5h-5C5.6 16 4 14.4 4 12.5z M8 10h4',
+  sound: 'M4 8h3l4-3v10l-4-3H4z M14 7.5c1.5 1.4 1.5 3.6 0 5 M16 5.5c2.6 2.5 2.6 6.5 0 9',
+  privacy: 'M10 2.5 16 5v4.4c0 3.8-2.5 6.7-6 8.1-3.5-1.4-6-4.3-6-8.1V5z M7.5 10l1.7 1.8 3.5-4',
+  integrations: 'M7 3v4H3 M13 17v-4h4 M4.5 7A6.5 6.5 0 0 1 15 4.7 M15.5 13A6.5 6.5 0 0 1 5 15.3',
+  ai: 'M10 2.5 12 7l4.5 2-4.5 2-2 4.5L8 11 3.5 9 8 7z',
+  account: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5 M15.5 3.5v4 M13.5 5.5h4',
+  info: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 9v5 M10 6h.01',
+};
+
+const SETTINGS_ICONS: Record<string, string> = {
+  General: IC.general,
+  Island: IC.island,
+  'Sound & alerts': IC.sound,
+  Learning: IC.study,
+  'Privacy & Data': IC.privacy,
+  Integrations: IC.integrations,
+  AI: IC.ai,
+  'Account & Plan': IC.account,
+  About: IC.info,
 };
 
 const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
@@ -215,15 +253,21 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
   ] },
 };
 
-const NAV: Array<{ id: PageId; icon: string }> = [
+const NAV_PINNED: Array<{ id: PageId; icon: string }> = [
   { id: 'Home', icon: IC.home },
+  { id: 'Chat', icon: IC.chat },
+];
+
+const NAV_SPACES: Array<{ id: PageId; icon: string }> = [
   { id: 'Learn', icon: IC.study },
   { id: 'Quiz', icon: IC.quiz },
-  { id: 'Chat', icon: IC.chat },
+  { id: 'Briefings', icon: IC.briefings },
   { id: 'Progress', icon: IC.progress },
   { id: 'Plan', icon: IC.plan },
   { id: 'Gift', icon: IC.gift },
 ];
+
+const NAV = [...NAV_PINNED, ...NAV_SPACES];
 
 const FOOT: Array<{ id: string; icon: string; toast: string }> = [
   { id: 'Settings', icon: 'M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M10 2.8l1 2.2 2.4-.6 1.2 2-1.7 1.8.8 2.3-2.2 1-.1 2.5H9.6l-.1-2.5-2.2-1 .8-2.3-1.7-1.8 1.2-2 2.4.6z', toast: '' },
@@ -272,34 +316,44 @@ function accelFromEvent(e: KeyboardEvent): string | null {
   if (mods.length === 0) return null; // require at least one modifier
   return [...mods, key].join('+');
 }
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-}
-function dayGroup(iso: string): string {
-  const when = new Date(iso);
-  const today = new Date();
-  const start = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((start(today) - start(when)) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  return when.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
-}
-
 function SignInForm({ onDone }: { onDone: (email: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+  const [browserOpened, setBrowserOpened] = useState(true);
   useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
   const startDevice = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; error?: string };
-    if (r.ok && r.userCode) setCode(r.userCode); else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
+    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    if (r.ok && r.userCode && r.verificationUri) {
+      setCode(r.userCode);
+      setVerificationUrl(r.verificationUri);
+      setBrowserOpened(r.browserOpened !== false);
+    } else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
+  };
+  const openBrowser = async () => {
+    const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };
+    if (!result.ok) setErr(result.error ?? 'Could not open your browser.');
+    else setBrowserOpened(true);
+  };
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(verificationUrl); }
+    catch { setErr('Could not copy the sign-in link.'); }
   };
   return (
     <div className="signin">
-      <button className="field-btn" disabled={busy} onClick={startDevice}>{busy ? 'Waiting for Google sign-in…' : 'Continue with Google'}</button>
+      <button className="field-btn field-btn--google" disabled={busy} onClick={startDevice}>
+        <GoogleMark />
+        {busy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
+      </button>
       {err && <div className="field-err">{err}</div>}
-      <div className="field-note">{code ? `Browser open — sign in with Google, then approve code ${code}.` : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}</div>
+      <div className="field-note">
+        {code
+          ? `${browserOpened ? 'Finish in your browser' : 'Your browser did not open'} — sign in with Google, then approve code ${code}.`
+          : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
+      </div>
+      {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startDevice()}>Retry</button></div> : null}
     </div>
   );
 }
@@ -340,14 +394,29 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
   const [nameError, setNameError] = useState('');
-  const steps = ['How it works', 'Your name', 'Ready'];
+  const [profileEmail, setProfileEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const steps = ['Welcome', 'Your profile', 'Connect', 'Permissions'];
 
   const next = () => {
     if (soundEffects) playSetupTone('step', soundVolume, soundStyle);
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
-  const back = () => setStep((s) => Math.max(s - 1, 0));
-  const finish = () => { if (soundEffects) playSetupTone('success', soundVolume, soundStyle); void window.unvibe.completeOnboarding(); onDone(); };
+  const back = () => { if (!saving) setStep((s) => Math.max(s - 1, 0)); };
+  const finish = async () => {
+    if (saving || !saveProfile()) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await window.unvibe.setSettings({ displayName: displayName.replace(/\s+/g, ' ').trim(), profileEmail: profileEmail.trim() });
+      await window.unvibe.completeOnboarding();
+      await onDone();
+      if (soundEffects) playSetupTone('success', soundVolume, soundStyle);
+    } catch {
+      setSaveError('Your setup could not be saved. Please try again.');
+    } finally { setSaving(false); }
+  };
   const saveProfile = () => {
     const name = displayName.replace(/\s+/g, ' ').trim();
     if (!name) {
@@ -355,7 +424,6 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
       return false;
     }
     setNameError('');
-    void window.unvibe.setSettings({ displayName: name });
     return true;
   };
   const advanceName = () => {
@@ -399,7 +467,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
         <div className="ob__scene-strip">
           <div><b>▶</b><LogoMark size={15} stroke={2} /></div>
           <span className="ob__scene-camera" />
-          <div><span>{step === 0 ? '⌘U' : step === 1 ? 'you' : 'ready'}</span><b>⌂</b></div>
+          <div><span>{step === 0 ? '⌘U' : step === 1 ? 'you' : step === 2 ? 'connect' : 'ready'}</span><b>⌂</b></div>
         </div>
         <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
       </div>
@@ -411,9 +479,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
           {step === 0 && (
             <>
               <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
-              <div className="ob__eyebrow">ONE SHORTCUT · ONE LEARNING LOOP</div>
+              <div className="ob__eyebrow">WELCOME TO UNVIBE</div>
               <h2 className="ob__title">Understand what AI changed.</h2>
-              <p className="ob__sub">Select code and press <span className="kbd-lg">⌘U</span>. Unvibe explains it beside your work, then helps you check that it makes sense.</p>
+              <p className="ob__sub">Select code and press <span className="kbd-lg">⌘U</span>. Unvibe explains it beside your work, checks understanding, and keeps the lesson for later.</p>
               <div className="ob__sample" aria-label="Example Unvibe explanation">
                 <div className="ob__sample-code"><span>Selected code</span><br />return users.filter(user =&gt; user.active);</div>
                 <div className="ob__sample-answer"><b>Keeps the active users.</b><p>This filters the list before the next step, so inactive accounts never enter the result.</p></div>
@@ -428,9 +496,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
           {step === 1 && (
             <>
-              <div className="ob__eyebrow">MAKE IT YOURS</div>
-              <h2 className="ob__title">What should Unvibe call you?</h2>
-              <p className="ob__sub">This is only used for greetings and stays on this Mac. You can change it later.</p>
+              <div className="ob__eyebrow">YOUR PROFILE</div>
+              <h2 className="ob__title">Name and profile, on this Mac.</h2>
+              <p className="ob__sub">Chat will say Hello again, then your name. Email is optional and stays on this laptop.</p>
               <form className="ob__form" onSubmit={(event) => { event.preventDefault(); advanceName(); }}>
                 <label>
                   Name
@@ -443,6 +511,17 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
                     placeholder="Your name"
                   />
                 </label>
+                <label>
+                  Email, optional
+                  <input
+                    className="field"
+                    type="email"
+                    value={profileEmail}
+                    onChange={(event) => setProfileEmail(event.target.value)}
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                  />
+                </label>
                 {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
               </form>
               {nav('Continue', advanceName, displayName.trim().length === 0)}
@@ -451,16 +530,38 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
           {step === 2 && (
             <>
-              <div className="ob__eyebrow">READY TO LEARN</div>
-              <h2 className="ob__title">Ready for your editor.</h2>
-              <p className="ob__sub">The Desktop Bridge gives Cursor and VS Code the cleanest Command U flow. Accessibility adds selection capture in Terminal and other Mac apps.</p>
+              <div className="ob__eyebrow">CONNECT YOUR WORKFLOW</div>
+              <h2 className="ob__title">Bring Unvibe into your editor.</h2>
+              <p className="ob__sub">Install the tiny Desktop Bridge for the cleanest selection flow. It reads only what you explicitly send with Command U.</p>
+              <div className="ob__integrations"><IntegrationsPanel /></div>
+              {nav('Continue')}
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="ob__eyebrow">ENABLE CORE FEATURES</div>
+              <h2 className="ob__title">One last permission.</h2>
+              <p className="ob__sub">Accessibility lets Control U read an explicit selection in Terminal and other Mac apps. Cursor and VS Code continue through the local bridge.</p>
               <PermRow />
-              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" onClick={finish}>Start using Unvibe</button></div>
+              <div className="ob__trust"><span>✓</span><div><b>Private by default</b><small>Secrets are filtered locally before any permitted remote request.</small></div></div>
+              {saveError && <p className="field-err" role="alert">{saveError}</p>}
+              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" disabled={saving} onClick={() => void finish()}>{saving ? 'Saving…' : 'Start using Unvibe'}</button></div>
             </>
           )}
         </FadeIn>
       </div>
     </div>
+  );
+}
+
+function MacGlyph() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="4" width="17" height="12" rx="2.2" />
+      <path d="M8 20h8" />
+      <path d="M12 16v4" />
+    </svg>
   );
 }
 
@@ -481,14 +582,20 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
             <div className="login__feature"><span className="lf-icon">03</span><span><b>Build real memory</b><small>Save understanding, review it, and watch progress.</small></span></div>
           </div>
         </section>
-        <aside className="login__card">
-          <div className="login__mark"><LogoMark size={34} stroke={1.7} /></div>
-          <div className="login__brand">UNVIBE</div>
-          <h2 className="login__tag">Carry your learning forward.</h2>
-          <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
-          <SignInForm onDone={onSignedIn} />
-          <button className="login__skip" onClick={onSkip}>Keep everything local for now →</button>
-        </aside>
+        <div className="login__actions">
+          <aside className="login__card">
+            <div className="login__mark"><LogoMark size={34} stroke={1.7} /></div>
+            <div className="login__brand">UNVIBE</div>
+            <h2 className="login__tag">Carry your learning forward.</h2>
+            <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
+            <SignInForm onDone={onSignedIn} />
+          </aside>
+          <button type="button" className="login__local" onClick={onSkip}>
+            <span className="login__local-icon"><MacGlyph /></span>
+            <strong>Open Unvibe on this Mac</strong>
+            <small>Keep everything local. No Google needed.</small>
+          </button>
+        </div>
       </FadeIn>
     </div>
   );
@@ -500,45 +607,169 @@ function UsageChip({ usage, onPlan, compact = false }: {
   compact?: boolean;
 }) {
   if (!usage) return null;
-  const low = usage.remaining <= 5;
-  const out = usage.remaining <= 0;
   const planLabel = usage.plan === 'full' ? 'Full' : usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
-  const aiPct = Math.min(100, Math.round((usage.used / Math.max(1, usage.limit)) * 100));
-  const selectionPct = Math.min(100, Math.round(((usage.selections?.used ?? 0) / Math.max(1, usage.selections?.limit ?? 100)) * 100));
   return (
-    <button
-      type="button"
-      className={`usage-chip${compact ? ' usage-chip--side' : ''}${out ? ' usage-chip--out' : low ? ' usage-chip--low' : ''}`}
-      onClick={onPlan}
-      title={`${planLabel} · resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}
-    >
-      <span className="usage-chip__title"><b>Usage</b><small>{planLabel}</small></span>
-      <span className="usage-chip__meter"><i><em style={{ width: `${aiPct}%` }} /></i><small>AI</small><b>{usage.remaining} left</b><strong>{usage.used}/{usage.limit}</strong></span>
-      <span className="usage-chip__meter"><i><em style={{ width: `${selectionPct}%` }} /></i><small>Select</small><b>{usage.selections?.remaining ?? 100} left</b><strong>{usage.selections?.used ?? 0}/{usage.selections?.limit ?? 100}</strong></span>
-    </button>
+    <div className={`usage-board${compact ? ' usage-board--side' : ''}`}>
+      <span className="usage-board__title">Usage · {planLabel}</span>
+      <UsageRings
+        ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }}
+        selections={usage.selections}
+        size={compact ? 44 : 52}
+        onOpen={onPlan}
+      />
+    </div>
   );
 }
 
-function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
+function greetFirst(name?: string): string {
+  const clean = (name ?? '').trim();
+  if (!clean || clean.toLowerCase() === 'there') return '';
+  return clean.split(/\s+/)[0] ?? '';
+}
+
+function pageLabel(id: string): string {
+  if (id === 'Home') return 'Today';
+  if (id === 'Chat') return 'Ask Unvibe';
+  if (id === 'Learn') return 'Learning Library';
+  if (id === 'Quiz') return 'Quick Quiz';
+  if (id === 'Briefings') return 'Change Briefs';
+  if (id === 'Progress') return 'Momentum';
+  if (id === 'Gift') return 'Share Unvibe';
+  return id;
+}
+
+/** Today or Yesterday when it is recent, otherwise a short calendar date. */
+function shortDate(iso: string): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return '';
+  const today = new Date();
+  if (when.toDateString() === today.toDateString()) return 'Today';
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  if (when.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  const sameYear = when.getFullYear() === today.getFullYear();
+  return when.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function dayGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: string; tone: 'current' | 'review' | 'stale' } {
+  if (status === 'CURRENT') return { text: 'Current', tone: 'current' };
+  if (status === 'MAY_BE_STALE') return { text: 'Review', tone: 'review' };
+  return { text: 'Stale', tone: 'stale' };
+}
+
+function heatForDate(heat: number[], date: Date): number {
+  const today = new Date();
+  const start = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((start(today) - start(date)) / 86400000);
+  if (diff < 0 || diff >= heat.length) return 0;
+  return heat[heat.length - 1 - diff] ?? 0;
+}
+
+function MonthStamp({ heat, marks }: { heat: number[]; marks: Set<string> }) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const first = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const pad = first.getDay();
+  const cells: Array<{ key: string; day?: number; today?: boolean; heat?: number; marked?: boolean }> = [];
+  for (let i = 0; i < pad; i++) cells.push({ key: `e${i}` });
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    cells.push({
+      key,
+      day,
+      today: day === now.getDate(),
+      heat: heatForDate(heat, date),
+      marked: marks.has(key),
+    });
+  }
+  const monthLabel = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return (
+    <div className="home-cal" aria-label={`${monthLabel} on this Mac`}>
+      <div className="home-cal__head">
+        <span>{monthLabel}</span>
+        <small>Days you reviewed</small>
+      </div>
+      <div className="home-cal__week">{['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <span key={`${d}${i}`}>{d}</span>)}</div>
+      <div className="home-cal__grid">
+        {cells.map((cell) => (
+          <span
+            key={cell.key}
+            className={`home-cal__day${cell.day ? '' : ' is-empty'}${cell.today ? ' is-today' : ''}${cell.marked ? ' is-marked' : ''}${cell.heat ? ` a${cell.heat}` : ''}`}
+          >
+            {cell.day ?? ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Home({ shortcut, userName, profile, feed, usage, onPlan, onNavigate }: {
   shortcut: string;
+  userName?: string;
   profile: Profile | null;
   feed: FeedItem[];
   usage: AppUsageLine | null;
   onPlan: () => void;
-  onRefresh: () => void | Promise<void>;
+  onNavigate: (page: PageId) => void;
 }) {
-  const groups: Array<{ label: string; items: FeedItem[] }> = [];
-  for (const item of feed) {
-    const label = dayGroup(item.ts);
-    const last = groups[groups.length - 1];
-    if (last && last.label === label) last.items.push(item);
-    else groups.push({ label, items: [item] });
-  }
-  const daily = feed.length > 0;
+  const [brief, setBrief] = useState<ChangeBrief | null>(null);
+  const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
+  useEffect(() => {
+    void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
+      const next = result as { ok?: boolean; brief?: ChangeBrief };
+      if (next?.ok && next.brief && !next.brief.empty) setBrief(next.brief);
+    });
+    void window.unvibe.listKnowledge().then((result) => {
+      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
+      if (next?.ok) setKnowledge(next.items ?? []);
+    });
+  }, []);
+  const first = greetFirst(userName);
+  const marks = new Set(feed.map((item) => {
+    const when = new Date(item.ts);
+    return `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`;
+  }));
+  const explainDisabled = !!usage && usage.remaining <= 0;
+  const startReview = () => window.unvibe.companionReview();
+  const reviewChange = () => { void window.unvibe.explainDiff({ brief: true, scope: 'working' }); };
+  const saved = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 4);
+  const stale = knowledge.filter((item) => item.freshnessStatus !== 'CURRENT').slice(0, 4);
+  const briefings = feed.slice(0, 4);
+  const learningSteps: Array<{ id: string; title: string; copy: string; icon: string; done: boolean; run: () => void }> = [
+    { id: '01', title: 'Review a change', copy: `Select code and press ${shortcut}.`, icon: IC.spark, done: (profile?.reviews ?? 0) > 0, run: startReview },
+    { id: '02', title: 'Save the lesson', copy: 'Mark the explanation understood.', icon: IC.study, done: (profile?.understood ?? 0) > 0, run: () => onNavigate('Learn') },
+    { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
+    { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
+    { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
+    { id: '06', title: 'Build your rhythm', copy: 'Return tomorrow and keep the streak.', icon: IC.progress, done: (profile?.streak ?? 0) > 1, run: () => onNavigate('Progress') },
+  ];
+  const completedSteps = learningSteps.filter((step) => step.done).length;
+  const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
   return (
     <>
-      <div className="topline">
-        <h1>{daily ? 'Today' : 'Keep it local.'}</h1>
+      <div className="home-command">
+        <span>Select code, then press</span><kbd>{shortcut}</kbd><span>to understand it</span>
+        <div className="home-command__apps" aria-label="Works with Cursor, VS Code, and Terminal"><i>C</i><i>V</i><i>&gt;_</i></div>
+      </div>
+      <div className="hello">
+        <div>
+          <h1>{first ? `${dayGreeting()}, ${first}.` : `${dayGreeting()}.`}</h1>
+          <p className="hello-line"><span className="hello-spark" aria-hidden="true" />A little clarity, every day. Let’s see what changed.</p>
+        </div>
+        <div className="hello-act">
+          <button type="button" className="primary-btn" onClick={startReview} disabled={explainDisabled}>Explain</button>
+          <span className="kbd">{shortcut}</span>
+        </div>
       </div>
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
@@ -560,58 +791,115 @@ function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
           </div>
         </div>
       )}
-      <div className={`cols${daily ? ' cols--daily' : ''}`}>
+      <section className="home-metric-strip" aria-label="Learning overview">
+        <div><span>Lines understood</span><strong>{profile?.linesUnderstood ?? 0}</strong><small>lines</small></div>
+        <div><span>Reviews completed</span><strong>{profile?.understood ?? 0}</strong><small>reviews</small></div>
+        <div><span>Day streak</span><strong>{profile?.streak ?? 0}</strong><small>days</small></div>
+        <div><span>Concepts familiar</span><strong>{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</strong><small>concepts</small></div>
+      </section>
+      <section className="learning-center">
+        <div className="learning-center__head"><div><span>Learning Center</span><small>A short path from first selection to lasting understanding.</small></div><button type="button" onClick={() => onNavigate('Learn')}>Open library →</button></div>
+        <div className="learning-center__track">
+          <button type="button" className="learning-task learning-task--lead" onClick={nextStep.run}>
+            <span>{completedSteps} of {learningSteps.length} complete</span>
+            <b>{completedSteps === learningSteps.length ? 'You know the loop' : 'Keep the loop moving'}</b>
+            <small>{completedSteps === learningSteps.length ? 'Revisit a lesson whenever the code changes.' : `Next: ${nextStep.title}`}</small>
+            <i className="learning-task__progress"><i style={{ width: `${Math.max(8, (completedSteps / learningSteps.length) * 100)}%` }} /></i>
+          </button>
+          {learningSteps.map((step) => (
+            <button type="button" key={step.id} className={`learning-task${step.done ? ' is-done' : ''}${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
+              <span className="learning-task__top"><em>{step.id}</em>{step.done ? <i aria-label="Complete">✓</i> : null}</span>
+              <span className="learning-task__icon"><Icon d={step.icon} /></span>
+              <b>{step.title}</b>
+              <small>{step.copy}</small>
+            </button>
+          ))}
+        </div>
+      </section>
+      <div className="cols cols--home">
         <div className="main-col">
-          <div className={`hero${daily ? ' hero--quiet' : ''}`}>
-            <h2>{daily ? 'Keep going.' : 'Understand everything you ship.'}</h2>
-            <p>{daily ? `Select code and press ${shortcut}. New reviews land in the list below.` : `Highlight code in any app and Unvibe explains it where you are working, pitched to how much you already know. Quiet until you ask.`}</p>
-            <div className="row">
-              <button onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
-              <span className="kbd">or press {shortcut} anywhere</span>
-            </div>
-          </div>
-          {feed.length === 0 ? (
-            <div className="feed-empty">
-              <div className="t">Nothing reviewed yet</div>
-              <div className="d">Highlight some code and press {shortcut}. Reviews gather here so you can return to them.</div>
-              <button type="button" className="primary-btn" onClick={() => window.unvibe.companionReview()} disabled={!!usage && usage.remaining <= 0}>Explain some code</button>
-            </div>
-          ) : (
-            groups.map((group) => (
-              <div className="feed-block" key={group.label}>
-                <div className="feed-label">{group.label}</div>
-                <div className="feed">
-                  {group.items.map((f) => (
-                    <div className="feed-row" key={f.id}>
-                      <div className="feed-time">{fmtTime(f.ts)}</div>
-                      <div className="feed-main"><div className="feed-title">{f.title}</div><div className="feed-meta">{f.meta}</div></div>
-                      <span className={`tag tag--${f.outcome}`}>{f.outcome === 'understood' ? 'Understood' : f.outcome === 'needs_review' ? 'Revisit' : 'Reviewed'}</span>
-                      <TrashButton
-                        label={`Remove ${f.title}`}
-                        onClick={() => {
-                          if (!window.confirm('Remove this lesson from this Mac?')) return;
-                          void window.unvibe.forgetLearning(f.id).then(() => void onRefresh());
-                        }}
-                      />
-                    </div>
+          <article className="change-hero">
+            <span className="kicker">Recent change</span>
+            {brief ? (
+              <>
+                <h2>{brief.mainChanges[0] ?? brief.repo}</h2>
+                <p>{brief.filesChanged} files changed{brief.repo ? ` in ${brief.repo}` : ''}</p>
+                <p>{brief.understandBeforeCommit.length} things worth reviewing</p>
+                <button type="button" className="primary-btn" onClick={reviewChange} disabled={explainDisabled}>Review Change</button>
+              </>
+            ) : (
+              <>
+                <h2>No working-tree change yet</h2>
+                <p>Select code and press {shortcut}, or open Briefings after you edit a repo.</p>
+                <button type="button" className="primary-btn" onClick={startReview} disabled={explainDisabled}>Explain</button>
+              </>
+            )}
+          </article>
+          <div className="home-bands">
+            <section className="home-band">
+              <h2>Recent Briefings</h2>
+              {briefings.length ? (
+                <ul>
+                  {briefings.map((item) => (
+                    <li key={item.id}>
+                      <strong>{item.title}</strong>
+                      <span>{item.meta}</span>
+                      <time dateTime={item.ts}>{shortDate(item.ts)}</time>
+                    </li>
                   ))}
-                </div>
-              </div>
-            ))
-          )}
+                </ul>
+              ) : <p className="home-empty">Not enough data yet.</p>}
+            </section>
+            <section className="home-band">
+              <h2>Saved Knowledge</h2>
+              {saved.length ? (
+                <ul>
+                  {saved.map((item) => (
+                    <li key={item.id}>
+                      <strong>{item.title}</strong>
+                      <span>{item.file || item.repositoryId || item.sourceType}</span>
+                      <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="home-empty">Not enough data yet.</p>}
+            </section>
+            <section className="home-band">
+              <h2>Knowledge That May Be Stale</h2>
+              {stale.length ? (
+                <ul>
+                  {stale.map((item) => {
+                    const mark = freshnessLabel(item.freshnessStatus);
+                    return (
+                      <li key={item.id}>
+                        <strong>{item.title}</strong>
+                        <span className="status-pill" data-tone={mark.tone}>{mark.text}</span>
+                        <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : <p className="home-empty">Nothing looks stale.</p>}
+            </section>
+          </div>
         </div>
         <div className="rail">
+          {usage ? (
+            <div className="home-usage">
+              <UsageRings
+                ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }}
+                selections={usage.selections}
+                size={52}
+                onOpen={onPlan}
+              />
+            </div>
+          ) : null}
+          <MonthStamp heat={profile?.heat ?? []} marks={marks} />
           <div className="stats">
             <div className="stat"><span className="v">{profile?.linesUnderstood ?? 0}</span><span className="l">lines understood</span></div>
             <div className="stat"><span className="v">{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</span><span className="l">concepts familiar or strong</span></div>
             <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
           </div>
-          {!daily && (
-            <>
-              <div className="rail-card"><div className="t">Kept on your machine</div><div className="d">Code is scanned for secrets on your device before anything is sent. The service never reads your repository.</div></div>
-              <div className="rail-card"><div className="t">How it works</div><div className="d">Select code, press {shortcut}, pick a depth from New to Expert, then take a quick check to lock it in.</div></div>
-            </>
-          )}
         </div>
       </div>
     </>
@@ -619,16 +907,29 @@ function Home({ shortcut, profile, feed, usage, onPlan, onRefresh }: {
 }
 
 function Progress({ profile }: { profile: Profile | null }) {
+  const [knowledge, setKnowledge] = useState<KnowledgeObject[] | null>(null);
+  useEffect(() => {
+    void window.unvibe.listKnowledge().then((result) => {
+      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
+      if (next?.ok) setKnowledge(next.items ?? []);
+    });
+  }, []);
   const heat = profile?.heat ?? Array.from({ length: 182 }, () => 0);
+  const coverage = profile && profile.linesReviewed > 0
+    ? `${Math.round((profile.linesUnderstood / profile.linesReviewed) * 100)}%`
+    : null;
+  const freshness = knowledge && knowledge.length
+    ? `${knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length} of ${knowledge.length} current`
+    : null;
   return (
     <>
       <div className="topline"><h1>Progress</h1></div>
-      <p className="lead">The honest measure of what you have understood. Lines you could explain to someone else.</p>
-      <div className="tiles">
-        <div className="tile"><div className="v">{profile?.linesUnderstood ?? 0}</div><div className="l">lines understood</div><div className="note">of {profile?.linesReviewed ?? 0} reviewed</div></div>
-        <div className="tile"><div className="v">{profile?.conceptsDeveloping ?? 0}</div><div className="l">concepts developing</div><div className="note">{profile?.conceptsSeen ?? 0} encountered · {profile?.conceptsNeedReview ?? 0} to revisit</div></div>
-        <div className="tile"><div className="v">{profile?.reviews ?? 0}</div><div className="l">reviews done</div><div className="note">{profile?.needsReview ?? 0} to revisit</div></div>
-        <div className="tile"><div className="v">{profile?.streak ?? 0}</div><div className="l">day streak</div><div className="note">best: {profile?.bestStreak ?? 0} days</div></div>
+      <p className="lead">What you have actually understood on this Mac. No invented scores.</p>
+      <div className="metrics">
+        <article className="metric-card"><span className="v">{coverage ?? '—'}</span><span className="l">Understanding Coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{freshness ?? '—'}</span><span className="l">Knowledge Freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{profile ? profile.reviews : '—'}</span><span className="l">Briefings Completed</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '—'}</span><span className="l">Knowledge Revisited</span><span className="note">{profile && profile.needsReview > 0 ? 'Marked to revisit' : 'Not enough data yet.'}</span></article>
       </div>
       <div className="panel-card">
         <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
@@ -758,24 +1059,31 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             <span>Upgrade available</span>
             {upgradeIsPro ? (
               <>
-                <h2>Pro {interval === 'annual' ? '$72/yr' : '$8/mo'}</h2>
+                <h2>Pro {interval === 'annual' ? '$81/yr' : '$9/mo'}</h2>
                 <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
                 <div className="plan-toggle" aria-label="Billing interval">
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
                   <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
                 </div>
+                <p className="plan-pick__terms" id="pro-renewal-terms">
+                  {interval === 'annual'
+                    ? 'Pro renews at $81 per year until canceled.'
+                    : 'Pro renews at $9 per month until canceled.'}
+                  {' '}Review today’s total and any promotion in Stripe Checkout. Manage or cancel later from this page.
+                </p>
                 <button
                   type="button"
                   className="primary-btn"
                   onClick={() => void checkout()}
                   disabled={busy || (signedIn && !available)}
+                  aria-describedby="pro-renewal-terms"
                 >
                   {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
                 </button>
               </>
             ) : (
               <>
-                <h2>Team $10/seat</h2>
+                <h2>Teams</h2>
                 <p>Shared workspace and seat billing. Coming soon.</p>
                 <button type="button" className="soft-btn" disabled>Coming soon</button>
               </>
@@ -845,16 +1153,6 @@ function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
         <button className="stub__cta" onClick={() => window.unvibe.companionReview()}>Review some code</button>
       </div>
     </>
-  );
-}
-
-function TrashButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button type="button" className="row-trash" aria-label={label} title="Remove" onClick={onClick}>
-      <svg viewBox="0 0 20 20" aria-hidden="true">
-        <path d="M5 6h10M8 6V4.5h4V6M7 6l.5 10h5L13 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
   );
 }
 
@@ -1137,9 +1435,16 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   initialTab?: string;
 }) {
   const [tab, setTab] = useState(initialTab);
+  useEffect(() => setTab(initialTab), [initialTab]);
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
+  const bodyRef = useRef<HTMLDivElement>(null);
   const recRef = useRef(recording); recRef.current = recording;
+
+  const chooseTab = (next: string) => {
+    setTab(next);
+    requestAnimationFrame(() => bodyRef.current?.scrollTo({ top: 0, behavior: 'instant' }));
+  };
 
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
@@ -1162,15 +1467,15 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
           <div className="mside-group">
             <div className="mh">PREFERENCES</div>
-            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'General' ? '⌘' : t === 'Island' ? '◒' : t === 'Sound & alerts' ? '♪' : t === 'Learning' ? '✦' : '⌂'}</span>{t}</button>)}
+            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => chooseTab(t)}><span className="settings-nav-icon"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
           </div>
           <div className="mside-group">
             <div className="mh">UNVIBE</div>
-            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}><span className="settings-nav-icon">{t === 'Integrations' ? '↗' : t === 'AI' ? '◌' : t === 'Account & Plan' ? '◈' : 'i'}</span>{t}</button>)}
+            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => chooseTab(t)}><span className="settings-nav-icon"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
           </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
-        <div className="mbody">
+        <div className="mbody" ref={bodyRef}>
           <h2>{tab}</h2>
 
           {tab === 'AI' && <AiSettingsPanel settings={settings} onSettings={onSettings} onNotice={onNotice} />}
@@ -1193,6 +1498,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
                 <div className="location-grid" role="group" aria-label="Island location">
                   {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
+                </div>
+              </div>
+              <div className="setrow settings-location"><div><div className="sl">Island size</div><div className="sd">Medium matches the Mac notch. Change it if you want a smaller or larger pill.</div></div>
+                <div className="location-grid" role="group" aria-label="Island size">
+                  {([['small', 'Small'], ['medium', 'Notch'], ['large', 'Large']] as const).map(([size, label]) => <button key={size} type="button" className={settings.barSize === size ? 'on' : ''} onClick={() => void onSettings({ barSize: size })}>{label}</button>)}
                 </div>
               </div>
               <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Recommended: show it only while learning. Select code anywhere and press {prettyAccel(settings.shortcut)} whenever you want to start.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
@@ -1224,7 +1534,16 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             </>
           )}
 
-          {tab === 'Learning' && <><div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div><div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this Mac. Open Learn to search, revisit, or remove a lesson.</div></div></div></>}
+          {tab === 'Learning' && <>
+            <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
+            <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this Mac. Open Learn to search, revisit, or remove a lesson.</div></div></div>
+            <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
+            <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
+            <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
+            <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Hold a button to speak a follow-up. Off by default. Recording never starts in the background. The system speech service may hear the audio.</div></div><Toggle on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
+            <div className="setrow"><div><div className="sl">Live change watch</div><div className="sd">Quiet Island notes after meaningful git edits settle. Debounced, grouped, and silent during quiet hours.</div></div><Toggle on={Boolean(settings.features?.live)} onClick={() => onSettings({ features: { ...settings.features, live: !settings.features?.live } })} /></div>
+            {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</button></div> : null}
+          </>}
 
           {tab === 'Integrations' && <IntegrationsPanel />}
 
@@ -1260,6 +1579,8 @@ function App() {
   const [queue, setQueue] = useState<LearningItem[]>([]);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [askDraft, setAskDraft] = useState('');
+  const [askSeed, setAskSeed] = useState('');
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
   const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
   const [sideWidth, setSideWidth] = useState(232);
@@ -1290,7 +1611,7 @@ function App() {
       }
       setUsageLine(usage.ok && usage.data
         ? usage.data
-        : { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 30, remaining: 30, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
+        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
@@ -1312,8 +1633,14 @@ function App() {
     const onFocus = () => void refresh();
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
     window.unvibe.onShowPage((next) => {
+      if (next === 'Settings') {
+        setSettingsTab('Island');
+        setSettingsOpen(true);
+        return;
+      }
       const allowed: PageId[] = ['Home', 'Learn', 'Study', 'History', 'Quiz', 'Chat', 'Progress', 'Plan', 'Gift', 'Projects', 'Concepts', 'Notebook', 'Briefings', 'Library', 'Profile'];
-      if (allowed.includes(next as PageId)) setPage(next as PageId);
+      if (!allowed.includes(next as PageId)) return;
+      setPage(next === 'History' || next === 'Study' ? 'Learn' : next as PageId);
     });
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -1333,7 +1660,7 @@ function App() {
 
   const [themeIsDark, setThemeIsDark] = useState(false);
   useEffect(() => {
-    const preference = settings?.theme ?? 'dark';
+    const preference = settings?.theme ?? 'light';
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
       const dark = preference === 'dark' || (preference === 'system' && media.matches);
@@ -1359,7 +1686,7 @@ function App() {
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
   const shortcutLabel = prettyAccel(info.shortcut);
   const isLearnPage = page === 'Learn' || page === 'Study' || page === 'History' || page === 'Quiz';
-  const fillPage = isLearnPage || page === 'Chat';
+  const fillPage = isLearnPage || page === 'Chat' || page === 'Briefings';
   const chatLabel = settings?.useOwnAi
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
@@ -1386,8 +1713,8 @@ function App() {
     const pages = NAV
       .map((item) => ({
         id: `page-${item.id}`,
-        title: item.id === 'Gift' ? 'Gift Unvibe' : item.id,
-        detail: item.id === 'History' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about your code' : 'Open page',
+        title: pageLabel(item.id),
+        detail: item.id === 'Learn' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about this codebase' : item.id === 'Quiz' ? 'Check understanding' : 'Open page',
         run: () => { setLessonSeedId(null); setPage(item.id); close(); },
       }))
       .filter((item) => matches(`${item.title} ${item.detail}`));
@@ -1452,12 +1779,21 @@ function App() {
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
         <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
           <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
-          <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
-          <nav className="nav">{NAV.map((p) => {
-            const on = p.id === page || (p.id === 'Learn' && page === 'Study');
-            const label = p.id === 'Gift' ? 'Gift Unvibe' : p.id;
+          <nav className="nav nav--top">{NAV_PINNED.map((p) => {
+            const on = p.id === page;
+            const label = pageLabel(p.id);
             return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
+              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
+                <Icon d={p.icon} /><span className="nav-label">{label}</span>
+              </button>
+            );
+          })}</nav>
+          <p className="side-spaces">Spaces</p>
+          <nav className="nav nav--spaces">{NAV_SPACES.map((p) => {
+            const on = p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'));
+            const label = pageLabel(p.id);
+            return (
+              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
                 <Icon d={p.icon} /><span className="nav-label">{label}</span>
               </button>
             );
@@ -1471,10 +1807,11 @@ function App() {
           >
             <span className="sync-state__dot" />
             <span className="sync-state__copy">{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
-            {sync.pending > 0 && <small>{sync.pending} pending</small>}
+            {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
           </button>
-          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">30 explanations each month on Free. 100 on Pro. AI access included, no provider API key needed.</div></div>
-          <nav className="nav">{FOOT.map((f) => (
+          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">Public beta includes 50 AI explanations and 50 code selections for 30 days. AI access included, no provider API key needed.</div></div>
+          <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
+          <nav className="nav nav--foot">{FOOT.map((f) => (
             <button key={f.id} type="button" aria-label={f.id} title={sideCompact ? f.id : undefined} onClick={() => {
               setNavOpen(false);
               if (f.id === 'Settings') { setSettingsTab('General'); setSettingsOpen(true); }
@@ -1508,15 +1845,15 @@ function App() {
               <LogoMark size={22} stroke={1.8} />
             </span>
           </div>
-          <div className={`page${fillPage ? ' page--learn' : ''}`}>
+          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`}>
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} onRefresh={() => void refresh()} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} feed={feed} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
                   queue={queue}
                   shortcut={shortcutLabel}
-                  intent={page === 'History' ? 'history' : page === 'Quiz' ? 'quiz' : 'learn'}
+                  intent={page === 'Quiz' ? 'quiz' : 'learn'}
                   initialOpenId={lessonSeedId}
                   onReview={() => window.unvibe.companionReview()}
                   onRefresh={() => void refresh()}
@@ -1526,6 +1863,7 @@ function App() {
                   }}
                 />
                 : page === 'Chat' ? <Chat
+                  initialDraft={askSeed}
                   providerLabel={chatLabel}
                   usingOwnAi={Boolean(settings?.useOwnAi)}
                   providerId={settings?.aiProvider ?? 'gemini'}
@@ -1537,9 +1875,22 @@ function App() {
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
+                : page === 'Briefings' ? <Briefings />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>
+          {page !== 'Chat' && (
+            <form className="ask-dock" onSubmit={(event) => {
+              event.preventDefault();
+              setAskSeed(askDraft.trim());
+              setAskDraft('');
+              setPage('Chat');
+            }}>
+              <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
+              <input aria-label="Ask Unvibe" placeholder="Ask about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
+              <button type="submit">{askDraft.trim() ? 'Continue →' : 'Ask Unvibe'}</button>
+            </form>
+          )}
         </main>
       </div>
       {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}

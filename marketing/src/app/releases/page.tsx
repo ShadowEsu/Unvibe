@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ChangelogList } from "@/components/paper/ChangelogList";
-import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
+import { DownloadRow } from "@/components/paper/DownloadLink";
 import { changelogEntries } from "@/data/milestones";
 import { fetchReleases } from "@/lib/releases";
 
@@ -30,7 +30,7 @@ export default async function ReleasesPage() {
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}
           </p>
-          <JoinWaitlistRow href="/#install" />
+          <DownloadRow href="/beta" />
         </div>
       </header>
 

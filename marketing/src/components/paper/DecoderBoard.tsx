@@ -7,21 +7,24 @@ const ROWS = [
   "PRESS COMMAND U",
   "EXPLAIN IN PLACE",
   "TEST YOUR KNOWLEDGE",
-  "KEEP ON THIS MAC",
+  "KEEP WHAT YOU LEARN",
 ];
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function noiseRow(row: string): string {
+/** Deterministic first frame so server and client render the same text. */
+function noiseRow(row: string, rowIndex: number): string {
   return row
     .split("")
-    .map((char) => (char === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)] ?? char))
+    .map((char, charIndex) =>
+      char === " " ? " " : GLYPHS[(charIndex * 7 + rowIndex * 13 + char.charCodeAt(0)) % GLYPHS.length] ?? char,
+    )
     .join("");
 }
 
 export function DecoderBoard() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [rows, setRows] = useState(() => ROWS.map(noiseRow));
+  const [rows, setRows] = useState(() => ROWS.map((row, index) => noiseRow(row, index)));
   const started = useRef(false);
 
   useEffect(() => {

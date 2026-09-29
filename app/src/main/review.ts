@@ -17,6 +17,9 @@ import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
 import { raiseLimitPause } from './windows';
+import { pulseBar } from './notify';
+import { knowledgeStore } from './knowledgeStore';
+import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
@@ -42,6 +45,8 @@ export interface ReviewSession {
   level: ExplanationLevel;
   /** Accumulated streamed explanation for local history (on-device only). */
   explanationText?: string;
+  /** Prevents a pulse event for every streamed token. */
+  islandStreaming?: boolean;
   payload?: ReviewRequestPayload;
   file?: string;
   project?: string;
@@ -65,6 +70,20 @@ function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
     win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
   }
+  const typed = ev as { type?: string; message?: string };
+  if (typed.type === 'status') pulseBar({ phase: 'thinking', label: 'Thinking' });
+  else if (typed.type === 'token' && !session.islandStreaming) {
+    session.islandStreaming = true;
+    pulseBar({ phase: 'generating', label: 'Generating' });
+  }
+  else if (typed.type === 'done') pulseBar({ phase: 'finalizing', label: 'Finalizing' });
+  else if (typed.type === 'understood') pulseBar({ phase: 'understood', label: 'Understood' });
+  else if (typed.type === 'error') {
+    const offline = /could not reach|network|offline|connection/i.test(typed.message ?? '');
+    pulseBar({ phase: offline ? 'offline' : 'error', label: offline ? 'Offline' : 'Issue' });
+  }
+  else if (typed.type === 'blocked') pulseBar({ phase: 'error', label: 'Blocked' });
+  else if (typed.type === 'cancelled') pulseBar({ phase: 'idle', label: 'Ready' });
 }
 
 async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise<ReviewRequestPayload> {
@@ -177,8 +196,8 @@ function appendExplanation(session: ReviewSession, text: string): void {
   session.explanationText = (session.explanationText ?? '') + text;
 }
 
-function recordReview(win: BrowserWindow, session: ReviewSession): void {
-  if (!session.code) return;
+function recordReview(win: BrowserWindow, session: ReviewSession): boolean {
+  if (!session.code) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
     try {
@@ -192,8 +211,9 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
         type: 'error',
         message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
       });
+      return false;
     }
-    return;
+    return true;
   }
   session.recorded = true;
   const now = new Date();
@@ -222,10 +242,33 @@ function recordReview(win: BrowserWindow, session: ReviewSession): void {
       type: 'error',
       message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
     });
-    return;
+    return false;
+  }
+  try {
+    if (explanation && session.file) {
+      knowledgeStore().upsert({
+        objectType: session.mode === 'brief' ? 'change_brief' : 'file',
+        objectId: `${session.project ?? 'local'}:${session.file}:${session.reviewId}`,
+        title: session.file,
+        summary: explanation.slice(0, 240),
+        body: explanation,
+        sourceType: 'review',
+        sourceRefs: [session.file],
+        visibility: 'PRIVATE',
+        verificationStatus: 'AI_GENERATED',
+        code: session.snapshotText ?? session.code ?? explanation,
+        repositoryId: session.project,
+        file: session.file,
+      });
+      productEvent('knowledge_saved');
+    }
+    productEvent('explanation_completed');
+  } catch {
+    /* learning already saved */
   }
   session.onRecorded?.();
   void flush();
+  return true;
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
@@ -235,6 +278,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
   session.level = opts.level;
   session.explanationText = '';
+  session.islandStreaming = false;
+  pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 
   const usageEarly = await resolveAppUsage();
   if (opts.level === 'expert' && !isProPlan(usageEarly.plan)) {
@@ -255,6 +300,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     return;
   }
 
+  pulseBar({ phase: 'analyzing', label: 'Analyzing' });
   const findings = scanPayload(payload);
   if (hasBlocking(findings)) {
     send(win, session, { type: 'blocked', findings });
@@ -262,6 +308,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
   if (findings.length > 0 && !opts.consented) {
     send(win, session, { type: 'consent', findings });
+    pulseBar({ phase: 'idle', label: 'Ready' });
     return;
   }
 
@@ -298,7 +345,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         type: 'error',
         code: 'plan_limit_reached',
         upgradePath: '/plan',
-        message: `You have reached your monthly ${planName} explanation limit (${usage.limit}). Resets on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
+        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'The beta access period ends' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
       });
       raiseLimitPause(win);
       return;
@@ -321,7 +368,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           signal: abort.signal,
         });
         send(win, session, { type: 'done', model, mock: false });
-        recordReview(win, session);
+        if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
         void resolveAppUsage().then((next) => {
           send(win, session, {
             type: 'usage',
@@ -387,6 +434,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     const parser = new SseParser();
+    let completed = false;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -394,7 +442,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
         send(win, session, ev);
         if (ev.type === 'done') {
-          recordReview(win, session);
+          completed = true;
+          if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
           void resolveAppUsage().then((next) => {
             send(win, session, {
               type: 'usage',
@@ -409,6 +458,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         }
       }
     }
+    if (!completed) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
   } catch (err) {
     if (abort.signal.aborted) {
       if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });
@@ -428,6 +478,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
 export async function startComprehension(win: BrowserWindow, session: ReviewSession): Promise<void> {
   if (!session.code && !session.payload) return;
   try {
+    pulseBar({ phase: 'thinking', label: 'Thinking' });
     const payload = await ensurePayload(session, { level: session.level });
     const q = await fetchQuestion(payload, store().token());
     session.pendingAnswer = {
@@ -442,6 +493,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
       options: q.options,
       conceptLabel: q.conceptLabel,
     });
+    pulseBar({ phase: 'ready', label: 'Ready' });
   } catch {
     send(win, session, { type: 'error', message: 'Could not build a question for this one. Try again.' });
   }

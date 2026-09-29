@@ -63,13 +63,13 @@ export function buildDayKey(now = new Date()): string {
 export function defaultBuildStatus(now = new Date()): BuildStatus {
   return {
     version: 1,
-    roadmapPercent: 75,
+    roadmapPercent: 100,
     totalSeconds: INITIAL_SECONDS,
     todaySeconds: 0,
     todayKey: buildDayKey(now),
     isBuilding: false,
-    focus: "Closing in on public release",
-    note: "Live testing and feedback are done. Public beta is next.",
+    focus: "Live on Mac and Windows",
+    note: "Unvibe is out. 800+ followers across Instagram, TikTok, X, and LinkedIn.",
     sessionStartedAt: null,
     lastHeartbeatAt: null,
     updatedAt: INITIAL_UPDATED_AT,

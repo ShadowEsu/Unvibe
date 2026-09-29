@@ -10,13 +10,40 @@ import type { ExplanationLevel } from '../core/protocol';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
+export type BarSize = 'small' | 'medium' | 'large';
 export type InactiveBehavior = 'dim' | 'stay';
 export type ThemePreference = 'system' | 'light' | 'dark';
+
+export interface FeatureFlags {
+  changeBrief: boolean;
+  whyExists: boolean;
+  voice: boolean;
+  teachBack: boolean;
+  live: boolean;
+  teamKnowledge: boolean;
+  githubTeams: boolean;
+  localModels: boolean;
+}
+
+export const DEFAULT_FEATURES: FeatureFlags = {
+  changeBrief: true,
+  whyExists: true,
+  voice: false,
+  teachBack: true,
+  live: false,
+  teamKnowledge: false,
+  githubTeams: false,
+  localModels: false,
+};
+
+function mergeFeatures(loaded?: Partial<FeatureFlags>): FeatureFlags {
+  return { ...DEFAULT_FEATURES, ...loaded };
+}
 
 /** Bump when a release should re-show onboarding for existing installs. */
 const SETTINGS_REVISION = 8;
 /** Separately migrates the Island's default behavior without restarting onboarding. */
-const ISLAND_BEHAVIOR_REVISION = 2;
+const ISLAND_BEHAVIOR_REVISION = 4;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 /** Makes the companion navigation quieter without overriding custom widths. */
@@ -25,9 +52,9 @@ const SIDEBAR_DENSITY_REVISION = 2;
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
   settingsRevision?: number;
-  /** Internal — migrates the former system-default appearance to dark once. */
+  /** Internal — migrates the former system-default appearance to light once. */
   appearanceRevision?: number;
-  /** Internal — tracks the quiet-by-default Island preference migration. */
+  /** Internal — tracks the top-attached, always-available Island migration. */
   islandBehaviorRevision?: number;
   /** Internal — tracks the editor bridge shortcut migration. */
   ideBridgeShortcutRevision?: number;
@@ -45,6 +72,8 @@ export interface Settings {
   barHoverDelayMs: number;
   /** Cycle compact Island learning stats automatically. */
   rotateIslandStats: boolean;
+  /** Compact Island scale. Medium matches a Mac notch. */
+  barSize: BarSize;
   /** Follow the display under the pointer when positioning the learning strip. */
   followActiveDisplay: boolean;
   /** Locally synthesized UI cues. Never records or plays remote audio. */
@@ -81,11 +110,15 @@ export interface Settings {
   sidebarHidden: boolean;
   /** Local 8 character gift code when the Mac is not signed in. */
   giftCode: string;
+  /** Incomplete B2B work stays behind flags so existing users keep the current loop. */
+  features: FeatureFlags;
+  /** ISO timestamp while Live mode is snoozed. */
+  liveSnoozeUntil?: string;
 }
 
 const DEFAULTS: Settings = {
   settingsRevision: SETTINGS_REVISION,
-  appearanceRevision: 1,
+  appearanceRevision: 2,
   islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
   ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
@@ -94,9 +127,10 @@ const DEFAULTS: Settings = {
   barPosition: 'top-center',
   // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
-  barHoverPreview: false,
-  barHoverDelayMs: 220,
+  barHoverPreview: true,
+  barHoverDelayMs: 160,
   rotateIslandStats: true,
+  barSize: 'medium',
   followActiveDisplay: true,
   soundEffects: true,
   soundVolume: 0.3,
@@ -105,7 +139,7 @@ const DEFAULTS: Settings = {
   widgetOpacityInactive: 0.84,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
-  theme: 'dark',
+  theme: 'light',
   defaultExplanationLevel: 'intermediate',
   displayName: '',
   profileEmail: '',
@@ -116,6 +150,7 @@ const DEFAULTS: Settings = {
   sidebarWidth: 204,
   sidebarHidden: false,
   giftCode: '',
+  features: DEFAULT_FEATURES,
 };
 
 class SettingsStore {
@@ -138,11 +173,15 @@ class SettingsStore {
     // default so deliberately customised shortcuts remain untouched.
     const needsIdeShortcutMigration = (loaded.ideBridgeShortcutRevision ?? 0) < IDE_BRIDGE_SHORTCUT_REVISION &&
       (loaded.shortcut === 'CommandOrControl+U' || loaded.shortcut === 'CommandOrControl+Alt+U');
-    const needsDarkDefault = (loaded.appearanceRevision ?? 0) < 1 &&
-      (loaded.theme === undefined || loaded.theme === 'system');
+    const needsLightDefault = (loaded.appearanceRevision ?? 0) < 2;
     // Only migrate the exact former defaults. Deliberate custom settings stay intact.
     const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
       loaded.barVisibility === 'during-review';
+    const needsIslandRevision = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION;
+    const needsTopIsland = needsIslandRevision &&
+      (loaded.barPosition === undefined || loaded.barPosition === 'bottom-center');
+    const needsIslandTiming = needsIslandRevision &&
+      (loaded.barHoverDelayMs === undefined || loaded.barHoverDelayMs === 220);
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
       (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
     this.freshStart = needsOnboardingReset;
@@ -154,15 +193,18 @@ class SettingsStore {
       ...loaded,
       quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
       aiProvider,
+      features: mergeFeatures(loaded.features),
       settingsRevision: SETTINGS_REVISION,
-      appearanceRevision: 1,
+      appearanceRevision: 2,
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
       ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
       sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
-      ...(needsDarkDefault ? { theme: 'dark' as const } : {}),
+      ...(needsLightDefault ? { theme: 'light' as const } : {}),
       ...(needsFullscreenIsland
-        ? { barVisibility: 'always' as const, barHoverPreview: false }
+        ? { barVisibility: 'always' as const, barHoverPreview: true }
         : {}),
+      ...(needsTopIsland ? { barPosition: 'top-center' as const, barHoverPreview: true } : {}),
+      ...(needsIslandTiming ? { barHoverDelayMs: 160 } : {}),
       // Older builds could collapse the whole panel on blur. Preserve the panel
       // size and simply dim it when focus returns to Cursor or VS Code.
       ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
@@ -179,7 +221,7 @@ class SettingsStore {
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsDarkDefault || needsFullscreenIsland || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
@@ -215,6 +257,7 @@ class SettingsStore {
       ? undefined
       : Math.min(1, Math.max(0, patch.soundVolume));
     const soundStyle = patch.soundStyle === 'pixel' ? 'pixel' : patch.soundStyle === 'soft' ? 'soft' : undefined;
+    const barSize = patch.barSize === 'small' || patch.barSize === 'large' || patch.barSize === 'medium' ? patch.barSize : undefined;
     const sidebarWidth = patch.sidebarWidth === undefined
       ? undefined
       : Math.min(340, Math.max(168, Math.round(patch.sidebarWidth)));
@@ -228,10 +271,12 @@ class SettingsStore {
       ...this.data,
       ...patch,
       quietHours: { ...this.data.quietHours, ...patch.quietHours },
+      features: mergeFeatures({ ...this.data.features, ...patch.features }),
       ...(nextProvider ? { aiProvider: nextProvider } : {}),
       ...(hoverDelay !== undefined ? { barHoverDelayMs: hoverDelay } : {}),
       ...(soundVolume !== undefined ? { soundVolume } : {}),
       ...(soundStyle ? { soundStyle } : {}),
+      ...(barSize ? { barSize } : {}),
       ...(sidebarWidth !== undefined ? { sidebarWidth } : {}),
       ...(displayName !== undefined ? { displayName } : {}),
       ...(profileEmail !== undefined ? { profileEmail } : {}),

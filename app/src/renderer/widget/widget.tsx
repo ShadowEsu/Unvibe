@@ -7,6 +7,8 @@ import { LogoMark } from '../shared/logo';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
+import { UsageRings } from '../shared/usageRings';
+import '../shared/tokens.css';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
@@ -50,6 +52,14 @@ interface TabState {
   ask: string;
   quiz: Quiz | null;
   history: HistoryEntry[];
+  originOpen: boolean;
+  originError: string;
+  originFacts: Array<{ label: string; value: string }>;
+  originInference: string;
+  teachAnswer: string;
+  teachNote: string;
+  teachChecks: Array<{ topic: string; mark: 'covered' | 'partial' | 'missed' }>;
+  teachEvidence: string;
 }
 
 const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
@@ -59,6 +69,17 @@ const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'advanced', label: 'Advanced' },
   { id: 'expert', label: 'Expert' },
 ];
+
+function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' }) {
+  const paths = {
+    explain: 'M7 4 3 8l4 4 M13 4l4 4-4 4 M11 2 9 14',
+    depth: 'M3 4h14 M5 8h10 M7 12h6',
+    quiz: 'M6.5 6a3.5 3.5 0 1 1 5.1 3.1c-1.7.9-2.1 1.6-2.1 2.9 M9.5 16h.01',
+    ask: 'M4 15 16 3 M8 3h8v8',
+    library: 'M4 3h10a2 2 0 0 1 2 2v11H6a2 2 0 0 0-2 2V3z M6 16h10',
+  } as const;
+  return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
+}
 
 function newTab(id: string, label: string): TabState {
   return {
@@ -74,7 +95,42 @@ function newTab(id: string, label: string): TabState {
     ask: '',
     quiz: null,
     history: [],
+    originOpen: false,
+    originError: '',
+    originFacts: [],
+    originInference: '',
+    teachAnswer: '',
+    teachNote: '',
+    teachChecks: [],
+    teachEvidence: '',
   };
+}
+
+interface SpeechRec {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
+
+function startSpeech(onText: (text: string) => void, onStop: () => void): SpeechRec | null {
+  const Ctor = (window as unknown as { webkitSpeechRecognition?: new () => SpeechRec }).webkitSpeechRecognition;
+  if (!Ctor) return null;
+  const rec = new Ctor();
+  rec.lang = 'en-US';
+  rec.interimResults = true;
+  rec.onresult = (ev) => {
+    const last = ev.results[ev.results.length - 1];
+    const transcript = last?.[0]?.transcript?.trim();
+    if (transcript) onText(transcript);
+  };
+  rec.onerror = () => onStop();
+  rec.onend = () => onStop();
+  rec.start();
+  return rec;
 }
 
 function prettyAccel(accel: string): string {
@@ -151,27 +207,32 @@ function EmptyPicker({
 
   return (
     <div className="state empty-picker">
-      <div className="big">What should we explain?</div>
+      <div className="big">Ready when you are.</div>
       <div className="sub">
-        No selection was captured. Highlight code and press {shortcut}, or choose another source below.
+        Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
       </div>
       <div className="empty-actions">
         <button className="btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
-          Use clipboard
+          Explain my clipboard
         </button>
         <button className="btn ghost" disabled={picking} onClick={() => void chooseFile()}>
           {picking ? 'Opening…' : 'Choose a file…'}
         </button>
+      </div>
+      <details className="empty-more">
+        <summary>Review project changes</summary>
+        <div className="empty-actions">
         <button className="btn ghost" disabled={picking} onClick={() => void runPro('diff')}>
           Explain git diff · Pro
         </button>
         <button className="btn ghost" disabled={picking} onClick={() => void runPro('brief')}>
-          Agent change brief · Pro
+          Change brief · Pro
         </button>
         <button className="btn ghost" disabled={picking} onClick={() => void runPro('compare')}>
           Since last understood · Pro
         </button>
-      </div>
+        </div>
+      </details>
       <label className="paste-label" htmlFor="paste-code">
         Or paste code
       </label>
@@ -237,6 +298,7 @@ function Widget() {
   const [shortcut, setShortcut] = useState('⌘U');
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [proGate, setProGate] = useState(false);
+  const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
@@ -248,6 +310,9 @@ function Widget() {
   const offer = usage ? limitOfferCopy(usage.plan, usage) : null;
   const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
   const [revealedText, setRevealedText] = useState('');
+  const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
+  const [listening, setListening] = useState(false);
+  const speechRef = useRef<SpeechRec | null>(null);
 
   useEffect(() => {
     const refreshUsage = () => {
@@ -258,8 +323,9 @@ function Widget() {
       });
     };
     void window.unvibe.getSettings().then((st) => {
-      const s = st as { theme?: 'system' | 'light' | 'dark' };
+      const s = st as { theme?: 'system' | 'light' | 'dark'; features?: typeof features };
       applyTheme(s.theme ?? 'system');
+      if (s.features) setFeatures((prev) => ({ ...prev, ...s.features }));
     });
     refreshUsage();
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -277,7 +343,7 @@ function Widget() {
   // The native window owns size; the renderer only exposes a bounded visual scale.
   useEffect(() => {
     const updateScale = () => {
-      const scale = Math.max(0.92, Math.min(1, Math.min(window.innerWidth / 440, window.innerHeight / 560)));
+      const scale = Math.max(0.78, Math.min(1, Math.min(window.innerWidth / 560, window.innerHeight / 640)));
       document.documentElement.style.setProperty('--widget-scale', scale.toFixed(3));
     };
     updateScale();
@@ -505,7 +571,7 @@ function Widget() {
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
 
   return (
-    <div className={`card card--${phase}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}`} aria-label="Unvibe">
       <div className="sanFranWash" aria-hidden="true" />
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
@@ -525,15 +591,39 @@ function Widget() {
             ✕
           </button>
         </div>
-        {usage && (
-          <span
-            className="quota quota--usage"
-            title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
-          >
-            <b>{usage.remaining}/{usage.limit} explanations left</b>
-          </span>
-        )}
       </div>
+
+      {!collapsed ? (
+        <div className="widget-workspace">
+          <aside className="widget-tools" aria-label="Review tools">
+            <div className="widget-tools__title"><LogoMark size={19} stroke={2} /><span>Workspace</span></div>
+            <button className={activeTool === 'explain' ? 'on' : ''} type="button" title="Explanation" onClick={() => {
+              setActiveTool('explain');
+              document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}><ToolIcon name="explain" /><b>Walkthrough</b></button>
+            <button className={activeTool === 'depth' ? 'on' : ''} type="button" title="Difficulty" onClick={() => {
+              setActiveTool('depth');
+              document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }}><ToolIcon name="depth" /><b>Depth</b></button>
+            <button className={activeTool === 'quiz' ? 'on' : ''} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => {
+              setActiveTool('quiz');
+              setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
+              window.unvibe.testMe();
+            }}><ToolIcon name="quiz" /><b>Quick Quiz</b></button>
+            <button className={activeTool === 'ask' ? 'on' : ''} type="button" title="Ask a follow-up" onClick={() => {
+              setActiveTool('ask');
+              requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
+            }}><ToolIcon name="ask" /><b>Ask Unvibe</b></button>
+            <div className="widget-tools__spacer" />
+            <button type="button" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Memory</b></button>
+            {usage && (
+              <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
+                <span>Available</span>
+                <UsageRings ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }} selections={usage.selections} size={26} tiny />
+              </div>
+            )}
+          </aside>
+          <section className="widget-main">
 
       {!collapsed && !sessionPaused && (
         <div className="tabs" role="tablist" aria-label="Review tabs">
@@ -699,7 +789,8 @@ function Widget() {
             </div>
           )}
 
-          {(phase === 'streaming' || phase === 'done') && !active.quiz && (
+          {(phase === 'streaming' || phase === 'done') && (
+            <div className="stage">
             <div className="body" ref={bodyRef} aria-live="polite" aria-atomic="false">
               {active.meta.preview ? (
                 <section className="code-context" aria-label="Selected code context">
@@ -710,27 +801,104 @@ function Widget() {
                   <pre><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
-              {active.history.map((h) => (
-                <section key={h.id} className="history-entry">
-                  <div className="history-entry__meta">
-                    <span>
-                      {h.meta.language && h.meta.language !== 'plaintext' ? h.meta.language : 'Code'}
-                      {h.meta.lines ? ` · ${h.meta.lines} lines` : ''}
-                    </span>
-                    <span>{h.at}</span>
-                  </div>
-                  {renderRich(h.text, false)}
-                </section>
-              ))}
-              {active.history.length > 0 && <div className="history-sep">Latest</div>}
               {showText
                 ? renderRich(showText, stillTyping)
                 : (
                   <div className="skeleton" aria-label="Generating explanation">
-                    <span>Reading your selected code…</span>
+                    <span>Thinking…</span>
                     <i /><i /><i />
                   </div>
                 )}
+            </div>
+            {active.quiz && (
+              <aside className="quiz-rail" aria-label="Test me">
+                {active.quiz.phase === 'loading' && (
+                  <div className="quiz-rail__wait">
+                    <span>Writing a question…</span>
+                    <i /><i /><i />
+                  </div>
+                )}
+                {active.quiz.phase !== 'loading' && (
+                  <div className="quiz">
+                    <div className="quiz__kicker">Test me</div>
+                    {active.quiz.conceptLabel && (
+                      <div className="quiz__concept">{active.quiz.conceptLabel}</div>
+                    )}
+                    <div className="quiz__q">{active.quiz.question}</div>
+                    <div className="quiz__opts">
+                      {active.quiz.options?.map((o, i) => {
+                        const graded = active.quiz!.phase === 'graded';
+                        const cls = graded
+                          ? i === active.quiz!.answerIndex
+                            ? 'opt right'
+                            : i === active.quiz!.choice
+                              ? 'opt wrong'
+                              : 'opt'
+                          : i === active.quiz!.choice
+                            ? 'opt sel'
+                            : 'opt';
+                        return (
+                          <button
+                            key={i}
+                            className={cls}
+                            disabled={active.quiz!.phase !== 'answering'}
+                            onClick={() =>
+                              setTabs((prev) =>
+                                patchTab(prev, activeTabId, {
+                                  quiz: { ...active.quiz!, choice: i },
+                                }),
+                              )
+                            }
+                          >
+                            <em>{String.fromCharCode(65 + i)}</em>
+                            <span>{o}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {active.quiz.phase === 'graded' ? (
+                      <>
+                        <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`}>
+                          {active.quiz.correct ? 'Correct. That one is understood.' : 'Not quite. Saved to revisit.'}
+                        </div>
+                        {active.quiz.rationale && (
+                          <div className="quiz__why">{active.quiz.rationale}</div>
+                        )}
+                        <button
+                          className="btn ghost"
+                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                        >
+                          Hide question
+                        </button>
+                      </>
+                    ) : (
+                      <div className="quiz__actions">
+                        <button
+                          className="btn"
+                          disabled={active.quiz.choice === undefined || active.quiz.phase === 'grading'}
+                          onClick={() => {
+                            window.unvibe.answer(active.quiz!.choice!);
+                            setTabs((prev) =>
+                              patchTab(prev, activeTabId, {
+                                quiz: { ...active.quiz!, phase: 'grading' },
+                              }),
+                            );
+                          }}
+                        >
+                          {active.quiz.phase === 'grading' ? 'Checking…' : 'Check'}
+                        </button>
+                        <button
+                          className="btn ghost"
+                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </aside>
+            )}
             </div>
           )}
 
@@ -746,92 +914,7 @@ function Widget() {
             </div>
           )}
 
-          {active.quiz && (phase === 'streaming' || phase === 'done') && (
-            <div className="body">
-              {active.quiz.phase === 'loading' && (
-                <div className="state"><div className="sub">Writing you a question…</div></div>
-              )}
-              {active.quiz.phase !== 'loading' && (
-                <div className="quiz">
-                  {active.quiz.conceptLabel && (
-                    <div className="quiz__concept">{active.quiz.conceptLabel}</div>
-                  )}
-                  <div className="quiz__q">{active.quiz.question}</div>
-                  <div className="quiz__opts">
-                    {active.quiz.options?.map((o, i) => {
-                      const graded = active.quiz!.phase === 'graded';
-                      const cls = graded
-                        ? i === active.quiz!.answerIndex
-                          ? 'opt right'
-                          : i === active.quiz!.choice
-                            ? 'opt wrong'
-                            : 'opt'
-                        : i === active.quiz!.choice
-                          ? 'opt sel'
-                          : 'opt';
-                      return (
-                        <button
-                          key={i}
-                          className={cls}
-                          disabled={active.quiz!.phase !== 'answering'}
-                          onClick={() =>
-                            setTabs((prev) =>
-                              patchTab(prev, activeTabId, {
-                                quiz: { ...active.quiz!, choice: i },
-                              }),
-                            )
-                          }
-                        >
-                          {o}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {active.quiz.phase === 'graded' ? (
-                    <>
-                      <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`}>
-                        {active.quiz.correct ? 'Correct — that one is understood.' : 'Not quite — saved to revisit.'}
-                      </div>
-                      {active.quiz.rationale && (
-                        <div className="quiz__why">{active.quiz.rationale}</div>
-                      )}
-                      <button
-                        className="btn ghost"
-                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
-                      >
-                        Back to the explanation
-                      </button>
-                    </>
-                  ) : (
-                    <div className="quiz__actions">
-                      <button
-                        className="btn"
-                        disabled={active.quiz.choice === undefined || active.quiz.phase === 'grading'}
-                        onClick={() => {
-                          window.unvibe.answer(active.quiz!.choice!);
-                          setTabs((prev) =>
-                            patchTab(prev, activeTabId, {
-                              quiz: { ...active.quiz!, phase: 'grading' },
-                            }),
-                          );
-                        }}
-                      >
-                        {active.quiz.phase === 'grading' ? 'Checking…' : 'Check'}
-                      </button>
-                      <button
-                        className="btn ghost"
-                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {(phase === 'streaming' || phase === 'done') && !active.quiz && (
+          {(phase === 'streaming' || phase === 'done') && (
             <div className="foot">
               <div className="chips">
                 {phase === 'streaming' && (
@@ -868,11 +951,86 @@ function Widget() {
                 >
                   Test me
                 </button>
+                {features.whyExists ? (
+                  <button
+                    className="chip"
+                    disabled={stillTyping}
+                    onClick={() => {
+                      void window.unvibe.lookupOrigin().then((raw) => {
+                        const result = raw as {
+                          ok?: boolean;
+                          error?: string;
+                          report?: { facts: Array<{ label: string; value: string }>; inference: string };
+                        };
+                        setTabs((prev) => patchTab(prev, activeTabId, {
+                          originOpen: true,
+                          originError: result?.ok ? '' : (result?.error ?? 'Unvibe could not find documented history for this code.'),
+                          originFacts: result?.report?.facts ?? [],
+                          originInference: result?.report?.inference ?? '',
+                        }));
+                      });
+                    }}
+                  >
+                    Why does this exist
+                  </button>
+                ) : null}
                 {active.mock && (
-                  <span className="mock-note">mock AI — set ANTHROPIC_API_KEY for real explanations</span>
+                  <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
                 {!active.mock && phase === 'done' && <span className="local-save-note">saved on this Mac</span>}
               </div>
+              {active.originOpen ? (
+                <div className="origin-panel" role="region" aria-label="Why this exists">
+                  <div className="ask-sandbox__label">Source facts</div>
+                  {active.originError ? <p className="sub">{active.originError}</p> : null}
+                  {active.originFacts.map((fact) => (
+                    <p key={fact.label}><strong>{fact.label}.</strong> {fact.value}</p>
+                  ))}
+                  <p className="origin-inference">{active.originInference || 'No documented rationale found.'}</p>
+                </div>
+              ) : null}
+              {features.teachBack && phase === 'done' ? (
+                <div className="teach-panel" role="region" aria-label="Teach it back">
+                  <div className="ask-sandbox__label">Teach it back</div>
+                  <textarea
+                    className="teach-box"
+                    rows={3}
+                    placeholder="Explain this change in your own words."
+                    value={active.teachAnswer}
+                    onChange={(e) => setTabs((prev) => patchTab(prev, activeTabId, { teachAnswer: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    disabled={!active.teachAnswer.trim()}
+                    onClick={() => {
+                      void window.unvibe.gradeTeachBack({ answer: active.teachAnswer }).then((raw) => {
+                        const result = raw as {
+                          ok?: boolean;
+                          result?: { checks: Array<{ topic: string; mark: 'covered' | 'partial' | 'missed' }>; evidence: string; note: string };
+                        };
+                        if (!result?.result) return;
+                        setTabs((prev) => patchTab(prev, activeTabId, {
+                          teachChecks: result.result!.checks,
+                          teachEvidence: result.result!.evidence,
+                          teachNote: result.result!.note,
+                        }));
+                      });
+                    }}
+                  >
+                    Check understanding
+                  </button>
+                  {active.teachEvidence ? (
+                    <div className="teach-result">
+                      {active.teachChecks.map((check) => (
+                        <p key={check.topic}>{check.mark === 'covered' ? '✓' : check.mark === 'partial' ? '△' : '✕'} {check.topic}</p>
+                      ))}
+                      <p>Understanding evidence: {active.teachEvidence}</p>
+                      <p className="sub">{active.teachNote}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="ask-sandbox">
                 <div className="ask-sandbox__label">Ask a follow-up</div>
                 <div className="askrow">
@@ -891,6 +1049,38 @@ function Widget() {
                       }
                     }}
                   />
+                  {features.voice ? (
+                    <button
+                      type="button"
+                      className={`btn ghost${listening ? ' rec' : ''}`}
+                      aria-pressed={listening}
+                      disabled={stillTyping}
+                      onMouseDown={() => {
+                        if (listening) return;
+                        const rec = startSpeech((text) => {
+                          setTabs((prev) => patchTab(prev, activeTabId, { ask: text }));
+                        }, () => setListening(false));
+                        if (!rec) {
+                          setTabs((prev) => patchTab(prev, activeTabId, { ask: 'Speech is not available in this build.' }));
+                          return;
+                        }
+                        speechRef.current = rec;
+                        setListening(true);
+                      }}
+                      onMouseUp={() => {
+                        speechRef.current?.stop();
+                        speechRef.current = null;
+                        setListening(false);
+                      }}
+                      onMouseLeave={() => {
+                        speechRef.current?.stop();
+                        speechRef.current = null;
+                        setListening(false);
+                      }}
+                    >
+                      {listening ? 'Listening' : 'Hold to ask'}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="btn btn-ask"
@@ -909,6 +1099,9 @@ function Widget() {
           )}
         </>
       )}
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

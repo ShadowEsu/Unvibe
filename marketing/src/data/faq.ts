@@ -1,3 +1,5 @@
+import { PRICING } from "@/lib/pricing";
+
 /**
  * FAQ content.
  *
@@ -101,7 +103,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: "Yes. Monthly Pro is $8 per month. Annual Pro is $72 per year, about $6 per month. Team and Enterprise also take 25% off yearly: Team is $90 per seat per year, Enterprise is $450 per year.",
+    answer: `Yes. Monthly Pro is $${PRICING.proMonthly} per month. Annual Pro is $${PRICING.proAnnual} per year, ${PRICING.annualDiscountPercent}% off. Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year.`,
     category: "pricing",
   },
   {
@@ -114,21 +116,21 @@ export const faqItems: FaqItem[] = [
     id: "beta",
     question: "How do I get the product?",
     answer:
-      "The private beta is live for Apple silicon Mac and Windows x64. 30 AI explanations, then it stops. Copy the install command on unvibe.site. For partnerships, contact preston@unvibe.site.",
+      "Download it from the Download page. The beta runs on Apple silicon Macs and Windows x64, with 30 free AI explanations and no card or API key. For partnerships, contact preston@unvibe.site.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Yes, as a private beta. Same 30 AI explanations as Mac. Install from PowerShell with irm https://unvibe.site/install.ps1 | iex. The app is unsigned, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
+      "Yes, in beta. Download the portable .exe from the Download page, or paste irm https://unvibe.site/install.ps1 | iex in PowerShell. It has the same 30 free explanations as Mac. The app is unsigned for now, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
     category: "platform",
   },
   {
     id: "teams",
     question: "Can educators or teams use it?",
     answer:
-      "Team is $10 per seat, 2 seats minimum, 20 seats maximum, shared in one app. Start Team from /pricing. Enterprise is $50 a month for 1,000 AI questions and integrations. Write preston@unvibe.site for Enterprise. Annual is 25% off for both.",
+      `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, with ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email preston@unvibe.site to request seats. For more than ${PRICING.teamsMaxSeats} seats, write to the same address about Enterprise.`,
     category: "platform",
   },
   {

@@ -5,6 +5,7 @@ export const ANALYTICS_EVENTS = [
   "waitlist_completed",
   "waitlist_failed",
   "waitlist_cta_clicked",
+  "download_cta_clicked",
   "demo_started",
   "demo_completed",
   "depth_changed",

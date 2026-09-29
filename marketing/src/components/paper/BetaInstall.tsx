@@ -78,7 +78,6 @@ export function BetaInstall({
   return (
     <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
       <p className="paper-beta__title">{title}</p>
-      <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
 
       {/* OS selector tabs */}
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
@@ -123,9 +122,9 @@ export function BetaInstall({
       <div className="paper-beta__specs" aria-label="System requirements">
         <span>{BETA_INSTALL_VERSION}</span>
         <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "Windows 10+ x64" : "Apple Silicon (M1–M4)"}</span>
+        <span>{os === "windows" ? "Windows 10+ x64" : "Apple silicon Mac"}</span>
         <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "Portable .exe" : "~82 MB .dmg"}</span>
+        <span>{os === "windows" ? "~81 MB .exe" : "~112 MB .dmg"}</span>
         <span aria-hidden="true">·</span>
         <span>No API key</span>
       </div>

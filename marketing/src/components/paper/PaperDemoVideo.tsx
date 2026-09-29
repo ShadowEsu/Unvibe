@@ -7,8 +7,8 @@ export function PaperDemoVideo() {
   return (
     <div className="paper-video">
       <AutoPlayVideo
-        src="/videos/unvibe-cursor-demo.mp4"
-        poster="/videos/unvibe-cursor-demo-poster.jpg"
+        src="/videos/unvibe-cursor-demo-v2.mp4"
+        poster="/videos/unvibe-cursor-demo-v2-poster.jpg"
         label="Unvibe overlay working beside Cursor"
       />
     </div>

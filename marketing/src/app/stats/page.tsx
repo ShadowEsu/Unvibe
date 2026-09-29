@@ -3,7 +3,7 @@ import { FounderAnalytics } from "@/components/FounderAnalytics";
 
 export const metadata: Metadata = {
   title: "Founder analytics",
-  description: "Live aggregate traffic, waitlist, and beta-request numbers for Unvibe.",
+  description: "Live aggregate traffic, download, and beta numbers for Unvibe.",
   robots: { index: false, follow: false },
 };
 

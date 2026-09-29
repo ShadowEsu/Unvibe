@@ -9,12 +9,14 @@ import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
+import { DownloadCta } from "@/components/paper/DownloadCta";
+import { HomeBenefits } from "@/components/paper/HomeBenefits";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
-  title: "Unvibe. Engineering understanding that keeps up.",
+  title: "Unvibe. Understand the AI-generated code you ship.",
 };
 
 const homeFaq = faqItems.filter((item) =>
@@ -30,8 +32,11 @@ export default function HomePage() {
         <Reveal className="paper-wrap paper-center">
           <PaperDemoVideo />
           <p className="paper-caption">
-            Highlight code in your editor. Unvibe explains it beside Cursor, then you can test yourself. The stills below are current.
+            A real session in Cursor: select code, press {"\u2318"}U, read the explanation, then test yourself.
           </p>
+          <div className="mt-10">
+            <HomeBenefits />
+          </div>
         </Reveal>
       </section>
 
@@ -40,8 +45,6 @@ export default function HomePage() {
           <BetaInstall tone="page" showFeedback={false} />
         </Reveal>
       </section>
-
-      <BackingStrip />
 
       <ToolsMarquee />
 
@@ -78,6 +81,8 @@ export default function HomePage() {
         </Reveal>
       </section>
 
+      <BackingStrip />
+
       <section className="paper-section">
         <Reveal className="paper-wrap">
           <div className="paper-center mb-8">
@@ -99,6 +104,12 @@ export default function HomePage() {
             <TypingFaq items={homeFaq} />
           </div>
         </Reveal>
+      </section>
+
+      <section className="paper-section">
+        <div className="paper-wrap">
+          <DownloadCta />
+        </div>
       </section>
     </div>
   );

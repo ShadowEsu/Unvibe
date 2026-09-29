@@ -3,7 +3,7 @@ import { BetaInstall } from "@/components/paper/BetaInstall";
 import { Reveal } from "@/components/redesign/Reveal";
 
 export const metadata: Metadata = {
-  title: "Download Unvibe — Private beta for Mac and Windows",
+  title: "Download Unvibe for Mac and Windows",
   description: "Download the Unvibe private beta. 30 free AI code explanations. No API key, no credit card. Available for Mac (Apple Silicon) and Windows (x64).",
   robots: { index: true, follow: true },
 };
@@ -15,7 +15,7 @@ export default function BetaDownloadsPage() {
         <img src="/hero/golden-gate.png" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
-          <p className="paper-meta">Private beta</p>
+          <p className="paper-meta">Free during the beta</p>
           <h1>Download Unvibe.</h1>
           <p>Select code, press ⌘U, understand what you ship.</p>
         </div>
@@ -46,7 +46,7 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Allow Accessibility when prompted</strong>
                   <p>
-                    {`This lets Unvibe read the code you actively select — it does not monitor keystrokes or record the screen.`}
+                    {`This lets Unvibe read the code you actively select — it does not watch your keystrokes or record your screen.`}
                   </p>
                 </div>
               </li>

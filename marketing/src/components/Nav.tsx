@@ -4,16 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
-import { JoinWaitlistLink } from "@/components/paper/JoinWaitlistLink";
+import { DownloadLink } from "@/components/paper/DownloadLink";
 
 const links = [
   { label: "Product", href: "/#product" },
   { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "/pricing" },
   { label: "Change Log", href: "/releases" },
-  { label: "Growth", href: "/build" },
-  { label: "Investors", href: "/investors" },
-  { label: "Download", href: "/beta" },
 ];
 
 export function Nav() {
@@ -52,7 +49,7 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
-          <JoinWaitlistLink href="/#install" size="nav" />
+          <DownloadLink href="/beta" size="nav" />
         </div>
         <button
           type="button"
@@ -78,7 +75,7 @@ export function Nav() {
                 {link.label}
               </Link>
             ))}
-            <JoinWaitlistLink href="/#install" size="nav" className="mt-4 w-full" onClick={() => setOpen(false)} />
+            <DownloadLink href="/beta" size="nav" className="mt-4 w-full" onClick={() => setOpen(false)} />
           </div>
         </div>
       )}

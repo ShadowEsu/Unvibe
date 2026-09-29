@@ -17,15 +17,15 @@ export function ReleaseCountdown({ variant = "page" }: { variant?: "page" | "her
     <div
       className={variant === "hero" ? "release-status release-status--hero" : "release-status"}
       role="status"
-      aria-label="Unvibe private beta is now available for Mac and Windows"
+      aria-label="Unvibe is available now for Mac and Windows"
     >
       <div className="release-status__badge">
         <span className="release-status__dot" aria-hidden="true" />
-        <span className="release-status__label">Private Beta Live</span>
+        <span className="release-status__label">Live now</span>
       </div>
       {ready && (
         <p className="release-status__platforms">
-          Available now for <strong>Mac</strong> (Apple Silicon) and <strong>Windows</strong> (x64)
+          <strong>Mac</strong> (Apple silicon) and <strong>Windows</strong> (x64) · No API key · No card
         </p>
       )}
     </div>

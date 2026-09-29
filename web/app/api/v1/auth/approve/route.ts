@@ -27,7 +27,7 @@ export async function POST(req: Request): Promise<Response> {
   // Secure only over HTTPS (so local http dev still works).
   const isHttps = new URL(req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';
   const cookie =
-    `uncode_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000` +
+    `uncode_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000` +
     (isHttps ? '; Secure' : '');
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,

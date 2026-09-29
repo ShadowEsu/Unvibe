@@ -2,15 +2,15 @@
  * Explanation quota for the desktop app.
  * Signed-in: prefer server billing overview.
  * Sealed trial: server trial meter (per install).
- * Local / unsigned: Free allotment (30/month) counted from local review events.
+ * Local / unsigned: Free allotment counted from local review events. Public-beta installs receive 50 actions for 30 days.
  */
 import { billingOverview, trialUsageOverview, type BillingUsageLine } from './backend';
 import { store } from './store';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 
 export const LOCAL_FREE_LIMIT = 30;
-/** The private beta matches Free: 30 monthly AI explanations. */
-export const TRIAL_FREE_LIMIT = 30;
+/** Public beta: 50 AI explanations during the 30-day device trial. */
+export const TRIAL_FREE_LIMIT = 50;
 /** UI-safe representation of an unrestricted local entitlement. */
 export const FULL_PRODUCT_LIMIT = 1_000_000;
 
@@ -37,12 +37,16 @@ export function localExplanationUsage(now = new Date()): AppUsage {
     return ev.ts.slice(0, 7) === prefix;
   }).length;
   const fullProduct = fullProductBuildEnabled();
-  const limit = fullProduct ? FULL_PRODUCT_LIMIT : trialBuildEnabled() ? TRIAL_FREE_LIMIT : LOCAL_FREE_LIMIT;
+  const trial = trialBuildEnabled() ? store().betaTrialWindow(now) : null;
+  const trialUsed = trial
+    ? store().events().filter((ev) => ev.eventType === 'explanation_completed' && ev.ts >= trial.startedAt).length
+    : used;
+  const limit = fullProduct ? FULL_PRODUCT_LIMIT : trial ? TRIAL_FREE_LIMIT : LOCAL_FREE_LIMIT;
   return {
-    used,
+    used: trialUsed,
     limit,
-    remaining: fullProduct ? FULL_PRODUCT_LIMIT : Math.max(0, limit - used),
-    resetsAt,
+    remaining: fullProduct ? FULL_PRODUCT_LIMIT : trial?.expired ? 0 : Math.max(0, limit - trialUsed),
+    resetsAt: trial?.expiresAt ?? resetsAt,
     plan: fullProduct ? 'full' : trialBuildEnabled() ? 'trial' : 'local',
     source: 'local',
   };

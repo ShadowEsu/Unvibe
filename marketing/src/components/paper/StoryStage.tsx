@@ -90,15 +90,6 @@ const beats: StoryBeat[] = [
     alt: "Unvibe product tour playing in place",
     kind: "video",
   },
-  {
-    meta: "In Cursor",
-    title: "It sits beside Cursor too.",
-    body: "Same shortcut. Same overlay. The editor you already have.",
-    src: "/videos/unvibe-cursor-demo.mp4",
-    poster: "/videos/unvibe-cursor-demo-poster.jpg",
-    alt: "Unvibe overlay working beside Cursor",
-    kind: "video",
-  },
 ];
 
 function StoryMedia({ beat, active }: { beat: StoryBeat; active: boolean }) {
@@ -143,11 +134,11 @@ export function StoryStage() {
     const trigger = ScrollTrigger.create({
       trigger: node,
       start: "top top",
-      end: () => `+=${beats.length * 280}vh`,
+      end: () => `+=${beats.length * 90}vh`,
       pin: true,
       pinSpacing: true,
       anticipatePin: 1,
-      scrub: 1.75,
+      scrub: 0.6,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
         const raw = self.progress * beats.length;

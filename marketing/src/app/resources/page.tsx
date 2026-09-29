@@ -2,30 +2,30 @@ import type { Metadata } from "next";
 import { ResourcesHub } from "@/components/paper/ResourcesHub";
 
 export const metadata: Metadata = {
-  title: "Resources, Guides & Architecture — Unvibe",
+  title: "Resources and guides",
   description:
-    "Explore developer guides, architecture deep-dives, the 5 depths of code comprehension, keyboard shortcuts, and zero-knowledge privacy documentation for Unvibe.",
+    "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
   openGraph: {
-    title: "Resources, Guides & Architecture — Unvibe",
+    title: "Resources and guides",
     description:
-      "Explore developer guides, architecture deep-dives, the 5 depths of code comprehension, keyboard shortcuts, and zero-knowledge privacy documentation for Unvibe.",
+      "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
     url: "https://unvibe.site/resources",
     siteName: "Unvibe",
     images: [
       {
-        url: "/og/share.png",
+        url: "/unvibe-social-preview-v6.png",
         width: 1200,
         height: 630,
-        alt: "Unvibe Resources and Architecture Documentation",
+        alt: "Unvibe resources and guides",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Resources, Guides & Architecture — Unvibe",
+    title: "Resources and guides",
     description:
-      "Explore developer guides, architecture deep-dives, the 5 depths of code comprehension, keyboard shortcuts, and zero-knowledge privacy documentation for Unvibe.",
-    images: ["/og/share.png"],
+      "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
+    images: ["/unvibe-social-preview-v6.png"],
   },
 };
 
@@ -36,10 +36,10 @@ export default function ResourcesPage() {
         <img src="/hero/golden-gate.png" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
-          <p className="paper-meta">Developer Knowledge Base</p>
-          <h1>Resources & Guides.</h1>
+          <p className="paper-meta">Resources</p>
+          <h1>Resources and guides.</h1>
           <p>
-            Everything you need to master code comprehension, configure your editor, understand local secret filtering, and retain what AI generates.
+            Get set up, choose an explanation depth, and see exactly how your code is handled.
           </p>
         </div>
       </header>

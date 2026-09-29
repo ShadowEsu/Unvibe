@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { BuildLive } from "@/components/build/BuildLive";
 import { BuildMap } from "@/components/paper/BuildMap";
 import { ChangelogList } from "@/components/paper/ChangelogList";
-import { JoinWaitlistRow } from "@/components/paper/JoinWaitlistLink";
+import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GrowthFollowSum } from "@/components/paper/SocialFollow";
 import { Reveal } from "@/components/redesign/Reveal";
 import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
   title: "Building Unvibe",
-  description: "Follow Unvibe from private beta to public release, live.",
+  description: "Unvibe is out for Mac and Windows. 800+ followers across Instagram, TikTok, X, and LinkedIn.",
 };
 
 export default function BuildPage() {
@@ -20,17 +20,17 @@ export default function BuildPage() {
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Building in public</p>
-          <h1>75% to public release.</h1>
+          <h1>100%. Unvibe is out.</h1>
           <p>
-            Almost here. Live testing is done. Feedback is done.
+            Built in public, now live on Mac and Windows. 800+ people follow along across Instagram, TikTok, X, and LinkedIn.
           </p>
-          <div className="paper-meter" aria-label="75 percent to public release">
+          <div className="paper-meter" aria-label="100 percent: public release is live">
             <div className="paper-meter__track">
-              <span style={{ width: "75%" }} />
+              <span style={{ width: "100%" }} />
             </div>
-            <strong>75%</strong>
+            <strong>100%</strong>
           </div>
-          <JoinWaitlistRow href="/#install" />
+          <DownloadRow href="/beta" />
         </div>
       </header>
 

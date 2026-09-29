@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { PricingHeadline } from "@/components/paper/PricingHeadline";
 import { PricingPlans } from "@/components/redesign/PricingPlans";
+import { PRICING } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "You'll spend 15,000 hours+ on vibe coding. Make them count. Free is 30 explanations a month. Pro is $8 a month or $72 a year.",
+  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year. Lifetime is $${PRICING.proLifetime} once. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
 };
 
 export default function PricingPage() {

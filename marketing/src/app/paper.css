@@ -118,25 +118,25 @@ h2 {
   right: 0;
   left: 0;
   z-index: 40;
-  border-bottom: 1px solid rgb(255 255 255 / 0.1);
-  background: rgb(10 10 12 / 0.94);
+  border-bottom: 1px solid transparent;
+  background: transparent;
   color: #fff;
-  box-shadow: 0 0.5rem 1.8rem rgb(14 8 20 / 0.12);
-  backdrop-filter: blur(16px) saturate(1.15);
-  -webkit-backdrop-filter: blur(16px) saturate(1.15);
-  transition: background 220ms ease, border-color 220ms ease, color 220ms ease;
+  box-shadow: none;
+  transition: background 280ms var(--ease-emphatic), border-color 280ms ease, color 280ms ease, box-shadow 280ms ease, backdrop-filter 280ms ease;
 }
 
 .paper-nav--scrolled,
 .paper-nav--solid {
-  background: rgb(10 10 12 / 0.97);
-  border-bottom-color: rgb(255 255 255 / 0.12);
-  color: #fff;
-  backdrop-filter: blur(16px);
+  background: rgb(255 252 248 / 0.78);
+  border-bottom-color: rgb(212 204 224 / 0.55);
+  color: var(--ink);
+  box-shadow: 0 0.4rem 1.4rem rgb(14 8 20 / 0.06);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
 }
 
 .paper-nav .paper-logo__word {
-  color: #fff;
+  color: inherit;
 }
 
 .paper-nav a,
@@ -147,7 +147,7 @@ h2 {
 
 .paper-nav a:hover,
 .paper-nav button:hover {
-  color: #cdbbff;
+  color: var(--brand);
 }
 
 .paper-nav .paper-join,
@@ -378,6 +378,8 @@ h2 {
   gap: 0.55rem;
   width: min(100%, 22rem);
   margin-top: 0.35rem;
+  margin-inline: auto;
+  justify-self: center;
 }
 
 .paper-beta__os button {
@@ -385,7 +387,8 @@ h2 {
   margin: 0;
   display: grid;
   gap: 0.12rem;
-  justify-items: start;
+  justify-items: center;
+  text-align: center;
   padding: 0.72rem 0.9rem;
   border: 1.5px solid currentColor;
   border-radius: 0.7rem;
@@ -394,7 +397,7 @@ h2 {
   font: inherit;
   letter-spacing: -0.02em;
   cursor: pointer;
-  opacity: 0.58;
+  opacity: 0.72;
   transition: opacity 140ms ease, background-color 140ms ease, border-width 140ms ease, transform 140ms ease;
 }
 
@@ -410,9 +413,9 @@ h2 {
 }
 
 .paper-beta__os-name {
-  font-family: var(--font-display);
-  font-size: clamp(1rem, 2.2vw, 1.2rem);
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-size: clamp(0.98rem, 2vw, 1.08rem);
+  font-weight: 600;
   line-height: 1.1;
 }
 
@@ -437,6 +440,8 @@ h2 {
 .paper-beta__blurb {
   font-size: clamp(0.82rem, 1.5vw, 0.95rem);
   opacity: 0.88;
+  justify-self: center;
+  margin-inline: auto;
 }
 
 .paper-beta__shell {
@@ -444,13 +449,18 @@ h2 {
   max-width: 34rem;
   font-size: clamp(0.78rem, 1.4vw, 0.9rem);
   opacity: 0.78;
+  justify-self: center;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .paper-beta__direct {
   display: inline-flex;
   align-items: center;
+  justify-self: center;
   width: fit-content;
   margin-top: 0.15rem;
+  margin-inline: auto;
   font-family: var(--font-display);
   font-size: clamp(0.82rem, 1.4vw, 0.95rem);
   font-weight: 700;
@@ -703,27 +713,17 @@ h2 {
   margin-top: 0.35rem;
 }
 
-.paper-install .paper-beta--page .paper-beta__title,
-.paper-install .paper-beta--page .paper-beta__version,
-.paper-install .paper-beta--page .paper-beta__blurb,
-.paper-install .paper-beta--page .paper-beta__offer,
-.paper-install .paper-beta--page .paper-beta__cmd,
-.paper-install .paper-beta--page .paper-beta__error,
-.paper-install .paper-beta--page .paper-beta__term button,
-.paper-install .paper-beta--page .paper-beta__os button,
-.paper-install .paper-beta--page .paper-beta__survey {
-  color: var(--hero-type);
-  text-shadow: var(--glow-hero);
-}
+
 
 .paper-keys-stage .paper-caption {
   max-width: 28rem;
-  color: var(--hero-type);
+  margin-inline: auto;
+  color: var(--ink);
   font-family: var(--font-clean);
   font-size: clamp(1rem, 1.8vw, 1.12rem);
   font-weight: 500;
   line-height: 1.4;
-  text-shadow: var(--glow-hero);
+  text-align: center;
 }
 
 @media (max-width: 720px) {
@@ -834,7 +834,7 @@ h2 {
 .paper-hero__copy.is-ready .paper-hero__teams-link,
 .paper-hero__copy.is-ready .paper-beta,
 .paper-hero__foot.is-ready {
-  animation: paperFadeRise 1.85s var(--ease-emphatic) both;
+  animation: paperFadeRise 1.15s var(--ease-emphatic) both;
 }
 
 .paper-hero__copy.is-ready .paper-hero__badge,
@@ -898,7 +898,7 @@ h2 {
 @keyframes paperFadeRise {
   from {
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
+    transform: translate3d(0, 10px, 0);
   }
   to {
     opacity: 1;
@@ -1277,8 +1277,11 @@ h2 {
 
 .paper-caption {
   margin-top: 0.85rem;
-  color: var(--ink);
+  max-width: 36rem;
+  margin-inline: auto;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
   font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .paper-frame--small {
@@ -1759,6 +1762,9 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 }
 
 .paper-faq summary {
+  position: relative;
+  list-style: none;
+  padding-right: 2.2rem;
   cursor: pointer;
   font-family: var(--font-display);
   font-size: clamp(1.35rem, 2.8vw, 2.05rem);
@@ -1767,6 +1773,34 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   letter-spacing: -0.02em;
   text-shadow: var(--glow-copy);
   transition: color 320ms var(--ease-calm);
+}
+
+.paper-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.paper-faq summary::after {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  right: 0.2rem;
+  transform: translateY(-50%);
+  font-family: var(--font-sans);
+  font-size: 1.4rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--brand);
+  transition: transform 240ms var(--ease-calm);
+}
+
+.paper-faq details[open] summary::after {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.paper-faq summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .paper-faq summary:hover {
@@ -2042,6 +2076,7 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   margin-top: 0.8rem;
   color: var(--ink-faint);
   font-size: 0.75rem;
+  text-align: center;
 }
 
 .paper-waitlist .form-legal a {
@@ -4338,13 +4373,13 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   max-width: 22rem;
   padding: 0.88rem 1.6rem;
   border: 0;
-  border-radius: var(--radius-glass);
-  background: var(--cta-fill);
-  box-shadow: var(--cta-glow), var(--cta-inset);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: clamp(0.92rem, 1.6vw, 1.08rem);
-  font-weight: 700;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  box-shadow: 0 1px 2px rgb(18 17 15 / 0.18), 0 8px 24px rgb(18 17 15 / 0.14);
+  color: #f7f4ee;
+  font-family: var(--font-sans);
+  font-size: clamp(0.95rem, 1.6vw, 1.05rem);
+  font-weight: 600;
   letter-spacing: -0.02em;
   text-decoration: none;
   cursor: pointer;
@@ -4365,12 +4400,19 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 
 .paper-beta__download-btn:hover {
   transform: translateY(-2px);
-  box-shadow: var(--cta-glow), var(--cta-inset), 0 6px 20px rgb(139 92 246 / 0.35);
-  filter: brightness(1.06);
+  box-shadow: 0 1px 2px rgb(18 17 15 / 0.2), 0 12px 28px rgb(18 17 15 / 0.2);
+  filter: none;
 }
 
 .paper-beta__download-btn:hover::before {
-  opacity: 1;
+  opacity: 0;
+}
+
+.paper-beta__download-btn:focus-visible,
+.paper-beta__os button:focus-visible,
+.paper-beta__term-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
 }
 
 .paper-beta__download-btn:active {
@@ -4508,9 +4550,9 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  font-family: var(--font-display);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 
@@ -4635,7 +4677,10 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 .beta-page h1 {
   font-family: var(--font-display);
   font-weight: 400;
-  color: var(--ink);
+}
+
+.beta-page .paper-photo-band h1 {
+  color: var(--hero-type);
 }
 
 .beta-page__steps {
@@ -5463,3 +5508,22 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   gap: 1rem;
 }
 
+
+/* ── Homepage benefits row ── */
+
+.home-benefits {
+  text-align: left;
+}
+
+.home-benefits .resources-card p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* Pricing buttons wrap instead of overflowing their pill. */
+.paper-pricing .pricing-button {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  padding-inline: 1rem;
+}

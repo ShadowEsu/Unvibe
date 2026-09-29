@@ -52,8 +52,8 @@ export default function InvestorsPage() {
         </div>
         <aside className="investor-hero__stage">
           <p>Current stage</p>
-          <strong>Private beta</strong>
-          <span>75% to public release</span>
+          <strong>Public beta</strong>
+          <span>100%: live on Mac and Windows · 800+ followers</span>
           <a href="/build">Follow the live build <ArrowRight size={13} /></a>
         </aside>
       </header>

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
+import '../shared/tokens.css';
 
 type Snapshot = {
   shortcut: string;
@@ -15,333 +16,250 @@ type Snapshot = {
   conceptsSeen: number;
   conceptsStrong: number;
   usage: { label: string; pct: number } | null;
+  quota?: { used: number; limit: number; remaining: number };
+  selections?: { used: number; limit: number; remaining: number };
   heat: number[];
 };
 
-type IslandMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+type PulsePhase =
+  | 'idle' | 'loading' | 'working' | 'analyzing' | 'searching' | 'thinking'
+  | 'generating' | 'contextualizing' | 'finalizing' | 'ready'
+  | 'understood' | 'error' | 'offline';
 
 function CodeIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
 }
 
-function HomeIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 11.2 12 4.8l7.5 6.4" /><path d="M7.2 10.2V19h9.6v-8.8" /></svg>;
+function SettingsIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3h3.4l.6 2.1 1.6.7 1.9-1 2.4 2.4-1 1.9.7 1.6 2.1.6v3.4l-2.1.6-.7 1.6 1 1.9-2.4 2.4-1.9-1-1.6.7-.6 2.1h-3.4l-.6-2.1-1.6-.7-1.9 1-2.4-2.4 1-1.9-.7-1.6-2.1-.6v-3.4l2.1-.6.7-1.6-1-1.9 2.4-2.4 1.9 1 1.6-.7z"/><circle cx="12" cy="12" r="2.7"/></svg>;
 }
 
-/**
- * The learning strip is intentionally not a Dynamic Island clone. It is a small, persistent
- * Unvibe status surface that expands into recent learning and honest local-privacy context.
- */
+function StatusDots() {
+  return <span className="island__dots" aria-hidden="true"><i /><i /><i /><i /></span>;
+}
+
+function FlameIcon() {
+  return (
+    <svg className="island__flame" width="12" height="14" viewBox="0 0 16 18" fill="none" aria-hidden="true">
+      <path d="M9.1 1.2c.45 2.3-.48 3.55-1.45 4.55-.8.83-1.63 1.68-1.54 3.02.04.55.23 1.02.57 1.4-.06-1.61.8-2.7 1.84-3.61.4 1.45 1.88 2.44 1.88 4.5 0 1.72-1.13 3.03-2.7 3.03-2.52 0-4.35-1.83-4.35-4.53 0-2.54 1.56-4.54 3.05-6.08.02 1.03.23 1.74.63 2.35C7.9 4.72 8.84 3.54 9.1 1.2Z" fill="currentColor" />
+      <path d="M10.1 6.4c1.63 1.1 2.55 2.79 2.55 4.63 0 3.2-2.05 5.77-5.13 5.77-2.9 0-5.17-2.2-5.17-5.24 0-.73.12-1.43.36-2.1.2 3.32 2.28 5.46 5.1 5.46 2.18 0 3.67-1.67 3.67-3.95 0-1.62-.61-3.02-1.38-4.57Z" fill="currentColor" opacity=".62" />
+    </svg>
+  );
+}
+
+const STATUS_WORD: Record<PulsePhase, string> = {
+  idle: 'ready', loading: 'loading', working: 'working', analyzing: 'analyzing', searching: 'searching',
+  thinking: 'thinking', generating: 'generating', contextualizing: 'learning',
+  finalizing: 'finalising', ready: 'ready', understood: 'understood', error: 'issue', offline: 'offline',
+};
+
+function notchSafeTop(): number {
+  const display = window.screen as Screen & { availTop?: number };
+  const inset = (display.availTop ?? window.screenY + 38) - window.screenY;
+  return Math.max(38, Math.min(48, Math.round(inset || 38)));
+}
+
 function Bar() {
   const [note, setNote] = useState('');
+  const [phase, setPhase] = useState<PulsePhase>('idle');
   const [expanded, setExpanded] = useState(false);
   const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
-  const [hoverDelayMs, setHoverDelayMs] = useState(220);
+  const [hoverDelayMs, setHoverDelayMs] = useState(160);
   const [attached, setAttached] = useState(true);
   const [position, setPosition] = useState('top-center');
-  const [rotateStats, setRotateStats] = useState(true);
-  const [statIndex, setStatIndex] = useState(0);
+  const [barSize, setBarSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(0.3);
   const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
-  const [confirmation, setConfirmation] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [drawerView, setDrawerView] = useState<'pulse' | 'ask'>('pulse');
-  const [askDraft, setAskDraft] = useState('');
-  const [askMessages, setAskMessages] = useState<IslandMessage[]>([]);
-  const [askBusy, setAskBusy] = useState(false);
-  const [askError, setAskError] = useState('');
   const expandedRef = useRef(false);
-  const pointerInside = useRef(false);
   const actionLockUntil = useRef(0);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const closeAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const launchPlayed = useRef(false);
-  const lastHoverTone = useRef(0);
   const soundRef = useRef({ enabled: true, volume: 0.3, style: 'soft' as 'soft' | 'pixel' });
   soundRef.current = { enabled: soundEnabled, volume: soundVolume, style: soundStyle };
-  const positionRef = useRef(position);
-  positionRef.current = position;
 
   const tone = (kind: ToneKind) => {
-    const next = soundRef.current;
-    if (!next.enabled) return;
-    playUiTone(kind, next.volume, next.style);
+    const sound = soundRef.current;
+    if (sound.enabled) playUiTone(kind, sound.volume, sound.style);
   };
   const playLaunchOnce = () => {
     if (launchPlayed.current) return;
     launchPlayed.current = true;
     tone('launch');
   };
-
-  const refresh = () => {
-    setLoading(true);
-    void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot)).finally(() => setLoading(false));
+  const refresh = () => void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
+  const applyPulse = (next: PulsePhase) => {
+    if (phaseTimer.current) clearTimeout(phaseTimer.current);
+    setPhase(next);
+    if (next === 'understood') tone('success');
+    if (next === 'ready' || next === 'understood') refresh();
+    if (next === 'ready' || next === 'understood' || next === 'error' || next === 'offline') {
+      phaseTimer.current = setTimeout(() => setPhase('idle'), next === 'error' || next === 'offline' ? 3200 : 1800);
+    } else if (next === 'idle') refresh();
   };
+
+  const setPanelExpanded = (next: boolean, withSound = true) => {
+    if (next) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+      setClosing(false);
+      if (expandedRef.current) return;
+      expandedRef.current = true;
+      setExpanded(true);
+      refresh();
+      window.unvibe.setBarExpanded(true);
+      if (withSound) tone('open');
+      return;
+    }
+    if (!expandedRef.current || closeTimer.current) return;
+    setClosing(true);
+    window.unvibe.setBarExpanded(false);
+    closeTimer.current = setTimeout(() => {
+      expandedRef.current = false;
+      closeTimer.current = null;
+      setExpanded(false);
+      setClosing(false);
+    }, 220);
+  };
+
   useEffect(() => {
     refresh();
     void window.unvibe.getSettings().then((value) => {
-      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
-      const enabled = Boolean(settings.barHoverPreview ?? true);
-      setHoverEnabled(enabled);
-      setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 220)));
-      setAttached(settings.barPosition === 'top-center');
+      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; barSize?: 'small' | 'medium' | 'large'; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
+      setHoverEnabled(settings.barHoverPreview ?? true);
+      setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 160)));
+      setAttached((settings.barPosition ?? 'top-center') === 'top-center');
       setPosition(settings.barPosition ?? 'top-center');
-      setRotateStats(settings.rotateIslandStats ?? true);
+      setBarSize(settings.barSize ?? 'medium');
       setSoundEnabled(settings.soundEffects ?? true);
       setSoundVolume(settings.soundVolume ?? 0.3);
       setSoundStyle(settings.soundStyle ?? 'soft');
-      soundRef.current = {
-        enabled: settings.soundEffects ?? true,
-        volume: settings.soundVolume ?? 0.3,
-        style: settings.soundStyle ?? 'soft',
-      };
+      soundRef.current = { enabled: settings.soundEffects ?? true, volume: settings.soundVolume ?? 0.3, style: settings.soundStyle ?? 'soft' };
       playLaunchOnce();
     });
-    const unsubscribe = window.unvibe.onBarNotify((msg) => {
-      setNote(msg);
+    const offNotify = window.unvibe.onBarNotify((message) => {
+      setNote(message);
       refresh();
       if (noteTimer.current) clearTimeout(noteTimer.current);
       noteTimer.current = setTimeout(() => setNote(''), 4000);
     });
-    const unsubscribeCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false));
-    const unsubscribeSettings = window.unvibe.onBarSettings((settings) => {
+    const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
+    const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
+    const offSettings = window.unvibe.onBarSettings((settings) => {
       if (settings.barPosition) { setAttached(settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
+      if (settings.barSize) setBarSize(settings.barSize);
       if (settings.barHoverPreview !== undefined) setHoverEnabled(settings.barHoverPreview);
       if (settings.barHoverDelayMs !== undefined) setHoverDelayMs(settings.barHoverDelayMs);
-      if (settings.rotateIslandStats !== undefined) setRotateStats(settings.rotateIslandStats);
       if (settings.soundEffects !== undefined) setSoundEnabled(settings.soundEffects);
       if (settings.soundVolume !== undefined) setSoundVolume(settings.soundVolume);
       if (settings.soundStyle !== undefined) setSoundStyle(settings.soundStyle);
     });
     return () => {
-      unsubscribe();
-      unsubscribeCollapse();
-      unsubscribeSettings();
+      offNotify(); offPulse(); offCollapse(); offSettings();
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
-      if (closeAnimationTimer.current) clearTimeout(closeAnimationTimer.current);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
+      if (phaseTimer.current) clearTimeout(phaseTimer.current);
     };
   }, []);
 
   useEffect(() => {
-    if (!rotateStats) { setStatIndex(0); return; }
-    const timer = window.setInterval(() => setStatIndex((index) => (index + 1) % 3), 3000);
-    return () => window.clearInterval(timer);
-  }, [rotateStats]);
-
-  const setPanelExpanded = (next: boolean, withSound = true) => {
-    if (next) {
-      if (closeAnimationTimer.current) {
-        clearTimeout(closeAnimationTimer.current);
-        closeAnimationTimer.current = null;
-      }
-      setClosing(false);
-      if (expandedRef.current) return;
-      expandedRef.current = true;
-      setExpanded(true);
-      window.unvibe.setBarExpanded(true);
-      if (withSound) tone('open');
-      return;
-    }
-    if (!expandedRef.current) return;
-    if (closeAnimationTimer.current) return;
-    setClosing(true);
-    const closeMs = positionRef.current.startsWith('bottom') ? 380 : 280;
-    closeAnimationTimer.current = setTimeout(() => {
-      expandedRef.current = false;
-      closeAnimationTimer.current = null;
-      setClosing(false);
-      setExpanded(false);
-      window.unvibe.setBarExpanded(false);
-    }, closeMs);
-  };
-  useEffect(() => {
-    const onWindowKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || !expandedRef.current) return;
-      event.preventDefault();
-      setPanelExpanded(false);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && expandedRef.current) setPanelExpanded(false);
     };
-    window.addEventListener('keydown', onWindowKey);
-    return () => window.removeEventListener('keydown', onWindowKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
-  const open = () => {
-    if (collapseTimer.current) clearTimeout(collapseTimer.current);
-    setPanelExpanded(true);
-  };
+
   const openFromHover = () => {
     if (!hoverEnabled || expandedRef.current) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     hoverOpenTimer.current = setTimeout(() => {
-      if (document.querySelector('.strip')?.matches(':hover')) setPanelExpanded(true, true);
+      if (document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
     }, hoverDelayMs);
   };
   const scheduleClose = () => {
-    pointerInside.current = false;
-    if (!hoverEnabled) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
+    if (!hoverEnabled) return;
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
-    const lockedFor = Math.max(0, actionLockUntil.current - Date.now());
+    const lock = Math.max(0, actionLockUntil.current - Date.now());
     collapseTimer.current = setTimeout(() => {
-      const stillHovered = document.querySelector('.strip')?.matches(':hover') ?? false;
-      pointerInside.current = stillHovered;
-      if (!stillHovered) setPanelExpanded(false, false);
-    }, Math.max(120, lockedFor + 40));
+      if (!document.querySelector('.island')?.matches(':hover')) setPanelExpanded(false, false);
+    }, Math.max(140, lock + 40));
   };
-
-  const act = (action: 'review' | 'home') => {
+  const act = (action: 'review' | 'home' | 'settings') => {
     tone('click');
-    actionLockUntil.current = Date.now() + 1400;
-    const message = action === 'review' ? 'Selection capture started' : 'Opening your learning space';
-    setConfirmation(message);
-    window.setTimeout(() => setConfirmation(''), 1100);
-    if (action === 'review') window.unvibe.reviewSelection();
+    actionLockUntil.current = Date.now() + 1000;
+    if (action === 'review') {
+      applyPulse('contextualizing');
+      window.unvibe.reviewSelection();
+    } else if (action === 'settings') window.unvibe.openSettings();
     else window.unvibe.openCompanion();
   };
 
-  const askUnvibe = async (prompt?: string) => {
-    const question = (prompt ?? askDraft).trim();
-    if (!question || askBusy) return;
-    const prior = askMessages;
-    setAskDraft('');
-    setAskError('');
-    setAskMessages((messages) => [...messages, { role: 'user' as const, content: question }].slice(-6));
-    setAskBusy(true);
-    try {
-      const result = snapshot?.recent
-        ? await window.unvibe.studyAsk({ eventId: snapshot.recent.id, question, messages: prior })
-        : await window.unvibe.chatAsk({ messages: prior, question });
-      const response = result as { ok: boolean; answer?: string; error?: string };
-      if (!response.ok || !response.answer?.trim()) {
-        setAskError(response.error ?? 'Unvibe could not answer that. Try again.');
-        return;
-      }
-      setAskMessages((messages) => [...messages, { role: 'assistant' as const, content: response.answer!.trim() }].slice(-6));
-      refresh();
-    } catch {
-      setAskError('Unvibe is offline. Your question stayed on this Mac.');
-    } finally {
-      setAskBusy(false);
-    }
-  };
-
-  const enter = () => {
-    pointerInside.current = true;
-    playLaunchOnce();
-    const now = Date.now();
-    if (now - lastHoverTone.current > 450) {
-      lastHoverTone.current = now;
-      tone('hover');
-    }
-    openFromHover();
-  };
-
   const bottom = position.startsWith('bottom');
-  const compactStats = [
-    { value: `${snapshot?.streak ?? 0}d`, label: 'streak', tone: 'streak' },
-    { value: `${snapshot?.linesUnderstood ?? 0}`, label: 'lines', tone: 'lines' },
-    { value: `${snapshot?.understood ?? 0}`, label: 'understood', tone: 'understood' },
-  ];
-  const compactStat = compactStats[rotateStats ? statIndex : 0]!;
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape' && expanded) {
-      event.preventDefault();
-      setPanelExpanded(false);
-    }
-    if (event.key === 'Enter' && !expanded) {
-      event.preventDefault();
-      open();
-    }
-  };
+  const active = phase !== 'idle';
+  const shortcut = prettyShortcut(snapshot?.shortcut ?? 'Control+U');
+  const heat = (snapshot?.heat ?? []).slice(-14);
+  const aiLeft = snapshot?.quota?.remaining;
+  const selectLeft = snapshot?.selections?.remaining;
+  const usagePct = snapshot?.usage?.pct ?? (snapshot?.quota?.limit ? Math.round((snapshot.quota.used / snapshot.quota.limit) * 100) : undefined);
+  const value = (number: number | undefined) => number === undefined ? '–' : String(number);
 
   return (
-    <div className={`strip${attached ? ' strip--attached' : ''}${bottom ? ' strip--bottom' : ''}${expanded ? ' strip--expanded' : ''}${closing ? ' strip--closing' : ''}${note ? ' strip--note' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, textarea, select, a, [role="tab"]')) setPanelExpanded(!expandedRef.current); }} onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }} onMouseEnter={enter} onMouseLeave={scheduleClose}>
-      <div className="strip__main" title={note || 'Unvibe is ready'}>
-        {bottom ? <button className="strip__bottom-open" type="button" onClick={() => act('home')}><LogoMark size={16} stroke={2} /><span>Open app</span></button> : <><div className="strip__wing strip__wing--left">
-          <button className="chip chip--play" aria-label="Explain selected code" title="Explain selected code" onClick={() => act('review')}><CodeIcon /></button>
-          <span className="mark" aria-hidden="true"><LogoMark size={15} stroke={2.1} /></span>
+    <div
+      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''} island--phase-${phase}`}
+      style={{ '--safe-top': `${attached ? notchSafeTop() : 0}px` } as React.CSSProperties}
+      onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
+      onMouseLeave={scheduleClose}
+      onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }}
+      onContextMenu={(event) => { event.preventDefault(); window.unvibe.barContextMenu({ hasRecent: Boolean(snapshot?.recent) }); }}
+      role="region"
+      aria-label="Unvibe Island"
+    >
+      <div className="island__compact">
+        <div className="island__wing island__wing--left">
+          <span className="island__mark" aria-hidden="true"><LogoMark size={17} stroke={2.05} tone="island" /></span>
+          <button className="island__tool" type="button" aria-label={`Understand selected code, ${shortcut}`} title={`Understand selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>
         </div>
-        <span className="strip__camera-gap" aria-hidden="true" />
-        <div className="strip__wing strip__wing--right">
-          <span className="strip__compact-stat" data-tone={compactStat.tone} key={rotateStats ? statIndex : 0}><b>{compactStat.value}</b> <span>{compactStat.label}</span></span>
-          <span className="strip__privacy"><i />local scan</span>
-          <button className="chip chip--home" aria-label="Open Unvibe" title="Open Unvibe" onClick={() => act('home')}><HomeIcon /></button>
-        </div></>}
+        <span className="island__notch" aria-hidden="true" />
+        <div className="island__wing island__wing--right" aria-live="polite">
+          {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : expanded ? null : <span className="island__streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>}
+        </div>
       </div>
-      {expanded && !bottom && (
-        <div className="strip__drawer">
-          <div className="strip__drawer-head">
-            <div>
-              <span className="pixel-label">{drawerView === 'pulse' ? 'Learning pulse' : 'Ask Unvibe'}</span>
-              <strong>{drawerView === 'pulse' ? 'Your understanding, right now.' : snapshot?.recent ? `About ${snapshot.recent.title}` : 'Ask a quick question.'}</strong>
+
+      {expanded ? (
+        <div className="island__overview">
+          <header className="island__header">
+            <div><strong>Unvibe</strong><span>your personal learning layer</span></div>
+            <div className="island__header-actions">
+              <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>
+              <button className="island__settings" type="button" aria-label="Island settings" title="Island settings" onClick={() => act('settings')}><SettingsIcon /></button>
             </div>
-            {loading ? <div className="pixel-loader" aria-label="Refreshing learning stats">{Array.from({ length: 7 }, (_, index) => <i key={index} />)}</div> : <span className="strip__live"><i />local data</span>}
+          </header>
+          <div className="island__metrics" aria-label="Learning metrics">
+            <span><b>{value(snapshot?.explanations)}</b> reviews</span>
+            <span data-tone="green"><b>{value(snapshot?.understood)}</b> understood</span>
+            <span data-tone="blue"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
+            <span><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> usage</span>
           </div>
-          <div className="strip__viewbar">
-            <div className="strip__views" role="tablist" aria-label="Island views">
-              <button type="button" role="tab" aria-selected={drawerView === 'pulse'} className={drawerView === 'pulse' ? 'on' : ''} onClick={() => setDrawerView('pulse')}>Pulse</button>
-              <button type="button" role="tab" aria-selected={drawerView === 'ask'} className={drawerView === 'ask' ? 'on' : ''} onClick={() => setDrawerView('ask')}>Ask</button>
-            </div>
-            <button type="button" className="strip__collapse" aria-label="Collapse Island" title="Collapse Island" onClick={() => setPanelExpanded(false)}>⌃</button>
+          <div className="island__activity"><span>14d</span><div>{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
+          <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
+          <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
+          {note ? <p className="island__note">{note}</p> : null}
+          <div className="island__actions">
+            <button type="button" onClick={() => act('review')}>Understand change</button>
+            <button type="button" onClick={() => act('home')}>Open Unvibe</button>
           </div>
-          {drawerView === 'pulse' ? (
-            <>
-              <div className="strip__metric-grid" aria-label="Actual learning statistics">
-                <article data-tone="streak"><b>{snapshot?.streak ?? 0}</b><span>day streak</span></article>
-                <article data-tone="understood"><b>{snapshot?.understood ?? 0}</b><span>understood</span></article>
-                <article data-tone="lines"><b>{snapshot?.linesUnderstood ?? 0}</b><span>lines learned</span></article>
-                <article data-tone="revisit"><b>{snapshot?.needsReview ?? 0}</b><span>to revisit</span></article>
-              </div>
-              <div className="strip__learning-row">
-                <div className="strip__recent"><span className="pixel-label">Last learning</span><strong>{snapshot?.recent?.title ?? 'No explanations yet'}</strong><small>{snapshot?.recent?.detail ?? 'Select code and start your first explanation.'}</small></div>
-                <div className="strip__concepts"><span><b>{snapshot?.conceptsSeen ?? 0}</b> concepts</span><span><b>{snapshot?.conceptsStrong ?? 0}</b> strong</span><small>{snapshot?.usage ? `${snapshot.usage.label} · ${snapshot.usage.pct}%` : 'No workflow data yet'}</small></div>
-              </div>
-              <div className="strip__heat" aria-label="Learning activity over the last 14 days"><span>14 days</span><div>{(snapshot?.heat ?? Array(14).fill(0)).map((value, index) => <i key={index} data-level={value} />)}</div></div>
-              <div className="strip__actions">
-                <button onClick={() => act('review')}>{confirmation === 'Selection capture started' ? '✓ Capturing selection' : <>Understand code <kbd>{prettyShortcut(snapshot?.shortcut)}</kbd></>}</button>
-                <button onClick={() => act('home')}>{confirmation === 'Opening your learning space' ? '✓ Opening Unvibe' : 'Open learning history →'}</button>
-              </div>
-            </>
-          ) : (
-            <div className="island-ask">
-              <div className="island-ask__thread" aria-live="polite">
-                {askMessages.length === 0 ? (
-                  <div className="island-ask__empty">
-                    <p>{snapshot?.recent ? 'Ask about the code, the explanation, or what to check next.' : 'Ask Unvibe a question, or select code to give it exact context.'}</p>
-                    <div>
-                      {(snapshot?.recent
-                        ? ['What should I verify?', 'Explain the risky part', 'Give me a quick check']
-                        : ['How do I review AI code?', 'What should I learn next?']
-                      ).map((suggestion) => <button type="button" key={suggestion} onClick={() => void askUnvibe(suggestion)}>{suggestion}</button>)}
-                    </div>
-                  </div>
-                ) : askMessages.map((message, index) => (
-                  <div key={`${message.role}-${index}`} className={`island-ask__message island-ask__message--${message.role}`}>
-                    <span>{message.role === 'user' ? 'You' : 'Unvibe'}</span>
-                    <p>{message.content}</p>
-                  </div>
-                ))}
-                {askBusy ? <div className="island-ask__thinking" role="status"><i /><i /><i /><span>Thinking with your saved context…</span></div> : null}
-                {askError ? <p className="island-ask__error" role="alert">{askError}</p> : null}
-              </div>
-              <form className="island-ask__composer" onSubmit={(event) => { event.preventDefault(); void askUnvibe(); }}>
-                <input aria-label="Ask Unvibe" placeholder={snapshot?.recent ? 'Ask about this explanation…' : 'Ask Unvibe…'} value={askDraft} disabled={askBusy} onChange={(event) => setAskDraft(event.target.value)} autoFocus />
-                <button type="submit" aria-label="Send question" disabled={askBusy || !askDraft.trim()}>↑</button>
-              </form>
-              <div className="island-ask__hint"><span>{snapshot?.recent ? 'Latest explanation attached' : 'No code attached yet'}</span><span>Return to send</span></div>
-            </div>
-          )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

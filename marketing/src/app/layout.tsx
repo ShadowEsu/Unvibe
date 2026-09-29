@@ -5,6 +5,7 @@ import "./paper.css";
 import { Providers } from "@/components/providers/Providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -85,9 +86,11 @@ const softwareJsonLd = {
   "@type": "SoftwareApplication",
   name: "Unvibe",
   applicationCategory: "DeveloperApplication",
-  operatingSystem: "macOS",
+  operatingSystem: "macOS, Windows",
+  softwareVersion: BETA_INSTALL_VERSION,
+  downloadUrl: `${siteUrl}/beta`,
   description:
-    "A Mac desktop overlay that explains selected AI-generated code in place.",
+    "A desktop overlay for Mac and Windows that explains selected AI-generated code in place.",
   offers: {
     "@type": "Offer",
     price: "0",

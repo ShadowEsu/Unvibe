@@ -96,10 +96,32 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
     if (params.get('checkout') !== 'success' || !sessionId) return;
     checkoutRefreshRef.current = true;
     setBusy(true); setNotice('Confirming your subscription with Stripe…');
-    void requestJson<{ overview?: BillingOverview; pending?: boolean }>('/api/v1/billing/refresh', { method: 'POST', body: JSON.stringify({ sessionId }) })
-      .then((data) => { if (data.overview) { setOverview(data.overview); setNotice('Your plan is active.'); } else setNotice('Payment is still processing. Your plan will update automatically.'); })
-      .catch((error: unknown) => setNotice(error instanceof Error ? error.message : 'Plan refresh is still pending.'))
-      .finally(() => { setBusy(false); window.history.replaceState({}, '', '/plan'); });
+    let cancelled = false;
+    const confirm = async () => {
+      try {
+        // Wait for the signed webhook, not merely the Checkout success redirect.
+        for (let attempt = 0; attempt < 15 && !cancelled; attempt += 1) {
+          const response = await fetch('/api/v1/billing/refresh', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sessionId }), cache: 'no-store',
+          });
+          if (response.status !== 202) {
+            if (!response.ok) throw new Error('We could not confirm your payment yet. Refresh Plan & usage to check again.');
+            const data = await response.json() as { overview: BillingOverview };
+            if (!cancelled) { setOverview(data.overview); setNotice('Your plan is active.'); }
+            return;
+          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 2_000));
+        }
+        if (!cancelled) setNotice('Payment is still processing. Refresh Plan & usage shortly to check your plan.');
+      } catch (error) {
+        if (!cancelled) setNotice(error instanceof Error ? error.message : 'Plan confirmation is still pending.');
+      } finally {
+        if (!cancelled) { setBusy(false); window.history.replaceState({}, '', '/plan'); }
+      }
+    };
+    void confirm();
+    return () => { cancelled = true; };
   }, []);
 
   const checkout = async (nextInterval: BillingInterval = interval) => {
@@ -173,7 +195,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
   };
 
   const priceLabel = useMemo(() => ({
-    pro: interval === 'monthly' ? '$10/month' : '$90/year',
+    pro: interval === 'monthly' ? '$9/month' : '$81/year',
   }), [interval]);
 
   return (
@@ -201,10 +223,10 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
       </section>
 
       {!isLifetime && <>
-        <section className="pricing-controls-wrap" aria-label="Billing interval"><div className="pricing-controls"><button type="button" className={interval === 'monthly' ? 'active' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'active' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div><p><strong>Pro annual saves 25%:</strong> about $7.50/month, billed as $90/year. Monthly Pro is $10/month.</p></section>
+        <section className="pricing-controls-wrap" aria-label="Billing interval"><div className="pricing-controls"><button type="button" className={interval === 'monthly' ? 'active' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'active' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div><p><strong>Pro annual saves 25%:</strong> about $6.75/month, billed as $81/year. Monthly Pro is $9/month.</p></section>
         <section className="plan-grid plan-grid--two">
           <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>50 AI explanations/month</li><li>1 active project</li><li>Core explanation levels</li><li>Selected-code explanations</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
-          <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $7.50/month · billed $90/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>100 AI explanations/month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Upgrade to Pro</button></article>
+          <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>100 AI explanations/month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Upgrade to Pro</button></article>
         </section>
 
         <section className="plan-card plan-lifetime-band">

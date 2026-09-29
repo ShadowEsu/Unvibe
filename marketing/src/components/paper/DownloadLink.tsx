@@ -4,7 +4,7 @@ import Link from "next/link";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
-interface JoinWaitlistLinkProps {
+interface DownloadLinkProps {
   href: string;
   platform?: "mac" | "windows";
   size?: "hero" | "nav";
@@ -34,26 +34,26 @@ function WindowsMark() {
   );
 }
 
-export function JoinWaitlistLink({
+export function DownloadLink({
   href,
   platform,
   size = "hero",
   className,
   onClick,
-}: JoinWaitlistLinkProps) {
+}: DownloadLinkProps) {
   const tone = platform === "windows" ? "win" : "mac";
   const label =
     platform === "mac"
       ? "Download for Mac"
       : platform === "windows"
         ? "Download for Windows"
-        : "Download beta";
+        : "Download";
 
   return (
     <Link
       href={href}
       onClick={() => {
-        track("waitlist_cta_clicked", {
+        track("download_cta_clicked", {
           platform: platform ?? "generic",
           surface: size,
         });
@@ -73,11 +73,11 @@ export function JoinWaitlistLink({
   );
 }
 
-export function JoinWaitlistRow({ href }: { href: string }) {
+export function DownloadRow({ href }: { href: string }) {
   return (
     <div className="paper-join-row">
-      <JoinWaitlistLink href={href} platform="mac" />
-      <JoinWaitlistLink href={href} platform="windows" />
+      <DownloadLink href={href} platform="mac" />
+      <DownloadLink href={href} platform="windows" />
     </div>
   );
 }

@@ -1349,11 +1349,12 @@
   --hero-type-muted: rgb(247 244 238 / 0.7);
   --hero-glass: rgb(18 12 32 / 0.32);
   --hero-line: rgb(247 244 238 / 0.22);
-  --hero-veil: linear-gradient(180deg, rgb(12 16 28 / 0.14) 0%, rgb(12 16 28 / 0.1) 38%, rgb(18 12 32 / 0.62) 100%);
+  --hero-veil: linear-gradient(180deg, rgb(12 16 28 / 0.22) 0%, rgb(12 16 28 / 0.28) 42%, rgb(18 12 32 / 0.62) 100%);
   --brand: #6f45d2;
   --brand-deep: #3d2080;
   --brand-soft: #e8dff8;
   --brand-mist: rgb(111 69 210 / 0.12);
+  --brand-wash: rgb(111 69 210 / 0.1);
   --glow-copy: 0 0 28px rgb(111 69 210 / 0.2);
   --glow-hero: 0 0 46px rgb(167 139 250 / 0.42);
   --glow-bloom: 0 0 48px rgb(111 69 210 / 0.16);
@@ -1425,6 +1426,7 @@
   --font-display: var(--font-display-face), "Newsreader", Georgia, serif;
   --font-sans: var(--font-sans-face), Inter, system-ui, sans-serif;
   --font-mono: var(--font-mono-face), "JetBrains Mono", ui-monospace, monospace;
+  --font-clean: var(--font-sans);
 
   --dur-micro: 150ms;
   --dur-standard: 320ms;

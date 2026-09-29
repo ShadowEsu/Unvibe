@@ -11,6 +11,32 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "28 SEP 2026",
+    category: "COMPANY",
+    title: "100%. Unvibe is out",
+    summary: "The build meter hit 100 percent. Unvibe is live for Mac and Windows, with 800+ followers across Instagram, TikTok, X, and LinkedIn.",
+    figure: "100%",
+    pinned: true,
+  },
+  {
+    date: "28 SEP 2026",
+    category: "DISTRIBUTION",
+    title: "Download replaces the waitlist",
+    summary: "The nav, hero, pricing, and closing call to action now lead to the Mac and Windows download. The homepage waitlist form is gone. A new Resources page covers depths, shortcuts, and how your code is handled.",
+  },
+  {
+    date: "19 SEP 2026",
+    category: "DISTRIBUTION",
+    title: "Release day countdown removed",
+    summary: "The 7 SEP 2026 private beta countdown is off the homepage hero. No new public date is listed.",
+  },
+  {
+    date: "19 SEP 2026",
+    category: "DISTRIBUTION",
+    title: "Homepage waitlist at the bottom",
+    summary: "Join waitlist in the nav and footer now opens the homepage form. Install platform tabs and the Mac download link sit centered under the command.",
+  },
+  {
     date: "26 AUG 2026",
     category: "DISTRIBUTION",
     title: "Smol Startup #1 daily",

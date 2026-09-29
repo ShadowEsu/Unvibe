@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "posthog": {
+      "url": "https://mcp.posthog.com/mcp"
+    },
+    "composio": {
+      "url": "https://connect.composio.dev/mcp"
+    }
+  }
+}

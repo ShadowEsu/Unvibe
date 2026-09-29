@@ -59,6 +59,7 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 - D2. ✅ Local learning store + in-widget comprehension + accounts (login / sign-out /
   delete-account) + sync + real data in Home & Progress + logo ← current
 - D3. Repo indexing + git-diff reviews + project scope from the desktop agent
+- D4. Change Brief (real git scopes), Why this exists (blame/log facts), local knowledge objects + change-driven freshness, opt-in voice, Teach it back
 
 See [docs/validation.md](docs/validation.md) for what is verified vs. what still needs real
 credentials or permissions.

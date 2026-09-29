@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import type {
   Account,
   DeviceCode,
@@ -70,7 +70,7 @@ export class MemoryStore implements Store {
 
   async createDeviceCode(baseUrl: string): Promise<DeviceCode> {
     const deviceCode = randomUUID();
-    const userCode = randomUUID().slice(0, 8).toUpperCase();
+    const userCode = randomBytes(8).toString('hex').toUpperCase();
     this.data.devices.set(deviceCode, { userCode, createdAt: this.now() });
     return { deviceCode, userCode, verificationUri: `${baseUrl}/activate`, interval: 2 };
   }

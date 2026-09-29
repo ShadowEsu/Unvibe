@@ -108,7 +108,7 @@ export class OpenRouterProvider implements Provider {
   }
 
   private headers(): Record<string, string> {
-    const referer = process.env.PUBLIC_APP_URL || process.env.WEB_BASE_URL || 'https://unvibe.site';
+    const referer = process.env.APP_URL || process.env.PUBLIC_APP_URL || process.env.WEB_BASE_URL || 'https://unvibe.site';
     return {
       'content-type': 'application/json',
       authorization: `Bearer ${this.apiKey}`,

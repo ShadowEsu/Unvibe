@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCopyToast } from "@/components/paper/CopyToast";
+import { DownloadRow } from "@/components/paper/DownloadLink";
 import { track } from "@/lib/analytics";
 
 type DepthLevel = "new" | "beginner" | "intermediate" | "advanced" | "expert";
@@ -20,7 +21,7 @@ const DEPTH_DATA: Record<
 > = {
   new: {
     name: "New",
-    badge: "Level 1 · Conceptual",
+    badge: "Depth 1 · Concepts",
     description: "Everyday analogies and clear mental models without overwhelming jargon.",
     targetAudience: "Junior devs, product managers, or engineers encountering a new language.",
     sampleExplanation:
@@ -29,7 +30,7 @@ const DEPTH_DATA: Record<
   },
   beginner: {
     name: "Beginner",
-    badge: "Level 2 · Structural",
+    badge: "Depth 2 · Structure",
     description: "Line-by-line breakdown explaining what each construct and function call accomplishes.",
     targetAudience: "Developers learning modern async TypeScript patterns.",
     sampleExplanation:
@@ -38,7 +39,7 @@ const DEPTH_DATA: Record<
   },
   intermediate: {
     name: "Intermediate",
-    badge: "Level 3 · Architectural",
+    badge: "Depth 3 · Design",
     description: "Design patterns, stale-while-revalidate caching, and error boundary handling.",
     targetAudience: "Full-stack engineers reviewing PRs and verifying AI agent code.",
     sampleExplanation:
@@ -47,7 +48,7 @@ const DEPTH_DATA: Record<
   },
   advanced: {
     name: "Advanced",
-    badge: "Level 4 · Systemic",
+    badge: "Depth 4 · Systems",
     description: "Memory footprint, closure scope, event loop timing, and concurrency edge cases.",
     targetAudience: "Senior staff engineers reviewing critical path infrastructure.",
     sampleExplanation:
@@ -56,7 +57,7 @@ const DEPTH_DATA: Record<
   },
   expert: {
     name: "Expert",
-    badge: "Level 5 · Deep Internals",
+    badge: "Depth 5 · Internals",
     description: "V8 engine optimizations, allocation profiles, and runtime memory layout.",
     targetAudience: "Systems engineers, runtime specialists, and compiler enthusiasts.",
     sampleExplanation:
@@ -66,12 +67,9 @@ const DEPTH_DATA: Record<
 };
 
 const SHORTCUTS = [
-  { mac: "Cmd + Shift + U", win: "Ctrl + Shift + U", action: "Explain selected code in floating Island", context: "Any editor (Cursor, VS Code, Zed, JetBrains)" },
-  { mac: "Cmd + Shift + L", win: "Ctrl + Shift + L", action: "Cycle explanation depth (1 → 5)", context: "When explanation card is active" },
-  { mac: "Cmd + Shift + T", win: "Ctrl + Shift + T", action: "Test Me (Trigger comprehension quiz)", context: "After reviewing any code explanation" },
-  { mac: "Cmd + Shift + S", win: "Ctrl + Shift + S", action: "Save explanation to personal Study dashboard", context: "Saves code + markdown note + citations" },
-  { mac: "Cmd + Shift + K", win: "Ctrl + Shift + K", action: "Open Companion App (History, Concepts, Quizzes)", context: "Global desktop shortcut" },
-  { mac: "Escape", win: "Escape", action: "Dismiss floating Island / Return to typing", context: "Zero distraction dismissal" },
+  { mac: "\u2318 U", win: "Ctrl U", action: "Explain the selected code", context: "Cursor and VS Code, through the Unvibe editor bridge" },
+  { mac: "Control U", win: "Ctrl U", action: "Explain the selected code", context: "Any other app. You can change this shortcut in Settings" },
+  { mac: "Escape", win: "Escape", action: "Collapse the explanation card", context: "While a card is focused" },
 ];
 
 export function ResourcesHub() {
@@ -80,8 +78,13 @@ export function ResourcesHub() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const { showCopyToast } = useCopyToast();
 
-  const handleCopy = (text: string, key: string, label: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, key: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      showCopyToast("Copy failed. Select the value and copy it yourself.");
+      return;
+    }
     setCopiedKey(key);
     showCopyToast(`Copied ${label}`);
     setTimeout(() => setCopiedKey(null), 2000);
@@ -94,12 +97,12 @@ export function ResourcesHub() {
       {/* Category Filter Bar */}
       <div className="resources-filters" role="tablist" aria-label="Resource Categories">
         {[
-          { id: "all", label: "All Resources" },
+          { id: "all", label: "All" },
           { id: "quickstart", label: "Quickstart" },
-          { id: "depths", label: "5 Comprehension Depths" },
-          { id: "privacy", label: "Security & Privacy" },
-          { id: "shortcuts", label: "Shortcuts & HUD" },
-          { id: "brand", label: "Brand Kit" },
+          { id: "depths", label: "Depths" },
+          { id: "privacy", label: "Privacy" },
+          { id: "shortcuts", label: "Shortcuts" },
+          { id: "brand", label: "Brand" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -121,10 +124,10 @@ export function ResourcesHub() {
       {(activeCategory === "all" || activeCategory === "quickstart") && (
         <section className="resources-section" id="quickstart">
           <div className="resources-section__head">
-            <span className="paper-meta">Onboarding Guide</span>
-            <h2>Getting started with Unvibe in under 60 seconds</h2>
+            <span className="paper-meta">Quickstart</span>
+            <h2>Get started in about a minute</h2>
             <p className="paper-lead">
-              Unvibe runs as a featherweight native desktop overlay. It pairs seamlessly with Cursor, VS Code, or any code editor without invading your git repo.
+              Unvibe is a desktop overlay that sits beside Cursor, VS Code, or any app where you can select code. It reads only what you select and never touches your git repo.
             </p>
           </div>
 
@@ -133,10 +136,10 @@ export function ResourcesHub() {
               <div className="resources-card__step">01</div>
               <h3>Download & Launch</h3>
               <p>
-                Grab the DMG for Apple Silicon macOS or the portable EXE for Windows x64. Run the app — it quietly docks to your menu bar or tray.
+                Grab the .dmg for Apple silicon Macs or the portable .exe for Windows x64. Open the app and it waits in your menu bar or tray.
               </p>
               <div className="resources-card__code">
-                <code># Zero npm dependencies, native binaries</code>
+                <code>Mac: Apple silicon .dmg &middot; Windows: x64 portable .exe</code>
               </div>
             </div>
 
@@ -147,7 +150,7 @@ export function ResourcesHub() {
                 Open your favorite editor. Highlight any complex function, unfamiliar AI generation, or gnarly git diff.
               </p>
               <div className="resources-card__code">
-                <code>Cmd + Shift + U (Mac) / Ctrl + Shift + U (Win)</code>
+                <code>&#8984;U on Mac &middot; Ctrl+U on Windows</code>
               </div>
             </div>
 
@@ -155,10 +158,10 @@ export function ResourcesHub() {
               <div className="resources-card__step">03</div>
               <h3>Understand & Retain</h3>
               <p>
-                The floating Island displays a clean, syntax-highlighted breakdown. Click <strong>Test Me</strong> to lock the concept into memory.
+                The floating Island displays a clean, syntax-highlighted breakdown. Click <strong>Test me</strong> to check what stuck.
               </p>
               <div className="resources-card__code">
-                <code>Saved to your offline Study log</code>
+                <code>Saved on your device in Study</code>
               </div>
             </div>
           </div>
@@ -169,10 +172,10 @@ export function ResourcesHub() {
       {(activeCategory === "all" || activeCategory === "depths") && (
         <section className="resources-section" id="depths">
           <div className="resources-section__head">
-            <span className="paper-meta">Pedagogy & Intelligence</span>
-            <h2>The 5 Depths of Code Comprehension</h2>
+            <span className="paper-meta">Explanation depths</span>
+            <h2>Five explanation depths</h2>
             <p className="paper-lead">
-              One size never fits all. Whether you need a 30-second intuitive analogy or line-by-line V8 garbage collection analysis, Unvibe dynamically adjusts to your expertise.
+              The same code, explained five ways. Pick the depth that matches what you already know. The sample below is written by hand to show the range. It is not live model output.
             </p>
           </div>
 
@@ -203,7 +206,7 @@ export function ResourcesHub() {
               <div className="resources-depth-header">
                 <div>
                   <span className="resources-depth-badge">{currentDepth.badge}</span>
-                  <h3 className="resources-depth-title">{currentDepth.name} Depth Explanation</h3>
+                  <h3 className="resources-depth-title">{currentDepth.name} depth</h3>
                 </div>
                 <p className="resources-depth-audience">
                   <strong>Best for:</strong> {currentDepth.targetAudience}
@@ -247,7 +250,7 @@ export function ResourcesHub() {
               <div className="resources-explanation-bubble">
                 <div className="resources-explanation-meta">
                   <span className="resources-explanation-indicator" />
-                  <strong>Unvibe Output ({currentDepth.name} Level):</strong>
+                  <strong>Example, {currentDepth.name} depth:</strong>
                 </div>
                 <div className="resources-explanation-text">
                   {currentDepth.sampleExplanation.split("\n\n").map((para, i) => (
@@ -255,7 +258,7 @@ export function ResourcesHub() {
                   ))}
                 </div>
                 <div className="resources-explanation-takeaway">
-                  <strong>Key Learning:</strong> {currentDepth.keyTakeaway}
+                  <strong>Takeaway:</strong> {currentDepth.keyTakeaway}
                 </div>
               </div>
             </div>
@@ -267,10 +270,10 @@ export function ResourcesHub() {
       {(activeCategory === "all" || activeCategory === "privacy") && (
         <section className="resources-section" id="privacy">
           <div className="resources-section__head">
-            <span className="paper-meta">Zero-Knowledge Guarantee</span>
-            <h2>Security & Privacy Architecture</h2>
+            <span className="paper-meta">What leaves your machine</span>
+            <h2>How your code is handled</h2>
             <p className="paper-lead">
-              AI code review should never leak proprietary company secrets or customer credentials. Unvibe filters all sensitive tokens on your machine before a single byte leaves your hardware.
+              Unvibe is not a local-only tool. Your selected code is sent to a cloud model to write the explanation. A secret scanner runs on your machine first, and anything that looks like a key or token is blocked or held for your confirmation.
             </p>
           </div>
 
@@ -286,17 +289,17 @@ export function ResourcesHub() {
 
               <div className="resources-arch-node resources-arch-node--shield">
                 <div className="resources-arch-badge">Step 2 · On-Device</div>
-                <h4>Local Secret Filter</h4>
-                <p>Regex sweeps for AWS, OpenAI, Stripe, JWT & .env secrets</p>
-                <div className="resources-arch-tag">100% On-Device</div>
+                <h4>Local secret scan</h4>
+                <p>Pattern checks for cloud keys, API tokens, private keys, and risky assignments</p>
+                <div className="resources-arch-tag">Runs on-device</div>
               </div>
 
               <div className="resources-arch-arrow">→</div>
 
               <div className="resources-arch-node">
-                <div className="resources-arch-badge">Step 3 · Secure API</div>
-                <h4>Sanitized Stream</h4>
-                <p>HTTPS SSE streaming via Anthropic Codex (Zero Data Training)</p>
+                <div className="resources-arch-badge">Step 3 · Cloud model</div>
+                <h4>Filtered snippet</h4>
+                <p>Sent over HTTPS to the model provider, and the answer streams back</p>
               </div>
 
               <div className="resources-arch-arrow">→</div>
@@ -310,16 +313,16 @@ export function ResourcesHub() {
 
             <div className="resources-arch-specs">
               <div className="resources-spec-item">
-                <strong>Zero Repository Ingestion</strong>
-                <p>Unvibe never clones, reads, or indexes your filesystem or repository. Only the explicitly selected snippet is processed.</p>
+                <strong>No repository upload</strong>
+                <p>Unvibe does not clone or index your repository. It sends the code you select plus limited context such as file name and language.</p>
               </div>
               <div className="resources-spec-item">
-                <strong>Zero AI Model Training</strong>
-                <p>Under our Anthropic commercial API agreement, inputs and outputs are never retained or utilized for model training.</p>
+                <strong>No training set built from your code</strong>
+                <p>Unvibe does not build a training set from your code. Provider retention follows the provider’s API terms, described on the <Link href="/privacy" className="paper-text-link">privacy page</Link>.</p>
               </div>
               <div className="resources-spec-item">
-                <strong>Client-Side Storage</strong>
-                <p>Your notes, flashcards, and history remain encrypted on your local drive in an offline SQLite database.</p>
+                <strong>Local history</strong>
+                <p>Saved explanations, notes, and quiz history live on your device. Your sign-in token is sealed with the OS keychain. Optional sync stores learning metadata, not your code.</p>
               </div>
             </div>
           </div>
@@ -330,10 +333,10 @@ export function ResourcesHub() {
       {(activeCategory === "all" || activeCategory === "shortcuts") && (
         <section className="resources-section" id="shortcuts">
           <div className="resources-section__head">
-            <span className="paper-meta">Tactile Workflow</span>
-            <h2>Keyboard Shortcuts & Floating Island HUD</h2>
+            <span className="paper-meta">Shortcuts</span>
+            <h2>Keyboard shortcuts</h2>
             <p className="paper-lead">
-              Designed for keyboard-first developers who live in flow state. Never touch your mouse to understand or quiz AI-generated code.
+              One shortcut starts a review. Everything after that works from the keyboard too.
             </p>
           </div>
 
@@ -356,29 +359,29 @@ export function ResourcesHub() {
         </section>
       )}
 
-      {/* SECTION 5: Brand & Media Kit */}
+      {/* SECTION 5: Brand & Brand */}
       {(activeCategory === "all" || activeCategory === "brand") && (
         <section className="resources-section" id="brand">
           <div className="resources-section__head">
-            <span className="paper-meta">Media Kit</span>
-            <h2>Brand Assets, Palette & Design Tokens</h2>
+            <span className="paper-meta">Brand</span>
+            <h2>Brand colors and type</h2>
             <p className="paper-lead">
-              Writing about Unvibe, presenting at a conference, or building an integration? Grab our official vectors, typography standards, and color tokens.
+              Writing about Unvibe? Copy the colors below and use the fonts as listed.
             </p>
           </div>
 
           <div className="resources-grid resources-grid--2">
             {/* Color Palette */}
             <div className="resources-card paper-glass">
-              <h3>Brand Color Tokens</h3>
-              <p>Harmonious warm-editorial palette inspired by San Francisco light and crisp paper.</p>
+              <h3>Colors</h3>
+              <p>The colors used on this site and in the app.</p>
               <div className="resources-swatches">
                 {[
-                  { name: "Deep Ink", hex: "#0D0F12" },
-                  { name: "Coral Bridge", hex: "#E07A5F" },
-                  { name: "Pacific Steel", hex: "#3D5A80" },
-                  { name: "Paper Bone", hex: "#F4F1DE" },
-                  { name: "Mist Veil", hex: "#F8F9FA" },
+                  { name: "Ink", hex: "#12110F" },
+                  { name: "Paper", hex: "#F3EEF8" },
+                  { name: "Hero white", hex: "#F7F4EE" },
+                  { name: "Violet", hex: "#6F45D2" },
+                  { name: "Deep violet", hex: "#3D2080" },
                 ].map((color) => (
                   <button
                     key={color.hex}
@@ -397,19 +400,19 @@ export function ResourcesHub() {
 
             {/* Typography & Brand Rules */}
             <div className="resources-card paper-glass">
-              <h3>Typography & Voice</h3>
+              <h3>Type</h3>
               <div className="resources-typography-guide">
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Editorial Serif</span>
-                  <p className="resources-serif-demo">Newsreader Italic — Calm, authoritative, editorial.</p>
+                  <p className="resources-serif-demo">Newsreader Italic. Calm and editorial.</p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Monospace Code</span>
-                  <p className="resources-mono-demo">JetBrains Mono — 13px tabular figures, high legibility.</p>
+                  <p className="resources-mono-demo">JetBrains Mono for code and shortcuts.</p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">System UI</span>
-                  <p className="resources-sans-demo">Inter / SF Pro — Crisp interface chrome and micro-labels.</p>
+                  <p className="resources-sans-demo">Inter for interface text and small labels.</p>
                 </div>
               </div>
             </div>
@@ -420,16 +423,14 @@ export function ResourcesHub() {
       {/* Bottom Download CTA Bar */}
       <section className="resources-cta-banner paper-glass">
         <div className="resources-cta-copy">
-          <span className="paper-meta">Private Beta</span>
+          <span className="paper-meta">Free during the beta</span>
           <h3>Ready to understand the code you ship?</h3>
-          <p>Download Unvibe for macOS (Apple Silicon) or Windows (x64) and start your first review.</p>
+          <p>Download Unvibe for Mac (Apple silicon) or Windows (x64) and run your first review.</p>
         </div>
         <div className="resources-cta-actions">
-          <Link href="/#install" className="paper-hero__btn-primary">
-            Download Unvibe Beta
-          </Link>
+          <DownloadRow href="/beta" />
           <Link href="/pricing" className="paper-text-link">
-            View Pro & Teams Pricing →
+            See pricing
           </Link>
         </div>
       </section>

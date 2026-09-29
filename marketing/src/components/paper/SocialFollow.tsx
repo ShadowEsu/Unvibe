@@ -177,7 +177,7 @@ export function GrowthFollowSum() {
           <span>followers</span>
         </div>
       </div>
-      <p className="paper-caption">Current total across those four.</p>
+      <p className="paper-caption">Followers across Instagram, TikTok, X, and LinkedIn.</p>
     </div>
   );
 }

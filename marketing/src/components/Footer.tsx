@@ -8,17 +8,18 @@ import { Logo } from "@/components/Logo";
 
 const product = [
   ["Product", "/#product"],
-  ["Resources & Guides", "/resources"],
+  ["Resources", "/resources"],
   ["Pricing", "/pricing"],
-  ["Download beta", "/#install"],
+  ["Download", "/beta"],
   ["Change Log", "/releases"],
-  ["Growth", "/build"],
 ];
 
 const company = [
+  ["Growth", "/build"],
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
+  ["Contact", "mailto:support@unvibe.site"],
 ];
 
 export function Footer() {
