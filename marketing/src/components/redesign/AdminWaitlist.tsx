@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { founderHeaders, saveFounderToken } from "@/lib/founderToken";
 import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { SiteStatsSummary } from "@/lib/siteStatsStore";
@@ -19,6 +20,7 @@ export function AdminWaitlist() {
   const [retrying, setRetrying] = useState("");
   const [deleting, setDeleting] = useState("");
   const [retryError, setRetryError] = useState("");
+  const [tokenDraft, setTokenDraft] = useState("");
   const [actionError, setActionError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
@@ -32,9 +34,9 @@ export function AdminWaitlist() {
     else setState("loading");
     try {
       const [waitlistResponse, statsResponse, founderResponse] = await Promise.all([
-        fetch("/api/waitlist/admin", { cache: "no-store" }),
+        fetch("/api/waitlist/admin", { cache: "no-store", headers: founderHeaders() }),
         fetch("/api/stats", { cache: "no-store" }),
-        fetch("/api/founder/waitlist", { cache: "no-store" }),
+        fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() }),
       ]);
 
       if (waitlistResponse.ok) {
@@ -45,7 +47,7 @@ export function AdminWaitlist() {
         setEntries(data.entries);
         setUpdatedAt(data.generatedAt);
       } else if (founderResponse.ok) {
-        // Admin Bearer token is often unset in the browser; founder list still works.
+        // Same admin token, older founder shape.
         const roster = (await founderResponse.json()) as {
           entries?: Array<{ name: string; email: string; joinedAt: string; tool: string }>;
         };
@@ -119,7 +121,7 @@ export function AdminWaitlist() {
     try {
       const response = await fetch("/api/waitlist/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: founderHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("retry failed");
@@ -144,7 +146,7 @@ export function AdminWaitlist() {
     try {
       const response = await fetch("/api/founder/waitlist", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: founderHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("delete failed");
@@ -172,8 +174,25 @@ export function AdminWaitlist() {
       ) : state === "error" ? (
         <section className="admin-login">
           <h1>Could not load the waitlist.</h1>
-          <p className="admin-error" role="alert">Check storage on this deployment, then try again.</p>
-          <button type="button" onClick={() => void load()}>Retry</button>
+          <p className="admin-error" role="alert">Enter the admin token (WAITLIST_ADMIN_TOKEN). If it is already correct, check storage on this deployment.</p>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveFounderToken(tokenDraft.trim());
+              setTokenDraft("");
+              void load();
+            }}
+          >
+            <input
+              type="password"
+              autoComplete="off"
+              aria-label="Admin token"
+              placeholder="Admin token"
+              value={tokenDraft}
+              onChange={(event) => setTokenDraft(event.target.value)}
+            />
+            <button type="submit">Unlock and retry</button>
+          </form>
         </section>
       ) : (
         <section className="admin-content">

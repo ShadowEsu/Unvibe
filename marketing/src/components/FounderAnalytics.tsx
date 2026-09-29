@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
+import { founderHeaders, readFounderToken, saveFounderToken } from "@/lib/founderToken";
+import type { DownloadStats } from "@/lib/downloadStats";
+import type { AppUserStats } from "@/lib/appUserStats";
 
 const PRIOR_PEOPLE = 300;
 
@@ -46,6 +49,7 @@ interface AnalyticsPayload {
   betaDownloads: number;
   installs?: InstallCounts;
   funnel?: GrowthFunnel;
+  downloads?: DownloadStats;
 }
 
 interface WaitlistPerson {
@@ -72,6 +76,21 @@ function joinedStamp(value: string): string {
   }).format(date);
 }
 
+function appUserNote(users: AppUserStats | null, locked: boolean): string {
+  if (locked) return "Unlock with the admin token";
+  if (!users) return "Loading";
+  switch (users.source) {
+    case "blob":
+      return `Installs that used AI · ${users.newToday} new today`;
+    case "not_configured":
+      return "Set UNVIBE_API_URL and UNVIBE_ADMIN_STATS_TOKEN on the site";
+    case "unavailable":
+      return "Backend has no Blob storage configured";
+    default:
+      return "Backend did not answer";
+  }
+}
+
 export function FounderAnalytics() {
   const [data, setData] = useState<AnalyticsPayload | null>(null);
   const [people, setPeople] = useState<WaitlistPerson[]>([]);
@@ -82,13 +101,20 @@ export function FounderAnalytics() {
   const [deleting, setDeleting] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [clearingProbes, setClearingProbes] = useState(false);
+  const [appUsers, setAppUsers] = useState<AppUserStats | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [tokenDraft, setTokenDraft] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const [statsResponse, waitlistResponse] = await Promise.all([
+      const [statsResponse, waitlistResponse, metricsResponse] = await Promise.all([
         fetch("/api/stats?include=waitlist", { cache: "no-store" }),
-        fetch("/api/founder/waitlist", { cache: "no-store" }),
+        fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() }),
+        fetch("/api/founder/metrics", { cache: "no-store", headers: founderHeaders() }),
       ]);
+      setLocked(waitlistResponse.status === 401 || metricsResponse.status === 401);
+      const metrics = await metricsResponse.json().catch(() => null) as { ok?: true; appUsers?: AppUserStats } | null;
+      setAppUsers(metricsResponse.ok && metrics?.appUsers ? metrics.appUsers : null);
       const payload = await statsResponse.json().catch(() => null) as AnalyticsPayload | { error?: string } | null;
       if (!statsResponse.ok || !payload || !("ok" in payload) || payload.ok !== true) {
         throw new Error(payload && "error" in payload ? payload.error || "Analytics are unavailable." : "Analytics are unavailable.");
@@ -98,7 +124,10 @@ export function FounderAnalytics() {
       setUpdatedAt(new Date());
 
       const roster = await waitlistResponse.json().catch(() => null) as { ok?: true; entries?: WaitlistPerson[]; error?: string } | null;
-      if (!waitlistResponse.ok || !roster?.ok || !roster.entries) {
+      if (waitlistResponse.status === 401) {
+        setPeople([]);
+        setPeopleError("Enter the admin token above to see names and emails.");
+      } else if (!waitlistResponse.ok || !roster?.ok || !roster.entries) {
         setPeople([]);
         setPeopleError(roster && "error" in roster ? roster.error || "Waitlist names could not load." : "Waitlist names could not load.");
       } else {
@@ -136,7 +165,7 @@ export function FounderAnalytics() {
     try {
       const response = await fetch("/api/founder/waitlist", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: founderHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("delete failed");
@@ -169,7 +198,7 @@ export function FounderAnalytics() {
       for (const person of probes) {
         const response = await fetch("/api/founder/waitlist", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: founderHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ email: person.email }),
         });
         if (!response.ok) throw new Error("delete failed");
@@ -212,8 +241,59 @@ export function FounderAnalytics() {
         </div>
       ) : null}
 
+      {locked ? (
+        <form
+          className="founder-analytics__error"
+          onSubmit={(event) => {
+            event.preventDefault();
+            saveFounderToken(tokenDraft.trim());
+            setTokenDraft("");
+            void load();
+          }}
+        >
+          <strong>Private numbers are locked.</strong>
+          <span>{readFounderToken() ? "That token was not accepted." : "Enter WAITLIST_ADMIN_TOKEN to see app users and the waitlist roster."}</span>
+          <input
+            type="password"
+            autoComplete="off"
+            aria-label="Admin token"
+            placeholder="Admin token"
+            value={tokenDraft}
+            onChange={(event) => setTokenDraft(event.target.value)}
+          />
+          <button type="submit" disabled={!tokenDraft.trim()}>Unlock</button>
+        </form>
+      ) : null}
+
       {data ? (
         <>
+          <div className="founder-analytics__grid founder-analytics__grid--tight">
+            <article>
+              <span>Downloads, all time</span>
+              <strong>{data.downloads?.source === "github" ? data.downloads.total.toLocaleString() : "—"}</strong>
+              <small>
+                {data.downloads?.source === "github"
+                  ? `${data.downloads.mac.toLocaleString()} Mac · ${data.downloads.windows.toLocaleString()} Windows · from GitHub`
+                  : "GitHub release counts are unavailable right now"}
+              </small>
+            </article>
+            <article>
+              <span>Current version downloads</span>
+              <strong>{((data.downloads?.currentMac ?? 0) + (data.downloads?.currentWindows ?? 0)).toLocaleString()}</strong>
+              <small>{data.downloads?.currentTag ?? ""} · {data.downloads?.currentMac ?? 0} Mac · {data.downloads?.currentWindows ?? 0} Windows</small>
+            </article>
+            <article>
+              <span>App users</span>
+              <strong>{appUsers && (appUsers.source === "blob") ? appUsers.installs.toLocaleString() : "—"}</strong>
+              <small>{appUserNote(appUsers, locked)}</small>
+            </article>
+            <article>
+              <span>Active this week</span>
+              <strong>{appUsers?.source === "blob" ? appUsers.active7d.toLocaleString() : "—"}</strong>
+              <small>{appUsers?.source === "blob" ? `${appUsers.active30d} in 30 days · ${appUsers.new7d} new this week` : "Installs that asked for an explanation"}</small>
+            </article>
+          </div>
+
           <div className="founder-analytics__grid founder-analytics__grid--tight">
             <article>
               <span>Waitlist joined</span>

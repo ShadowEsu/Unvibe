@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { deleteWaitlistEntry, listWaitlistEntries } from "@/lib/waitlistStore";
 import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
+import { isWaitlistAdminAuthorized } from "@/lib/adminAuth";
+
+const PRIVATE_HEADERS = { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" };
+
+function unauthorized() {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: PRIVATE_HEADERS });
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/** Names and emails are private: requires the WAITLIST_ADMIN_TOKEN bearer. */
+export async function GET(request: Request) {
+  if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) return unauthorized();
   try {
     const entries = (await listWaitlistEntries(10_000)).filter(
       (entry) => !isProbeWaitlistEmail(entry.email, `${entry.firstName} ${entry.lastName}`),
@@ -34,6 +43,7 @@ export async function GET() {
 
 /** Remove a signup (test emails, duplicates). Same private founder surface as GET. */
 export async function DELETE(request: Request) {
+  if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) return unauthorized();
   const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
   if (typeof body?.email !== "string" || !body.email.trim()) {
     return NextResponse.json(

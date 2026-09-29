@@ -4371,6 +4371,8 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   gap: 0.55rem;
   width: 100%;
   max-width: 22rem;
+  justify-self: center;
+  margin-inline: auto;
   padding: 0.88rem 1.6rem;
   border: 0;
   border-radius: var(--radius-pill);

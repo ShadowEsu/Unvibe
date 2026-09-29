@@ -47,6 +47,8 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 | `MIXPANEL_HOST` | Optional Mixpanel API host (defaults to `https://api.mixpanel.com`). |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Optional PostHog project key. Named events only. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Optional PostHog host (defaults to US cloud). |
+| `UNVIBE_API_URL` | Product backend origin, used by `/stats` for desktop app user counts. |
+| `UNVIBE_ADMIN_STATS_TOKEN` | Server-only secret, 24+ characters, matching the backend's `UNVIBE_ADMIN_STATS_TOKEN`. |
 
 Without Vercel Blob configured, waitlist submissions are written to `.data/waitlist.json`
 (gitignored) so the form works end to end in development. Production fails closed when durable
