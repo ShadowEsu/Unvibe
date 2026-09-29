@@ -42,8 +42,8 @@ export const TEAMS_MAX_SEATS = 20;
 /** Published totals in cents. UI copy must stay in lockstep with these numbers. */
 const UNIT_CENTS: Record<PlanId, { monthly: number; annual: number }> = {
   free: { monthly: 0, annual: 0 },
-  /** Pro $8/mo · $72/yr (25% off). Stripe price IDs must match. */
-  pro: { monthly: 800, annual: 7_200 },
+  /** Pro $9/mo · $81/yr (25% off). Stripe price IDs must match. */
+  pro: { monthly: 900, annual: 8_100 },
   /** Teams $8/seat/mo · $72/seat/yr (25% off). */
   teams: { monthly: 800, annual: 7_200 },
 };

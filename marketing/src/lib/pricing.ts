@@ -3,8 +3,8 @@
  * web/src/billing/plans.ts and the Stripe price IDs checkout uses.
  */
 export const PRICING = {
-  proMonthly: 8,
-  proAnnual: 72,
+  proMonthly: 9,
+  proAnnual: 81,
   proLifetime: 80,
   teamsSeatMonthly: 8,
   teamsSeatAnnual: 72,

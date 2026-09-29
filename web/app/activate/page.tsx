@@ -397,9 +397,16 @@ export default function ActivatePage() {
         )}
       </div>
 
-      <p className="activate-foot">
-        Private by design · Secrets stay on your computer · Free during beta
-      </p>
+      <div className="activate-foot">
+        <p style={{ margin: 0 }}>Private by design · Secrets stay on your computer · Free during beta</p>
+        <nav className="activate-links" aria-label="Policies and help">
+          <a href="https://unvibe.site/privacy" target="_blank" rel="noreferrer">Privacy</a>
+          <a href="https://unvibe.site/terms" target="_blank" rel="noreferrer">Terms</a>
+          <a href="https://unvibe.site/data-controls" target="_blank" rel="noreferrer">Data controls</a>
+          <a href="https://unvibe.site/beta#help" target="_blank" rel="noreferrer">Help</a>
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>
+        </nav>
+      </div>
     </div>
   );
 }
