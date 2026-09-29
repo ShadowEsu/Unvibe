@@ -21,8 +21,8 @@ export const milestones: Milestone[] = [
   {
     date: "28 SEP 2026",
     category: "DISTRIBUTION",
-    title: "Download replaces the waitlist",
-    summary: "The nav, hero, pricing, and closing call to action now lead to the Mac and Windows download. The homepage waitlist form is gone. A new Resources page covers depths, shortcuts, and how your code is handled.",
+    title: "Download on every page",
+    summary: "The nav, hero, pricing, and closing call to action now download Unvibe for Mac and Windows. A new Resources page covers depths, shortcuts, and how your code is handled.",
   },
   {
     date: "19 SEP 2026",
