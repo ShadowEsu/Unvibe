@@ -64,6 +64,46 @@ export default function BetaDownloadsPage() {
         </Reveal>
       </section>
 
+      <section className="paper-section" id="help">
+        <Reveal className="paper-wrap paper-center">
+          <p className="paper-meta">Troubleshooting</p>
+          <h2 className="mt-3">Stuck? Quick fixes.</h2>
+          <div className="paper-faq mt-8">
+            <details>
+              <summary>The app says “Waiting for Google sign-in…”</summary>
+              <p>
+                Unvibe opened a sign-in page in your browser. Sign in with Google there, then click
+                {" "}<strong>Connect this device</strong>. The app finishes a few seconds after that click, not after
+                the Google step alone. If no browser opened, go to{" "}
+                <a className="paper-text-link" href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
+                sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
+              </p>
+            </details>
+            <details>
+              <summary>Windows shows “Windows protected your PC”</summary>
+              <p>
+                The beta is not code-signed yet, so SmartScreen warns about it. Click <strong>More info</strong>, then
+                {" "}<strong>Run anyway</strong>. Only do this for the file downloaded from unvibe.site or our GitHub releases.
+              </p>
+            </details>
+            <details>
+              <summary>Ctrl+U or ⌘U does nothing</summary>
+              <p>
+                In Cursor and VS Code, install the Unvibe editor bridge from the app’s setup screen. In other apps, the
+                shortcut is Control+U. On Mac, turn on Unvibe in System Settings → Privacy &amp; Security → Accessibility.
+                If another app already uses the shortcut, change it in Unvibe’s Settings.
+              </p>
+            </details>
+            <details>
+              <summary>You can use it without signing in</summary>
+              <p>
+                Sign-in only syncs your history across devices. Skip it on the first screen and the free explanations still work.
+              </p>
+            </details>
+          </div>
+        </Reveal>
+      </section>
+
       <section className="paper-section">
         <Reveal className="paper-wrap paper-center">
           <div className="beta-page__trust">
