@@ -11,7 +11,7 @@ export default function TermsPage() {
   return (
     <LegalLayout
       title="Terms of use"
-      updated="July 2026"
+      updated="September 2026"
       intro="Plain-language terms for using Unvibe during its beta. Using the product means you agree to these. This is a summary and may be superseded by a full agreement as the product matures."
     >
       <LegalSection heading="The service">
@@ -61,6 +61,24 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection heading="Payments and cancellation">
+        <p>
+          Free use needs no card. Pro is billed through Stripe, monthly or yearly, and
+          renews until you cancel. Pro Lifetime is a one-time payment. You can cancel a
+          subscription at any time from the Plan page in the app. Paid access continues
+          until the end of the period you already paid for, then your account returns to
+          the Free plan. Prices are shown in USD before checkout.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="Acceptable use">
+        <p>
+          Do not use Unvibe to break the law, to process code you have no right to share,
+          to probe or overload our service, or to resell access. Do not try to extract
+          other users&apos; data or bypass usage limits. We may suspend accounts that do.
+        </p>
+      </LegalSection>
+
       <LegalSection heading="Your content and termination">
         <p>
           You retain ownership of your code. You may stop using the service and{" "}
@@ -68,6 +86,13 @@ export default function TermsPage() {
           accounts that violate these terms. To the maximum extent permitted by law, we
           are not liable for indirect or consequential damages or for decisions made in
           reliance on AI output.
+        </p>
+      </LegalSection>
+      <LegalSection heading="Changes and contact">
+        <p>
+          We may update these terms as the product grows and will change the date above
+          when we do. Questions go to{" "}
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>.
         </p>
       </LegalSection>
     </LegalLayout>

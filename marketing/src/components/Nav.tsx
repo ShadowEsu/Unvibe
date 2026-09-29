@@ -49,6 +49,14 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
+          <button
+            type="button"
+            className="nav-kbd"
+            aria-label="Search the site"
+            onClick={() => window.dispatchEvent(new Event("unvibe:palette"))}
+          >
+            <kbd>{"⌘"}K</kbd>
+          </button>
           <DownloadLink href="/beta" size="nav" />
         </div>
         <button

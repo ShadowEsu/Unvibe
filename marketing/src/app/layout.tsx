@@ -5,6 +5,9 @@ import "./paper.css";
 import "./polish.css";
 import { Providers } from "@/components/providers/Providers";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
+import { SelectionExplain } from "@/components/paper/SelectionExplain";
+import { SitePalette } from "@/components/paper/SitePalette";
+import { MobileDownloadBar } from "@/components/paper/MobileDownloadBar";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -148,6 +151,9 @@ export default function RootLayout({
           <Nav />
           <main id="main">{children}</main>
           <Footer />
+          <SelectionExplain />
+          <SitePalette />
+          <MobileDownloadBar />
         </Providers>
       </body>
     </html>

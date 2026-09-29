@@ -26,6 +26,9 @@ export const ANALYTICS_EVENTS = [
   "survey_opened",
   "feedback_opened",
   "story_beat_viewed",
+  "selection_explain_tried",
+  "palette_opened",
+  "playground_used",
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

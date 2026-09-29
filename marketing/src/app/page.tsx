@@ -11,6 +11,8 @@ import { ChangelogList } from "@/components/paper/ChangelogList";
 import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { DownloadCta } from "@/components/paper/DownloadCta";
 import { HomeBenefits } from "@/components/paper/HomeBenefits";
+import { StatsStrip } from "@/components/paper/StatsStrip";
+import { DepthPlayground } from "@/components/paper/DepthPlayground";
 import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
 import { changelogPreview } from "@/data/milestones";
@@ -23,10 +25,14 @@ const homeFaq = faqItems.filter((item) =>
   ["what-is-it", "generator", "vs-cursor", "editors", "sent", "beta", "windows", "teams"].includes(item.id),
 );
 
+export const revalidate = 300;
+
 export default function HomePage() {
   return (
     <div>
       <PhotoHero />
+
+      <StatsStrip />
 
       <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
@@ -61,6 +67,17 @@ export default function HomePage() {
             <DecoderBoard />
           </div>
         </div>
+      </section>
+
+      <section className="paper-section" id="try">
+        <Reveal className="paper-wrap paper-center">
+          <p className="paper-meta">Try it here</p>
+          <h2 className="mt-3">Same code. Five depths.</h2>
+          <p className="paper-lead mt-3">Pick a snippet and slide the depth. This is how Unvibe meets you where you are.</p>
+          <div className="mt-10">
+            <DepthPlayground />
+          </div>
+        </Reveal>
       </section>
 
       <StoryStage />
