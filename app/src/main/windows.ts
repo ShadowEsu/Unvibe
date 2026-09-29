@@ -1,6 +1,7 @@
 import { BrowserWindow, screen, shell } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize } from './settings';
+import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
@@ -24,7 +25,7 @@ const secureWebPrefs = () => ({
 /** Renderers are local files; deny any attempt to open new windows or navigate away. */
 function lockNavigation(win: BrowserWindow): void {
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/.test(url) || /^mailto:/i.test(url)) void shell.openExternal(url);
+    if (isSafeExternalUrl(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e) => e.preventDefault());

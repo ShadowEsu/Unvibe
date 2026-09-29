@@ -2,7 +2,7 @@
  * Review pipeline (main process — the only place with network access).
  * capture → build context → local secret filter → (consent) → stream → record → sync.
  */
-import type { BrowserWindow } from 'electron';
+import { net, type BrowserWindow } from 'electron';
 import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter';
 import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
@@ -10,8 +10,13 @@ import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
 import { aiAuthHeaders, BACKEND, fetchQuestion } from './backend';
 import { store } from './store';
+
+/** Longest wait for the first words of an explanation. */
+const FIRST_TOKEN_MS = 30_000;
+/** Longest silence allowed once words are streaming. */
+const STREAM_IDLE_MS = 30_000;
 import { flush } from './sync';
-import { resolveAppUsage } from './usage';
+import { cachedAppUsage, refreshAppUsage } from './usage';
 import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
@@ -97,7 +102,7 @@ async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise
   }
   const code = session.code;
   if (!code) throw new Error('No code captured.');
-  const usage = await resolveAppUsage();
+  const usage = await cachedAppUsage();
   const built = await buildSelectionPayload({
     code,
     level: opts.level,
@@ -281,7 +286,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   session.islandStreaming = false;
   pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 
-  const usageEarly = await resolveAppUsage();
+  const usageEarly = await cachedAppUsage();
   if (opts.level === 'expert' && !isProPlan(usageEarly.plan)) {
     send(win, session, {
       type: 'error',
@@ -316,12 +321,18 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   const abort = new AbortController();
   session.abort = abort;
   let timedOut = false;
-  const timeout = setTimeout(() => { timedOut = true; abort.abort(); }, 45_000);
+  // Wait up to FIRST_TOKEN_MS for the first words, then only fail if the stream goes quiet.
+  // A long answer that keeps streaming is never cut off.
+  let watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, FIRST_TOKEN_MS);
+  const stillStreaming = () => {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, STREAM_IDLE_MS);
+  };
 
   send(win, session, { type: 'status', message: 'thinking' });
   try {
     const token = store().token();
-    const usage = await resolveAppUsage();
+    const usage = await cachedAppUsage();
     send(win, session, {
       type: 'usage',
       used: usage.used,
@@ -362,6 +373,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           system: buildLocalSystemPrompt(payload),
           user: buildLocalUserPrompt(payload),
           onToken: (text) => {
+            stillStreaming();
             appendExplanation(session, text);
             send(win, session, { type: 'token', text });
           },
@@ -369,7 +381,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         });
         send(win, session, { type: 'done', model, mock: false });
         if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
-        void resolveAppUsage().then((next) => {
+        void refreshAppUsage().then((next) => {
           send(win, session, {
             type: 'usage',
             used: next.used,
@@ -438,13 +450,14 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      stillStreaming();
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
         if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
         send(win, session, ev);
         if (ev.type === 'done') {
           completed = true;
           if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
-          void resolveAppUsage().then((next) => {
+          void refreshAppUsage().then((next) => {
             send(win, session, {
               type: 'usage',
               used: next.used,
@@ -461,16 +474,18 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     if (!completed) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
   } catch (err) {
     if (abort.signal.aborted) {
-      if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });
+      if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.' });
       return;
     }
     send(win, session, {
       type: 'error',
-      message: `Could not reach the Unvibe service at ${BACKEND}. Is it running?`,
+      message: net.isOnline()
+        ? 'Unvibe could not reach its explanation service. Try again in a moment.'
+        : 'You appear to be offline. Reconnect to the internet and try again.',
     });
     void err;
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(watchdog);
     if (session.abort === abort) session.abort = null;
   }
 }

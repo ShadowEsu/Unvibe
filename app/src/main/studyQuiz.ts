@@ -12,7 +12,7 @@ import { flush } from './sync';
 import { readAiKey } from './aiKey';
 import { settings } from './settings';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, streamLocalAi } from './localAi';
-import { resolveAppUsage } from './usage';
+import { cachedAppUsage, refreshAppUsage } from './usage';
 
 interface PendingQuiz {
   eventId: string;
@@ -49,7 +49,7 @@ async function collectReviewText(payload: ReviewRequestPayload): Promise<{ text:
   const token = store().token();
   const prefs = settings().all();
   const localKey = readAiKey();
-  const usage = await resolveAppUsage();
+  const usage = await cachedAppUsage();
   const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
 
   if (wantLocal && localKey) {
@@ -294,7 +294,7 @@ export async function askChat(input: {
   if (!question) return { ok: false, error: 'Type a message first.' };
   if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };
 
-  const usage = await resolveAppUsage();
+  const usage = await cachedAppUsage();
   const localKey = readAiKey();
   if (usage.remaining <= 0 && !localKey) {
     return { ok: false, error: 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.', remaining: 0 };
@@ -357,7 +357,7 @@ export async function askChat(input: {
       explanation: answer.slice(0, 8_000),
     });
     void flush();
-    const next = await resolveAppUsage();
+    const next = await refreshAppUsage();
     return { ok: true, answer, remaining: next.remaining };
   } catch (err) {
     return {

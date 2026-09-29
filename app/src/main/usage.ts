@@ -95,3 +95,41 @@ export async function resolveAppUsage(): Promise<AppUsage> {
   }
   return localExplanationUsage();
 }
+
+/** How long a usage snapshot stays fresh before the next explanation re-checks the server. */
+const USAGE_TTL_MS = 60_000;
+let usageSnapshot: { at: number; account: string; value: AppUsage } | null = null;
+let usageInflight: Promise<AppUsage> | null = null;
+
+/** Fetch usage now and remember it; concurrent callers share one request. */
+export function refreshAppUsage(): Promise<AppUsage> {
+  const account = store().token() ?? '';
+  usageInflight ??= resolveAppUsage()
+    .then((value) => {
+      usageSnapshot = { at: Date.now(), account, value };
+      return value;
+    })
+    .finally(() => {
+      usageInflight = null;
+    });
+  return usageInflight;
+}
+
+/**
+ * Usage for the pre-flight check before an explanation. Serves a recent snapshot so the
+ * first token is not waiting on an extra network round trip. The server still enforces
+ * limits, and an exhausted or stale snapshot is always re-checked.
+ */
+export function cachedAppUsage(now = Date.now()): Promise<AppUsage> {
+  const account = store().token() ?? '';
+  const snap = usageSnapshot;
+  if (snap && snap.account === account && now - snap.at < USAGE_TTL_MS && snap.value.remaining > 0) {
+    return Promise.resolve(snap.value);
+  }
+  return refreshAppUsage();
+}
+
+/** Drop the snapshot after sign-in, sign-out, or a plan change. */
+export function invalidateAppUsage(): void {
+  usageSnapshot = null;
+}

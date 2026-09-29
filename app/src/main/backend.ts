@@ -53,6 +53,17 @@ export function aiAuthHeaders(sessionToken?: string | null): Record<string, stri
   };
 }
 
+/**
+ * Open the HTTPS connection before the first explanation so it does not pay for DNS and the
+ * TLS handshake. Health is a public liveness route; nothing about the user is sent.
+ */
+export function warmBackend(): void {
+  if (!/^https:/i.test(BACKEND)) return;
+  void request(`${BACKEND}/api/v1/health`, { method: 'GET' })
+    .then((res) => res.body?.cancel())
+    .catch(() => undefined);
+}
+
 /** Network access stays in the main process. Bound requests so an unavailable backend never
  * leaves the widget or account controls waiting indefinitely. */
 async function request(url: string, init: RequestInit): Promise<Response> {

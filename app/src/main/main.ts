@@ -14,6 +14,7 @@ import {
   globalShortcut,
   ipcMain,
   nativeImage,
+  powerMonitor,
   screen,
   shell,
   systemPreferences,
@@ -66,10 +67,12 @@ import {
   startBillingPortal,
   resolveBackendUrl,
   type Account as BackendAccount,
+  warmBackend,
 } from './backend';
 import { setBar, notify, pulseBar } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
-import { resolveAppUsage } from './usage';
+import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
+import { installHardening } from './hardening';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
 import {
   costOverview,
@@ -265,6 +268,7 @@ onSyncStatus((status) => {
 });
 
 async function persistAccount(account: BackendAccount): Promise<void> {
+  invalidateAppUsage();
   try {
     store().setAccount(account.userId, account.email, account.token);
   } catch (error) {
@@ -325,7 +329,8 @@ function asset(...parts: string[]): string {
 async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
-  const usage = await resolveAppUsage();
+  // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
+  const usage = await cachedAppUsage();
   if (usage.remaining <= 0) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);
@@ -405,6 +410,9 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 }
 
 app.setName('Unvibe');
+installHardening();
+// Windows only shows toasts for apps with an explicit AppUserModelID matching the installer.
+if (process.platform === 'win32') app.setAppUserModelId('com.unvibe.app');
 
 // One process owns the global fallback shortcut and the `unvibe://` protocol. Without this,
 // two copies (for example, one in Applications and one opened from a mounted DMG) can race for
@@ -444,6 +452,13 @@ if (process.defaultApp) {
 }
 
 app.whenReady().then(() => {
+  // Open the backend connection and fetch usage early so the first explanation starts faster.
+  setTimeout(() => {
+    warmBackend();
+    void refreshAppUsage().catch(() => undefined);
+  }, 1200);
+  powerMonitor.on('resume', warmBackend);
+  powerMonitor.on('unlock-screen', warmBackend);
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
@@ -535,7 +550,7 @@ app.whenReady().then(() => {
     let quota = { used: 0, limit: 30, remaining: 30 };
     let selections = { used: 0, limit: 30, remaining: 30 };
     try {
-      const appUsage = await resolveAppUsage();
+      const appUsage = await cachedAppUsage();
       quota = { used: appUsage.used, limit: appUsage.limit, remaining: appUsage.remaining };
       selections = store().betaSelectedCodeUsage();
     } catch { /* keep local defaults */ }
@@ -648,7 +663,7 @@ app.whenReady().then(() => {
     if (!text) return { ok: false as const, error: 'That file looks empty.' };
     const root = await resolveRepoRoot(path.dirname(filePath));
     const rel = root ? path.relative(root, filePath) : path.basename(filePath);
-    const usage = await resolveAppUsage();
+    const usage = await cachedAppUsage();
     try {
       const built = await buildSelectionPayload({
         code: text,
@@ -1003,7 +1018,7 @@ app.whenReady().then(() => {
 
     const openFromCode = async (code: string, filePath?: string, repoRoot?: string | null) => {
       if (code.length > MAX_PICK_BYTES) return { ok: false as const, error: 'That lesson is too large to reopen here.' };
-      const usage = await resolveAppUsage();
+      const usage = await cachedAppUsage();
       const built = await buildSelectionPayload({
         code,
         level: session.level,
@@ -1160,7 +1175,7 @@ app.whenReady().then(() => {
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load plan.' }; }
   });
   ipcMain.handle('usage:get', async () => {
-    try { return { ok: true, data: { ...await resolveAppUsage(), selections: store().betaSelectedCodeUsage() } }; }
+    try { return { ok: true, data: { ...await refreshAppUsage(), selections: store().betaSelectedCodeUsage() } }; }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load usage.' }; }
   });
   ipcMain.handle('gift:status', async () => {
@@ -1310,6 +1325,7 @@ app.whenReady().then(() => {
     }
     try {
       store().signOut();
+      invalidateAppUsage();
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Local sign-out could not be saved.', warning };
     }
