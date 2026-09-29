@@ -30,7 +30,7 @@ export default function BuildPage() {
             </div>
             <strong>75%</strong>
           </div>
-          <JoinWaitlistRow href="/#waitlist" />
+          <JoinWaitlistRow href="/#install" />
         </div>
       </header>
 

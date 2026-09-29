@@ -2,67 +2,32 @@
 
 import { useEffect, useState } from "react";
 
-const RELEASE_AT = new Date("2026-09-07T00:00:00+08:00").getTime();
-
-type Remaining = {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-};
-
-const EMPTY: Remaining = { days: 0, hours: 0, minutes: 0, seconds: 0 };
-
+/**
+ * Replaces the expired September 7 countdown with a live status badge
+ * that shows the current beta is active and available.
+ */
 export function ReleaseCountdown({ variant = "page" }: { variant?: "page" | "hero" }) {
-  const [remaining, setRemaining] = useState<Remaining | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const update = () => setRemaining(getRemaining(RELEASE_AT - Date.now()));
-    update();
-    const interval = window.setInterval(update, 1_000);
-    return () => window.clearInterval(interval);
+    setReady(true);
   }, []);
-
-  const values = remaining ?? EMPTY;
-  const released = remaining !== null && Object.values(remaining).every((value) => value === 0);
 
   return (
     <div
-      className={variant === "hero" ? "release-countdown release-countdown--hero" : "release-countdown"}
-      role="timer"
-      aria-label={released ? "Unvibe private beta release day" : countdownLabel(values)}
+      className={variant === "hero" ? "release-status release-status--hero" : "release-status"}
+      role="status"
+      aria-label="Unvibe private beta is now available for Mac and Windows"
     >
-      <div className="release-countdown__heading">
-        <span>{released ? "RELEASE DAY" : "PRIVATE BETA RELEASE"}</span>
-        <time dateTime="2026-09-07T00:00:00+08:00">SEPTEMBER 7, 2026</time>
+      <div className="release-status__badge">
+        <span className="release-status__dot" aria-hidden="true" />
+        <span className="release-status__label">Private Beta Live</span>
       </div>
-      <div className="release-countdown__grid" aria-hidden="true">
-        {([
-          [values.days, "DAYS"],
-          [values.hours, "HOURS"],
-          [values.minutes, "MINUTES"],
-          [values.seconds, "SECONDS"],
-        ] as const).map(([value, label]) => (
-          <div key={label}>
-            <strong>{remaining ? String(value).padStart(2, "0") : "--"}</strong>
-            <small>{label}</small>
-          </div>
-        ))}
-      </div>
+      {ready && (
+        <p className="release-status__platforms">
+          Available now for <strong>Mac</strong> (Apple Silicon) and <strong>Windows</strong> (x64)
+        </p>
+      )}
     </div>
   );
-}
-
-function getRemaining(milliseconds: number): Remaining {
-  const secondsTotal = Math.max(0, Math.floor(milliseconds / 1_000));
-  return {
-    days: Math.floor(secondsTotal / 86_400),
-    hours: Math.floor((secondsTotal % 86_400) / 3_600),
-    minutes: Math.floor((secondsTotal % 3_600) / 60),
-    seconds: secondsTotal % 60,
-  };
-}
-
-function countdownLabel(remaining: Remaining): string {
-  return `Unvibe private beta releases in ${remaining.days} days, ${remaining.hours} hours, ${remaining.minutes} minutes, and ${remaining.seconds} seconds`;
 }

@@ -24,5 +24,8 @@ web/env.local
 *.log
 .DS_Store
 
+# Local customer-support triage artifacts
+support/
+
 # Editor
 .vscode-test/

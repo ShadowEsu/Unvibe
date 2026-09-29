@@ -34,6 +34,7 @@ export function BetaInstall({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [os, setOs] = useState<InstallOs>("mac");
+  const [termOpen, setTermOpen] = useState(false);
   const { showCopyToast } = useCopyToast();
   const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
   const prompt = os === "windows" ? "PS>" : "$";
@@ -42,7 +43,6 @@ export function BetaInstall({
       ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
       : "Paste in Terminal on an Apple silicon Mac (M1–M4).";
   const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
-  const directLabel = os === "windows" ? "Download Windows .exe instead" : "Download Mac .dmg instead";
 
   useEffect(() => {
     const detected = detectInstallOs();
@@ -79,11 +79,8 @@ export function BetaInstall({
     <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
       <p className="paper-beta__title">{title}</p>
       <p className="paper-beta__version">{BETA_INSTALL_VERSION}</p>
-      <p className="paper-beta__blurb">
-        {os === "windows"
-          ? "Windows x64 portable. 30 AI explanations, then it stops. No API key."
-          : "Apple silicon. 30 AI explanations, then it stops. No API key."}
-      </p>
+
+      {/* OS selector tabs */}
       <div className="paper-beta__os" role="tablist" aria-label="Install platform">
         <button
           type="button"
@@ -92,6 +89,7 @@ export function BetaInstall({
           className={os === "mac" ? "is-on" : undefined}
           onClick={() => selectOs("mac")}
         >
+          <span className="paper-beta__os-icon"><AppleIcon /></span>
           <span className="paper-beta__os-name">Mac</span>
           <span className="paper-beta__os-meta">Apple silicon</span>
         </button>
@@ -102,53 +100,113 @@ export function BetaInstall({
           className={os === "windows" ? "is-on" : undefined}
           onClick={() => selectOs("windows")}
         >
+          <span className="paper-beta__os-icon"><WindowsIcon /></span>
           <span className="paper-beta__os-name">Windows</span>
           <span className="paper-beta__os-meta">x64 PowerShell</span>
         </button>
       </div>
-      <p className="paper-beta__shell" role="note">{shellHint}</p>
-      <div className="paper-beta__term">
-        <pre
-          role="button"
-          tabIndex={0}
-          aria-label={`Copy ${os === "windows" ? "Windows" : "Mac"} install command`}
-          onClick={() => void copyCommand()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              void copyCommand();
-            }
-          }}
-        >
-          <code>
-            <span className="paper-beta__cmd">
-              <span className="paper-beta__prompt">{prompt}</span>
-              {command}
-            </span>
-          </code>
-        </pre>
-        <button
-          type="button"
-          className={copied ? "is-copied" : undefined}
-          onClick={() => void copyCommand()}
-          aria-label={copied ? "Copied" : "Copy command"}
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-        </button>
-      </div>
+
+      {/* Primary download button */}
       <a
-        className="paper-beta__direct"
+        className="paper-beta__download-btn"
         href={directHref}
         rel="noreferrer"
-        onClick={() => track("release_download_clicked", { os, surface: tone })}
+        onClick={() => {
+          track("release_download_clicked", { os, surface: tone });
+        }}
       >
-        {directLabel}
+        <DownloadIcon />
+        <span>{os === "windows" ? "Download for Windows (.exe)" : "Download for Mac (.dmg)"}</span>
       </a>
-      {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
+
+      {/* Spec pills */}
+      <div className="paper-beta__specs" aria-label="System requirements">
+        <span>{BETA_INSTALL_VERSION}</span>
+        <span aria-hidden="true">·</span>
+        <span>{os === "windows" ? "Windows 10+ x64" : "Apple Silicon (M1–M4)"}</span>
+        <span aria-hidden="true">·</span>
+        <span>{os === "windows" ? "Portable .exe" : "~82 MB .dmg"}</span>
+        <span aria-hidden="true">·</span>
+        <span>No API key</span>
+      </div>
+
+      {/* Collapsible terminal install */}
+      <button
+        type="button"
+        className="paper-beta__term-toggle"
+        onClick={() => setTermOpen(!termOpen)}
+        aria-expanded={termOpen}
+      >
+        <TerminalIcon />
+        <span>Or install via Terminal</span>
+        <ChevronIcon open={termOpen} />
+      </button>
+
+      {termOpen && (
+        <div className="paper-beta__term-drawer">
+          <p className="paper-beta__shell" role="note">{shellHint}</p>
+          <div className="paper-beta__term">
+            <pre
+              role="button"
+              tabIndex={0}
+              aria-label={`Copy ${os === "windows" ? "Windows" : "Mac"} install command`}
+              onClick={() => void copyCommand()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  void copyCommand();
+                }
+              }}
+            >
+              <code>
+                <span className="paper-beta__cmd">
+                  <span className="paper-beta__prompt">{prompt}</span>
+                  {command}
+                </span>
+              </code>
+            </pre>
+            <button
+              type="button"
+              className={copied ? "is-copied" : undefined}
+              onClick={() => void copyCommand()}
+              aria-label={copied ? "Copied" : "Copy command"}
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+          </div>
+          {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
+        </div>
+      )}
+
+      {/* Value proposition line */}
+      <p className="paper-beta__blurb">
+        {os === "windows"
+          ? "30 free AI explanations included. No credit card required."
+          : "30 free AI explanations included. No credit card required."}
+      </p>
+
+      {/* 3-step quickstart */}
+      <div className="paper-beta__quickstart">
+        <div className="paper-beta__step">
+          <span className="paper-beta__step-num">1</span>
+          <span className="paper-beta__step-text">Download &amp; open</span>
+        </div>
+        <span className="paper-beta__step-arrow" aria-hidden="true">→</span>
+        <div className="paper-beta__step">
+          <span className="paper-beta__step-num">2</span>
+          <span className="paper-beta__step-text">Select code in your editor</span>
+        </div>
+        <span className="paper-beta__step-arrow" aria-hidden="true">→</span>
+        <div className="paper-beta__step">
+          <span className="paper-beta__step-num">3</span>
+          <span className="paper-beta__step-text">Press {os === "windows" ? "Ctrl+U" : "⌘U"}</span>
+        </div>
+      </div>
+
       {showFeedback ? (
         <>
           <p className="paper-beta__offer">
-            Install, open Unvibe, then select code and press {os === "windows" ? "Ctrl+U" : "⌘U"}. After 30 explanations, the feedback form unlocks 1 week of Pro.
+            After 30 explanations, fill the feedback form to unlock 1 week of Pro.
           </p>
           <a
             className="paper-beta__survey"
@@ -172,7 +230,7 @@ export function BetaInstall({
 export function BetaFeedback({ source }: { source: string }) {
   return (
     <div className="paper-beta-feedback">
-      <p className="paper-beta__offer">After you try the beta, finish this form for 1 week of Pro. Waitlist gifts still add on.</p>
+      <p className="paper-beta__offer">After you try the beta, submit your feedback for 1 free week of Pro.</p>
       <a
         className="paper-beta__survey"
         href={BETA_FEEDBACK_URL}
@@ -187,6 +245,62 @@ export function BetaFeedback({ source }: { source: string }) {
         {BETA_FEEDBACK_URL}
       </a>
     </div>
+  );
+}
+
+/* ── Inline SVG icons ── */
+
+function AppleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M16.35 12.55c-.03-2.28 1.86-3.37 1.94-3.42-1.06-1.55-2.7-1.76-3.28-1.78-1.4-.14-2.73.82-3.44.82-.71 0-1.81-.8-2.98-.78-1.53.02-2.94.89-3.73 2.26-1.59 2.76-.41 6.85 1.14 9.09.76 1.1 1.66 2.33 2.84 2.29 1.14-.05 1.57-.74 2.95-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.27 1.23-2.5 1.25-2.56-.03-.01-2.39-.92-2.43-3.67zM14.4 6.48c.63-.76 1.05-1.82.93-2.88-1.08.04-2.38.72-3.15 1.62-.69.8-1.29 2.08-1.13 3.11 1.2.09 2.43-.61 3.35-1.85z"
+      />
+    </svg>
+  );
+}
+
+function WindowsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M3 5.4 11.2 4.2v7.4H3V5.4zm8.8-.4 9.2-1.3v9.1h-9.2V5zM3 13.2h8.2V20L3 18.8v-5.6zm8.8 0h9.2V21l-9.2-1.3v-6.5z"
+      />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 2v8m0 0L5 7.5m3 2.5 3-2.5M3 12h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TerminalIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M4.5 7l2 1.5-2 1.5M8 10.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      style={{ transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 200ms ease" }}
+    >
+      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

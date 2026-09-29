@@ -8,8 +8,9 @@ import { Logo } from "@/components/Logo";
 
 const product = [
   ["Product", "/#product"],
+  ["Resources & Guides", "/resources"],
   ["Pricing", "/pricing"],
-  ["Join waitlist", "/waitlist"],
+  ["Download beta", "/#install"],
   ["Change Log", "/releases"],
   ["Growth", "/build"],
 ];

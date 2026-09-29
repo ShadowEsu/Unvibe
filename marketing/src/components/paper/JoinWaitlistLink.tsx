@@ -44,10 +44,10 @@ export function JoinWaitlistLink({
   const tone = platform === "windows" ? "win" : "mac";
   const label =
     platform === "mac"
-      ? "Waitlist for Mac"
+      ? "Download for Mac"
       : platform === "windows"
-        ? "Waitlist for Windows"
-        : "Join waitlist";
+        ? "Download for Windows"
+        : "Download beta";
 
   return (
     <Link

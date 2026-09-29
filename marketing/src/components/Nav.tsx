@@ -8,10 +8,12 @@ import { JoinWaitlistLink } from "@/components/paper/JoinWaitlistLink";
 
 const links = [
   { label: "Product", href: "/#product" },
+  { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "/pricing" },
   { label: "Change Log", href: "/releases" },
   { label: "Growth", href: "/build" },
   { label: "Investors", href: "/investors" },
+  { label: "Download", href: "/beta" },
 ];
 
 export function Nav() {
@@ -50,7 +52,7 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
-          <JoinWaitlistLink href="/waitlist" size="nav" />
+          <JoinWaitlistLink href="/#install" size="nav" />
         </div>
         <button
           type="button"
@@ -76,7 +78,7 @@ export function Nav() {
                 {link.label}
               </Link>
             ))}
-            <JoinWaitlistLink href="/waitlist" size="nav" className="mt-4 w-full" onClick={() => setOpen(false)} />
+            <JoinWaitlistLink href="/#install" size="nav" className="mt-4 w-full" onClick={() => setOpen(false)} />
           </div>
         </div>
       )}
