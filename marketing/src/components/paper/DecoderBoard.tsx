@@ -12,19 +12,10 @@ const ROWS = [
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-/** Deterministic first frame so server and client render the same text. */
-function noiseRow(row: string, rowIndex: number): string {
-  return row
-    .split("")
-    .map((char, charIndex) =>
-      char === " " ? " " : GLYPHS[(charIndex * 7 + rowIndex * 13 + char.charCodeAt(0)) % GLYPHS.length] ?? char,
-    )
-    .join("");
-}
-
 export function DecoderBoard() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [rows, setRows] = useState(() => ROWS.map((row, index) => noiseRow(row, index)));
+  // Real words by default, so a paused scroll never shows gibberish. The scramble is a flourish on entry.
+  const [rows, setRows] = useState(ROWS);
   const started = useRef(false);
 
   useEffect(() => {
@@ -43,7 +34,7 @@ export function DecoderBoard() {
         scramble();
         observer.disconnect();
       },
-      { threshold: 0.62, rootMargin: "0px 0px -12% 0px" },
+      { threshold: 0.3 },
     );
 
     observer.observe(node);

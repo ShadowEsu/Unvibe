@@ -26,6 +26,9 @@ export function PhotoHero() {
         <DownloadRow />
         <p className="paper-hero__fine">Free · No API key · No card</p>
       </div>
+      <a href="#product" className="paper-hero__scroll" aria-label="Scroll to the demo">
+        <span />
+      </a>
     </section>
   );
 }

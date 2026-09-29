@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
-import { ShortcutKeys } from "@/components/paper/ShortcutKeys";
+import { LiveDemo } from "@/components/paper/LiveDemo";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
@@ -55,10 +55,10 @@ export default function HomePage() {
             <h2 className="mt-3">One shortcut. The rest stays with you.</h2>
           </Reveal>
           <div className="mt-10">
-            <DecoderBoard />
+            <LiveDemo />
           </div>
-          <div className="mt-6">
-            <ShortcutKeys />
+          <div className="mt-12">
+            <DecoderBoard />
           </div>
         </div>
       </section>

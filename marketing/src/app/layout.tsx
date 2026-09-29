@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import "./paper.css";
+import "./polish.css";
 import { Providers } from "@/components/providers/Providers";
+import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -139,6 +141,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          <AmbientEffects />
           <a href="#main" className="skip-link">
             Skip to content
           </a>
