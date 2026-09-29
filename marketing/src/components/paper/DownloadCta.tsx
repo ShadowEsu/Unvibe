@@ -12,7 +12,7 @@ export function DownloadCta() {
           Mac (Apple silicon) and Windows. No API key and no credit card.
           Select code, press {"⌘"}U, and keep what you ship.
         </p>
-        <DownloadRow href="/beta" />
+        <DownloadRow />
         <p className="paper-caption mt-4">
           {BETA_INSTALL_VERSION} · <a href="/beta" className="paper-text-link">Install steps and requirements</a>
         </p>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 
 interface DownloadLinkProps {
   href: string;
@@ -73,11 +74,15 @@ export function DownloadLink({
   );
 }
 
-export function DownloadRow({ href }: { href: string }) {
+/**
+ * Mac and Windows buttons with their logos. With no href they download the
+ * installer directly from the current GitHub release.
+ */
+export function DownloadRow({ href }: { href?: string }) {
   return (
     <div className="paper-join-row">
-      <DownloadLink href={href} platform="mac" />
-      <DownloadLink href={href} platform="windows" />
+      <DownloadLink href={href ?? BETA_MAC_DIRECT_DOWNLOAD} platform="mac" />
+      <DownloadLink href={href ?? BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" />
     </div>
   );
 }
