@@ -410,6 +410,8 @@ function widgetOf(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): Brows
 }
 
 app.setName('Unvibe');
+// Development and QA only: run against a throwaway profile instead of the real learning data.
+if (process.env.UNVIBE_USER_DATA) app.setPath('userData', process.env.UNVIBE_USER_DATA);
 installHardening();
 // Windows only shows toasts for apps with an explicit AppUserModelID matching the installer.
 if (process.platform === 'win32') app.setAppUserModelId('com.unvibe.app');

@@ -14,6 +14,9 @@ import { Briefings } from './briefings';
 import type { ChangeBrief } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
 import '../shared/tokens.css';
+import { AccountMenu } from './accountMenu';
+import { FloatingBuddy } from './floatingBuddy';
+import { Buddy } from '../shared/buddy';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -96,6 +99,17 @@ interface AppUsageLine {
 }
 
 type PlanId = 'free' | 'pro' | 'teams' | 'local' | 'trial' | 'full';
+
+function planLabel(plan: string | undefined): string {
+  switch (plan) {
+    case 'pro': return 'Pro';
+    case 'teams': return 'Teams';
+    case 'trial': return 'Free beta';
+    case 'full': return 'Full access';
+    case 'local': return 'Local';
+    default: return 'Free';
+  }
+}
 
 function asPlanId(value: string | undefined): PlanId {
   if (value === 'pro' || value === 'teams' || value === 'full' || value === 'trial' || value === 'local') return value;
@@ -269,9 +283,6 @@ const NAV_SPACES: Array<{ id: PageId; icon: string }> = [
 
 const NAV = [...NAV_PINNED, ...NAV_SPACES];
 
-const FOOT: Array<{ id: string; icon: string; toast: string }> = [
-  { id: 'Settings', icon: 'M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M10 2.8l1 2.2 2.4-.6 1.2 2-1.7 1.8.8 2.3-2.2 1-.1 2.5H9.6l-.1-2.5-2.2-1 .8-2.3-1.7-1.8 1.2-2 2.4.6z', toast: '' },
-];
 
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
@@ -397,7 +408,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
   const [profileEmail, setProfileEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [celebrating, setCelebrating] = useState(false);
   const steps = ['Welcome', 'Your profile', 'Connect', 'Permissions'];
+  const firstName = displayName.trim().split(/\s+/)[0] ?? '';
 
   const next = () => {
     if (soundEffects) playSetupTone('step', soundVolume, soundStyle);
@@ -411,8 +424,14 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
     try {
       await window.unvibe.setSettings({ displayName: displayName.replace(/\s+/g, ' ').trim(), profileEmail: profileEmail.trim() });
       await window.unvibe.completeOnboarding();
-      await onDone();
       if (soundEffects) playSetupTone('success', soundVolume, soundStyle);
+      // A short celebration before the app opens, skipped for reduced motion.
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduce) {
+        setCelebrating(true);
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+      }
+      await onDone();
     } catch {
       setSaveError('Your setup could not be saved. Please try again.');
     } finally { setSaving(false); }
@@ -461,6 +480,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
   return (
     <div className={`ob ob--scene-${step}`}>
+      {celebrating ? (
+        <div className="ob__confetti" aria-hidden="true">
+          {Array.from({ length: 36 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
+        </div>
+      ) : null}
       <div className="ob__scene" aria-hidden="true">
         <div className="sanFranWash" />
         <div className="ob__scene-grid" />
@@ -478,7 +502,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
         <FadeIn animKey={step} stagger className="ob__step">
           {step === 0 && (
             <>
-              <div className="ob__mark"><LogoMark size={48} stroke={1.7} /></div>
+              <div className="ob__hello">
+                <Buddy mood="wave" size={76} follow label="Vibe says hello" />
+                <div className="ob__hello-bubble">Hi, I&rsquo;m Vibe. I explain the code AI writes for you, in plain English.</div>
+              </div>
               <div className="ob__eyebrow">WELCOME TO UNVIBE</div>
               <h2 className="ob__title">Understand what AI changed.</h2>
               <p className="ob__sub">Select code and press <span className="kbd-lg">⌘U</span>. Unvibe explains it beside your work, checks understanding, and keeps the lesson for later.</p>
@@ -496,9 +523,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
           {step === 1 && (
             <>
+              <div className="ob__hello ob__hello--small">
+                <Buddy mood={firstName ? 'happy' : 'idle'} size={58} follow label="Vibe" key={firstName ? 'named' : 'unnamed'} />
+                <div className="ob__hello-bubble">{firstName ? `Nice to meet you, ${firstName}!` : 'What should I call you?'}</div>
+              </div>
               <div className="ob__eyebrow">YOUR PROFILE</div>
-              <h2 className="ob__title">Name and profile, on this Mac.</h2>
-              <p className="ob__sub">Chat will say Hello again, then your name. Email is optional and stays on this laptop.</p>
+              <h2 className="ob__title">Let&rsquo;s make it yours.</h2>
+              <p className="ob__sub">Your name stays on this computer. Email is optional.</p>
               <form className="ob__form" onSubmit={(event) => { event.preventDefault(); advanceName(); }}>
                 <label>
                   Name
@@ -530,6 +561,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
           {step === 2 && (
             <>
+              <div className="ob__hello ob__hello--small">
+                <Buddy mood="reading" size={58} label="Vibe is reading" />
+                <div className="ob__hello-bubble">{firstName ? `${firstName}, ` : ''}this is how I see the code you pick.</div>
+              </div>
               <div className="ob__eyebrow">CONNECT YOUR WORKFLOW</div>
               <h2 className="ob__title">Bring Unvibe into your editor.</h2>
               <p className="ob__sub">Install the tiny Desktop Bridge for the cleanest selection flow. It reads only what you explicitly send with Command U.</p>
@@ -540,13 +575,17 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
           {step === 3 && (
             <>
+              <div className="ob__hello ob__hello--small">
+                <Buddy mood={celebrating ? 'celebrate' : 'happy'} size={58} label="Vibe" />
+                <div className="ob__hello-bubble">{celebrating ? `Welcome aboard${firstName ? `, ${firstName}` : ''}!` : 'Last step, then we start learning.'}</div>
+              </div>
               <div className="ob__eyebrow">ENABLE CORE FEATURES</div>
               <h2 className="ob__title">One last permission.</h2>
               <p className="ob__sub">Accessibility lets Control U read an explicit selection in Terminal and other Mac apps. Cursor and VS Code continue through the local bridge.</p>
               <PermRow />
               <div className="ob__trust"><span>✓</span><div><b>Private by default</b><small>Secrets are filtered locally before any permitted remote request.</small></div></div>
               {saveError && <p className="field-err" role="alert">{saveError}</p>}
-              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" disabled={saving} onClick={() => void finish()}>{saving ? 'Saving…' : 'Start using Unvibe'}</button></div>
+              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" disabled={saving} onClick={() => void finish()}>{celebrating ? 'Welcome!' : saving ? 'Saving…' : 'Start using Unvibe'}</button></div>
             </>
           )}
         </FadeIn>
@@ -1648,6 +1687,11 @@ function App() {
         setSearchQuery('');
         setSearchOpen(true);
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === ',') {
+        event.preventDefault();
+        setSettingsTab('General');
+        setSettingsOpen(true);
+      }
       if (event.key === 'Escape') setSearchOpen(false);
     };
     window.addEventListener('keydown', onKey);
@@ -1811,15 +1855,24 @@ function App() {
           </button>
           <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">Public beta includes 50 AI explanations and 50 code selections for 30 days. AI access included, no provider API key needed.</div></div>
           <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
-          <nav className="nav nav--foot">{FOOT.map((f) => (
-            <button key={f.id} type="button" aria-label={f.id} title={sideCompact ? f.id : undefined} onClick={() => {
-              setNavOpen(false);
-              if (f.id === 'Settings') { setSettingsTab('General'); setSettingsOpen(true); }
-              else flash(f.toast);
-            }}>
-              <Icon d={f.icon} /><span className="nav-label">{f.id}</span>
-            </button>
-          ))}</nav>
+          <AccountMenu
+            name={settings?.displayName?.trim() || info.user || 'You'}
+            email={account?.email || settings?.profileEmail || undefined}
+            planLabel={planLabel(usageLine?.plan)}
+            signedIn={Boolean(account)}
+            compact={sideCompact}
+            version={info.version}
+            onSettings={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
+            onShortcuts={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
+            onPlan={() => { setNavOpen(false); setPage('Plan'); }}
+            onInvite={() => { setNavOpen(false); setPage('Gift'); }}
+            onSignIn={() => setGate('login')}
+            onSignOut={async () => {
+              await window.unvibe.signOut();
+              const { acct } = await refresh();
+              if (!acct) flash('Signed out. Your learning stays on this computer.');
+            }}
+          />
           <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize" onPointerDown={startSideResize} />
         </aside>
         <main className="content">
@@ -1893,6 +1946,11 @@ function App() {
           )}
         </main>
       </div>
+      <FloatingBuddy
+        userName={settings?.displayName?.trim() || info.user}
+        hidden={page === 'Chat' || settingsOpen}
+        onOpenChat={() => { setAskSeed(''); setPage('Chat'); }}
+      />
       {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}

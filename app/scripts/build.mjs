@@ -60,8 +60,9 @@ for (const name of ['bar', 'widget', 'companion']) {
   cpSync(`src/renderer/${name}/${name}.html`, `dist/renderer/${name}/${name}.html`);
   const tokens = readFileSync('src/renderer/shared/tokens.css', 'utf8');
   const rings = readFileSync('src/renderer/shared/usageRings.css', 'utf8');
+  const buddy = readFileSync('src/renderer/shared/buddy.css', 'utf8');
   const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
-  writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${css}`);
+  writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${buddy}\n${css}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }

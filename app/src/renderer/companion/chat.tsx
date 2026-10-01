@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
+import { Buddy, setBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
 
 interface ChatMessage {
@@ -238,18 +239,26 @@ export function Chat({
     setDraft('');
     setError('');
     setBusy(true);
+    // Vibe reads the question first, then thinks until the answer arrives.
+    setBuddyMood('reading');
+    const thinkTimer = window.setTimeout(() => setBuddyMood('thinking'), 900);
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question, ts: new Date().toISOString() }];
     setMessages(nextMessages);
     const result = await window.unvibe.chatAsk({
       messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
       question,
     }) as { ok: boolean; answer?: string; error?: string; remaining?: number };
+    window.clearTimeout(thinkTimer);
     setBusy(false);
     if (result.remaining !== undefined) setLeft(result.remaining);
     if (!result.ok || !result.answer) {
       setError(result.error ?? 'Chat could not reply.');
+      setBuddyMood('confused');
+      window.setTimeout(() => setBuddyMood('idle'), 3200);
       return;
     }
+    setBuddyMood('happy');
+    window.setTimeout(() => setBuddyMood('idle'), 2600);
     const answered: ChatMessage[] = [...nextMessages, { role: 'assistant', content: result.answer, ts: new Date().toISOString() }];
     setMessages(answered);
     persist(answered);
@@ -330,7 +339,12 @@ export function Chat({
                 )}
               </article>
             ))}
-            {busy ? <ThinkingStatus label={providerLabel} /> : null}
+            {busy ? (
+              <div className="chat-thinking">
+                <Buddy mood="thinking" size={34} label="Vibe is thinking" />
+                <ThinkingStatus label={providerLabel} />
+              </div>
+            ) : null}
             {error ? <p className="form-error">{error}</p> : null}
             <div ref={endRef} />
           </div>

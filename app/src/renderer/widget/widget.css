@@ -937,3 +937,6 @@ code.inline {
   .head__status { display: none; }
   .body { padding: 18px; }
 }
+
+/* Vibe in the panel header */
+.head__mark--vibe { width: 28px; height: 28px; display: grid; place-items: center; }
