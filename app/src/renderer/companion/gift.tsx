@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { LogoMark } from '../shared/logo';
 import { GoogleMark } from '../shared/googleMark';
 
 export function Gift() {
@@ -97,7 +96,6 @@ export function Gift() {
       <div className="page-head">
         <div>
           <div className="gift-view__brand">
-            <LogoMark size={28} />
             <div className="eyebrow">Gift Unvibe</div>
           </div>
           <h1>Give a friend a month of Pro.</h1>
