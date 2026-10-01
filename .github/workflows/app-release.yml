@@ -18,6 +18,8 @@ jobs:
   build:
     strategy:
       fail-fast: false
+      # One OS at a time so both jobs never race to create the same GitHub release.
+      max-parallel: 1
       matrix:
         include:
           - os: macos-latest
