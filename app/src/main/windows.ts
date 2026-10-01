@@ -116,7 +116,7 @@ export function createBar(): BrowserWindow {
   });
   win.setAlwaysOnTop(true, 'screen-saver', 1);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setHiddenInMissionControl(true);
+  if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
   if (process.platform === 'darwin') win.setWindowButtonVisibility(false);
   lockNavigation(win);
@@ -278,7 +278,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   // full-screen editor, not just ordinary desktop windows.
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setHiddenInMissionControl(true);
+  if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
 
   const persist = () => {
