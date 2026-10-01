@@ -4,6 +4,7 @@ import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { LogoMark } from '../shared/logo';
+import { Buddy } from '../shared/buddy';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -297,6 +298,7 @@ function Widget() {
   const [collapsed, setCollapsed] = useState(false);
   const [shortcut, setShortcut] = useState('⌘U');
   const [usage, setUsage] = useState<UsageState | null>(null);
+  const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -574,8 +576,8 @@ function Widget() {
     <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
-        <span className="head__mark" aria-hidden="true">
-          <LogoMark size={16} stroke={2} />
+        <span className="head__mark head__mark--vibe" aria-hidden="true">
+          <Buddy mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={26} label="Vibe" />
         </span>
         <div className="head__context">
           <span className="head__product">Unvibe</span>
@@ -981,6 +983,11 @@ function Widget() {
                     Why does this exist
                   </button>
                 ) : null}
+                {features.teachBack && phase === 'done' ? (
+                  <button type="button" className={`chip${teachOpen ? ' chip--on' : ''}`} aria-expanded={teachOpen} onClick={() => setTeachOpen((open) => !open)}>
+                    Teach it back
+                  </button>
+                ) : null}
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
@@ -996,7 +1003,7 @@ function Widget() {
                   <p className="origin-inference">{active.originInference || 'No documented rationale found.'}</p>
                 </div>
               ) : null}
-              {features.teachBack && phase === 'done' ? (
+              {features.teachBack && phase === 'done' && teachOpen ? (
                 <div className="teach-panel" role="region" aria-label="Teach it back">
                   <div className="ask-sandbox__label">Teach it back</div>
                   <textarea

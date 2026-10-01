@@ -1028,3 +1028,6 @@ code.inline {
 .opt { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); box-shadow: none; }
 .opt:hover:not(:disabled) { background: var(--chip-bg); }
 .skeleton > * { background: var(--chip-bg); }
+.head__mark.head__mark--vibe { width: 28px; height: 28px; border: 0; background: transparent; box-shadow: none; outline: 0; }
+.chip.chip--on { border-color: var(--fg); }
+.foot .chips { flex-wrap: wrap; gap: 6px; }
