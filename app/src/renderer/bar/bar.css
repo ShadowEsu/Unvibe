@@ -5,7 +5,7 @@
   font-weight: 400 700;
   font-display: block;
 }
-:root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
+:root { color-scheme: dark; font-family: "Pixelify Sans", ui-monospace, monospace; }
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
 button { font: inherit; }
@@ -44,7 +44,7 @@ button { font: inherit; }
 .island__wing--left { justify-content: flex-start; }
 .island__wing--right { justify-content: flex-end; }
 .island__notch { width: 100%; height: 100%; pointer-events: none; }
-.island__mark { width: 24px; height: 24px; display: grid; place-items: center; flex: 0 0 auto; }
+.island__mark { width: 18px; height: 18px; display: grid; place-items: center; filter: drop-shadow(0 0 5px rgba(139,92,246,.28)); flex: 0 0 auto; }
 .island__tool {
   width: 21px; height: 21px; padding: 0; border-radius: 50%;
   border: 1px solid rgba(255,255,255,.13); background: #111114; color: #8d8d96;
@@ -120,67 +120,4 @@ button { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .island__dots i, .island__overview { animation: none; }
   .island__overview { opacity: 1; transform: none; }
-}
-
-/* ── Island refresh: clean type, Vibe, shimmer status, glass panel ── */
-
-.island { letter-spacing: -0.01em; }
-.island:not(.island--attached) {
-  background: linear-gradient(180deg, rgba(22,18,34,.94), rgba(10,9,16,.96));
-  border-color: rgba(255,255,255,.12);
-  box-shadow: 0 14px 34px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  backdrop-filter: blur(20px) saturate(1.6);
-}
-.island--expanded { background: linear-gradient(180deg, #050506 0%, #0d0b15 40%, #130f20 100%); }
-
-.island__tool { width: 22px; height: 22px; border-radius: 7px; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color: #b9b6c6; }
-.island__tool:hover { background: rgba(139,92,246,.22); border-color: rgba(167,139,250,.55); color: #fff; }
-
-.island__status {
-  font-size: 12px; font-weight: 600; text-transform: none;
-  background: linear-gradient(90deg, #cfc4ff 0%, #ffffff 45%, #cfc4ff 90%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: island-shimmer 1.6s linear infinite;
-}
-.island--phase-ready .island__status,
-.island--phase-understood .island__status { background: none; color: #8be0b0; animation: none; }
-.island--phase-error .island__status,
-.island--phase-offline .island__status { background: none; color: #f0a59c; animation: none; }
-@keyframes island-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-
-.island__streak { font-size: 12.5px; font-weight: 600; color: #f1eff6; }
-
-.island__header { align-items: center; padding-bottom: 8px; }
-.island__who { display: flex; align-items: center; gap: 10px; }
-.island__who > div { display: grid; line-height: 1.15; }
-.island__who strong { font-size: 15px; font-weight: 650; }
-.island__who span { color: #a7a3b6; font-size: 11.5px; }
-.island__who span::first-letter { text-transform: uppercase; }
-.island__hint { display: none; }
-
-.island__metrics { grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 0 8px; }
-.island__metrics > span {
-  display: grid; justify-items: start; gap: 1px; padding: 7px 9px; border-radius: 10px;
-  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06);
-  font-size: 10.5px; color: #9a96aa;
-}
-.island__metrics b { font-size: 16px; }
-
-.island__activity i { border-radius: 2px; background: rgba(255,255,255,.07); }
-.island__activity i[data-level="1"] { background: #4b3a8f; }
-.island__activity i[data-level="2"] { background: #7357d6; }
-.island__activity i[data-level="3"] { background: #a78bfa; box-shadow: 0 0 6px rgba(167,139,250,.5); }
-
-.island__actions button { height: 31px; border-radius: 10px; background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); }
-.island__actions button:first-child {
-  border-color: transparent; color: #fff;
-  background: linear-gradient(135deg, #8b5cf6, #6d3fe0);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 6px 16px rgba(109,63,224,.35);
-}
-.island__actions button:first-child:hover { background: linear-gradient(135deg, #9b70ff, #7a4cf0); }
-
-@media (prefers-reduced-motion: reduce) {
-  .island__status { animation: none; background: none; color: #efeff2; }
 }

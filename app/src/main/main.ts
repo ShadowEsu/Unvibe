@@ -287,14 +287,32 @@ function accessibilityGranted(prompt = false): boolean {
   return systemPreferences.isTrustedAccessibilityClient(prompt);
 }
 
+let quitting = false;
+app.on('before-quit', () => {
+  quitting = true;
+});
+
 function openCompanion(): void {
   if (companion && !companion.isDestroyed()) {
+    if (companion.isMinimized()) companion.restore();
     companion.show();
     companion.focus();
     return;
   }
   companion = createCompanion();
-  companion.on('closed', () => (companion = null));
+  const win = companion;
+  // On Windows and Linux the taskbar button belongs to the window, so closing it would make
+  // Unvibe vanish into the tray. Minimize instead so it always stays clickable in the taskbar.
+  if (!isMac) {
+    win.on('close', (event) => {
+      if (quitting) return;
+      event.preventDefault();
+      win.minimize();
+    });
+  }
+  win.on('closed', () => {
+    if (companion === win) companion = null;
+  });
 }
 
 function openCompanionPage(page: string): void {

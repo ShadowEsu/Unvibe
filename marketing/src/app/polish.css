@@ -1557,3 +1557,24 @@ html[data-performance="lite"] .ambient__orb {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.55; transform: scale(0.8); }
 }
+
+/* ── Performance pass: a still header and no always-on motion. Last block wins. ── */
+.paper-nav.paper-nav--static,
+.paper-nav.paper-nav--static.paper-nav--solid {
+  position: fixed; top: 0; left: 0; right: 0; width: auto;
+  transform: none; transition: none; border-radius: 0;
+  border: 0; border-bottom: 1px solid rgb(212 204 224 / 0.6);
+  background: rgb(255 252 248 / 0.97); color: var(--ink);
+  box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.paper-nav.paper-nav--static > nav { height: 4rem; padding-inline: 0; }
+.paper-nav.paper-nav--static::after { display: none; }
+.paper-nav.paper-nav--static .paper-join,
+.paper-nav.paper-nav--static .paper-join:hover { color: #fff; border-color: var(--ink); background: var(--ink); }
+
+.ambient { display: none; }
+.paper-hero > img { animation: none; }
+.paper-glass, .resources-card, .paper-quotes blockquote, .marketing-plan-card {
+  backdrop-filter: none; -webkit-backdrop-filter: none; transition: border-color 200ms ease;
+}
+.paper-glass::after, .resources-card::after, .paper-quotes blockquote::after, .marketing-plan-card::after { display: none; }

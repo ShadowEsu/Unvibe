@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 
@@ -14,17 +13,7 @@ const links = [
 ];
 
 export function Nav() {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const onHome = pathname === "/";
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -33,14 +22,9 @@ export function Nav() {
     };
   }, [open]);
 
-  const navClass = [
-    "paper-nav",
-    scrolled ? "paper-nav--scrolled" : "",
-    onHome ? "" : "paper-nav--solid",
-  ].filter(Boolean).join(" ");
-
+  // A plain header pinned to the top: same look on every page and scroll position, no motion.
   return (
-    <header className={navClass}>
+    <header className="paper-nav paper-nav--solid paper-nav--static">
       <nav className="paper-wrap flex h-16 items-center justify-between gap-4" aria-label="Primary">
         <Link href="/" aria-label="Unvibe home"><Logo /></Link>
         <div className="hidden items-center gap-6 md:flex">

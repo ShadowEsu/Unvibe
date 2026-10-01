@@ -4,7 +4,6 @@ import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { LogoMark } from '../shared/logo';
-import { Buddy, type BuddyMood } from '../shared/buddy';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -571,23 +570,12 @@ function Widget() {
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
 
-  // Vibe mirrors the explanation: thinking before the first words, reading while they stream,
-  // happy when done, celebrating a correct quiz answer, confused on errors.
-  const vibeMood: BuddyMood =
-    active.quiz?.phase === 'graded' ? (active.quiz.correct ? 'celebrate' : 'confused')
-      : active.quiz?.phase === 'grading' || active.quiz?.phase === 'loading' ? 'thinking'
-        : active.phase === 'streaming' ? (active.text ? 'reading' : 'thinking')
-          : active.phase === 'done' ? 'happy'
-            : active.phase === 'error' || active.phase === 'blocked' ? 'confused'
-              : 'idle';
-
   return (
     <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}`} aria-label="Unvibe">
-      <div className="sanFranWash" aria-hidden="true" />
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
-        <span className="head__mark head__mark--vibe" aria-hidden="true">
-          <Buddy mood={vibeMood} size={26} label="Vibe" />
+        <span className="head__mark" aria-hidden="true">
+          <LogoMark size={16} stroke={2} />
         </span>
         <div className="head__context">
           <span className="head__product">Unvibe</span>
@@ -595,6 +583,14 @@ function Widget() {
         </div>
         <span className={`head__status head__status--${phase}`}><i />{phaseLabel}</span>
         <div className="head__actions">
+          {usage && (
+            <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
+              {usage.remaining} left
+            </span>
+          )}
+          <button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
+            Saved
+          </button>
           <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
             {collapsed ? '▾' : '▴'}
           </button>

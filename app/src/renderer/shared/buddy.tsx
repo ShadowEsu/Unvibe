@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Vibe, the face of Unvibe's AI. A small violet squircle with an antenna and expressive eyes.
+ * Vibe, the face of Unvibe's AI. A soft, squishy violet blob with big eyes that wobbles as it thinks.
  *
  * Moods map to what the AI is doing:
  * - idle: blinks and glances around (follows the pointer when `follow` is set)
- * - thinking: eyes look up, antenna pulses, thought dots rise (waiting for the first token)
+ * - thinking: eyes look up, the blob wobbles faster, thought dots rise (waiting for the first token)
  * - reading: pupils sweep left to right like reading lines (tokens streaming)
  * - happy: smiling arc eyes and a small bounce (answer finished, quiz correct)
  * - celebrate: happy plus sparkles (milestones, onboarding done)
@@ -113,46 +113,38 @@ export function Buddy({ mood = 'idle', size = 40, follow = false, className = ''
     >
       <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
         <defs>
-          <linearGradient id="buddy-body" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#b79bff" />
-            <stop offset="0.55" stopColor="#8b5cf6" />
-            <stop offset="1" stopColor="#5b34c9" />
-          </linearGradient>
-          <radialGradient id="buddy-shine" cx="0.3" cy="0.25" r="0.6">
-            <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          <radialGradient id="buddy-body" cx="0.36" cy="0.3" r="0.8">
+            <stop offset="0" stopColor="#c9b8ff" />
+            <stop offset="0.5" stopColor="#8f68f7" />
+            <stop offset="1" stopColor="#5a33c8" />
           </radialGradient>
         </defs>
+        <ellipse className="buddy__shadow" cx="24" cy="45" rx="12" ry="1.8" />
         <g className="buddy__float">
-          <g className="buddy__antenna">
-            <path d="M24 9.5V5.5" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" />
-            <circle className="buddy__bulb" cx="24" cy="4.2" r="2.4" />
-          </g>
-          <rect className="buddy__body" x="6" y="9" width="36" height="32" rx="12" fill="url(#buddy-body)" />
-          <rect x="6" y="9" width="36" height="32" rx="12" fill="url(#buddy-shine)" />
-          <rect className="buddy__face" x="11" y="15" width="26" height="18" rx="8" />
+          <path className="buddy__body" d="M24 9C34 9 41 16 41 26C41 36 34 42 24 42C14 42 7 36 7 26C7 16 14 9 24 9Z" fill="url(#buddy-body)" />
+          <ellipse className="buddy__gloss" cx="17" cy="15.5" rx="4.6" ry="2.6" transform="rotate(-24 17 15.5)" />
           {happy ? (
             <g className="buddy__eyes buddy__eyes--happy">
-              <path d="M15.5 25.5c1.2-2.4 4.6-2.4 5.8 0" />
-              <path d="M26.7 25.5c1.2-2.4 4.6-2.4 5.8 0" />
+              <path d="M15.6 25.2c1.2-2.6 4.8-2.6 6 0" />
+              <path d="M26.4 25.2c1.2-2.6 4.8-2.6 6 0" />
             </g>
           ) : (
             <g className="buddy__eyes">
               <g className="buddy__eye">
-                <ellipse cx="18.4" cy="24" rx="3.4" ry="4" fill="#fff" />
-                <circle className="buddy__pupil" cx="18.4" cy="24.4" r="1.9" />
+                <ellipse cx="18.6" cy="24" rx="3.1" ry="4.2" fill="#fff" />
+                <circle className="buddy__pupil" cx="18.9" cy="24.6" r="1.9" />
               </g>
               <g className="buddy__eye">
-                <ellipse cx="29.6" cy="24" rx="3.4" ry="4" fill="#fff" />
-                <circle className="buddy__pupil" cx="29.6" cy="24.4" r="1.9" />
+                <ellipse cx="29.4" cy="24" rx="3.1" ry="4.2" fill="#fff" />
+                <circle className="buddy__pupil" cx="29.7" cy="24.6" r="1.9" />
               </g>
-              <rect className="buddy__lid buddy__lid--l" x="14.6" y="19.4" width="7.6" height="9.2" rx="3.8" />
-              <rect className="buddy__lid buddy__lid--r" x="25.8" y="19.4" width="7.6" height="9.2" rx="3.8" />
+              <rect className="buddy__lid buddy__lid--l" x="15" y="19.2" width="7.2" height="9.6" rx="3.6" />
+              <rect className="buddy__lid buddy__lid--r" x="25.8" y="19.2" width="7.2" height="9.6" rx="3.6" />
             </g>
           )}
-          <path className="buddy__mouth" d={mood === 'confused' ? 'M21.5 30.6c1.6-.9 3.4.9 5 0' : 'M21.6 29.8c1.4 1.3 3.4 1.3 4.8 0'} />
-          <ellipse className="buddy__cheek" cx="13.6" cy="29" rx="1.8" ry="1.1" />
-          <ellipse className="buddy__cheek" cx="34.4" cy="29" rx="1.8" ry="1.1" />
+          <path className="buddy__mouth" d={mood === 'confused' ? 'M21.6 32c1.6-.9 3.2.9 4.8 0' : 'M22 31.2c1.2 1.1 2.8 1.1 4 0'} />
+          <ellipse className="buddy__cheek" cx="13.8" cy="29.6" rx="2" ry="1.2" />
+          <ellipse className="buddy__cheek" cx="34.2" cy="29.6" rx="2" ry="1.2" />
         </g>
         <g className="buddy__extras">
           <circle className="buddy__dot buddy__dot--1" cx="38" cy="10" r="1.6" />

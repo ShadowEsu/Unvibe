@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { LogoMark } from '../shared/logo';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
 import '../shared/tokens.css';
-import { Buddy, buddyMoodForPhase } from '../shared/buddy';
 
 type Snapshot = {
   shortcut: string;
@@ -226,7 +226,7 @@ function Bar() {
     >
       <div className="island__compact">
         <div className="island__wing island__wing--left">
-          <span className="island__mark" aria-hidden="true"><Buddy mood={buddyMoodForPhase(phase)} size={22} label="Vibe" /></span>
+          <span className="island__mark" aria-hidden="true"><LogoMark size={17} stroke={2.05} tone="island" /></span>
           <button className="island__tool" type="button" aria-label={`Understand selected code, ${shortcut}`} title={`Understand selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>
         </div>
         <span className="island__notch" aria-hidden="true" />
@@ -238,7 +238,7 @@ function Bar() {
       {expanded ? (
         <div className="island__overview">
           <header className="island__header">
-            <div className="island__who"><Buddy mood={active ? buddyMoodForPhase(phase) : 'idle'} size={30} follow label="Vibe" /><div><strong>Unvibe</strong><span>{active ? STATUS_WORD[phase] : 'ready when you are'}</span></div></div>
+            <div><strong>Unvibe</strong><span>your personal learning layer</span></div>
             <div className="island__header-actions">
               <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>
               <button className="island__settings" type="button" aria-label="Island settings" title="Island settings" onClick={() => act('settings')}><SettingsIcon /></button>
