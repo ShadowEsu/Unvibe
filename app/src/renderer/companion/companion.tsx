@@ -8,7 +8,6 @@ import { playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
-import { UsageRings } from '../shared/usageRings';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
 import type { ChangeBrief } from '../../core/changeBrief';
@@ -623,7 +622,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
         </section>
         <div className="login__actions">
           <aside className="login__card">
-            <div className="login__mark"><LogoMark size={34} stroke={1.7} /></div>
+            <div className="login__mark"><Buddy mood="wave" size={56} follow label="Vibe" /></div>
             <div className="login__brand">UNVIBE</div>
             <h2 className="login__tag">Carry your learning forward.</h2>
             <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
@@ -636,26 +635,6 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
           </button>
         </div>
       </FadeIn>
-    </div>
-  );
-}
-
-function UsageChip({ usage, onPlan, compact = false }: {
-  usage: AppUsageLine | null;
-  onPlan: () => void;
-  compact?: boolean;
-}) {
-  if (!usage) return null;
-  const planLabel = usage.plan === 'full' ? 'Full' : usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
-  return (
-    <div className={`usage-board${compact ? ' usage-board--side' : ''}`}>
-      <span className="usage-board__title">Usage · {planLabel}</span>
-      <UsageRings
-        ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }}
-        selections={usage.selections}
-        size={compact ? 44 : 52}
-        onOpen={onPlan}
-      />
     </div>
   );
 }
@@ -796,20 +775,14 @@ function Home({ shortcut, userName, profile, feed, usage, onPlan, onNavigate }: 
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
   return (
     <>
-      <div className="home-command">
-        <span>Select code, then press</span><kbd>{shortcut}</kbd><span>to understand it</span>
-        <div className="home-command__apps" aria-label="Works with Cursor, VS Code, and Terminal"><i>C</i><i>V</i><i>&gt;_</i></div>
-      </div>
-      <div className="hello">
-        <div>
+      <header className="home-hero">
+        <Buddy mood={explainDisabled ? 'sleepy' : 'idle'} size={64} follow label="Vibe" />
+        <div className="home-hero__copy">
           <h1>{first ? `${dayGreeting()}, ${first}.` : `${dayGreeting()}.`}</h1>
-          <p className="hello-line"><span className="hello-spark" aria-hidden="true" />A little clarity, every day. Let’s see what changed.</p>
+          <p>Select code anywhere and press <kbd>{shortcut}</kbd>. Vibe explains it right beside your editor.</p>
         </div>
-        <div className="hello-act">
-          <button type="button" className="primary-btn" onClick={startReview} disabled={explainDisabled}>Explain</button>
-          <span className="kbd">{shortcut}</span>
-        </div>
-      </div>
+        <button type="button" className="primary-btn home-hero__cta" onClick={startReview} disabled={explainDisabled}>Explain code</button>
+      </header>
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
           <div>
@@ -836,109 +809,78 @@ function Home({ shortcut, userName, profile, feed, usage, onPlan, onNavigate }: 
         <div><span>Day streak</span><strong>{profile?.streak ?? 0}</strong><small>days</small></div>
         <div><span>Concepts familiar</span><strong>{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</strong><small>concepts</small></div>
       </section>
-      <section className="learning-center">
-        <div className="learning-center__head"><div><span>Learning Center</span><small>A short path from first selection to lasting understanding.</small></div><button type="button" onClick={() => onNavigate('Learn')}>Open library →</button></div>
-        <div className="learning-center__track">
-          <button type="button" className="learning-task learning-task--lead" onClick={nextStep.run}>
-            <span>{completedSteps} of {learningSteps.length} complete</span>
-            <b>{completedSteps === learningSteps.length ? 'You know the loop' : 'Keep the loop moving'}</b>
-            <small>{completedSteps === learningSteps.length ? 'Revisit a lesson whenever the code changes.' : `Next: ${nextStep.title}`}</small>
-            <i className="learning-task__progress"><i style={{ width: `${Math.max(8, (completedSteps / learningSteps.length) * 100)}%` }} /></i>
-          </button>
-          {learningSteps.map((step) => (
-            <button type="button" key={step.id} className={`learning-task${step.done ? ' is-done' : ''}${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
-              <span className="learning-task__top"><em>{step.id}</em>{step.done ? <i aria-label="Complete">✓</i> : null}</span>
-              <span className="learning-task__icon"><Icon d={step.icon} /></span>
-              <b>{step.title}</b>
-              <small>{step.copy}</small>
-            </button>
-          ))}
-        </div>
-      </section>
-      <div className="cols cols--home">
-        <div className="main-col">
-          <article className="change-hero">
-            <span className="kicker">Recent change</span>
+      <div className="home-grid">
+        <div className="home-grid__main">
+          <article className="home-card home-card--change">
+            <span className="home-card__label">Recent change</span>
             {brief ? (
               <>
                 <h2>{brief.mainChanges[0] ?? brief.repo}</h2>
-                <p>{brief.filesChanged} files changed{brief.repo ? ` in ${brief.repo}` : ''}</p>
-                <p>{brief.understandBeforeCommit.length} things worth reviewing</p>
-                <button type="button" className="primary-btn" onClick={reviewChange} disabled={explainDisabled}>Review Change</button>
+                <p>{brief.filesChanged} files changed{brief.repo ? ` in ${brief.repo}` : ''} · {brief.understandBeforeCommit.length} things worth reviewing</p>
+                <button type="button" className="soft-btn" onClick={reviewChange} disabled={explainDisabled}>Review change</button>
               </>
             ) : (
               <>
-                <h2>No working-tree change yet</h2>
-                <p>Select code and press {shortcut}, or open Briefings after you edit a repo.</p>
-                <button type="button" className="primary-btn" onClick={startReview} disabled={explainDisabled}>Explain</button>
+                <h2>No changes to review yet</h2>
+                <p>Edit a repo, then come back here for a plain-English brief of what changed before you commit.</p>
+                <button type="button" className="soft-btn" onClick={() => onNavigate('Briefings')}>Open briefs</button>
               </>
             )}
           </article>
-          <div className="home-bands">
-            <section className="home-band">
-              <h2>Recent Briefings</h2>
-              {briefings.length ? (
-                <ul>
-                  {briefings.map((item) => (
-                    <li key={item.id}>
-                      <strong>{item.title}</strong>
-                      <span>{item.meta}</span>
-                      <time dateTime={item.ts}>{shortDate(item.ts)}</time>
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="home-empty">Not enough data yet.</p>}
-            </section>
-            <section className="home-band">
-              <h2>Saved Knowledge</h2>
-              {saved.length ? (
-                <ul>
-                  {saved.map((item) => (
-                    <li key={item.id}>
-                      <strong>{item.title}</strong>
-                      <span>{item.file || item.repositoryId || item.sourceType}</span>
-                      <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="home-empty">Not enough data yet.</p>}
-            </section>
-            <section className="home-band">
-              <h2>Knowledge That May Be Stale</h2>
-              {stale.length ? (
-                <ul>
-                  {stale.map((item) => {
-                    const mark = freshnessLabel(item.freshnessStatus);
-                    return (
-                      <li key={item.id}>
-                        <strong>{item.title}</strong>
-                        <span className="status-pill" data-tone={mark.tone}>{mark.text}</span>
-                        <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : <p className="home-empty">Nothing looks stale.</p>}
-            </section>
-          </div>
-        </div>
-        <div className="rail">
-          {usage ? (
-            <div className="home-usage">
-              <UsageRings
-                ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }}
-                selections={usage.selections}
-                size={52}
-                onOpen={onPlan}
-              />
+          <section className="home-card">
+            <div className="home-card__head">
+              <span className="home-card__label">Getting started</span>
+              <span className="home-card__count">{completedSteps} of {learningSteps.length}</span>
             </div>
-          ) : null}
-          <MonthStamp heat={profile?.heat ?? []} marks={marks} />
-          <div className="stats">
-            <div className="stat"><span className="v">{profile?.linesUnderstood ?? 0}</span><span className="l">lines understood</span></div>
-            <div className="stat"><span className="v">{(profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0)}</span><span className="l">concepts familiar or strong</span></div>
-            <div className="stat"><span className="v">{profile?.streak ?? 0}</span><span className="l">day streak</span></div>
-          </div>
+            <i className="home-progress"><i style={{ width: `${(completedSteps / learningSteps.length) * 100}%` }} /></i>
+            <ol className="home-steps">
+              {learningSteps.map((step) => (
+                <li key={step.id}>
+                  <button type="button" className={`home-step${step.done ? ' is-done' : ''}${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
+                    <span className="home-step__check" aria-hidden="true">{step.done ? '✓' : ''}</span>
+                    <span className="home-step__text"><b>{step.title}</b><small>{step.copy}</small></span>
+                    <span className="home-step__go" aria-hidden="true">→</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+        <div className="home-grid__side">
+          <section className="home-card">
+            <div className="home-card__head"><span className="home-card__label">Saved knowledge</span><button type="button" className="link-btn" onClick={() => onNavigate('Learn')}>View all</button></div>
+            {saved.length ? (
+              <ul className="home-list">
+                {saved.map((item) => (
+                  <li key={item.id}><strong>{item.title}</strong><span>{item.file || item.repositoryId || item.sourceType}</span><time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time></li>
+                ))}
+              </ul>
+            ) : <p className="home-empty">Explanations you finish land here.</p>}
+          </section>
+          <section className="home-card">
+            <div className="home-card__head"><span className="home-card__label">Needs a second look</span></div>
+            {stale.length ? (
+              <ul className="home-list">
+                {stale.map((item) => {
+                  const mark = freshnessLabel(item.freshnessStatus);
+                  return <li key={item.id}><strong>{item.title}</strong><span className="status-pill" data-tone={mark.tone}>{mark.text}</span><time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time></li>;
+                })}
+              </ul>
+            ) : <p className="home-empty">Nothing is out of date.</p>}
+          </section>
+          <section className="home-card">
+            <div className="home-card__head"><span className="home-card__label">Recent briefs</span></div>
+            {briefings.length ? (
+              <ul className="home-list">
+                {briefings.map((item) => (
+                  <li key={item.id}><strong>{item.title}</strong><span>{item.meta}</span><time dateTime={item.ts}>{shortDate(item.ts)}</time></li>
+                ))}
+              </ul>
+            ) : <p className="home-empty">Briefs of your changes show up here.</p>}
+          </section>
+          <section className="home-card home-card--calendar">
+            <MonthStamp heat={profile?.heat ?? []} marks={marks} />
+          </section>
         </div>
       </div>
     </>
@@ -1503,7 +1445,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="mside">
-          <div className="settings-brand"><LogoMark size={19} /><span>Unvibe</span></div>
+          <div className="settings-brand"><span>Settings</span></div>
           <div className="mside-group">
             <div className="mh">PREFERENCES</div>
             {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => chooseTab(t)}><span className="settings-nav-icon"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
@@ -1597,7 +1539,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><LogoMark size={38} /></div><div className="setrow"><div><div className="sl">Unvibe for macOS</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:preston@unvibe.site')}>Email →</button></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for macOS</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:preston@unvibe.site')}>Email →</button></div></>}
         </div>
       </div>
     </div>
@@ -1709,6 +1651,7 @@ function App() {
     const apply = () => {
       const dark = preference === 'dark' || (preference === 'system' && media.matches);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.documentElement.dataset.ui = 'v3';
       setThemeIsDark(dark);
     };
     apply();
@@ -1814,15 +1757,17 @@ function App() {
           <button type="button" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar' : 'Hide sidebar'} onClick={() => void applySettings({ sidebarHidden: !sideHidden })}>
             <Icon d="M4 4h12v12H4z M7 4v12" />
           </button>
-          <button type="button" aria-label="Search" title="Search (⌘K or Ctrl K)" onClick={() => { setSearchQuery(''); setSearchOpen(true); }}>
-            <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
-          </button>
         </div>
       </div>
       <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}`}>
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
         <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
-          <div className="brand"><span className="mark"><LogoMark size={22} /></span><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          <div className="brand"><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          <button type="button" className="side-search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
+            <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
+            <span className="nav-label">Search</span>
+            <kbd>⌘K</kbd>
+          </button>
           <nav className="nav nav--top">{NAV_PINNED.map((p) => {
             const on = p.id === page;
             const label = pageLabel(p.id);
@@ -1832,7 +1777,7 @@ function App() {
               </button>
             );
           })}</nav>
-          <p className="side-spaces">Spaces</p>
+          <p className="side-spaces">Learn</p>
           <nav className="nav nav--spaces">{NAV_SPACES.map((p) => {
             const on = p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'));
             const label = pageLabel(p.id);
@@ -1853,8 +1798,16 @@ function App() {
             <span className="sync-state__copy">{sync.phase === 'local' ? 'Saved on this Mac' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
             {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
           </button>
-          <div className="promo"><div className="t">Start free. <em>Learn daily.</em></div><div className="d">Public beta includes 50 AI explanations and 50 code selections for 30 days. AI access included, no provider API key needed.</div></div>
-          <UsageChip usage={usageLine} onPlan={() => setPage('Plan')} compact />
+          {usageLine ? (
+            <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
+              <span className="side-usage__row"><span>{planLabel(usageLine.plan)} plan</span><b>{usageLine.remaining} left</b></span>
+              <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
+            </button>
+          ) : null}
+          <button type="button" className="side-settings" onClick={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}>
+            <Icon d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M16.2 11.6l1.3 1-1.6 2.8-1.6-.6a6.3 6.3 0 0 1-1.6.9l-.3 1.7H9.2l-.3-1.7a6.3 6.3 0 0 1-1.6-.9l-1.6.6-1.6-2.8 1.3-1a6.4 6.4 0 0 1 0-1.8l-1.3-1 1.6-2.8 1.6.6a6.3 6.3 0 0 1 1.6-.9l.3-1.7h3.2l.3 1.7c.6.2 1.1.5 1.6.9l1.6-.6 1.6 2.8-1.3 1c.1.6.1 1.2 0 1.8z" />
+            <span className="nav-label">Settings</span>
+          </button>
           <AccountMenu
             name={settings?.displayName?.trim() || info.user || 'You'}
             email={account?.email || settings?.profileEmail || undefined}
@@ -1894,9 +1847,6 @@ function App() {
             >
               {themeIsDark ? '☀' : '☾'}
             </button>
-            <span className="topline__logo" aria-hidden="true">
-              <LogoMark size={22} stroke={1.8} />
-            </span>
           </div>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`}>
             <FadeIn animKey={page} stagger={!fillPage}>

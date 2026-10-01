@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
-import { Buddy, setBuddyMood } from '../shared/buddy';
+import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
 
 interface ChatMessage {
@@ -276,6 +276,7 @@ export function Chat({
   const empty = messages.length === 0 && !busy;
   const tone = usageTone(pct);
 
+  const vibeMood = useBuddyMood('idle');
   return (
     <div className={`chat-page${empty ? ' chat-page--empty' : ''}`}>
       <header className="chat-top">
@@ -290,8 +291,9 @@ export function Chat({
       <div className="chat-stage">
         {empty ? (
           <div className="chat-hello">
+            <span className="chat-hello__vibe"><Buddy mood={vibeMood} size={88} follow label="Vibe" /></span>
             <h2>{greetName(userName)}</h2>
-            <p>Ask Unvibe anything about this codebase. Replies use {aiLabel}.</p>
+            <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
             <div className="chat-context">
               {brief?.repo ? <span>Repository {brief.repo}</span> : <span>Repository on this Mac</span>}
               <span>{brief ? `${brief.filesChanged} files in the working tree` : 'No current change'}</span>

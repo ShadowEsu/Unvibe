@@ -62,7 +62,9 @@ for (const name of ['bar', 'widget', 'companion']) {
   const rings = readFileSync('src/renderer/shared/usageRings.css', 'utf8');
   const buddy = readFileSync('src/renderer/shared/buddy.css', 'utf8');
   const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
-  writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${buddy}\n${css}`);
+  // The companion's v3 design layer loads last so it wins over the older layers.
+  const v3 = name === 'companion' ? `\n${readFileSync('src/renderer/companion/v3.css', 'utf8')}` : '';
+  writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${buddy}\n${css}${v3}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }
