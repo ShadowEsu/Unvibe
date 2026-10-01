@@ -16,6 +16,6 @@ export const BETA_INSTALL_COMMAND = `curl -fsSL ${BETA_INSTALL_HOST}/install.sh 
 export const BETA_WINDOWS_INSTALL_COMMAND = `irm ${BETA_INSTALL_HOST}/install.ps1 | iex`;
 export const BETA_MAC_DIRECT_DOWNLOAD = BETA_MAC_DOWNLOAD_URL;
 export const BETA_WINDOWS_DIRECT_DOWNLOAD = BETA_WINDOWS_DOWNLOAD_URL;
-export const BETA_INSTALL_VERSION = "v0.1.16";
+export const BETA_INSTALL_VERSION = "v0.1.17";
 export const BETA_INSTALL_LABEL = "Free for Mac and Windows";
 export const BETA_INVESTOR_LABEL = "Try the beta testing version (30 AI explanations)";
