@@ -17,6 +17,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -69,7 +70,11 @@ jobs:
           # Without them the app is built unsigned (identity: null in app/package.json).
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-        run: npx electron-builder ${{ matrix.platformFlag }} --publish always
+        shell: bash
+        run: |
+          # An unset repo secret arrives as an empty string, which electron-builder misreads as a path.
+          if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; fi
+          npx electron-builder ${{ matrix.platformFlag }} --publish always
 
       - name: Package (build only, no publish)
         if: startsWith(github.ref, 'refs/tags/app-v') == false && inputs.publish != true
