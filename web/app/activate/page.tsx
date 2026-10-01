@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const DEVICE_CODE_KEY = 'unvibe_device_user_code';
@@ -35,25 +35,6 @@ function forgetDeviceCode(): void {
   }
 }
 
-function LogoMark() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <g stroke="#3d2080" strokeOpacity="0.22" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" transform="translate(0.7 0.7)">
-        <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z" />
-        <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4" />
-      </g>
-      <g stroke="#3d2080" strokeOpacity="0.12" strokeWidth="2.1" strokeLinejoin="round" strokeLinecap="round" transform="translate(1 1)">
-        <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z" />
-        <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4" />
-      </g>
-      <g stroke="#6f45d2" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z" />
-        <path d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4" />
-      </g>
-    </svg>
-  );
-}
-
 function GoogleMark() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -72,6 +53,8 @@ function activateOrigin(): string {
 
 export default function ActivatePage() {
   const [code, setCode] = useState('');
+  const [editingCode, setEditingCode] = useState(false);
+  const initialCodeRef = useRef('');
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -107,11 +90,15 @@ export default function ActivatePage() {
       params.get('device_code');
     if (fromDevice) {
       const normalized = fromDevice.trim().toUpperCase();
+      initialCodeRef.current = normalized;
       setCode(normalized);
       rememberDeviceCode(normalized);
     } else {
       const saved = recallDeviceCode();
-      if (saved) setCode(saved);
+      if (saved) {
+        initialCodeRef.current = saved;
+        setCode(saved);
+      }
     }
   }, []);
 
@@ -235,71 +222,36 @@ export default function ActivatePage() {
     }
   }
 
+  // A code passed in from the desktop app is shown as a quiet chip instead of an empty-looking field.
+  const codeLocked = initialCodeRef.current.length >= 4 && code === initialCodeRef.current;
+
   return (
     <div className="activate-shell">
-      <div className="activate-brand">
-        <span className="activate-brand__mark">
-          <LogoMark />
-        </span>
-        <span className="activate-brand__name">Unvibe</span>
-      </div>
+      <a className="activate-brand" href="https://unvibe.site">unvibe</a>
 
       <div className="activate-card">
         {status === 'done' ? (
           <div className="activate-success">
-            <div className="activate-success__icon" aria-hidden="true">
-              ✓
-            </div>
+            <div className="activate-success__icon" aria-hidden="true" />
             <h2>You are connected</h2>
             <p>
-              Return to the Unvibe desktop app — it will finish signing in on its
+              Return to the Unvibe desktop app. It will finish signing in on its
               own.
             </p>
           </div>
         ) : (
           <>
-            <div className="activate-kicker">
-              <span className="activate-kicker__dot" aria-hidden="true" />
-              Device approval
-            </div>
+            <ol className="activate-progress" aria-label="Sign-in progress">
+              <li className={accessToken ? 'is-done' : 'is-current'}><span>1</span>Sign in</li>
+              <li className={accessToken ? 'is-current' : ''}><span>2</span>Connect</li>
+              <li><span>3</span>Back to the app</li>
+            </ol>
             <h1 className="activate-title">{accessToken ? 'One last step.' : 'Connect Unvibe to your account.'}</h1>
             <p className="activate-sub">
               {accessToken
                 ? 'You are signed in. Click Connect this device so the Unvibe app can finish. It is waiting for this.'
                 : 'Sign in once, connect this device, and Unvibe finishes on its own.'}
             </p>
-
-            {!accessToken && (
-            <div className="activate-steps" aria-hidden="true">
-              <div className="activate-step">
-                <span className="activate-step__n">1</span>
-                <div>
-                  <div className="activate-step__t">Sign in with Google</div>
-                  <div className="activate-step__d">
-                    Use your Google account — Unvibe never sees your password.
-                  </div>
-                </div>
-              </div>
-              <div className="activate-step">
-                <span className="activate-step__n">2</span>
-                <div>
-                  <div className="activate-step__t">Click Connect this device</div>
-                  <div className="activate-step__d">
-                    The code from the Unvibe app is filled in for you.
-                  </div>
-                </div>
-              </div>
-              <div className="activate-step">
-                <span className="activate-step__n">3</span>
-                <div>
-                  <div className="activate-step__t">Return to Unvibe</div>
-                  <div className="activate-step__d">
-                    The app finishes signing in within a few seconds.
-                  </div>
-                </div>
-              </div>
-            </div>
-            )}
 
             {!accessToken && (
               <div className="activate-section">
@@ -350,6 +302,14 @@ export default function ActivatePage() {
             )}
 
             <div className="activate-section">
+              {codeLocked && !editingCode ? (
+                <div className="activate-codechip">
+                  <span className="activate-codechip__label">Device code</span>
+                  <code>{code}</code>
+                  <button type="button" onClick={() => setEditingCode(true)}>Change</button>
+                </div>
+              ) : (
+              <>
               <label className="activate-label" htmlFor="activate-code">
                 Device code
               </label>
@@ -363,6 +323,8 @@ export default function ActivatePage() {
                 autoCapitalize="characters"
                 spellCheck={false}
               />
+              </>
+              )}
               <button
                 className="activate-btn"
                 type="button"
