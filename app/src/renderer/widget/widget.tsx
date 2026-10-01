@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
-import { LogoMark } from '../shared/logo';
 import { Buddy } from '../shared/buddy';
+import { ThinkingStatus } from '../shared/thinkingStatus';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -71,13 +71,40 @@ const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'expert', label: 'Expert' },
 ];
 
-function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' }) {
+/** Shown while the first words are on their way: Vibe thinks out loud with three real steps. */
+function ThinkingCard({ hasCode }: { hasCode: boolean }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const a = window.setTimeout(() => setStep(1), 700);
+    const b = window.setTimeout(() => setStep(2), 1700);
+    return () => { window.clearTimeout(a); window.clearTimeout(b); };
+  }, []);
+  const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
+  return (
+    <div className="thinking" role="status" aria-live="polite" aria-label="Generating explanation">
+      <div className="thinking__head">
+        <Buddy mood="thinking" size={30} label="Vibe is thinking" />
+        <ThinkingStatus label="Vibe" />
+      </div>
+      <ol className="thinking__steps">
+        {steps.map((label, i) => (
+          <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}><i aria-hidden="true" />{label}</li>
+        ))}
+      </ol>
+      <div className="thinking__lines" aria-hidden="true"><i /><i /><i /></div>
+    </div>
+  );
+}
+
+function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' | 'why' | 'teach' }) {
   const paths = {
     explain: 'M7 4 3 8l4 4 M13 4l4 4-4 4 M11 2 9 14',
     depth: 'M3 4h14 M5 8h10 M7 12h6',
     quiz: 'M6.5 6a3.5 3.5 0 1 1 5.1 3.1c-1.7.9-2.1 1.6-2.1 2.9 M9.5 16h.01',
     ask: 'M4 15 16 3 M8 3h8v8',
     library: 'M4 3h10a2 2 0 0 1 2 2v11H6a2 2 0 0 0-2 2V3z M6 16h10',
+    why: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M10 6v5 M10 13.5v.5',
+    teach: 'M3 7l7-3 7 3-7 3-7-3z M6 8.5V12c0 1.5 2 2.5 4 2.5s4-1 4-2.5V8.5',
   } as const;
   return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
 }
@@ -572,6 +599,22 @@ function Widget() {
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
 
+  const askWhy = () => {
+    void window.unvibe.lookupOrigin().then((raw) => {
+      const result = raw as {
+        ok?: boolean;
+        error?: string;
+        report?: { facts: Array<{ label: string; value: string }>; inference: string };
+      };
+      setTabs((prev) => patchTab(prev, activeTabId, {
+        originOpen: true,
+        originError: result?.ok ? '' : (result?.error ?? 'Unvibe could not find documented history for this code.'),
+        originFacts: result?.report?.facts ?? [],
+        originInference: result?.report?.inference ?? '',
+      }));
+    });
+  };
+
   return (
     <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
@@ -605,26 +648,31 @@ function Widget() {
       {!collapsed ? (
         <div className="widget-workspace">
           <aside className="widget-tools" aria-label="Review tools">
-            <div className="widget-tools__title"><LogoMark size={19} stroke={2} /><span>Workspace</span></div>
-            <button className={activeTool === 'explain' ? 'on' : ''} type="button" title="Explanation" onClick={() => {
+            <button className={`tool--explain${activeTool === 'explain' ? ' on' : ''}`} type="button" title="Explanation" onClick={() => {
               setActiveTool('explain');
               document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}><ToolIcon name="explain" /><b>Walkthrough</b></button>
-            <button className={activeTool === 'depth' ? 'on' : ''} type="button" title="Difficulty" onClick={() => {
+            }}><ToolIcon name="explain" /><b>Explain</b></button>
+            <button className={`tool--depth${activeTool === 'depth' ? ' on' : ''}`} type="button" title="Difficulty" onClick={() => {
               setActiveTool('depth');
               document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }}><ToolIcon name="depth" /><b>Depth</b></button>
-            <button className={activeTool === 'quiz' ? 'on' : ''} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => {
+            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => {
               setActiveTool('quiz');
               setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
               window.unvibe.testMe();
-            }}><ToolIcon name="quiz" /><b>Quick Quiz</b></button>
-            <button className={activeTool === 'ask' ? 'on' : ''} type="button" title="Ask a follow-up" onClick={() => {
+            }}><ToolIcon name="quiz" /><b>Quiz</b></button>
+            <button className={`tool--ask${activeTool === 'ask' ? ' on' : ''}`} type="button" title="Ask a follow-up" onClick={() => {
               setActiveTool('ask');
               requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
-            }}><ToolIcon name="ask" /><b>Ask Unvibe</b></button>
+            }}><ToolIcon name="ask" /><b>Ask</b></button>
+            {features.whyExists ? (
+              <button type="button" className="tool--why" title="Why does this exist" disabled={phase !== 'done' || stillTyping} onClick={askWhy}><ToolIcon name="why" /><b>Why</b></button>
+            ) : null}
+            {features.teachBack ? (
+              <button type="button" className={`tool--teach${teachOpen ? ' on' : ''}`} title="Teach it back" disabled={phase !== 'done' || stillTyping} onClick={() => setTeachOpen((open) => !open)}><ToolIcon name="teach" /><b>Teach</b></button>
+            ) : null}
             <div className="widget-tools__spacer" />
-            <button type="button" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Memory</b></button>
+            <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
             {usage && (
               <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
                 <span>Available</span>
@@ -813,10 +861,7 @@ function Widget() {
               {showText
                 ? renderRich(showText, stillTyping)
                 : (
-                  <div className="skeleton" aria-label="Generating explanation">
-                    <span>Thinking…</span>
-                    <i /><i /><i />
-                  </div>
+                  <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
             </div>
             {active.quiz && (
@@ -964,30 +1009,12 @@ function Widget() {
                   <button
                     className="chip"
                     disabled={stillTyping}
-                    onClick={() => {
-                      void window.unvibe.lookupOrigin().then((raw) => {
-                        const result = raw as {
-                          ok?: boolean;
-                          error?: string;
-                          report?: { facts: Array<{ label: string; value: string }>; inference: string };
-                        };
-                        setTabs((prev) => patchTab(prev, activeTabId, {
-                          originOpen: true,
-                          originError: result?.ok ? '' : (result?.error ?? 'Unvibe could not find documented history for this code.'),
-                          originFacts: result?.report?.facts ?? [],
-                          originInference: result?.report?.inference ?? '',
-                        }));
-                      });
-                    }}
+                    onClick={askWhy}
                   >
                     Why does this exist
                   </button>
                 ) : null}
-                {features.teachBack && phase === 'done' ? (
-                  <button type="button" className={`chip${teachOpen ? ' chip--on' : ''}`} aria-expanded={teachOpen} onClick={() => setTeachOpen((open) => !open)}>
-                    Teach it back
-                  </button>
-                ) : null}
+
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
@@ -1098,6 +1125,7 @@ function Widget() {
                   <button
                     type="button"
                     className="btn btn-ask"
+                    aria-label="Ask"
                     disabled={stillTyping || !active.ask.trim()}
                     onClick={() => {
                       if (!active.ask.trim()) return;
@@ -1105,7 +1133,7 @@ function Widget() {
                       setTabs((prev) => patchTab(prev, activeTabId, { ask: '' }));
                     }}
                   >
-                    Ask
+                    ↑
                   </button>
                 </div>
               </div>
