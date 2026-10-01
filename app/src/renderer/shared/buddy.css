@@ -26,11 +26,9 @@
 .buddy__body { animation: buddyGoo 6s ease-in-out infinite; }
 .buddy__gloss { fill: #fff; opacity: 0.42; }
 .buddy__shadow { fill: #000; opacity: 0.16; transform-box: fill-box; transform-origin: center; animation: buddyShadow 4.2s ease-in-out infinite; }
-.buddy__pupil { fill: #1b1230; transform: translate(var(--look-x), var(--look-y)); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
+.buddy__pupil { fill: #fff; transform: translate(var(--look-x), var(--look-y)); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
 .buddy__lid { fill: #7d55ee; transform: scaleY(0); transform-origin: top; }
-.buddy__mouth { fill: none; stroke: #2a1760; stroke-width: 1.6; stroke-linecap: round; opacity: 0.9; }
-.buddy__cheek { fill: #ff9ec7; opacity: 0; transition: opacity 300ms ease; }
-.buddy__eyes--happy path { fill: none; stroke: #2a1760; stroke-width: 2.2; stroke-linecap: round; }
+.buddy__eyes--happy path { fill: none; stroke: #141217; stroke-width: 2.8; stroke-linecap: round; }
 .buddy__extras > * { opacity: 0; }
 .buddy__dot { fill: #c4b5fd; }
 .buddy__spark { fill: #fde68a; }
@@ -60,9 +58,6 @@
 .buddy--wave .buddy__float { animation: buddyHop 0.9s cubic-bezier(.3,1.6,.5,1) 2; }
 .buddy--wave .buddy__float { animation-iteration-count: 3; }
 .buddy--celebrate .buddy__float { animation: buddyHop 0.8s cubic-bezier(.3,1.6,.5,1) infinite; }
-.buddy--happy .buddy__cheek,
-.buddy--wave .buddy__cheek,
-.buddy--celebrate .buddy__cheek { opacity: 0.85; }
 .buddy--celebrate .buddy__spark { animation: buddySpark 1.2s ease-in-out infinite; }
 .buddy--celebrate .buddy__spark--2 { animation-delay: 0.5s; }
 

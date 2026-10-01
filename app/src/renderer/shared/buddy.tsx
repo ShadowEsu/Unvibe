@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Vibe, the face of Unvibe's AI. A soft, squishy violet blob with big eyes that wobbles as it thinks.
+ * Vibe, the face of Unvibe's AI. A soft, squishy violet blob with two glossy black eyes and no mouth.
  *
  * Moods map to what the AI is doing:
  * - idle: blinks and glances around (follows the pointer when `follow` is set)
@@ -131,20 +131,17 @@ export function Buddy({ mood = 'idle', size = 40, follow = false, className = ''
           ) : (
             <g className="buddy__eyes">
               <g className="buddy__eye">
-                <ellipse cx="18.6" cy="24" rx="3.1" ry="4.2" fill="#fff" />
-                <circle className="buddy__pupil" cx="18.9" cy="24.6" r="1.9" />
+                <ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" fill="#141217" />
+                <circle className="buddy__pupil" cx="17.6" cy="22.6" r="1.15" fill="#fff" />
               </g>
               <g className="buddy__eye">
-                <ellipse cx="29.4" cy="24" rx="3.1" ry="4.2" fill="#fff" />
-                <circle className="buddy__pupil" cx="29.7" cy="24.6" r="1.9" />
+                <ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" fill="#141217" />
+                <circle className="buddy__pupil" cx="28.4" cy="22.6" r="1.15" fill="#fff" />
               </g>
               <rect className="buddy__lid buddy__lid--l" x="15" y="19.2" width="7.2" height="9.6" rx="3.6" />
               <rect className="buddy__lid buddy__lid--r" x="25.8" y="19.2" width="7.2" height="9.6" rx="3.6" />
             </g>
           )}
-          <path className="buddy__mouth" d={mood === 'confused' ? 'M21.6 32c1.6-.9 3.2.9 4.8 0' : 'M22 31.2c1.2 1.1 2.8 1.1 4 0'} />
-          <ellipse className="buddy__cheek" cx="13.8" cy="29.6" rx="2" ry="1.2" />
-          <ellipse className="buddy__cheek" cx="34.2" cy="29.6" rx="2" ry="1.2" />
         </g>
         <g className="buddy__extras">
           <circle className="buddy__dot buddy__dot--1" cx="38" cy="10" r="1.6" />
