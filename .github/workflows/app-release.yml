@@ -70,7 +70,7 @@ jobs:
 
       - name: Package (build only, no publish)
         if: startsWith(github.ref, 'refs/tags/app-v') == false && inputs.publish != true
-        run: npx electron-builder ${{ matrix.platformFlag }}
+        run: npx electron-builder ${{ matrix.platformFlag }} --publish never
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
