@@ -1246,3 +1246,21 @@ code.inline {
   .card.card--quiz .body { border-right: 0; flex: 1 1 55%; }
   .card.card--quiz .quiz-rail { border-left: 0; border-top: 1px solid var(--p-line); flex: 1 1 45%; width: auto; max-width: none; }
 }
+
+/* Panel v5 color: an aurora glow, gradient accents, livelier motion. */
+.card.card { background: radial-gradient(520px 260px at 0% 0%, rgb(124 92 255 / 0.16), transparent 60%), radial-gradient(420px 240px at 100% 0%, rgb(59 139 255 / 0.12), transparent 60%), var(--p-bg); }
+.card .head, .card.card .tabs, .card.card .levels, .card .widget-tools, .card .widget-main, .card .foot, .card .quiz-rail { background: transparent; }
+.card .head { position: relative; }
+.card .head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgb(164 139 255 / 0.6), rgb(124 180 255 / 0.5), transparent); }
+.card .head__product { background: linear-gradient(135deg, #c4b5fd, #93c5fd); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 750; }
+.card .widget-tools button.on { background: linear-gradient(180deg, rgb(164 139 255 / 0.18), rgb(124 180 255 / 0.08)); box-shadow: inset 2px 0 0 var(--p-violet); }
+.card .widget-tools button:hover:not(:disabled) .widget-tool-icon { transform: scale(1.08) rotate(-4deg); }
+.card .widget-tools .widget-tool-icon { transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
+.card .lvl.on, .card .lvl[data-level].on { box-shadow: 0 6px 16px -8px currentColor; }
+.card .chip { transition: transform 140ms ease, background 160ms ease; }
+.card .chip:hover:not(:disabled) { transform: translateY(-1px); }
+.card .chip:active:not(:disabled) { transform: scale(0.97); }
+.card .body > * { animation: pRise 380ms cubic-bezier(.2,.8,.2,1) both; }
+.card .thinking { animation: pRise 420ms cubic-bezier(.2,.8,.2,1) both; border-color: rgb(164 139 255 / 0.25); box-shadow: 0 0 0 1px rgb(164 139 255 / 0.08), 0 16px 40px -24px rgb(124 92 255 / 0.6); }
+@keyframes pRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .card .body > *, .card .thinking { animation: none; } }

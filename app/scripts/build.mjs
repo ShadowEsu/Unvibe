@@ -63,10 +63,14 @@ for (const name of ['bar', 'widget', 'companion']) {
   const buddy = readFileSync('src/renderer/shared/buddy.css', 'utf8');
   const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
   // The companion's v3 design layer loads last so it wins over the older layers.
-  const v3 = name === 'companion' ? `\n${readFileSync('src/renderer/companion/v3.css', 'utf8')}` : '';
-  writeFileSync(`dist/renderer/${name}/${name}.css`, `${tokens}\n${rings}\n${buddy}\n${css}${v3}`);
+  const v3 = name === 'companion' ? `\n${readFileSync('src/renderer/companion/v3.css', 'utf8')}\n${readFileSync('src/renderer/companion/v5.css', 'utf8')}` : '';
+  writeFileSync(`dist/renderer/${name}/${name}.css`, `${readFileSync('src/renderer/shared/fonts.css', 'utf8')}\n${tokens}\n${rings}\n${buddy}\n${css}${v3}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
+  }
+  // Bundled fonts so the interface never depends on a font CDN being reachable.
+  for (const file of readdirSync('src/renderer/shared/fonts').filter((f) => /\.woff2$/i.test(f))) {
+    cpSync(`src/renderer/shared/fonts/${file}`, `dist/renderer/${name}/${file}`);
   }
 }
 mkdirSync('dist/assets', { recursive: true });

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
+import { Buddy } from '../shared/buddy';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -474,6 +475,7 @@ export function Learn({
 
               {result?.correct && card ? (
                 <div className="survey__end" key={`end-${card.key}`}>
+                  <span className="survey__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
                   <p className="survey__kicker">Nice work</p>
                   <h2>You got it.</h2>
                   <p className="survey__rationale">{result.rationale}</p>
@@ -482,6 +484,7 @@ export function Learn({
                 </div>
               ) : card ? (
                 <div className="survey__card" key={card.key}>
+                  <span className="survey__vibe survey__vibe--small"><Buddy mood={quizBusy ? 'thinking' : result && !result.correct ? 'confused' : 'idle'} size={40} follow label="Vibe" /></span>
                   <p className="survey__kicker">{card.conceptLabel || 'Check'}</p>
                   <h2>{card.question}</h2>
                   {open.code ? (
@@ -521,6 +524,7 @@ export function Learn({
                 </div>
               ) : (
                 <div className="survey__welcome">
+                  <span className="survey__vibe"><Buddy mood="wave" size={56} label="Vibe" /></span>
                   <p className="survey__kicker">{open.level}, {open.file || 'Saved lesson'}</p>
                   <h2>{open.title}</h2>
                   <p>One question at a time. Wrong answers stay open so you can keep trying. About 30 seconds each.</p>

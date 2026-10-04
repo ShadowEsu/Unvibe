@@ -1,0 +1,15 @@
+/* Bundled variable fonts. Concatenated into each renderer stylesheet by scripts/build.mjs. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("./plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("./inter-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
