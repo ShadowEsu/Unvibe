@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "Opens on every Mac, M1 and newer included",
+    summary: "Apple silicon Macs said Unvibe was damaged because the app bundle was not signed. Every Mac build is now sealed with a signature and checked before release, including actually starting it on an Apple silicon machine. The download box explains the first open on Mac and Windows.",
+    figure: "v0.1.31",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Unvibe updates itself",
     summary: "When a new version is out, a small card says so. Press Update now and Unvibe downloads it, swaps itself and reopens, lessons and settings kept. Opening a newer copy while an older one runs now hands over to the new one instead of bringing the old one back.",
     figure: "v0.1.30",

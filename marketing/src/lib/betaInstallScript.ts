@@ -59,6 +59,8 @@ if [ -d "$DEST" ]; then
 fi
 ditto "$mountPoint/Unvibe.app" "$DEST"
 xattr -cr "$DEST"
+# Apple silicon refuses apps with a broken signature; repair it locally only if needed.
+codesign --verify --deep --strict "$DEST" >/dev/null 2>&1 || codesign --force --deep --sign - "$DEST" >/dev/null 2>&1 || true
 
 echo "Opening Unvibe…"
 open "$DEST"

@@ -128,6 +128,17 @@ export function BetaInstall({
           : "Quit it from the menu bar first (Unvibe icon, Quit), then drag the new one into Applications and choose Replace."}
         {" "}From v0.1.30 on, Unvibe updates itself with one click.
       </p>
+      {os === "mac" ? (
+        <p className="paper-beta__update">
+          <b>First open on a Mac:</b> right click Unvibe in Applications and choose Open. If macOS still blocks it,
+          go to System Settings, Privacy &amp; Security, and press Open Anyway. Or skip all of that with the one line
+          Terminal install below.
+        </p>
+      ) : (
+        <p className="paper-beta__update">
+          <b>First open on Windows:</b> if SmartScreen appears, press More info, then Run anyway.
+        </p>
+      )}
 
       {/* Spec pills */}
       <div className="paper-beta__specs" aria-label="System requirements">

@@ -98,6 +98,7 @@ export async function installUpdate(onProgress?: (pct: number) => void): Promise
       `  rm -rf ${shellQuote(target)}`,
       `  ditto ${shellQuote(`${mount}/Unvibe.app`)} ${shellQuote(target)}`,
       `  xattr -cr ${shellQuote(target)} 2>/dev/null`,
+      `  codesign --verify --deep --strict ${shellQuote(target)} >/dev/null 2>&1 || codesign --force --deep --sign - ${shellQuote(target)} >/dev/null 2>&1`,
       'fi',
       `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
       `open ${shellQuote(target)}`,
