@@ -17,7 +17,7 @@ const LINES: Array<[number, string]> = [
   [0.85, "go on, download me"],
 ];
 
-const HIDDEN = ["/founder", "/stats", "/waitlist", "/waitlist-admin", "/activate"];
+const HIDDEN = ["/founder", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate"];
 
 /**
  * Site-wide scroll companion: a lime progress bar, Vibe riding down the right edge and

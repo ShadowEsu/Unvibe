@@ -19,7 +19,7 @@ export function MobileDownloadBar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/waitlist")) return null;
+  if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist")) return null;
 
   return (
     <div className={visible ? "mobile-dl is-in" : "mobile-dl"} aria-hidden={!visible}>

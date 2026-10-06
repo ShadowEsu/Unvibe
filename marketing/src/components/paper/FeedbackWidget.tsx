@@ -9,7 +9,7 @@ import { track } from "@/lib/analytics";
 const MAX_WORDS = 100;
 /** Same floor the server uses before the email link earns a Pro month. */
 const BONUS_MIN_WORDS = 8;
-const HIDDEN = ["/founder", "/stats", "/waitlist-admin", "/activate"];
+const HIDDEN = ["/founder", "/stats", "/s/", "/waitlist-admin", "/activate"];
 
 function words(text: string): number {
   const trimmed = text.trim();

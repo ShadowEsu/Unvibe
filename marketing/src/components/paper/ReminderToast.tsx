@@ -8,7 +8,7 @@ import { markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
 
 export const DOWNLOADED_EVENT = "unvibe:downloaded";
 
-const QUIET = ["/founder", "/stats", "/waitlist-admin", "/activate"];
+const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 
 /**
  * One small email ask. Opens when a friend's invite link brings you here (you both get a month
