@@ -11,6 +11,41 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
+    title: "Sign-in that works on more networks, Windows that feels native",
+    summary: "Unvibe now connects through your computer's own network settings and certificates, so Google sign-in works on school, work and antivirus networks. On Windows, Cursor, VS Code, Zed, Windsurf, Claude, Warp, GitHub Desktop and git are detected, the editor bridge installs, and copying a selection is more patient.",
+    figure: "v0.1.20",
+  },
+  {
+    date: "04 OCT 2026",
+    category: "PRODUCT",
+    title: "Color, motion and a real quiz",
+    summary: "An aurora gradient behind glass panels, a color for every section, Plus Jakarta Sans built in, and pages that ease in. The quiz is a centered card where Vibe waves, thinks and celebrates. Library and Quiz are full width cards.",
+    figure: "v0.1.19",
+  },
+  {
+    date: "01 OCT 2026",
+    category: "PRODUCT",
+    title: "A dark side panel for Command U",
+    summary: "The explain panel is a compact dark window with a color coded tool rail, live thinking steps while the answer is written, and text that scales with the panel.",
+    figure: "v0.1.18",
+  },
+  {
+    date: "01 OCT 2026",
+    category: "PRODUCT",
+    title: "Meet Vibe, and a calmer app",
+    summary: "Vibe is a purple blob with glossy black eyes that follows you through the app. A rebuilt sidebar with search, a simpler Home, restyled onboarding and settings, and the original Island is back.",
+    figure: "v0.1.14 to v0.1.17",
+  },
+  {
+    date: "01 OCT 2026",
+    category: "PRODUCT",
+    title: "Windows startup fix",
+    summary: "Unvibe no longer crashes on launch on Windows. Closing the window keeps Unvibe in the taskbar instead of hiding it.",
+    figure: "v0.1.13",
+  },
+  {
     date: "28 SEP 2026",
     category: "COMPANY",
     title: "100%. Unvibe is out",
