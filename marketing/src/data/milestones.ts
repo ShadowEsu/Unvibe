@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "Unvibe updates itself",
+    summary: "When a new version is out, a small card says so. Press Update now and Unvibe downloads it, swaps itself and reopens, lessons and settings kept. Opening a newer copy while an older one runs now hands over to the new one instead of bringing the old one back.",
+    figure: "v0.1.30",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Vibe is the app icon now",
     summary: "The old purple hexagon is gone. Unvibe's icon in the Dock, the taskbar, the installer and your browser tab is now Vibe on a paper tile.",
     figure: "v0.1.29",

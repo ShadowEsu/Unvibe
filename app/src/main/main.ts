@@ -92,6 +92,7 @@ import {
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
+import { checkForUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
 import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
@@ -440,14 +441,23 @@ if (process.platform === 'win32') app.setAppUserModelId('com.unvibe.app');
 // One process owns the global fallback shortcut and the `unvibe://` protocol. Without this,
 // two copies (for example, one in Applications and one opened from a mounted DMG) can race for
 // ⌘U and leave a review panel open with no captured selection.
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
+// The lock carries this copy's version and path so an older running copy can hand over to it.
+const hasSingleInstanceLock = app.requestSingleInstanceLock({ version: app.getVersion(), execPath: process.execPath });
 if (!hasSingleInstanceLock) app.quit();
 /** Windows and Linux deliver `unvibe://` links as command-line arguments, not via open-url. */
 function protocolUrlFrom(argv: readonly string[]): string | null {
   return argv.find((arg) => arg.toLowerCase().startsWith('unvibe://')) ?? null;
 }
 
-app.on('second-instance', (_event, argv) => {
+app.on('second-instance', (_event, argv, _cwd, additionalData) => {
+  // A newer Unvibe was just opened while this older one runs: step aside and start the new one.
+  const incoming = additionalData as { version?: unknown; execPath?: unknown } | undefined;
+  if (typeof incoming?.version === 'string' && typeof incoming.execPath === 'string' && isNewer(incoming.version, app.getVersion())) {
+    app.relaunch({ execPath: incoming.execPath, args: [] });
+    quitting = true;
+    app.exit(0);
+    return;
+  }
   const url = protocolUrlFrom(argv);
   if (url) handleExternalReviewUrl(url);
   else openCompanion();
@@ -1222,6 +1232,24 @@ app.whenReady().then(() => {
     try { return { ok: true, data: { ...await refreshAppUsage(), selections: store().betaSelectedCodeUsage() } }; }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not load usage.' }; }
   });
+  ipcMain.handle('update:check', async () => {
+    try { return { ok: true, ...(await checkForUpdate(true)) }; }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not check for updates.' }; }
+  });
+  ipcMain.handle('update:install', async () => {
+    try {
+      return await installUpdate((pct) => companion?.webContents.send('update:progress', pct));
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'The update could not be installed.' };
+    }
+  });
+  // Look for a newer release shortly after launch and every few hours; the Home page shows it.
+  const announceUpdate = () => void checkForUpdate().then((info) => {
+    if (info.available) companion?.webContents.send('update:available', info);
+  }).catch(() => undefined);
+  setTimeout(announceUpdate, 8000);
+  setInterval(announceUpdate, 4 * 60 * 60_000);
+
   ipcMain.handle('gift:status', async () => {
     const email = store().account()?.email ?? null;
     if (!email) {

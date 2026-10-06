@@ -140,6 +140,18 @@ const api = {
   billingOverview: () => ipcRenderer.invoke('billing:overview'),
   usageGet: () => ipcRenderer.invoke('usage:get'),
   giftStatus: () => ipcRenderer.invoke('gift:status'),
+  updateCheck: () => ipcRenderer.invoke('update:check'),
+  updateInstall: () => ipcRenderer.invoke('update:install'),
+  onUpdateAvailable: (cb: (info: { latest?: string; current: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, info: { latest?: string; current: string }) => cb(info);
+    ipcRenderer.on('update:available', listener);
+    return () => { ipcRenderer.removeListener('update:available', listener); };
+  },
+  onUpdateProgress: (cb: (pct: number) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, pct: number) => cb(pct);
+    ipcRenderer.on('update:progress', listener);
+    return () => { ipcRenderer.removeListener('update:progress', listener); };
+  },
   aiKeyStatus: () => ipcRenderer.invoke('ai:keyStatus'),
   aiSetKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
   aiClearKey: () => ipcRenderer.invoke('ai:clearKey'),

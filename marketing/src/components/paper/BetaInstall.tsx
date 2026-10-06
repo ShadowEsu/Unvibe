@@ -121,6 +121,13 @@ export function BetaInstall({
         <DownloadIcon />
         <span>{os === "windows" ? "Download free for Windows" : "Download free for Mac"}</span>
       </a>
+      <p className="paper-beta__update">
+        <b>Already have Unvibe?</b>{" "}
+        {os === "windows"
+          ? "Quit it from the tray icon first, then run the new installer."
+          : "Quit it from the menu bar first (Unvibe icon, Quit), then drag the new one into Applications and choose Replace."}
+        {" "}From v0.1.30 on, Unvibe updates itself with one click.
+      </p>
 
       {/* Spec pills */}
       <div className="paper-beta__specs" aria-label="System requirements">
