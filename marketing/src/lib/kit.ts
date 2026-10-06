@@ -33,7 +33,7 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "Wordmark: Vibe + Unvibe (PNG)", path: "/brand/unvibe-wordmark.png", use: "Main logo for headers, decks, emails", kind: "image" },
   { name: "Vibe mascot (SVG)", path: "/brand/vibe.svg", use: "The brand mark at any size", kind: "image" },
   { name: "Vibe icon 1024 (PNG)", path: "/brand/vibe-icon-1024.png", use: "Avatars, socials, directory listings", kind: "image" },
-  { name: "Classic app icon", path: "/brand/icon-1024.png", use: "Only where the installer icon must match", kind: "image" },
+  { name: "App icon 1024", path: "/brand/icon-1024.png", use: "The Mac and Windows app icon, app store style", kind: "image" },
   { name: "Outreach email banner", path: "/email/outreach-banner.png", use: "Top of cold outreach emails", kind: "image" },
   { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Top of waitlist and download emails", kind: "image" },
   { name: "Social preview", path: "/og.png", use: "Link previews, social posts", kind: "image" },
