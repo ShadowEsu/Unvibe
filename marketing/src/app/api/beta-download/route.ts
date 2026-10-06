@@ -9,8 +9,8 @@ import { recordWaitlistBetaEmail, saveWaitlistEntry } from "@/lib/waitlistStore"
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const release = "0.1.30";
-const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.30/Unvibe-0.1.30-mac-arm64.dmg";
+const release = "0.1.31";
+const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.31/Unvibe-0.1.31-mac-arm64.dmg";
 const schema = z.object({
   firstName: z.string().trim().max(80).optional().default(""),
   email: z.string().trim().email().max(240),
