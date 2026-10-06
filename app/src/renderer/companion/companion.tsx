@@ -15,7 +15,7 @@ import type { KnowledgeObject } from '../../core/knowledge';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
-import { Buddy } from '../shared/buddy';
+import { Buddy, setBuddyMood } from '../shared/buddy';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -681,56 +681,6 @@ function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: str
   return { text: 'Stale', tone: 'stale' };
 }
 
-function heatForDate(heat: number[], date: Date): number {
-  const today = new Date();
-  const start = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((start(today) - start(date)) / 86400000);
-  if (diff < 0 || diff >= heat.length) return 0;
-  return heat[heat.length - 1 - diff] ?? 0;
-}
-
-function MonthStamp({ heat, marks }: { heat: number[]; marks: Set<string> }) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const first = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const pad = first.getDay();
-  const cells: Array<{ key: string; day?: number; today?: boolean; heat?: number; marked?: boolean }> = [];
-  for (let i = 0; i < pad; i++) cells.push({ key: `e${i}` });
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day);
-    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    cells.push({
-      key,
-      day,
-      today: day === now.getDate(),
-      heat: heatForDate(heat, date),
-      marked: marks.has(key),
-    });
-  }
-  const monthLabel = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  return (
-    <div className="home-cal" aria-label={`${monthLabel} on this Mac`}>
-      <div className="home-cal__head">
-        <span>{monthLabel}</span>
-        <small>Days you reviewed</small>
-      </div>
-      <div className="home-cal__week">{['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <span key={`${d}${i}`}>{d}</span>)}</div>
-      <div className="home-cal__grid">
-        {cells.map((cell) => (
-          <span
-            key={cell.key}
-            className={`home-cal__day${cell.day ? '' : ' is-empty'}${cell.today ? ' is-today' : ''}${cell.marked ? ' is-marked' : ''}${cell.heat ? ` a${cell.heat}` : ''}`}
-          >
-            {cell.day ?? ''}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNavigate }: {
   shortcut: string;
   userName?: string;
@@ -754,10 +704,6 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
     });
   }, []);
   const first = greetFirst(userName);
-  const marks = new Set(feed.map((item) => {
-    const when = new Date(item.ts);
-    return `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`;
-  }));
   const explainDisabled = !!usage && usage.remaining <= 0;
   const startReview = () => window.unvibe.companionReview();
   const reviewChange = () => { void window.unvibe.explainDiff({ brief: true, scope: 'working' }); };
@@ -779,25 +725,27 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
   const concepts = (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0);
-  const stats: Array<[number, string]> = [
-    [profile?.linesUnderstood ?? 0, 'lines understood'],
-    [profile?.understood ?? 0, 'reviews'],
-    [profile?.streak ?? 0, 'day streak'],
-    [concepts, 'concepts'],
-  ];
+  const streak = profile?.streak ?? 0;
+  const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
+  const note = explainDisabled ? 'out of explains this month, catch you soon'
+    : brief ? 'you changed some code, want the story?'
+      : (profile?.understood ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
+        : streak > 1 ? `${streak} days in a row, nice!` : 'ready when you are';
   return (
     <div className="today">
       <header className="today-hero">
-        <Buddy mood={explainDisabled ? 'sleepy' : 'idle'} size={56} follow label="Vibe" />
+        <Buddy mood={explainDisabled ? 'sleepy' : 'wave'} size={68} follow label="Vibe" />
         <div className="today-hero__copy">
           <h1>{first ? `${dayGreeting()}, ${first}.` : `${dayGreeting()}.`}</h1>
-          <p className="today-stats">
-            {stats.map(([value, label], index) => (
-              <span key={label}>{index ? <i aria-hidden="true">·</i> : null}<b>{value}</b> {label}</span>
-            ))}
-          </p>
+          <p className="hand-note">{note}</p>
         </div>
       </header>
+      <div className="stickers" aria-label="Learning overview">
+        <span className="sticker sticker--lime"><b>{profile?.linesUnderstood ?? 0}</b> lines understood</span>
+        <span className="sticker sticker--sky"><b>{profile?.understood ?? 0}</b> reviews</span>
+        <span className="sticker sticker--sun"><b>{streak}</b> day streak</span>
+        <span className="sticker sticker--lilac"><b>{concepts}</b> concepts</span>
+      </div>
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
           <div>
@@ -819,54 +767,48 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
         </div>
       )}
       <button type="button" className="today-cta" onClick={brief ? reviewChange : startReview} disabled={explainDisabled}>
-        <span className="today-cta__dot" aria-hidden="true" />
         <span className="today-cta__text">
-          <b>{brief ? (brief.mainChanges[0] ?? `Changes in ${brief.repo}`) : 'Explain any code in place'}</b>
+          <b>{brief ? (brief.mainChanges[0] ?? `Changes in ${brief.repo}`) : 'Explain any code, right where it is'}</b>
           <small>{brief
             ? `${brief.filesChanged} files changed${brief.repo ? ` in ${brief.repo}` : ''} · ${brief.understandBeforeCommit.length} worth reviewing`
-            : `Select code in any app and press ${shortcut}. Vibe explains it right beside your editor.`}</small>
+            : 'Select code in any app. Vibe pops up beside it.'}</small>
         </span>
-        <span className="today-cta__key">{brief ? 'Review ↵' : shortcut}</span>
+        <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
       </button>
       <div className="today-cols">
+        {upNext.length ? (
+          <section className="today-sec">
+            <header><h2>Up next</h2><span>{completedSteps} of {learningSteps.length} done</span></header>
+            <ol className="rows">
+              {upNext.map((step) => (
+                <li key={step.id}>
+                  <button type="button" className={`row${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
+                    <span className="row__mark" aria-hidden="true">{step.id === nextStep.id ? '→' : '○'}</span>
+                    <span className="row__title">{step.title}</span>
+                    <span className="row__meta">{step.copy}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
         <section className="today-sec">
-          <header><h2>Getting started</h2><span>{completedSteps}/{learningSteps.length}</span></header>
-          <ol className="rows">
-            {learningSteps.map((step) => (
-              <li key={step.id}>
-                <button type="button" className={`row${step.done ? ' is-done' : ''}${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
-                  <span className="row__mark" aria-hidden="true">{step.done ? '✓' : '▸'}</span>
-                  <span className="row__title">{step.title}</span>
-                  <span className="row__meta">{step.copy}</span>
-                </button>
-              </li>
-            ))}
-          </ol>
-          <header><h2>This month</h2></header>
-          <MonthStamp heat={profile?.heat ?? []} marks={marks} />
-        </section>
-        <section className="today-sec">
-          <header><h2>Understood</h2><button type="button" className="link-btn" onClick={() => onNavigate('Learn')}>Library →</button></header>
+          <header><h2>Recently understood</h2><button type="button" className="link-btn" onClick={() => onNavigate('Learn')}>See all</button></header>
           {saved.length ? (
             <ul className="rows">
               {saved.map((item) => (
                 <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Learn')}>
-                  <span className="row__mark" aria-hidden="true">▸</span>
+                  <span className="row__mark" aria-hidden="true">✓</span>
                   <span className="row__title">{item.title}</span>
                   <span className="row__meta">{item.meta}</span>
                   <time dateTime={item.ts}>{shortDate(item.ts)}</time>
                 </button></li>
               ))}
-            </ul>
-          ) : <p className="rows-empty">Explanations you finish land here.</p>}
-          <header><h2>Needs a second look</h2></header>
-          {stale.length ? (
-            <ul className="rows">
-              {stale.map((item) => {
+              {stale.slice(0, 2).map((item) => {
                 const mark = freshnessLabel(item.freshnessStatus);
                 return (
                   <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Learn')}>
-                    <span className="row__mark" aria-hidden="true">▸</span>
+                    <span className="row__mark" aria-hidden="true">!</span>
                     <span className="row__title">{item.title}</span>
                     <span className="status-pill" data-tone={mark.tone}>{mark.text}</span>
                     <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
@@ -874,20 +816,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
                 );
               })}
             </ul>
-          ) : <p className="rows-empty">Nothing is out of date.</p>}
-          <header><h2>Recent briefs</h2><button type="button" className="link-btn" onClick={() => onNavigate('Briefings')}>Briefs →</button></header>
-          {briefings.length ? (
-            <ul className="rows">
-              {briefings.map((item) => (
-                <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Briefings')}>
-                  <span className="row__mark" aria-hidden="true">▸</span>
-                  <span className="row__title">{item.title}</span>
-                  <span className="row__meta">{item.meta}</span>
-                  <time dateTime={item.ts}>{shortDate(item.ts)}</time>
-                </button></li>
-              ))}
-            </ul>
-          ) : <p className="rows-empty">Briefs of your changes show up here.</p>}
+          ) : <p className="rows-empty hand-note">nothing yet. your first explanation lands here!</p>}
         </section>
       </div>
     </div>
@@ -911,7 +840,7 @@ function Progress({ profile }: { profile: Profile | null }) {
     : null;
   return (
     <>
-      <div className="topline"><h1>Progress</h1></div>
+      <div className="topline"><h1>Momentum</h1></div>
       <p className="lead">What you have actually understood on this Mac. No invented scores.</p>
       <div className="metrics">
         <article className="metric-card"><span className="v">{coverage ?? '—'}</span><span className="l">Understanding Coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
@@ -1650,12 +1579,19 @@ function App() {
     };
   }, []);
 
-  // Dark pro: the companion is designed dark, to sit next to the dark explain panel.
+  // Paper and ink: a light, playful companion next to the dark explain panel.
   useEffect(() => {
-    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.dataset.theme = 'light';
     document.documentElement.dataset.ui = 'v3';
-    document.documentElement.dataset.pro = '';
+    document.documentElement.dataset.v7 = '';
   }, []);
+  // Vibe says hi whenever you open a new page.
+  useEffect(() => {
+    if (gate !== 'app') return;
+    setBuddyMood('wave');
+    const t = window.setTimeout(() => setBuddyMood('idle'), 1600);
+    return () => window.clearTimeout(t);
+  }, [page, gate]);
 
   const applySettings = async (patch: Partial<Settings>): Promise<string | undefined> => {
     const r = (await window.unvibe.setSettings(patch)) as { settings: Settings; shortcutError?: string };

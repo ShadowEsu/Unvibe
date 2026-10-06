@@ -1,6 +1,8 @@
 /* Vibe, the Unvibe AI blob. Pure CSS moods (the body morphs via the CSS d property); every loop stops for reduced motion. */
 
 .buddy {
+  --vibe-fill: #b8a6ff;
+  --vibe-ink: #141217;
   --look-x: 0px;
   --look-y: 0px;
   position: relative;
@@ -23,16 +25,16 @@
 }
 
 .buddy__float { transform-origin: 50% 100%; }
-.buddy__body { animation: buddyGoo 6s ease-in-out infinite; }
-.buddy__gloss { fill: #fff; opacity: 0.42; }
-.buddy__shadow { fill: #000; opacity: 0.16; transform-box: fill-box; transform-origin: center; animation: buddyShadow 4.2s ease-in-out infinite; }
+.buddy__body { fill: var(--vibe-fill); stroke: var(--vibe-ink); stroke-width: 2.2; stroke-linejoin: round; animation: buddyGoo 6s ease-in-out infinite; }
+.buddy__iris { fill: var(--vibe-ink); }
+.buddy__shadow { fill: var(--vibe-ink); opacity: 0.14; transform-box: fill-box; transform-origin: center; animation: buddyShadow 4.2s ease-in-out infinite; }
 .buddy__pupil { fill: #fff; transform: translate(var(--look-x), var(--look-y)); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
-.buddy__lid { fill: #7d55ee; transform: scaleY(0); transform-origin: top; }
-.buddy__eyes--happy path { fill: none; stroke: #141217; stroke-width: 2.8; stroke-linecap: round; }
+.buddy__lid { fill: var(--vibe-fill); transform: scaleY(0); transform-origin: top; }
+.buddy__eyes--happy path { fill: none; stroke: var(--vibe-ink); stroke-width: 2.8; stroke-linecap: round; }
 .buddy__extras > * { opacity: 0; }
-.buddy__dot { fill: #c4b5fd; }
-.buddy__spark { fill: #fde68a; }
-.buddy__z { fill: #c4b5fd; font: 700 7px/1 ui-sans-serif, system-ui; }
+.buddy__dot { fill: var(--vibe-fill); stroke: var(--vibe-ink); stroke-width: 1; }
+.buddy__spark { fill: #ffd84d; stroke: var(--vibe-ink); stroke-width: 0.8; }
+.buddy__z { fill: var(--vibe-ink); font: 700 7px/1 ui-sans-serif, system-ui; }
 
 /* idle: float, blink, glance */
 .buddy--idle .buddy__float { animation: buddySquish 4.2s ease-in-out infinite; }
@@ -72,9 +74,10 @@
 .buddy--sleepy .buddy__z { animation: buddyZ 2.6s ease-in-out infinite; }
 
 @keyframes buddyGoo {
-  0%, 100% { d: path("M24 9C34 9 41 16 41 26C41 36 34 42 24 42C14 42 7 36 7 26C7 16 14 9 24 9Z"); }
-  33% { d: path("M25 10C35 8 42 17 40 27C39 36 33 43 23 41C13 41 7 35 8 25C8 15 15 11 25 10Z"); }
-  66% { d: path("M23 9C33 10 40 15 41 25C42 35 35 41 25 42C15 42 6 37 7 27C7 17 13 9 23 9Z"); }
+  0%, 100% { d: path("M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z"); }
+  33% { d: path("M25 8.5C34 8.5 39 15 40.5 23C42 31 43.5 38 38 41C32.5 43.6 15.5 43.4 10 40.6C4.6 37.6 6 30.5 7.6 22C9 13.6 16 8.5 25 8.5Z"); }
+  66% { d: path("M23 8C32 7.6 38 13.6 39.6 22C41.2 30.6 43.4 38.2 38 41.2C32.4 43.8 16.4 43.8 10.6 40.8C5.4 38 6.8 31.4 8.4 23C10 14.4 14.6 8.4 23 8Z"); }
+}
 }
 @keyframes buddySquish { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.4px) scale(0.97, 1.03); } }
 @keyframes buddyShadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.86); } }
@@ -95,3 +98,6 @@
   .buddy *, .buddy *::before, .buddy *::after { animation: none !important; }
   .buddy__pupil { transition: none; }
 }
+
+/* Vibe is a flat 2D sticker: no glows or soft shadows from any surface. */
+.buddy, .buddy svg { filter: none !important; }

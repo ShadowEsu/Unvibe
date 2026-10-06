@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Vibe, the face of Unvibe's AI. A soft, squishy violet blob with two glossy black eyes and no mouth.
+ * Vibe, the face of Unvibe's AI. A flat, sticker-style blob with an ink outline, two black eyes and no mouth.
  *
  * Moods map to what the AI is doing:
  * - idle: blinks and glances around (follows the pointer when `follow` is set)
@@ -112,17 +112,9 @@ export function Buddy({ mood = 'idle', size = 40, follow = false, className = ''
       aria-label={label ?? `Vibe is ${mood === 'idle' ? 'here' : mood}`}
     >
       <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
-        <defs>
-          <radialGradient id="buddy-body" cx="0.36" cy="0.3" r="0.8">
-            <stop offset="0" stopColor="#c9b8ff" />
-            <stop offset="0.5" stopColor="#8f68f7" />
-            <stop offset="1" stopColor="#5a33c8" />
-          </radialGradient>
-        </defs>
         <ellipse className="buddy__shadow" cx="24" cy="45" rx="12" ry="1.8" />
         <g className="buddy__float">
-          <path className="buddy__body" d="M24 9C34 9 41 16 41 26C41 36 34 42 24 42C14 42 7 36 7 26C7 16 14 9 24 9Z" fill="url(#buddy-body)" />
-          <ellipse className="buddy__gloss" cx="17" cy="15.5" rx="4.6" ry="2.6" transform="rotate(-24 17 15.5)" />
+          <path className="buddy__body" d="M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z" />
           {happy ? (
             <g className="buddy__eyes buddy__eyes--happy">
               <path d="M15.6 25.2c1.2-2.6 4.8-2.6 6 0" />
@@ -131,11 +123,11 @@ export function Buddy({ mood = 'idle', size = 40, follow = false, className = ''
           ) : (
             <g className="buddy__eyes">
               <g className="buddy__eye">
-                <ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" fill="#141217" />
+                <ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" className="buddy__iris" />
                 <circle className="buddy__pupil" cx="17.6" cy="22.6" r="1.15" fill="#fff" />
               </g>
               <g className="buddy__eye">
-                <ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" fill="#141217" />
+                <ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" className="buddy__iris" />
                 <circle className="buddy__pupil" cx="28.4" cy="22.6" r="1.15" fill="#fff" />
               </g>
               <rect className="buddy__lid buddy__lid--l" x="15" y="19.2" width="7.2" height="9.6" rx="3.6" />

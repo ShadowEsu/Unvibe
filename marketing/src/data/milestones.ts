@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "Paper, ink and stickers",
+    summary: "Unvibe goes light and playful. Warm paper and black ink with bright sticker colors, Bricolage Grotesque headings, Inter for reading and handwritten notes from Vibe. Buttons press down like real keys, pages spring in, and Vibe is now a flat 2D sticker on every page. Today is simpler, and the Command U panel is an ink window where Vibe scribbles what it is doing while it writes.",
+    figure: "v0.1.22",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Dark pro: a sharper, denser Unvibe",
     summary: "The whole app is redesigned dark, like Linear or Raycast: near black surfaces, hairline borders, one violet accent with a soft glow. Today is a single dense view with a one line stats row and quick rows you can scan. Every page has a header with search and a Command U Explain button. The Command U panel and the Island share the same palette, and Vibe glows in the corner of every page.",
     figure: "v0.1.21",

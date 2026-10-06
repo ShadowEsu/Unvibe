@@ -4,7 +4,6 @@ import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy } from '../shared/buddy';
-import { ThinkingStatus } from '../shared/thinkingStatus';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -80,18 +79,19 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
     return () => { window.clearTimeout(a); window.clearTimeout(b); };
   }, []);
   const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
+  const notes = [hasCode ? 'hmm, let me read this…' : 'one sec, reading…', 'checking the rest of your project', 'okay, writing it up for you'];
   return (
     <div className="thinking" role="status" aria-live="polite" aria-label="Generating explanation">
-      <div className="thinking__head">
-        <Buddy mood="thinking" size={30} label="Vibe is thinking" />
-        <ThinkingStatus label="Vibe" />
+      <div className="thinking__vibe"><Buddy mood={step === 2 ? 'reading' : 'thinking'} size={46} label="Vibe is thinking" /></div>
+      <div className="thinking__main">
+        <p className="thinking__note" key={step}>{notes[step]}</p>
+        <ol className="thinking__steps">
+          {steps.map((label, i) => (
+            <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}><i aria-hidden="true" />{label}</li>
+          ))}
+        </ol>
+        <div className="thinking__lines" aria-hidden="true"><i /><i /><i /></div>
       </div>
-      <ol className="thinking__steps">
-        {steps.map((label, i) => (
-          <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}><i aria-hidden="true" />{label}</li>
-        ))}
-      </ol>
-      <div className="thinking__lines" aria-hidden="true"><i /><i /><i /></div>
     </div>
   );
 }
@@ -235,6 +235,7 @@ function EmptyPicker({
 
   return (
     <div className="state empty-picker">
+      <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
       <div className="big">Ready when you are.</div>
       <div className="sub">
         Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
@@ -1005,15 +1006,6 @@ function Widget() {
                 >
                   Test me
                 </button>
-                {features.whyExists ? (
-                  <button
-                    className="chip"
-                    disabled={stillTyping}
-                    onClick={askWhy}
-                  >
-                    Why does this exist
-                  </button>
-                ) : null}
 
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>

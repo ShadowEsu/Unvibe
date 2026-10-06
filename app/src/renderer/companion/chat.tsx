@@ -47,8 +47,8 @@ const STARTERS = [
 
 function greetName(name?: string): string {
   const clean = (name ?? '').trim();
-  if (!clean || clean.toLowerCase() === 'there') return 'Ask Unvibe';
-  return `Ask Unvibe, ${clean.split(/\s+/)[0]}`;
+  if (!clean || clean.toLowerCase() === 'there') return 'Hey, what are we figuring out?';
+  return `Hey ${clean.split(/\s+/)[0]}, what are we figuring out?`;
 }
 
 function usageTone(pct: number): 'ok' | 'warn' | 'hot' {
@@ -367,7 +367,7 @@ export function Chat({
               rows={1}
               value={draft}
               disabled={busy}
-              placeholder={empty ? 'Ask Unvibe anything about this codebase…' : 'Follow up'}
+              placeholder={empty ? 'Ask Vibe anything about this codebase…' : 'Follow up'}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

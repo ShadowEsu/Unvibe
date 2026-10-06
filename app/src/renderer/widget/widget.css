@@ -1340,3 +1340,123 @@ code.inline {
 .card .opt { border-radius: 9px; }
 .card .opt:hover:not(:disabled) { border-color: rgb(139 92 246 / 0.5); background: rgb(139 92 246 / 0.08); }
 .card .quiz__kicker { color: var(--p-violet); }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Panel v7 "Ink terminal": a warm black window next to your code. Bricolage for
+   titles, Inter for reading, JetBrains Mono for code, Caveat for Vibe's notes.
+   Sticker colors mark meaning: lime is the next step, sky is test me.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.card.card {
+  --p-bg: #141413;
+  --p-surface: #1e1e1c;
+  --p-raised: #272725;
+  --p-line: #2f2f2c;
+  --p-ink: #f4f2ea;
+  --p-muted: #aeaba2;
+  --p-faint: #75726a;
+  --p-code: #0d0d0c;
+  --p-lime: #d6f45a;
+  --p-sky: #9fd8ff;
+  --p-sun: #ffd84d;
+  --p-coral: #ff9a76;
+  --p-lilac: #b8a6ff;
+  --p-violet: var(--p-lime);
+  --p-green: var(--p-lime);
+  --p-glow: none;
+  --p-fs: clamp(13px, 0.6rem + 1.05cqi, 16.5px);
+  --p-press: cubic-bezier(0.3, 1.5, 0.5, 1);
+  background: var(--p-bg);
+  border: 1.5px solid #000;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.04) inset, 0 24px 60px -18px rgb(0 0 0 / 0.7);
+}
+.card.card, .card.card * { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.card.card pre, .card.card code, .card.card pre *, .card.card code *, .card.card kbd { font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; }
+.card.card ::selection { background: var(--p-lime); color: #141413; }
+.card .head::after { background: none; }
+.card .head { border-bottom: 1px solid var(--p-line); }
+.card .head__product { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; font-weight: 800; font-size: 15px; letter-spacing: -0.03em; color: var(--p-ink); }
+.card .head .buddy { --vibe-ink: #0d0d0c; }
+.card .head__status i { background: var(--p-lime); box-shadow: 0 0 0 3px rgb(214 244 90 / 0.18); }
+.card.card--streaming .head__status i { background: var(--p-sky); box-shadow: 0 0 0 3px rgb(159 216 255 / 0.2); }
+.card .head__actions button { border-radius: 8px; border-color: var(--p-line); }
+
+.card .tab.on { background: var(--p-surface); border-color: var(--p-line); }
+.card .lvl, .card .lvl[data-level] { border-radius: 99px; transition: transform 180ms var(--p-press), background 120ms ease; }
+.card .lvl:hover:not(:disabled) { transform: translateY(-1px); }
+.card .lvl.on, .card .lvl[data-level].on,
+.card .lvl[data-level="new"].on, .card .lvl[data-level="beginner"].on, .card .lvl[data-level="intermediate"].on,
+.card .lvl[data-level="advanced"].on, .card .lvl[data-level="expert"].on {
+  background: var(--p-lime); border-color: var(--p-lime); color: #141413; font-weight: 700; box-shadow: 0 2px 0 #6f8a12;
+}
+
+.card .widget-tools button { border-radius: 10px; transition: transform 200ms var(--p-press), background 120ms ease; }
+.card .widget-tools button:hover:not(:disabled) { transform: translateY(-1px); }
+.card .widget-tools button:hover:not(:disabled) .widget-tool-icon { transform: rotate(-8deg); }
+.card .widget-tools .widget-tool-icon,
+.card .widget-tools .tool--explain .widget-tool-icon, .card .widget-tools .tool--depth .widget-tool-icon,
+.card .widget-tools .tool--quiz .widget-tool-icon, .card .widget-tools .tool--ask .widget-tool-icon,
+.card .widget-tools .tool--why .widget-tool-icon, .card .widget-tools .tool--teach .widget-tool-icon,
+.card .widget-tools .tool--saved .widget-tool-icon { background: var(--p-surface); color: var(--p-muted); box-shadow: none; transition: transform 240ms var(--p-press); }
+.card .widget-tools button.on { background: transparent; box-shadow: none; color: var(--p-ink); }
+.card .widget-tools button.on .widget-tool-icon { background: var(--p-lime); color: #141413; box-shadow: 0 2px 0 #6f8a12; }
+
+.card .body { line-height: 1.6; }
+.card .body p { color: #e4e1d8; }
+.card .body h1, .card .body h2, .card .body h3 { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; font-weight: 750; letter-spacing: -0.025em; }
+.card .body strong { color: #fff; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.28) 62%); }
+.card .body li::marker { color: var(--p-lime); }
+.card .body a { color: var(--p-sky); }
+.card .body :not(pre) > code { background: var(--p-raised); color: var(--p-sun); }
+.card .code-context, .card .cb { border-radius: 12px; border-color: var(--p-line); }
+.card .tk-k { color: var(--p-lilac); } .card .tk-s { color: var(--p-lime); } .card .tk-c { color: #6f6c64; } .card .tk-n { color: var(--p-sun); }
+
+/* Thinking: Vibe bobs while a handwritten note writes itself. */
+.card .thinking {
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px dashed #3a3a36; border-radius: 14px;
+  background: var(--p-surface); box-shadow: none;
+}
+.card .thinking__vibe { flex: 0 0 auto; animation: pBob 1.1s ease-in-out infinite; }
+.card .thinking__vibe .buddy { --vibe-ink: #0d0d0c; }
+.card .thinking__main { display: grid; gap: 10px; flex: 1; min-width: 0; }
+.card .thinking__note {
+  margin: 0; color: var(--p-lime); font-family: "Caveat", "Bradley Hand", cursive !important; font-size: 24px; font-weight: 600; line-height: 1;
+  animation: pWrite 650ms ease-out both;
+}
+.card .thinking__steps li { font-size: 12.5px; }
+.card .thinking__steps li.is-now i { border-color: var(--p-lime); border-top-color: transparent; }
+.card .thinking__steps li.is-done i { border-color: var(--p-lime); background: var(--p-lime); box-shadow: inset 0 0 0 3px var(--p-surface); }
+.card .thinking__lines i { background: linear-gradient(90deg, var(--p-raised), #34342f, var(--p-raised)); background-size: 200% 100%; }
+
+/* Actions: chunky keys that press down. */
+.card .chip, .card .chip--ok, .card .chip--diff, .card .chip--test,
+.card .chip:not(.chip--ok):not(.chip--diff):not(.chip--test) {
+  min-height: 30px; padding: 0 13px; border: 1.5px solid var(--p-line); border-radius: 10px; background: var(--p-surface);
+  color: var(--p-ink); font-weight: 650; box-shadow: 0 2px 0 #000; transition: transform 160ms var(--p-press), box-shadow 160ms var(--p-press);
+}
+.card .chip:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 0 #000; background: var(--p-raised); }
+.card .chip:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 #000; }
+.card .chip--ok, .card .chip--ok:hover:not(:disabled) { background: var(--p-lime); border-color: var(--p-lime); color: #141413; box-shadow: 0 2px 0 #6f8a12; }
+.card .chip--test, .card .chip--test:hover:not(:disabled) { background: var(--p-sky); border-color: var(--p-sky); color: #141413; box-shadow: 0 2px 0 #3d7aa6; }
+.card .foot .chips .chip:first-child:not(.chip--ok) { color: var(--p-ink); }
+.card .ask-sandbox { border-radius: 12px; border: 1.5px solid var(--p-line); background: var(--p-code); }
+.card .ask-sandbox:focus-within { border-color: var(--p-lime); box-shadow: none; background: var(--p-code); }
+.card .askrow .btn-ask { width: 32px; height: 32px; border-radius: 9px; background: var(--p-lime); color: #141413; box-shadow: 0 2px 0 #6f8a12; }
+.card .askrow .btn-ask:disabled { background: var(--p-raised); color: var(--p-faint); box-shadow: none; }
+.card .btn { border-radius: 10px; background: var(--p-lime); color: #141413; border: 0; font-weight: 750; box-shadow: 0 3px 0 #6f8a12; transition: transform 160ms var(--p-press), box-shadow 160ms var(--p-press); }
+.card .btn:hover:not(:disabled) { opacity: 1; transform: translateY(-1px); box-shadow: 0 4px 0 #6f8a12; }
+.card .btn:active:not(:disabled) { transform: translateY(3px); box-shadow: none; }
+.card .btn.ghost { background: var(--p-surface); color: var(--p-ink); border: 1.5px solid var(--p-line); box-shadow: 0 2px 0 #000; }
+.card .state .big { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; font-size: 19px; font-weight: 800; letter-spacing: -0.03em; }
+.card .paste-box { border-radius: 12px; }
+.card .quiz__kicker { color: var(--p-sky); font-family: "Caveat", cursive !important; font-size: 20px; font-weight: 600; letter-spacing: 0; }
+.card .quiz__q { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; letter-spacing: -0.02em; }
+.card .opt { border: 1.5px solid var(--p-line); border-radius: 12px; box-shadow: 0 2px 0 #000; transition: transform 160ms var(--p-press), border-color 120ms ease; }
+.card .opt:hover:not(:disabled) { border-color: var(--p-sky); background: var(--p-raised); transform: translateY(-1px); }
+.card .body > * { animation: pRise 360ms var(--p-press) both; }
+
+@keyframes pBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
+@keyframes pWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .card .thinking__vibe, .card .thinking__note { animation: none; } }
+.card .state__vibe { display: flex; justify-content: center; margin: 4px 0 6px; animation: pBob 2.4s ease-in-out infinite; }
+.card .state__vibe .buddy { --vibe-ink: #0d0d0c; }
