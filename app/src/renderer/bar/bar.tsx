@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { LogoMark } from '../shared/logo';
+import { Buddy, buddyMoodForPhase } from '../shared/buddy';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
 import '../shared/tokens.css';
@@ -226,7 +226,7 @@ function Bar() {
     >
       <div className="island__compact">
         <div className="island__wing island__wing--left">
-          <span className="island__mark" aria-hidden="true"><LogoMark size={17} stroke={2.05} tone="island" /></span>
+          <span className="island__mark" aria-hidden="true"><Buddy mood={buddyMoodForPhase(phase)} size={20} label="Vibe" /></span>
           <button className="island__tool" type="button" aria-label={`Understand selected code, ${shortcut}`} title={`Understand selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>
         </div>
         <span className="island__notch" aria-hidden="true" />
@@ -238,17 +238,17 @@ function Bar() {
       {expanded ? (
         <div className="island__overview">
           <header className="island__header">
-            <div><strong>Unvibe</strong><span>your personal learning layer</span></div>
+            <div><strong>Unvibe</strong><span>your learning, at a glance</span></div>
             <div className="island__header-actions">
               <span className="island__header-streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>
               <button className="island__settings" type="button" aria-label="Island settings" title="Island settings" onClick={() => act('settings')}><SettingsIcon /></button>
             </div>
           </header>
           <div className="island__metrics" aria-label="Learning metrics">
-            <span><b>{value(snapshot?.explanations)}</b> reviews</span>
-            <span data-tone="green"><b>{value(snapshot?.understood)}</b> understood</span>
-            <span data-tone="blue"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
-            <span><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> usage</span>
+            <span data-tone="sky"><b>{value(snapshot?.explanations)}</b> reviews</span>
+            <span data-tone="lime"><b>{value(snapshot?.understood)}</b> understood</span>
+            <span data-tone="sun"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
+            <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> used</span>
           </div>
           <div className="island__activity"><span>14d</span><div>{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
           <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>

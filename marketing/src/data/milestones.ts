@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "Always in your Dock, a cleaner Island, a bigger site",
+    summary: "Unvibe now always shows in the Mac Dock and the Windows taskbar so you can click back into it. The Island uses the app's fonts, Vibe as its mark and sticker colours. unvibe.site gets bigger type, solid cards, a giant free download box, a FREE ribbon, Vibe riding down the page as you scroll, a sticky free download bar, and a new one-page investor brief.",
+    figure: "v0.1.25",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "After-Agent Review, sounds, and a new demo",
     summary: "When Cursor or Claude Code leaves a pile of edits, Briefs now opens with an After-Agent Review: sensitive files first, the largest edits, the areas touched, a review checklist you can tick off, and saved explanations that may now be stale. Vibe has sounds now: a happy boop, a soft whoosh when it starts thinking, a chime when the answer lands, and quiz right and wrong cues. The waitlist only asks for your email, and the site has a new recorded demo of the app.",
     figure: "v0.1.24",

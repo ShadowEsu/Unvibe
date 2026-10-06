@@ -122,10 +122,33 @@ button { font: inherit; }
   .island__overview { opacity: 1; transform: none; }
 }
 
-/* Sticker accents: the Island shares the companion's lime and sky. */
-.island__metrics [data-tone="green"] b { color: #d6f45a; }
-.island__metrics [data-tone="blue"] b { color: #9fd8ff; }
+/* ── Island, Unvibe edition: app fonts, Vibe as the mark, sticker colours ── */
+:root { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.island { background: #121211; border-color: rgba(255,255,255,.1); }
+.island__mark { width: 22px; height: 22px; filter: none; }
+.island__mark .buddy { --vibe-ink: #0b0b0a; }
+.island__tool { width: 23px; height: 23px; border-radius: 7px; background: #1e1e1c; border-color: rgba(255,255,255,.12); color: #b7b4ab; }
+.island__tool:hover { background: #d6f45a; border-color: #d6f45a; color: #141414; }
+.island__streak, .island__header-streak { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+.island__status { font-weight: 600; }
+.island__dots i { background: #d6f45a; }
+.island__header strong { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+.island__header div:first-child span { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 14px; color: #aeaba2; }
+.island__metrics { gap: 6px; }
+.island__metrics > span { display: grid; justify-items: start; gap: 1px; padding: 5px 8px; border-radius: 9px; background: #1e1e1c; color: #aeaba2; font-size: 11px; }
+.island__metrics b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
+.island__metrics [data-tone="lime"] b { color: #d6f45a; }
+.island__metrics [data-tone="sky"] b { color: #9fd8ff; }
+.island__metrics [data-tone="sun"] b { color: #ffd84d; }
+.island__metrics [data-tone="lilac"] b { color: #b8a6ff; }
+.island__activity i { background: #262624; }
 .island__activity i[data-level="1"] { background: rgb(214 244 90 / 0.35); }
 .island__activity i[data-level="2"] { background: rgb(214 244 90 / 0.65); }
 .island__activity i[data-level="3"] { background: #d6f45a; }
-.island__mark { filter: none; }
+.island__allowance b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; }
+.island__note { color: #d6f45a; }
+.island__actions button { border-radius: 9px; background: #1e1e1c; border-color: rgba(255,255,255,.12); font-weight: 650; box-shadow: 0 2px 0 #000; }
+.island__actions button:first-child { background: #d6f45a; border-color: #d6f45a; color: #141414; box-shadow: 0 2px 0 #6f8a12; }
+.island__actions button:hover { border-color: rgba(214,244,90,.6); }
+.island__actions button:active { transform: translateY(2px); box-shadow: none; }
+.island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline-color: #d6f45a; }

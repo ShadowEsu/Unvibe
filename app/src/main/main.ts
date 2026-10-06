@@ -293,6 +293,8 @@ app.on('before-quit', () => {
 });
 
 function openCompanion(): void {
+  // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
+  if (isMac) void app.dock?.show();
   if (companion && !companion.isDestroyed()) {
     if (companion.isMinimized()) companion.restore();
     companion.show();
@@ -526,7 +528,7 @@ app.whenReady().then(() => {
     if (bar && !bar.isDestroyed() && bar.isVisible()) showBar(bar);
     const panel = currentWidget();
     if (!panel || panel.isDestroyed()) return;
-    panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
     panel.moveTop();
   };
   screen.on('display-added', restoreFloatingWindows);
@@ -746,7 +748,7 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     if (!win) return;
     win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'pop-up-menu');
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
     if (isMac) win.setHiddenInMissionControl(true);
     win.moveTop();
   });

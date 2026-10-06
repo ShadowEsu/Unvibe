@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
+import { FreeRibbon } from "@/components/paper/FreeRibbon";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { LiveDemo } from "@/components/paper/LiveDemo";
 import { BetaInstall } from "@/components/paper/BetaInstall";
@@ -31,6 +32,8 @@ export default function HomePage() {
   return (
     <div>
       <PhotoHero />
+
+      <FreeRibbon />
 
       <AppTour />
 

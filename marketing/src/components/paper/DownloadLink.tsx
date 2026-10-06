@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { delight } from "@/lib/delight";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 
 interface DownloadLinkProps {
@@ -45,9 +46,9 @@ export function DownloadLink({
   const tone = platform === "windows" ? "win" : "mac";
   const label =
     platform === "mac"
-      ? "Download for Mac"
+      ? "Download free for Mac"
       : platform === "windows"
-        ? "Download for Windows"
+        ? "Download free for Windows"
         : "Download";
 
   return (
@@ -58,6 +59,7 @@ export function DownloadLink({
           platform: platform ?? "generic",
           surface: size,
         });
+        delight();
         onClick?.();
       }}
       className={cn(

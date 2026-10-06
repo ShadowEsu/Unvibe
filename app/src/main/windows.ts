@@ -115,7 +115,7 @@ export function createBar(): BrowserWindow {
     webPreferences: secureWebPrefs(),
   });
   win.setAlwaysOnTop(true, 'screen-saver', 1);
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
   if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
   if (process.platform === 'darwin') win.setWindowButtonVisibility(false);
@@ -160,7 +160,7 @@ export function showBar(win: BrowserWindow | null): void {
   // macOS can lower an auxiliary window while an editor enters a full-screen
   // Space. Reassert both flags whenever the Island is shown.
   win.setAlwaysOnTop(true, 'screen-saver', 1);
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
   positionBar(win);
   if (!win.isVisible()) win.showInactive();
   win.moveTop();
@@ -277,7 +277,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   // Use the same level as the Island so the review remains reachable above a
   // full-screen editor, not just ordinary desktop windows.
   win.setAlwaysOnTop(true, 'screen-saver');
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
   if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
 
@@ -340,7 +340,7 @@ export function raiseLimitPause(win: BrowserWindow | null): void {
   limitPauseActive = true;
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(true, 'screen-saver');
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
   win.setOpacity(1);
   if (win.isMinimized()) win.restore();
   win.show();

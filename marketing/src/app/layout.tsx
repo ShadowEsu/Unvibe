@@ -9,6 +9,7 @@ import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
 import { SitePalette } from "@/components/paper/SitePalette";
 import { MobileDownloadBar } from "@/components/paper/MobileDownloadBar";
+import { ScrollVibe } from "@/components/paper/ScrollVibe";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -162,6 +163,7 @@ export default function RootLayout({
           <SelectionExplain />
           <SitePalette />
           <MobileDownloadBar />
+          <ScrollVibe />
         </Providers>
       </body>
     </html>
