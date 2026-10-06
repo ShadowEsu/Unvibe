@@ -4,6 +4,7 @@ import { delight } from "@/lib/delight";
 
 import { useEffect, useState } from "react";
 import { useCopyToast } from "@/components/paper/CopyToast";
+import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import {
   BETA_FEEDBACK_URL,
@@ -40,6 +41,7 @@ export function BetaInstall({
   const [termOpen, setTermOpen] = useState(false);
   // Chromium browsers can tell an Intel Mac apart; Safari cannot, so Intel users also get a link.
   const [intelMac, setIntelMac] = useState(false);
+  const [clicked, setClicked] = useState(false);
   const { showCopyToast } = useCopyToast();
   const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
   const prompt = os === "windows" ? "PS>" : "$";
@@ -123,6 +125,7 @@ export function BetaInstall({
           track("release_download_clicked", { os, surface: tone });
           delight();
           window.dispatchEvent(new Event("unvibe:downloaded"));
+          setClicked(true);
         }}
       >
         <DownloadIcon />
@@ -142,15 +145,14 @@ export function BetaInstall({
           : "Quit it from the menu bar first (Unvibe icon, Quit), then drag the new one into Applications and choose Replace."}
         {" "}From v0.1.30 on, Unvibe updates itself with one click.
       </p>
-      {os === "mac" ? (
-        <p className="paper-beta__update">
-          <b>First open on a Mac:</b> right click Unvibe in Applications and choose Open. If macOS still blocks it,
-          go to System Settings, Privacy &amp; Security, and press Open Anyway. Or skip all of that with the one line
-          Terminal install below.
-        </p>
+      {clicked ? (
+        <div className="paper-beta__next" role="status">
+          <p className="paper-beta__next-title">Downloading! Now open it the first time:</p>
+          <FirstOpenSteps initialOs={os} compact />
+        </div>
       ) : (
         <p className="paper-beta__update">
-          <b>First open on Windows:</b> if SmartScreen appears, press More info, then Run anyway.
+          <a href="/install-help">How to open it the first time</a> · takes one extra click because Unvibe is new
         </p>
       )}
 
@@ -158,7 +160,7 @@ export function BetaInstall({
       <div className="paper-beta__specs" aria-label="System requirements">
         <span>{BETA_INSTALL_VERSION}</span>
         <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "Windows 10+ x64" : "Apple silicon Mac"}</span>
+        <span>{os === "windows" ? "Windows 10+ x64" : "Mac, M1 or Intel"}</span>
         <span aria-hidden="true">·</span>
         <span>{os === "windows" ? "~81 MB .exe" : "~112 MB .dmg"}</span>
         <span aria-hidden="true">·</span>

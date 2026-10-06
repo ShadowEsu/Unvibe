@@ -4,7 +4,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  const routes = ["", "/beta", "/resources", "/app", "/build", "/pricing", "/releases", "/investors", "/privacy", "/terms", "/data-controls", "/account-deletion"];
+  const routes = ["", "/beta", "/resources", "/app", "/build", "/pricing", "/releases", "/install-help", "/investors", "/privacy", "/terms", "/data-controls", "/account-deletion"];
   return routes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: now,
