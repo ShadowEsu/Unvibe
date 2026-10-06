@@ -1,7 +1,8 @@
 import { BETA_SURVEY_URL } from "@/lib/betaOffer";
 import { recordBetaInstallEvent } from "@/lib/betaInstallStats";
 import { captureServerEvent } from "@/lib/posthogServer";
-import { cleanText, clientIp, feedbackDb, feedbackSchema, hashIp } from "@/lib/feedback";
+import { cleanText, clientIp, FEEDBACK_BONUS_MIN_WORDS, feedbackDb, feedbackSchema, hashIp, wordCount } from "@/lib/feedback";
+import { verifyEmailSignature } from "@/lib/rewardLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,5 +68,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "Could not save that. Try again in a moment." }, { status: 500, headers: noStore });
   }
   await captureServerEvent("feedback_submitted", ipHash, { rating: input.rating, source: input.source }).catch(() => undefined);
-  return Response.json({ ok: true }, { headers: noStore });
+
+  // From the welcome email: a signed link plus a real message earns one more month of Pro.
+  let bonus: "granted" | "already" | "too_short" | undefined;
+  if (input.email && input.claim && verifyEmailSignature(input.email, input.claim)) {
+    if (wordCount(input.message) < FEEDBACK_BONUS_MIN_WORDS) {
+      bonus = "too_short";
+    } else {
+      const { data, error: grantError } = await db.rpc("grant_bonus_month", { p_email: input.email.toLowerCase(), p_reason: "feedback" });
+      if (grantError) console.error("feedback bonus grant failed", grantError.message);
+      else bonus = data === true ? "granted" : "already";
+    }
+  }
+  return Response.json({ ok: true, bonus }, { headers: noStore });
 }

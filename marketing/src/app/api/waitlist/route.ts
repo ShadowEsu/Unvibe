@@ -2,8 +2,10 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { waitlistDetailsSchema, waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
+import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
 import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
+  recordWaitlistBetaEmail,
   recordWaitlistNotification,
   referralCodeForEmail,
   saveWaitlistEntry,
@@ -90,6 +92,13 @@ export async function POST(req: Request) {
       await recordWaitlistNotification(email, notification).catch((error) => {
         console.error("waitlist notification status write failed", error);
       });
+      const welcome = await sendWelcomeEmail({ email, referralCode });
+      await recordWaitlistBetaEmail(email, {
+        status: welcome.sent ? "sent" : "failed",
+        at: new Date().toISOString(),
+        messageId: welcome.messageId,
+        error: welcome.error,
+      }).catch((error) => console.error("welcome email status write failed", error));
     }
     // Await so Vercel does not freeze the isolate before the capture request leaves.
     const completionProps = {

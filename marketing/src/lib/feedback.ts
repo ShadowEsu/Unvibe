@@ -5,6 +5,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 /** Stars plus up to 100 words. Shared by the site form and the desktop app. */
 export const FEEDBACK_MAX_WORDS = 100;
 
+/** Words needed in a message before it earns the bonus Pro month from the email link. */
+export const FEEDBACK_BONUS_MIN_WORDS = 8;
+
 export function wordCount(text: string): number {
   const trimmed = text.trim();
   return trimmed ? trimmed.split(/\s+/).length : 0;
@@ -22,6 +25,8 @@ export const feedbackSchema = z.object({
   source: z.enum(["site", "app"]).default("site"),
   page: z.string().trim().max(200).optional(),
   appVersion: z.string().trim().max(40).optional(),
+  // Signature from the welcome email link; earns a bonus Pro month for that email.
+  claim: z.string().regex(/^[a-f0-9]{32}$/).optional().or(z.literal("")),
   // Honeypot: real people never fill this hidden field.
   website: z.string().max(0).optional().or(z.literal("")),
 });

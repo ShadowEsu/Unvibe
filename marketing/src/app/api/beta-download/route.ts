@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
-import { scheduleSetupReminder, sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
-import { saveWaitlistEntry } from "@/lib/waitlistStore";
+import { scheduleSetupReminder } from "@/lib/sendBetaDownloadEmail";
+import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
+import { recordWaitlistBetaEmail, saveWaitlistEntry } from "@/lib/waitlistStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   const code = existing?.referralCode || referralCode(email);
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
-    : await sendBetaDownloadEmail({ firstName: parsed.data.firstName, email, macDownloadUrl, referralCode: code });
+    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: macDownloadUrl });
   if (!existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {
@@ -79,6 +80,14 @@ export async function POST(request: Request) {
     utmSource: "download",
     createdAt: new Date().toISOString(),
   }).catch((error) => console.error("download waitlist record failed", error));
+  if (!existing?.emailSentAt) {
+    await recordWaitlistBetaEmail(email, {
+      status: delivery.sent ? "sent" : "failed",
+      at: new Date().toISOString(),
+      messageId: delivery.messageId,
+      error: "error" in delivery ? delivery.error : undefined,
+    }).catch(() => undefined);
+  }
 
   return NextResponse.json({
     downloadUrl: macDownloadUrl,

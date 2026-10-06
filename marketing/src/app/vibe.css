@@ -502,3 +502,4 @@ p { font-size: 1.02rem; }
 @media (min-width: 821px) { .remind { bottom: 6.6rem; } }
 .reward-track { grid-template-columns: repeat(5, 1fr); }
 @media (min-width: 700px) { .remind { left: 3.4rem; } }
+.fb-bonus { margin: 0.6rem 0 1rem; padding: 0.7rem 0.9rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--v-lime); font-size: 0.98rem; }
