@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Unvibe pitch deck</title>
+<!--
+  Source for public/investors/unvibe-pitch-deck.pdf. Build: node scripts/build-deck.mjs
+  Every number here must be real and dated. Update the traction slide before sending.
+-->
+<style>
+@font-face { font-family: "Bricolage"; src: url("../../app/src/renderer/shared/fonts/bricolage-grotesque-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; }
+@font-face { font-family: "Inter"; src: url("../../app/src/renderer/shared/fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Serif"; src: url("../../app/src/renderer/shared/fonts/instrument-serif-latin-400-italic.woff2") format("woff2"); font-style: italic; }
+:root { --paper: #f6f1e7; --ink: #141414; --lime: #d6f45a; --lilac: #b8a6ff; --sky: #9fd8ff; --sun: #ffd84d; --soft: #3b3b3b; --faint: #6b6b6b; }
+@page { size: 1920px 1080px; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #ddd; }
+body { font-family: "Inter", Helvetica, sans-serif; color: var(--ink); }
+.s { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); padding: 110px 130px 120px; page-break-after: always; break-after: page; }
+.s:last-child { page-break-after: auto; }
+.dot { position: absolute; border-radius: 50%; }
+.top { position: absolute; left: 130px; right: 130px; top: 48px; display: flex; justify-content: space-between; align-items: center; font: 700 22px "Bricolage"; letter-spacing: .02em; }
+.top .brand { display: flex; align-items: center; gap: 12px; font-size: 28px; }
+.top .tag { padding: 8px 18px; border: 2.5px solid var(--ink); border-radius: 999px; background: #fff; font-size: 18px; letter-spacing: .08em; text-transform: uppercase; }
+.foot { position: absolute; left: 130px; right: 130px; bottom: 44px; display: flex; justify-content: space-between; font: 600 18px "Inter"; color: var(--faint); letter-spacing: .04em; }
+h1, h2 { font-family: "Bricolage"; font-weight: 800; letter-spacing: -0.045em; margin: 0; line-height: .95; }
+h1 { font-size: 150px; }
+h2 { font-size: 104px; }
+em { font-family: "Serif"; font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+.lead { font-size: 36px; line-height: 1.4; color: var(--soft); max-width: 1180px; margin: 34px 0 0; }
+.card { border: 3px solid var(--ink); border-radius: 30px; background: #fff; box-shadow: 9px 9px 0 var(--ink); padding: 36px 40px; }
+.chip { display: inline-block; padding: 10px 22px; border: 3px solid var(--ink); border-radius: 999px; font: 800 26px "Bricolage"; box-shadow: 4px 4px 0 var(--ink); background: #fff; }
+.lime { background: var(--lime); } .lilac { background: var(--lilac); } .sky { background: var(--sky); } .sun { background: var(--sun); }
+.grid { display: grid; gap: 34px; }
+.big { font: 800 112px/1 "Bricolage"; letter-spacing: -0.05em; }
+.small { font-size: 26px; line-height: 1.4; color: var(--soft); }
+.bubble { position: absolute; padding: 18px 28px; background: #fff; border: 3px solid var(--ink); border-radius: 30px 30px 30px 8px; box-shadow: 5px 5px 0 var(--ink); font: italic 40px/1.1 "Serif"; }
+.shot { border: 3px solid var(--ink); border-radius: 22px; box-shadow: 10px 10px 0 var(--ink); display: block; background: #fff; }
+.src { position: absolute; left: 130px; bottom: 90px; font-size: 18px; color: var(--faint); letter-spacing: .03em; }
+ul.ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; font-size: 30px; line-height: 1.35; }
+ul.ticks li { padding-left: 52px; position: relative; }
+ul.ticks li::before { content: ""; position: absolute; left: 0; top: 6px; width: 30px; height: 30px; border: 3px solid var(--ink); border-radius: 50%; background: var(--lime); }
+.row { display: grid; grid-template-columns: 340px 1fr 1fr; gap: 0; border-top: 3px solid var(--ink); font-size: 28px; }
+.row > div { padding: 22px 18px; }
+.row.us { background: var(--lime); border-bottom: 3px solid var(--ink); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- Vibe, reused -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="vibe" viewBox="0 0 48 48"><ellipse cx="24" cy="45.6" rx="12" ry="1.8" fill="rgba(20,20,20,.16)"/><path d="M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z" fill="#b8a6ff" stroke="#141414" stroke-width="2.2" stroke-linejoin="round"/><ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" fill="#141414"/><circle cx="17.6" cy="22.6" r="1.15" fill="#fff"/><ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" fill="#141414"/><circle cx="28.4" cy="22.6" r="1.15" fill="#fff"/></symbol>
+</svg>
+
+<!-- 1. Cover -->
+<section class="s">
+  <i class="dot lime" style="width:520px;height:520px;left:-150px;top:-170px"></i>
+  <i class="dot sky" style="width:640px;height:640px;right:-200px;bottom:-260px"></i>
+  <i class="dot sun" style="width:220px;height:220px;right:640px;bottom:-80px"></i>
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Seed deck · Oct 2026</span></div>
+  <div style="position:absolute;left:130px;top:250px">
+    <h1>Understand the code<br><em>AI ships for you.</em></h1>
+    <p class="lead">Unvibe sits beside your editor, explains what the AI just wrote, checks you actually got it, and keeps the lesson. Free on Mac and Windows.</p>
+    <div style="margin-top:46px;display:flex;gap:18px"><span class="chip lime">Live today</span><span class="chip">v0.1.27</span><span class="chip sky">Mac + Windows</span></div>
+  </div>
+  <svg style="position:absolute;right:150px;top:520px" width="340" height="340"><use href="#vibe"/></svg>
+  <div class="bubble" style="right:110px;top:430px">hi! I'm Vibe</div>
+  <div class="foot"><span>Preston Susanto · Founder · preston@unvibe.site</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 2. Personal -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Why I'm building this</span></div>
+  <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:90px;margin-top:70px">
+    <div>
+      <h2>I shipped code<br><em>I couldn't explain.</em></h2>
+      <p class="lead" style="font-size:33px">I'm Preston. I'm 17, I grew up in Jakarta, went to school in Perth, and now study EECS at Diablo Valley College in California. I build with Cursor and Claude every day on one MacBook, no GPU, no budget.</p>
+      <p class="lead" style="font-size:33px;color:var(--ink);font-weight:600">The AI made me fast. It didn't make me understand. So I built the tool I wanted: one key, and the code makes sense, at my level.</p>
+    </div>
+    <div class="card" style="align-self:center;transform:rotate(1.5deg)">
+      <p style="margin:0 0 18px;font:800 30px 'Bricolage'">Preston Susanto</p>
+      <ul class="ticks" style="font-size:26px;gap:14px">
+        <li>4.0 GPA, EECS at DVC, Phillip Howe Scholarship</li>
+        <li>SF Hacks 2026: 3 awards in one weekend</li>
+        <li>Mega Hackathon: Gaming Award, solo, 950+ entrants</li>
+        <li>Software Engineer Officer, Google Developers Group</li>
+        <li>Built and shipped Unvibe solo: app, API, site</li>
+        <li>English, Indonesian and Mandarin</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>02</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 3. Why now -->
+<section class="s">
+  <i class="dot lilac" style="width:300px;height:300px;right:-80px;top:-90px"></i>
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Why now</span></div>
+  <h2 style="margin-top:70px">AI writes the code now.<br><em>Who understands it?</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-top:80px">
+    <div class="card lime"><div class="big">84%</div><p class="small" style="color:var(--ink)">of developers use or plan to use AI tools</p></div>
+    <div class="card"><div class="big">51%</div><p class="small">of professional developers use AI every day</p></div>
+    <div class="card sun"><div class="big">3%</div><p class="small" style="color:var(--ink)">highly trust the accuracy of what AI writes</p></div>
+    <div class="card"><div class="big">45%</div><p class="small">say debugging AI code takes longer than writing it</p></div>
+  </div>
+  <p class="lead" style="margin-top:60px;color:var(--ink);font-weight:600">Generation is solved. Ownership is the new gap.</p>
+  <p class="src">Source: Stack Overflow 2025 Developer Survey, 49,000+ developers</p>
+  <div class="foot"><span>03</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 4. Product -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">The product</span></div>
+  <div style="display:grid;grid-template-columns:.9fr 1.1fr;gap:70px;margin-top:60px;align-items:center">
+    <div>
+      <h2>Select. Press ⌘U.<br><em>Get it.</em></h2>
+      <div class="grid" style="margin-top:50px;gap:22px">
+        <div style="display:flex;gap:22px;align-items:center"><span class="chip lime">1</span><span style="font-size:32px"><b>Select</b> any code, in any app</span></div>
+        <div style="display:flex;gap:22px;align-items:center"><span class="chip lilac">2</span><span style="font-size:32px"><b>Explain</b> at 5 depths, New to Expert</span></div>
+        <div style="display:flex;gap:22px;align-items:center"><span class="chip sky">3</span><span style="font-size:32px"><b>Test me:</b> one question to prove it stuck</span></div>
+        <div style="display:flex;gap:22px;align-items:center"><span class="chip sun">4</span><span style="font-size:32px"><b>Save</b> the lesson to your library</span></div>
+      </div>
+      <p class="small" style="margin-top:40px">Works beside Cursor, VS Code, Claude Code and Terminal. Model access included, no API key.</p>
+    </div>
+    <img class="shot" src="../public/product/v3/home-today.jpg" style="width:100%">
+  </div>
+  <div class="foot"><span>04</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 5. What's new -->
+<section class="s">
+  <i class="dot lime" style="width:260px;height:260px;left:-90px;bottom:-90px"></i>
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Shipped since the last deck</span></div>
+  <h2 style="margin-top:60px">Now on v0.1.27. <em>Here's what's new.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:60px;gap:28px">
+    <div class="card"><p style="margin:0 0 10px;font:800 32px 'Bricolage'">After-Agent Review</p><p class="small" style="margin:0">When Cursor or Claude Code edits many files, Unvibe ranks the real diff and gives a review checklist.</p></div>
+    <div class="card lime"><p style="margin:0 0 10px;font:800 32px 'Bricolage'">Windows</p><p class="small" style="margin:0;color:var(--ink)">Mac and Windows from one codebase. The site always serves the newest version.</p></div>
+    <div class="card"><p style="margin:0 0 10px;font:800 32px 'Bricolage'">Knowledge freshness</p><p class="small" style="margin:0">Saved explanations get flagged when the code under them changes.</p></div>
+    <div class="card lilac"><p style="margin:0 0 10px;font:800 32px 'Bricolage'">A talking onboarding</p><p class="small" style="margin:0;color:var(--ink)">Vibe talks you through setup with sound, Google fills in your details, a 6 second demo.</p></div>
+    <div class="card"><p style="margin:0 0 10px;font:800 32px 'Bricolage'">Try it in the browser</p><p class="small" style="margin:0">Paste code on unvibe.site and get a real explanation before installing.</p></div>
+    <div class="card sky"><p style="margin:0 0 10px;font:800 32px 'Bricolage'">Growth loops</p><p class="small" style="margin:0;color:var(--ink)">Invite a friend: both get a month of Pro. Feedback earns a month. Welcome emails.</p></div>
+  </div>
+  <div class="foot"><span>05</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 6. After-agent review screenshot -->
+<section class="s" style="padding-top:150px">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">For the agent era</span></div>
+  <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:70px;align-items:center">
+    <img class="shot" src="../public/product/v3/after-agent-review.jpg" style="width:100%">
+    <div>
+      <h2 style="font-size:88px">Your agent changed 14 files. <em>Which 3 matter?</em></h2>
+      <p class="lead" style="font-size:31px">After-Agent Review reads the diff, ranks what actually matters, groups it by area, and hands you a checklist. Tick it off and Vibe celebrates.</p>
+    </div>
+  </div>
+  <div class="foot"><span>06</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 7. Privacy -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Built to be trusted</span></div>
+  <h2 style="margin-top:70px">Your code stays <em>yours.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:80px">
+    <div class="card"><div style="font:800 46px 'Bricolage'">Filtered locally</div><p class="small">API keys, tokens and .env files are removed on your computer before anything is sent.</p></div>
+    <div class="card"><div style="font:800 46px 'Bricolage'">Server never reads the repo</div><p class="small">It only receives the already filtered context you chose to explain.</p></div>
+    <div class="card"><div style="font:800 46px 'Bricolage'">No training</div><p class="small">Private code is never used to train models. Per repo consent, delete anytime.</p></div>
+  </div>
+  <div class="foot"><span>07</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 8. Traction -->
+<section class="s">
+  <i class="dot sun" style="width:340px;height:340px;right:-110px;top:-120px"></i>
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Traction · 6 Oct 2026</span></div>
+  <h2 style="margin-top:70px">Live, free, <em>and moving.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-top:70px">
+    <div class="card lime"><div class="big">257</div><p class="small" style="color:var(--ink)">installer downloads<br>148 Mac · 109 Windows</p></div>
+    <div class="card"><div class="big">1,750+</div><p class="small">site visits,<br>250 in the last week</p></div>
+    <div class="card lilac"><div class="big">#1</div><p class="small" style="color:var(--ink)">daily on Smol Startup</p></div>
+    <div class="card"><div class="big">800+</div><p class="small">followers across Instagram, TikTok, X and LinkedIn</p></div>
+  </div>
+  <p class="lead" style="margin-top:56px">Built and shipped solo. Early numbers, all real, and every one is tracked live.</p>
+  <div class="foot"><span>08</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 9. Backing -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Backing</span></div>
+  <div style="display:grid;grid-template-columns:.85fr 1.15fr;gap:80px;margin-top:70px;align-items:start">
+    <div>
+      <h2><span style="font-size:150px">$246,200</span><br><em>in startup support.</em></h2>
+      <p class="lead" style="font-size:31px">From 12 sources, 10 of them startup programs. Mostly product credits that cover analytics, AI and hosting for years. Credits are not cash, and this is not a priced round.</p>
+    </div>
+    <div class="card" style="padding:14px 34px">
+      <div style="display:grid;grid-template-columns:1fr auto;font-size:29px;line-height:2.05">
+        <span>Mixpanel for Startups</span><b>$144,000</b>
+        <span>PostHog for Startups</span><b>$50,000</b>
+        <span>GitLab for Startups</span><b>$23,700</b>
+        <span>Salesforce Launchpad</span><b>$13,500</b>
+        <span>AWS for Startups</span><b>$5,000</b>
+        <span>Linear Founder Value Pack</span><b>$4,500</b>
+        <span>Google AI Startups</span><b>$2,000</b>
+        <span>OpenAI · Deepgram · MongoDB</span><b>$2,700</b>
+        <span>Founder capital + early angel</span><b>$800</b>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>09</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 10. Business model -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Business model</span></div>
+  <h2 style="margin-top:70px">Free builds the habit. <em>Pro pays.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:70px">
+    <div class="card"><p style="margin:0;font:800 30px 'Bricolage'">Free</p><div class="big" style="margin:10px 0">$0</div><ul class="ticks" style="font-size:25px"><li>50 explanations a month</li><li>Five depths, Test me</li><li>Saved lessons</li></ul></div>
+    <div class="card lime" style="transform:translateY(-16px)"><p style="margin:0;font:800 30px 'Bricolage'">Pro</p><div class="big" style="margin:10px 0">$9<span style="font-size:40px">/mo</span></div><ul class="ticks" style="font-size:25px"><li>$81 a year</li><li>Git diffs and agent reviews</li><li>10 projects, full history</li></ul></div>
+    <div class="card"><p style="margin:0;font:800 30px 'Bricolage'">Teams</p><div class="big" style="margin:10px 0">$8<span style="font-size:40px">/seat</span></div><ul class="ticks" style="font-size:25px"><li>2 to 20 seats</li><li>Shared knowledge (next)</li><li>Enterprise above 20</li></ul></div>
+  </div>
+  <p class="lead" style="margin-top:46px">Every new account starts with a free month of Pro, and invites add more. Users feel Pro before they pay for it.</p>
+  <div class="foot"><span>10</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 11. Competition -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Why Unvibe wins</span></div>
+  <h2 style="margin-top:70px">Not another generator. <em>The layer that sticks.</em></h2>
+  <div style="margin-top:60px;border:3px solid var(--ink);border-radius:26px;overflow:hidden;background:#fff;box-shadow:9px 9px 0 var(--ink)">
+    <div class="row" style="border-top:0;background:var(--sun);font-weight:800"><div>Who</div><div>What they do</div><div>What's missing</div></div>
+    <div class="row"><div><b>Coding agents</b></div><div>Generate and edit code</div><div>Not built to make you understand it</div></div>
+    <div class="row"><div><b>Chatbots</b></div><div>Explain pasted code in a side window</div><div>No editor context, no memory, no check</div></div>
+    <div class="row"><div><b>Courses</b></div><div>Teach a fixed curriculum</div><div>Not the code you actually ship</div></div>
+    <div class="row us"><div>Unvibe</div><div>Explains your code in place, at your level</div><div>Checks you got it and keeps it fresh</div></div>
+  </div>
+  <p class="lead" style="margin-top:40px;font-size:30px">Neutral across every agent. The more you build, the more Unvibe knows what you know.</p>
+  <div class="foot"><span>11</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 12. Go to market -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Go to market</span></div>
+  <h2 style="margin-top:70px">Start where the gap <em>hurts most.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:70px">
+    <div class="card lime"><p style="margin:0 0 12px;font:800 34px 'Bricolage'">Students and clubs</p><p class="small" style="margin:0;color:var(--ink)">GDG, Code The Change and campus CS clubs I already help lead. Workshops, not ads.</p></div>
+    <div class="card"><p style="margin:0 0 12px;font:800 34px 'Bricolage'">Hackathons</p><p class="small" style="margin:0">Teams ship in 48 hours and have to demo it. I've won there, so I know the room.</p></div>
+    <div class="card lilac"><p style="margin:0 0 12px;font:800 34px 'Bricolage'">AI coding communities</p><p class="small" style="margin:0;color:var(--ink)">Cursor and Claude Code builders, build in public clips, product directories.</p></div>
+  </div>
+  <p class="lead" style="margin-top:50px">Built-in loops: invite a friend for a free month, feedback for a free month, try it in the browser before installing.</p>
+  <div class="foot"><span>12</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 13. Roadmap -->
+<section class="s">
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">Roadmap</span></div>
+  <h2 style="margin-top:70px">From explaining code <em>to owning a codebase.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:70px">
+    <div class="card lime"><span class="chip" style="font-size:22px">Shipped</span><ul class="ticks" style="font-size:26px;margin-top:24px"><li>Explain at 5 depths, Test me</li><li>After-Agent Review</li><li>Knowledge freshness</li><li>Mac + Windows</li></ul></div>
+    <div class="card"><span class="chip sun" style="font-size:22px">Next</span><ul class="ticks" style="font-size:26px;margin-top:24px"><li>Instant Selection Bubble</li><li>Ask the codebase</li><li>Impact trace: what breaks</li></ul></div>
+    <div class="card"><span class="chip sky" style="font-size:22px">After that</span><ul class="ticks" style="font-size:26px;margin-top:24px"><li>GitHub PR intelligence</li><li>Shared team knowledge</li><li>Who knows this code</li></ul></div>
+  </div>
+  <div class="foot"><span>13</span><span>unvibe.site</span></div>
+</section>
+
+<!-- 14. Ask -->
+<section class="s">
+  <i class="dot lime" style="width:520px;height:520px;right:-150px;bottom:-200px"></i>
+  <i class="dot lilac" style="width:240px;height:240px;left:-80px;top:-80px"></i>
+  <div class="top"><span class="brand"><svg width="44" height="44"><use href="#vibe"/></svg>Unvibe</span><span class="tag">The ask</span></div>
+  <h2 style="margin-top:70px">Help me make AI code <em>understandable.</em></h2>
+  <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:60px;max-width:1300px">
+    <div class="card"><p style="margin:0;font:800 26px 'Bricolage';color:var(--faint)">CAPITAL</p><div style="font:800 54px/1.05 'Bricolage';margin:12px 0">$50K to $100K</div><p class="small" style="margin:0">AI usage, Apple and Windows signing, security review, focused distribution.</p></div>
+    <div class="card"><p style="margin:0;font:800 26px 'Bricolage';color:var(--faint)">USERS</p><div style="font:800 54px/1.05 'Bricolage';margin:12px 0">500 builders</div><p class="small" style="margin:0">Students, AI first devs and hackathon teams using it on real work.</p></div>
+    <div class="card"><p style="margin:0;font:800 26px 'Bricolage';color:var(--faint)">INTROS</p><div style="font:800 54px/1.05 'Bricolage';margin:12px 0">Your network</div><p class="small" style="margin:0">Developer communities, technical founders, angels and partners.</p></div>
+  </div>
+  <div style="position:absolute;left:130px;bottom:70px;font:800 40px 'Bricolage'">preston@unvibe.site · <em style="font-size:50px">unvibe.site</em></div>
+  <svg style="position:absolute;right:110px;bottom:150px" width="220" height="220"><use href="#vibe"/></svg>
+  <div class="bubble" style="right:90px;bottom:390px">let's build it together</div>
+</section>
+
+</body>
+</html>
