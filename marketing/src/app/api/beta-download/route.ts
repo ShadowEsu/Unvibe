@@ -7,8 +7,8 @@ import { scheduleSetupReminder, sendBetaDownloadEmail } from "@/lib/sendBetaDown
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const release = "0.1.25";
-const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.25/Unvibe-0.1.25-mac-arm64.dmg";
+const release = "0.1.26";
+const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.26/Unvibe-0.1.26-mac-arm64.dmg";
 const schema = z.object({
   firstName: z.string().trim().max(80).optional().default(""),
   email: z.string().trim().email().max(240),
