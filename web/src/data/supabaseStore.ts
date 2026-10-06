@@ -115,13 +115,25 @@ export class SupabaseStore implements Store {
     return { token, userId, email: normalized };
   }
 
-  async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
+  async accountInfo(userId: string): Promise<{ userId: string; email?: string; name?: string }> {
     const { data } = await this.db
       .from('users')
-      .select('email')
+      .select('email, settings')
       .eq('id', userId)
       .maybeSingle();
-    return { userId, email: (data?.email as string | undefined) ?? undefined };
+    const settings = (data?.settings ?? {}) as { providerName?: unknown };
+    return {
+      userId,
+      email: (data?.email as string | undefined) ?? undefined,
+      name: typeof settings.providerName === 'string' ? settings.providerName : undefined,
+    };
+  }
+
+  async rememberName(userId: string, name: string): Promise<void> {
+    const { data } = await this.db.from('users').select('settings').eq('id', userId).maybeSingle();
+    const settings = { ...((data?.settings ?? {}) as Record<string, unknown>), providerName: name };
+    const { error } = await this.db.from('users').update({ settings }).eq('id', userId);
+    if (error) throw new Error(`Could not save profile name: ${error.message}`);
   }
 
   async userIdForEmail(email: string): Promise<string | null> {

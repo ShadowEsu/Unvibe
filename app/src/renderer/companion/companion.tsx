@@ -327,13 +327,15 @@ function accelFromEvent(e: KeyboardEvent): string | null {
   if (mods.length === 0) return null; // require at least one modifier
   return [...mods, key].join('+');
 }
-function SignInForm({ onDone }: { onDone: (email: string) => void }) {
+function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) => void; label?: string }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
   const [browserOpened, setBrowserOpened] = useState(true);
-  useEffect(() => { window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) onDone(r.email); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }); }, [onDone]);
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
@@ -356,7 +358,7 @@ function SignInForm({ onDone }: { onDone: (email: string) => void }) {
     <div className="signin">
       <button className="field-btn field-btn--google" disabled={busy} onClick={startDevice}>
         <GoogleMark />
-        {busy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
+        {busy ? 'Waiting for Google sign-in…' : (label ?? 'Continue with Google')}
       </button>
       {err && <div className="field-err">{err}</div>}
       <div className="field-note">
@@ -497,13 +499,21 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
 
   const lines = [
     "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
-    firstName ? `Nice to meet you, ${firstName}! I'll remember that.` : 'First things first. What should I call you?',
+    firstName ? `Nice to meet you, ${firstName}! I'll remember that.` : 'First things first. Tap Google and I fill this in for you, or just type it.',
     signedIn ? `You're signed in as ${signedIn}. Now let's hook up your editors.` : "Let's hook me up to your editors. Google sign-in is optional, it just syncs your progress.",
     'One permission so I can read code you select in Terminal and other apps. Nothing leaves without your OK.',
     demoDone ? "That's me! Ready when you are." : "Watch this. It's the whole thing in six seconds.",
   ];
   const said = useVibeSays(lines[step] ?? '', soundEffects);
 
+  // Google sign-in hands back the account email and profile name; fill what is still empty.
+  const fillFromGoogle = (email: string, name?: string) => {
+    setSignedIn(email);
+    if (email.includes('@')) setProfileEmail((current) => current.trim() || email);
+    if (name) { setDisplayName((current) => current.trim() || name); setNameError(''); }
+    if (soundEffects) playTone('correct');
+    setBuddyMood('happy');
+  };
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
@@ -578,6 +588,12 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
           )}
 
           {step === 1 && (
+            <>
+            {signedIn ? <p className="ob2__ok">✓ Filled in from Google ({signedIn})</p> : (
+              <div className="ob2__google ob2__google--you">
+                <SignInForm label="Fill this in with Google" onDone={fillFromGoogle} />
+              </div>
+            )}
             <form className="ob__form ob2__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
               <label>
                 <span>Your name</span>
@@ -591,12 +607,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
               {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
               <button type="submit" hidden />
             </form>
+            </>
           )}
 
           {step === 2 && (
             <>
               <div className="ob2__google">
-                {signedIn ? <p className="ob2__ok">✓ Signed in as {signedIn}</p> : <SignInForm onDone={(email) => { setSignedIn(email); if (soundEffects) playTone('correct'); }} />}
+                {signedIn ? <p className="ob2__ok">✓ Signed in as {signedIn}</p> : <SignInForm onDone={fillFromGoogle} />}
               </div>
               <div className="ob__integrations"><IntegrationsPanel /></div>
             </>

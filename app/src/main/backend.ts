@@ -160,8 +160,8 @@ export async function redeemDeviceAuth(deviceCode: string): Promise<{ token: str
   return json<{ token: string }>(res);
 }
 
-export async function accountInfo(token: string): Promise<{ userId: string; email?: string }> {
-  return json<{ userId: string; email?: string }>(await request(`${BACKEND}/api/v1/account`, { headers: { authorization: `Bearer ${token}` } }));
+export async function accountInfo(token: string): Promise<{ userId: string; email?: string; name?: string }> {
+  return json<{ userId: string; email?: string; name?: string }>(await request(`${BACKEND}/api/v1/account`, { headers: { authorization: `Bearer ${token}` } }));
 }
 
 export async function signIn(email: string): Promise<Account> {

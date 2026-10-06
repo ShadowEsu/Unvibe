@@ -604,6 +604,8 @@
   & .ob2__opt { color: var(--v-faint); font-weight: 500; }
   & .ob2__google { padding: 14px 16px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
   & .ob2__ok { margin: 0; color: var(--v-good); font-weight: 700; }
+  & .ob2__google--you { margin-bottom: 14px; }
+  & .ob2__google--you + .ob2__form, .ob2__ok + .ob2__form { margin-top: 12px; }
   & .ob2 .ob__integrations { max-height: 300px; overflow: auto; padding-right: 4px; }
   & .ob2 .ob__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 

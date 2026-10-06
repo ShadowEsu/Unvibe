@@ -128,7 +128,11 @@ const api = {
   signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
   openDeviceAuth: () => ipcRenderer.invoke('account:openDeviceAuth'),
-  onDeviceAuth: (cb: (result: { ok: boolean; email?: string; error?: string }) => void) => ipcRenderer.on('account:device', (_e, r) => cb(r)),
+  onDeviceAuth: (cb: (result: { ok: boolean; email?: string; name?: string; error?: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, r: { ok: boolean; email?: string; name?: string; error?: string }) => cb(r);
+    ipcRenderer.on('account:device', listener);
+    return () => { ipcRenderer.removeListener('account:device', listener); };
+  },
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
 

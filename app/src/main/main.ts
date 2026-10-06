@@ -1332,7 +1332,7 @@ app.whenReady().then(() => {
           if (devicePoll) clearInterval(devicePoll); devicePoll = null;
           currentDeviceVerificationUrl = null;
           void flush();
-          companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user' });
+          companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
         } catch (err) {
           const message = err instanceof Error ? err.message : 'The secure sign-in request ended.';
           if (/expired|unknown|already redeemed/i.test(message)) {

@@ -137,8 +137,14 @@ export class MemoryStore implements Store {
     return { token, userId, email: normalized };
   }
 
-  async accountInfo(userId: string): Promise<{ userId: string; email?: string }> {
-    return { userId, email: this.data.users.get(userId)?.email };
+  async accountInfo(userId: string): Promise<{ userId: string; email?: string; name?: string }> {
+    return { userId, email: this.data.users.get(userId)?.email, name: this.names.get(userId) };
+  }
+
+  private readonly names = new Map<string, string>();
+
+  async rememberName(userId: string, name: string): Promise<void> {
+    this.names.set(userId, name);
   }
 
   async deleteAccount(userId: string): Promise<void> {

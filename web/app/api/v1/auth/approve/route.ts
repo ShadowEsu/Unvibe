@@ -24,6 +24,12 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'unknown code' }, { status: 404 });
   }
   if (data.user.email) await applyGiftsForEmail(data.user.email);
+  // Keep the Google profile name so the app can greet people without asking again.
+  const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+  const googleName = [meta.full_name, meta.name].find((v): v is string => typeof v === 'string' && v.trim().length > 0);
+  if (googleName) {
+    await getStore().rememberName(data.user.id, googleName.replace(/\s+/g, ' ').trim().slice(0, 80)).catch(() => undefined);
+  }
   // Secure only over HTTPS (so local http dev still works).
   const isHttps = new URL(req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';
   const cookie =
