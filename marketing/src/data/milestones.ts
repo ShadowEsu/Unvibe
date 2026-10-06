@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "Dark pro: a sharper, denser Unvibe",
+    summary: "The whole app is redesigned dark, like Linear or Raycast: near black surfaces, hairline borders, one violet accent with a soft glow. Today is a single dense view with a one line stats row and quick rows you can scan. Every page has a header with search and a Command U Explain button. The Command U panel and the Island share the same palette, and Vibe glows in the corner of every page.",
+    figure: "v0.1.21",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Sign-in that works on more networks, Windows that feels native",
     summary: "Unvibe now connects through your computer's own network settings and certificates, so Google sign-in works on school, work and antivirus networks. On Windows, Cursor, VS Code, Zed, Windsurf, Claude, Warp, GitHub Desktop and git are detected, the editor bridge installs, and copying a selection is more patient.",
     figure: "v0.1.20",

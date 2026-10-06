@@ -1264,3 +1264,79 @@ code.inline {
 .card .thinking { animation: pRise 420ms cubic-bezier(.2,.8,.2,1) both; border-color: rgb(164 139 255 / 0.25); box-shadow: 0 0 0 1px rgb(164 139 255 / 0.08), 0 16px 40px -24px rgb(124 92 255 / 0.6); }
 @keyframes pRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .card .body > *, .card .thinking { animation: none; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Panel v6 "Dark pro": same palette as the companion. Near black, hairlines,
+   one violet accent with a soft glow. Color only means something: violet is
+   the next action, green is understood, amber is a warning.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.card.card {
+  --p-bg: #0b0b0f;
+  --p-surface: #131318;
+  --p-raised: #1a1a21;
+  --p-line: #22222b;
+  --p-ink: #ededf2;
+  --p-muted: #9a9aa8;
+  --p-faint: #60606e;
+  --p-code: #08080b;
+  --p-violet: #a78bfa;
+  --p-glow: 0 0 0 1px rgb(139 92 246 / 0.45), 0 0 22px -4px rgb(139 92 246 / 0.6);
+  --p-fs: clamp(13px, 0.6rem + 1.05cqi, 16.5px);
+  background: radial-gradient(480px 220px at 0% 0%, rgb(139 92 246 / 0.12), transparent 65%), var(--p-bg);
+  border: 1px solid #262630;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5), 0 30px 70px -20px rgb(0 0 0 / 0.85);
+}
+.card .head { min-height: 44px; }
+.card .head::after { background: linear-gradient(90deg, transparent, rgb(139 92 246 / 0.55), transparent); }
+.card .head__product { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--p-ink); font-weight: 650; }
+.card .head .buddy { filter: drop-shadow(0 0 8px rgb(139 92 246 / 0.6)); }
+.card .head__status i { background: var(--p-green); box-shadow: 0 0 8px rgb(95 212 160 / 0.6); }
+.card .head__actions button { border-radius: 6px; background: transparent; }
+.card .tab { border-radius: 6px; }
+.card .tab.on { background: var(--p-surface); }
+.card .tab-add { border-radius: 6px; }
+
+/* Depth: one accent instead of a rainbow. */
+.card .lvl, .card .lvl[data-level] { border-radius: 6px; }
+.card .lvl.on, .card .lvl[data-level].on,
+.card .lvl[data-level="new"].on, .card .lvl[data-level="beginner"].on, .card .lvl[data-level="intermediate"].on,
+.card .lvl[data-level="advanced"].on, .card .lvl[data-level="expert"].on {
+  background: rgb(139 92 246 / 0.16); border-color: rgb(139 92 246 / 0.5); color: #e4dbff; box-shadow: 0 0 14px -4px rgb(139 92 246 / 0.7);
+}
+
+/* Rail: neutral icons, the active tool glows violet. */
+.card .widget-tools button { border-radius: 8px; }
+.card .widget-tools .widget-tool-icon,
+.card .widget-tools .tool--explain .widget-tool-icon, .card .widget-tools .tool--depth .widget-tool-icon,
+.card .widget-tools .tool--quiz .widget-tool-icon, .card .widget-tools .tool--ask .widget-tool-icon,
+.card .widget-tools .tool--why .widget-tool-icon, .card .widget-tools .tool--teach .widget-tool-icon,
+.card .widget-tools .tool--saved .widget-tool-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--p-surface); color: var(--p-muted); }
+.card .widget-tools button:hover:not(:disabled) .widget-tool-icon { transform: none; color: var(--p-ink); }
+.card .widget-tools button.on { background: rgb(139 92 246 / 0.1); box-shadow: inset 2px 0 0 #8b5cf6; }
+.card .widget-tools button.on .widget-tool-icon { background: rgb(139 92 246 / 0.2); color: #e4dbff; box-shadow: 0 0 12px -2px rgb(139 92 246 / 0.7); }
+
+/* Reading */
+.card .body p { color: #d4d4dc; }
+.card .body :not(pre) > code { background: var(--p-raised); color: #d9ccff; }
+.card .code-context, .card .cb { border-radius: 10px; }
+.card .thinking { border-radius: 12px; border-color: rgb(139 92 246 / 0.3); background: linear-gradient(180deg, rgb(139 92 246 / 0.08), transparent 70%), var(--p-surface); }
+
+/* Actions: neutral chips, the next step in violet, understood in green. */
+.card .chip, .card .chip--diff, .card .chip--test,
+.card .chip:not(.chip--ok):not(.chip--diff):not(.chip--test) {
+  min-height: 28px; border-radius: 7px; border-color: var(--p-line); background: var(--p-surface); color: var(--p-ink);
+}
+.card .chip:hover:not(:disabled) { background: var(--p-raised); border-color: #30303b; transform: none; }
+.card .chip--ok { border-radius: 7px; background: rgb(95 212 160 / 0.1); border-color: rgb(95 212 160 / 0.35); color: var(--p-green); }
+.card .chip--test { border-color: rgb(139 92 246 / 0.45); background: rgb(139 92 246 / 0.14); color: #e4dbff; }
+.card .chip--test:hover:not(:disabled) { box-shadow: var(--p-glow); background: rgb(139 92 246 / 0.2); }
+.card .ask-sandbox { border-radius: 10px; }
+.card .ask-sandbox:focus-within { border-color: rgb(139 92 246 / 0.5); box-shadow: 0 0 24px -10px rgb(139 92 246 / 0.7); }
+.card .askrow .btn-ask { width: 30px; height: 30px; border-radius: 7px; background: linear-gradient(135deg, #a78bfa, #7c5cff); }
+.card .btn { border-radius: 7px; background: linear-gradient(135deg, #a78bfa, #7c5cff); color: #fff; border: 1px solid rgb(167 139 250 / 0.5); }
+.card .btn:hover:not(:disabled) { opacity: 1; box-shadow: var(--p-glow); }
+.card .btn.ghost { background: var(--p-surface); border-color: var(--p-line); color: var(--p-ink); }
+.card .opt { border-radius: 9px; }
+.card .opt:hover:not(:disabled) { border-color: rgb(139 92 246 / 0.5); background: rgb(139 92 246 / 0.08); }
+.card .quiz__kicker { color: var(--p-violet); }

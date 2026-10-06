@@ -121,3 +121,10 @@ button { font: inherit; }
   .island__dots i, .island__overview { animation: none; }
   .island__overview { opacity: 1; transform: none; }
 }
+
+/* Dark pro accents: the Island shares the companion's violet. */
+.island__metrics [data-tone="green"] b { color: #c4b5fd; }
+.island__metrics [data-tone="blue"] b { color: #a78bfa; }
+.island__activity i[data-level="1"] { background: rgb(139 92 246 / 0.35); }
+.island__activity i[data-level="2"] { background: rgb(139 92 246 / 0.6); }
+.island__activity i[data-level="3"] { background: #a78bfa; box-shadow: 0 0 6px rgb(167 139 250 / 0.7); }
