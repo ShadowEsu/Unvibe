@@ -35,7 +35,7 @@ export function SitePalette() {
   const commands = useMemo<Command[]>(() => {
     const go = (href: string) => () => router.push(href);
     return [
-      { id: "mac", label: "Download for Mac", hint: ".dmg · Apple silicon", keywords: "install get macos apple", run: () => { window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
+      { id: "mac", label: "Download for Mac", hint: ".dmg · M1 or newer", keywords: "install get macos apple", run: () => { window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
       { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
       { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
       { id: "home", label: "Home", hint: "/", run: go("/") },

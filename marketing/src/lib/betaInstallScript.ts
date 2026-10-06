@@ -20,9 +20,10 @@ if [ "$(uname -s)" != "Darwin" ]; then
   echo "This installer is for macOS."
   exit 1
 fi
-if [ "$(uname -m)" != "arm64" ]; then
-  echo "This beta is Apple silicon only (M1, M2, M3, or M4)."
-  exit 1
+if [ "$(uname -m)" != "arm64" ] && [ -z "\${UNVIBE_BETA_ASSET:-}" ]; then
+  # Intel Mac: use the x64 build.
+  ASSET="\${ASSET/mac-arm64/mac-x64}"
+  URL="https://github.com/ShadowEsu/Unvibe/releases/download/\${TAG}/\${ASSET}"
 fi
 
 work="$(mktemp -d /tmp/unvibe-beta-XXXX)"
@@ -73,6 +74,8 @@ export const BETA_WINDOWS_DOWNLOAD_URL =
   `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/${BETA_WINDOWS_ASSET}`;
 export const BETA_MAC_DOWNLOAD_URL =
   `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/${BETA_INSTALL_ASSET}`;
+/** Older Intel Macs need the x64 build; the Apple silicon one cannot run there. */
+export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-arm64.dmg", "mac-x64.dmg");
 
 /** Private beta installer. Downloads a portable Windows exe with the same 30 explanation trial. */
 export function betaWindowsInstallScript(): string {

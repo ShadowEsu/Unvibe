@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for dmg in app/release/*.dmg; do
+          for dmg in release/*.dmg; do
             mnt="$(mktemp -d)"
             hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" >/dev/null
             app="$mnt/Unvibe.app"

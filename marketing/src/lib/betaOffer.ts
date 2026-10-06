@@ -1,5 +1,6 @@
 import {
   BETA_MAC_DOWNLOAD_URL,
+  BETA_MAC_INTEL_DOWNLOAD_URL,
   BETA_WINDOWS_DOWNLOAD_URL,
 } from "@/lib/betaInstallScript";
 
@@ -15,6 +16,7 @@ export const POSTHOG_SURVEY_ID = "01a03aa5-ab81-0000-b791-03561d8f4f7d";
 export const BETA_INSTALL_COMMAND = `curl -fsSL ${BETA_INSTALL_HOST}/install.sh | bash`;
 export const BETA_WINDOWS_INSTALL_COMMAND = `irm ${BETA_INSTALL_HOST}/install.ps1 | iex`;
 export const BETA_MAC_DIRECT_DOWNLOAD = BETA_MAC_DOWNLOAD_URL;
+export const BETA_MAC_INTEL_DIRECT_DOWNLOAD = BETA_MAC_INTEL_DOWNLOAD_URL;
 export const BETA_WINDOWS_DIRECT_DOWNLOAD = BETA_WINDOWS_DOWNLOAD_URL;
 export const BETA_INSTALL_VERSION = "v0.1.31";
 export const BETA_INSTALL_LABEL = "Free for Mac and Windows";

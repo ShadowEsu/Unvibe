@@ -579,3 +579,4 @@ p { font-size: 1.02rem; }
 .deckv__thumbs img { display: block; width: 88px; height: auto; border-radius: 6px; }
 @media (max-width: 640px) { .deckv__thumbs { display: none; } .deckv__bar { justify-content: space-between; } .deckv__nav { width: 2.4rem; height: 2.4rem; } }
 .paper-beta__update { margin: 0.7rem 0 0; font-size: 0.92rem; line-height: 1.45; color: #4a4a4a; text-align: center; } .paper-beta__update b { color: var(--v-ink, #141414); }
+.paper-beta__update a { color: var(--v-ink, #141414); font-weight: 700; text-decoration: underline; }

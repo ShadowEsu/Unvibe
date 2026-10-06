@@ -11,6 +11,7 @@ import {
   BETA_INSTALL_LABEL,
   BETA_INSTALL_VERSION,
   BETA_MAC_DIRECT_DOWNLOAD,
+  BETA_MAC_INTEL_DIRECT_DOWNLOAD,
   BETA_WINDOWS_DIRECT_DOWNLOAD,
   BETA_WINDOWS_INSTALL_COMMAND,
 } from "@/lib/betaOffer";
@@ -37,18 +38,24 @@ export function BetaInstall({
   const [error, setError] = useState("");
   const [os, setOs] = useState<InstallOs>("mac");
   const [termOpen, setTermOpen] = useState(false);
+  // Chromium browsers can tell an Intel Mac apart; Safari cannot, so Intel users also get a link.
+  const [intelMac, setIntelMac] = useState(false);
   const { showCopyToast } = useCopyToast();
   const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
   const prompt = os === "windows" ? "PS>" : "$";
   const shellHint =
     os === "windows"
       ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
-      : "Paste in Terminal on an Apple silicon Mac (M1–M4).";
-  const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
+      : "Paste in Terminal on any Mac. It picks the right build for Apple silicon or Intel.";
+  const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : intelMac ? BETA_MAC_INTEL_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
 
   useEffect(() => {
     const detected = detectInstallOs();
     setOs(detected);
+    const uaData = (navigator as Navigator & { userAgentData?: { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string; platform?: string }> } }).userAgentData;
+    void uaData?.getHighEntropyValues?.(["architecture", "platform"]).then((v) => {
+      if (v.platform === "macOS" && v.architecture === "x86") setIntelMac(true);
+    }).catch(() => undefined);
     track("beta_install_viewed", { surface: tone, os: detected });
     const selectFromCta = (event: Event) => {
       const platform = (event as CustomEvent<InstallOs>).detail;
@@ -92,7 +99,7 @@ export function BetaInstall({
         >
           <span className="paper-beta__os-icon"><AppleIcon /></span>
           <span className="paper-beta__os-name">Mac</span>
-          <span className="paper-beta__os-meta">Apple silicon</span>
+          <span className="paper-beta__os-meta">{intelMac ? "Intel" : "M1 or newer"}</span>
         </button>
         <button
           type="button"
@@ -121,6 +128,13 @@ export function BetaInstall({
         <DownloadIcon />
         <span>{os === "windows" ? "Download free for Windows" : "Download free for Mac"}</span>
       </a>
+      {os === "mac" ? (
+        <p className="paper-beta__update">
+          {intelMac
+            ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD}>M1 or newer instead</a></>
+            : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD}>Download the Intel build</a></>}
+        </p>
+      ) : null}
       <p className="paper-beta__update">
         <b>Already have Unvibe?</b>{" "}
         {os === "windows"
