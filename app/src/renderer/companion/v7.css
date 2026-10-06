@@ -574,3 +574,109 @@
   & .agent-review__stale small { color: var(--v-faint); font: 12px var(--font-mono); }
   & .agent-review__note { margin: 0; color: var(--v-faint); font-size: 12px; }
 }
+
+/* ── Onboarding v2: Vibe talks, five quick steps, a live demo ─────────────── */
+:root[data-ui="v3"][data-v7] {
+  & .ob2 { display: grid; place-items: center; padding: 28px; overflow: auto; }
+  & .ob2__card { width: min(720px, 100%); padding: 26px 34px 24px; display: grid; gap: 18px; }
+  & .ob2__top { display: flex; align-items: center; gap: 14px; }
+  & .ob2__top .ob__dots { display: flex; flex: 1; gap: 6px; }
+  & .ob2__top .ob__dot { flex: 1; height: 8px; border-radius: 99px; border: 1.5px solid var(--v-ink); background: var(--v-surface); transition: background 300ms ease; }
+  & .ob2__top .ob__dot.on { background: var(--lime); box-shadow: none; }
+  & .ob2__count { font: 700 12px var(--font-mono); color: var(--v-muted); }
+  & .ob2__vibe { display: flex; align-items: center; gap: 16px; }
+  & .ob--scene-0 .ob2__vibe { flex-direction: column; text-align: center; }
+  & .ob2__blob { animation: v7Pop 600ms var(--press) both; }
+  & .ob2__speech {
+    position: relative; flex: 1; margin: 0; padding: 14px 18px; min-height: 58px; border: 1.5px solid var(--v-ink); border-radius: 18px 18px 18px 6px;
+    background: var(--v-surface); box-shadow: var(--hard-sm); color: var(--v-ink); font: italic 400 22px/1.25 var(--font-hand);
+  }
+  & .ob--scene-0 .ob2__speech { border-radius: 18px; max-width: 520px; font-size: 25px; }
+  & .ob2__caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: var(--v-ink); animation: v7Blink 900ms steps(1) infinite; }
+  & .ob2__caret.is-off { display: none; }
+  & .ob2__body { display: grid; gap: 14px; }
+  & .ob--scene-0 .ob2__body { text-align: center; justify-items: center; }
+  & .ob2 .ob__title { margin: 0; font-size: 34px; }
+  & .ob2 .ob__sub { margin: 0; font-size: 15.5px; }
+  & .ob2__form { display: grid; gap: 14px; }
+  & .ob2__form label { display: grid; gap: 6px; font: 650 13.5px var(--font-sans); color: var(--v-ink); }
+  & .ob2__form .field { height: 46px; padding: 0 14px; font-size: 16px; }
+  & .ob2__opt { color: var(--v-faint); font-weight: 500; }
+  & .ob2__google { padding: 14px 16px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
+  & .ob2__ok { margin: 0; color: var(--v-good); font-weight: 700; }
+  & .ob2 .ob__integrations { max-height: 300px; overflow: auto; padding-right: 4px; }
+  & .ob2 .ob__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+
+  /* The six second demo */
+  & .obd { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+  & .obd__editor { position: relative; border: 1.5px solid var(--v-ink); border-radius: 14px; background: #151514; overflow: hidden; box-shadow: var(--hard-sm); }
+  & .obd__bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid #2c2c29; }
+  & .obd__bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--coral); }
+  & .obd__bar i:nth-child(2) { background: var(--sun); }
+  & .obd__bar i:nth-child(3) { background: var(--lime); }
+  & .obd__bar span { margin-left: 4px; color: #9e9a92; font: 500 11.5px var(--font-mono); }
+  & .obd pre { margin: 0; padding: 12px 14px 54px; color: #f4f2ea; font: 12.5px/1.7 var(--font-mono); white-space: pre; overflow: hidden; }
+  & .obd__line { background: linear-gradient(90deg, rgb(184 166 255 / 0.4), rgb(184 166 255 / 0.4)) no-repeat; background-size: 0% 100%; animation: obdSelect 260ms ease-out forwards; animation-delay: var(--d); }
+  & .obd__keys { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; opacity: 0; transform: translateY(6px); transition: opacity 200ms ease, transform 200ms ease; }
+  & .obd__keys kbd { display: grid; place-items: center; min-width: 34px; height: 34px; border: 1.5px solid #f4f2ea; border-bottom-width: 4px; border-radius: 9px; background: #232321; color: #f4f2ea; font: 700 15px var(--font-sans); }
+  & .obd__keys.is-pressed { opacity: 1; transform: none; }
+  & .obd__keys.is-pressed kbd { animation: obdPress 260ms ease 2; }
+  & .obd__panel { min-height: 100%; padding: 12px 14px; border: 1.5px solid var(--v-ink); border-radius: 14px; background: var(--v-surface); box-shadow: var(--hard-sm); opacity: 0; transform: translateX(16px) scale(0.98); transition: opacity 300ms ease, transform 420ms var(--press); }
+  & .obd__panel.is-in { opacity: 1; transform: none; }
+  & .obd__panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  & .obd__panel-head b { font-family: var(--font-display); }
+  & .obd__panel-head span { margin-left: auto; color: var(--v-muted); font-size: 11.5px; }
+  & .obd__answer { margin: 0; min-height: 84px; font-size: 13.5px; line-height: 1.55; color: var(--v-ink); }
+  & .obd__caret { display: inline-block; width: 2px; height: 1em; margin-left: 1px; vertical-align: -0.12em; background: var(--v-ink); animation: v7Blink 900ms steps(1) infinite; }
+  & .obd__caret.is-off { display: none; }
+  & .obd__quiz { margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed var(--v-line); animation: v7Rise 360ms var(--press) both; }
+  & .obd__quiz p { margin: 0 0 8px; font-size: 13px; }
+  & .obd__opts { display: grid; gap: 6px; }
+  & .obd__opts button { padding: 8px 10px; border: 1.5px solid var(--v-ink); border-radius: 10px; background: var(--v-surface); color: var(--v-ink); text-align: left; font: 600 12.5px var(--font-sans); cursor: pointer; box-shadow: 0 2px 0 var(--v-ink); }
+  & .obd__opts button:hover { background: var(--v-sunken); }
+  & .obd__opts button.is-right { background: var(--mint); }
+  & .obd__yay { margin: 8px 0 0 !important; color: var(--v-good); font: italic 400 18px var(--font-hand) !important; }
+  & .obd__replay { position: absolute; left: 0; bottom: -30px; border: 0; background: none; color: var(--v-muted); font: 600 12px var(--font-sans); text-decoration: underline; cursor: pointer; }
+
+  & .ob__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
+  & .ob__confetti i { position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border: 1.5px solid var(--v-ink); border-radius: 3px; background: var(--lime); animation: obConfetti 1.6s cubic-bezier(.2,.7,.4,1) forwards; animation-delay: calc(var(--i) * 18ms); }
+  & .ob__confetti i:nth-child(4n+2) { background: var(--sky); }
+  & .ob__confetti i:nth-child(4n+3) { background: var(--sun); }
+  & .ob__confetti i:nth-child(4n+4) { background: var(--lilac); border-radius: 50%; width: 12px; height: 12px; }
+}
+@keyframes v7Blink { 50% { opacity: 0; } }
+@keyframes obdSelect { to { background-size: 100% 100%; } }
+@keyframes obdPress { 50% { transform: translateY(3px); border-bottom-width: 1px; } }
+@keyframes obConfetti { to { transform: translateY(105vh) rotate(540deg); } }
+@media (max-width: 760px) { :root[data-ui="v3"][data-v7] .obd { grid-template-columns: minmax(0, 1fr); } }
+:root[data-ui="v3"][data-v7] {
+  & .obd, & .obd pre, & .obd__panel, & .obd__answer, & .obd__quiz { text-align: left; }
+  & .obd__panel-head { justify-content: flex-start; }
+  & .ob2__opt { font-style: normal; }
+  & .ob2__form { width: min(440px, 100%); justify-self: center; }
+  & .ob2__speech { min-height: 0; }
+  & .ob__confetti i:nth-child(3n) { animation-duration: 2s; margin-left: -30px; }
+  & .ob__confetti i:nth-child(3n+1) { animation-duration: 1.3s; margin-left: 20px; }
+  & .ob__confetti i:nth-child(5n) { top: -60px; }
+  & .ob__confetti i:nth-child(7n) { top: -120px; }
+}
+
+/* ── In-app feedback card ─────────────────────────────────────────────────── */
+:root[data-ui="v3"][data-v7] {
+  & .fbk-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgb(20 20 20 / 0.35); }
+  & .fbk { position: relative; width: min(440px, 100%); padding: 22px 22px 18px; border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--v-surface); box-shadow: 6px 6px 0 var(--v-ink); animation: v7Pop 320ms var(--press) both; }
+  & .fbk__close { position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; border: 1.5px solid var(--v-ink); border-radius: 50%; background: var(--v-surface); cursor: pointer; }
+  & .fbk__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  & .fbk h2 { margin: 0; font: 800 24px var(--font-display); letter-spacing: -0.035em; }
+  & .fbk h2 em { font: italic 400 1.1em var(--font-hand); }
+  & .fbk__head p { margin: 2px 0 0; color: var(--v-muted); font-size: 13px; }
+  & .fbk__stars { display: flex; gap: 6px; margin-bottom: 12px; }
+  & .fbk__stars button { width: 42px; height: 42px; border: 1.5px solid var(--v-ink); border-radius: 10px; background: var(--v-surface); color: #d9d4c8; font-size: 22px; cursor: pointer; transition: transform 200ms var(--press); }
+  & .fbk__stars button.is-on { background: var(--sun); color: var(--v-ink); transform: translateY(-2px) rotate(-6deg); }
+  & .fbk textarea { width: 100%; padding: 10px 12px; border-radius: 12px; font: 14px/1.5 var(--font-sans); resize: vertical; }
+  & .fbk__count { margin: 4px 0 0; text-align: right; color: var(--v-faint); font-size: 12px; }
+  & .fbk__count.is-over { color: #b91c1c; font-weight: 700; }
+  & .fbk__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  & .fbk__done { display: grid; justify-items: center; gap: 6px; padding: 10px 0; text-align: center; }
+  & .fbk__done p { margin: 0; color: var(--v-muted); }
+}

@@ -1,6 +1,7 @@
 import { BETA_SURVEY_URL } from "@/lib/betaOffer";
 import { recordBetaInstallEvent } from "@/lib/betaInstallStats";
 import { captureServerEvent } from "@/lib/posthogServer";
+import { cleanText, clientIp, feedbackDb, feedbackSchema, hashIp } from "@/lib/feedback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,4 +20,52 @@ export async function GET() {
     console.error("feedback count failed", error);
   }
   return Response.redirect(BETA_SURVEY_URL, 302);
+}
+
+const WINDOW_MS = 10 * 60_000;
+const MAX_PER_WINDOW = 5;
+const recent = new Map<string, number[]>();
+
+function limited(key: string): boolean {
+  const now = Date.now();
+  const times = (recent.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
+  times.push(now);
+  recent.set(key, times);
+  if (recent.size > 5_000) recent.clear();
+  return times.length > MAX_PER_WINDOW;
+}
+
+/** Stars plus up to 100 words, from the site or the desktop app. Stored server-side only. */
+export async function POST(request: Request) {
+  const noStore = { "Cache-Control": "no-store" };
+  const length = Number(request.headers.get("content-length") ?? "0");
+  if (length > 8_000) return Response.json({ error: "Too long." }, { status: 413, headers: noStore });
+  const ipHash = hashIp(clientIp(request));
+  if (limited(ipHash)) return Response.json({ error: "Thanks! Give it a few minutes before sending more." }, { status: 429, headers: noStore });
+
+  const parsed = feedbackSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return Response.json({ error: parsed.error.issues[0]?.message ?? "Check the form and try again." }, { status: 400, headers: noStore });
+  }
+  const input = parsed.data;
+  // Honeypot filled in: pretend it worked so bots learn nothing.
+  if (input.website) return Response.json({ ok: true }, { headers: noStore });
+
+  const db = feedbackDb();
+  if (!db) return Response.json({ error: "Feedback is not available right now." }, { status: 503, headers: noStore });
+  const { error } = await db.from("site_feedback").insert({
+    rating: input.rating,
+    message: cleanText(input.message),
+    email: input.email ? input.email.toLowerCase() : null,
+    source: input.source,
+    page: input.page ? cleanText(input.page).slice(0, 200) : null,
+    app_version: input.appVersion ? cleanText(input.appVersion).slice(0, 40) : null,
+    ip_hash: ipHash,
+  });
+  if (error) {
+    console.error("feedback insert failed", error.message);
+    return Response.json({ error: "Could not save that. Try again in a moment." }, { status: 500, headers: noStore });
+  }
+  await captureServerEvent("feedback_submitted", ipHash, { rating: input.rating, source: input.source }).catch(() => undefined);
+  return Response.json({ ok: true }, { headers: noStore });
 }

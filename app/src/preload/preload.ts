@@ -64,6 +64,7 @@ const api = {
   openStudy: () => ipcRenderer.send('widget:openStudy'),
   openPlan: () => ipcRenderer.send('companion:openPlan'),
   openUrl: (url: string) => ipcRenderer.invoke('app:openUrl', url),
+  sendFeedback: (input: { rating: number; message: string; email?: string }) => ipcRenderer.invoke('feedback:send', input),
   onShowPage: (cb: (page: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, page: string) => cb(page);
     ipcRenderer.on('companion:showPage', listener);

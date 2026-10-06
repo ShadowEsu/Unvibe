@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
-import { sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
+import { scheduleSetupReminder, sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many download requests. Try again shortly." }, { status: 429 });
   }
   const parsed = schema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Enter a valid first name and email." }, { status: 422 });
+  if (!parsed.success) return NextResponse.json({ error: "Enter a valid email." }, { status: 422 });
 
   const email = parsed.data.email.toLowerCase();
   const macDownloadUrl = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
     : await sendBetaDownloadEmail({ firstName: parsed.data.firstName, email, macDownloadUrl, referralCode: code });
+  if (!existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {
     firstName: parsed.data.firstName,

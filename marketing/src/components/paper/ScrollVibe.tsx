@@ -90,8 +90,8 @@ export function ScrollVibe() {
         <div className={showBar ? "sfree is-in" : "sfree"} aria-hidden={!showBar}>
           <p><b>Unvibe is free.</b> <span>Mac and Windows · no card · no API key</span></p>
           <div className="sfree__links">
-            <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={() => { delight(); track("download_cta_clicked", { platform: "mac", surface: "sticky_free" }); }}>Free for Mac</a>
-            <a href={BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => { delight(); track("download_cta_clicked", { platform: "windows", surface: "sticky_free" }); }}>Free for Windows</a>
+            <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "mac", surface: "sticky_free" }); }}>Free for Mac</a>
+            <a href={BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "windows", surface: "sticky_free" }); }}>Free for Windows</a>
           </div>
         </div>
       ) : null}

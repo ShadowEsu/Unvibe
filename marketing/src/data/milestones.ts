@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "A talking onboarding, feedback everywhere, and try it in your browser",
+    summary: "Setup is five quick steps where Vibe talks to you with little sounds: say hi, your name, connect your editors and Google, one permission, then a six second demo you can play with. You can rate Unvibe with stars and a few words from the site or the app. unvibe.site lets you paste code and get a real explanation without downloading, shows live visitor and download numbers, gives you an invite link that earns you and a friend a month of Pro, and can email you the setup guide. The Mac installer window is custom too.",
+    figure: "v0.1.26",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Always in your Dock, a cleaner Island, a bigger site",
     summary: "Unvibe now always shows in the Mac Dock and the Windows taskbar so you can click back into it. The Island uses the app's fonts, Vibe as its mark and sticker colours. unvibe.site gets bigger type, solid cards, a giant free download box, a FREE ribbon, Vibe riding down the page as you scroll, a sticky free download bar, and a new one-page investor brief.",
     figure: "v0.1.25",

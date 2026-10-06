@@ -15,6 +15,7 @@ import type { KnowledgeObject } from '../../core/knowledge';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
+import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
@@ -396,8 +397,87 @@ function PermRow({ compact }: { compact?: boolean }) {
   );
 }
 
-function playSetupTone(kind: 'step' | 'success', volume = 0.3, style: 'soft' | 'pixel' = 'soft'): void {
-  playUiTone(kind, volume, style);
+
+/** Types a line of Vibe's speech out loud: a blip every few characters, then calls onDone. */
+function useVibeSays(text: string, enabled: boolean): string {
+  const [shown, setShown] = useState('');
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setShown(text); return; }
+    setShown('');
+    let i = 0;
+    const id = window.setInterval(() => {
+      i += 1;
+      setShown(text.slice(0, i));
+      if (enabled && i % 3 === 0 && /\S/.test(text[i - 1] ?? '')) playTone('talk');
+      if (i >= text.length) window.clearInterval(id);
+    }, 26);
+    return () => window.clearInterval(id);
+  }, [text, enabled]);
+  return shown;
+}
+
+const DEMO_LINES = [
+  'function activeUsers(users) {',
+  '  return users',
+  '    .filter((u) => u.active)',
+  '    .sort((a, b) => b.lastSeen - a.lastSeen);',
+  '}',
+];
+const DEMO_ANSWER = 'Keeps only active users, newest activity first. The filter drops inactive accounts, then the sort puts whoever was seen most recently at the top.';
+
+/** A 6 second, self-playing taste of the real loop: select, ⌘U, explanation, quick check. */
+function OnboardingDemo({ sound, onDone }: { sound: boolean; onDone: () => void }) {
+  const [phase, setPhase] = useState(0); // 0 select, 1 keys, 2 panel, 3 quiz, 4 correct
+  const [typed, setTyped] = useState('');
+  const [run, setRun] = useState(0);
+  const tone = (kind: Parameters<typeof playTone>[0]) => { if (sound) playTone(kind); };
+
+  useEffect(() => {
+    setPhase(0); setTyped('');
+    const timers: number[] = [];
+    const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
+    at(1200, () => { setPhase(1); tone('key'); });
+    at(1450, () => tone('key'));
+    at(1900, () => { setPhase(2); tone('whoosh'); });
+    at(2300, () => {
+      let i = 0;
+      const id = window.setInterval(() => {
+        i += 3;
+        setTyped(DEMO_ANSWER.slice(0, i));
+        if (i % 9 === 0) tone('talk');
+        if (i >= DEMO_ANSWER.length) { window.clearInterval(id); tone('done'); }
+      }, 22);
+      timers.push(id);
+    });
+    at(5200, () => setPhase(3));
+    return () => timers.forEach((t) => { window.clearTimeout(t); window.clearInterval(t); });
+  }, [run]);
+
+  return (
+    <div className="obd">
+      <div className={`obd__editor${phase >= 0 ? ' is-selecting' : ''}`}>
+        <div className="obd__bar"><i /><i /><i /><span>users.ts</span></div>
+        <pre>{DEMO_LINES.map((line, index) => <span key={index} className="obd__line" style={{ '--d': `${index * 160}ms` } as React.CSSProperties}>{line}{'\n'}</span>)}</pre>
+        <div className={`obd__keys${phase >= 1 ? ' is-pressed' : ''}`} aria-hidden="true"><kbd>⌘</kbd><kbd>U</kbd></div>
+      </div>
+      <div className={`obd__panel${phase >= 2 ? ' is-in' : ''}`}>
+        <div className="obd__panel-head"><Buddy mood={phase >= 4 ? 'celebrate' : phase === 2 ? 'reading' : 'happy'} size={26} label="Vibe" /><b>Unvibe</b><span>{phase >= 3 ? 'ready to learn' : 'explaining'}</span></div>
+        <p className="obd__answer">{typed}<i className={typed.length < DEMO_ANSWER.length ? 'obd__caret' : 'obd__caret is-off'} /></p>
+        {phase >= 3 ? (
+          <div className="obd__quiz">
+            <p><b>Quick check:</b> who ends up first?</p>
+            <div className="obd__opts">
+              <button type="button" className={phase === 4 ? 'is-right' : ''} onClick={() => { if (phase === 4) return; setPhase(4); tone('correct'); setBuddyMood('celebrate'); onDone(); }}>The user seen most recently</button>
+              <button type="button" onClick={() => tone('wrong')}>The first user in the list</button>
+            </div>
+            {phase === 4 ? <p className="obd__yay">Nailed it. That is the whole loop.</p> : null}
+          </div>
+        ) : null}
+      </div>
+      {phase >= 3 ? <button type="button" className="obd__replay" onClick={() => setRun((r) => r + 1)}>Replay</button> : null}
+    </div>
+  );
 }
 
 function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; onDone: () => void }) {
@@ -408,14 +488,32 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
-  const steps = ['Welcome', 'Your profile', 'Connect', 'Permissions'];
+  const [demoDone, setDemoDone] = useState(false);
+  const [signedIn, setSignedIn] = useState('');
+  const steps = ['Hello', 'You', 'Connect', 'Permissions', 'Try it'];
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
 
-  const next = () => {
-    if (soundEffects) playSetupTone('step', soundVolume, soundStyle);
-    setStep((s) => Math.min(s + 1, steps.length - 1));
+  useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
+
+  const lines = [
+    "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
+    firstName ? `Nice to meet you, ${firstName}! I'll remember that.` : 'First things first. What should I call you?',
+    signedIn ? `You're signed in as ${signedIn}. Now let's hook up your editors.` : "Let's hook me up to your editors. Google sign-in is optional, it just syncs your progress.",
+    'One permission so I can read code you select in Terminal and other apps. Nothing leaves without your OK.',
+    demoDone ? "That's me! Ready when you are." : "Watch this. It's the whole thing in six seconds.",
+  ];
+  const said = useVibeSays(lines[step] ?? '', soundEffects);
+
+  const go = (to: number) => {
+    if (soundEffects) playTone('boop');
+    setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
-  const back = () => { if (!saving) setStep((s) => Math.max(s - 1, 0)); };
+  const saveProfile = () => {
+    const name = displayName.replace(/\s+/g, ' ').trim();
+    if (!name) { setNameError('Add a name so I know what to call you.'); return false; }
+    setNameError('');
+    return true;
+  };
   const finish = async () => {
     if (saving || !saveProfile()) return;
     setSaving(true);
@@ -423,171 +521,102 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
     try {
       await window.unvibe.setSettings({ displayName: displayName.replace(/\s+/g, ' ').trim(), profileEmail: profileEmail.trim() });
       await window.unvibe.completeOnboarding();
-      if (soundEffects) playSetupTone('success', soundVolume, soundStyle);
-      // A short celebration before the app opens, skipped for reduced motion.
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!reduce) {
+      if (soundEffects) playTone('celebrate');
+      setBuddyMood('celebrate');
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         setCelebrating(true);
-        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        await new Promise((resolve) => window.setTimeout(resolve, 1600));
       }
       await onDone();
     } catch {
       setSaveError('Your setup could not be saved. Please try again.');
     } finally { setSaving(false); }
   };
-  const saveProfile = () => {
-    const name = displayName.replace(/\s+/g, ' ').trim();
-    if (!name) {
-      setNameError('Add a name so chat can greet you.');
-      return false;
-    }
-    setNameError('');
-    return true;
-  };
-  const advanceName = () => {
-    if (!saveProfile()) return;
-    next();
-  };
   const advance = () => {
-    if (step === 1) {
-      advanceName();
-      return;
-    }
-    if (step === steps.length - 1) finish();
-    else next();
+    if (step === 1 && !saveProfile()) return;
+    if (step === steps.length - 1) void finish();
+    else go(step + 1);
   };
 
-  // This is a presentation-sized first-run experience, but it should still feel
-  // quick for keyboard-first developers. Inputs retain their own native keys.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, select, textarea, button')) return;
       if (event.key === 'ArrowRight' || event.key === 'Enter') { event.preventDefault(); advance(); }
-      if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
+      if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); if (!saving) go(step - 1); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const nav = (continueLabel = 'Continue', onContinue = next, continueDisabled = false) => (
-    <div className="ob__actions">
-      <button className="ob__skip" disabled={step === 0} onClick={back}>Back</button>
-      <button className="field-btn inline" disabled={continueDisabled} onClick={onContinue}>{continueLabel}</button>
-    </div>
-  );
+  const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (firstName ? 'happy' : 'idle') : step === 2 ? 'reading' : step === 3 ? 'thinking' : demoDone ? 'happy' : 'reading';
+  const continueLabel = step === 0 ? "Let's go" : step === steps.length - 1 ? (celebrating ? 'Welcome!' : saving ? 'Saving…' : 'Start using Unvibe') : 'Continue';
 
   return (
-    <div className={`ob ob--scene-${step}`}>
+    <div className={`ob ob2 ob--scene-${step}`}>
       {celebrating ? (
         <div className="ob__confetti" aria-hidden="true">
-          {Array.from({ length: 36 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
+          {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
         </div>
       ) : null}
-      <div className="ob__scene" aria-hidden="true">
-        <div className="sanFranWash" />
-        <div className="ob__scene-grid" />
-        <div className="ob__scene-strip">
-          <div><b>▶</b><LogoMark size={15} stroke={2} /></div>
-          <span className="ob__scene-camera" />
-          <div><span>{step === 0 ? '⌘U' : step === 1 ? 'you' : step === 2 ? 'connect' : 'ready'}</span><b>⌂</b></div>
+      <div className="ob__card ob2__card">
+        <div className="ob2__top">
+          <div className="ob__dots">{steps.map((label, i) => <span key={label} title={label} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
+          <span className="ob2__count">{step + 1} / {steps.length}</span>
         </div>
-        <div className="ob__scene-code">function understand(code) {'{'}<br />&nbsp;&nbsp;return context + clarity;<br />{'}'}</div>
-      </div>
-      <div className="ob__card fade-in">
-        <div className="ob__progress"><span>Step {step + 1} of {steps.length}</span><span>{steps[step]}</span></div>
-        <div className="ob__dots">{steps.map((_, i) => <span key={i} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
+        <div className="ob2__vibe">
+          <span className="ob2__blob"><Buddy mood={mood} size={step === 0 ? 112 : 72} follow label="Vibe" key={`${step}-${mood}`} /></span>
+          <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < (lines[step] ?? '').length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
+        </div>
 
-        <FadeIn animKey={step} stagger className="ob__step">
+        <FadeIn animKey={step} className="ob__step ob2__body">
           {step === 0 && (
             <>
-              <div className="ob__hello">
-                <Buddy mood="wave" size={76} follow label="Vibe says hello" />
-                <div className="ob__hello-bubble">Hi, I&rsquo;m Vibe. I explain the code AI writes for you, in plain English.</div>
-              </div>
-              <div className="ob__eyebrow">WELCOME TO UNVIBE</div>
               <h2 className="ob__title">Understand what AI <em>changed.</em></h2>
-              <p className="ob__sub">Select code and press <span className="kbd-lg">⌘U</span>. Unvibe explains it beside your work, checks understanding, and keeps the lesson for later.</p>
-              <div className="ob__sample" aria-label="Example Unvibe explanation">
-                <div className="ob__sample-code"><span>Selected code</span><br />return users.filter(user =&gt; user.active);</div>
-                <div className="ob__sample-answer"><b>Keeps the active users.</b><p>This filters the list before the next step, so inactive accounts never enter the result.</p></div>
-              </div>
-              <div className="ob__sample-actions" aria-label="Learning actions">
-                <span className="on">I understand</span><span>Explain differently</span><span>Test me</span>
-              </div>
-              <div className="ob__signal"><i className="ob__pixel" />Secret scan happens first, on this Mac</div>
-              {nav('Continue')}
+              <p className="ob__sub">Select code anywhere, press <span className="kbd-lg">⌘U</span>, and I explain it. Five quick steps and you are in.</p>
             </>
           )}
 
           {step === 1 && (
-            <>
-              <div className="ob__hello ob__hello--small">
-                <Buddy mood={firstName ? 'happy' : 'idle'} size={58} follow label="Vibe" key={firstName ? 'named' : 'unnamed'} />
-                <div className="ob__hello-bubble">{firstName ? `Nice to meet you, ${firstName}!` : 'What should I call you?'}</div>
-              </div>
-              <div className="ob__eyebrow">YOUR PROFILE</div>
-              <h2 className="ob__title">Let&rsquo;s make it yours.</h2>
-              <p className="ob__sub">Your name stays on this computer. Email is optional.</p>
-              <form className="ob__form" onSubmit={(event) => { event.preventDefault(); advanceName(); }}>
-                <label>
-                  Name
-                  <input
-                    className="field"
-                    value={displayName}
-                    onChange={(event) => { setDisplayName(event.target.value); if (nameError) setNameError(''); }}
-                    autoComplete="given-name"
-                    autoFocus
-                    placeholder="Your name"
-                  />
-                </label>
-                <label>
-                  Email, optional
-                  <input
-                    className="field"
-                    type="email"
-                    value={profileEmail}
-                    onChange={(event) => setProfileEmail(event.target.value)}
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                  />
-                </label>
-                {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
-              </form>
-              {nav('Continue', advanceName, displayName.trim().length === 0)}
-            </>
+            <form className="ob__form ob2__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
+              <label>
+                <span>Your name</span>
+                <input className="field" value={displayName} autoFocus autoComplete="given-name" placeholder="What should Vibe call you?"
+                  onChange={(event) => { setDisplayName(event.target.value); if (nameError) setNameError(''); }} />
+              </label>
+              <label>
+                <span>Email <em className="ob2__opt">optional</em></span>
+                <input className="field" type="email" value={profileEmail} autoComplete="email" placeholder="you@example.com" onChange={(event) => setProfileEmail(event.target.value)} />
+              </label>
+              {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
+              <button type="submit" hidden />
+            </form>
           )}
 
           {step === 2 && (
             <>
-              <div className="ob__hello ob__hello--small">
-                <Buddy mood="reading" size={58} label="Vibe is reading" />
-                <div className="ob__hello-bubble">{firstName ? `${firstName}, ` : ''}this is how I see the code you pick.</div>
+              <div className="ob2__google">
+                {signedIn ? <p className="ob2__ok">✓ Signed in as {signedIn}</p> : <SignInForm onDone={(email) => { setSignedIn(email); if (soundEffects) playTone('correct'); }} />}
               </div>
-              <div className="ob__eyebrow">CONNECT YOUR WORKFLOW</div>
-              <h2 className="ob__title">Bring Unvibe into your editor.</h2>
-              <p className="ob__sub">Install the tiny Desktop Bridge for the cleanest selection flow. It reads only what you explicitly send with Command U.</p>
               <div className="ob__integrations"><IntegrationsPanel /></div>
-              {nav('Continue')}
             </>
           )}
 
           {step === 3 && (
             <>
-              <div className="ob__hello ob__hello--small">
-                <Buddy mood={celebrating ? 'celebrate' : 'happy'} size={58} label="Vibe" />
-                <div className="ob__hello-bubble">{celebrating ? `Welcome aboard${firstName ? `, ${firstName}` : ''}!` : 'Last step, then we start learning.'}</div>
-              </div>
-              <div className="ob__eyebrow">ENABLE CORE FEATURES</div>
-              <h2 className="ob__title">One last permission.</h2>
-              <p className="ob__sub">Accessibility lets Control U read an explicit selection in Terminal and other Mac apps. Cursor and VS Code continue through the local bridge.</p>
               <PermRow />
-              <div className="ob__trust"><span>✓</span><div><b>Private by default</b><small>Secrets are filtered locally before any permitted remote request.</small></div></div>
-              {saveError && <p className="field-err" role="alert">{saveError}</p>}
-              <div className="ob__actions"><button className="ob__skip" onClick={back}>Back</button><button className="field-btn inline" disabled={saving} onClick={() => void finish()}>{celebrating ? 'Welcome!' : saving ? 'Saving…' : 'Start using Unvibe'}</button></div>
+              <div className="ob__trust"><span>✓</span><div><b>Private by default</b><small>Secrets are filtered on this computer before anything is sent.</small></div></div>
             </>
           )}
+
+          {step === 4 && <OnboardingDemo sound={soundEffects} onDone={() => setDemoDone(true)} />}
         </FadeIn>
+
+        {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
+        <div className="ob__actions">
+          <button className="ob__skip" disabled={step === 0 || saving} onClick={() => go(step - 1)}>Back</button>
+          <button className="field-btn inline" disabled={saving || (step === 1 && !displayName.trim())} onClick={advance}>{continueLabel}</button>
+        </div>
       </div>
     </div>
   );
@@ -1504,6 +1533,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [lessonSeedId, setLessonSeedId] = useState<string | null>(null);
   const [lessonSeedRevision, setLessonSeedRevision] = useState(0);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const refresh = async () => {
     try {
@@ -1587,6 +1617,15 @@ function App() {
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
+  // Ask for a rating once, after the third explanation, when it means something.
+  useEffect(() => {
+    if (gate !== 'app' || (profile?.reviews ?? 0) < 3) return;
+    let asked = false;
+    try { asked = window.localStorage.getItem(FEEDBACK_ASKED_KEY) === '1'; } catch { asked = true; }
+    if (asked) return;
+    const t = window.setTimeout(() => setFeedbackOpen(true), 2500);
+    return () => window.clearTimeout(t);
+  }, [gate, profile?.reviews]);
   // Vibe says hi whenever you open a new page.
   const firstPage = useRef(true);
   useEffect(() => {
@@ -1757,6 +1796,7 @@ function App() {
             onShortcuts={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
             onPlan={() => { setNavOpen(false); setPage('Plan'); }}
             onInvite={() => { setNavOpen(false); setPage('Gift'); }}
+            onFeedback={() => { setNavOpen(false); setFeedbackOpen(true); }}
             onSignIn={() => setGate('login')}
             onSignOut={async () => {
               await window.unvibe.signOut();
@@ -1841,6 +1881,7 @@ function App() {
           onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
+      {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
       {toast && <div className="toast" role="status">{toast}</div>}
     </>
   );

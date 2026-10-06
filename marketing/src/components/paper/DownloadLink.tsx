@@ -60,6 +60,7 @@ export function DownloadLink({
           surface: size,
         });
         delight();
+        window.dispatchEvent(new Event("unvibe:downloaded"));
         onClick?.();
       }}
       className={cn(

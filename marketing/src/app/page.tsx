@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
 import { FreeRibbon } from "@/components/paper/FreeRibbon";
+import { TryIt } from "@/components/paper/TryIt";
+import { LiveCounter } from "@/components/paper/LiveCounter";
+import { InviteFriend } from "@/components/paper/InviteFriend";
+import { WhyNow } from "@/components/paper/WhyNow";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { LiveDemo } from "@/components/paper/LiveDemo";
 import { BetaInstall } from "@/components/paper/BetaInstall";
@@ -35,7 +39,18 @@ export default function HomePage() {
 
       <FreeRibbon />
 
+      <LiveCounter />
+
       <AppTour />
+
+      <section className="paper-section" id="try-it">
+        <div className="paper-wrap paper-center">
+          <p className="paper-meta">Try it right now</p>
+          <h2 className="mt-3">Paste code. <em>Vibe explains it.</em></h2>
+          <p className="paper-lead mt-3">A real explanation, right here. No download, no account.</p>
+          <div className="mt-10"><TryIt /></div>
+        </div>
+      </section>
 
       <StatsStrip />
 
@@ -45,6 +60,14 @@ export default function HomePage() {
             <HomeBenefits />
           </div>
         </Reveal>
+      </section>
+
+      <section className="paper-section" id="why-now">
+        <div className="paper-wrap paper-center">
+          <p className="paper-meta">Why get it today</p>
+          <h2 className="mt-3">Free now. <em>Smarter every day you use it.</em></h2>
+          <div className="mt-10"><WhyNow /></div>
+        </div>
       </section>
 
       <section className="paper-section paper-install" id="install">
@@ -122,6 +145,10 @@ export default function HomePage() {
             <TypingFaq items={homeFaq} />
           </div>
         </Reveal>
+      </section>
+
+      <section className="paper-section" id="invite">
+        <div className="paper-wrap"><InviteFriend /></div>
       </section>
 
       <section className="paper-section">

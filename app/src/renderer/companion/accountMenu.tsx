@@ -11,13 +11,13 @@ interface AccountMenuProps {
   onShortcuts: () => void;
   onPlan: () => void;
   onInvite: () => void;
+  onFeedback: () => void;
   onSignIn: () => void;
   onSignOut: () => Promise<void>;
 }
 
 const HELP = 'https://unvibe.site/beta#help';
 const CHANGELOG = 'https://unvibe.site/releases';
-const FEEDBACK = 'https://unvibe.site/feedback';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -119,6 +119,9 @@ export function AccountMenu(props: AccountMenuProps) {
             <button type="button" role="menuitem" className="acct-menu__item" onClick={run(props.onPlan)}>
               <MenuIcon d={ICONS.plan} /><span>Plan and usage</span>
             </button>
+            <button type="button" role="menuitem" className="acct-menu__item" onClick={run(props.onFeedback)}>
+              <MenuIcon d={ICONS.feedback} /><span>Send feedback</span>
+            </button>
           </div>
 
           <div className="acct-menu__group">
@@ -127,9 +130,6 @@ export function AccountMenu(props: AccountMenuProps) {
             </button>
             <button type="button" role="menuitem" className="acct-menu__item" onClick={external(CHANGELOG)}>
               <MenuIcon d={ICONS.news} /><span>What&rsquo;s new</span><MenuIcon d={ICONS.external} />
-            </button>
-            <button type="button" role="menuitem" className="acct-menu__item" onClick={external(FEEDBACK)}>
-              <MenuIcon d={ICONS.feedback} /><span>Send feedback</span><MenuIcon d={ICONS.external} />
             </button>
           </div>
 

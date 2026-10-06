@@ -10,6 +10,8 @@ import { SelectionExplain } from "@/components/paper/SelectionExplain";
 import { SitePalette } from "@/components/paper/SitePalette";
 import { MobileDownloadBar } from "@/components/paper/MobileDownloadBar";
 import { ScrollVibe } from "@/components/paper/ScrollVibe";
+import { FeedbackWidget } from "@/components/paper/FeedbackWidget";
+import { ReminderToast } from "@/components/paper/ReminderToast";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -164,6 +166,8 @@ export default function RootLayout({
           <SitePalette />
           <MobileDownloadBar />
           <ScrollVibe />
+          <FeedbackWidget />
+          <ReminderToast />
         </Providers>
       </body>
     </html>

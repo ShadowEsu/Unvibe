@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "private": true,
   "description": "Unvibe desktop \u2014 floating learning layer for code",
   "main": "dist/main/main.cjs",
@@ -93,7 +93,27 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "sign": false
+      "sign": false,
+      "background": "build/dmg-background.png",
+      "iconSize": 110,
+      "window": {
+        "width": 660,
+        "height": 420
+      },
+      "contents": [
+        {
+          "x": 180,
+          "y": 212,
+          "type": "file"
+        },
+        {
+          "x": 480,
+          "y": 212,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "title": "Install Unvibe"
     },
     "win": {
       "icon": "build/icon.png",

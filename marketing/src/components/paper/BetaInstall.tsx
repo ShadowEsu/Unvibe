@@ -1,5 +1,7 @@
 "use client";
 
+import { delight } from "@/lib/delight";
+
 import { useEffect, useState } from "react";
 import { useCopyToast } from "@/components/paper/CopyToast";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
@@ -112,10 +114,12 @@ export function BetaInstall({
         rel="noreferrer"
         onClick={() => {
           track("release_download_clicked", { os, surface: tone });
+          delight();
+          window.dispatchEvent(new Event("unvibe:downloaded"));
         }}
       >
         <DownloadIcon />
-        <span>{os === "windows" ? "Download for Windows (.exe)" : "Download for Mac (.dmg)"}</span>
+        <span>{os === "windows" ? "Download free for Windows" : "Download free for Mac"}</span>
       </a>
 
       {/* Spec pills */}

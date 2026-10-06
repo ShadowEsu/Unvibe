@@ -68,6 +68,7 @@ import {
   resolveBackendUrl,
   type Account as BackendAccount,
   warmBackend,
+  networkFetch,
 } from './backend';
 import { setBar, notify, pulseBar } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
@@ -1151,6 +1152,27 @@ app.whenReady().then(() => {
     if (typeof url !== 'string' || !allowedExternalUrl(url)) return { ok: false };
     void shell.openExternal(url);
     return { ok: true };
+  });
+  // Stars plus up to 100 words, posted to unvibe.site. Validated here and again on the server.
+  ipcMain.handle('feedback:send', async (_event, input: { rating?: unknown; message?: unknown; email?: unknown }) => {
+    const rating = typeof input?.rating === 'number' ? Math.round(input.rating) : 0;
+    const message = typeof input?.message === 'string' ? input.message.trim().slice(0, 1200) : '';
+    const email = typeof input?.email === 'string' ? input.email.trim().slice(0, 254) : '';
+    if (rating < 1 || rating > 5) return { ok: false, error: 'Pick a star rating first.' };
+    if (message && message.split(/\s+/).length > 100) return { ok: false, error: 'Keep it under 100 words.' };
+    try {
+      const response = await networkFetch('https://unvibe.site/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, message, email, source: 'app', appVersion: app.getVersion() }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) return { ok: false, error: body.error ?? 'Could not send feedback.' };
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not reach unvibe.site. Check your connection and try again.' };
+    }
   });
   ipcMain.handle('app:reportFeedback', (_event, context: { screen?: unknown; version?: unknown }) => {
     const screen = typeof context.screen === 'string' ? context.screen.slice(0, 120) : 'Unknown screen';
