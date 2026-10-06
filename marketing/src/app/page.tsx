@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PhotoHero } from "@/components/paper/PhotoHero";
+import { AppTour } from "@/components/paper/AppTour";
 import { DecoderBoard } from "@/components/paper/DecoderBoard";
 import { LiveDemo } from "@/components/paper/LiveDemo";
 import { BetaInstall } from "@/components/paper/BetaInstall";
@@ -32,6 +33,8 @@ export default function HomePage() {
     <div>
       <PhotoHero />
 
+      <AppTour />
+
       <StatsStrip />
 
       <section className="paper-section" id="product">
@@ -58,7 +61,7 @@ export default function HomePage() {
         <div className="paper-wrap paper-center">
           <Reveal>
             <p className="paper-meta">The loop</p>
-            <h2 className="mt-3">One shortcut. The rest stays with you.</h2>
+            <h2 className="mt-3">One shortcut. The rest <em>stays with you.</em></h2>
           </Reveal>
           <div className="mt-10">
             <LiveDemo />
@@ -72,7 +75,7 @@ export default function HomePage() {
       <section className="paper-section" id="try">
         <Reveal className="paper-wrap paper-center">
           <p className="paper-meta">Try it here</p>
-          <h2 className="mt-3">Same code. Five depths.</h2>
+          <h2 className="mt-3">Same code. <em>Five depths.</em></h2>
           <p className="paper-lead mt-3">Pick a snippet and slide the depth. This is how Unvibe meets you where you are.</p>
           <div className="mt-10">
             <DepthPlayground />
@@ -104,7 +107,7 @@ export default function HomePage() {
         <Reveal className="paper-wrap">
           <div className="paper-center mb-8">
             <p className="paper-meta">Change log</p>
-            <h2 className="mt-3">What shipped.</h2>
+            <h2 className="mt-3">What <em>shipped.</em></h2>
             <a href="/releases" className="paper-text-link">Full change log</a>
           </div>
           <div className="paper-log-wrap paper-glass">
@@ -116,7 +119,7 @@ export default function HomePage() {
       <section className="paper-section">
         <Reveal className="paper-wrap paper-center">
           <p className="paper-meta">Questions</p>
-          <h2 className="mt-3">Short answers.</h2>
+          <h2 className="mt-3">Short <em>answers.</em></h2>
           <div className="mt-10">
             <TypingFaq items={homeFaq} />
           </div>

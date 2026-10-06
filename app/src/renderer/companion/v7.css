@@ -1,7 +1,7 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Unvibe companion, v7 "Paper and ink". Warm paper, black ink, a few bright
    sticker colors used as highlights, never as wallpaper. Bricolage Grotesque
-   for headings, Inter for reading, Caveat for Vibe's handwritten notes.
+   for headings, Inter for reading, Instrument Serif Italic for Vibe's notes and accents.
    Buttons press down like real keys. Vibe is a flat sticker that is on every
    page. Loads after v5.css and wins through the extra [data-v7] attribute.
    ───────────────────────────────────────────────────────────────────────────── */
@@ -10,7 +10,7 @@
   color-scheme: light;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-hand: "Caveat", "Bradley Hand", "Segoe Print", cursive;
+  --font-hand: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   --v-bg: #f5f2ea;
   --v-surface: #ffffff;
@@ -77,7 +77,7 @@
   }
   & .side-search:hover { border-color: var(--v-ink); color: var(--v-muted); }
   & .side-search kbd { border-color: var(--v-line); background: var(--v-sunken); color: var(--v-muted); }
-  & .side-spaces { margin: 16px 0 4px; padding: 0 8px; color: var(--v-faint); opacity: 1; font: 500 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .side-spaces { margin: 16px 0 4px; padding: 0 8px; color: var(--v-faint); opacity: 1; font: italic 400 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
 
   & .nav button,
   & .side-settings {
@@ -169,8 +169,8 @@
   & .page p { color: var(--v-muted); }
   & .page-head { margin-bottom: 18px; }
   & .page-head p, & .lead { font-size: 14.5px; color: var(--v-muted); }
-  & .eyebrow { color: var(--v-muted); font: 600 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
-  & .hand-note { margin: 0; color: var(--v-muted); font: 600 25px/1.1 var(--font-hand); letter-spacing: 0; }
+  & .eyebrow { color: var(--v-muted); font: italic 400 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .hand-note { margin: 0; color: var(--v-muted); font: italic 400 25px/1.1 var(--font-hand); letter-spacing: 0; }
   & kbd, & .kbd {
     padding: 0 6px; border: 1.5px solid var(--v-ink); border-bottom-width: 3px; border-radius: 6px; background: var(--v-surface);
     color: var(--v-ink); font: 700 11.5px/18px var(--font-sans); box-shadow: none;
@@ -304,7 +304,7 @@
   /* ── Library and Quiz lists ────────────────────────────────────────────── */
   & .learn-page { font-family: var(--font-sans); }
   & .lib-group { margin: 0 0 14px; }
-  & .lib-group__label { color: var(--v-muted); font: 600 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; margin: 0 0 4px; padding: 0 4px 2px; border: 0; }
+  & .page h2.lib-group__label, & .lib-group__label { color: var(--v-muted); font: italic 400 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; margin: 0 0 4px; padding: 0 4px 2px; border: 0; }
   & .lib-group__rows { display: grid; gap: 4px; border: 0; }
   & .lib-line, & .survey-line {
     display: flex; align-items: center; margin: 0; border: 1.5px solid var(--v-line); border-radius: 12px; background: var(--v-surface);
@@ -342,7 +342,7 @@
   }
   & .survey__end { background: color-mix(in srgb, var(--mint) 40%, #fff); text-align: center; }
   & .survey h2 { font: 800 22px/1.25 var(--font-display); letter-spacing: -0.03em; }
-  & .survey__kicker { color: var(--v-muted); font: 600 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .survey__kicker { color: var(--v-muted); font: italic 400 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
   & .survey__end .survey__kicker { color: var(--v-good); }
   & .survey__progress { height: 10px; border: 1.5px solid var(--v-ink); border-radius: 99px; background: var(--v-surface); }
   & .survey__progress i { background: var(--lime); }
@@ -410,7 +410,7 @@
   & .vibe-float__btn:hover { animation-play-state: paused; transform: rotate(-6deg) scale(1.06); }
   & .vibe-float__bubble {
     border: 1.5px solid var(--v-ink); border-radius: 14px 14px 4px 14px; background: var(--v-surface); color: var(--v-ink);
-    font: 600 20px/1.1 var(--font-hand); box-shadow: var(--hard-sm);
+    font: italic 400 20px/1.1 var(--font-hand); box-shadow: var(--hard-sm);
   }
 
   /* ── Palette, settings, toast ──────────────────────────────────────────── */
@@ -425,7 +425,7 @@
   & .modal { border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--v-surface); box-shadow: 6px 6px 0 var(--v-ink); }
   & .modal .mside, & .mside { background: var(--v-bg); border-right: 1.5px solid var(--v-line); }
   & .settings-brand { font: 800 22px var(--font-display); letter-spacing: -0.04em; color: var(--v-ink); }
-  & .mside .mh { color: var(--v-faint); font: 600 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .mside .mh { color: var(--v-faint); font: italic 400 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
   & .modal .mside button, & .mside button { height: 34px; border: 1.5px solid transparent; color: var(--v-ink-2); font: 550 13.5px var(--font-sans); }
   & .mside button:hover { background: var(--v-hover); color: var(--v-ink); }
   & .mside button.on { background: var(--v-surface); border-color: var(--v-ink); color: var(--v-ink); font-weight: 700; box-shadow: var(--hard-sm); }
@@ -442,7 +442,7 @@
 
   /* Integrations (onboarding and settings) */
   & .integ__group, & .integ__lead { color: var(--v-muted); }
-  & .integ__group { font: 600 18px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .integ__group { font: italic 400 18px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
   & .integ__grid { gap: 6px; }
   & .integ-card { border: 1.5px solid var(--v-line); border-radius: 12px; background: var(--v-surface); box-shadow: none; padding: 10px 12px; transition: border-color 120ms ease, transform 200ms var(--press); }
   & .integ-card:hover { border-color: var(--v-ink); transform: translateY(-1px); }
@@ -470,24 +470,24 @@
   & .login__local small { color: var(--v-muted); }
   & .login__local-icon { background: var(--sky); border: 1.5px solid var(--v-ink); color: var(--v-ink); }
   & .login__local-icon svg { stroke: var(--v-ink); }
-  & .login__brand { color: var(--v-muted); font: 600 20px/1 var(--font-hand); letter-spacing: 0; }
+  & .login__brand { color: var(--v-muted); font: italic 400 20px/1 var(--font-hand); letter-spacing: 0; }
   & .login h1, & .login h2, & .ob__title { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.045em; color: var(--v-ink); }
   & .login__card-copy { color: var(--v-muted); }
   & .field-btn--google { height: 44px; border-radius: 12px; font-weight: 700; }
   & .ob__title { font-size: 36px; }
   & .ob__sub { color: var(--v-muted); }
-  & .ob__eyebrow { color: var(--v-muted); font: 600 20px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .ob__eyebrow { color: var(--v-muted); font: italic 400 20px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
   & .ob__step { color: var(--v-faint); }
   & .ob__dot { height: 6px; background: var(--v-line-2); }
   & .ob__dot.on { background: var(--lime); box-shadow: inset 0 -1.5px 0 var(--v-ink); }
   & .ob .field-btn.inline { height: 38px; background: var(--v-ink); border: 1.5px solid var(--v-ink); color: #fff; box-shadow: 0 3px 0 #000; }
   & .ob .field-btn.inline:hover:not(:disabled) { background: #262626; transform: translateY(-1px); }
   & .ob .field-btn.inline:active:not(:disabled) { transform: translateY(3px); box-shadow: none; }
-  & .ob__hello-bubble { border: 1.5px solid var(--v-ink); border-radius: 16px 16px 16px 4px; background: var(--v-surface); color: var(--v-ink); font: 600 21px/1.15 var(--font-hand); box-shadow: var(--hard-sm); }
+  & .ob__hello-bubble { border: 1.5px solid var(--v-ink); border-radius: 16px 16px 16px 4px; background: var(--v-surface); color: var(--v-ink); font: italic 400 21px/1.15 var(--font-hand); box-shadow: var(--hard-sm); }
   & .ob__trust, & .ob__signal { border: 1.5px solid var(--v-line); border-radius: 99px; background: var(--v-sunken); color: var(--v-muted); box-shadow: none; }
   & .ob__sample { border: 1.5px solid var(--v-ink); border-radius: 14px; background: var(--v-surface); box-shadow: var(--hard-sm); }
   & .ob__sample-code { background: var(--v-ink); color: #f3f1ea; font-family: var(--font-mono); }
-  & .ob__sample-code span { color: var(--lime); font: 600 18px/1 var(--font-hand); }
+  & .ob__sample-code span { color: var(--lime); font: italic 400 18px/1 var(--font-hand); }
   & .ob__scene::after, & .ob__scene-grid, & .ob__scene-code { display: none; }
   & .ob__scene-strip { display: none; }
   & .ob__sample-answer b { color: var(--v-ink); font: 750 16px var(--font-display); }
@@ -515,6 +515,7 @@
   & .lib-group:nth-child(n+3) .lib-line, & .lib-group:nth-child(n+3) .survey-line { animation-delay: 120ms; }
   & .modal, & .search-palette, & .acct-menu { animation: v7Pop 280ms var(--press) both; }
   & .hand-note { animation: v7Write 700ms ease-out 200ms both; }
+  & .serif-em, & .page h1 em, & .ob__title em, & .login h2 em, & .chat-hello h2 em { font: italic 400 1.1em/1 var(--font-hand); letter-spacing: -0.01em; }
 }
 
 @keyframes v7Page { from { opacity: 0; transform: translateY(12px) rotate(-0.4deg); } to { opacity: 1; transform: none; } }

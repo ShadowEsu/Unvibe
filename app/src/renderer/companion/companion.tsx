@@ -506,7 +506,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
                 <div className="ob__hello-bubble">Hi, I&rsquo;m Vibe. I explain the code AI writes for you, in plain English.</div>
               </div>
               <div className="ob__eyebrow">WELCOME TO UNVIBE</div>
-              <h2 className="ob__title">Understand what AI changed.</h2>
+              <h2 className="ob__title">Understand what AI <em>changed.</em></h2>
               <p className="ob__sub">Select code and press <span className="kbd-lg">⌘U</span>. Unvibe explains it beside your work, checks understanding, and keeps the lesson for later.</p>
               <div className="ob__sample" aria-label="Example Unvibe explanation">
                 <div className="ob__sample-code"><span>Selected code</span><br />return users.filter(user =&gt; user.active);</div>
@@ -624,7 +624,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
           <aside className="login__card">
             <div className="login__mark"><Buddy mood="wave" size={56} follow label="Vibe" /></div>
             <div className="login__brand">UNVIBE</div>
-            <h2 className="login__tag">Carry your learning forward.</h2>
+            <h2 className="login__tag">Carry your learning <em>forward.</em></h2>
             <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
             <SignInForm onDone={onSignedIn} />
           </aside>
@@ -736,7 +736,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
       <header className="today-hero">
         <Buddy mood={explainDisabled ? 'sleepy' : 'wave'} size={68} follow label="Vibe" />
         <div className="today-hero__copy">
-          <h1>{first ? `${dayGreeting()}, ${first}.` : `${dayGreeting()}.`}</h1>
+          <h1>{dayGreeting()}{first ? <>, <em>{first}.</em></> : <em>.</em>}</h1>
           <p className="hand-note">{note}</p>
         </div>
       </header>

@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./paper.css";
 import "./polish.css";
+import "./vibe.css";
 import { Providers } from "@/components/providers/Providers";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
@@ -24,11 +25,18 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const display = Newsreader({
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-display-face",
+  display: "swap",
+});
+
+const serif = Instrument_Serif({
   subsets: ["latin"],
   style: ["normal", "italic"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display-face",
+  weight: "400",
+  variable: "--font-serif-face",
   display: "swap",
 });
 
@@ -130,7 +138,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} ${display.variable}`}
+      className={`${sans.variable} ${mono.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
         <script

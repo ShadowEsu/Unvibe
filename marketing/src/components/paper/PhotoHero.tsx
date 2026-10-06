@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { DownloadRow } from "@/components/paper/DownloadLink";
+import { Vibe } from "@/components/paper/Vibe";
 
-const HEADLINE = "Understand the AI-generated code you ship.";
+const LEAD = "Understand the code";
+const ACCENT = "AI ships for you.";
 
+/** Homepage hero: Vibe, one line of promise, the download buttons. */
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
 
@@ -19,23 +22,28 @@ export function PhotoHero() {
   }, []);
 
   return (
-    <section className="paper-hero" aria-label="Unvibe">
-      <img src="/hero/golden-gate.png" alt="" />
-      <div className="paper-hero__veil" />
-      <div className={ready ? "paper-hero__copy is-ready" : "paper-hero__copy"}>
-        <h1 aria-label={HEADLINE}>
-          {HEADLINE.split(" ").map((word, index, words) => (
-            <span key={index} aria-hidden="true">
-              <span className="hw" style={{ "--i": index } as React.CSSProperties}>{word}</span>
-              {index < words.length - 1 ? " " : null}
-            </span>
-          ))}
+    <section className={ready ? "vhero is-ready" : "vhero"} aria-label="Unvibe">
+      <div className="vhero__copy">
+        <div className="vhero__vibe">
+          <Vibe size={104} />
+          <span className="vhero__bubble">psst, select any code and press ⌘U</span>
+        </div>
+        <h1 aria-label={`${LEAD} ${ACCENT}`}>
+          <span className="vhero__lead">{LEAD}</span> <em>{ACCENT}</em>
         </h1>
-        <p className="paper-hero__kicker">Select code. Unvibe explains it beside your editor. Save it, then quiz yourself.</p>
+        <p className="vhero__kicker">
+          Select code in Cursor, VS Code or Terminal. Vibe explains it right beside your editor, checks you got it, and keeps the lesson.
+        </p>
+        <div className="vhero__stickers" aria-hidden="true">
+          <span className="vsticker vsticker--lime">Explain in place</span>
+          <span className="vsticker vsticker--sky">Five depths</span>
+          <span className="vsticker vsticker--sun">Test me</span>
+          <span className="vsticker vsticker--lilac">Saved for later</span>
+        </div>
         <DownloadRow />
-        <p className="paper-hero__fine">Free · No API key · No card</p>
+        <p className="vhero__fine">Free · No API key · No card</p>
       </div>
-      <a href="#product" className="paper-hero__scroll" aria-label="Scroll to the demo">
+      <a href="#tour" className="vhero__scroll" aria-label="See the app">
         <span />
       </a>
     </section>

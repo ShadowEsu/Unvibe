@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "An elegant italic, a see-through panel, and a new site",
+    summary: "Vibe's notes and the accent words now use an elegant italic serif instead of handwriting. The Command U panel has a light and dark switch in its header, and when you click back into your editor it turns see-through instead of getting in the way. unvibe.site gets Vibe in the nav and hero, the app's fonts, and a new tour of the app.",
+    figure: "v0.1.23",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Paper, ink and stickers",
     summary: "Unvibe goes light and playful. Warm paper and black ink with bright sticker colors, Bricolage Grotesque headings, Inter for reading and handwritten notes from Vibe. Buttons press down like real keys, pages spring in, and Vibe is now a flat 2D sticker on every page. Today is simpler, and the Command U panel is an ink window where Vibe scribbles what it is doing while it writes.",
     figure: "v0.1.22",

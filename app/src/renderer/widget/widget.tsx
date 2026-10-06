@@ -320,10 +320,29 @@ function applyTheme(preference: 'system' | 'light' | 'dark') {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
+const PANEL_THEME_KEY = 'unvibe.panelTheme';
+
 function Widget() {
   const [tabs, setTabs] = useState<TabState[]>([newTab('1', 'Review')]);
   const [activeTabId, setActiveTabId] = useState('1');
   const [collapsed, setCollapsed] = useState(false);
+  // Panel look is a per-device preference: an ink terminal (default) or paper.
+  const [panelTheme, setPanelTheme] = useState<'dark' | 'light'>(() => {
+    try { return window.localStorage.getItem(PANEL_THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+  });
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    document.documentElement.dataset.panel = panelTheme;
+    try { window.localStorage.setItem(PANEL_THEME_KEY, panelTheme); } catch { /* storage blocked */ }
+  }, [panelTheme]);
+  // Clicking back into your editor turns the panel see-through instead of hiding it.
+  useEffect(() => {
+    const onBlur = () => setAway(true);
+    const onFocus = () => setAway(false);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+    return () => { window.removeEventListener('blur', onBlur); window.removeEventListener('focus', onFocus); };
+  }, []);
   const [shortcut, setShortcut] = useState('⌘U');
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [teachOpen, setTeachOpen] = useState(false);
@@ -617,7 +636,7 @@ function Widget() {
   };
 
   return (
-    <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
@@ -634,6 +653,14 @@ function Widget() {
               {usage.remaining} left
             </span>
           )}
+          <button
+            className="head__theme"
+            aria-label={panelTheme === 'dark' ? 'Switch panel to light mode' : 'Switch panel to dark mode'}
+            title={panelTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+            onClick={() => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          >
+            {panelTheme === 'dark' ? '☀' : '☾'}
+          </button>
           <button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
             Saved
           </button>

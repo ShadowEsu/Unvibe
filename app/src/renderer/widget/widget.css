@@ -1343,7 +1343,7 @@ code.inline {
 
 /* ═════════════════════════════════════════════════════════════════════════════
    Panel v7 "Ink terminal": a warm black window next to your code. Bricolage for
-   titles, Inter for reading, JetBrains Mono for code, Caveat for Vibe's notes.
+   titles, Inter for reading, JetBrains Mono for code, Instrument Serif Italic for Vibe's notes.
    Sticker colors mark meaning: lime is the next step, sky is test me.
    ═════════════════════════════════════════════════════════════════════════════ */
 .card.card {
@@ -1420,7 +1420,7 @@ code.inline {
 .card .thinking__vibe .buddy { --vibe-ink: #0d0d0c; }
 .card .thinking__main { display: grid; gap: 10px; flex: 1; min-width: 0; }
 .card .thinking__note {
-  margin: 0; color: var(--p-lime); font-family: "Caveat", "Bradley Hand", cursive !important; font-size: 24px; font-weight: 600; line-height: 1;
+  margin: 0; color: var(--p-lime); font-family: "Instrument Serif", Georgia, serif !important; font-style: italic; font-size: 23px; font-weight: 400; line-height: 1.05;
   animation: pWrite 650ms ease-out both;
 }
 .card .thinking__steps li { font-size: 12.5px; }
@@ -1449,7 +1449,7 @@ code.inline {
 .card .btn.ghost { background: var(--p-surface); color: var(--p-ink); border: 1.5px solid var(--p-line); box-shadow: 0 2px 0 #000; }
 .card .state .big { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; font-size: 19px; font-weight: 800; letter-spacing: -0.03em; }
 .card .paste-box { border-radius: 12px; }
-.card .quiz__kicker { color: var(--p-sky); font-family: "Caveat", cursive !important; font-size: 20px; font-weight: 600; letter-spacing: 0; }
+.card .quiz__kicker { color: var(--p-sky); font-family: "Instrument Serif", Georgia, serif !important; font-style: italic; font-size: 19px; font-weight: 400; letter-spacing: 0; }
 .card .quiz__q { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; letter-spacing: -0.02em; }
 .card .opt { border: 1.5px solid var(--p-line); border-radius: 12px; box-shadow: 0 2px 0 #000; transition: transform 160ms var(--p-press), border-color 120ms ease; }
 .card .opt:hover:not(:disabled) { border-color: var(--p-sky); background: var(--p-raised); transform: translateY(-1px); }
@@ -1460,3 +1460,63 @@ code.inline {
 @media (prefers-reduced-motion: reduce) { .card .thinking__vibe, .card .thinking__note { animation: none; } }
 .card .state__vibe { display: flex; justify-content: center; margin: 4px 0 6px; animation: pBob 2.4s ease-in-out infinite; }
 .card .state__vibe .buddy { --vibe-ink: #0d0d0c; }
+
+/* Clicked away: the panel stays put but turns see-through so your code shows behind it. */
+.card.card { transition: background-color 260ms ease, border-color 260ms ease; }
+.card.card.card--away { background: rgb(20 20 19 / 0.62); border-color: rgb(255 255 255 / 0.08); }
+.card.card.card--away .head, .card.card.card--away .foot { background: transparent; }
+.card.card.card--away:hover { background: var(--p-bg); }
+
+/* Paper mode: the same panel, light. */
+:root[data-panel="light"] .card.card {
+  --p-bg: #fbfaf6;
+  --p-surface: #ffffff;
+  --p-raised: #f1eee6;
+  --p-line: #e4dfd3;
+  --p-ink: #141414;
+  --p-muted: #5f5c55;
+  --p-faint: #98948b;
+  --p-code: #141413;
+  --vibe-ink: #141414;
+  color-scheme: light;
+  border-color: #141414;
+  box-shadow: 4px 4px 0 #141414, 0 20px 50px -20px rgb(0 0 0 / 0.35);
+}
+:root[data-panel="light"] .card.card.card--away { background: rgb(251 250 246 / 0.62); border-color: rgb(20 20 20 / 0.25); box-shadow: none; }
+:root[data-panel="light"] .card.card.card--away:hover { background: var(--p-bg); }
+:root[data-panel="light"] .card .head .buddy,
+:root[data-panel="light"] .card .thinking__vibe .buddy,
+:root[data-panel="light"] .card .state__vibe .buddy { --vibe-ink: #141414; }
+:root[data-panel="light"] .card .body p { color: #2e2e2e; }
+:root[data-panel="light"] .card .body strong { color: #141414; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%); }
+:root[data-panel="light"] .card .body :not(pre) > code { background: #f1eee6; color: #9a3412; }
+:root[data-panel="light"] .card .body a { color: #1d6fa5; }
+:root[data-panel="light"] .card .code-context pre, :root[data-panel="light"] .card .cb pre { color: #f4f2ea; }
+:root[data-panel="light"] .card .code-context__head, :root[data-panel="light"] .card .cb-head { color: #aeaba2; border-color: #2f2f2c; }
+:root[data-panel="light"] .card .code-context, :root[data-panel="light"] .card .cb { border-color: #141414; }
+:root[data-panel="light"] .card .thinking { background: #ffffff; border-color: #d6d0c3; }
+:root[data-panel="light"] .card .thinking__note { color: #5b4bd6; }
+:root[data-panel="light"] .card .thinking__steps li.is-now i { border-color: #141414; border-top-color: transparent; }
+:root[data-panel="light"] .card .thinking__steps li.is-done i { border-color: #141414; background: #d6f45a; box-shadow: none; }
+:root[data-panel="light"] .card .thinking__lines i { background: linear-gradient(90deg, #f1eee6, #e4dfd3, #f1eee6); background-size: 200% 100%; }
+:root[data-panel="light"] .card .chip, :root[data-panel="light"] .card .chip--diff,
+:root[data-panel="light"] .card .chip:not(.chip--ok):not(.chip--diff):not(.chip--test) { border-color: #141414; background: #ffffff; color: #141414; box-shadow: 0 2px 0 #141414; }
+:root[data-panel="light"] .card .chip:hover:not(:disabled) { background: #f1eee6; box-shadow: 0 3px 0 #141414; }
+:root[data-panel="light"] .card .chip--ok, :root[data-panel="light"] .card .chip--ok:hover:not(:disabled) { background: #d6f45a; border-color: #141414; box-shadow: 0 2px 0 #141414; }
+:root[data-panel="light"] .card .chip--test, :root[data-panel="light"] .card .chip--test:hover:not(:disabled) { background: #9fd8ff; border-color: #141414; box-shadow: 0 2px 0 #141414; }
+:root[data-panel="light"] .card .lvl.on, :root[data-panel="light"] .card .lvl[data-level].on,
+:root[data-panel="light"] .card .lvl[data-level="new"].on, :root[data-panel="light"] .card .lvl[data-level="beginner"].on,
+:root[data-panel="light"] .card .lvl[data-level="intermediate"].on, :root[data-panel="light"] .card .lvl[data-level="advanced"].on,
+:root[data-panel="light"] .card .lvl[data-level="expert"].on { border-color: #141414; box-shadow: 0 2px 0 #141414; }
+:root[data-panel="light"] .card .widget-tools button.on .widget-tool-icon { box-shadow: inset 0 0 0 1.5px #141414; }
+:root[data-panel="light"] .card .btn { box-shadow: 0 3px 0 #141414; border: 1.5px solid #141414; }
+:root[data-panel="light"] .card .btn.ghost { background: #ffffff; color: #141414; border-color: #141414; box-shadow: 0 2px 0 #141414; }
+:root[data-panel="light"] .card .askrow .btn-ask { box-shadow: 0 2px 0 #141414; }
+:root[data-panel="light"] .card .ask-sandbox { background: #ffffff; }
+:root[data-panel="light"] .card .askrow input { color: #141414; }
+:root[data-panel="light"] .card .paste-box { background: #ffffff; color: #141414; }
+:root[data-panel="light"] .card .opt { box-shadow: 0 2px 0 #e4dfd3; color: #141414; }
+:root[data-panel="light"] .card .quiz__kicker { color: #1d6fa5; }
+:root[data-panel="light"] .card .head__status i { box-shadow: 0 0 0 3px rgb(20 20 20 / 0.08); }
+:root[data-panel="light"] .card .head__actions button { color: #5f5c55; background: #fff; }
+.card .head__theme { font-size: 13px; }

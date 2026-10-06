@@ -1,0 +1,172 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   unvibe.site, Vibe edition. Same background colour, the app's type system:
+   Bricolage Grotesque headings, Instrument Serif Italic accents, Inter body.
+   Ink outlines, sticker colours and Vibe the blob. Loads last.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --font-serif: var(--font-serif-face), "Instrument Serif", Georgia, serif;
+  --v-ink: #141414;
+  --v-lime: #d6f45a;
+  --v-sky: #9fd8ff;
+  --v-sun: #ffd84d;
+  --v-lilac: #b8a6ff;
+  --v-coral: #ff9a76;
+  --v-press: cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+/* Type: chunky grotesque headings, an elegant italic for the emotional word. */
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  text-shadow: none;
+}
+h1 em, h2 em, h3 em, .serif-em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.paper-kicker, .paper-quote, .paper-hero__kicker, .sel-card blockquote, .paper-quotes blockquote p {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+.paper-meta {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.3rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── Vibe ─────────────────────────────────────────────────────────────────── */
+.vibe { --look-x: 0px; --look-y: 0px; display: inline-block; line-height: 0; flex: 0 0 auto; }
+.vibe svg { overflow: visible; }
+.vibe__float, .vibe__pupil, .vibe__eyes { transform-box: fill-box; transform-origin: center; }
+.vibe__float { transform-origin: 50% 100%; animation: vibeSquish 4.2s ease-in-out infinite; }
+.vibe__body { fill: var(--v-lilac); stroke: var(--v-ink); stroke-width: 2.2; stroke-linejoin: round; animation: vibeGoo 6s ease-in-out infinite; }
+.vibe__iris { fill: var(--v-ink); }
+.vibe__eyes { animation: vibeBlink 5.2s infinite; }
+.vibe__pupil { fill: #fff; transform: translate(var(--look-x), var(--look-y)); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
+.vibe__shadow { fill: var(--v-ink); opacity: 0.14; transform-box: fill-box; transform-origin: center; animation: vibeShadow 4.2s ease-in-out infinite; }
+@keyframes vibeSquish { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.6px) scale(0.97, 1.03); } }
+@keyframes vibeShadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.86); } }
+@keyframes vibeBlink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(0.1); } }
+@keyframes vibeGoo {
+  0%, 100% { d: path("M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z"); }
+  33% { d: path("M25 8.5C34 8.5 39 15 40.5 23C42 31 43.5 38 38 41C32.5 43.6 15.5 43.4 10 40.6C4.6 37.6 6 30.5 7.6 22C9 13.6 16 8.5 25 8.5Z"); }
+  66% { d: path("M23 8C32 7.6 38 13.6 39.6 22C41.2 30.6 43.4 38.2 38 41.2C32.4 43.8 16.4 43.8 10.6 40.8C5.4 38 6.8 31.4 8.4 23C10 14.4 14.6 8.4 23 8Z"); }
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.vhero {
+  position: relative;
+  min-height: 92svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 7.5rem 1.25rem 4rem;
+  color: var(--v-ink);
+}
+.vhero__dot { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0.55; animation: vDrift 14s ease-in-out infinite; }
+.vhero__dot--lime { width: 220px; height: 220px; left: 6%; top: 18%; background: var(--v-lime); }
+.vhero__dot--sky { width: 300px; height: 300px; right: 4%; bottom: 6%; background: var(--v-sky); animation-delay: -5s; }
+.vhero__dot--sun { width: 140px; height: 140px; right: 14%; top: 14%; background: var(--v-sun); animation-delay: -9s; }
+@keyframes vDrift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(14px, -18px); } }
+
+.vhero__copy { position: relative; z-index: 1; display: grid; justify-items: center; gap: 1.1rem; width: min(64rem, 94vw); text-align: center; }
+.vhero__vibe { position: relative; display: inline-flex; align-items: flex-end; gap: 0.6rem; }
+.vhero__bubble {
+  position: absolute; left: calc(100% + 0.4rem); top: 0.2rem; white-space: nowrap;
+  padding: 0.45rem 0.85rem; border: 1.5px solid var(--v-ink); border-radius: 16px 16px 16px 4px; background: #fff;
+  box-shadow: 3px 3px 0 var(--v-ink); font-family: var(--font-serif); font-style: italic; font-size: 1.15rem; line-height: 1.1;
+}
+.vhero h1 { max-width: 15ch; margin: 0; font-size: clamp(2.9rem, 7.4vw, 6.4rem); line-height: 0.98; color: var(--v-ink); }
+.vhero h1 em { display: inline-block; font-size: 1.04em; }
+.vhero__kicker { max-width: 40rem; margin: 0; color: #4d4a44; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.55; }
+.vhero__stickers { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin: 0.2rem 0 0.4rem; }
+.vsticker {
+  padding: 0.38rem 0.9rem; border: 1.5px solid var(--v-ink); border-radius: 999px; box-shadow: 2px 2px 0 var(--v-ink);
+  font: 650 0.86rem var(--font-sans); color: var(--v-ink); transition: transform 220ms var(--v-press);
+}
+.vsticker:hover { transform: rotate(-3deg) translateY(-2px); }
+.vsticker--lime { background: var(--v-lime); }
+.vsticker--sky { background: var(--v-sky); }
+.vsticker--sun { background: var(--v-sun); }
+.vsticker--lilac { background: var(--v-lilac); }
+.vhero__fine { margin: 0; color: #6b6760; font-size: 0.86rem; }
+.vhero__scroll { position: absolute; left: 50%; bottom: 1.4rem; width: 26px; height: 40px; margin-left: -13px; border: 1.5px solid var(--v-ink); border-radius: 14px; }
+.vhero__scroll span { position: absolute; left: 50%; top: 8px; width: 4px; height: 8px; margin-left: -2px; border-radius: 2px; background: var(--v-ink); animation: vScroll 1.8s ease-in-out infinite; }
+@keyframes vScroll { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(12px); opacity: 0; } 100% { opacity: 0; } }
+
+/* Hero entrance: Vibe pops, words rise, stickers bounce in. */
+.vhero .vhero__copy > * { opacity: 0; transform: translateY(14px); }
+.vhero.is-ready .vhero__copy > * { animation: vRise 620ms var(--v-press) forwards; }
+.vhero.is-ready .vhero__copy > *:nth-child(2) { animation-delay: 90ms; }
+.vhero.is-ready .vhero__copy > *:nth-child(3) { animation-delay: 170ms; }
+.vhero.is-ready .vhero__copy > *:nth-child(4) { animation-delay: 240ms; }
+.vhero.is-ready .vhero__copy > *:nth-child(5) { animation-delay: 300ms; }
+.vhero.is-ready .vhero__copy > *:nth-child(n+6) { animation-delay: 360ms; }
+.vhero.is-ready .vhero__bubble { animation: vPop 520ms var(--v-press) 700ms both; }
+@keyframes vRise { to { opacity: 1; transform: none; } }
+@keyframes vPop { 0% { opacity: 0; transform: scale(0.6) rotate(-6deg); } 70% { opacity: 1; transform: scale(1.05); } 100% { transform: none; } }
+
+/* Download buttons pick up the ink and press like keys. */
+.vhero .paper-join, .paper-invite .paper-join {
+  border: 1.5px solid var(--v-ink) !important;
+  box-shadow: 0 3px 0 var(--v-ink);
+  transition: transform 160ms var(--v-press), box-shadow 160ms var(--v-press);
+}
+.vhero .paper-join:hover, .paper-invite .paper-join:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--v-ink); }
+.vhero .paper-join:active, .paper-invite .paper-join:active { transform: translateY(3px); box-shadow: 0 0 0 var(--v-ink); }
+
+/* ── App tour ─────────────────────────────────────────────────────────────── */
+.vtour { display: grid; justify-items: center; gap: 1.4rem; padding: 3rem 1.25rem 5rem; }
+.vtour__head { text-align: center; }
+.vtour__eyebrow { margin: 0 0 0.3rem; font-family: var(--font-serif); font-style: italic; font-size: 1.4rem; color: #5b4bd6; }
+.vtour h2 { margin: 0; font-size: clamp(2rem, 4.4vw, 3.4rem); }
+.vtour__window {
+  width: min(1080px, 94vw); overflow: hidden; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #f5f2ea;
+  box-shadow: 8px 8px 0 var(--v-ink);
+}
+.vtour__bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1.5px solid var(--v-ink); background: #fff; }
+.vtour__bar i { width: 11px; height: 11px; border: 1.5px solid var(--v-ink); border-radius: 50%; background: var(--v-coral); }
+.vtour__bar i:nth-child(2) { background: var(--v-sun); }
+.vtour__bar i:nth-child(3) { background: var(--v-lime); }
+.vtour__bar span { margin-left: 8px; font: 700 0.85rem var(--font-display); letter-spacing: -0.02em; }
+.vtour__window video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.vtour__caption { max-width: 40rem; margin: 0; color: #6b6760; text-align: center; font-size: 0.9rem; }
+
+@media (max-width: 720px) {
+  .vhero__bubble { left: 50%; top: auto; bottom: calc(100% + 0.4rem); transform: translateX(-50%); }
+  .vhero.is-ready .vhero__bubble { animation: none; }
+  .vhero__dot--sky { width: 180px; height: 180px; }
+  .vtour__window { box-shadow: 4px 4px 0 var(--v-ink); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow, .vhero__dot, .vhero__scroll span { animation: none; }
+  .vhero .vhero__copy > * { opacity: 1; transform: none; }
+  .vhero.is-ready .vhero__copy > *, .vhero.is-ready .vhero__bubble { animation: none; }
+}
+
+/* Dark site theme: ink becomes paper, stickers stay bright. */
+.dark .vhero, .dark .vhero h1, .dark .vtour h2 { color: #f2eef9; }
+.dark .vhero__kicker, .dark .vhero__fine, .dark .vtour__caption { color: #b9b2c6; }
+.dark .vhero__bubble { background: #1f1729; color: #f2eef9; border-color: #f2eef9; box-shadow: 3px 3px 0 #f2eef9; }
+.dark .vhero__scroll { border-color: #f2eef9; }
+.dark .vhero__scroll span { background: #f2eef9; }
+.dark .vhero__dot { opacity: 0.18; }
+.dark .vtour__window { border-color: #f2eef9; box-shadow: 8px 8px 0 #f2eef9; }
+.dark .vtour__bar { background: #1f1729; border-color: #f2eef9; }
+.dark .vtour__bar span { color: #f2eef9; }
+.dark .vtour__eyebrow { color: #c4b5fd; }
+
+/* On the site's colour field: solid ink copy and a paper chip for the fine print. */
+.vhero__kicker { color: #1c1a17; font-weight: 500; }
+.vhero__fine { padding: 0.25rem 0.75rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: rgb(255 255 255 / 0.85); color: var(--v-ink); font-weight: 600; }
+.vtour__caption { color: #1c1a17; font-weight: 500; }
+.paper-logo__word { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; }
+.dark .vhero__fine { background: #1f1729; color: #f2eef9; border-color: #f2eef9; }
+.dark .vhero__kicker, .dark .vtour__caption { color: #e6e0f0; }

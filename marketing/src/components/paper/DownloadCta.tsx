@@ -7,7 +7,7 @@ export function DownloadCta() {
     <div className="paper-invite is-lit">
       <div className="paper-invite__card paper-glass">
         <p className="paper-meta">Free during the beta</p>
-        <h2>Download Unvibe.</h2>
+        <h2>Download <em>Unvibe.</em></h2>
         <p className="paper-lead">
           Mac (Apple silicon) and Windows. No API key and no credit card.
           Select code, press {"⌘"}U, and keep what you ship.

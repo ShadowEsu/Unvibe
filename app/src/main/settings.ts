@@ -136,7 +136,7 @@ const DEFAULTS: Settings = {
   soundVolume: 0.3,
   soundStyle: 'soft',
   // Enough transparency to show the editor beneath without making text feel disabled.
-  widgetOpacityInactive: 0.84,
+  widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
   launchAtLogin: false,
   theme: 'light',
@@ -208,6 +208,8 @@ class SettingsStore {
       // Older builds could collapse the whole panel on blur. Preserve the panel
       // size and simply dim it when focus returns to Cursor or VS Code.
       ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
+      // The old default (0.84) barely looked see-through; move it to the new default.
+      ...(loaded.widgetOpacityInactive === 0.84 ? { widgetOpacityInactive: 0.72 } : {}),
       ...(needsOnboardingReset
         ? {
             onboarded: false,
