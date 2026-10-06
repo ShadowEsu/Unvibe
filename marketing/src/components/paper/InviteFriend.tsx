@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
+import { storedRef } from "@/lib/referral";
 
 /** Get a personal link. When a friend joins with it, you both get a month of Pro. */
 export function InviteFriend() {
@@ -20,7 +21,7 @@ export function InviteFriend() {
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, firstName: "", lastName: "" }),
+        body: JSON.stringify({ email, firstName: "", lastName: "", referredBy: storedRef() }),
       });
       const body = (await response.json().catch(() => ({}))) as { referralCode?: string; error?: string };
       if (!response.ok || !body.referralCode) throw new Error(body.error || "Could not make your link.");
@@ -61,7 +62,7 @@ export function InviteFriend() {
       <div className="invite__copy">
         <p className="paper-meta">Bring a friend</p>
         <h2>One link. <em>A month of Pro each.</em></h2>
-        <p className="paper-lead">Grab your personal link and send it to a friend. When they join with it, you both get a month of Pro, up to five friends.</p>
+        <p className="paper-lead">Grab your personal link and send it to a friend. When they join with it, you both get a month of Pro, up to five friends. Months stack, and land when you sign in to the app with the same email.</p>
       </div>
       {link ? (
         <div className="invite__result">

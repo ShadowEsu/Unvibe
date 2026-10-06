@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpRight, Check, Copy, Gift, Loader2, Send } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { Reveal } from "@/components/redesign/Reveal";
+import { markRefUsed, storedRef } from "@/lib/referral";
 import {
   experienceLabels,
   experiences,
@@ -49,7 +50,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setTracking({
-      referredBy: (params.get("ref") ?? "").slice(0, 32),
+      referredBy: storedRef(),
       utmSource: (params.get("utm_source") ?? "").slice(0, 64),
       utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
       utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
@@ -70,7 +71,8 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, ...tracking }),
+        // A typed friend email wins over the remembered ?ref= code; the database claims either.
+        body: JSON.stringify({ ...values, ...tracking, referredBy: values.referredBy?.trim() || tracking.referredBy }),
       });
       const data = (await response.json().catch(() => ({}))) as WaitlistResponse & { referralCode?: string };
       if (!response.ok) {
@@ -87,19 +89,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
       setReferralCode(typeof data.referralCode === "string" ? data.referralCode : "");
       setStatus(data.duplicate ? "duplicate" : "success");
       track("waitlist_completed", { duplicate: Boolean(data.duplicate), surface: variant });
-      const giverEmail = (values.referredBy ?? "").trim();
-      const promoCode = (values.promoCode ?? "").trim();
-      if (giverEmail && promoCode) {
-        void fetch("/api/gifts/claim", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            recipientEmail: values.email.trim(),
-            giverEmail,
-            promoCode,
-          }),
-        });
-      }
+      if (values.referredBy?.trim() || tracking.referredBy) markRefUsed();
     } catch {
       setSubmitError("We couldn't reach the private beta list. Check your connection and try again.");
       setStatus("error");
@@ -169,15 +159,15 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
             <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />
           </Field>
           <details className="referral-offer">
-            <summary>Referral or promo code</summary>
+            <summary>{tracking.referredBy ? "Invited by a friend: you both get a month of Pro" : "Invited by a friend?"}</summary>
             <p>
-              {variant === "hero"
-                ? "Optional. Friend email and UNVIBE SPECIAL if you have them."
-                : "Optional. Friend email and SPECIAL CHAR if you have them. Both of you get 1 month of Pro, up to five gifts."}
+              {tracking.referredBy
+                ? "Your friend's link is already applied. Add a promo code if you have one."
+                : "Optional. Type the email of the friend who invited you and you both get a month of Pro."}
             </p>
             <div className="referral-offer__fields">
               <label><span>Friend&apos;s email</span><input type="email" autoComplete="email" placeholder="friend@example.com" {...register("referredBy")} /></label>
-              <label><span>Promo code</span><input placeholder={variant === "hero" ? "UNVIBE SPECIAL" : "SPECIAL CHAR"} {...register("promoCode")} /></label>
+              <label><span>Promo code</span><input placeholder="Optional" {...register("promoCode")} /></label>
             </div>
           </details>
           {status === "error" && <p className="form-error" role="alert">{submitError}</p>}
@@ -196,13 +186,13 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
             <div className="referral-success">
               <Gift size={18} />
               <div>
-                <strong>Your share link is ready. Every 3 verified joins = $5 (up to $25).</strong>
-                <span>Rewards are reviewed before Unvibe credit or wire. Share in the next minute while it is fresh.</span>
+                <strong>Your invite link is ready. Every friend who joins gets you both a month of Pro.</strong>
+                <span>Up to five friends. Months stack and land on the account with this email.</span>
                 <code className="referral-success__link" aria-label="Your referral link">{referralUrl}</code>
                 <div className="referral-success__actions">
                   <button type="button" onClick={copyReferral}>{copied ? "Copied" : <><Copy size={15} /> Copy link</>}</button>
                   <button type="button" onClick={shareReferral}>Share</button>
-                  <a href={`/rewards?ref=${referralCode}`}>View reward progress <ArrowUpRight size={14} /></a>
+                  <a href={`/rewards?ref=${referralCode}`}>See your Pro months <ArrowUpRight size={14} /></a>
                 </div>
               </div>
             </div>
@@ -243,7 +233,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <ul>
             <li><Check size={16} />Private Mac beta. Working product.</li>
             <li><Check size={16} />Selected-code explanations, saved learning, and early feature voting</li>
-            <li><Check size={16} />Referral rewards: $5 per 3 verified referrals, up to $25</li>
+            <li><Check size={16} />Invite friends: a month of Pro for both of you, up to five friends</li>
             <li><Check size={16} />Invite-only access · no credit card required</li>
           </ul>
           <p className="beta-clarity">For beta partnerships or developer-community access, contact preston@unvibe.site.</p>

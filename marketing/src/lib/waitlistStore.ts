@@ -571,16 +571,25 @@ export async function referralCodeForEmail(email: string): Promise<string | unde
 }
 
 /** Public referral progress deliberately exposes only aggregate counts for a code, never identities. */
-export async function referralProgress(code: string): Promise<{ found: boolean; joinedReferrals: number }> {
+export async function referralProgress(code: string): Promise<{ found: boolean; joinedReferrals: number; proMonths: number }> {
   const normalized = code.trim().toLowerCase();
-  if (!/^[a-f0-9]{8}$/.test(normalized)) return { found: false, joinedReferrals: 0 };
+  if (!/^[a-f0-9]{8}$/.test(normalized)) return { found: false, joinedReferrals: 0, proMonths: 0 };
   const entries = await listWaitlistEntries(10_000);
   const found = entries.some((entry) => entry.referralCode.toLowerCase() === normalized);
-  if (!found) return { found: false, joinedReferrals: 0 };
-  return {
-    found: true,
-    joinedReferrals: entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length,
-  };
+  if (!found) return { found: false, joinedReferrals: 0, proMonths: 0 };
+  const joinedReferrals = entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length;
+  return { found: true, joinedReferrals, proMonths: await giftMonthsForCode(normalized, joinedReferrals) };
+}
+
+/** Pro months actually granted for a code (one per friend, max five), from the database claims. */
+async function giftMonthsForCode(code: string, fallback: number): Promise<number> {
+  if (!supabaseConfigured()) return Math.min(fallback, 5);
+  const { count, error } = await supabaseClient()
+    .from("gift_claims")
+    .select("id", { count: "exact", head: true })
+    .eq("promo_code", code);
+  if (error) throw new Error(`Supabase gift lookup failed: ${error.message}`);
+  return count ?? 0;
 }
 
 /** Entries are marked only after Resend accepts the beta invitation, making batches safe to retry. */

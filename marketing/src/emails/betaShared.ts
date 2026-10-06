@@ -38,7 +38,7 @@ export function betaFeedbackText(): string {
   return `The beta includes 30 AI explanations. After you try it, fill the feedback form:
 ${BETA_FEEDBACK_URL}
 
-The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. Every 3 verified referrals earns $5, up to 5 rewards ($25). You can take Unvibe credit instead of a wire. We check eligibility first.`;
+The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. Every friend who joins with your link gets you both a month of Pro, up to five friends. Months stack.`;
 }
 
 export function betaSignOffText(): string {

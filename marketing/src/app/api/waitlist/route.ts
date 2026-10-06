@@ -61,9 +61,11 @@ export async function POST(req: Request) {
   }
   const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
+  // Stored as the friend's code; a typed email the list does not know yet is kept as is and
+  // the database resolves it (it also accepts app accounts that never used the waitlist).
   const referredBy = referralInput?.includes("@")
-    ? await referralCodeForEmail(referralInput)
-    : referralInput;
+    ? (await referralCodeForEmail(referralInput).catch(() => undefined)) ?? referralInput.toLowerCase()
+    : referralInput?.toLowerCase() || undefined;
   const promoCode = parsed.data.promoCode?.trim().toUpperCase();
   const entry: WaitlistEntry = {
     firstName: parsed.data.firstName,

@@ -31,11 +31,9 @@ export async function GET(request: Request, { params }: { params: { code: string
   try {
     const progress = await referralProgress(params.code);
     if (!progress.found) return NextResponse.json({ error: "Referral link not found." }, { status: 404, headers: { "Cache-Control": "no-store" } });
-    const rewardsPendingReview = Math.min(Math.floor(progress.joinedReferrals / 3), 5);
     return NextResponse.json({
       joinedReferrals: progress.joinedReferrals,
-      nextRewardAt: Math.min((rewardsPendingReview + 1) * 3, 15),
-      rewardsPendingReview,
+      proMonths: progress.proMonths,
       rewardCap: 5,
     }, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   } catch (error) {

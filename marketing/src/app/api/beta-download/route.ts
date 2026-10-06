@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
 import { scheduleSetupReminder, sendBetaDownloadEmail } from "@/lib/sendBetaDownloadEmail";
+import { saveWaitlistEntry } from "@/lib/waitlistStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,8 @@ const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/downlo
 const schema = z.object({
   firstName: z.string().trim().max(80).optional().default(""),
   email: z.string().trim().email().max(240),
+  // A friend's 8 character code from their ?ref= link. The database grants both people Pro.
+  referredBy: z.string().trim().toLowerCase().regex(/^([a-f0-9]{8})?$/).optional().default(""),
 });
 
 const RATE_LIMIT = { windowMs: 60_000, max: 6 };
@@ -66,6 +69,16 @@ export async function POST(request: Request) {
     emailMessageId: existing?.emailMessageId || delivery.messageId,
   };
   await saveBetaDownload(entry).catch((error) => console.error("beta download record failed", error));
+  // Everyone who downloads is on the waitlist too. A new row with a referral claims it.
+  await saveWaitlistEntry({
+    firstName: parsed.data.firstName,
+    lastName: "",
+    email,
+    referralCode: code.toLowerCase(),
+    referredBy: parsed.data.referredBy || undefined,
+    utmSource: "download",
+    createdAt: new Date().toISOString(),
+  }).catch((error) => console.error("download waitlist record failed", error));
 
   return NextResponse.json({
     downloadUrl: macDownloadUrl,

@@ -500,3 +500,5 @@ p { font-size: 1.02rem; }
 .remind__error { color: #b91c1c; font-size: 0.9rem; margin-top: 0.4rem !important; }
 @media (prefers-reduced-motion: reduce) { .live__dot, .try__bob, .try__thinking > i, .fb-overlay, .fb-dialog, .remind { animation: none; } }
 @media (min-width: 821px) { .remind { bottom: 6.6rem; } }
+.reward-track { grid-template-columns: repeat(5, 1fr); }
+@media (min-width: 700px) { .remind { left: 3.4rem; } }

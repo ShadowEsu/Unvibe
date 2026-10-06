@@ -17,7 +17,7 @@ describe("beta waitlist invite email", () => {
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
     assert.match(text, /1 week of Pro/);
-    assert.match(text, /Every 3 verified referrals/);
+    assert.match(text, /month of Pro, up to five friends/);
     assert.doesNotMatch(text, /[—–]/);
     assert.doesNotMatch(betaInviteHtml("Ohm"), /[—–]/);
   });
@@ -38,9 +38,9 @@ describe("beta download email", () => {
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
     assert.match(text, /1 week of Pro/);
-    assert.match(text, /Every 3 verified referrals/);
+    assert.match(text, /month of Pro, up to five friends/);
     assert.match(text, /AB12CD34/);
-    assert.match(text, /\$25/);
+    assert.doesNotMatch(text, /\$25/);
     assert.doesNotMatch(text, /[—–]/);
   });
 
