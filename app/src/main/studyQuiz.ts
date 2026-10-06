@@ -6,7 +6,7 @@ import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { BACKEND, fetchQuestion } from './backend';
+import { BACKEND, fetchQuestion, networkFetch } from './backend';
 import { store } from './store';
 import { flush } from './sync';
 import { readAiKey } from './aiKey';
@@ -71,7 +71,7 @@ async function collectReviewText(payload: ReviewRequestPayload): Promise<{ text:
   const abort = new AbortController();
   const timeout = setTimeout(() => abort.abort(), 45_000);
   try {
-    const res = await fetch(`${BACKEND}/api/v1/reviews`, {
+    const res = await networkFetch(`${BACKEND}/api/v1/reviews`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

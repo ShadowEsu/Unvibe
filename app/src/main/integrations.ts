@@ -1,9 +1,9 @@
 /**
  * Local-only discovery of apps Unvibe can sit beside.
  * Detection never writes another tool's config. A row is never marked detected unless the app
- * is present on this Mac, or Unvibe already has a remembered project folder.
+ * is present on this computer (macOS or Windows), or Unvibe already has a remembered project folder.
  */
-import { execFile } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -28,18 +28,46 @@ export interface IntegrationStatus {
   bridgeAvailable?: boolean;
 }
 
+const IS_WIN = process.platform === 'win32';
+const LOCAL = process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local');
+const PROGRAMS = path.join(LOCAL, 'Programs');
+const PROGRAM_FILES = [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter((p): p is string => Boolean(p));
+
+/** Where each app lives on Windows. macOS apps are found in /Applications by name. */
+const WINDOWS_APPS: Record<string, string[]> = {
+  Cursor: [path.join(PROGRAMS, 'cursor', 'Cursor.exe')],
+  'Visual Studio Code': [
+    path.join(PROGRAMS, 'Microsoft VS Code', 'Code.exe'),
+    ...PROGRAM_FILES.map((dir) => path.join(dir, 'Microsoft VS Code', 'Code.exe')),
+  ],
+  Zed: [path.join(PROGRAMS, 'Zed', 'Zed.exe')],
+  Windsurf: [path.join(PROGRAMS, 'Windsurf', 'Windsurf.exe')],
+  Claude: [path.join(LOCAL, 'AnthropicClaude', 'claude.exe'), path.join(PROGRAMS, 'Claude', 'Claude.exe')],
+  Warp: [path.join(PROGRAMS, 'Warp', 'warp.exe'), ...PROGRAM_FILES.map((dir) => path.join(dir, 'Warp', 'warp.exe'))],
+  'GitHub Desktop': [path.join(LOCAL, 'GitHubDesktop', 'GitHubDesktop.exe')],
+};
+
 const EDITORS: Record<EditorId, { appName: string; extensionDir: string; cliPaths: string[] }> = {
   cursor: {
     appName: 'Cursor',
     extensionDir: path.join(homedir(), '.cursor', 'extensions'),
-    cliPaths: ['/Applications/Cursor.app/Contents/Resources/app/bin/cursor'],
+    cliPaths: IS_WIN
+      ? [path.join(PROGRAMS, 'cursor', 'resources', 'app', 'bin', 'cursor.cmd')]
+      : ['/Applications/Cursor.app/Contents/Resources/app/bin/cursor'],
   },
   vscode: {
     appName: 'Visual Studio Code',
     extensionDir: path.join(homedir(), '.vscode', 'extensions'),
-    cliPaths: ['/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code', '/usr/local/bin/code'],
+    cliPaths: IS_WIN
+      ? [
+          path.join(PROGRAMS, 'Microsoft VS Code', 'bin', 'code.cmd'),
+          ...PROGRAM_FILES.map((dir) => path.join(dir, 'Microsoft VS Code', 'bin', 'code.cmd')),
+        ]
+      : ['/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code', '/usr/local/bin/code'],
   },
 };
+
+const PLACE = process.platform === 'darwin' ? 'this Mac' : 'this computer';
 
 function desktopBridgePath(): string | null {
   const candidates = [
@@ -63,13 +91,20 @@ function hasDesktopBridge(id: EditorId): boolean {
 
 export async function installDesktopBridge(id: EditorId): Promise<{ ok: boolean; error?: string }> {
   const editor = EDITORS[id];
-  if (!hasMacApp(editor.appName)) return { ok: false, error: `${id === 'cursor' ? 'Cursor' : 'VS Code'} is not installed on this Mac.` };
+  if (!hasMacApp(editor.appName)) return { ok: false, error: `${id === 'cursor' ? 'Cursor' : 'VS Code'} is not installed on ${PLACE}.` };
   const cli = editorCli(id);
   const vsix = desktopBridgePath();
   if (!cli) return { ok: false, error: `Could not find the ${id === 'cursor' ? 'Cursor' : 'VS Code'} command-line tool.` };
   if (!vsix) return { ok: false, error: 'The Desktop Bridge package is missing. Reinstall Unvibe and try again.' };
   try {
-    await execFileAsync(cli, ['--install-extension', vsix, '--force'], { timeout: 30_000, maxBuffer: 512_000 });
+    if (IS_WIN) {
+      // Editor CLIs on Windows are .cmd scripts, which must run through cmd.exe with quoted paths.
+      await execFileAsync('cmd.exe', ['/d', '/s', '/c', `""${cli}" --install-extension "${vsix}" --force"`], {
+        timeout: 30_000, maxBuffer: 512_000, windowsHide: true, windowsVerbatimArguments: true,
+      });
+    } else {
+      await execFileAsync(cli, ['--install-extension', vsix, '--force'], { timeout: 30_000, maxBuffer: 512_000 });
+    }
     return hasDesktopBridge(id)
       ? { ok: true }
       : { ok: false, error: 'The editor finished without confirming the bridge. Open Extensions and look for Unvibe.' };
@@ -79,11 +114,24 @@ export async function installDesktopBridge(id: EditorId): Promise<{ ok: boolean;
   }
 }
 
+/** True when the app is installed: /Applications on macOS, the usual install folders on Windows. */
 function hasMacApp(name: string): boolean {
+  if (IS_WIN) return (WINDOWS_APPS[name] ?? []).some(existsSync);
   return [
     `/Applications/${name}.app`,
     path.join(homedir(), 'Applications', `${name}.app`),
   ].some(existsSync);
+}
+
+let gitCache: boolean | null = null;
+function hasGit(): boolean {
+  if (gitCache !== null) return gitCache;
+  try {
+    gitCache = spawnSync('git', ['--version'], { timeout: 2000, windowsHide: true }).status === 0;
+  } catch {
+    gitCache = false;
+  }
+  return gitCache;
 }
 
 function hasAnyApp(...names: string[]): boolean {
@@ -112,6 +160,7 @@ function row(
 
 export function integrationStatus(): IntegrationStatus[] {
   const isMac = process.platform === 'darwin';
+  const hasTerminal = isMac || IS_WIN;
   const project = settings().all().lastProjectRoot;
   const cursor = hasMacApp('Cursor');
   const vscode = hasMacApp('Visual Studio Code');
@@ -120,11 +169,13 @@ export function integrationStatus(): IntegrationStatus[] {
   const claude = hasAnyApp('Claude', 'Claude Code');
   const iterm = hasAnyApp('iTerm', 'iTerm2');
   const warp = hasMacApp('Warp');
-  const github = hasMacApp('GitHub Desktop');
+  const githubDesktop = hasMacApp('GitHub Desktop');
+  const git = hasGit();
+  const github = githubDesktop || git;
 
   const cursorRow = row(
       'cursor', 'Cursor', 'Editors', cursor,
-      'Detected on this Mac. Select code there and Unvibe can explain it.',
+      `Detected on ${PLACE}. Select code there and Unvibe can explain it.`,
       'Install Cursor if that is where you write. Unvibe never edits Cursor settings.',
       'Frontmost selection and file context.',
     );
@@ -132,7 +183,7 @@ export function integrationStatus(): IntegrationStatus[] {
   cursorRow.bridgeAvailable = cursor && Boolean(editorCli('cursor') && desktopBridgePath());
   const vscodeRow = row(
       'vscode', 'VS Code', 'Editors', vscode,
-      'Detected on this Mac. Select code there and Unvibe can explain it.',
+      `Detected on ${PLACE}. Select code there and Unvibe can explain it.`,
       'Install VS Code if that is where you write. Unvibe never edits VS Code settings.',
       'Frontmost selection and file context.',
     );
@@ -144,46 +195,50 @@ export function integrationStatus(): IntegrationStatus[] {
     vscodeRow,
     row(
       'zed', 'Zed', 'Editors', zed,
-      'Detected on this Mac. Select code there and Unvibe can explain it.',
+      `Detected on ${PLACE}. Select code there and Unvibe can explain it.`,
       'Not installed. Unvibe can still explain a selection if Zed is the frontmost app later.',
       'Frontmost selection.',
     ),
     row(
       'windsurf', 'Windsurf', 'Editors', windsurf,
-      'Detected on this Mac. Select code there and Unvibe can explain it.',
+      `Detected on ${PLACE}. Select code there and Unvibe can explain it.`,
       'Not installed. Unvibe can still explain a selection if Windsurf is the frontmost app later.',
       'Frontmost selection.',
     ),
     row(
       'claude', 'Claude', 'Agents', claude,
-      'Detected on this Mac. Unvibe stays beside it. It does not send chats into Claude.',
+      `Detected on ${PLACE}. Unvibe stays beside it. It does not send chats into Claude.`,
       'Not installed. You can still chat inside Unvibe from the Chat page.',
       'Sits beside the agent. Does not rewrite its config.',
     ),
     row(
-      'terminal', 'Terminal', 'Shell', isMac,
-      'Available through macOS. Copy a snippet, then explain it with the Unvibe shortcut.',
-      'Terminal detection is available on macOS only.',
+      'terminal', IS_WIN ? 'Windows Terminal' : 'Terminal', 'Shell', hasTerminal,
+      IS_WIN
+        ? 'Available on Windows. Select or copy a snippet in PowerShell or Windows Terminal, then press the Unvibe shortcut.'
+        : 'Available through macOS. Copy a snippet, then explain it with the Unvibe shortcut.',
+      'Copy a snippet from any terminal, then explain it with the Unvibe shortcut.',
       'Copied snippets and selected text.',
-      isMac ? 'available' : 'not-installed',
+      hasTerminal ? 'available' : 'not-installed',
     ),
     row(
       'iterm', 'iTerm', 'Shell', iterm,
-      'Detected on this Mac. Copy a snippet, then explain it with the Unvibe shortcut.',
+      `Detected on ${PLACE}. Copy a snippet, then explain it with the Unvibe shortcut.`,
       'Not installed. The system Terminal still works for copied snippets.',
       'Copied snippets.',
     ),
     row(
       'warp', 'Warp', 'Shell', warp,
-      'Detected on this Mac. Copy a snippet, then explain it with the Unvibe shortcut.',
+      `Detected on ${PLACE}. Copy a snippet, then explain it with the Unvibe shortcut.`,
       'Not installed. Any terminal that can copy text still works.',
       'Copied snippets.',
     ),
     row(
-      'github', 'GitHub Desktop', 'Workspace', github,
-      'Detected on this Mac. Unvibe does not sync GitHub for you. Diffs still come from your local git.',
-      'Not installed. Git diffs still work from any local repository Unvibe can see.',
-      'Local git diffs, not GitHub.com.',
+      'github', 'GitHub and git', 'Workspace', github,
+      git
+        ? `git is ready on ${PLACE}${githubDesktop ? ', with GitHub Desktop' : ''}. Change Briefs and diff reviews read your local repositories.`
+        : `GitHub Desktop is on ${PLACE}. Install git (or open a repo once in GitHub Desktop) so Change Briefs can read diffs.`,
+      'Install git or GitHub Desktop so Change Briefs and diff reviews can read your local repositories.',
+      'Local git diffs. Your code is never uploaded to GitHub by Unvibe.',
     ),
     {
       id: 'project',

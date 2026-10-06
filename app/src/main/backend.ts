@@ -1,5 +1,6 @@
 /** Thin HTTP client for the Unvibe backend. Main process only. */
 import { readFileSync, existsSync } from 'node:fs';
+import { net } from 'electron';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
@@ -64,13 +65,27 @@ export function warmBackend(): void {
     .catch(() => undefined);
 }
 
+/**
+ * Electron's network stack first: it honours the computer's proxy settings and trusts the
+ * operating system's certificate store (school, work and antivirus networks often need both).
+ * If that path fails outright, try Node's fetch once before giving up.
+ */
+export async function networkFetch(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await net.fetch(url, init as Parameters<typeof net.fetch>[1]);
+  } catch (error) {
+    if (init.signal?.aborted || (error instanceof DOMException && (error.name === 'AbortError' || error.name === 'TimeoutError'))) throw error;
+    return await fetch(url, init);
+  }
+}
+
 /** Network access stays in the main process. Bound requests so an unavailable backend never
  * leaves the widget or account controls waiting indefinitely. */
 async function request(url: string, init: RequestInit): Promise<Response> {
   try {
     const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
     const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
-    return await fetch(url, { ...init, signal });
+    return await networkFetch(url, { ...init, signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('Sync cancelled.');

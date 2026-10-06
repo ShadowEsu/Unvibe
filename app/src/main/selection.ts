@@ -23,8 +23,8 @@ function powershell(command: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       'powershell.exe',
-      ['-NoProfile', '-STA', '-NonInteractive', '-Command', command],
-      { timeout: 5000, windowsHide: true },
+      ['-NoProfile', '-NoLogo', '-STA', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', command],
+      { timeout: 8000, windowsHide: true },
       (err, stdout) => (err ? reject(err) : resolve(String(stdout).trim())),
     );
   });
@@ -95,7 +95,9 @@ async function syntheticCopy(): Promise<void> {
  * Poll briefly instead of assuming a single fixed delay is enough.
  */
 async function waitForCopiedText(): Promise<string> {
-  for (let attempt = 0; attempt < 18; attempt += 1) {
+  // Windows editors and terminals can take longer to commit the copy after SendKeys.
+  const attempts = isWindows ? 32 : 18;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     await delay(70);
     const text = clipboard.readText();
     if (text.trim().length > 0) return text;

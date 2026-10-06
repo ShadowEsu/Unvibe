@@ -8,7 +8,7 @@ import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { aiAuthHeaders, BACKEND, fetchQuestion } from './backend';
+import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
 import { store } from './store';
 
 /** Longest wait for the first words of an explanation. */
@@ -405,7 +405,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       return;
     }
 
-    const res = await fetch(`${BACKEND}/api/v1/reviews`, {
+    const res = await networkFetch(`${BACKEND}/api/v1/reviews`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
