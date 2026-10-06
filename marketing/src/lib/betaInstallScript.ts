@@ -48,6 +48,11 @@ if [ ! -d "$mountPoint/Unvibe.app" ]; then
   exit 1
 fi
 
+echo "Closing any running Unvibe…"
+osascript -e 'tell application id "com.unvibe.app" to quit' >/dev/null 2>&1 || true
+sleep 1
+pkill -x Unvibe >/dev/null 2>&1 || true
+
 echo "Installing to Applications…"
 if [ -d "$DEST" ]; then
   rm -rf "$DEST"
