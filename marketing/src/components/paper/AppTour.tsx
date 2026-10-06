@@ -18,13 +18,12 @@ export function AppTour() {
           <span>Unvibe</span>
         </div>
         <AutoPlayVideo
-          src="/videos/unvibe-app-tour-v3.mp4"
-          poster="/videos/unvibe-app-tour-v3-poster.jpg"
-          label="Tour of the Unvibe desktop app: onboarding, Today, the Command U panel thinking and answering, a quiz, light mode, the library and Ask Vibe"
-          controls={false}
+          src="/videos/unvibe-demo-v3.mp4"
+          poster="/videos/unvibe-demo-v3-poster.jpg"
+          label="Click-through of the Unvibe app: Today, Library, a quiz, After-Agent Review, Ask Vibe and the Command U panel explaining code"
         />
       </div>
-      <p className="vtour__caption">Real screens from the app: onboarding, Today, the ⌘U panel thinking and answering, a quiz, light mode and the library.</p>
+      <p className="vtour__caption">A recorded click-through of the app: Today, the library, a quiz, After-Agent Review, Ask Vibe and the ⌘U panel. The explanation text in the panel is a written sample.</p>
     </section>
   );
 }

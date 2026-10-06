@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ChangeBrief, BriefScope } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
+import { buildAgentReview, type AgentReview } from '../../core/agentReview';
+import { Buddy, setBuddyMood } from '../shared/buddy';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -114,6 +116,16 @@ export function Briefings() {
       )}
 
       {brief && !brief.empty ? (
+        <AgentReviewCard
+          review={buildAgentReview(brief, knowledge)}
+          repo={brief.repo}
+          busy={busy}
+          onExplain={() => void understand()}
+          onRefreshKnowledge={(id) => void window.unvibe.refreshKnowledge(id).then(() => loadKnowledge())}
+        />
+      ) : null}
+
+      {brief && !brief.empty ? (
         <article className="briefings__card">
           <div className="briefings__meta">
             {brief.repo ? <span>{brief.repo}</span> : null}
@@ -189,5 +201,93 @@ export function Briefings() {
         )}
       </section>
     </div>
+  );
+}
+
+const SIZE_LABEL: Record<AgentReview['size'], string> = { small: 'Small change', medium: 'Medium change', large: 'Big change' };
+
+/** After-Agent Review: what an agent (or you) just changed, ranked by what deserves a human look. */
+function AgentReviewCard({ review, repo, busy, onExplain, onRefreshKnowledge }: {
+  review: AgentReview;
+  repo: string;
+  busy: boolean;
+  onExplain: () => void;
+  onRefreshKnowledge: (id: string) => void;
+}) {
+  const storageKey = `unvibe.agentReview.${repo}.${review.headline}`;
+  const [checked, setChecked] = useState<number[]>(() => {
+    try { return JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as number[]; } catch { return []; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(storageKey, JSON.stringify(checked)); } catch { /* storage blocked */ }
+  }, [checked, storageKey]);
+  const toggle = (index: number) => {
+    setChecked((prev) => {
+      const next = prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index];
+      if (next.length === review.reviewFirst.length && review.reviewFirst.length > 0) setBuddyMood('celebrate');
+      return next;
+    });
+  };
+  const done = review.reviewFirst.length > 0 && checked.length >= review.reviewFirst.length;
+  return (
+    <article className="agent-review" aria-label="After-agent review">
+      <header className="agent-review__head">
+        <Buddy mood={done ? 'happy' : 'reading'} size={44} label="Vibe" />
+        <div>
+          <p className="agent-review__eyebrow">after-agent review</p>
+          <h2>{review.headline}</h2>
+          <p className="agent-review__sub">{SIZE_LABEL[review.size]}{repo ? ` in ${repo.split(/[\\/]/).filter(Boolean).pop()}` : ''}. Here is what deserves your eyes first.</p>
+        </div>
+        <button type="button" className="primary-btn" disabled={busy} onClick={onExplain}>Explain the change</button>
+      </header>
+      <div className="agent-review__grid">
+        <section>
+          <h3>Review first <span>{checked.length}/{review.reviewFirst.length}</span></h3>
+          <ol className="agent-review__checks">
+            {review.reviewFirst.map((line, index) => (
+              <li key={line}>
+                <label className={checked.includes(index) ? 'is-done' : ''}>
+                  <input type="checkbox" checked={checked.includes(index)} onChange={() => toggle(index)} />
+                  <span>{line}</span>
+                </label>
+              </li>
+            ))}
+          </ol>
+          {done ? <p className="agent-review__done">All reviewed. Nice, you actually know what shipped.</p> : null}
+        </section>
+        <section>
+          <h3>What matters</h3>
+          <ul className="agent-review__files">
+            {review.whatMatters.map((file) => (
+              <li key={file.path} data-kind={file.kind}>
+                <code>{file.path}</code>
+                <small>{file.reason}</small>
+                <span>+{file.insertions} / -{file.deletions}</span>
+              </li>
+            ))}
+          </ul>
+          <h3>Areas touched</h3>
+          <div className="agent-review__areas">
+            {review.areas.map((area) => (
+              <span key={area.name} className={area.sensitive ? 'is-sensitive' : ''}>{area.name} <b>{area.files}</b></span>
+            ))}
+          </div>
+          {review.staleKnowledge.length ? (
+            <>
+              <h3>Knowledge that may be stale</h3>
+              <ul className="agent-review__stale">
+                {review.staleKnowledge.map((hit) => (
+                  <li key={hit.id}>
+                    <span><strong>{hit.title}</strong><small>{hit.file}</small></span>
+                    <button type="button" className="soft-btn" onClick={() => onRefreshKnowledge(hit.id)}>Refresh</button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </section>
+      </div>
+      <p className="agent-review__note">Built from local git on this computer. Unvibe ranks the real diff; it does not guess why the agent made each edit.</p>
+    </article>
   );
 }

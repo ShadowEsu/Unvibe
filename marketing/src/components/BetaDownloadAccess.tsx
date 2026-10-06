@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { Download, Mail } from "lucide-react";
 
 export function BetaDownloadAccess() {
-  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ downloadUrl: string; emailNotice: string; referralCode: string } | null>(null);
@@ -18,7 +17,7 @@ export function BetaDownloadAccess() {
       const response = await fetch("/api/beta-download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, email }),
+        body: JSON.stringify({ email }),
       });
       const body = await response.json() as { error?: string; downloadUrl?: string; emailNotice?: string; referralCode?: string };
       if (!response.ok || !body.downloadUrl || !body.referralCode) throw new Error(body.error || "Could not prepare the download.");
@@ -42,7 +41,6 @@ export function BetaDownloadAccess() {
 
   return (
     <form className="beta-access-form" onSubmit={submit}>
-      <div><label htmlFor="beta-first-name">First name</label><input id="beta-first-name" name="firstName" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></div>
       <div><label htmlFor="beta-email">Email</label><input id="beta-email" name="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
       <button type="submit" disabled={busy}><Download size={18} />{busy ? "Preparing…" : "Get the macOS beta"}</button>
       <p>We email the download, feedback survey, and your personal referral code. No marketing spam.</p>

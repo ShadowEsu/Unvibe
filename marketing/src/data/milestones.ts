@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "After-Agent Review, sounds, and a new demo",
+    summary: "When Cursor or Claude Code leaves a pile of edits, Briefs now opens with an After-Agent Review: sensitive files first, the largest edits, the areas touched, a review checklist you can tick off, and saved explanations that may now be stale. Vibe has sounds now: a happy boop, a soft whoosh when it starts thinking, a chime when the answer lands, and quiz right and wrong cues. The waitlist only asks for your email, and the site has a new recorded demo of the app.",
+    figure: "v0.1.24",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "An elegant italic, a see-through panel, and a new site",
     summary: "Vibe's notes and the accent words now use an elegant italic serif instead of handwriting. The Command U panel has a light and dark switch in its header, and when you click back into your editor it turns see-through instead of getting in the way. unvibe.site gets Vibe in the nav and hero, the app's fonts, and a new tour of the app.",
     figure: "v0.1.23",

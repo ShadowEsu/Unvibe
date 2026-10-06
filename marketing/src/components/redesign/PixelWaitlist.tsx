@@ -163,15 +163,7 @@ export function PixelWaitlist({ variant = "page" }: { variant?: Variant }) {
           <div className="form-heading">
             <span className="brand-pixel" />
             <strong>Join the waitlist</strong>
-            <small>Name and email. You can skip the rest.</small>
-          </div>
-          <div className="name-row">
-            <Field label="First name" error={errors.firstName?.message}>
-              <input autoComplete="given-name" aria-invalid={Boolean(errors.firstName)} {...register("firstName")} />
-            </Field>
-            <Field label="Last name" error={errors.lastName?.message}>
-              <input autoComplete="family-name" aria-invalid={Boolean(errors.lastName)} {...register("lastName")} />
-            </Field>
+            <small>Just your email. That&apos;s it.</small>
           </div>
           <Field label="Email" error={errors.email?.message}>
             <input type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(errors.email)} {...register("email")} />

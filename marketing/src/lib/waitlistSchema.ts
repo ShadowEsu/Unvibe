@@ -38,16 +38,9 @@ export const experienceLabels: Record<(typeof experiences)[number], string> = {
 };
 
 export const waitlistSchema = z.object({
-  firstName: z
-    .string()
-    .trim()
-    .min(1, "First name is required")
-    .max(80, "Keep it under 80 characters"),
-  lastName: z
-    .string()
-    .trim()
-    .min(1, "Last name is required")
-    .max(80, "Keep it under 80 characters"),
+  // Joining only needs an email. Names stay optional for older clients.
+  firstName: z.string().trim().max(80, "Keep it under 80 characters"),
+  lastName: z.string().trim().max(80, "Keep it under 80 characters"),
   email: z
     .string()
     .trim()

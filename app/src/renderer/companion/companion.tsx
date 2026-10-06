@@ -4,7 +4,7 @@ import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
 import { Chat } from './chat';
 import { Gift } from './gift';
-import { playUiTone } from '../shared/tones';
+import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
@@ -706,7 +706,6 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
   const first = greetFirst(userName);
   const explainDisabled = !!usage && usage.remaining <= 0;
   const startReview = () => window.unvibe.companionReview();
-  const reviewChange = () => { void window.unvibe.explainDiff({ brief: true, scope: 'working' }); };
   const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 5);
   // Until the knowledge index has entries, show the latest saved lessons instead.
   const saved = savedKnowledge.length
@@ -766,11 +765,11 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
           </div>
         </div>
       )}
-      <button type="button" className="today-cta" onClick={brief ? reviewChange : startReview} disabled={explainDisabled}>
+      <button type="button" className="today-cta" onClick={brief ? () => onNavigate('Briefings') : startReview} disabled={!brief && explainDisabled}>
         <span className="today-cta__text">
-          <b>{brief ? (brief.mainChanges[0] ?? `Changes in ${brief.repo}`) : 'Explain any code, right where it is'}</b>
+          <b>{brief ? `Review what changed: ${brief.filesChanged} file${brief.filesChanged === 1 ? '' : 's'}` : 'Explain any code, right where it is'}</b>
           <small>{brief
-            ? `${brief.filesChanged} files changed${brief.repo ? ` in ${brief.repo}` : ''} · ${brief.understandBeforeCommit.length} worth reviewing`
+            ? `${brief.filesChanged} files changed${brief.repo ? ` in ${brief.repo.split(/[\\/]/).filter(Boolean).pop()}` : ''} · ${brief.understandBeforeCommit.length} worth reviewing`
             : 'Select code in any app. Vibe pops up beside it.'}</small>
         </span>
         <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
@@ -1440,9 +1439,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Sound & alerts' && (
             <>
               <div className="settings-section-label">LOCAL SOUND</div>
-              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Cues when Unvibe starts, when you hover or open the island, and when you click island actions. Nothing is recorded or downloaded.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
+              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
-              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this Mac.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => playUiTone('success', settings.soundVolume, settings.soundStyle)}>Preview</button></div></div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this Mac.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
               <div className="settings-section-label">NOTIFICATIONS</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
@@ -1585,9 +1584,15 @@ function App() {
     document.documentElement.dataset.ui = 'v3';
     document.documentElement.dataset.v7 = '';
   }, []);
+  useEffect(() => {
+    configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
+  }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
   // Vibe says hi whenever you open a new page.
+  const firstPage = useRef(true);
   useEffect(() => {
     if (gate !== 'app') return;
+    if (firstPage.current) firstPage.current = false;
+    else playTone('nav');
     setBuddyMood('wave');
     const t = window.setTimeout(() => setBuddyMood('idle'), 1600);
     return () => window.clearTimeout(t);

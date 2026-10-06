@@ -16,8 +16,8 @@ export function InvestorBriefDemo() {
       </div>
       <div className="paper-video investor-brief__video">
         <AutoPlayVideo
-          src="/videos/unvibe-brief-demo.mp4"
-          poster="/videos/unvibe-brief-demo-poster.jpg"
+          src="/videos/unvibe-demo-v3.mp4"
+          poster="/videos/unvibe-demo-v3-poster.jpg"
           label="Brief Unvibe product demo"
         />
       </div>

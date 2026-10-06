@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
   }
 
-  const parsed = waitlistSchema.safeParse(await req.json().catch(() => null));
+  const parsed = waitlistSchema.safeParse(withNameDefaults(await req.json().catch(() => null)));
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", issues: parsed.error.flatten().fieldErrors },
@@ -129,4 +129,10 @@ export async function PATCH(req: Request) {
     console.error("waitlist details update failed", error);
     return NextResponse.json({ error: "Could not save details" }, { status: 500 });
   }
+}
+
+/** Joining only needs an email; older clients may still send names. */
+function withNameDefaults(body: unknown): unknown {
+  if (!body || typeof body !== "object") return body;
+  return { firstName: "", lastName: "", ...(body as Record<string, unknown>) };
 }

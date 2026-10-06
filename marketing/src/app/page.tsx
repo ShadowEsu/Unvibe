@@ -9,7 +9,6 @@ import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
 import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { ChangelogList } from "@/components/paper/ChangelogList";
-import { PaperDemoVideo } from "@/components/paper/PaperDemoVideo";
 import { DownloadCta } from "@/components/paper/DownloadCta";
 import { HomeBenefits } from "@/components/paper/HomeBenefits";
 import { StatsStrip } from "@/components/paper/StatsStrip";
@@ -39,11 +38,7 @@ export default function HomePage() {
 
       <section className="paper-section" id="product">
         <Reveal className="paper-wrap paper-center">
-          <PaperDemoVideo />
-          <p className="paper-caption">
-            A real session in Cursor: select code, press {"\u2318"}U, read the explanation, then test yourself.
-          </p>
-          <div className="mt-10">
+          <div>
             <HomeBenefits />
           </div>
         </Reveal>

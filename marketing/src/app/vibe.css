@@ -170,3 +170,40 @@ h1 em, h2 em, h3 em, .serif-em {
 .paper-logo__word { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; }
 .dark .vhero__fine { background: #1f1729; color: #f2eef9; border-color: #f2eef9; }
 .dark .vhero__kicker, .dark .vtour__caption { color: #e6e0f0; }
+
+/* ── Glass cards: frosted paper on the colour field, inked like the app ──── */
+.paper-glass, .paper-faq details, .paper-faq > *, .stats-strip__item, .paper-decoder__row, .paper-invite__card, .paper-beta {
+  background: rgb(255 255 255 / 0.72) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border: 1.5px solid var(--v-ink) !important;
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 rgb(20 20 20 / 0.92) !important;
+  transition: transform 260ms var(--v-press), box-shadow 260ms var(--v-press);
+}
+.paper-glass:hover, .stats-strip__item:hover, .paper-decoder__row:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 rgb(20 20 20 / 0.92) !important;
+}
+.stats-strip__item { padding: 1rem 1.2rem; }
+.stats-strip__item:nth-child(4n+1) { background: color-mix(in srgb, var(--v-lime) 55%, rgb(255 255 255 / 0.7)) !important; }
+.stats-strip__item:nth-child(4n+2) { background: color-mix(in srgb, var(--v-sky) 55%, rgb(255 255 255 / 0.7)) !important; }
+.stats-strip__item:nth-child(4n+3) { background: color-mix(in srgb, var(--v-sun) 55%, rgb(255 255 255 / 0.7)) !important; }
+.stats-strip__item:nth-child(4n+4) { background: color-mix(in srgb, var(--v-lilac) 55%, rgb(255 255 255 / 0.7)) !important; }
+.resources-card__step {
+  display: inline-grid; place-items: center; min-width: 2rem; height: 2rem; padding: 0 0.5rem; border: 1.5px solid var(--v-ink);
+  border-radius: 999px; background: var(--v-lime); color: var(--v-ink); font-family: var(--font-display); font-weight: 800;
+}
+.home-benefits .paper-glass:nth-child(2) .resources-card__step { background: var(--v-sky); }
+.home-benefits .paper-glass:nth-child(3) .resources-card__step { background: var(--v-sun); }
+.paper-text-link { color: var(--v-ink); text-decoration: underline; text-decoration-color: var(--v-lime); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.vtour__window { background: rgb(255 255 255 / 0.6); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+
+/* Section entrances: everything springs in a little. */
+.paper-section h2 { transition: transform 300ms var(--v-press); }
+.paper-section h2:hover { transform: rotate(-0.6deg); }
+
+.dark .paper-glass, .dark .paper-faq details, .dark .stats-strip__item, .dark .paper-decoder__row, .dark .paper-invite__card, .dark .paper-beta {
+  background: rgb(31 23 41 / 0.72) !important; border-color: #f2eef9 !important; box-shadow: 5px 5px 0 rgb(242 238 249 / 0.9) !important;
+}
+.dark .stats-strip__item:nth-child(n) { background: rgb(31 23 41 / 0.72) !important; }

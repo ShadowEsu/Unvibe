@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { playTone } from './tones';
 
 /**
  * Vibe, the face of Unvibe's AI. A flat, sticker-style blob with an ink outline, two black eyes and no mouth.
@@ -28,6 +29,8 @@ const EVENT = 'unvibe:buddy';
 
 /** Let any part of a window set the shared Vibe mood without prop drilling. */
 export function setBuddyMood(mood: BuddyMood): void {
+  if (mood === 'happy') playTone('boop');
+  if (mood === 'celebrate') playTone('celebrate');
   window.dispatchEvent(new CustomEvent<BuddyMood>(EVENT, { detail: mood }));
 }
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
-import { Buddy } from '../shared/buddy';
+import { Buddy, setBuddyMood } from '../shared/buddy';
+import { playTone } from '../shared/tones';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -296,10 +297,12 @@ export function Learn({
     if (!r.ok) { setQuizError(r.error ?? 'Could not grade.'); return; }
     if (!r.correct) {
       setWrongPicks((prev) => (prev.includes(choice) ? prev : [...prev, choice]));
+      playTone('wrong');
       setResult({ correct: false, rationale: r.rationale ?? 'Sorry, wrong. Pick another option.' });
       void onRefresh();
       return;
     }
+    setBuddyMood('celebrate');
     setResult({ correct: true, rationale: r.rationale ?? 'You got it.', answerIndex: r.answerIndex ?? choice });
     setCleared((count) => count + 1);
     void onRefresh();

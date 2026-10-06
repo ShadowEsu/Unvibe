@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const release = "0.1.23";
 const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.23/Unvibe-0.1.23-mac-arm64.dmg";
 const schema = z.object({
-  firstName: z.string().trim().min(1).max(80),
+  firstName: z.string().trim().max(80).optional().default(""),
   email: z.string().trim().email().max(240),
 });
 

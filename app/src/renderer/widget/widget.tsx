@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
-import { Buddy } from '../shared/buddy';
+import { Buddy, setBuddyMood } from '../shared/buddy';
+import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -372,8 +373,9 @@ function Widget() {
       });
     };
     void window.unvibe.getSettings().then((st) => {
-      const s = st as { theme?: 'system' | 'light' | 'dark'; features?: typeof features };
+      const s = st as { theme?: 'system' | 'light' | 'dark'; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
       applyTheme(s.theme ?? 'system');
+      configureTones({ enabled: s.soundEffects ?? true, volume: s.soundVolume ?? 0.3, style: s.soundStyle ?? 'soft' });
       if (s.features) setFeatures((prev) => ({ ...prev, ...s.features }));
     });
     refreshUsage();
@@ -444,6 +446,7 @@ function Widget() {
           case 'understood':
             return prev;
           case 'status':
+            playTone('think');
             return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: null });
           case 'consent':
             return patchTab(prev, tabId, { findings: ev.findings ?? [], phase: 'consent' });
@@ -456,6 +459,7 @@ function Widget() {
                 : t,
             );
           case 'done':
+            playTone('done');
             return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done' });
           case 'error':
             return patchTab(prev, tabId, {
@@ -476,6 +480,7 @@ function Widget() {
               },
             });
           case 'graded':
+            playTone(ev.correct ? 'correct' : 'wrong');
             return patchTab(prev, tabId, {
               quiz: tab.quiz
                 ? {
@@ -1008,6 +1013,7 @@ function Widget() {
                   className="chip chip--ok"
                   disabled={stillTyping}
                   onClick={() => {
+                    setBuddyMood('celebrate');
                     window.unvibe.gotIt();
                     toggleCollapse();
                   }}
