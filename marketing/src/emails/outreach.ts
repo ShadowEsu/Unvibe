@@ -1,3 +1,4 @@
+import { imageButton } from "./welcome";
 /**
  * Cold outreach from Preston: one short, personal note with the Unvibe banner.
  * Agents fill the placeholders per person; nothing here is sent automatically.
@@ -36,7 +37,7 @@ function bits(input: OutreachInput) {
 export function outreachHtml(input: OutreachInput): string {
   const b = bits(input);
   const p = "margin:0 0 16px;font-size:16px;line-height:1.6;color:#2b2b2b";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unvibe</title></head>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>Unvibe</title><style>:root{color-scheme:light only;supported-color-schemes:light}</style></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:Helvetica,Arial,sans-serif;color:#141414">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:20px 12px">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px">
@@ -46,7 +47,7 @@ export function outreachHtml(input: OutreachInput): string {
 <p style="${p}">${escape(input.personalLine)}</p>
 <p style="${p}">I'm Preston, a student builder. I made <b>Unvibe</b> because I kept shipping code from Cursor and Claude that I couldn't fully explain. You select any code, press one key, and a little guy named Vibe explains it right beside your editor, at your level, then checks you actually got it.</p>
 <p style="${p}">It's free on Mac and Windows, no card and no API key. I'd love for you to try it and tell me honestly what's missing.</p>
-<p style="margin:0 0 22px"><a href="${escape(b.link)}" style="display:inline-block;padding:13px 22px;border:2px solid #141414;border-radius:14px;background:#d6f45a;color:#141414;font-weight:800;font-size:16px;text-decoration:none">Try Unvibe free</a></p>
+<p style="margin:0 0 22px">${imageButton(b.site, b.link, "try")}</p>
 <p style="${p}">Thanks for reading,<br><b>Preston Susanto</b><br><span style="color:#6b6b6b">Founder, Unvibe · <a href="${b.site}" style="color:#6b6b6b">unvibe.site</a></span></p>
 <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#8a8a8a">Not for you? Just reply "no thanks" and I won't email again.</p>
 </td></tr></table></td></tr></table></body></html>`;
