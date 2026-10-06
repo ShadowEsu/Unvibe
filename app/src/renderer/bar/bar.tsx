@@ -94,6 +94,20 @@ function Bar() {
     tone('launch');
   };
   const refresh = () => void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
+  // Streak went up: Vibe hops, a "+1" floats off the flame, and a small celebration plays.
+  const [streakUp, setStreakUp] = useState(false);
+  const lastStreak = useRef<number | null>(null);
+  useEffect(() => {
+    const next = snapshot?.streak;
+    if (next === undefined) return;
+    const prev = lastStreak.current;
+    lastStreak.current = next;
+    if (prev === null || next <= prev) return;
+    setStreakUp(true);
+    tone('celebrate');
+    const timer = setTimeout(() => setStreakUp(false), 1800);
+    return () => clearTimeout(timer);
+  }, [snapshot?.streak]);
   const applyPulse = (next: PulsePhase) => {
     if (phaseTimer.current) clearTimeout(phaseTimer.current);
     setPhase(next);
@@ -215,7 +229,7 @@ function Bar() {
 
   return (
     <div
-      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''} island--phase-${phase}`}
+      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${streakUp ? ' island--streak-up' : ''} island--phase-${phase}`}
       style={{ '--safe-top': `${attached ? notchSafeTop() : 0}px` } as React.CSSProperties}
       onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
       onMouseLeave={scheduleClose}
@@ -231,7 +245,7 @@ function Bar() {
         </div>
         <span className="island__notch" aria-hidden="true" />
         <div className="island__wing island__wing--right" aria-live="polite">
-          {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : expanded ? null : <span className="island__streak"><b>{value(snapshot?.streak)}</b><FlameIcon /></span>}
+          {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : expanded ? null : <span className="island__streak"><b>{value(snapshot?.streak)}</b><FlameIcon />{streakUp ? <i className="island__plus" aria-hidden="true">+1</i> : null}</span>}
         </div>
       </div>
 

@@ -152,3 +152,15 @@ button { font: inherit; }
 .island__actions button:hover { border-color: rgba(214,244,90,.6); }
 .island__actions button:active { transform: translateY(2px); box-shadow: none; }
 .island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline-color: #d6f45a; }
+
+/* Vibe Island life: flame flicker, a hop when an answer lands, a +1 when the streak grows. */
+.island__flame { animation: island-flicker 2.6s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes island-flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.08, .94) rotate(-4deg); } 60% { transform: scale(.95, 1.06) rotate(3deg); } }
+.island__streak { position: relative; }
+.island__plus { position: absolute; right: -4px; top: -2px; font: 800 11px "Bricolage Grotesque", sans-serif; font-style: normal; color: #d6f45a; animation: island-plus 1.6s ease-out forwards; pointer-events: none; }
+@keyframes island-plus { 0% { opacity: 0; transform: translateY(4px) scale(.6); } 20% { opacity: 1; transform: translateY(-4px) scale(1.15); } 100% { opacity: 0; transform: translateY(-16px) scale(1); } }
+.island--phase-ready .island__mark, .island--phase-understood .island__mark, .island--streak-up .island__mark { animation: island-hop .7s cubic-bezier(.3,1.6,.5,1) 2; }
+.island--phase-thinking .island__mark, .island--phase-generating .island__mark, .island--phase-analyzing .island__mark, .island--phase-contextualizing .island__mark { animation: island-think 1.2s ease-in-out infinite; }
+@keyframes island-hop { 0%, 100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.08, .94); } 60% { transform: translateY(0) scale(.94, 1.06); } }
+@keyframes island-think { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .island__flame, .island__mark, .island__plus { animation: none !important; } }

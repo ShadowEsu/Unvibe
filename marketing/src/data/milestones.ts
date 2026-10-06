@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "06 OCT 2026",
     category: "PRODUCT",
+    title: "Answers start instantly, quiz me on everything, a livelier Island",
+    summary: "Explanations now stream word by word the moment the AI starts writing, instead of waiting for the whole answer. Quick Quiz has a new Quiz me on everything run: up to ten questions across your saved lessons, revisit ones first, with a score at the end. On the Island, Vibe hops when an answer lands, the streak flame flickers, and a +1 pops when your streak grows. Investors can now page through the pitch deck right on unvibe.site/investors.",
+    figure: "v0.1.28",
+  },
+  {
+    date: "06 OCT 2026",
+    category: "PRODUCT",
     title: "Sign in with Google fills you in, and invites really pay out",
     summary: "On the setup screen, tap Fill this in with Google, pick one of your saved Google accounts, and your name and email are filled in for you. Invite links now actually work: when a friend joins with yours, you both get a month of Pro, up to five friends, and it stacks. Everyone with the app is on the list automatically and starts with a welcome month of Pro.",
     figure: "v0.1.27",

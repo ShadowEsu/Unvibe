@@ -48,33 +48,48 @@ export class GeminiProvider implements Provider {
       throw new Error(`Gemini API ${res.status}: ${await safeText(res)}`);
     }
 
-    const raw = await res.text();
+    // Read the stream as it arrives so the first words show in well under a second, instead of
+    // waiting for the whole answer. A gateway that drops alt=sse sends one JSON array instead;
+    // that case is parsed once the body ends.
     let emitted = 0;
-
-    if (raw.trim().startsWith('[')) {
-      // Non-SSE JSON array fallback (some gateways drop alt=sse).
-      try {
-        const chunks = JSON.parse(raw) as GeminiChunk[];
-        for (const chunk of chunks) {
-          const text = textFromChunk(chunk);
-          if (text) {
-            onToken(text);
-            emitted += text.length;
-          }
+    let buffer = '';
+    let arrayBody = false;
+    const emit = (text: string | undefined) => {
+      if (!text) return;
+      onToken(text);
+      emitted += text.length;
+    };
+    if (res.body) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        if (!arrayBody && buffer.trimStart().startsWith('[')) arrayBody = true;
+        if (arrayBody) continue;
+        let match: RegExpExecArray | null;
+        while ((match = /\r?\n\r?\n/.exec(buffer))) {
+          const event = buffer.slice(0, match.index);
+          buffer = buffer.slice(match.index + match[0].length);
+          emit(extractDelta(event));
         }
-      } catch {
-        // fall through to SSE parse
       }
+      buffer += decoder.decode();
+    } else {
+      buffer = await res.text();
+      arrayBody = buffer.trimStart().startsWith('[');
     }
 
-    if (emitted === 0) {
-      for (const event of splitSseEvents(raw)) {
-        const text = extractDelta(event);
-        if (text) {
-          onToken(text);
-          emitted += text.length;
-        }
+    if (arrayBody) {
+      try {
+        for (const chunk of JSON.parse(buffer) as GeminiChunk[]) emit(textFromChunk(chunk));
+      } catch {
+        /* not a JSON array after all; the SSE pass below handles it */
       }
+    }
+    if (emitted === 0 || !arrayBody) {
+      for (const event of splitSseEvents(buffer)) emit(extractDelta(event));
     }
 
     // If stream produced nothing (common when thinking ate the budget), fall back.

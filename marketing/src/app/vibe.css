@@ -563,3 +563,18 @@ p { font-size: 1.02rem; }
 .kit__file { display: grid; place-items: center; height: 110px; min-width: 0; border-radius: 10px; background: var(--v-lilac); font: 800 1.3rem var(--font-display); }
 .kit__asset small { color: #6b6b6b; }
 @media (max-width: 640px) { .kit__head .vibe { display: none; } .kit__row { grid-template-columns: 1fr 1fr; } .kit__row span:nth-child(3) { grid-column: 1 / -1; } }
+
+/* Investor deck viewer */
+.deckv { display: grid; gap: 1rem; }
+.deckv__stage { position: relative; border: 2px solid var(--v-ink); border-radius: 22px; overflow: hidden; background: #fff; box-shadow: 8px 8px 0 var(--v-ink); }
+.deckv__stage img { display: block; width: 100%; height: auto; }
+.deckv__nav { position: absolute; top: 50%; transform: translateY(-50%); width: 3rem; height: 3rem; display: grid; place-items: center; border: 2px solid var(--v-ink); border-radius: 50%; background: var(--v-lime); color: var(--v-ink); cursor: pointer; box-shadow: 3px 3px 0 var(--v-ink); }
+.deckv__nav:disabled { opacity: 0.35; cursor: default; }
+.deckv__nav--prev { left: 1rem; } .deckv__nav--next { right: 1rem; }
+.deckv__bar { display: flex; align-items: center; gap: 1rem; }
+.deckv__count { font: 800 1.05rem var(--font-display); white-space: nowrap; }
+.deckv__thumbs { flex: 1; display: flex; gap: 0.45rem; overflow-x: auto; padding: 0.3rem 0.2rem; scrollbar-width: thin; }
+.deckv__thumbs button { flex: 0 0 auto; padding: 0; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; opacity: 0.6; }
+.deckv__thumbs button.is-on { border-color: var(--v-ink); opacity: 1; }
+.deckv__thumbs img { display: block; width: 88px; height: auto; border-radius: 6px; }
+@media (max-width: 640px) { .deckv__thumbs { display: none; } .deckv__bar { justify-content: space-between; } .deckv__nav { width: 2.4rem; height: 2.4rem; } }

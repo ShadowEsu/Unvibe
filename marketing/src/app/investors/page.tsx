@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowRight, FileText, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { InvestorBriefDemo } from "@/components/paper/InvestorBriefDemo";
+import { DeckViewer } from "@/components/paper/DeckViewer";
 import { Vibe } from "@/components/paper/Vibe";
 import {
   compensationCashUsd,
@@ -57,8 +58,8 @@ export default function InvestorsPage() {
             changed, checks that it stuck, and keeps the knowledge fresh as the code moves.
           </p>
           <div className="inv-actions">
-            <a className="inv-btn inv-btn--ink" href={DECK_URL} target="_blank" rel="noopener noreferrer">
-              <FileText size={17} /> Open the pitch deck
+            <a className="inv-btn inv-btn--ink" href="#deck">
+              <FileText size={17} /> See the pitch deck
             </a>
             <a className="inv-btn" href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation">
               <Mail size={17} /> Talk to the founder
@@ -86,6 +87,12 @@ export default function InvestorsPage() {
           <article className="inv-card"><span>02</span><h3>Product</h3><p>Select code, press ⌘U. Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
           <article className="inv-card"><span>03</span><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
         </div>
+      </section>
+
+      <section className="inv-section" id="deck">
+        <p className="inv-eyebrow">The deck</p>
+        <h2>Fourteen slides, <em>right here.</em></h2>
+        <DeckViewer pdf={DECK_URL} />
       </section>
 
       <section className="inv-section">

@@ -130,6 +130,8 @@ export function Learn({
   const [cardKey, setCardKey] = useState(0);
   const quizRequestRef = useRef(false);
   const [cleared, setCleared] = useState(0);
+  // Mixed review: one run across many lessons, revisit ones first, scored on first tries.
+  const [mix, setMix] = useState<{ ids: string[]; index: number; firstTry: number; done: boolean } | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [savedNote, setSavedNote] = useState('');
   const [noteStatus, setNoteStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -194,6 +196,7 @@ export function Learn({
     setResult(null);
     setWrongPicks([]);
     setCleared(0);
+    setMix(null);
   };
 
   const saveNote = async () => {
@@ -287,6 +290,32 @@ export function Learn({
     }
   };
 
+  const startMix = () => {
+    const revisit = catalog.filter((item) => item.outcome === 'needs_review');
+    const rest = catalog.filter((item) => item.outcome !== 'needs_review').sort(() => Math.random() - 0.5);
+    const ids = [...revisit, ...rest].slice(0, 10).map((item) => item.id);
+    const first = catalog.find((item) => item.id === ids[0]);
+    if (!first) return;
+    setMix({ ids, index: 0, firstTry: 0, done: false });
+    openLesson(first, 'check');
+    void startQuiz(first);
+  };
+  const nextQuestion = () => {
+    if (!open) return;
+    if (!mix) { void startQuiz(open); return; }
+    const index = mix.index + 1;
+    const item = catalog.find((entry) => entry.id === mix.ids[index]);
+    if (!item) {
+      setMix({ ...mix, done: true });
+      playTone('celebrate');
+      setBuddyMood('celebrate');
+      return;
+    }
+    setMix({ ...mix, index });
+    setOpenId(item.id);
+    void startQuiz(item);
+  };
+
   const answerQuiz = async (choice: number) => {
     if (!open || result?.correct || wrongPicks.includes(choice)) return;
     setQuizBusy(true); setQuizError('');
@@ -303,6 +332,7 @@ export function Learn({
       return;
     }
     setBuddyMood('celebrate');
+    if (mix && wrongPicks.length === 0) setMix((m) => (m ? { ...m, firstTry: m.firstTry + 1 } : m));
     setResult({ correct: true, rationale: r.rationale ?? 'You got it.', answerIndex: r.answerIndex ?? choice });
     setCleared((count) => count + 1);
     void onRefresh();
@@ -315,6 +345,7 @@ export function Learn({
       if (target?.matches('input, textarea, select')) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === 'Escape') return;
+      if (mix?.done) return;
       if (!card && !quizBusy && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
         void startQuiz(open);
@@ -323,7 +354,7 @@ export function Learn({
       if (!card || quizBusy) return;
       if (result?.correct && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
-        void startQuiz(open);
+        nextQuestion();
         return;
       }
       if (result?.correct) return;
@@ -337,7 +368,7 @@ export function Learn({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, mode, card, quizBusy, result, quizMode, wrongPicks]);
+  }, [open, mode, card, quizBusy, result, quizMode, wrongPicks, mix]);
 
   if (open) {
     const survey = mode === 'check';
@@ -476,13 +507,21 @@ export function Learn({
                 ))}
               </div>
 
-              {result?.correct && card ? (
+              {mix?.done ? (
+                <div className="survey__end">
+                  <span className="survey__vibe"><Buddy mood={mix.firstTry >= mix.ids.length * 0.7 ? 'celebrate' : 'happy'} size={72} label="Vibe" /></span>
+                  <p className="survey__kicker">Mixed review done</p>
+                  <h2>{mix.firstTry} of {mix.ids.length} on the first try.</h2>
+                  <p className="survey__rationale">{mix.firstTry === mix.ids.length ? 'Perfect run. You really know this code.' : mix.firstTry >= mix.ids.length * 0.7 ? 'Strong. The ones you missed are marked to revisit.' : 'Good start. Run it again tomorrow and watch the number climb.'}</p>
+                  <button className="primary-btn" type="button" onClick={() => { setMix(null); closeLesson(); }}>Back to lessons</button>
+                </div>
+              ) : result?.correct && card ? (
                 <div className="survey__end" key={`end-${card.key}`}>
                   <span className="survey__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
                   <p className="survey__kicker">Nice work</p>
                   <h2>You got it.</h2>
                   <p className="survey__rationale">{result.rationale}</p>
-                  <button className="primary-btn" type="button" onClick={() => void startQuiz(open)}>Next question</button>
+                  <button className="primary-btn" type="button" onClick={nextQuestion}>{mix ? (mix.index + 1 >= mix.ids.length ? 'See my score' : `Next lesson (${mix.index + 2} of ${mix.ids.length})`) : 'Next question'}</button>
                   <p className="survey__hint">Press Return to continue</p>
                 </div>
               ) : card ? (
@@ -571,6 +610,11 @@ export function Learn({
               ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'
               : 'Saved explanations on this Mac, with source and freshness where we have it.'}
           </p>
+          {intent === 'quiz' && catalog.length > 1 ? (
+            <button className="primary-btn mix-start" type="button" onClick={startMix}>
+              Quiz me on everything <span>{Math.min(10, catalog.length)} questions</span>
+            </button>
+          ) : null}
         </div>
         {catalog.length > 0 && intent !== 'quiz' ? (
           <div className="learn-filters" role="tablist" aria-label="Filter lessons">
