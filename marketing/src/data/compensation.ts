@@ -25,6 +25,13 @@ export const compensationLines: CompensationLine[] = [
     state: "Secured",
   },
   {
+    name: "Claude for Startups",
+    amountUsd: 21_500,
+    detail: "Anthropic API credits, Claude Team for 12 months, and partner perks (ElevenLabs, ClickHouse, Moda, Firecrawl, Viktor and more). Low end of a $21.5K to $23K estimate",
+    kind: "credits",
+    state: "Secured",
+  },
+  {
     name: "GitLab for Startups",
     amountUsd: 23_700,
     detail: "GitLab Ultimate credits",

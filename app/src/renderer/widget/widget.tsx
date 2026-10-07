@@ -181,6 +181,14 @@ function EmptyPicker({
   const [paste, setPaste] = useState('');
   const [hint, setHint] = useState('');
   const [picking, setPicking] = useState(false);
+  // ⌘U copies your selection through macOS Accessibility. Without it the shortcut lands here.
+  const [needsAccess, setNeedsAccess] = useState(false);
+  useEffect(() => {
+    void window.unvibe.accessibility().then((r) => {
+      const res = r as { granted?: boolean; platform?: string };
+      setNeedsAccess(res.platform === 'darwin' && res.granted === false);
+    });
+  }, []);
 
   const chooseFile = async () => {
     setHint('');
@@ -214,6 +222,15 @@ function EmptyPicker({
       <div className="sub">
         Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
       </div>
+      {needsAccess ? (
+        <div className="access-note" role="alert">
+          <b>{shortcut} can’t read your selection yet.</b> Unvibe needs Accessibility to copy what you selected. Turn Unvibe on, then restart it.
+          <div className="empty-actions">
+            <button className="btn" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
+            <button className="btn ghost" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+          </div>
+        </div>
+      ) : null}
       <div className="empty-actions">
         <button className="btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
           Explain my clipboard

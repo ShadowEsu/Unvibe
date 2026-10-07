@@ -12,6 +12,20 @@ export interface Milestone {
 export const milestones: Milestone[] = [
   {
     date: "07 OCT 2026",
+    category: "COMPANY",
+    title: "Unvibe is in Claude for Startups",
+    summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals $267,700 in credits and committed cash.",
+    figure: "$21.5K",
+  },
+  {
+    date: "07 OCT 2026",
+    category: "PRODUCT",
+    title: "Calmer look, Teams ready, clearer shortcut help",
+    summary: "The app uses one accent colour instead of four, and the box around the Ask field is gone. If the shortcut cannot read your selection, the panel now says why and offers a one click fix. The sidebar button sits clear of the window buttons and also works with Command backslash. Teams has a real card on the Plan page with team name and seats, ready for checkout.",
+    figure: "v0.1.34",
+  },
+  {
+    date: "07 OCT 2026",
     category: "PRODUCT",
     title: "Light panel, voice, easier sharing",
     summary: "The review panel now opens in light mode to match the app, and its buttons keep their colour instead of turning black. The island fits its stats without cutting off, and the bottom and top right positions open properly. A big Try voice card shows how to ask Vibe out loud with Mac Dictation. Share is now one invite link with Email, X, WhatsApp and LinkedIn buttons. VS Code and Cursor are found wherever they are installed, and Accessibility has a one click fix when macOS gets stuck.",

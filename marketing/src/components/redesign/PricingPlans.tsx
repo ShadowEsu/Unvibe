@@ -60,7 +60,7 @@ export function PricingPlans() {
       </div>
       <div className="marketing-plan-grid marketing-plan-grid--core">
         {corePlans.map((plan) => (
-          <article key={plan.id} className={`marketing-plan-card${'featured' in plan && plan.featured ? ' featured' : ''}`}>
+          <article key={plan.id} id={plan.id} className={`marketing-plan-card${'featured' in plan && plan.featured ? ' featured' : ''}`}>
             <span className="plan-badge">{plan.badge}</span>
             <h3>{plan.name}</h3>
             <p className="plan-kicker">{plan.eyebrow}</p>

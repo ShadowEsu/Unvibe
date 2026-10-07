@@ -2,6 +2,7 @@ import { getBillingStore } from '@/billing/store';
 import { billingError, isResponse, requireUser } from '@/billing/http';
 import { stripeIsConfigured, stripeLifetimeConfigured } from '@/billing/stripe';
 import { publicBillingOverview } from '@/billing/presentation';
+import { teamsCheckoutEnabled } from '@/billing/plans';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,7 @@ export async function GET(req: Request): Promise<Response> {
       workspaces: await store.listWorkspaces(user),
       checkoutAvailable: stripeIsConfigured(),
       lifetimeAvailable: stripeLifetimeConfigured(),
+      teamsAvailable: stripeIsConfigured() && teamsCheckoutEnabled(),
     });
   } catch (error) {
     return billingError(error);

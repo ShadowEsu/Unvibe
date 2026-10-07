@@ -34,7 +34,13 @@ const BILLING_LIMITS: Record<PlanId, Record<BillingUsageKind, number>> = {
   teams: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
 };
 
-export const TEAMS_CHECKOUT_ENABLED = false;
+/**
+ * Teams checkout opens as soon as both Teams Stripe prices exist on the server
+ * (STRIPE_PRICE_TEAMS_MONTHLY and STRIPE_PRICE_TEAMS_ANNUAL, $8 and $72 per seat).
+ */
+export function teamsCheckoutEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean(env.STRIPE_PRICE_TEAMS_MONTHLY?.trim() && env.STRIPE_PRICE_TEAMS_ANNUAL?.trim());
+}
 
 /** Founding Teams seat cap. Above this is Enterprise conversation pricing. */
 export const TEAMS_MAX_SEATS = 20;

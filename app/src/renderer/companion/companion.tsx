@@ -127,7 +127,7 @@ function planDisplayName(plan: PlanId): string {
 function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
   if (plan === 'full') return 'Included';
   if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
-  if (plan === 'teams') return interval === 'annual' ? '$90/seat/yr' : '$10/seat';
+  if (plan === 'teams') return interval === 'annual' ? '$72/seat/yr' : '$8/seat';
   return '$0';
 }
 
@@ -948,6 +948,9 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [localUsage, setLocalUsage] = useState<AppUsageLine | null>(null);
   const [available, setAvailable] = useState(false);
+  const [teamsAvailable, setTeamsAvailable] = useState(false);
+  const [seats, setSeats] = useState(3);
+  const [teamName, setTeamName] = useState('');
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
   const [message, setMessage] = useState(compact ? '' : 'Loading plan…');
   const [busy, setBusy] = useState(false);
@@ -961,7 +964,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       setMessage('');
       return;
     }
-    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean }; error?: string };
+    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean }; error?: string };
     if (!result.ok || !result.data) {
       setOverview(null);
       setMessage(result.error ?? 'Could not load cloud plan. Local limits still apply.');
@@ -969,6 +972,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     }
     setOverview(result.data.overview);
     setAvailable(result.data.checkoutAvailable);
+    setTeamsAvailable(Boolean(result.data.teamsAvailable));
     if (result.data.overview.subscription.interval) setInterval(result.data.overview.subscription.interval);
     setMessage('');
   };
@@ -989,6 +993,41 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     if (!result.ok) setMessage(result.error ?? 'Checkout could not start.');
     setBusy(false);
   };
+
+  const teamsCheckout = async () => {
+    if (!signedIn) {
+      setMessage('Sign in to start a team. Google approval happens in the browser.');
+      return;
+    }
+    setBusy(true); setMessage('');
+    const result = await window.unvibe.startBillingCheckout({ plan: 'teams', interval, seats, workspaceName: teamName.trim() || 'My team' }) as { ok: boolean; error?: string };
+    if (!result.ok) setMessage(result.error ?? 'Teams checkout could not start.');
+    setBusy(false);
+  };
+  const teamsTotal = interval === 'annual' ? seats * 72 : seats * 8;
+  const teamsCard = (
+    <article className="plan-pick__card plan-pick__card--teams">
+      <span>For clubs, classes and small teams</span>
+      <h2>Teams $8/seat{interval === 'annual' ? ' · $72/yr' : '/mo'}</h2>
+      <p>One shared workspace, invites, and who reviewed what. 2 to 20 seats. Each person keeps their explanations on their own Mac.</p>
+      <div className="teams-form">
+        <label>Team name<input value={teamName} maxLength={60} placeholder="My team" onChange={(e) => setTeamName(e.target.value)} /></label>
+        <label>Seats
+          <span className="seat-step">
+            <button type="button" aria-label="Fewer seats" onClick={() => setSeats((n) => Math.max(2, n - 1))} disabled={seats <= 2}>−</button>
+            <b aria-live="polite">{seats}</b>
+            <button type="button" aria-label="More seats" onClick={() => setSeats((n) => Math.min(20, n + 1))} disabled={seats >= 20}>+</button>
+          </span>
+        </label>
+      </div>
+      <p className="plan-pick__terms">${teamsTotal} {interval === 'annual' ? 'per year' : 'per month'} for {seats} seats, until canceled. Change seats later from this page.</p>
+      {teamsAvailable ? (
+        <button type="button" className="primary-btn" onClick={() => void teamsCheckout()} disabled={busy}>{signedIn ? 'Start Teams' : 'Sign in to start Teams'}</button>
+      ) : (
+        <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(`https://unvibe.site/pricing#teams`)}>Request Teams seats</button>
+      )}
+    </article>
+  );
 
   const portal = async () => {
     if (!overview) return;
@@ -1038,7 +1077,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             : <button type="button" className="soft-btn" disabled>{gifted ? 'Included with a gift' : paid ? 'Active' : 'Included'}</button>}
         </article>
 
-        {showUpgrade && (
+        {showUpgrade && upgradeIsPro && (
           <article className="plan-pick__card is-upgrade">
             <span>Upgrade available</span>
             {upgradeIsPro ? (
@@ -1065,15 +1104,10 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
                   {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
                 </button>
               </>
-            ) : (
-              <>
-                <h2>Teams</h2>
-                <p>Shared workspace and seat billing. Coming soon.</p>
-                <button type="button" className="soft-btn" disabled>Coming soon</button>
-              </>
-            )}
+            ) : null}
           </article>
         )}
+        {currentPlan !== 'teams' && !compact ? teamsCard : null}
       </div>
 
       {!signedIn && (
@@ -1551,6 +1585,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 function App() {
   const [page, setPage] = useState<PageId>('Home');
   const [navOpen, setNavOpen] = useState(false);
+  const toggleSideRef = useRef<() => void>(() => {});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
@@ -1638,6 +1673,10 @@ function App() {
         setSettingsTab('General');
         setSettingsOpen(true);
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === '\\') {
+        event.preventDefault();
+        toggleSideRef.current();
+      }
       if (event.key === 'Escape') setSearchOpen(false);
     };
     window.addEventListener('keydown', onKey);
@@ -1696,6 +1735,7 @@ function App() {
     : 'Unvibe AI';
   const sideCompact = sideWidth < 178;
   const sideHidden = settings?.sidebarHidden ?? false;
+  toggleSideRef.current = () => void applySettings({ sidebarHidden: !sideHidden });
   const searchGroups = (() => {
     const query = searchQuery.trim().toLowerCase();
     const matches = (value: string) => !query || value.toLowerCase().includes(query);
@@ -1771,7 +1811,7 @@ function App() {
     <>
       <div className="titlebar">
         <div className="shell-tools">
-          <button type="button" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar' : 'Hide sidebar'} onClick={() => void applySettings({ sidebarHidden: !sideHidden })}>
+          <button type="button" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar (⌘\\)' : 'Hide sidebar (⌘\\)'} onClick={() => toggleSideRef.current()}>
             <Icon d="M4 4h12v12H4z M7 4v12" />
           </button>
         </div>
@@ -1844,7 +1884,7 @@ function App() {
               if (!acct) flash('Signed out. Your learning stays on this computer.');
             }}
           />
-          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize" onPointerDown={startSideResize} />
+          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = 204; setSideWidth(204); void applySettings({ sidebarWidth: 204 }); }} />
         </aside>
         <main className="content">
           <header className="topbar">

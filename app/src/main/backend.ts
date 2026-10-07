@@ -121,14 +121,11 @@ export interface BillingOverview {
   hasBillingAccount: boolean;
 }
 
-export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean }> {
+export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean }> {
   return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
 }
 
 export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
-  if (input.plan === 'teams') {
-    throw new Error('Teams is not available right now. Choose Pro for a personal plan.');
-  }
   const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/checkout`, {
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(input),
   }));

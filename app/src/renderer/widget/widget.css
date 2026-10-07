@@ -1530,3 +1530,5 @@ code.inline {
 :root[data-panel="light"] .card .btn:not(:disabled):active { box-shadow: none; transform: translateY(3px); }
 .card .voice-note { margin: 8px 2px 0; font-size: 12px; line-height: 1.5; color: var(--p-muted); }
 .card .voice-note kbd { padding: 1px 5px; border: 1px solid var(--p-line); border-radius: 5px; background: var(--p-raised); color: var(--p-ink); font: 600 11px ui-monospace, Menlo, monospace; }
+.card .access-note { margin: 10px 0 4px; padding: 10px 12px; border: 1.5px dashed var(--p-ink); border-radius: 10px; background: var(--p-surface); color: var(--p-ink); font-size: 12.5px; line-height: 1.5; text-align: left; }
+.card .access-note .empty-actions { margin-top: 8px; }

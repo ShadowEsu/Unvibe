@@ -42,6 +42,7 @@ export function PhotoHero() {
         </div>
         <DownloadRow />
         <p className="vhero__fine">Free · No API key · No card</p>
+        <a className="vhero__program" href="#backing">In <b>Claude for Startups</b></a>
       </div>
       <a href="#tour" className="vhero__scroll" aria-label="See the app">
         <span />

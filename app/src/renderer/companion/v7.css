@@ -30,12 +30,13 @@
   --v-radius: 14px;
   --v-radius-sm: 10px;
   --v-shadow: none;
+  /* Calmer palette: lime is the one accent; the other sticker colours are soft paper greys. */
   --lime: #d6f45a;
-  --sky: #9fd8ff;
-  --sun: #ffd84d;
-  --coral: #ff9a76;
-  --lilac: #b8a6ff;
-  --mint: #8fe3bf;
+  --sky: #f1eee6;
+  --sun: #f1eee6;
+  --coral: #f3d9cf;
+  --lilac: #ece9e1;
+  --mint: #e3f0c0;
   --hard: 3px 3px 0 var(--v-ink);
   --hard-sm: 2px 2px 0 var(--v-ink);
   --press: cubic-bezier(0.3, 1.5, 0.5, 1);
@@ -715,7 +716,7 @@
 .chat-ai__btn { max-width: min(320px, 60vw); }
 
 /* Share: one big link, share buttons under it. */
-.share-link { margin-top: 22px; padding: 18px 20px; border: 2px solid #141414; border-radius: 16px; background: #eef9c8; box-shadow: 3px 3px 0 #141414; }
+.share-link { margin-top: 22px; padding: 18px 20px; border: 2px solid #141414; border-radius: 16px; background: #ffffff; box-shadow: 3px 3px 0 #141414; }
 .share-link__label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: #3b3b3b; }
 .share-link__row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .share-link__row code { flex: 1 1 260px; min-width: 0; padding: 10px 12px; border: 1.5px dashed #141414; border-radius: 10px; background: #fff; color: #141414; font: 600 14px/1.3 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
@@ -725,7 +726,7 @@
 .share-meter { margin-top: 12px; }
 
 /* Voice: a big friendly entry on Home and plain steps in Ask Vibe. */
-.voice-cta { display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 12px; padding: 16px 18px; border: 2px solid #141414; border-radius: 16px; background: #e7e0ff; color: #141414; text-align: left; cursor: pointer; box-shadow: 3px 3px 0 #141414; transition: transform 140ms ease, box-shadow 140ms ease; }
+.voice-cta { display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 12px; padding: 16px 18px; border: 2px solid #141414; border-radius: 16px; background: #ffffff; color: #141414; text-align: left; cursor: pointer; box-shadow: 3px 3px 0 #141414; transition: transform 140ms ease, box-shadow 140ms ease; }
 .voice-cta:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #141414; }
 .voice-cta:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #141414; }
 .voice-cta:focus-visible { outline: 2px solid #141414; outline-offset: 3px; }
@@ -734,10 +735,31 @@
 .voice-cta__text b { font: 800 18px/1.2 var(--font-display, inherit); letter-spacing: -0.02em; }
 .voice-cta__text small { font-size: 13px; color: #3b3b3b; }
 .voice-cta__go { font-size: 20px; font-weight: 800; }
-.voice-tip { margin: 0 0 8px; padding: 12px 14px; border: 1.5px dashed #141414; border-radius: 12px; background: #f3efff; color: #141414; font-size: 13px; line-height: 1.5; }
+.voice-tip { margin: 0 0 8px; padding: 12px 14px; border: 1.5px dashed #141414; border-radius: 12px; background: #fbfaf6; color: #141414; font-size: 13px; line-height: 1.5; }
 .voice-tip b { display: block; margin-bottom: 4px; font-size: 14px; }
 .voice-tip ol { margin: 0 0 6px; padding-left: 18px; }
 .voice-tip p { margin: 0; color: #4a4a4a; }
 .voice-tip kbd, .voice-cta kbd { padding: 1px 6px; border: 1px solid #141414; border-radius: 5px; background: #fff; font: 600 12px ui-monospace, Menlo, monospace; }
 .chat-mic { margin-left: auto; margin-right: 8px; padding: 5px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414; font: 700 12px/1 inherit; cursor: pointer; }
-.chat-mic[aria-pressed="true"] { background: #e7e0ff; }
+.chat-mic[aria-pressed="true"] { background: #d6f45a; }
+
+/* No extra box around the text you are typing in: the dock or composer border already shows focus. */
+:root[data-ui="v3"][data-v7] .ask-dock input:focus, :root[data-ui="v3"][data-v7] .ask-dock input:focus-visible,
+:root[data-ui="v3"][data-v7] .chat-composer textarea:focus, :root[data-ui="v3"][data-v7] .chat-composer textarea:focus-visible { outline: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .ask-dock:focus-within { box-shadow: var(--hard); }
+
+/* Sidebar toggle sits right after the window buttons, and the page title moves clear of
+   them when the sidebar is hidden, so nothing overlaps at any window size. */
+:root[data-ui="v3"][data-v7] .shell-tools { left: 84px; top: 8px; }
+:root[data-ui="v3"][data-v7] .shell-tools button { width: 30px; height: 30px; display: grid; place-items: center; }
+:root[data-ui="v3"][data-v7] .layout--side-hidden .topbar { padding-left: 112px; }
+:root[data-ui="v3"][data-v7] .side-resize { width: 12px; right: -4px; }
+
+/* Plan: Teams card */
+.plan-pick__card--teams .teams-form { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
+.plan-pick__card--teams .teams-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: #3b3b3b; }
+.plan-pick__card--teams .teams-form input { width: 180px; padding: 7px 10px; border: 1.5px solid #141414; border-radius: 9px; background: #fff; color: #141414; font: inherit; font-weight: 500; }
+.plan-pick__card--teams .seat-step { display: inline-flex; align-items: center; gap: 10px; }
+.plan-pick__card--teams .seat-step button { width: 30px; height: 30px; border: 1.5px solid #141414; border-radius: 8px; background: #fff; color: #141414; font-weight: 800; cursor: pointer; }
+.plan-pick__card--teams .seat-step button:disabled { opacity: .4; cursor: default; }
+.plan-pick__card--teams .seat-step b { min-width: 22px; text-align: center; font-size: 16px; }

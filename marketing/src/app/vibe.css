@@ -611,3 +611,15 @@ p { font-size: 1.02rem; }
 .fos__card { overflow: hidden; }
 .fos__cmd { min-width: 0; }
 .fos__cmd code { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
+
+/* Claude for Startups: one big, plain callout above the backing numbers. */
+.claude-startups { display: grid; gap: 8px; margin: 0 0 28px; padding: clamp(22px, 4vw, 36px); border: 2px solid #141414; border-radius: 24px; background: #fff; box-shadow: 5px 5px 0 #141414; text-align: center; }
+.claude-startups__tag { justify-self: center; padding: 3px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #d6f45a; font: 700 12px/1.4 Inter, sans-serif; letter-spacing: .02em; }
+.claude-startups__title { margin: 0; font: 800 clamp(28px, 5vw, 48px)/1.08 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.035em; color: #141414; }
+.claude-startups__title em { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-style: italic; }
+.claude-startups__copy { margin: 0 auto; max-width: 560px; font-size: 16px; line-height: 1.5; color: #3b3b3b; }
+.vhero__program { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 7px 14px; border: 2px solid #141414; border-radius: 999px; background: #fff; color: #141414; font: 600 14px/1.2 Inter, sans-serif; text-decoration: none; box-shadow: 3px 3px 0 #141414; transition: transform 140ms ease, box-shadow 140ms ease; }
+.vhero__program:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #141414; }
+.vhero__program b { font-weight: 800; }
+/* Calmer hero: one lime accent, the other stickers plain white. */
+.vhero .vsticker--sky, .vhero .vsticker--sun, .vhero .vsticker--lilac { background: #fff; }

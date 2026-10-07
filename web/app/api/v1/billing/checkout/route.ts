@@ -1,7 +1,7 @@
 import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
-import { normalizedSeats, TEAMS_CHECKOUT_ENABLED } from '@/billing/plans';
+import { normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
 import { getStripe, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval } from '@/billing/types';
 
@@ -18,7 +18,7 @@ export async function POST(req: Request): Promise<Response> {
   if (isResponse(user)) return user;
   try {
     const body = (await req.json()) as CheckoutBody;
-    if (body.plan === 'teams' && !TEAMS_CHECKOUT_ENABLED) {
+    if (body.plan === 'teams' && !teamsCheckoutEnabled()) {
       return Response.json({ error: 'teams_unavailable', message: 'Teams is not available right now. Choose Pro for a personal plan.' }, { status: 403 });
     }
     if ((body.plan !== 'pro' && body.plan !== 'teams') || !isBillingInterval(body.interval)) {

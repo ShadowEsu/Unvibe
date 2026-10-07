@@ -13,7 +13,7 @@ import {
   priceFor,
   proAnnualSavingsPercent,
   teamsAnnualSavingsPercent,
-  TEAMS_CHECKOUT_ENABLED,
+  teamsCheckoutEnabled,
 } from '../src/billing/plans';
 import { processStripeEvent, syncStripeSubscription } from '../src/billing/webhooks';
 import { publicBillingOverview } from '../src/billing/presentation';
@@ -34,8 +34,10 @@ test('pricing math matches every published total', () => {
   assert.equal(teamsAnnualSavingsPercent(), 25);
 });
 
-test('Teams checkout stays paused for private launch', () => {
-  assert.equal(TEAMS_CHECKOUT_ENABLED, false);
+test('Teams checkout opens only when both Teams prices are configured', () => {
+  assert.equal(teamsCheckoutEnabled({}), false);
+  assert.equal(teamsCheckoutEnabled({ STRIPE_PRICE_TEAMS_MONTHLY: 'price_m' }), false);
+  assert.equal(teamsCheckoutEnabled({ STRIPE_PRICE_TEAMS_MONTHLY: 'price_m', STRIPE_PRICE_TEAMS_ANNUAL: 'price_a' }), true);
 });
 
 test('Teams clamps abusive seat quantities while Pro stays one-person', () => {
