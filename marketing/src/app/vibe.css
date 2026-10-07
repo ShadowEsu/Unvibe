@@ -623,3 +623,21 @@ p { font-size: 1.02rem; }
 .vhero__program b { font-weight: 800; }
 /* Calmer hero: one lime accent, the other stickers plain white. */
 .vhero .vsticker--sky, .vhero .vsticker--sun, .vhero .vsticker--lilac { background: #fff; }
+
+/* Rewards: paper and ink like the rest of the site (the old dark panel hid its own heading). */
+.reward-page { background: #f6f1e7 !important; color: #141414 !important; }
+.reward-panel { background: #fff !important; border: 2px solid #141414 !important; border-radius: 24px; box-shadow: 6px 6px 0 #141414 !important; color: #141414; }
+.reward-panel .pixel-label { color: #5a5a5a !important; }
+.reward-panel h1 { color: #141414 !important; }
+.reward-panel h1 em { color: #141414 !important; font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+.reward-lead, .reward-note, .reward-stat span, .reward-stat small, .reward-review small { color: #3b3b3b !important; }
+.reward-code label { color: #3b3b3b !important; }
+.reward-code input { background: #fff !important; color: #141414 !important; border: 1.5px solid #141414 !important; border-radius: 10px; }
+.reward-code button, .reward-copy { background: #d6f45a !important; color: #141414 !important; border: 1.5px solid #141414 !important; border-radius: 10px; box-shadow: 2px 2px 0 #141414; }
+.reward-code button:hover, .reward-copy:hover { background: #cbe94e !important; }
+.reward-progress { background: #fbfaf6 !important; border: 1.5px solid #e4dfd3 !important; border-radius: 14px; }
+.reward-stat strong { color: #141414; }
+.reward-track i { background: #f1eee6 !important; border-color: #141414 !important; }
+.reward-track i.on { background: #d6f45a !important; }
+.reward-note a { color: #141414 !important; text-decoration: underline; }
+.reward-error { color: #b42318 !important; }
