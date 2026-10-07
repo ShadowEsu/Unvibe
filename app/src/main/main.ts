@@ -8,6 +8,7 @@ import {
   app,
   BrowserWindow,
   Menu,
+  Notification,
   Tray,
   clipboard,
   dialog,
@@ -20,6 +21,7 @@ import {
   systemPreferences,
 } from 'electron';
 import { execFile } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -1257,12 +1259,30 @@ app.whenReady().then(() => {
       return { ok: false, error: err instanceof Error ? err.message : 'The update could not be installed.' };
     }
   });
-  // Look for a newer release shortly after launch and every few hours; the Home page shows it.
+  // Look for a newer release shortly after launch and every hour. The Home page shows it, and a
+  // desktop notification announces each new version once (clicking it installs the update).
+  const notifiedFile = path.join(app.getPath('userData'), 'update-notified.txt');
+  const alreadyNotified = (version: string) => {
+    try { return readFileSync(notifiedFile, 'utf8').trim() === version; } catch { return false; }
+  };
   const announceUpdate = () => void checkForUpdate().then((info) => {
-    if (info.available) companion?.webContents.send('update:available', info);
+    if (!info.available || !info.latest) return;
+    companion?.webContents.send('update:available', info);
+    if (alreadyNotified(info.latest) || !Notification.isSupported()) return;
+    try { writeFileSync(notifiedFile, info.latest); } catch { /* still notify this session */ }
+    const note = new Notification({
+      title: `Unvibe ${info.latest} is ready`,
+      body: 'Click to update now. It takes about a minute and reopens by itself.',
+      silent: false,
+    });
+    note.on('click', () => {
+      openCompanion();
+      void installUpdate((pct) => companion?.webContents.send('update:progress', pct)).catch(() => undefined);
+    });
+    note.show();
   }).catch(() => undefined);
   setTimeout(announceUpdate, 8000);
-  setInterval(announceUpdate, 4 * 60 * 60_000);
+  setInterval(announceUpdate, 60 * 60_000);
 
   ipcMain.handle('gift:status', async () => {
     const email = store().account()?.email ?? null;

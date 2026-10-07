@@ -76,7 +76,20 @@ jobs:
         run: |
           # An unset repo secret arrives as an empty string, which electron-builder misreads as a path.
           if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; fi
-          npx electron-builder ${{ matrix.platformFlag }} --publish always
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            # Spotlight indexing a freshly mounted DMG keeps it busy, so "hdiutil detach" fails
+            # and the Apple silicon DMG never uploads. Indexing is useless on a CI runner.
+            sudo mdutil -a -i off >/dev/null 2>&1 || true
+          fi
+          # One retry covers a DMG still busy after the first attempt; already uploaded files are skipped.
+          npx electron-builder ${{ matrix.platformFlag }} --publish always || {
+            echo "Packaging failed once, retrying after detaching leftover disk images."
+            if [ "$RUNNER_OS" = "macOS" ]; then
+              for v in /Volumes/Install\ Unvibe*; do [ -d "$v" ] && hdiutil detach -force "$v" || true; done
+            fi
+            sleep 10
+            npx electron-builder ${{ matrix.platformFlag }} --publish always
+          }
 
       - name: Package (build only, no publish)
         if: startsWith(github.ref, 'refs/tags/app-v') == false && inputs.publish != true

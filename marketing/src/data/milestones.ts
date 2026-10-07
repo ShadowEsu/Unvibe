@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "07 OCT 2026",
     category: "PRODUCT",
+    title: "A notification when a new version is out",
+    summary: "Unvibe now checks for updates every hour and shows a desktop notification once for each new version. Click it and the update installs and reopens by itself. The Mac release build is also sturdier, so the Apple silicon download is never missing.",
+    figure: "v0.1.36",
+  },
+  {
+    date: "07 OCT 2026",
+    category: "PRODUCT",
     title: "Ask Vibe model picker moved into the message box",
     summary: "The model label could cover the Ask Vibe greeting on some window sizes. It now sits inside the message box next to Speak, and its menu opens upward, so nothing overlaps.",
     figure: "v0.1.35",

@@ -66,7 +66,20 @@ function shellQuote(value: string): string {
 }
 
 /** Downloads the installer, then hands off to a detached helper and quits. */
+let installing = false;
+
 export async function installUpdate(onProgress?: (pct: number) => void): Promise<{ ok: boolean; error?: string }> {
+  // The notification and the Home card can both start an install; only one runs.
+  if (installing) return { ok: true };
+  installing = true;
+  try {
+    return await runInstall(onProgress);
+  } finally {
+    installing = false;
+  }
+}
+
+async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boolean; error?: string }> {
   const info = await checkForUpdate(true);
   if (!info.available || !info.url) return { ok: false, error: 'You already have the newest Unvibe.' };
   if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
