@@ -750,9 +750,10 @@
 
 /* Sidebar toggle sits right after the window buttons, and the page title moves clear of
    them when the sidebar is hidden, so nothing overlaps at any window size. */
-:root[data-ui="v3"][data-v7] .shell-tools { left: 84px; top: 8px; }
-:root[data-ui="v3"][data-v7] .shell-tools button { width: 30px; height: 30px; display: grid; place-items: center; }
-:root[data-ui="v3"][data-v7] .layout--side-hidden .topbar { padding-left: 112px; }
+:root[data-ui="v3"][data-v7] .topbar__side { -webkit-app-region: no-drag; display: grid; place-items: center; width: 30px; height: 30px; margin-left: -8px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--v-muted); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .topbar__side:hover { background: var(--v-hover); color: var(--v-ink); }
+:root[data-ui="v3"][data-v7] .topbar__side svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+:root[data-ui="v3"][data-v7] .layout--side-hidden .topbar { padding-left: 86px; }
 :root[data-ui="v3"][data-v7] .side-resize { width: 12px; right: -4px; }
 
 /* Plan: Teams card */
@@ -768,3 +769,10 @@
 .chat-composer__bar .chat-ai__btn { max-width: 240px; }
 .chat-composer__bar .chat-ai__menu { top: auto; bottom: calc(100% + 6px); }
 .chat-composer__hint { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The fixed drag strip sits behind the page so it never eats clicks. The topbar and the
+   sidebar are the drag areas instead; every control inside them opts out. */
+:root[data-ui="v3"][data-v7] .titlebar { z-index: 0; pointer-events: none; }
+:root[data-ui="v3"][data-v7] .side { -webkit-app-region: drag; }
+:root[data-ui="v3"][data-v7] .side button, :root[data-ui="v3"][data-v7] .side a, :root[data-ui="v3"][data-v7] .side input,
+:root[data-ui="v3"][data-v7] .side nav, :root[data-ui="v3"][data-v7] .side [role="button"] { -webkit-app-region: no-drag; }
+:root[data-ui="v3"][data-v7] .topbar a, :root[data-ui="v3"][data-v7] .topbar input, :root[data-ui="v3"][data-v7] .topbar kbd { -webkit-app-region: no-drag; }

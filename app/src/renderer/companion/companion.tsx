@@ -1809,13 +1809,9 @@ function App() {
 
   return (
     <>
-      <div className="titlebar">
-        <div className="shell-tools">
-          <button type="button" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar (⌘\\)' : 'Hide sidebar (⌘\\)'} onClick={() => toggleSideRef.current()}>
-            <Icon d="M4 4h12v12H4z M7 4v12" />
-          </button>
-        </div>
-      </div>
+      {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
+          clicks on anything layered over them, whatever the z-index. */}
+      <div className="titlebar" />
       <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}`}>
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
         <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
@@ -1890,6 +1886,9 @@ function App() {
           <header className="topbar">
             <button type="button" className="nav-toggle" aria-label="Open menu" onClick={() => setNavOpen(true)}>
               <Icon d="M3 6h14 M3 10h14 M3 14h14" />
+            </button>
+            <button type="button" className="topbar__side" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar (⌘\\)' : 'Hide sidebar (⌘\\)'} onClick={() => toggleSideRef.current()}>
+              <Icon d="M4 4h12v12H4z M7 4v12" />
             </button>
             <h2 className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
             <span className="topbar__spacer" />

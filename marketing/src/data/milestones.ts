@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "07 OCT 2026",
     category: "PRODUCT",
+    title: "Sidebar button really works now",
+    summary: "On Mac, the strip you drag the window by was sitting on top of the sidebar button, so clicks moved the window instead. The button now lives in the page header next to the title, and the header and sidebar are where you drag the window.",
+    figure: "v0.1.37",
+  },
+  {
+    date: "07 OCT 2026",
+    category: "PRODUCT",
     title: "A notification when a new version is out",
     summary: "Unvibe now checks for updates every hour and shows a desktop notification once for each new version. Click it and the update installs and reopens by itself. The Mac release build is also sturdier, so the Apple silicon download is never missing.",
     figure: "v0.1.36",
