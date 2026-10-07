@@ -763,3 +763,8 @@
 .plan-pick__card--teams .seat-step button { width: 30px; height: 30px; border: 1.5px solid #141414; border-radius: 8px; background: #fff; color: #141414; font-weight: 800; cursor: pointer; }
 .plan-pick__card--teams .seat-step button:disabled { opacity: .4; cursor: default; }
 .plan-pick__card--teams .seat-step b { min-width: 22px; text-align: center; font-size: 16px; }
+/* The model picker lives in the composer bar; its menu opens upward there. */
+.chat-composer__bar .chat-ai { flex: 0 1 auto; min-width: 0; }
+.chat-composer__bar .chat-ai__btn { max-width: 240px; }
+.chat-composer__bar .chat-ai__menu { top: auto; bottom: calc(100% + 6px); }
+.chat-composer__hint { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

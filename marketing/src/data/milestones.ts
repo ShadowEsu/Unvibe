@@ -12,6 +12,13 @@ export interface Milestone {
 export const milestones: Milestone[] = [
   {
     date: "07 OCT 2026",
+    category: "PRODUCT",
+    title: "Ask Vibe model picker moved into the message box",
+    summary: "The model label could cover the Ask Vibe greeting on some window sizes. It now sits inside the message box next to Speak, and its menu opens upward, so nothing overlaps.",
+    figure: "v0.1.35",
+  },
+  {
+    date: "07 OCT 2026",
     category: "COMPANY",
     title: "Unvibe is in Claude for Startups",
     summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals $267,700 in credits and committed cash.",

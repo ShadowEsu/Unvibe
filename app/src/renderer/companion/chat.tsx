@@ -297,14 +297,14 @@ export function Chat({
   const vibeMood = useBuddyMood('idle');
   return (
     <div className={`chat-page${empty ? ' chat-page--empty' : ''}`}>
-      <header className="chat-top">
-        <AiPicker label={aiLabel} usingOwnAi={usingOwnAi} onOpenSettings={onOpenAiSettings} />
-        {!empty ? (
+      {!empty ? (
+        <header className="chat-top">
+          <span />
           <button type="button" className="ghost-link" onClick={startNew}>
             New question
           </button>
-        ) : null}
-      </header>
+        </header>
+      ) : null}
 
       <div className="chat-stage">
         {empty ? (
@@ -396,7 +396,8 @@ export function Chat({
             />
             {showVoice ? <VoiceTip onClose={() => setShowVoice(false)} /> : null}
             <div className="chat-composer__bar">
-              <span>{empty ? 'Return to send' : 'Return to send, Shift Return for a new line'}</span>
+              <AiPicker label={aiLabel} usingOwnAi={usingOwnAi} onOpenSettings={onOpenAiSettings} />
+              <span className="chat-composer__hint">{empty ? 'Return to send' : 'Return to send, Shift Return for a new line'}</span>
               <button className="chat-mic" type="button" aria-pressed={showVoice} onClick={() => { setShowVoice(true); areaRef.current?.focus(); }}>🎙 Speak</button>
               <button className="chat-send" type="submit" disabled={busy || !draft.trim()} aria-label={busy ? 'Sending' : 'Send'}>
                 {busy ? '·' : '↑'}
