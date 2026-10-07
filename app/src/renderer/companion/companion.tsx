@@ -399,6 +399,15 @@ function PermRow({ compact }: { compact?: boolean }) {
           <button className="act" onClick={check}>Re-check</button>
         </div>
       )}
+      {!granted && !na && (
+        <div className="perm-fix">
+          <p><b>Switched it on but it still says Not granted?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
+          <div className="perm-actions">
+            <button className="act act--primary" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
+            <button className="act" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -731,7 +740,8 @@ function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: str
   return { text: 'Stale', tone: 'stale' };
 }
 
-function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNavigate }: {
+function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
+  onTryVoice: () => void;
   shortcut: string;
   userName?: string;
   profile: Profile | null;
@@ -823,6 +833,14 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
             : 'Select code in any app. Vibe pops up beside it.'}</small>
         </span>
         <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
+      </button>
+      <button type="button" className="voice-cta" onClick={onTryVoice}>
+        <span className="voice-cta__mic" aria-hidden="true">🎙</span>
+        <span className="voice-cta__text">
+          <b>Try voice: ask Vibe out loud</b>
+          <small>Press fn twice, talk about your code, press Return. No typing.</small>
+        </span>
+        <span className="voice-cta__go" aria-hidden="true">→</span>
       </button>
       <div className="today-cols">
         {upNext.length ? (
@@ -1505,7 +1523,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
             <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
             <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
-            <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Hold a button to speak a follow-up. Off by default. Recording never starts in the background. The system speech service may hear the audio.</div></div><Toggle on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
+            <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. To talk: click any question box, press fn twice (or 🌐), speak, press fn, then Return. It uses Mac Dictation, so Unvibe never records in the background. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Dictation settings</button></div></div><Toggle on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
             <div className="setrow"><div><div className="sl">Live change watch</div><div className="sd">Quiet Island notes after meaningful git edits settle. Debounced, grouped, and silent during quiet hours.</div></div><Toggle on={Boolean(settings.features?.live)} onClick={() => onSettings({ features: { ...settings.features, live: !settings.features?.live } })} /></div>
             {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</button></div> : null}
           </>}
@@ -1546,6 +1564,7 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
   const [askSeed, setAskSeed] = useState('');
+  const [voiceTip, setVoiceTip] = useState(false);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
   const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
   const [sideWidth, setSideWidth] = useState(232);
@@ -1843,7 +1862,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`}>
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -1867,6 +1886,7 @@ function App() {
                   usage={usageLine}
                   onRefresh={() => void refresh()}
                   onOpenAiSettings={() => { setSettingsTab('AI'); setSettingsOpen(true); }}
+                  voiceTip={voiceTip}
                 />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />

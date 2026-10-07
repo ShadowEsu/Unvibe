@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "07 OCT 2026",
     category: "PRODUCT",
+    title: "Light panel, voice, easier sharing",
+    summary: "The review panel now opens in light mode to match the app, and its buttons keep their colour instead of turning black. The island fits its stats without cutting off, and the bottom and top right positions open properly. A big Try voice card shows how to ask Vibe out loud with Mac Dictation. Share is now one invite link with Email, X, WhatsApp and LinkedIn buttons. VS Code and Cursor are found wherever they are installed, and Accessibility has a one click fix when macOS gets stuck.",
+    figure: "v0.1.33",
+  },
+  {
+    date: "07 OCT 2026",
+    category: "PRODUCT",
     title: "Google sign-in connects every time",
     summary: "A server bug marked the sign-in code as used while the app was still waiting, so Connect this device said the code was not recognised. That is fixed, and the app now shows the code big and clear so you can match it with the browser.",
     figure: "v0.1.32",

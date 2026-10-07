@@ -113,6 +113,21 @@ function AiPicker({
   );
 }
 
+/** Voice uses the Mac's own Dictation, so it works in any text box and nothing records in the background. */
+export function VoiceTip({ onClose }: { onClose?: () => void }) {
+  return (
+    <div className="voice-tip" role="note">
+      <b>Ask out loud</b>
+      <ol>
+        <li>Your cursor is in the box. Press <kbd>fn</kbd> twice (or <kbd>🌐</kbd> on newer Macs).</li>
+        <li>Talk. Your words appear as you speak.</li>
+        <li>Press <kbd>fn</kbd> once to stop, then <kbd>Return</kbd> to send.</li>
+      </ol>
+      <p>Nothing happens? Turn on Dictation in System Settings, Keyboard. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Open it</button>{onClose ? <> · <button type="button" className="link-btn" onClick={onClose}>Hide</button></> : null}</p>
+    </div>
+  );
+}
+
 export function Chat({
   initialDraft = '',
   providerLabel,
@@ -122,7 +137,9 @@ export function Chat({
   usage,
   onRefresh,
   onOpenAiSettings,
+  voiceTip = false,
 }: {
+  voiceTip?: boolean;
   initialDraft?: string;
   providerLabel: string;
   usingOwnAi: boolean;
@@ -141,6 +158,7 @@ export function Chat({
   const [modelName, setModelName] = useState('');
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [saved, setSaved] = useState<SavedThread[]>([]);
+  const [showVoice, setShowVoice] = useState(voiceTip);
   const threadRef = useRef(newThreadId());
   const startedRef = useRef(new Date().toISOString());
   const endRef = useRef<HTMLDivElement>(null);
@@ -376,8 +394,10 @@ export function Chat({
                 }
               }}
             />
+            {showVoice ? <VoiceTip onClose={() => setShowVoice(false)} /> : null}
             <div className="chat-composer__bar">
               <span>{empty ? 'Return to send' : 'Return to send, Shift Return for a new line'}</span>
+              <button className="chat-mic" type="button" aria-pressed={showVoice} onClick={() => { setShowVoice(true); areaRef.current?.focus(); }}>🎙 Speak</button>
               <button className="chat-send" type="submit" disabled={busy || !draft.trim()} aria-label={busy ? 'Sending' : 'Send'}>
                 {busy ? '·' : '↑'}
               </button>

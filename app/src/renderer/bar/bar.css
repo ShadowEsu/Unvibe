@@ -112,10 +112,15 @@ button { font: inherit; }
 .island__actions button:active { transform: translateY(1px); }
 .island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline: 2px solid #9b7cf6; outline-offset: 1px; }
 
-.island--bottom { --safe-top: 38px; border: 1px solid rgba(255,255,255,.13); border-radius: 13px; }
-.island--bottom .island__compact { grid-template-columns: 1fr 0 1fr; }
-.island--bottom .island__notch { display: none; }
-.island--bottom.island--expanded .island__overview { display: none; }
+.island--bottom { border: 1px solid rgba(255,255,255,.13); border-radius: 13px; }
+/* Floating pill (top right, bottom center, bottom right): no camera notch to dodge. */
+.island:not(.island--attached) .island__compact { grid-template-columns: 1fr 0 1fr; height: 38px; flex: 0 0 38px; }
+.island:not(.island--attached) .island__notch { display: none; }
+.island:not(.island--attached).island--expanded { display: flex; flex-direction: column; }
+.island:not(.island--attached) .island__overview { flex: 1 1 auto; height: auto; min-height: 0; }
+/* At the bottom the card opens upward, so the pill stays where your eyes left it. */
+.island.island--bottom.island--expanded:not(.island--attached) { flex-direction: column-reverse; }
+.island--bottom .island__overview { transform: translateY(5px); padding-top: 11px; }
 
 @media (prefers-reduced-motion: reduce) {
   .island__dots i, .island__overview { animation: none; }

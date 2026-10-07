@@ -1206,10 +1206,24 @@ app.whenReady().then(() => {
 
   // --- permissions ---
   ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));
+  // Each new build has a new ad-hoc signature, so macOS can keep a stale Accessibility entry that
+  // looks switched on but no longer matches. Clear it for this app and ask again.
+  ipcMain.handle('perms:resetAccessibility', async () => {
+    if (!isMac) return { ok: true };
+    await new Promise<void>((resolve) => execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => resolve()));
+    accessibilityGranted(true);
+    return { ok: true };
+  });
+  ipcMain.handle('app:restart', () => { quitting = true; app.relaunch(); app.exit(0); });
   ipcMain.handle('perms:promptAccessibility', () => ({ granted: accessibilityGranted(true) }));
   ipcMain.handle('perms:openAccessibility', () => {
     if (isMac)
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    return { ok: true };
+  });
+  // Voice questions use macOS Dictation; this opens the Keyboard pane where it is switched on.
+  ipcMain.handle('perms:openDictation', () => {
+    if (isMac) void shell.openExternal('x-apple.systempreferences:com.apple.Keyboard-Settings.extension');
     return { ok: true };
   });
 

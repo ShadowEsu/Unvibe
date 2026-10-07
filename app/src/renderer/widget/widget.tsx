@@ -135,33 +135,6 @@ function newTab(id: string, label: string): TabState {
   };
 }
 
-interface SpeechRec {
-  lang: string;
-  interimResults: boolean;
-  onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start(): void;
-  stop(): void;
-}
-
-function startSpeech(onText: (text: string) => void, onStop: () => void): SpeechRec | null {
-  const Ctor = (window as unknown as { webkitSpeechRecognition?: new () => SpeechRec }).webkitSpeechRecognition;
-  if (!Ctor) return null;
-  const rec = new Ctor();
-  rec.lang = 'en-US';
-  rec.interimResults = true;
-  rec.onresult = (ev) => {
-    const last = ev.results[ev.results.length - 1];
-    const transcript = last?.[0]?.transcript?.trim();
-    if (transcript) onText(transcript);
-  };
-  rec.onerror = () => onStop();
-  rec.onend = () => onStop();
-  rec.start();
-  return rec;
-}
-
 function prettyAccel(accel: string): string {
   return prettyShortcut(accel);
 }
@@ -321,15 +294,16 @@ function applyTheme(preference: 'system' | 'light' | 'dark') {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
-const PANEL_THEME_KEY = 'unvibe.panelTheme';
+// v2 key: paper became the default look, matching the companion window.
+const PANEL_THEME_KEY = 'unvibe.panelTheme2';
 
 function Widget() {
   const [tabs, setTabs] = useState<TabState[]>([newTab('1', 'Review')]);
   const [activeTabId, setActiveTabId] = useState('1');
   const [collapsed, setCollapsed] = useState(false);
-  // Panel look is a per-device preference: an ink terminal (default) or paper.
+  // Panel look is a per-device preference: paper (default) or an ink terminal.
   const [panelTheme, setPanelTheme] = useState<'dark' | 'light'>(() => {
-    try { return window.localStorage.getItem(PANEL_THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+    try { return window.localStorage.getItem(PANEL_THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
   });
   const [away, setAway] = useState(false);
   useEffect(() => {
@@ -362,7 +336,6 @@ function Widget() {
   const [revealedText, setRevealedText] = useState('');
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
   const [listening, setListening] = useState(false);
-  const speechRef = useRef<SpeechRec | null>(null);
 
   useEffect(() => {
     const refreshUsage = () => {
@@ -1120,31 +1093,13 @@ function Widget() {
                       type="button"
                       className={`btn ghost${listening ? ' rec' : ''}`}
                       aria-pressed={listening}
-                      disabled={stillTyping}
-                      onMouseDown={() => {
-                        if (listening) return;
-                        const rec = startSpeech((text) => {
-                          setTabs((prev) => patchTab(prev, activeTabId, { ask: text }));
-                        }, () => setListening(false));
-                        if (!rec) {
-                          setTabs((prev) => patchTab(prev, activeTabId, { ask: 'Speech is not available in this build.' }));
-                          return;
-                        }
-                        speechRef.current = rec;
-                        setListening(true);
-                      }}
-                      onMouseUp={() => {
-                        speechRef.current?.stop();
-                        speechRef.current = null;
-                        setListening(false);
-                      }}
-                      onMouseLeave={() => {
-                        speechRef.current?.stop();
-                        speechRef.current = null;
-                        setListening(false);
+                      title="Ask out loud with Mac Dictation"
+                      onClick={() => {
+                        setListening((v) => !v);
+                        (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus();
                       }}
                     >
-                      {listening ? 'Listening' : 'Hold to ask'}
+                      🎙 Speak
                     </button>
                   ) : null}
                   <button
@@ -1161,6 +1116,9 @@ function Widget() {
                     ↑
                   </button>
                 </div>
+                {listening ? (
+                  <p className="voice-note" role="note">Press <kbd>fn</kbd> twice (or <kbd>🌐</kbd>), talk, press <kbd>fn</kbd> again, then <kbd>Return</kbd>. Nothing? Turn on Dictation in System Settings, Keyboard.</p>
+                ) : null}
               </div>
             </div>
           )}

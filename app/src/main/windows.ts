@@ -56,10 +56,13 @@ function barBounds(position: BarPosition, w: number, h: number): { x: number; y:
 }
 
 /** Compact top surface. Width leaves independent controls on both sides of a Mac notch. */
-const FLOATING_BAR_W = 220;
+const FLOATING_BAR_W = 184;
 const BOTTOM_BAR_COMPACT_W = 184;
-const BOTTOM_BAR_W = 356;
-const BAR_EXPANDED_BODY_H = 196;
+/** Floating (not attached) bars open into a card this wide, above or below the pill. */
+const FLOATING_EXPANDED_W = 372;
+/** Height of the expanded overview under (or above) the compact row. Fits note + actions. */
+const BAR_EXPANDED_BODY_H = 244;
+const FLOATING_ROW_H = 38;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
@@ -85,7 +88,13 @@ function islandSafeTop(position: BarPosition): number {
 }
 
 function compactBarHeight(position: BarPosition): number {
-  return position.startsWith('bottom') ? 38 : Math.max(islandMetrics().h, islandSafeTop(position));
+  return position === 'top-center' ? Math.max(islandMetrics().h, islandSafeTop(position)) : FLOATING_ROW_H;
+}
+
+function barSize(position: BarPosition, expanded: boolean): { width: number; height: number } {
+  if (!expanded) return { width: compactBarWidth(position), height: compactBarHeight(position) };
+  if (position === 'top-center') return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
+  return { width: FLOATING_EXPANDED_W, height: BAR_EXPANDED_BODY_H + FLOATING_ROW_H };
 }
 
 export function createBar(): BrowserWindow {
@@ -130,9 +139,7 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   if (barIsExpanded === expanded && !force) return;
   barIsExpanded = expanded;
   const position = settings().all().barPosition;
-  const bottom = position.startsWith('bottom');
-  const width = bottom && expanded ? BOTTOM_BAR_W : compactBarWidth(position);
-  const height = expanded ? (bottom ? 56 : BAR_EXPANDED_BODY_H + islandSafeTop(position)) : compactBarHeight(position);
+  const { width, height } = barSize(position, expanded);
   const { x, y } = barBounds(position, width, height);
   // Hover previews must never activate the app or interrupt typing in the editor.
   win.setFocusable(false);
@@ -146,9 +153,8 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
 /** Move the bar to a new position (called when the setting changes). */
 export function positionBar(win: BrowserWindow): void {
   const position = settings().all().barPosition;
-  const bottom = position.startsWith('bottom');
-  const width = bottom && barIsExpanded ? BOTTOM_BAR_W : compactBarWidth(position);
-  const height = barIsExpanded ? (bottom ? 56 : BAR_EXPANDED_BODY_H + islandSafeTop(position)) : compactBarHeight(position);
+  const { width, height } = barSize(position, barIsExpanded);
+  win.setMovable(position !== 'top-center');
   const { x, y } = barBounds(position, width, height);
   win.setBounds({ x, y, width, height });
   if (position === 'top-center') win.setPosition(x, y);

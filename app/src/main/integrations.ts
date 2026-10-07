@@ -78,7 +78,13 @@ function desktopBridgePath(): string | null {
 }
 
 function editorCli(id: EditorId): string | null {
-  return EDITORS[id].cliPaths.find(existsSync) ?? null;
+  const fixed = EDITORS[id].cliPaths.find(existsSync);
+  if (fixed) return fixed;
+  // The editor may live outside /Applications (Downloads, an external drive); use its real path.
+  const bundle = macAppPath(EDITORS[id].appName);
+  if (!bundle) return null;
+  const cli = path.join(bundle, 'Contents', 'Resources', 'app', 'bin', id === 'cursor' ? 'cursor' : 'code');
+  return existsSync(cli) ? cli : null;
 }
 
 function hasDesktopBridge(id: EditorId): boolean {
@@ -114,13 +120,43 @@ export async function installDesktopBridge(id: EditorId): Promise<{ ok: boolean;
   }
 }
 
-/** True when the app is installed: /Applications on macOS, the usual install folders on Windows. */
+/** Bundle ids, so Spotlight can find an app wherever it lives (Downloads, external drives). */
+const MAC_BUNDLE_IDS: Record<string, string> = {
+  Cursor: 'com.todesktop.230313mzl4w4u92',
+  'Visual Studio Code': 'com.microsoft.VSCode',
+  Zed: 'dev.zed.Zed',
+  Windsurf: 'com.exafunction.windsurf',
+  Claude: 'com.anthropic.claudefordesktop',
+  iTerm: 'com.googlecode.iterm2',
+  iTerm2: 'com.googlecode.iterm2',
+  Warp: 'dev.warp.Warp-Stable',
+  'GitHub Desktop': 'com.github.GitHubClient',
+};
+const appPathCache = new Map<string, { at: number; path: string | null }>();
+
+/** Where a Mac app is installed, or null. Checks the usual folders, then asks Spotlight. */
+function macAppPath(name: string): string | null {
+  const usual = [`/Applications/${name}.app`, path.join(homedir(), 'Applications', `${name}.app`)].find(existsSync);
+  if (usual) return usual;
+  const id = MAC_BUNDLE_IDS[name];
+  if (!id || process.platform !== 'darwin') return null;
+  const cached = appPathCache.get(name);
+  if (cached && Date.now() - cached.at < 60_000) return cached.path;
+  let found: string | null = null;
+  try {
+    const out = spawnSync('mdfind', [`kMDItemCFBundleIdentifier == '${id}'`], { timeout: 2500, encoding: 'utf8' });
+    found = (out.stdout ?? '').split('\n').map((line) => line.trim()).find((line) => line.endsWith('.app') && !line.startsWith('/Volumes/') && existsSync(line)) ?? null;
+  } catch {
+    found = null;
+  }
+  appPathCache.set(name, { at: Date.now(), path: found });
+  return found;
+}
+
+/** True when the app is installed: anywhere Spotlight knows on macOS, the usual install folders on Windows. */
 function hasMacApp(name: string): boolean {
   if (IS_WIN) return (WINDOWS_APPS[name] ?? []).some(existsSync);
-  return [
-    `/Applications/${name}.app`,
-    path.join(homedir(), 'Applications', `${name}.app`),
-  ].some(existsSync);
+  return macAppPath(name) !== null;
 }
 
 let gitCache: boolean | null = null;

@@ -113,6 +113,9 @@ const api = {
   accessibility: () => ipcRenderer.invoke('perms:accessibility'),
   promptAccessibility: () => ipcRenderer.invoke('perms:promptAccessibility'),
   openAccessibility: () => ipcRenderer.invoke('perms:openAccessibility'),
+  openDictation: () => ipcRenderer.invoke('perms:openDictation'),
+  resetAccessibility: () => ipcRenderer.invoke('perms:resetAccessibility'),
+  restartApp: () => ipcRenderer.invoke('app:restart'),
 
   // privacy
   openPrivacy: () => ipcRenderer.invoke('app:openPrivacy'),

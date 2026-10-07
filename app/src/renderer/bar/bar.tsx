@@ -230,7 +230,7 @@ function Bar() {
   return (
     <div
       className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${streakUp ? ' island--streak-up' : ''} island--phase-${phase}`}
-      style={{ '--safe-top': `${attached ? notchSafeTop() : 0}px` } as React.CSSProperties}
+      style={{ '--safe-top': `${attached ? notchSafeTop() : 38}px` } as React.CSSProperties}
       onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
       onMouseLeave={scheduleClose}
       onClick={(event) => { if (!(event.target as HTMLElement).closest('button')) setPanelExpanded(!expandedRef.current); }}

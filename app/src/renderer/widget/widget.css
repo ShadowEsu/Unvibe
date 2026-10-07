@@ -1520,3 +1520,13 @@ code.inline {
 :root[data-panel="light"] .card .head__status i { box-shadow: 0 0 0 3px rgb(20 20 20 / 0.08); }
 :root[data-panel="light"] .card .head__actions button { color: #5f5c55; background: #fff; }
 .card .head__theme { font-size: 13px; }
+
+/* Buttons never flip to black on hover or press: they keep their colour and just lift or sink. */
+.card .btn:not(:disabled):hover, .card .btn:not(:disabled):focus-visible, .card .btn:not(:disabled):active { background: var(--p-lime); color: #141413; border-color: transparent; filter: none; }
+.card .btn.ghost:not(:disabled):hover, .card .btn.ghost:not(:disabled):focus-visible, .card .btn.ghost:not(:disabled):active { background: var(--p-raised); color: var(--p-ink); border-color: var(--p-line); }
+.card .btn:focus-visible { outline: 2px solid var(--p-ink); outline-offset: 2px; }
+:root[data-panel="light"] .card .btn:not(:disabled):hover, :root[data-panel="light"] .card .btn:not(:disabled):focus-visible, :root[data-panel="light"] .card .btn:not(:disabled):active { background: #d6f45a; color: #141414; border-color: #141414; }
+:root[data-panel="light"] .card .btn.ghost:not(:disabled):hover, :root[data-panel="light"] .card .btn.ghost:not(:disabled):focus-visible, :root[data-panel="light"] .card .btn.ghost:not(:disabled):active { background: #f1eee6; color: #141414; border-color: #141414; }
+:root[data-panel="light"] .card .btn:not(:disabled):active { box-shadow: none; transform: translateY(3px); }
+.card .voice-note { margin: 8px 2px 0; font-size: 12px; line-height: 1.5; color: var(--p-muted); }
+.card .voice-note kbd { padding: 1px 5px; border: 1px solid var(--p-line); border-radius: 5px; background: var(--p-raised); color: var(--p-ink); font: 600 11px ui-monospace, Menlo, monospace; }
