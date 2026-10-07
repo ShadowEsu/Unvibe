@@ -11,6 +11,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "07 OCT 2026",
+    category: "PRODUCT",
+    title: "Google sign-in connects every time",
+    summary: "A server bug marked the sign-in code as used while the app was still waiting, so Connect this device said the code was not recognised. That is fixed, and the app now shows the code big and clear so you can match it with the browser.",
+    figure: "v0.1.32",
+  },
+  {
     date: "06 OCT 2026",
     category: "PRODUCT",
     title: "Opens on every Mac, M1 and newer included",

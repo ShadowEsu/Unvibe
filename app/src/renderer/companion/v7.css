@@ -696,3 +696,11 @@
 :root[data-ui="v3"][data-v7] .update-card__bar b { display: block; height: 100%; background: #d6f45a; transition: width .3s; }
 :root[data-ui="v3"][data-v7] .update-card__actions { display: grid; gap: 4px; justify-items: center; }
 :root[data-ui="v3"][data-v7] .update-card__later { border: 0; background: none; color: #777; font-size: 12px; cursor: pointer; }
+
+/* Sign in: readable note and a big code to compare with the browser */
+:root[data-ui="v3"][data-v7] .login .field-note,
+:root[data-ui="v3"][data-v7] .signin .field-note { color: #5a5a5a; }
+:root[data-ui="v3"][data-v7] .login .field-err { color: #b42318; }
+:root[data-ui="v3"][data-v7] .signin__code { display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px; border: 1.5px dashed #141414; border-radius: 14px; background: #f6f1e7; text-align: center; }
+:root[data-ui="v3"][data-v7] .signin__code span { font-size: 13px; color: #3b3b3b; line-height: 1.45; }
+:root[data-ui="v3"][data-v7] .signin__code b { font: 700 22px/1.2 ui-monospace, Menlo, monospace; letter-spacing: .12em; color: #141414; user-select: all; }

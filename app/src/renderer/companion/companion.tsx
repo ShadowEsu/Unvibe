@@ -362,11 +362,14 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
         {busy ? 'Waiting for Google sign-in…' : (label ?? 'Continue with Google')}
       </button>
       {err && <div className="field-err">{err}</div>}
-      <div className="field-note">
-        {code
-          ? `${browserOpened ? 'Finish in your browser' : 'Your browser did not open'} — sign in with Google, then approve code ${code}.`
-          : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
-      </div>
+      {code ? (
+        <div className="signin__code" aria-live="polite">
+          <span>{browserOpened ? 'Finish in your browser. Check this code matches, then press Connect this device:' : 'Your browser did not open. Press Open browser, then check this code matches:'}</span>
+          <b>{code}</b>
+        </div>
+      ) : (
+        <div className="field-note">Opens your browser for Google sign-in. Unvibe never sees your Google password.</div>
+      )}
       {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startDevice()}>Retry</button></div> : null}
     </div>
   );
