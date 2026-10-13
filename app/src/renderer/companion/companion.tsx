@@ -1388,7 +1388,7 @@ function IntegrationsPanel() {
   }> | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  const load = () => void window.unvibe.integrations().then((result) => setItems(result as typeof items));
+  const load = () => void window.unvibe.integrations().then((result) => setItems(Array.isArray(result) ? result as typeof items : []));
   useEffect(load, []);
   const installBridge = async (id: string, name: string) => {
     if (id !== 'cursor' && id !== 'vscode') return;

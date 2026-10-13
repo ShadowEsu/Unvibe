@@ -91,6 +91,24 @@ jobs:
             npx electron-builder ${{ matrix.platformFlag }} --publish always
           }
 
+      # SHA-256 for every installer, uploaded next to it, so people (and install.sh) can verify
+      # the download before running it.
+      - name: Publish checksums
+        if: startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v=$(node -p "require('./package.json').version")
+          cd release
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            f=SHA256SUMS-mac.txt; shasum -a 256 Unvibe-*.dmg > "$f"
+          else
+            f=SHA256SUMS-windows.txt; sha256sum Unvibe-*.exe | sed 's/ \*/  /' > "$f"
+          fi
+          cat "$f"
+          gh release upload "v$v" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+
       - name: Package (build only, no publish)
         if: startsWith(github.ref, 'refs/tags/app-v') == false && inputs.publish != true
         run: npx electron-builder ${{ matrix.platformFlag }} --publish never

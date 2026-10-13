@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { Vibe } from "@/components/paper/Vibe";
+import { BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 
 export const metadata: Metadata = {
   title: "Install help",
@@ -19,6 +20,21 @@ export default function InstallHelpPage() {
         </div>
       </header>
       <FirstOpenSteps />
+      <section className="verify" aria-labelledby="verify-title">
+        <h2 id="verify-title">Check it before you run it</h2>
+        <p>Read anything before it touches your computer. Everything is public:</p>
+        <ul>
+          <li><a href="/install.sh">Read the Mac install script</a> and <a href="/install.ps1">the Windows one</a>. They download from GitHub, check the file, and copy the app into place. Nothing else.</li>
+          <li><a href={`https://github.com/ShadowEsu/Unvibe/releases/tag/${BETA_INSTALL_TAG}`}>The {BETA_INSTALL_TAG} release on GitHub</a>, with every installer and its SHA-256 checksum (<a href={`https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-mac.txt`}>Mac</a>, <a href={`https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-windows.txt`}>Windows</a>).</li>
+          <li>The Mac script stops by itself if the download does not match the published checksum.</li>
+        </ul>
+        <p>To check a file you downloaded yourself:</p>
+        <pre><code>{`# Mac
+shasum -a 256 ~/Downloads/Unvibe-*.dmg
+# Windows (PowerShell)
+Get-FileHash $HOME\\Downloads\\Unvibe-*.exe -Algorithm SHA256`}</code></pre>
+        <p>The number it prints should match the line for that file in the checksum list.</p>
+      </section>
       <p className="fos-page__help">Still stuck? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20install%20help">preston@unvibe.site</a> with a screenshot and your Mac or Windows version. A real person answers.</p>
     </main>
   );

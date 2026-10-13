@@ -11,6 +11,19 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "13 OCT 2026",
+    category: "PRODUCT",
+    title: "Installs you can verify",
+    summary: "Every release now publishes a SHA-256 checksum next to each installer, and the one line install for Mac and Windows checks the download against it before anything runs. Install help shows how to read the script and verify a file yourself. The Integrations settings tab also handles an empty editor list without going blank.",
+    figure: "v0.1.38",
+  },
+  {
+    date: "13 OCT 2026",
+    category: "COMPANY",
+    title: "Meet the founder",
+    summary: "unvibe.site/about introduces Preston Susanto: the story behind Unvibe, what he has built before, the communities he leads, and how to reach him directly.",
+  },
+  {
     date: "07 OCT 2026",
     category: "PRODUCT",
     title: "Sidebar button really works now",

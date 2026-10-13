@@ -10,6 +10,7 @@ const links = [
   { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "/pricing" },
   { label: "Change Log", href: "/releases" },
+  { label: "Founder", href: "/about" },
 ];
 
 export function Nav() {

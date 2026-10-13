@@ -52,6 +52,13 @@ export const faqItems: FaqItem[] = [
     category: "platform",
   },
   {
+    id: "app-or-extension",
+    question: "Is Unvibe an extension or an app? How does it get context?",
+    answer:
+      "It is a desktop app for Mac and Windows that runs beside your editor, not an editor extension. When you press ⌘U it copies only the code you selected, plus the file name and language. For change briefs it reads the git diff of the project on your Mac. Secrets like API keys and .env values are filtered on your computer before anything is sent, and nothing runs in the background.",
+    category: "product",
+  },
+  {
     id: "screen",
     question: "Does it read my entire screen?",
     answer:

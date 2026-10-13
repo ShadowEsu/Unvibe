@@ -641,3 +641,47 @@ p { font-size: 1.02rem; }
 .reward-track i.on { background: #d6f45a !important; }
 .reward-note a { color: #141414 !important; text-decoration: underline; }
 .reward-error { color: #b42318 !important; }
+
+/* Founder page */
+.founder-about { background: #f6f1e7; color: #141414; padding: 96px 0 80px; }
+.founder-about__hero { display: grid; grid-template-columns: auto 1fr; gap: 36px; align-items: center; padding-top: 24px; padding-bottom: 36px; }
+.founder-about__avatar { position: relative; width: 168px; height: 168px; border: 3px solid #141414; border-radius: 50%; background: #d6f45a; display: grid; place-items: center; box-shadow: 6px 6px 0 #141414; }
+.founder-about__avatar span { font: 800 64px/1 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.04em; }
+.founder-about__avatar i { position: absolute; right: -14px; bottom: -6px; }
+.founder-about__eyebrow { margin: 0 0 6px; font: 700 13px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; color: #5a5a5a; }
+.founder-about h1 { margin: 0; font: 800 clamp(36px, 6vw, 64px)/1.02 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.04em; }
+.founder-about h1 em { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-style: italic; }
+.founder-about__lead { max-width: 640px; margin: 16px 0 0; font-size: 18px; line-height: 1.6; color: #2e2e2e; }
+.founder-about__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.founder-about__btn { display: inline-flex; align-items: center; padding: 10px 18px; border: 2px solid #141414; border-radius: 12px; background: #fff; color: #141414; font-weight: 700; text-decoration: none; box-shadow: 3px 3px 0 #141414; transition: transform 140ms ease, box-shadow 140ms ease; }
+.founder-about__btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #141414; }
+.founder-about__btn--lime { background: #d6f45a; }
+.founder-about__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+.founder-about__card { padding: 26px 28px; border: 2px solid #141414; border-radius: 20px; background: #fff; box-shadow: 4px 4px 0 #141414; }
+.founder-about__card h2, .founder-about__h2, .founder-about__contact h2 { margin: 0 0 12px; font: 800 26px/1.15 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.03em; }
+.founder-about__card p { margin: 0 0 12px; line-height: 1.65; color: #2e2e2e; }
+.founder-about__card ul { margin: 0; padding-left: 18px; line-height: 1.7; color: #2e2e2e; }
+.founder-about__facts { list-style: none; padding: 0 !important; display: grid; gap: 8px; margin-top: 14px !important; }
+.founder-about__facts li { padding: 10px 14px; border: 1.5px solid #e4dfd3; border-radius: 12px; background: #fbfaf6; }
+.founder-about__h2 { margin-top: 40px !important; }
+.founder-about__track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.founder-about__item { padding: 20px 22px; border: 2px solid #141414; border-radius: 18px; background: #fff; }
+.founder-about__item h3 { margin: 0 0 6px; font: 800 18px/1.2 "Bricolage Grotesque", Inter, sans-serif; }
+.founder-about__item p { margin: 0; font-size: 15px; line-height: 1.55; color: #3b3b3b; }
+.founder-about__contact { margin-top: 40px; padding: 36px; border: 2px solid #141414; border-radius: 24px; background: #fff; box-shadow: 5px 5px 0 #141414; text-align: center; }
+.founder-about__contact p { margin: 0 0 18px; color: #3b3b3b; }
+@media (max-width: 820px) {
+  .founder-about__hero { grid-template-columns: 1fr; justify-items: start; }
+  .founder-about__avatar { width: 120px; height: 120px; }
+  .founder-about__avatar span { font-size: 46px; }
+  .founder-about__grid, .founder-about__track { grid-template-columns: 1fr; }
+}
+/* Install help: verify before running */
+.fos-page .verify { max-width: 760px; margin: 28px auto 0; padding: 24px 26px; border: 2px solid #141414; border-radius: 20px; background: #fff; box-shadow: 4px 4px 0 #141414; color: #141414; }
+.fos-page .verify h2 { margin: 0 0 8px; font: 800 24px/1.2 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.03em; }
+.fos-page .verify p, .fos-page .verify li { line-height: 1.6; color: #2e2e2e; }
+.fos-page .verify ul { padding-left: 18px; }
+.fos-page .verify a { color: #141414; font-weight: 700; text-decoration: underline; text-decoration-color: #d6f45a; text-decoration-thickness: 3px; }
+.fos-page .verify pre { margin: 10px 0; padding: 12px 14px; border-radius: 12px; background: #141414; color: #f4f2ea; font: 13px/1.6 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }
+.fos-page .fos-page__help { max-width: 760px; margin: 18px auto 0; padding: 14px 18px; border: 2px solid #141414; border-radius: 14px; background: #fff; color: #2e2e2e !important; }
+.fos-page .fos-page__help a { color: #141414 !important; font-weight: 700; }

@@ -39,6 +39,18 @@ trap cleanup EXIT
 
 echo "Downloading Unvibe beta…"
 curl -fL --progress-bar "$URL" -o "$work/Unvibe.dmg"
+
+# Check the download against the SHA-256 published with the release, when there is one.
+SUMS_URL="https://github.com/ShadowEsu/Unvibe/releases/download/\${TAG}/SHA256SUMS-mac.txt"
+if curl -fsSL -m 20 "$SUMS_URL" -o "$work/SHA256SUMS" 2>/dev/null; then
+  expected="$(awk -v a="$ASSET" '$2 == a || $2 == "*"a { print $1; exit }' "$work/SHA256SUMS")"
+  actual="$(shasum -a 256 "$work/Unvibe.dmg" | awk '{ print $1 }')"
+  if [ -n "$expected" ] && [ "$expected" != "$actual" ]; then
+    echo "The download does not match the published checksum. Stopping so nothing unexpected is installed."
+    exit 1
+  fi
+  [ -n "$expected" ] && echo "Checksum verified."
+fi
 xattr -cr "$work/Unvibe.dmg" 2>/dev/null || true
 
 mkdir -p "$mountPoint"
@@ -145,6 +157,23 @@ if (-not \$downloaded) {
 }
 if (-not (Test-Path \$dest) -or (Get-Item \$dest).Length -lt 1000000) {
   Write-Error "Download finished but the installer looks incomplete. Delete \$dest, then run the install command again, or download \$url in your browser."
+  exit 1
+}
+# Check the download against the SHA-256 published with the release, when there is one.
+\$mismatch = \$false
+try {
+  \$sums = (Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/\$tag/SHA256SUMS-windows.txt" -UseBasicParsing -UserAgent \$ua -MaximumRedirection 8 -TimeoutSec 20).Content
+  if (\$sums -is [byte[]]) { \$sums = [System.Text.Encoding]::UTF8.GetString(\$sums) }
+  \$line = (\$sums -split "\`n") | Where-Object { \$_ -match [regex]::Escape(\$asset) } | Select-Object -First 1
+  if (\$line) {
+    \$expected = (\$line -split '\\s+')[0].Trim().ToLower()
+    \$actual = (Get-FileHash -Path \$dest -Algorithm SHA256).Hash.ToLower()
+    if (\$expected -ne \$actual) { \$mismatch = \$true } else { Write-Host "Checksum verified." }
+  }
+} catch {}
+if (\$mismatch) {
+  Remove-Item -Force \$dest -ErrorAction SilentlyContinue
+  Write-Host "The download does not match the published checksum. Stopping so nothing unexpected runs."
   exit 1
 }
 try { Unblock-File -Path \$dest -ErrorAction Stop } catch {}

@@ -121,14 +121,13 @@ function ColorTikTokMark() {
 }
 
 const socialProfiles = [
-  { name: "X", href: X_URL, Mark: XMark },
+  // X is hidden until the handle is confirmed (x.com/unvibe_app is a 404).
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: LinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: InstagramMark },
   { name: "TikTok", href: TIKTOK_URL, Mark: TikTokMark },
 ] as const;
 
 const followSum = [
-  { name: "X", href: X_URL, Mark: ColorXMark },
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: ColorLinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: ColorInstagramMark },
   { name: "TikTok", href: TIKTOK_URL, Mark: ColorTikTokMark },

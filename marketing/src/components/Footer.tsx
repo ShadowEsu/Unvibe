@@ -15,6 +15,7 @@ const product = [
 ];
 
 const company = [
+  ["Founder", "/about"],
   ["Growth", "/build"],
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],
@@ -44,7 +45,7 @@ export function Footer() {
         </div>
       ) : null}
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
-        <p>© {new Date().getFullYear()} Unvibe. Perth, Australia.</p>
+        <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
         <p className="paper-footer__status">
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>{"⌘"}K</kbd> to search, or select any text and press <kbd>{"⌘"}U</kbd>
         </p>

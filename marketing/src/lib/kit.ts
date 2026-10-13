@@ -148,6 +148,7 @@ export function kitSections(): KitSection[] {
         `Windows direct download: ${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
         `Pricing: ${SITE}/pricing`,
         `Investors: ${SITE}/investors`,
+        `Founder page: ${SITE}/about`,
         `Changelog: ${SITE}/releases`,
         `Referral link format: ${SITE}/?ref=CODE (CODE = the person's 8 character code)`,
         "Founder email: preston@unvibe.site",
