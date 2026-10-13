@@ -1,0 +1,106 @@
+name: Real device test
+
+# Installs a published Unvibe release on real macOS and Windows machines, walks through
+# onboarding, Google sign-in (up to Google's own page), every page, the editor shortcut path
+# and the global shortcut, and uploads a screenshot of every step plus a pass/fail report.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to test, without the v (empty = latest on unvibe.site)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  walkthrough:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: mac
+          - os: windows-latest
+            label: windows
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Pick the version
+        id: ver
+        shell: bash
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then v=$(curl -fsSL https://unvibe.site/install.sh | sed -n 's/^TAG=".*:-v\([0-9.]*\)}"$/\1/p' | head -1); fi
+          echo "Testing Unvibe $v"
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Install Playwright (driver and Chromium only)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null
+          npm install playwright@1.48.2 >/dev/null
+          npx playwright install chromium
+
+      - name: Install Unvibe (Mac)
+        if: matrix.label == 'mac'
+        shell: bash
+        run: |
+          v="${{ steps.ver.outputs.v }}"
+          arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
+          curl -fL -o "$RUNNER_TEMP/Unvibe.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-mac-$arch.dmg"
+          mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/Unvibe.dmg"
+          ditto "$mnt/Unvibe.app" /Applications/Unvibe.app
+          hdiutil detach "$mnt" -force || true
+          xattr -cr /Applications/Unvibe.app
+          codesign --verify --deep --strict /Applications/Unvibe.app && echo "signature valid"
+          # Let Unvibe and the test's keystroke helpers use Accessibility, like a user switching it on.
+          db="/Library/Application Support/com.apple.TCC/TCC.db"
+          for c in com.unvibe.app com.apple.systemevents com.apple.Terminal; do
+            sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','$c',0,2,4,1,'UNUSED',0);" || true
+          done
+          for p in /bin/bash /usr/bin/osascript "$(command -v node)" /usr/local/opt/runner/provisioner/provisioner; do
+            sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','$p',1,2,4,1,'UNUSED',0);" || true
+          done
+          echo "UNVIBE_EXE=/Applications/Unvibe.app/Contents/MacOS/Unvibe" >> "$GITHUB_ENV"
+
+      - name: Install Unvibe (Windows)
+        if: matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.v }}"
+          $setup = "$env:RUNNER_TEMP\Unvibe-setup.exe"
+          Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-setup.exe" -OutFile $setup
+          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { $exe = Get-ChildItem "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 }
+          if (-not $exe) { Write-Error 'Unvibe.exe was not installed'; exit 1 }
+          "UNVIBE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Walk through the app
+        shell: bash
+        env:
+          SHOTS_DIR: ${{ runner.temp }}/shots
+          UNVIBE_OS: ${{ matrix.label }}
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: |
+          cp app/e2e/real-device.mjs "$RUNNER_TEMP/pw/real-device.mjs"
+          cd "$RUNNER_TEMP/pw" && node real-device.mjs
+          cat "$SHOTS_DIR/report.txt"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unvibe-${{ matrix.label }}-walkthrough
+          path: ${{ runner.temp }}/shots
+          retention-days: 14
