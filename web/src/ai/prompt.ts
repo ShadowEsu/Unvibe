@@ -94,7 +94,7 @@ export function buildComprehensionPrompt(payload: ReviewRequestPayload): { syste
   const quizInstruction = payload.quizMode === 'recall'
     ? 'Mode: RECALL. Test whether the reader can name the responsibility or purpose of the code in their own words. Do not test surface syntax.'
     : payload.quizMode === 'scenario'
-      ? 'Mode: SCENARIO. Ask what behaviour, data flow, or risk follows from a small concrete change. Keep the scenario strictly grounded in the supplied code.'
+      ? 'Mode: PROVE IT. Name one specific line or expression from the code, propose a small concrete change to it (remove it, flip a condition, change a value, reorder two lines), and ask what breaks or changes as a result. Options are concrete outcomes, not definitions. Keep the scenario strictly grounded in the supplied code.'
       : 'Mode: QUICK CHECK. Test the central behaviour or intent of the code in one direct question.';
   const system = [
     'You are Uncode. Generate ONE multiple-choice question that tests whether the reader',
@@ -104,6 +104,8 @@ export function buildComprehensionPrompt(payload: ReviewRequestPayload): { syste
     '{"question": string, "options": [string, string, string, string],',
     ' "answerIndex": 0-3, "rationale": string, "concept": kebab-case-slug, "conceptLabel": string}',
     'Exactly one option must be correct. Keep options plausible and similar in length.',
+    'The rationale must quote or point to the exact line(s) that make the answer true, so the reader can check it.',
+    'If the provided code is not enough to know the answer for certain, ask about something it does show instead of guessing.',
     quizInstruction,
   ].join('\n');
   const user = buildUserPrompt({ ...payload, question: undefined });

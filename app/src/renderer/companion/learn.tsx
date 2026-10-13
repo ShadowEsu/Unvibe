@@ -24,9 +24,9 @@ type LessonMode = 'read' | 'restudy' | 'check';
 type QuizMode = 'quick-check' | 'recall' | 'scenario';
 
 const QUIZ_MODES = [
+  { id: 'scenario' as const, label: 'Prove it', detail: 'What breaks if you change this line? The real test of understanding.' },
   { id: 'quick-check' as const, label: 'Quick check', detail: 'One fact from the snippet you already read.' },
   { id: 'recall' as const, label: 'Recall', detail: 'Answer from memory. Peek at the code only if you need it.' },
-  { id: 'scenario' as const, label: 'Scenario', detail: 'What would break if this code changed.' },
 ];
 
 function outcomeName(outcome: string): string {
@@ -120,7 +120,7 @@ export function Learn({
   const [askBusy, setAskBusy] = useState(false);
   const [askError, setAskError] = useState('');
   const [askLeft, setAskLeft] = useState<number | null>(null);
-  const [quizMode, setQuizMode] = useState<QuizMode>('quick-check');
+  const [quizMode, setQuizMode] = useState<QuizMode>('scenario');
   const [card, setCard] = useState<{ question: string; options: string[]; conceptLabel: string; key: number } | null>(null);
   const [result, setResult] = useState<{ correct: boolean; rationale: string; answerIndex?: number } | null>(null);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
