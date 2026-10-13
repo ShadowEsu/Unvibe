@@ -12,7 +12,15 @@ module.exports = async function afterPack(context) {
 
   const appPath = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
   const entitlements = path.join(context.packager.info?.projectDir ?? context.packager.projectDir ?? process.cwd(), 'build', 'entitlements.mac.plist');
-  execFileSync('codesign', ['--force', '--deep', '--sign', '-', '--entitlements', entitlements, appPath], { stdio: 'inherit' });
+  // A stable self-signed identity (set up by the release workflow) keeps the same signature
+  // across versions, so macOS keeps Accessibility and keychain access after updates.
+  const identity = process.env.UNVIBE_SIGN_IDENTITY;
+  const keychain = process.env.UNVIBE_SIGN_KEYCHAIN;
+  const sign = identity ? identity : '-';
+  const args = ['--force', '--deep', '--sign', sign, '--entitlements', entitlements];
+  if (identity) args.push('--options', 'runtime', '--timestamp=none');
+  if (identity && keychain) args.push('--keychain', keychain);
+  execFileSync('codesign', [...args, appPath], { stdio: 'inherit' });
   execFileSync('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath], { stdio: 'inherit' });
-  console.log(`  • ad-hoc signed and verified  ${appPath}`);
+  console.log(`  • ${identity ? `signed with ${identity}` : 'ad-hoc signed'} and verified  ${appPath}`);
 };

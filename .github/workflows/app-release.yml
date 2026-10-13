@@ -55,6 +55,51 @@ jobs:
           if [[ "$UNVIBE_BACKEND" != https://* ]]; then echo "Set the UNVIBE_BACKEND repository secret to the HTTPS API origin."; exit 1; fi
           if [ "${#UNVIBE_TRIAL_TOKEN}" -lt 24 ]; then echo "Set the UNVIBE_TRIAL_TOKEN repository secret to the production trial token."; exit 1; fi
 
+      # The VS Code / Cursor "Desktop Bridge" is what makes ⌘U work inside those editors.
+      # It ships inside the app (extraResources), so build it before packaging and fail loudly
+      # if it is missing instead of shipping an app without it.
+      - name: Build editor bridge
+        working-directory: extension
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          mkdir -p release
+          npm run package < /dev/null
+          test -f release/unvibe-desktop-bridge-0.1.2.vsix
+
+      # Optional stable signing identity (self-signed, not Apple-issued). With it every Mac
+      # build has the same signature, so macOS keeps the Accessibility permission and the
+      # keychain stops asking for the login password after each update. Without the secrets
+      # the build falls back to ad-hoc signing in scripts/afterPackHook.cjs.
+      - name: Prepare stable Mac signing identity
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        env:
+          MAC_SELF_SIGN_P12: ${{ secrets.MAC_SELF_SIGN_P12 }}
+          MAC_SELF_SIGN_PASSWORD: ${{ secrets.MAC_SELF_SIGN_PASSWORD }}
+        run: |
+          if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
+            echo "No stable signing identity configured; builds use ad-hoc signing."
+            exit 0
+          fi
+          kc="$RUNNER_TEMP/unvibe-sign.keychain-db"
+          kcpass="$(uuidgen)"
+          echo "$MAC_SELF_SIGN_P12" | base64 --decode > "$RUNNER_TEMP/sign.p12"
+          security create-keychain -p "$kcpass" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kcpass" "$kc"
+          security import "$RUNNER_TEMP/sign.p12" -k "$kc" -P "$MAC_SELF_SIGN_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kcpass" "$kc" >/dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          # Trust the certificate for code signing on this runner only, so codesign accepts it.
+          security find-certificate -c "Unvibe Self Signed" -p "$kc" > "$RUNNER_TEMP/sign.pem"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$RUNNER_TEMP/sign.pem"
+          rm -f "$RUNNER_TEMP/sign.p12"
+          security find-identity -v -p codesigning "$kc"
+          echo "UNVIBE_SIGN_IDENTITY=Unvibe Self Signed" >> "$GITHUB_ENV"
+          echo "UNVIBE_SIGN_KEYCHAIN=$kc" >> "$GITHUB_ENV"
+
       - name: Build app bundle
         env:
           UNVIBE_BACKEND: ${{ secrets.UNVIBE_BACKEND }}

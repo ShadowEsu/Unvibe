@@ -291,6 +291,26 @@ function accessibilityGranted(prompt = false): boolean {
   return systemPreferences.isTrustedAccessibilityClient(prompt);
 }
 
+/**
+ * Builds without a stable signing identity get a new signature every release, and macOS then
+ * treats the updated app as a stranger: the Accessibility switch still looks on but no longer
+ * applies, so the shortcut cannot read a selection. After an update, if access was lost, clear
+ * the stale entry and ask again once, with a clear note instead of a silent failure.
+ */
+function repairAccessibilityAfterUpdate(): void {
+  if (!isMac) return;
+  const file = path.join(app.getPath('userData'), 'last-run-version.txt');
+  let last = '';
+  try { last = readFileSync(file, 'utf8').trim(); } catch { /* first run */ }
+  const current = app.getVersion();
+  try { writeFileSync(file, current); } catch { /* still repair this launch */ }
+  if (!last || last === current || accessibilityGranted(false)) return;
+  execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => {
+    accessibilityGranted(true);
+    notify('Unvibe updated. Switch Unvibe on in Accessibility once more so the shortcut can read your selection.');
+  });
+}
+
 let quitting = false;
 app.on('before-quit', () => {
   quitting = true;
@@ -550,6 +570,7 @@ app.whenReady().then(() => {
   registerShortcut(s.shortcut);
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
+  repairAccessibilityAfterUpdate();
   if (pendingExternalReview) {
     const request = pendingExternalReview;
     pendingExternalReview = null;

@@ -52,6 +52,13 @@ export const faqItems: FaqItem[] = [
     category: "platform",
   },
   {
+    id: "which-shortcut",
+    question: "Which shortcut do I press?",
+    answer:
+      "Inside VS Code and Cursor, select code and press ⌘U (Ctrl+U on Windows). Unvibe installs a tiny editor bridge for this from Settings, Integrations. Everywhere else, like Terminal, Chrome or Xcode, press Control+U on Mac or Ctrl+U on Windows. On Mac the first time, allow Unvibe in System Settings, Privacy and Security, Accessibility, so it can copy what you selected. You can change the shortcut in Settings.",
+    category: "product",
+  },
+  {
     id: "app-or-extension",
     question: "Is Unvibe an extension or an app? How does it get context?",
     answer:
