@@ -3,6 +3,7 @@ import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { playTone } from '../shared/tones';
+import { deviceName } from '../shared/platform';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -138,7 +139,7 @@ export function Learn({
   const [noteError, setNoteError] = useState('');
   const letters = 'ABCDEFGH';
   const forgetLesson = async (id: string) => {
-    if (!window.confirm('Remove this lesson from this Mac?')) return;
+    if (!window.confirm(`Remove this lesson from this ${deviceName}?`)) return;
     const r = await window.unvibe.forgetLearning(id) as { ok?: boolean };
     if (!r?.ok) return;
     if (openId === id) closeLesson();
@@ -436,7 +437,7 @@ export function Learn({
                 <div className="lesson-note__head">
                   <div>
                     <span className="learning-kicker" id="lesson-note-title">My note</span>
-                    <p>Capture what you want to remember. This stays on this Mac.</p>
+                    <p>Capture what you want to remember. This stays on this {deviceName}.</p>
                   </div>
                   <span className={`lesson-note__status lesson-note__status--${noteStatus}`} role="status">
                     {noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved locally' : noteStatus === 'error' ? 'Not saved' : ''}
@@ -608,7 +609,7 @@ export function Learn({
           <p className="lead lead--tight">
             {intent === 'quiz'
               ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'
-              : 'Saved explanations on this Mac, with source and freshness where we have it.'}
+              : `Saved explanations on this ${deviceName}, with source and freshness where we have it.`}
           </p>
           {intent === 'quiz' && catalog.length > 1 ? (
             <button className="primary-btn mix-start" type="button" onClick={startMix}>

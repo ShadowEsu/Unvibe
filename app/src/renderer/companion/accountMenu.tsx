@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isMac } from '../shared/platform';
 
 interface AccountMenuProps {
   name: string;
@@ -111,7 +112,7 @@ export function AccountMenu(props: AccountMenuProps) {
 
           <div className="acct-menu__group">
             <button ref={firstItem} type="button" role="menuitem" className="acct-menu__item" onClick={run(props.onSettings)}>
-              <MenuIcon d={ICONS.settings} /><span>Settings</span><kbd>⌘ ,</kbd>
+              <MenuIcon d={ICONS.settings} /><span>Settings</span><kbd>{isMac ? '⌘ ,' : 'Ctrl+,'}</kbd>
             </button>
             <button type="button" role="menuitem" className="acct-menu__item" onClick={run(props.onShortcuts)}>
               <MenuIcon d={ICONS.keys} /><span>Keyboard shortcuts</span>

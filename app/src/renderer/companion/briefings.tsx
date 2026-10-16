@@ -3,6 +3,7 @@ import type { ChangeBrief, BriefScope } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
 import { buildAgentReview, type AgentReview } from '../../core/agentReview';
 import { Buddy, setBuddyMood } from '../shared/buddy';
+import { deviceName } from '../shared/platform';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -110,7 +111,7 @@ export function Briefings() {
       {needsRepo && !busy && (
         <section className="briefings__empty">
           <h2>Your next change, made clear.</h2>
-          <p>Choose a local git project to see its recent changes. Reading a brief stays on this Mac; AI explanations ask for your consent separately.</p>
+          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}; AI explanations ask for your consent separately.</p>
           <button className="btn" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}
@@ -167,7 +168,7 @@ export function Briefings() {
         <div className="briefings__head">
           <div>
             <div className="kicker">Saved knowledge</div>
-            <h2>On this Mac</h2>
+            <h2>On this {deviceName}</h2>
             <p>AI-generated notes stay labelled until you confirm them. Freshness follows code change, not calendar time.</p>
           </div>
         </div>

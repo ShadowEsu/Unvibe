@@ -754,6 +754,8 @@
 :root[data-ui="v3"][data-v7] .topbar__side:hover { background: var(--v-hover); color: var(--v-ink); }
 :root[data-ui="v3"][data-v7] .topbar__side svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
 :root[data-ui="v3"][data-v7] .layout--side-hidden .topbar { padding-left: 86px; }
+/* Windows draws min/max/close (titleBarOverlay, 138px wide) over the top-right corner. */
+:root[data-ui="v3"][data-v7][data-platform="win"] .topbar { padding-right: 150px; }
 :root[data-ui="v3"][data-v7] .side-resize { width: 12px; right: -4px; }
 
 /* Plan: Teams card */

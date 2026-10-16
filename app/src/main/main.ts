@@ -95,7 +95,7 @@ import {
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
-import { checkForUpdate, installUpdate, isNewer } from './updater';
+import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
 import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
@@ -529,6 +529,7 @@ if (process.defaultApp) {
 }
 
 app.whenReady().then(() => {
+  cleanupPortableUpdate();
   // Open the backend connection and fetch usage early so the first explanation starts faster.
   setTimeout(() => {
     warmBackend();

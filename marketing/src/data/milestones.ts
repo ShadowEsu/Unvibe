@@ -11,6 +11,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "16 OCT 2026",
+    category: "PRODUCT",
+    title: "Prove it quizzes, the editor shortcut, and a proper Windows app",
+    summary: "Quizzes now ask what breaks if a line changes, and every answer cites the line. The editor bridge ships inside the app again, so ⌘U works in VS Code and Cursor. After an update on Mac, Unvibe asks for Accessibility again instead of quietly losing it. On Windows the shortcut is Ctrl+Alt+U so Ctrl+U stays free, copying a selection no longer interrupts a terminal, the window has real minimize, maximize and close buttons, the portable app updates itself, and the app talks about your PC instead of a Mac.",
+    figure: "v0.1.39",
+  },
+  {
     date: "13 OCT 2026",
     category: "PRODUCT",
     title: "Installs you can verify",

@@ -35,6 +35,12 @@ function portableExecutable(): string | undefined {
   return process.platform === 'win32' ? process.env.PORTABLE_EXECUTABLE_FILE || undefined : undefined;
 }
 
+/** After a portable self-update, remove the previous .exe that was moved aside. */
+export function cleanupPortableUpdate(): void {
+  const portable = portableExecutable();
+  if (portable) void rm(`${portable}.old`, { force: true }).catch(() => undefined);
+}
+
 export async function checkForUpdate(force = false): Promise<UpdateInfo> {
   const current = app.getVersion();
   if (!force && cached && Date.now() - cached.at < 30 * 60_000) return cached.info;
@@ -107,10 +113,11 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
 
   const portable = portableExecutable();
   const assetName = path.basename(new URL(info.url).pathname);
-  // The portable build has no installer: the new .exe goes next to the one the user runs.
+  // The portable build has no installer: download beside the running .exe, then swap it into
+  // the same path so pinned shortcuts and double-clicks start the new version.
   const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(tmpdir(), 'unvibe-update-'));
-  const target = path.join(dir, assetName);
-  const file = portable ? `${target}.download` : target;
+  const target = portable ?? path.join(dir, assetName);
+  const file = portable ? `${portable}.download` : target;
   const res = await networkFetch(info.url, { redirect: 'follow', signal: AbortSignal.timeout(10 * 60_000) });
   if (!res.ok || !res.body) return { ok: false, error: `Download failed (${res.status}).` };
   const total = Number(res.headers.get('content-length') ?? 0);
@@ -155,12 +162,22 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
     let launched: { ok: boolean; error?: string };
     if (portable) {
       // A partial download never carries the real name, so only a complete .exe is started.
+      // Windows lets a running .exe be renamed on the same drive, so move it aside first.
+      const old = `${portable}.old`;
       try {
-        await rename(file, target);
+        await rm(old, { force: true });
+        await rename(portable, old);
+        try {
+          await rename(file, portable);
+        } catch (error) {
+          await rename(old, portable).catch(() => undefined);
+          throw error;
+        }
       } catch (error) {
+        await rm(file, { force: true }).catch(() => undefined);
         return { ok: false, error: `Could not save the update: ${error instanceof Error ? error.message : String(error)}` };
       }
-      launched = await launchDetached(target, []);
+      launched = await launchDetached(portable, []);
     } else {
       // Silent NSIS install into the existing location; --force-run starts Unvibe again after.
       launched = await launchDetached(file, ['/S', '--force-run']);

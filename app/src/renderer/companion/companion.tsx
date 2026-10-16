@@ -911,7 +911,7 @@ function Progress({ profile }: { profile: Profile | null }) {
   return (
     <>
       <div className="topline"><h1>Momentum</h1></div>
-      <p className="lead">What you have actually understood on this Mac. No invented scores.</p>
+      <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
         <article className="metric-card"><span className="v">{coverage ?? '—'}</span><span className="l">Understanding Coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{freshness ?? '—'}</span><span className="l">Knowledge Freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
@@ -1073,7 +1073,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             {gifted ? 'Pro from a gift. Limits follow the Pro plan.'
               : unlimited ? 'This build is not metered locally.'
                 : resetIso ? resetLabel(resetIso)
-                  : 'Monthly explanation limits apply to this Mac.'}
+                  : `Monthly explanation limits apply to this ${deviceName}.`}
           </p>
           {canPortal
             ? <button type="button" className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>
@@ -1115,7 +1115,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
 
       {!signedIn && (
         <div className="plan-board__signin">
-          <p>Sign in to sync this Mac with your cloud plan and Stripe billing.</p>
+          <p>Sign in to sync this {deviceName} with your cloud plan and Stripe billing.</p>
           <SignInForm onDone={onSignedIn ?? (() => undefined)} />
         </div>
       )}
@@ -1124,7 +1124,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       <div className="plan-usage-block">
         <h3>Usage this month</h3>
         <div className="plan-usage-card">
-          {meters.length === 0 && <p className="plan-usage-empty">Usage appears after the first explanation on this Mac.</p>}
+          {meters.length === 0 && <p className="plan-usage-empty">Usage appears after the first explanation on this {deviceName}.</p>}
           {meters.map((line) => {
             const open = line.limit >= 100_000;
             const left = percentLeft(line.remaining, line.limit);
@@ -1202,8 +1202,8 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
           <div className="sd">You are using Unvibe locally right now. Sign in above to attach a cloud plan.</div>
         </div>
         <div className="setrow" style={{ display: 'block' }}>
-          <div className="sl">Erase learning on this Mac</div>
-          <div className="sd" style={{ marginBottom: 12 }}>Removes every saved explanation on this Mac. This cannot be undone.</div>
+          <div className="sl">Erase learning on this {deviceName}</div>
+          <div className="sd" style={{ marginBottom: 12 }}>Removes every saved explanation on this {deviceName}. This cannot be undone.</div>
           {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Erase everything…</button> : (
             <div className="danger-row">
               <input className="field delete-confirm" aria-label="Type DELETE to confirm" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
@@ -1226,11 +1226,11 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
           onChange();
           onNotice(result.ok
             ? result.warning ? `Signed out locally. ${result.warning}` : 'Signed out securely.'
-            : result.error ?? 'Sign-out could not be saved on this Mac.');
+            : result.error ?? `Sign-out could not be saved on this ${deviceName}.`);
         }}>Sign out</button></div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl" style={{ color: '#a1291f' }}>Delete account</div>
-        <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this Mac and on our servers. This cannot be undone.</div>
+        <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this {deviceName} and on our servers. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
             <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
@@ -1276,7 +1276,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
     if (!r.ok) { setErr(r.error ?? 'Could not save key.'); return; }
     setKeyDraft('');
     if (r.provider) await onSettings({ aiProvider: r.provider });
-    onNotice('API key saved on this Mac only.');
+    onNotice(`API key saved on this ${deviceName} only.`);
     await refresh();
   };
   const clearKey = async () => {
@@ -1292,12 +1292,12 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <section className="ai-container" aria-label="AI settings">
       <div className="ai-container__intro">
         <span>AI on your terms</span>
-        <p>Use included Unvibe AI, or securely connect a provider key kept on this Mac.</p>
+        <p>Use included Unvibe AI, or securely connect a provider key kept on this {deviceName}.</p>
       </div>
       <div className="setrow" style={{ display: 'block' }}>
         <div className="sl">Your own API key</div>
         <div className="sd" style={{ marginBottom: 12 }}>
-          Works with Gemini, OpenAI, Anthropic, Grok, DeepSeek, or Kimi. The key stays encrypted on this Mac and is never sent to Unvibe.
+          Works with Gemini, OpenAI, Anthropic, Grok, DeepSeek, or Kimi. The key stays encrypted on this {deviceName} and is never sent to Unvibe.
         </div>
         <div className="ai-key-row">
           <input
@@ -1317,7 +1317,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <div className="setrow">
         <div>
           <div className="sl">Use my own AI</div>
-          <div className="sd">Always call your provider from this Mac instead of Unvibe cloud AI.</div>
+          <div className="sd">Always call your provider from this {deviceName} instead of Unvibe cloud AI.</div>
         </div>
         <Toggle on={Boolean(settings.useOwnAi)} onClick={() => void onSettings({ useOwnAi: !settings.useOwnAi })} />
       </div>
@@ -1504,9 +1504,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'General' && (
             <>
               <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
-              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this Mac for your profile.</div></div><input className="field setrow-field" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
+              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
-              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this. Control+U is always registered as well.</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
+              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ' Control+U is always registered as well.'}</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow compact />
             </>
           )}

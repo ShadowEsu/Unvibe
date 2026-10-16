@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Buddy, buddyMoodForPhase } from '../shared/buddy';
+import { isMac } from '../shared/platform';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
 import '../shared/tokens.css';
@@ -66,7 +67,7 @@ function Bar() {
   const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const [hoverDelayMs, setHoverDelayMs] = useState(160);
-  const [attached, setAttached] = useState(true);
+  const [attached, setAttached] = useState(isMac);
   const [position, setPosition] = useState('top-center');
   const [barSize, setBarSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -148,7 +149,7 @@ function Bar() {
       const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; barSize?: 'small' | 'medium' | 'large'; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
       setHoverEnabled(settings.barHoverPreview ?? true);
       setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 160)));
-      setAttached((settings.barPosition ?? 'top-center') === 'top-center');
+      setAttached(isMac && (settings.barPosition ?? 'top-center') === 'top-center');
       setPosition(settings.barPosition ?? 'top-center');
       setBarSize(settings.barSize ?? 'medium');
       setSoundEnabled(settings.soundEffects ?? true);
@@ -166,7 +167,7 @@ function Bar() {
     const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
     const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
     const offSettings = window.unvibe.onBarSettings((settings) => {
-      if (settings.barPosition) { setAttached(settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
+      if (settings.barPosition) { setAttached(isMac && settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
       if (settings.barSize) setBarSize(settings.barSize);
       if (settings.barHoverPreview !== undefined) setHoverEnabled(settings.barHoverPreview);
       if (settings.barHoverDelayMs !== undefined) setHoverDelayMs(settings.barHoverDelayMs);

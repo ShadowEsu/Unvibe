@@ -3,6 +3,7 @@ import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
+import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -105,7 +106,7 @@ function AiPicker({
           </button>
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onOpenSettings(); }}>
             {usingOwnAi ? 'Manage API key' : 'Use an API key'}
-            <span>{usingOwnAi ? 'Update or remove the key kept on this Mac.' : 'Keep a provider key on this Mac if you want your own model.'}</span>
+            <span>{usingOwnAi ? `Update or remove the key kept on this ${deviceName}.` : `Keep a provider key on this ${deviceName} if you want your own model.`}</span>
           </button>
         </div>
       ) : null}
@@ -113,17 +114,14 @@ function AiPicker({
   );
 }
 
-/** Voice uses the Mac's own Dictation, so it works in any text box and nothing records in the background. */
+/** Voice uses the OS's dictation, without recording in the background. */
 export function VoiceTip({ onClose }: { onClose?: () => void }) {
   return (
     <div className="voice-tip" role="note">
       <b>Ask out loud</b>
-      <ol>
-        <li>Your cursor is in the box. Press <kbd>fn</kbd> twice (or <kbd>🌐</kbd> on newer Macs).</li>
-        <li>Talk. Your words appear as you speak.</li>
-        <li>Press <kbd>fn</kbd> once to stop, then <kbd>Return</kbd> to send.</li>
-      </ol>
-      <p>Nothing happens? Turn on Dictation in System Settings, Keyboard. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Open it</button>{onClose ? <> · <button type="button" className="link-btn" onClick={onClose}>Hide</button></> : null}</p>
+      <p>{voiceHowTo}</p>
+      {!isWindows ? <p>Nothing happens? Turn on Dictation in System Settings, Keyboard. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Open it</button></p> : null}
+      {onClose ? <button type="button" className="link-btn" onClick={onClose}>Hide</button> : null}
     </div>
   );
 }
@@ -313,7 +311,7 @@ export function Chat({
             <h2>{greetName(userName)}</h2>
             <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
             <div className="chat-context">
-              {brief?.repo ? <span>Repository {brief.repo}</span> : <span>Repository on this Mac</span>}
+              {brief?.repo ? <span>Repository {brief.repo}</span> : <span>Repository on this {deviceName}</span>}
               <span>{brief ? `${brief.filesChanged} files in the working tree` : 'No current change'}</span>
               {brief?.files[0] ? <span>Current file {brief.files[0].path}</span> : null}
             </div>
@@ -397,7 +395,9 @@ export function Chat({
             {showVoice ? <VoiceTip onClose={() => setShowVoice(false)} /> : null}
             <div className="chat-composer__bar">
               <AiPicker label={aiLabel} usingOwnAi={usingOwnAi} onOpenSettings={onOpenAiSettings} />
-              <span className="chat-composer__hint">{empty ? 'Return to send' : 'Return to send, Shift Return for a new line'}</span>
+              <span className="chat-composer__hint">{isWindows
+                ? (empty ? 'Enter to send' : 'Enter to send, Shift+Enter for a new line')
+                : (empty ? 'Return to send' : 'Return to send, Shift Return for a new line')}</span>
               <button className="chat-mic" type="button" aria-pressed={showVoice} onClick={() => { setShowVoice(true); areaRef.current?.focus(); }}>🎙 Speak</button>
               <button className="chat-send" type="submit" disabled={busy || !draft.trim()} aria-label={busy ? 'Sending' : 'Send'}>
                 {busy ? '·' : '↑'}

@@ -1,5 +1,6 @@
 import './usageRings.css';
 import { LogoMark } from './logo';
+import { isMac } from './platform';
 
 export type UsageSlice = {
   used: number;
@@ -55,7 +56,7 @@ function Ring({
       </span>
       <small>{label} · {left} left</small>
       <span className="usage-ring__detail" role="tooltip">
-        <strong>{label === 'AI' ? '✨ AI explanations' : '⌘ Code selections'}</strong>
+        <strong>{label === 'AI' ? '✨ AI explanations' : `${isMac ? '⌘' : '⌨'} Code selections`}</strong>
         <span>{Math.max(0, used)} used · {left} remaining</span>
         <span className="usage-ring__bar"><i style={{ width: `${pct}%` }} /></span>
         <span>{pct}% of your {safeLimit} allowance left</span>

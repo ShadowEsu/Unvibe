@@ -8,6 +8,7 @@ import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
+import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { UsageRings } from '../shared/usageRings';
 import '../shared/tokens.css';
 
@@ -181,7 +182,7 @@ function EmptyPicker({
   const [paste, setPaste] = useState('');
   const [hint, setHint] = useState('');
   const [picking, setPicking] = useState(false);
-  // ⌘U copies your selection through macOS Accessibility. Without it the shortcut lands here.
+  // On macOS the shortcut copies your selection through Accessibility. Without it the shortcut lands here.
   const [needsAccess, setNeedsAccess] = useState(false);
   useEffect(() => {
     void window.unvibe.accessibility().then((r) => {
@@ -335,7 +336,7 @@ function Widget() {
     window.addEventListener('focus', onFocus);
     return () => { window.removeEventListener('blur', onBlur); window.removeEventListener('focus', onFocus); };
   }, []);
-  const [shortcut, setShortcut] = useState('⌘U');
+  const [shortcut, setShortcut] = useState(reviewKeyHint);
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
@@ -534,9 +535,10 @@ function Widget() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey && e.key === 'w') window.unvibe.closeWidget();
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === 'w') window.unvibe.closeWidget();
       else if (e.key === 'Escape') toggleCollapse();
-      else if (e.metaKey && e.key >= '1' && e.key <= '5') pick(LEVELS[Number(e.key) - 1]!.id);
+      else if (mod && e.key >= '1' && e.key <= '5') pick(LEVELS[Number(e.key) - 1]!.id);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -1033,7 +1035,7 @@ function Widget() {
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
-                {!active.mock && phase === 'done' && <span className="local-save-note">saved on this Mac</span>}
+                {!active.mock && phase === 'done' && <span className="local-save-note">saved on this {deviceName}</span>}
               </div>
               {active.originOpen ? (
                 <div className="origin-panel" role="region" aria-label="Why this exists">
@@ -1110,7 +1112,7 @@ function Widget() {
                       type="button"
                       className={`btn ghost${listening ? ' rec' : ''}`}
                       aria-pressed={listening}
-                      title="Ask out loud with Mac Dictation"
+                      title={isWindows ? 'Ask out loud with Windows voice typing' : 'Ask out loud with Mac Dictation'}
                       onClick={() => {
                         setListening((v) => !v);
                         (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus();
@@ -1134,7 +1136,7 @@ function Widget() {
                   </button>
                 </div>
                 {listening ? (
-                  <p className="voice-note" role="note">Press <kbd>fn</kbd> twice (or <kbd>🌐</kbd>), talk, press <kbd>fn</kbd> again, then <kbd>Return</kbd>. Nothing? Turn on Dictation in System Settings, Keyboard.</p>
+                  <p className="voice-note" role="note">{voiceHowTo}{!isWindows ? ' Nothing? Turn on Dictation in System Settings, Keyboard.' : ''}</p>
                 ) : null}
               </div>
             </div>
