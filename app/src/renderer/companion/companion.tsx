@@ -8,6 +8,7 @@ import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
+import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, reviewKeyParts, voiceHowTo } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
@@ -391,7 +392,9 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
-      <div className="perm-why">The Unvibe Desktop Bridge handles ⌘U inside VS Code and Cursor. In Terminal and other Mac apps, Control+U reads your selection through Accessibility.</div>
+      <div className="perm-why">{isWindows
+        ? 'Windows needs no permission. The Unvibe Desktop Bridge handles Ctrl+U inside VS Code and Cursor. In other apps, Ctrl+Alt+U copies your selection.'
+        : 'The Unvibe Desktop Bridge handles ⌘U inside VS Code and Cursor. In Terminal and other Mac apps, Control+U reads your selection through Accessibility.'}</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
@@ -474,7 +477,7 @@ function OnboardingDemo({ sound, onDone }: { sound: boolean; onDone: () => void 
       <div className={`obd__editor${phase >= 0 ? ' is-selecting' : ''}`}>
         <div className="obd__bar"><i /><i /><i /><span>users.ts</span></div>
         <pre>{DEMO_LINES.map((line, index) => <span key={index} className="obd__line" style={{ '--d': `${index * 160}ms` } as React.CSSProperties}>{line}{'\n'}</span>)}</pre>
-        <div className={`obd__keys${phase >= 1 ? ' is-pressed' : ''}`} aria-hidden="true"><kbd>⌘</kbd><kbd>U</kbd></div>
+        <div className={`obd__keys${phase >= 1 ? ' is-pressed' : ''}`} aria-hidden="true">{reviewKeyParts.map((key) => <kbd key={key}>{key}</kbd>)}</div>
       </div>
       <div className={`obd__panel${phase >= 2 ? ' is-in' : ''}`}>
         <div className="obd__panel-head"><Buddy mood={phase >= 4 ? 'celebrate' : phase === 2 ? 'reading' : 'happy'} size={26} label="Vibe" /><b>Unvibe</b><span>{phase >= 3 ? 'ready to learn' : 'explaining'}</span></div>
@@ -596,7 +599,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
           {step === 0 && (
             <>
               <h2 className="ob__title">Understand what AI <em>changed.</em></h2>
-              <p className="ob__sub">Select code anywhere, press <span className="kbd-lg">⌘U</span>, and I explain it. Five quick steps and you are in.</p>
+              <p className="ob__sub">Select code anywhere, press <span className="kbd-lg">{reviewKeyHint}</span>, and I explain it. Five quick steps and you are in.</p>
             </>
           )}
 
@@ -689,7 +692,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
           </aside>
           <button type="button" className="login__local" onClick={onSkip}>
             <span className="login__local-icon"><MacGlyph /></span>
-            <strong>Open Unvibe on this Mac</strong>
+            <strong>Open Unvibe on this {deviceName}</strong>
             <small>Keep everything local. No Google needed.</small>
           </button>
         </div>
@@ -838,7 +841,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
         <span className="voice-cta__mic" aria-hidden="true">🎙</span>
         <span className="voice-cta__text">
           <b>Try voice: ask Vibe out loud</b>
-          <small>Press fn twice, talk about your code, press Return. No typing.</small>
+          <small>{voiceHowTo} No typing.</small>
         </span>
         <span className="voice-cta__go" aria-hidden="true">→</span>
       </button>
@@ -1404,14 +1407,14 @@ function IntegrationsPanel() {
     setMessage(`${name} bridge installed. Reload ${name} if it is open.`);
     load();
   };
-  if (!items) return <div className="settings-empty">Checking this Mac…</div>;
+  if (!items) return <div className="settings-empty">Checking this {deviceName}…</div>;
   const groups = ['Editors', 'Agents', 'Shell', 'Workspace'].map((group) => ({
     group,
     rows: items.filter((item) => item.group === group),
   })).filter((item) => item.rows.length > 0);
   return (
     <div className="integ">
-      <p className="integ__lead">Unvibe sits beside tools you already have. Detected means the app is on this Mac. Bridge ready means Command U can send the editor selection directly.</p>
+      <p className="integ__lead">Unvibe sits beside tools you already have. Detected means the app is on this {deviceName}. Bridge ready means {isWindows ? 'Ctrl+U' : 'Command U'} can send the editor selection directly.</p>
       {message ? <div className="integ__message" role="status">{message}</div> : null}
       {groups.map(({ group, rows }) => (
         <section key={group} className="integ__group">
@@ -1502,7 +1505,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <>
               <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
               <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this Mac for your profile.</div></div><input className="field setrow-field" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
-              <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your Mac.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
+              <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this. Control+U is always registered as well.</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow compact />
             </>
@@ -1557,7 +1560,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
             <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
             <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
-            <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. To talk: click any question box, press fn twice (or 🌐), speak, press fn, then Return. It uses Mac Dictation, so Unvibe never records in the background. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Dictation settings</button></div></div><Toggle on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
+            <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. {isWindows
+                ? 'To talk: click any question box, press Win+H, speak, then press Enter. It uses Windows voice typing, so Unvibe never records in the background.'
+                : <>To talk: click any question box, press fn twice (or 🌐), speak, press fn, then Return. It uses Mac Dictation, so Unvibe never records in the background. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Dictation settings</button></>}</div></div><Toggle on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
             <div className="setrow"><div><div className="sl">Live change watch</div><div className="sd">Quiet Island notes after meaningful git edits settle. Debounced, grouped, and silent during quiet hours.</div></div><Toggle on={Boolean(settings.features?.live)} onClick={() => onSettings({ features: { ...settings.features, live: !settings.features?.live } })} /></div>
             {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</button></div> : null}
           </>}
@@ -1566,7 +1571,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Privacy & Data' && (
             <>
-              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your Mac. Always on.</div></div><button className="act" disabled>On</button></div>
+              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your {deviceName}. Always on.</div></div><button className="act" disabled>On</button></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
@@ -1589,7 +1594,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
-  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: '⌘U' });
+  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: reviewKeyHint });
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -1692,6 +1697,8 @@ function App() {
     document.documentElement.dataset.theme = 'light';
     document.documentElement.dataset.ui = 'v3';
     document.documentElement.dataset.v7 = '';
+    // Windows draws its caption buttons over the top-right corner; CSS reserves room for them.
+    document.documentElement.dataset.platform = platformAttr;
   }, []);
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
@@ -1819,7 +1826,7 @@ function App() {
           <button type="button" className="side-search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
             <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
             <span className="nav-label">Search</span>
-            <kbd>⌘K</kbd>
+            <kbd>{modKey}K</kbd>
           </button>
           <nav className="nav nav--top">{NAV_PINNED.map((p) => {
             const on = p.id === page;
@@ -1887,13 +1894,13 @@ function App() {
             <button type="button" className="nav-toggle" aria-label="Open menu" onClick={() => setNavOpen(true)}>
               <Icon d="M3 6h14 M3 10h14 M3 14h14" />
             </button>
-            <button type="button" className="topbar__side" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? 'Show sidebar (⌘\\)' : 'Hide sidebar (⌘\\)'} onClick={() => toggleSideRef.current()}>
+            <button type="button" className="topbar__side" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? `Show sidebar (${modKey}\\)` : `Hide sidebar (${modKey}\\)`} onClick={() => toggleSideRef.current()}>
               <Icon d="M4 4h12v12H4z M7 4v12" />
             </button>
             <h2 className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
             <span className="topbar__spacer" />
             <button type="button" className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
-              <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>⌘K</kbd>
+              <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>{modKey}K</kbd>
             </button>
             <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
               <kbd>{shortcutLabel}</kbd><span>Explain</span>

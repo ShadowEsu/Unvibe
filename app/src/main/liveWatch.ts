@@ -56,7 +56,7 @@ export async function tickLiveWatch(): Promise<void> {
     return;
   }
   const impact = architectureImpact(stats.files);
-  const name = root.split('/').filter(Boolean).pop() ?? 'this repo';
+  const name = root.split(/[\\/]/).filter(Boolean).pop() ?? 'this repo';
   const message = impact === 'HIGH'
     ? `${stats.files.length} files changed in ${name}. Architecture may be affected.`
     : `${stats.files.length} files changed in ${name}.`;

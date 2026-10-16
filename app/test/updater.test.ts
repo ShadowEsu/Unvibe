@@ -16,3 +16,12 @@ test('picks the right installer for the machine', () => {
   assert.equal(pickAsset(names, 'win32', 'x64'), 'Unvibe-0.1.30-win-x64-setup.exe');
   assert.equal(pickAsset(names, 'linux', 'x64'), undefined);
 });
+
+test('the Windows portable build updates to the portable exe', () => {
+  const names = ['Unvibe-0.1.30-win-x64-setup.exe', 'Unvibe-0.1.30-win-x64-portable.exe', 'Unvibe-0.1.30-win-x64-setup.exe.blockmap'];
+  assert.equal(pickAsset(names, 'win32', 'x64', true), 'Unvibe-0.1.30-win-x64-portable.exe');
+  assert.equal(pickAsset(names, 'win32', 'x64', false), 'Unvibe-0.1.30-win-x64-setup.exe');
+  assert.equal(pickAsset(['Unvibe-0.1.30-win-x64-setup.exe'], 'win32', 'x64', true), undefined);
+  // The flag only matters on Windows.
+  assert.equal(pickAsset(['Unvibe-0.1.30-mac-arm64.dmg'], 'darwin', 'arm64', true), 'Unvibe-0.1.30-mac-arm64.dmg');
+});

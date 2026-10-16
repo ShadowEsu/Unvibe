@@ -109,7 +109,7 @@ export async function installDesktopBridge(id: EditorId): Promise<{ ok: boolean;
         timeout: 30_000, maxBuffer: 512_000, windowsHide: true, windowsVerbatimArguments: true,
       });
     } else {
-      await execFileAsync(cli, ['--install-extension', vsix, '--force'], { timeout: 30_000, maxBuffer: 512_000 });
+      await execFileAsync(cli, ['--install-extension', vsix, '--force'], { timeout: 30_000, maxBuffer: 512_000, windowsHide: true });
     }
     return hasDesktopBridge(id)
       ? { ok: true }
@@ -144,7 +144,7 @@ function macAppPath(name: string): string | null {
   if (cached && Date.now() - cached.at < 60_000) return cached.path;
   let found: string | null = null;
   try {
-    const out = spawnSync('mdfind', [`kMDItemCFBundleIdentifier == '${id}'`], { timeout: 2500, encoding: 'utf8' });
+    const out = spawnSync('mdfind', [`kMDItemCFBundleIdentifier == '${id}'`], { timeout: 2500, encoding: 'utf8', windowsHide: true });
     found = (out.stdout ?? '').split('\n').map((line) => line.trim()).find((line) => line.endsWith('.app') && !line.startsWith('/Volumes/') && existsSync(line)) ?? null;
   } catch {
     found = null;

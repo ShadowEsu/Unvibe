@@ -59,6 +59,7 @@ async function untrackedAsHunks(repoRoot: string): Promise<DiffHunk[]> {
     const { stdout } = await pexecFile('git', ['ls-files', '--others', '--exclude-standard'], {
       cwd: repoRoot,
       maxBuffer: MAX_BUFFER,
+      windowsHide: true,
     });
     const files = stdout
       .split(/\r?\n/)
@@ -99,12 +100,14 @@ export async function getWorkingTreeDiff(repoRoot: string, files?: string[]): Pr
     const { stdout } = await pexecFile('git', ['diff', '--unified=3', '--no-color', 'HEAD', ...fileArgs], {
       cwd: repoRoot,
       maxBuffer: MAX_BUFFER,
+      windowsHide: true,
     });
     tracked = parseUnifiedDiff(stdout);
   } catch {
     const { stdout } = await pexecFile('git', ['diff', '--unified=3', '--no-color', ...fileArgs], {
       cwd: repoRoot,
       maxBuffer: MAX_BUFFER,
+      windowsHide: true,
     });
     tracked = parseUnifiedDiff(stdout);
   }
@@ -127,7 +130,7 @@ export function capHunks(hunks: DiffHunk[], maxHunks = 40, maxLinesPerHunk = 200
 export type GitDiffScope = 'working' | 'staged' | 'latest' | 'branch';
 
 async function gitText(repoRoot: string, args: string[]): Promise<string> {
-  const { stdout } = await pexecFile('git', args, { cwd: repoRoot, maxBuffer: MAX_BUFFER });
+  const { stdout } = await pexecFile('git', args, { cwd: repoRoot, maxBuffer: MAX_BUFFER, windowsHide: true });
   return stdout;
 }
 
@@ -285,7 +288,7 @@ export async function readRepoFile(repoRoot: string, relativePath: string): Prom
 
 export async function findGitRoot(startDir: string): Promise<string | null> {
   try {
-    const { stdout } = await pexecFile('git', ['rev-parse', '--show-toplevel'], { cwd: startDir });
+    const { stdout } = await pexecFile('git', ['rev-parse', '--show-toplevel'], { cwd: startDir, windowsHide: true });
     const root = stdout.trim();
     return root || null;
   } catch {

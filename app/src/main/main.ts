@@ -25,6 +25,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { userInfo } from 'node:os';
 import {
   applyWidgetResize,
   createBar,
@@ -51,7 +52,7 @@ import {
   type RequestOpts,
 } from './review';
 import { store, type ChatThread } from './store';
-import { settings, type Settings } from './settings';
+import { applyLoginItem, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
@@ -102,7 +103,19 @@ import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
 
+function osUserName(): string {
+  try {
+    return userInfo().username;
+  } catch {
+    return '';
+  }
+}
+
 function firstName(): Promise<string> {
+  // `id -F` (full name) only exists on macOS.
+  if (process.platform !== 'darwin') {
+    return Promise.resolve(osUserName() || process.env.USERNAME || process.env.USER || 'there');
+  }
   return new Promise((resolve) => {
     execFile('id', ['-F'], { timeout: 1500 }, (err, stdout) => {
       const full = err ? '' : stdout.trim();
@@ -405,9 +418,16 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
   // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
-  const code = await captureSelection(options);
-  const sourceApp = await frontmostApp();
+  const capture = await captureSelection(options);
+  const code = capture.code;
+  // Windows capture already looked up the foreground app in the same PowerShell call.
+  const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
   if (!code) pulseBar({ phase: 'error', label: 'Select code first' });
+  if (!code && process.platform === 'win32' && !options.preferClipboard) {
+    // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
+    const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
+    notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
+  }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
   if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
@@ -437,7 +457,9 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
 
 function registerShortcut(accel: string): boolean {
   globalShortcut.unregisterAll();
-  const keys = new Set<string>([accel, 'Control+U']);
+  // ⌃U is a spare chord on macOS (the IDE bridge owns ⌘U). On Windows Ctrl+U is the
+  // bridge's own key and a common app shortcut, so only the user's choice is grabbed there.
+  const keys = new Set<string>(isMac ? [accel, 'Control+U'] : [accel]);
   let any = false;
   for (const key of keys) {
     try {
@@ -519,7 +541,7 @@ app.whenReady().then(() => {
   store();
   store().ensureDayActive();
   const s = settings().all();
-  if (isMac) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
+  applyLoginItem(s.launchAtLogin);
   void flush();
   startFrontmostWatch();
   startLiveWatch();
@@ -531,7 +553,10 @@ app.whenReady().then(() => {
     if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
   }
 
-  let trayImage = nativeImage.createFromPath(asset('trayTemplate.png'));
+  // The black template image only suits the macOS menu bar; the Windows tray gets the colour icon.
+  let trayImage = process.platform === 'win32' && !dockIcon.isEmpty()
+    ? dockIcon.resize({ width: 16, height: 16 })
+    : nativeImage.createFromPath(asset('trayTemplate.png'));
   if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
   else if (isMac) trayImage.setTemplateImage(true);
   tray = new Tray(trayImage);
@@ -567,7 +592,9 @@ app.whenReady().then(() => {
   screen.on('display-added', restoreFloatingWindows);
   screen.on('display-removed', restoreFloatingWindows);
   screen.on('display-metrics-changed', restoreFloatingWindows);
-  registerShortcut(s.shortcut);
+  if (!registerShortcut(s.shortcut)) {
+    notify('That shortcut is in use by another app. Pick a different one in Settings.');
+  }
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
   openCompanion();
   repairAccessibilityAfterUpdate();

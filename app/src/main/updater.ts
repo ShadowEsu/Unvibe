@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -30,6 +30,11 @@ export interface UpdateInfo {
 
 let cached: { at: number; info: UpdateInfo } | null = null;
 
+/** Set by electron-builder's portable launcher to the .exe the user actually runs. */
+function portableExecutable(): string | undefined {
+  return process.platform === 'win32' ? process.env.PORTABLE_EXECUTABLE_FILE || undefined : undefined;
+}
+
 export async function checkForUpdate(force = false): Promise<UpdateInfo> {
   const current = app.getVersion();
   if (!force && cached && Date.now() - cached.at < 30 * 60_000) return cached.info;
@@ -41,7 +46,7 @@ export async function checkForUpdate(force = false): Promise<UpdateInfo> {
   const releases = (await res.json()) as Array<{ tag_name: string; draft: boolean; html_url: string; assets: Array<{ name: string; browser_download_url: string }> }>;
   for (const release of releases) {
     if (release.draft) continue;
-    const name = pickAsset(release.assets.map((a) => a.name), process.platform, process.arch);
+    const name = pickAsset(release.assets.map((a) => a.name), process.platform, process.arch, Boolean(portableExecutable()));
     const asset = release.assets.find((a) => a.name === name);
     if (!asset) continue;
     const latest = release.tag_name.replace(/^v/, '');
@@ -65,6 +70,22 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+/** Starts a detached process and resolves once Windows has actually created it. */
+function launchDetached(command: string, args: string[]): Promise<{ ok: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    try {
+      const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+      child.once('error', (error) => resolve({ ok: false, error: `Could not start the update: ${error.message}` }));
+      child.once('spawn', () => {
+        child.unref();
+        resolve({ ok: true });
+      });
+    } catch (error) {
+      resolve({ ok: false, error: `Could not start the update: ${error instanceof Error ? error.message : String(error)}` });
+    }
+  });
+}
+
 /** Downloads the installer, then hands off to a detached helper and quits. */
 let installing = false;
 
@@ -84,8 +105,12 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
   if (!info.available || !info.url) return { ok: false, error: 'You already have the newest Unvibe.' };
   if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
 
-  const dir = await mkdtemp(path.join(tmpdir(), 'unvibe-update-'));
-  const file = path.join(dir, path.basename(new URL(info.url).pathname));
+  const portable = portableExecutable();
+  const assetName = path.basename(new URL(info.url).pathname);
+  // The portable build has no installer: the new .exe goes next to the one the user runs.
+  const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(tmpdir(), 'unvibe-update-'));
+  const target = path.join(dir, assetName);
+  const file = portable ? `${target}.download` : target;
   const res = await networkFetch(info.url, { redirect: 'follow', signal: AbortSignal.timeout(10 * 60_000) });
   if (!res.ok || !res.body) return { ok: false, error: `Download failed (${res.status}).` };
   const total = Number(res.headers.get('content-length') ?? 0);
@@ -95,7 +120,14 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
     received += chunk.length;
     if (total && onProgress) onProgress(Math.min(99, Math.round((received / total) * 100)));
   });
-  await pipeline(body, createWriteStream(file));
+  try {
+    await pipeline(body, createWriteStream(file));
+  } catch (error) {
+    if (!portable) throw error;
+    // The portable folder may be read-only (e.g. a protected drive); say so instead of crashing.
+    await rm(file, { force: true }).catch(() => undefined);
+    return { ok: false, error: `Download failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
 
   if (process.platform === 'darwin') {
     const bundle = macBundlePath();
@@ -120,8 +152,20 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
     ].join('\n'), { mode: 0o700 });
     spawn('/bin/bash', [script], { detached: true, stdio: 'ignore' }).unref();
   } else if (process.platform === 'win32') {
-    // The NSIS installer replaces the installed app and starts it again when it finishes.
-    spawn(file, [], { detached: true, stdio: 'ignore' }).unref();
+    let launched: { ok: boolean; error?: string };
+    if (portable) {
+      // A partial download never carries the real name, so only a complete .exe is started.
+      try {
+        await rename(file, target);
+      } catch (error) {
+        return { ok: false, error: `Could not save the update: ${error instanceof Error ? error.message : String(error)}` };
+      }
+      launched = await launchDetached(target, []);
+    } else {
+      // Silent NSIS install into the existing location; --force-run starts Unvibe again after.
+      launched = await launchDetached(file, ['/S', '--force-run']);
+    }
+    if (!launched.ok) return launched;
   } else {
     return { ok: false, error: 'Automatic updates are not available on this system.' };
   }

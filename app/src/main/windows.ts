@@ -31,17 +31,26 @@ function lockNavigation(win: BrowserWindow): void {
   win.webContents.on('will-navigate', (e) => e.preventDefault());
 }
 
+/**
+ * Only macOS attaches the top Island to the screen edge around the camera notch. Elsewhere
+ * 'top-center' is a floating pill below the top of the work area, like the other positions.
+ */
+function attachedIsland(position: BarPosition): boolean {
+  return position === 'top-center' && process.platform === 'darwin';
+}
+
 function barBounds(position: BarPosition, w: number, h: number): { x: number; y: number } {
   const pointer = screen.getCursorScreenPoint();
   const display = settings().all().followActiveDisplay
     ? screen.getDisplayNearestPoint(pointer)
     : screen.getPrimaryDisplay();
   const { workArea, bounds } = display;
-  const centerArea = position === 'top-center' ? bounds : workArea;
+  const attached = attachedIsland(position);
+  const centerArea = attached ? bounds : workArea;
   const cx = centerArea.x + Math.round((centerArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
   // Keep every interactive pixel below the macOS camera/menu-bar safe area.
-  const top = position === 'top-center' ? bounds.y : workArea.y + 12;
+  const top = attached ? bounds.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
   switch (position) {
     case 'top-center':
@@ -74,26 +83,26 @@ function islandMetrics(): { w: number; h: number } {
 }
 
 function compactBarWidth(position: BarPosition): number {
-  if (position === 'top-center') return islandMetrics().w;
+  if (attachedIsland(position)) return islandMetrics().w;
   if (position.startsWith('bottom')) return BOTTOM_BAR_COMPACT_W;
   return FLOATING_BAR_W;
 }
 
 /** The black cap attaches to the screen; controls start below the camera safe area. */
 function islandSafeTop(position: BarPosition): number {
-  if (position !== 'top-center') return 0;
+  if (!attachedIsland(position)) return 0;
   const display = settings().all().followActiveDisplay
     ? screen.getDisplayNearestPoint(screen.getCursorScreenPoint()) : screen.getPrimaryDisplay();
   return Math.max(process.platform === 'darwin' ? 38 : 0, display.workArea.y - display.bounds.y);
 }
 
 function compactBarHeight(position: BarPosition): number {
-  return position === 'top-center' ? Math.max(islandMetrics().h, islandSafeTop(position)) : FLOATING_ROW_H;
+  return attachedIsland(position) ? Math.max(islandMetrics().h, islandSafeTop(position)) : FLOATING_ROW_H;
 }
 
 function barSize(position: BarPosition, expanded: boolean): { width: number; height: number } {
   if (!expanded) return { width: compactBarWidth(position), height: compactBarHeight(position) };
-  if (position === 'top-center') return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
+  if (attachedIsland(position)) return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
   return { width: FLOATING_EXPANDED_W, height: BAR_EXPANDED_BODY_H + FLOATING_ROW_H };
 }
 
@@ -111,7 +120,7 @@ export function createBar(): BrowserWindow {
     frame: false,
     transparent: true,
     resizable: false,
-    movable: position !== 'top-center',
+    movable: !attachedIsland(position),
     focusable: false,
     skipTaskbar: true,
     hasShadow: false,
@@ -154,10 +163,10 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
 export function positionBar(win: BrowserWindow): void {
   const position = settings().all().barPosition;
   const { width, height } = barSize(position, barIsExpanded);
-  win.setMovable(position !== 'top-center');
+  win.setMovable(!attachedIsland(position));
   const { x, y } = barBounds(position, width, height);
   win.setBounds({ x, y, width, height });
-  if (position === 'top-center') win.setPosition(x, y);
+  if (attachedIsland(position)) win.setPosition(x, y);
 }
 
 /** Quiet aisle — only show while a review is active. */
@@ -364,7 +373,11 @@ export function createCompanion(): BrowserWindow {
     height: 780,
     minWidth: 980,
     minHeight: 620,
-    titleBarStyle: 'hiddenInset',
+    // 'hiddenInset' is macOS-only; elsewhere it would drop the min/max/close buttons, so draw
+    // them as an overlay in the companion's paper colour (v7 --v-bg).
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const }
+      : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
     backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
     skipTaskbar: false,
     webPreferences: secureWebPrefs(),

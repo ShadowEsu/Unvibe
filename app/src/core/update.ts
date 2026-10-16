@@ -11,12 +11,15 @@ export function isNewer(a: string, b: string): boolean {
   return false;
 }
 
-/** The installer this machine needs from a release's asset names. */
-export function pickAsset(names: string[], platform: NodeJS.Platform, arch: string): string | undefined {
+/**
+ * The installer this machine needs from a release's asset names. `portable` is true when the
+ * running copy is the Windows portable .exe, which updates by replacing itself, not via setup.
+ */
+export function pickAsset(names: string[], platform: NodeJS.Platform, arch: string, portable = false): string | undefined {
   if (platform === 'darwin') {
     const want = arch === 'arm64' ? 'mac-arm64.dmg' : 'mac-x64.dmg';
     return names.find((n) => n.endsWith(want));
   }
-  if (platform === 'win32') return names.find((n) => n.endsWith('win-x64-setup.exe'));
+  if (platform === 'win32') return names.find((n) => n.endsWith(portable ? 'win-x64-portable.exe' : 'win-x64-setup.exe'));
   return undefined;
 }

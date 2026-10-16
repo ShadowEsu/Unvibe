@@ -48,6 +48,15 @@ const ISLAND_BEHAVIOR_REVISION = 4;
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 /** Makes the companion navigation quieter without overriding custom widths. */
 const SIDEBAR_DENSITY_REVISION = 2;
+/** Moves Windows installs off Ctrl+U, which belongs to the editor bridge and other apps. */
+const WINDOWS_SHORTCUT_REVISION = 1;
+
+const IS_WIN = process.platform === 'win32';
+/**
+ * Ctrl+U is a global grab on Windows (it steals the key from every app and from the
+ * VS Code / Cursor bridge, which binds ctrl+u there), so Windows gets a free chord instead.
+ */
+const DEFAULT_SHORTCUT = IS_WIN ? 'Control+Alt+U' : 'Control+U';
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
@@ -60,6 +69,8 @@ export interface Settings {
   ideBridgeShortcutRevision?: number;
   /** Internal — tracks the compact companion sidebar migration. */
   sidebarDensityRevision?: number;
+  /** Internal — tracks the Windows Ctrl+U → Ctrl+Alt+U shortcut migration. */
+  windowsShortcutRevision?: number;
   onboarded: boolean;
   /** Electron accelerator for the cross-app fallback. ⌘U belongs to the IDE bridge. */
   shortcut: string;
@@ -122,9 +133,11 @@ const DEFAULTS: Settings = {
   islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
   ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
+  windowsShortcutRevision: WINDOWS_SHORTCUT_REVISION,
   onboarded: false,
-  shortcut: 'Control+U',
-  barPosition: 'top-center',
+  shortcut: DEFAULT_SHORTCUT,
+  // Windows has no notch to attach to; a floating pill above the taskbar reads better.
+  barPosition: IS_WIN ? 'bottom-center' : 'top-center',
   // Keep the Island available over full-screen editors; it stays compact until asked.
   barVisibility: 'always',
   barHoverPreview: true,
@@ -178,12 +191,15 @@ class SettingsStore {
     const needsFullscreenIsland = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION &&
       loaded.barVisibility === 'during-review';
     const needsIslandRevision = (loaded.islandBehaviorRevision ?? 0) < ISLAND_BEHAVIOR_REVISION;
-    const needsTopIsland = needsIslandRevision &&
+    const needsTopIsland = needsIslandRevision && !IS_WIN &&
       (loaded.barPosition === undefined || loaded.barPosition === 'bottom-center');
     const needsIslandTiming = needsIslandRevision &&
       (loaded.barHoverDelayMs === undefined || loaded.barHoverDelayMs === 220);
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
       (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
+    // Only the former defaults move; a deliberately chosen shortcut stays as it is.
+    const needsWindowsShortcut = IS_WIN && (loaded.windowsShortcutRevision ?? 0) < WINDOWS_SHORTCUT_REVISION &&
+      (loaded.shortcut === 'Control+U' || loaded.shortcut === 'CommandOrControl+U');
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -199,6 +215,7 @@ class SettingsStore {
       islandBehaviorRevision: ISLAND_BEHAVIOR_REVISION,
       ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
       sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
+      windowsShortcutRevision: WINDOWS_SHORTCUT_REVISION,
       ...(needsLightDefault ? { theme: 'light' as const } : {}),
       ...(needsFullscreenIsland
         ? { barVisibility: 'always' as const, barHoverPreview: true }
@@ -217,13 +234,14 @@ class SettingsStore {
             lastWidgetBounds: undefined,
           }
         : {}),
-      ...(needsIdeShortcutMigration ? { shortcut: 'Control+U' } : {}),
+      ...(needsIdeShortcutMigration ? { shortcut: DEFAULT_SHORTCUT } : {}),
+      ...(needsWindowsShortcut ? { shortcut: DEFAULT_SHORTCUT } : {}),
       ...(needsSidebarDensity ? { sidebarWidth: 204 } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsWindowsShortcut || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
@@ -285,9 +303,7 @@ class SettingsStore {
     };
     delete this.data.aiModel;
     this.persist();
-    if (patch.launchAtLogin !== undefined && process.platform === 'darwin') {
-      app.setLoginItemSettings({ openAtLogin: this.data.launchAtLogin });
-    }
+    if (patch.launchAtLogin !== undefined) applyLoginItem(this.data.launchAtLogin);
     return this.data;
   }
 
@@ -301,6 +317,17 @@ class SettingsStore {
     const s = sh * 60 + sm;
     const e = eh * 60 + em;
     return s <= e ? cur >= s && cur < e : cur >= s || cur < e; // handles overnight ranges
+  }
+}
+
+/** Registers (or removes) the OS login item. macOS and Windows only. */
+export function applyLoginItem(openAtLogin: boolean): void {
+  if (process.platform === 'darwin') {
+    app.setLoginItemSettings({ openAtLogin });
+  } else if (IS_WIN) {
+    // The portable build runs from a temp extraction; the login item must start the .exe itself.
+    const portable = process.env.PORTABLE_EXECUTABLE_FILE;
+    app.setLoginItemSettings(portable ? { openAtLogin, path: portable } : { openAtLogin });
   }
 }
 
