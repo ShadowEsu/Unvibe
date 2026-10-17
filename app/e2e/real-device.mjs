@@ -9,6 +9,7 @@ import { execFile, execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import assert from 'node:assert/strict';
 
 const exe = process.env.UNVIBE_EXE;
 const out = process.env.SHOTS_DIR ?? path.resolve('shots');
@@ -47,16 +48,23 @@ async function windowWith(app, part, timeout = 30000) {
 }
 
 async function clickText(page, text, timeout = 8000) {
-  await page.getByRole('button', { name: text }).first().click({ timeout });
+  await page.getByRole('button', { name: text, exact: typeof text === 'string' }).first().click({ timeout });
 }
 
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-e2e-'));
+// Shell-launched protocol handlers must use the same isolated profile as the driven app.
+process.env.UNVIBE_USER_DATA = userData;
 const app = await electron.launch({ executablePath: exe, env: { ...process.env, UNVIBE_USER_DATA: userData }, timeout: 90000 });
 const companion = await windowWith(app, 'companion.html', 60000);
 if (!companion) { log(false, 'App opens'); writeFileSync(path.join(out, 'report.txt'), report.join('\n')); process.exit(1); }
 await companion.waitForLoadState('domcontentloaded');
 await sleep(2500);
 log(true, 'App opens', `version ${await app.evaluate(({ app }) => app.getVersion())}`);
+if (os === 'windows') {
+  const registered = await app.evaluate(({ app }) =>
+    app.setAsDefaultProtocolClient('unvibe', process.execPath, [`--user-data-dir=${app.getPath('userData')}`]));
+  assert.equal(registered, true, 'the installed app must register its protocol handler');
+}
 desktopShot('first-launch');
 
 // --- Onboarding ---------------------------------------------------------------------------
@@ -102,15 +110,19 @@ if (userCode) {
 try {
   await clickText(companion, 'Continue');
   await sleep(1500);
+  assert.equal((await companion.locator('.ob2__count').innerText()).trim(), '3 / 5');
   await shot(companion, 'onboarding-3-connect-editors');
   await clickText(companion, 'Continue');
   await sleep(1500);
+  assert.equal((await companion.locator('.ob2__count').innerText()).trim(), '4 / 5');
   await shot(companion, 'onboarding-4-permissions');
   await clickText(companion, 'Continue');
   await sleep(8000);
+  assert.equal((await companion.locator('.ob2__count').innerText()).trim(), '5 / 5');
   await shot(companion, 'onboarding-5-demo');
   await clickText(companion, 'Start using Unvibe');
   await sleep(3500);
+  await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
   await shot(companion, 'after-onboarding');
   log(true, 'Onboarding: all five steps');
 } catch (e) { log(false, 'Onboarding: all five steps', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
@@ -119,54 +131,67 @@ try {
 try {
   const skip = companion.locator('.login__local');
   if (await skip.count()) { await skip.first().click(); await sleep(2500); }
+  await companion.locator('.topbar__title').waitFor({ timeout: 15000 });
+  assert.equal((await companion.locator('.topbar__title').innerText()).trim(), 'Today');
   await shot(companion, 'home');
   log(true, 'Home opens');
 } catch (e) { log(false, 'Home opens', e.message.split('\n')[0]); }
 
 for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']) {
   try {
-    await companion.evaluate((label) => {
-      const b = [...document.querySelectorAll('.side button')].find((x) => (x.getAttribute('aria-label') || x.textContent || '').trim() === label);
-      b?.click();
-    }, page);
-    await sleep(1200);
+    await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
+    await companion.waitForFunction((label) =>
+      document.querySelector('.topbar__title')?.textContent?.trim() === label, page, { timeout: 10000 });
+    log(true, `Page ${page}`);
     await shot(companion, `page-${page.toLowerCase().replace(/\s+/g, '-')}`);
   } catch (e) { log(false, `Page ${page}`, e.message.split('\n')[0]); }
 }
-log(true, 'Every sidebar page opens');
 
-const shortcutLabel = (await companion.locator('.ask-dock__shortcut').first().innerText().catch(() => '')).trim();
+const { shortcut } = await companion.evaluate(() => window.unvibe.appInfo());
+const shortcutRegistered = await app.evaluate(({ globalShortcut }, accelerator) =>
+  globalShortcut.isRegistered(accelerator), shortcut);
+log(shortcutRegistered, 'Configured global shortcut is registered', shortcut);
 const sample = 'function total(items) {\n  return items.reduce((sum, item) => sum + item.price * item.qty, 0);\n}';
 
-async function waitForExplanation(label) {
+async function waitForExplanation(label, expectedCode) {
   const panel = await windowWith(app, 'widget.html', 20000);
   if (!panel) return { ok: false, why: 'review panel did not open' };
-  const start = Date.now();
-  let text = '';
-  while (Date.now() - start < 60000) {
-    text = await panel.locator('.body').first().innerText().catch(() => '');
-    if (text.trim().length > 80) break;
-    await sleep(1000);
+  try {
+    await panel.waitForFunction((code) =>
+      document.querySelector('.code-context code')?.textContent?.trim() === code.trim(),
+    expectedCode, { timeout: 30000 });
+    // The selected-code preview alone is not an AI explanation.
+    await panel.locator('.local-save-note').waitFor({ timeout: 90000 });
+    const text = await panel.locator('.body').evaluate((body) => {
+      const copy = body.cloneNode(true);
+      copy.querySelector('.code-context')?.remove();
+      return copy.textContent?.trim() ?? '';
+    });
+    assert.ok(text.length > 80, 'a completed review must contain an explanation beyond the code preview');
+    await shot(panel, label);
+    desktopShot(label);
+    return { ok: true, why: text.slice(0, 120).replace(/\s+/g, ' ') };
+  } catch (error) {
+    await shot(panel, `${label}-failed`);
+    desktopShot(`${label}-failed`);
+    return { ok: false, why: error.message.split('\n')[0] };
   }
-  await sleep(1500);
-  await shot(panel, label);
-  desktopShot(label);
-  return { ok: text.trim().length > 80, why: text.trim().slice(0, 120).replace(/\s+/g, ' ') || 'no explanation text' };
 }
 
 // --- Editor bridge path (what ⌘U / Ctrl+U does inside VS Code and Cursor) -------------------
 try {
   await app.evaluate(({ clipboard }, code) => clipboard.writeText(code), sample);
-  if (os === 'mac') execFile('open', ['unvibe://review?source=ide']);
-  else execFile('cmd', ['/c', 'start', '', 'unvibe://review?source=ide']);
-  const r = await waitForExplanation('editor-bridge-explanation');
+  if (os === 'mac') execFileSync('open', ['unvibe://review?source=ide']);
+  else execFileSync('cmd', ['/c', 'start', '', 'unvibe://review?source=ide']);
+  const r = await waitForExplanation('editor-bridge-explanation', sample);
   log(r.ok, 'Editor shortcut path explains code', r.why);
 } catch (e) { log(false, 'Editor shortcut path explains code', e.message.split('\n')[0]); }
 
 // --- Global shortcut in another app ------------------------------------------------------------
 try {
   const file = path.join(tmpdir(), 'unvibe-sample.js');
-  writeFileSync(file, sample);
+  const globalSample = sample.replace('function total', 'function selectedTotal');
+  writeFileSync(file, globalSample);
   if (os === 'mac') {
     execFileSync('open', ['-a', 'TextEdit', file]);
     await sleep(3000);
@@ -177,16 +202,17 @@ try {
   } else {
     execFile('notepad', [file]);
     await sleep(3000);
-    const keys = /Alt/i.test(shortcutLabel) ? '^%u' : '^u';
+    assert.equal(shortcutRegistered, true, 'the configured shortcut must be registered before sending it');
+    const keys = `${/Control|CommandOrControl/i.test(shortcut) ? '^' : ''}${/Alt/i.test(shortcut) ? '%' : ''}${/Shift/i.test(shortcut) ? '+' : ''}u`;
     execFileSync('powershell', ['-NoProfile', '-Command',
-      `$w=New-Object -ComObject WScript.Shell; $null=$w.AppActivate('unvibe-sample'); Start-Sleep -Milliseconds 700; $w.SendKeys('^a'); Start-Sleep -Milliseconds 500; $w.SendKeys('${keys}')`]);
+      `$w=New-Object -ComObject WScript.Shell; if (-not $w.AppActivate('unvibe-sample')) { throw 'Notepad did not become the foreground app' }; Start-Sleep -Milliseconds 700; $w.SendKeys('^a'); Start-Sleep -Milliseconds 500; $w.SendKeys('${keys}')`]);
   }
-  const r = await waitForExplanation('global-shortcut-explanation');
-  log(r.ok, `Global shortcut (${shortcutLabel || 'default'}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
+  const r = await waitForExplanation('global-shortcut-explanation', globalSample);
+  log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
 } catch (e) { log(false, 'Global shortcut in another app', e.message.split('\n')[0]); }
 
 await sleep(1000);
 desktopShot('final');
 writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
 await app.close().catch(() => {});
-process.exit(0);
+process.exit(report.some((line) => line.startsWith('FAIL')) ? 1 : 0);
