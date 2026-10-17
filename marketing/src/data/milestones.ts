@@ -13,6 +13,13 @@ export const milestones: Milestone[] = [
   {
     date: "17 OCT 2026",
     category: "PRODUCT",
+    title: "Windows says PC, and the site teaches the right shortcut",
+    summary: "On Windows the sidebar, Settings and About now say this PC instead of this Mac. The site now shows the shortcut that works in every app: Control+U on Mac and Ctrl+Alt+U on Windows. On a phone, the homepage lets you send the link to your computer or try Vibe right there.",
+    figure: "v0.1.41",
+  },
+  {
+    date: "17 OCT 2026",
+    category: "PRODUCT",
     title: "A tidier Today page and a Mac signature that stays the same",
     summary: "On smaller windows the Up next list no longer runs into Recently understood. The Mac app is now signed with the same certificate every release, so after this update macOS asks for Accessibility once more, and future updates no longer change the signature that permission is tied to.",
     figure: "v0.1.40",
