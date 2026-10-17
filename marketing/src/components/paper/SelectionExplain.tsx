@@ -12,7 +12,7 @@ interface Card {
 const MAX_QUOTE = 90;
 
 /**
- * Easter egg: select text anywhere on the site and press ⌘U / Ctrl+U to see the
+ * Easter egg: select text anywhere on the site and press the Unvibe shortcut to see the
  * gesture Unvibe uses in your editor. Nothing is sent anywhere.
  */
 export function SelectionExplain() {
@@ -25,7 +25,9 @@ export function SelectionExplain() {
         setCard(null);
         return;
       }
-      const combo = (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "u";
+      const isU = event.code === "KeyU" || event.key.toLowerCase() === "u";
+      // ⌘U, Control+U, or Ctrl+Alt+U (the Windows default). Leaves ⌥⌘U (view source) alone.
+      const combo = isU && !event.shiftKey && ((event.metaKey && !event.altKey) || (event.ctrlKey && !event.metaKey));
       if (!combo) return;
       const target = event.target;
       if (target instanceof Element && target.closest("input, textarea, [contenteditable='true']")) return;
@@ -68,12 +70,12 @@ export function SelectionExplain() {
       <header>
         <span className="sel-card__logo" aria-hidden="true" />
         <strong>Unvibe</strong>
-        <kbd>{typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent) ? "Ctrl U" : "⌘ U"}</kbd>
+        <kbd>{typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent) ? "Ctrl Alt U" : "⌃ U"}</kbd>
       </header>
       <blockquote>&ldquo;{card.text}&rdquo;</blockquote>
       <p>
-        That is the gesture. In Cursor or VS Code, this opens a plain-English explanation of the code you
-        selected, right beside your editor.
+        That is the gesture. In Cursor, VS Code, Terminal or any app, this opens a plain-English explanation of
+        the code you selected, right beside your editor.
       </p>
       <a href="/beta" className="sel-card__cta">Try it on real code →</a>
     </div>

@@ -27,7 +27,7 @@ export const faqItems: FaqItem[] = [
     id: "what-is-it",
     question: "What is Unvibe?",
     answer:
-      "Unvibe is a desktop overlay that explains AI-generated code in place. Select code in Cursor or VS Code, press ⌘U / Ctrl+U, and get a leveled explanation beside your editor. You can save it, follow up, and quiz yourself later. It is not a code generator and not another chat window.",
+      "Unvibe is a desktop overlay that explains AI-generated code in place. Select code in Cursor, VS Code or Terminal, press Control+U (Ctrl+Alt+U on Windows), and get a leveled explanation beside your editor. You can save it, follow up, and quiz yourself later. It is not a code generator and not another chat window.",
     category: "product",
   },
   {
@@ -55,7 +55,7 @@ export const faqItems: FaqItem[] = [
     id: "which-shortcut",
     question: "Which shortcut do I press?",
     answer:
-      "Inside VS Code and Cursor, select code and press ⌘U (Ctrl+U on Windows). Unvibe installs a tiny editor bridge for this from Settings, Integrations. Everywhere else, like Terminal, Chrome or Xcode, press Control+U on Mac or Ctrl+U on Windows. On Mac the first time, allow Unvibe in System Settings, Privacy and Security, Accessibility, so it can copy what you selected. You can change the shortcut in Settings.",
+      "Anywhere, including Terminal, Chrome and Xcode, press Control+U on Mac or Ctrl+Alt+U on Windows. On Mac the first time, allow Unvibe in System Settings, Privacy and Security, Accessibility, so it can copy what you selected. In VS Code and Cursor you can also use ⌘U (Ctrl+U on Windows) after installing the tiny editor bridge from Settings, Integrations. You can change the shortcut in Settings.",
     category: "product",
   },
   {
@@ -137,7 +137,7 @@ export const faqItems: FaqItem[] = [
     id: "windows",
     question: "Is Windows supported?",
     answer:
-      "Yes, in beta. Download the portable .exe from the Download page, or paste irm https://unvibe.site/install.ps1 | iex in PowerShell. It has the same 30 free explanations as Mac. The app is unsigned for now, so SmartScreen may warn. Press Ctrl+U in your editor to explain selected code.",
+      "Yes, in beta. Download the portable .exe from the Download page, or paste irm https://unvibe.site/install.ps1 | iex in PowerShell. It has the same 30 free explanations as Mac. The app is unsigned for now, so SmartScreen may warn. Select code in any app and press Ctrl+Alt+U to explain it.",
     category: "platform",
   },
   {

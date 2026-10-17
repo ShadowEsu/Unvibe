@@ -2,7 +2,7 @@ const BENEFITS = [
   {
     step: "01",
     title: "Get it in plain English",
-    body: "Select any code and press ⌘U. A short explanation opens right beside your editor, at the depth you pick.",
+    body: "Select any code and press Control+U (Ctrl+Alt+U on Windows). A short explanation opens right beside your editor, at the depth you pick.",
   },
   {
     step: "02",

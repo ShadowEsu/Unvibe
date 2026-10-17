@@ -67,8 +67,8 @@ const DEPTH_DATA: Record<
 };
 
 const SHORTCUTS = [
-  { mac: "\u2318 U", win: "Ctrl U", action: "Explain the selected code", context: "Cursor and VS Code, through the Unvibe editor bridge" },
-  { mac: "Control U", win: "Ctrl U", action: "Explain the selected code", context: "Any other app. You can change this shortcut in Settings" },
+  { mac: "Control U", win: "Ctrl Alt U", action: "Explain the selected code", context: "Any app. You can change this shortcut in Settings" },
+  { mac: "\u2318 U", win: "Ctrl U", action: "Explain the selected code", context: "Cursor and VS Code, after installing the Unvibe editor bridge" },
   { mac: "Escape", win: "Escape", action: "Collapse the explanation card", context: "While a card is focused" },
 ];
 
@@ -150,7 +150,7 @@ export function ResourcesHub() {
                 Open your favorite editor. Highlight any complex function, unfamiliar AI generation, or gnarly git diff.
               </p>
               <div className="resources-card__code">
-                <code>&#8984;U on Mac &middot; Ctrl+U on Windows</code>
+                <code>Control+U on Mac &middot; Ctrl+Alt+U on Windows</code>
               </div>
             </div>
 

@@ -17,7 +17,7 @@ export default function BetaDownloadsPage() {
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Free during the beta</p>
           <h1>Download Unvibe.</h1>
-          <p>Select code, press ⌘U, understand what you ship.</p>
+          <p>Select code, press Control+U (Ctrl+Alt+U on Windows), understand what you ship.</p>
         </div>
       </header>
 
@@ -53,7 +53,7 @@ export default function BetaDownloadsPage() {
               <li>
                 <span className="beta-page__step-badge">3</span>
                 <div>
-                  <strong>Select code and press ⌘U</strong>
+                  <strong>Select code and press Control+U (Ctrl+Alt+U on Windows)</strong>
                   <p>
                     {`Your explanation starts streaming beside your editor. Save it, quiz yourself, build understanding.`}
                   </p>
@@ -87,11 +87,12 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
             <details>
-              <summary>Ctrl+U or ⌘U does nothing</summary>
+              <summary>The shortcut does nothing</summary>
               <p>
-                In Cursor and VS Code, install the Unvibe editor bridge from the app’s setup screen. In other apps, the
-                shortcut is Control+U. On Mac, turn on Unvibe in System Settings → Privacy &amp; Security → Accessibility.
-                If another app already uses the shortcut, change it in Unvibe’s Settings.
+                The shortcut that works in every app is Control+U on Mac and Ctrl+Alt+U on Windows. On Mac, turn on
+                Unvibe in System Settings → Privacy &amp; Security → Accessibility. ⌘U (Ctrl+U on Windows) only works in
+                Cursor and VS Code after you install the editor bridge from Unvibe’s Settings, Integrations. If another
+                app already uses the shortcut, change it in Unvibe’s Settings.
               </p>
             </details>
             <details>

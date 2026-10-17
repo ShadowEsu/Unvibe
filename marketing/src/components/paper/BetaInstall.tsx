@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useCopyToast } from "@/components/paper/CopyToast";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
+import { SHORTCUTS } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
   BETA_INSTALL_COMMAND,
@@ -236,7 +237,7 @@ export function BetaInstall({
         <span className="paper-beta__step-arrow" aria-hidden="true">→</span>
         <div className="paper-beta__step">
           <span className="paper-beta__step-num">3</span>
-          <span className="paper-beta__step-text">Press {os === "windows" ? "Ctrl+U" : "⌘U"}</span>
+          <span className="paper-beta__step-text">Press {os === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere}</span>
         </div>
       </div>
 

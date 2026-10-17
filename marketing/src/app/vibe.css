@@ -97,6 +97,9 @@ h1 em, h2 em, h3 em, .serif-em {
 .vsticker--sun { background: var(--v-sun); }
 .vsticker--lilac { background: var(--v-lilac); }
 .vhero__fine { margin: 0; color: #6b6760; font-size: 0.86rem; }
+.vhero__phone { display: grid; justify-items: center; gap: 0.7rem; }
+.vhero__phone p { margin: 0; color: var(--v-ink); font-size: 0.98rem; font-weight: 550; }
+.vhero__phone button.paper-join { cursor: pointer; font: inherit; }
 .vhero__scroll { position: absolute; left: 50%; bottom: 1.4rem; width: 26px; height: 40px; margin-left: -13px; border: 1.5px solid var(--v-ink); border-radius: 14px; }
 .vhero__scroll span { position: absolute; left: 50%; top: 8px; width: 4px; height: 8px; margin-left: -2px; border-radius: 2px; background: var(--v-ink); animation: vScroll 1.8s ease-in-out infinite; }
 @keyframes vScroll { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(12px); opacity: 0; } 100% { opacity: 0; } }
