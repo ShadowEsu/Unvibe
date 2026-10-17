@@ -19,7 +19,7 @@ Founder: Preston Susanto, preston@unvibe.site. Public founder page: https://unvi
 | Repo | github.com/ShadowEsu/Unvibe (public). Work branch: `claude/website-app-review-82c93b-q2ajlz`, then fast forward `main`. |
 | Desktop app | `app/` (Electron + React). Build: `npm run build`, check: `npm run typecheck && npm test`. |
 | Website | `marketing/` (Next.js) at https://unvibe.site. Vercel project `unvibe-site` auto deploys from `main`. |
-| API + AI | `web/` (Next.js) at https://api.unvibe.site. Vercel project `unvibe-api` (prj_h0TU7Td2Cpq39z2lF0uuDwFUZUp7, team team_Q6QNWAdrTSwC1sWLzSzPxzyi). **Does not auto deploy**: deploy manually from `main` with root directory `web`, framework nextjs. |
+| API + AI | `web/` (Next.js) at https://api.unvibe.site. Vercel project `unvibe-api` (prj_h0TU7Td2Cpq39z2lF0uuDwFUZUp7, team team_Q6QNWAdrTSwC1sWLzSzPxzyi). **Does not auto deploy**: deploy manually from `web/` using the Vercel CLI. The project currently has root directory `.`, framework Next.js. |
 | Database + auth | Supabase project `aupxkhoczqnubiznqazp` (users, device_codes, waitlist, referrals, gifts, billing tables, site_feedback). |
 | Editor bridge | `extension/` packages `unvibe-desktop-bridge-0.1.2.vsix`, bundled into the app. It is what makes ⌘U work inside VS Code and Cursor. |
 | AI model | Gemini (`gemini-3.1-flash-lite`) via GEMINI_API_KEY on the API. Streams token by token. |
@@ -54,24 +54,23 @@ The Mac DMG step has failed twice with "hdiutil detach" errors; the workflow now
 
 ## 5. Current state
 
-- **Latest release: v0.1.38** (13 Oct). Includes the founder page, checksum verified installs (install.sh and install.ps1 refuse a download that does not match), FAQ answers for "app or extension" and "which shortcut".
-- **Committed on `main` but not released yet:** editor bridge built in CI, optional stable Mac signing, Accessibility repair after updates, the Real device test workflow.
-- **Committed on the work branch only (not on `main`):** "Prove it" quiz as the default mode (app `learn.tsx` and `web/src/ai/prompt.ts`), and the unfinished Windows fixes (section 7). The `web/` prompt change also needs an API deploy.
-- Health: no runtime errors on site or API in the last checks. Google sign-in has succeeded every time since the 7 Oct fix. 3 app users, 14 waitlist entries, 0 paid subscriptions.
-- **Daily health check routine** "Unvibe daily health check" runs at 7:52am Pacific and emails the result. It has no Supabase or Vercel connectors, so the data checks are skipped; recreate it from the claude.ai routines page to attach them.
+- **Latest release: v0.1.40** (17 Oct), published from `6291975` by [release run 39008035025](https://github.com/ShadowEsu/Unvibe/actions/runs/39008035025). All four installers returned HTTP 206 to ranged GETs; both checksum manifests are release assets. It is the first Mac build signed with the stable `Unvibe Self Signed` identity (log: "1 valid identities found", both architectures signed with `C9DA4F61…A99D0E`). It also fixes the Today page, where Up next ran into Recently understood at ~1024px wide.
+- **Site downloads:** point at v0.1.40 on `main` (`59831b0`); live `https://unvibe.site/install.sh` and `install.ps1` serve v0.1.40.
+- **API:** the Prove it prompt was deployed to `unvibe-api` on 16 Oct. `https://api.unvibe.site/api/v1/health` returned HTTP 200 afterward.
+- **Real device test on v0.1.40:** [run 39008453354](https://github.com/ShadowEsu/Unvibe/actions/runs/39008453354) PASSED every step on both macOS and Windows: onboarding (all 5 steps), Google sign-in up to Google's own page, Home and all seven pages, the registered shortcut (Mac Control+U, Windows Control+Alt+U), the editor URI path and the global shortcut in TextEdit/Notepad, each with a completed non-mock explanation of the expected code. Limits: GitHub runners, not testers' machines; Google sign-in is checked only up to Google's page, not a completed login; Accessibility persistence across a stable-signed upgrade and native portable self-update are still unverified.
+- **On `main` but not released:** `b88ee5a` replaces the remaining "this Mac" copy on Windows (sidebar sync label, two settings rows, About). It ships with the next release.
+- The 13 Oct counts (3 app users, 14 waitlist entries, 0 paid subscriptions) are historical, not a fresh production audit. Daily health routine management is out of scope at Preston's request.
 
 ## 6. Why ⌘U "doesn't work" (root causes found 13 Oct)
 
-1. **The editor bridge never shipped.** `app/package.json` bundles `extension/release/unvibe-desktop-bridge-0.1.2.vsix`, but CI never built it, so the app could not install the bridge and ⌘U inside VS Code/Cursor did nothing. Fixed on `main` (CI step "Build editor bridge"); ships in the next release.
-2. **Outside editors the shortcut is Control+U on Mac**, which needs Accessibility. Each update is ad-hoc signed with a new signature, so macOS silently stops honouring the Accessibility switch after every update ("Re-check" stays Not granted). The app now clears the stale entry and asks again after an update (`repairAccessibilityAfterUpdate` in `main.ts`).
-3. **The real fix for 2, and for the keychain asking for the password after updates, is a stable signature.** The workflow supports a self-signed identity through two repository secrets, `MAC_SELF_SIGN_P12` and `MAC_SELF_SIGN_PASSWORD`. The certificate was generated and the values are in a private file in the 13 Oct session scratchpad (`signing/github-secrets-to-add.txt`). **Preston needs to add them at https://github.com/ShadowEsu/Unvibe/settings/secrets/actions.** If that file is gone, generate a new one: a self-signed cert with the Code Signing extended key usage, CN "Unvibe Self Signed", exported as a 3DES/SHA1 PKCS#12 so macOS `security import` accepts it.
+1. **The editor bridge previously never shipped.** `app/package.json` bundles `extension/release/unvibe-desktop-bridge-0.1.2.vsix`; v0.1.39 CI builds and includes it. Installing and exercising the actual editor extension remains distinct from testing the `unvibe://review` handler.
+2. **Outside editors the shortcut is Control+U on Mac**, which needs Accessibility. The app clears a stale Accessibility entry after an update (`repairAccessibilityAfterUpdate` in `main.ts`).
+3. **Stable Mac signing is configured and shipping from v0.1.40.** `MAC_SELF_SIGN_P12` and `MAC_SELF_SIGN_PASSWORD` were added to GitHub on 16 Oct. Fingerprint `C9DA4F618ADF98911A450E041B8F336574A99D0E`. Private backups are in `~/.unvibe-signing/` with restricted permissions; never print or commit them. Reuse this certificate rather than regenerating it. Users updating from ad-hoc builds (≤ v0.1.39) are asked for Accessibility once more; that later updates keep the permission is expected but has not been verified on a real upgrade.
 4. Without Apple notarization ($99/year Developer ID) a browser download always shows the macOS "Open Anyway" step once, which asks for the Mac password. The Terminal install line avoids it.
 
-## 7. Windows: what is broken and what is half done
+## 7. Windows release status
 
-An audit (13 Oct) found these. Testers Tejas, Dan, Oussamah, Mithun and others reported the symptoms.
-
-Done but **uncommitted to `main`, untested on Windows** (work branch only):
+Testers Tejas, Dan, Oussamah, Mithun and others reported selection and shortcut problems. The following changes shipped in **v0.1.39**; native behavior must be evaluated with the corrected real-device test, not the original false-positive report:
 - Ctrl+U is no longer grabbed globally on Windows; the Windows default is Ctrl+Alt+U, with a one-time migration (`settings.ts`, `registerShortcut` in `main.ts`).
 - Clear message when copying a selection fails; warning when the shortcut cannot be registered.
 - Selection copy sends Ctrl+Insert instead of Ctrl+C (Ctrl+C interrupts terminals) and skips the retry in terminals; one PowerShell call finds the foreground app and copies (`selection.ts`).
@@ -80,28 +79,30 @@ Done but **uncommitted to `main`, untested on Windows** (work branch only):
 - `windowsHide: true` on git and helper processes (no flashing consoles), colour tray icon on Windows, launch at login on Windows, greeting name from the OS user, `renderer/shared/platform.ts` helper for Windows wording.
 - Companion window gets real min/max/close buttons via `titleBarOverlay` (`windows.ts`).
 
-Still to do before releasing the Windows work:
-- Reserve space for the overlay buttons: in `v7.css` add `:root[data-platform="win"] .topbar { padding-right: 150px; }` (the `data-platform` attribute is already set in `companion.tsx`). Without it the buttons cover Search and Explain.
-- `bar.tsx` still treats `top-center` as notch-attached on every OS (`setAttached(barPosition === 'top-center')`). Make it Mac-only to match `windows.ts`, or the Windows top pill is squashed.
-- Widget keyboard shortcuts accept only `metaKey` (`widget.tsx`); accept `ctrlKey` too.
-- Remaining Mac-only wording in the review panel and Ask Vibe voice tips (`widget.tsx`, `chat.tsx`, use `voiceHowTo` from `renderer/shared/platform.ts`) and in `accountMenu.tsx` / `usageRings.tsx` (⌘ hints).
-- Then run the **Real device test** workflow (section 8) on the new release and look at the Windows screenshots.
+Also shipped in v0.1.39:
+- `v7.css` reserves 150px at the right of the Windows topbar for caption buttons.
+- `bar.tsx` only attaches the top-center Island to the notch on Mac, matching `windows.ts`.
+- Widget keyboard shortcuts accept `ctrlKey` as well as `metaKey`.
+- Review panel, Ask Vibe voice tips, account menu and usage meters use platform-specific wording.
+- Portable updates now swap the new exe into the original path so existing shortcuts do not keep launching the old version. A real-filesystem smoke check verified replacement at the original path, rollback after a denied replacement, and removal of partial downloads with simulated Windows/network/process boundaries. Native locked-exe update/relaunch behavior remains unverified.
 
 ## 8. Real device test (Mac and Windows)
 
 Workflow `real-device-test.yml` (run it from GitHub Actions, optional input `version`). It installs the released app on GitHub's macOS and Windows machines and uses Playwright to walk onboarding, start Google sign-in up to Google's own page, open every page, test the editor shortcut path (`unvibe://review`) and the global shortcut in TextEdit/Notepad, and screenshots every step. Results are in the run's artifacts and the "Walk through the app" log.
 
-First run on v0.1.38 (13 Oct):
-- Mac: app opens, onboarding, Google sign-in start and Google page, every page, editor path explanation, global shortcut in TextEdit explanation: all PASS. "All five onboarding steps" FAIL (a Continue button click timed out; likely the test's selector on the Connect step, check the screenshots).
-- Windows: same passes, but the editor path FAILED (the review panel did not open from `unvibe://review`) and the global shortcut copied the wrong window (the panel showed Unvibe's own onboarding text instead of Notepad's). This matches what Windows testers reported.
-- Artifacts are stored on Azure blob storage that the cloud session's proxy blocks; to view them, either download from the run page, or add a step that uploads the screenshots somewhere reachable (for example a GitHub release asset).
+The [original v0.1.39 run](https://github.com/ShadowEsu/Unvibe/actions/runs/38980828564) did not prove the complete flow:
+- Both operating systems timed out during onboarding. The test matched `Continue with Google` as `Continue`, then reported Home/sidebar passes without checking navigation.
+- Windows reported that neither the editor URI nor the Notepad shortcut opened the panel. It guessed Ctrl+U after failing to read a UI label, instead of checking the registered Ctrl+Alt+U accelerator.
+- Mac reported both review paths as PASS, but its check accepted the selected-code preview as an explanation before generation completed. Google-page navigation also failed on Mac in that run.
+- Artifacts were successfully downloaded with `gh run download 38980828564 -R ShadowEsu/Unvibe -D /tmp/unvibe-v0139-device-evidence`; the old cloud-proxy restriction does not apply to this Mac.
+- The corrected walkthrough uses exact onboarding labels, verifies each page title, checks the registered accelerator, requires the expected selected code plus a completed non-mock explanation, isolates protocol launches to the same QA profile, uses CSP-compatible locators (no `waitForFunction`, the app's `script-src 'self'` stays intact), brings Notepad to the foreground and confirms it before sending keys, and exits nonzero on any failure. With it, v0.1.39 passed fully on Mac and failed only the Notepad step on Windows. That failure was a test focus problem: Edge's welcome page was in front, as the screenshot shows. After the focus fix, v0.1.39 and v0.1.40 both pass on both platforms.
 
 ## 9. What users asked for (research, 13 Oct)
 
 Top asks from email replies, site feedback and analytics:
 1. **A first run that always works**, with visible status and errors, the correct shortcut per OS, and a guided "select this and press the shortcut" step. Funnel today: 425 install script fetches, 15 installs, 1 learning event.
 2. **Installs you can check** (done in v0.1.38: checksums, readable scripts, verify section on /install-help).
-3. **"Prove it" quizzes** that test consequences, cite lines and say "unknown" instead of guessing (built, on the work branch).
+3. **"Prove it" quizzes** that test consequences, cite lines and say "unknown" instead of guessing (shipped in v0.1.39; API prompt deployed).
 4. A living project map: architecture and the "why" from commits and PRs, kept fresh.
 5. Agent and PR Briefs for team leads ("does the author understand this PR").
 6. Linux build (5 asks; out of scope in CLAUDE.md, needs Preston's sign-off).
@@ -109,9 +110,8 @@ Also: several contacts distrusted outreach emails that read as AI-written; perso
 
 ## 10. Open items for Preston
 
-- Add the two signing secrets (section 6).
-- Switch Stripe to live: create live Pro prices and a live webhook to `https://api.unvibe.site/api/v1/billing/webhook`, put the live secret key, webhook secret and price IDs in the `unvibe-api` Vercel env, redeploy. Add `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` to turn on Teams checkout.
-- Confirm the X/Twitter handle (x.com/unvibe_app is a 404, so the link is hidden).
-- Delete the two test rows in Supabase `site_feedback` ("short", "deploy check please delete").
-- Inbox follow-ups: reschedule Arie Kogan, call Amr Dabbas, Ubaid Usman's review was due 16 Oct, MakerHunt free listing offer, Manasvin asked to verify installs (point him to /install-help).
-- Optional: Apple Developer ID ($99/year) to remove the first-open warning entirely.
+- Switch Stripe to live only after account authorization and billing approval: create live Pro prices and a live webhook to `https://api.unvibe.site/api/v1/billing/webhook`, then set the live key, webhook secret and price IDs in `unvibe-api` and redeploy. Teams requires `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL`. Current source prices are Pro $9/month or $81/year; Teams $8/seat/month or $72/seat/year. Stripe Composio connections were EXPIRED at the latest check; no live billing mutation has been performed.
+- X is explicitly deferred by Preston. Keep the unverified link hidden; do not create or switch accounts.
+- Supabase cleanup is complete with Preston's authorization: deleted only the two test `site_feedback` rows (`short`, `deploy check please delete`), preserving the real feedback. The CauliformAI paused project was subsequently deleted; Unvibe and jaymini-prod were preserved. No further destructive cleanup is authorized by this handoff.
+- Preston owns email follow-ups. Do not inspect or prepare the inbox or send messages.
+- Optional Apple Developer ID/notarization requires a separate purchase/owner decision. No purchase or credit redemption is authorized.
