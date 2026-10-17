@@ -1,6 +1,7 @@
 # Unvibe handoff (16 Oct 2026)
 
 Everything a new person or agent needs to pick up Unvibe where it stands today.
+**Agents: read [`docs/SENDOFF.md`](SENDOFF.md) first.** It holds the full idea, history, lessons, every open task, and the protocol for keeping these notes current.
 
 ## 1. What Unvibe is
 
