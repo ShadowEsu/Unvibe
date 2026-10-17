@@ -140,8 +140,8 @@ try {
 for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']) {
   try {
     await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
-    await companion.waitForFunction((label) =>
-      document.querySelector('.topbar__title')?.textContent?.trim() === label, page, { timeout: 10000 });
+    await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
+    assert.equal((await companion.locator('.topbar__title').innerText()).trim(), page);
     log(true, `Page ${page}`);
     await shot(companion, `page-${page.toLowerCase().replace(/\s+/g, '-')}`);
   } catch (e) { log(false, `Page ${page}`, e.message.split('\n')[0]); }
@@ -157,16 +157,14 @@ async function waitForExplanation(label, expectedCode) {
   const panel = await windowWith(app, 'widget.html', 20000);
   if (!panel) return { ok: false, why: 'review panel did not open' };
   try {
-    await panel.waitForFunction((code) =>
-      document.querySelector('.code-context code')?.textContent?.trim() === code.trim(),
-    expectedCode, { timeout: 30000 });
+    const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });
+    await preview.waitFor({ timeout: 30000 });
+    assert.equal((await preview.innerText()).trim(), expectedCode.trim());
     // The selected-code preview alone is not an AI explanation.
     await panel.locator('.local-save-note').waitFor({ timeout: 90000 });
-    const text = await panel.locator('.body').evaluate((body) => {
-      const copy = body.cloneNode(true);
-      copy.querySelector('.code-context')?.remove();
-      return copy.textContent?.trim() ?? '';
-    });
+    const bodyText = await panel.locator('.body').innerText();
+    const codeContext = await panel.locator('.code-context').innerText();
+    const text = bodyText.replace(codeContext, '').trim();
     assert.ok(text.length > 80, 'a completed review must contain an explanation beyond the code preview');
     await shot(panel, label);
     desktopShot(label);
