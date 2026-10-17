@@ -276,12 +276,13 @@
   & .today-cta__key { flex: 0 0 auto; padding: 4px 10px; border: 1.5px solid var(--lime); border-bottom-width: 3px; border-radius: 8px; background: transparent; color: var(--lime); font: 800 13px var(--font-sans); }
 
   & .today-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; align-items: start; }
-  & .today-sec { display: grid; gap: 2px; min-width: 0; }
+  /* One track sized to the column; an implicit track grows to max-content and spills into the next column. */
+  & .today-sec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; min-width: 0; }
   & .today-sec > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px 6px; }
   & .today-sec h2 { margin: 0; color: var(--v-ink); font: 750 16px var(--font-display); letter-spacing: -0.02em; text-transform: none; }
   & .today-sec > header > span { color: var(--v-faint); font: 600 12px var(--font-sans); }
 
-  & .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  & .rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
   & .row {
     display: flex; align-items: center; gap: 10px; width: 100%; min-height: 38px; padding: 0 10px; border: 1.5px solid transparent; border-radius: 10px;
     background: transparent; color: var(--v-ink-2); text-align: left; cursor: pointer; font: 550 13.5px var(--font-sans);
