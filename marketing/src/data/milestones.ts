@@ -11,6 +11,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "17 OCT 2026",
+    category: "PRODUCT",
+    title: "A tidier Today page and a Mac signature that stays the same",
+    summary: "On smaller windows the Up next list no longer runs into Recently understood. The Mac app is now signed with the same certificate every release, so after this update macOS asks for Accessibility once more, and future updates no longer change the signature that permission is tied to.",
+    figure: "v0.1.40",
+  },
+  {
     date: "16 OCT 2026",
     category: "PRODUCT",
     title: "Prove it quizzes, the editor shortcut, and a proper Windows app",
