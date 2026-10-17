@@ -67,6 +67,26 @@ Top user asks (research 13 Oct, details in HANDOFF section 9):
 Also: several contacts distrusted outreach that read as AI-written. Personal replies from
 Preston matter more than volume.
 
+### How we grow (ethics and psychology, sourced 17 Oct 2026)
+Preston's goal: 100,000 users by the end of October 2026, through the site and app only (no
+outreach). Be honest about it: 30 days of Mixpanel to 17 Oct show **700 page views**, 525
+install-section views, 5 install-command copies, 13 release downloads, 12 download clicks,
+9 try-it explanations, 2 waitlist completions. Visitors: 38% Mac, 26% Windows, **28% phones**.
+Even perfect conversion gives hundreds of users, not 100k. The site can raise conversion; only
+distribution raises traffic. Rules for every site/app change:
+1. **Fix ability before motivation** (Fogg Behavior Model: a behaviour happens when motivation,
+   ability and a prompt meet; behaviormodel.org). Our leaks are ability leaks: wrong shortcut,
+   Accessibility, unsigned installers, phones that can't install. Fix those before adding hype.
+2. **One promise, one action per screen.** Visitors decide in 10–20 s and read 20–28% of the words
+   (NN/g, "How long do users stay on web pages", "How little do users read").
+3. **No dark patterns** (FTC staff report "Bringing Dark Patterns to Light", Sep 2022): no fake
+   scarcity or countdowns, no invented social proof, no confirmshaming, no hidden costs, no
+   pre-ticked consent. Every number on the site comes from a live source.
+4. **Fast and stable:** LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1 at p75 (web.dev Core Web Vitals).
+   One desktop lab run on 17 Oct: LCP 0.4 s, CLS 0.
+5. **Copy must match the app.** Shortcut facts live in `marketing/src/lib/shortcuts.ts` and must
+   match `app/src/main/settings.ts` `DEFAULT_SHORTCUT`.
+
 ---
 
 ## 2. Map of everything
@@ -217,6 +237,14 @@ curl -s https://api.unvibe.site/api/v1/health                          # expect 
   `https://api.supabase.com/v1/projects` with `Authorization: Bearer $SUPABASE_ACCESS_TOKEN_2`.
   Organizations cannot be deleted through the API (dashboard only).
 
+### Measure the site funnel (Mixpanel, read only)
+Project id `4054892` via Composio. `MIXPANEL_AGGREGATE_EVENTS` wants `event` as a JSON array
+*string* (`"event": "[\"beta_install_viewed\", ...]"`); `events` errors. `MIXPANEL_TOP_EVENT_PROPERTY_VALUES`
+is broken (`query_id`); break down with `MIXPANEL_QUERY_SEGMENTATION` and
+`"on": "properties[\"$os\"]"`. Key events: `$mp_web_page_view`, `beta_install_viewed`,
+`beta_install_copied`, `download_cta_clicked`, `release_download_clicked`, `try_explained`,
+`phone_link_sent`, `phone_try_clicked`. App side: Supabase `users` / `device_codes` row counts.
+
 ### Windows/Mac UI checks without a Windows machine
 Run the app with a throwaway profile and a debug port, then drive it over CDP:
 ```
@@ -351,6 +379,11 @@ Full detail per version: `marketing/src/data/milestones.ts` and `git log` (272+ 
 - When an agent session dies mid-edit (e.g. "No API key for provider"), re-read the file before
   editing again; the edit may or may not have landed.
 - Never claim "verified" for a native behaviour you only simulated. Say exactly what was simulated.
+- The site taught ⌘U and Ctrl+U for weeks, but on a fresh install ⌘U only works after installing
+  the editor bridge, and Windows moved to Ctrl+Alt+U in v0.1.39. Check every site instruction
+  against the shipped defaults whenever an app default changes.
+- Headless browser tabs that are hidden don't run CSS entrance animations; screenshots look
+  blank. Emulate `prefers-reduced-motion: reduce` before judging a layout.
 
 ---
 
@@ -360,8 +393,6 @@ Legend: **[agent]** you can do it now; **[Preston]** needs him; **[decide]** nee
 When you finish one, move it to the session log with the evidence.
 
 ### Release and quality
-- [ ] **[agent]** Release **v0.1.41** to ship `b88ee5a` (Windows "this PC" wording). Milestones
-      entry, release, 206 checks, site bump, real device test.
 - [ ] **[agent/Preston]** Verify on a real Mac that updating v0.1.40 → v0.1.41 keeps Accessibility
       granted (the whole point of stable signing). If it does, simplify the post-update repair
       message; if not, investigate the designated requirement of the signature.
@@ -380,7 +411,12 @@ When you finish one, move it to the session log with the evidence.
 - [ ] **[agent]** Design a guided first-run step: "select this sample and press <shortcut>", with
       visible success/failure and the correct key per OS. Measure with Mixpanel (connected as
       `unvibe` in Composio). Get Preston's OK on the design before building.
-- [ ] **[agent]** Re-measure the install → first explanation funnel and record numbers here.
+- [ ] **[agent]** Re-measure the funnel every session (recipe in section 4, "Measure the site
+      funnel") and add a row to the funnel table in section 14. First check of the new phone path:
+      `phone_link_sent` / `phone_try_clicked` counts vs. phone page views.
+- [ ] **[decide]** Phones are 28% of visitors. Optional next step: "email me the download link"
+      (needs Resend sending to the visitor, so it needs Preston's OK).
+- [ ] **[agent]** Exclude `?ref=agent-smoke` visits from funnel numbers (agent smoke tests).
 
 ### Product ideas queued (from user research)
 - [ ] **[decide]** Living project map (architecture + "why" from commits/PRs).
@@ -490,6 +526,12 @@ Improve the process itself, not just the notes: if a check you did by hand could
 CI step (as the real device test became), propose it and add it. The goal is that each session
 starts smarter and finishes faster than the last.
 
+**The loop (do it every session, it is how this project gets smarter):**
+measure (funnel numbers, section 4) → pick the single biggest leak → make the smallest truthful
+fix → verify it on the real surface at the real OS/user agent → ship → next session, re-measure and
+write the delta in the funnel table. If a fix didn't move its number, say so and try the next leak.
+Stop rules: same blocker three times, a decision only Preston can make, or no measurable gain.
+
 ---
 
 ## 14. Session log
@@ -501,5 +543,24 @@ starts smarter and finishes faster than the last.
   39008453354 (all PASS both OSes); commits `6cee939`…`05fc138`.
 - Unverified: Accessibility persistence across stable-signed updates; native portable self-update;
   completed Google login.
-- Unreleased on `main`: `b88ee5a`.
+- Unreleased on `main` at the time: `b88ee5a` (shipped in v0.1.41, see next entry).
 - Blocked on Preston: Stripe approval; X account (deferred).
+
+### 2026-10-17 (evening)
+- Site: the shortcut copy now matches the app (Control+U on Mac, Ctrl+Alt+U on Windows, ⌘U/Ctrl+U
+  only with the editor bridge), one source in `marketing/src/lib/shortcuts.ts`; phones get "Send
+  the link to my computer" and "Try it here first" instead of dead download buttons (`35cb0ba`).
+- Released **v0.1.41** (`bef3c1f`, ships `b88ee5a`): run 39076009281, signing `1 valid identities
+  found` + `identity=C9DA4F61…A99D0E`, all four installers 206; site bump `f44649d`, live
+  `install.sh` TAG v0.1.41. Real device test 39076481851 PASS on both OSes; screenshots opened
+  (Windows shows "Saved on this PC", Ctrl+Alt+U explains in Notepad).
+- Tests: app 72, marketing 48 (+2 for `detectVisitorDevice`).
+- Live check: phone UA on unvibe.site shows the phone block and no .dmg links.
+- Unverified: real phone share sheet (headless only); Accessibility persistence on a real
+  v0.1.40 → v0.1.41 Mac upgrade; native portable self-update.
+
+Funnel table (Mixpanel, 30 days ending on the date):
+
+| Date | Page views | Install views | Command copies | Release downloads | Try-it explains | Waitlist | App users (Supabase) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 17 Oct | 700 | 525 | 5 | 13 | 9 | 2 | 3 |
