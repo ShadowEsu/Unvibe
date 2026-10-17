@@ -202,8 +202,37 @@ try {
     await sleep(3000);
     assert.equal(shortcutRegistered, true, 'the configured shortcut must be registered before sending it');
     const keys = `${/Control|CommandOrControl/i.test(shortcut) ? '^' : ''}${/Alt/i.test(shortcut) ? '%' : ''}${/Shift/i.test(shortcut) ? '+' : ''}u`;
-    execFileSync('powershell', ['-NoProfile', '-Command',
-      `$w=New-Object -ComObject WScript.Shell; if (-not $w.AppActivate('unvibe-sample')) { throw 'Notepad did not become the foreground app' }; Start-Sleep -Milliseconds 700; $w.SendKeys('^a'); Start-Sleep -Milliseconds 500; $w.SendKeys('${keys}')`]);
+    // Windows refuses focus requests from background processes (the taskbar icon only flashes),
+    // so bring Notepad forward and confirm it is the foreground window before sending any keys.
+    const focusScript = path.join(tmpdir(), 'unvibe-focus-notepad.ps1');
+    writeFileSync(focusScript, [
+      'param([string]$keys)',
+      'Add-Type @"',
+      'using System; using System.Text; using System.Runtime.InteropServices;',
+      'public class Fg {',
+      '  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();',
+      '  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);',
+      '  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);',
+      '  [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, uint f, UIntPtr e);',
+      '  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder b, int n);',
+      '}',
+      '"@',
+      'function Title { $b = New-Object System.Text.StringBuilder 512; [void][Fg]::GetWindowText([Fg]::GetForegroundWindow(), $b, 512); $b.ToString() }',
+      '$p = $null',
+      'for ($i = 0; $i -lt 40 -and -not $p; $i++) { $p = Get-Process notepad -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like "*unvibe-sample*" } | Select-Object -First 1; if (-not $p) { Start-Sleep -Milliseconds 250 } }',
+      'if (-not $p) { throw "The Notepad window with the sample was not found" }',
+      'for ($i = 0; $i -lt 10 -and (Title) -notlike "*unvibe-sample*"; $i++) {',
+      '  [Fg]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [Fg]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)',
+      '  [void][Fg]::ShowWindow($p.MainWindowHandle, 9); [void][Fg]::SetForegroundWindow($p.MainWindowHandle); Start-Sleep -Milliseconds 300',
+      '}',
+      'if ((Title) -notlike "*unvibe-sample*") { throw "Notepad is not the foreground window (foreground: $(Title))" }',
+      '$w = New-Object -ComObject WScript.Shell',
+      "$w.SendKeys('^a'); Start-Sleep -Milliseconds 500",
+      'if ((Title) -notlike "*unvibe-sample*") { throw "Notepad lost focus before the shortcut (foreground: $(Title))" }',
+      '$w.SendKeys($keys)',
+    ].join('\r\n'));
+    execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', focusScript, '-keys', keys], { encoding: 'utf8' });
+    desktopShot('notepad-selected');
   }
   const r = await waitForExplanation('global-shortcut-explanation', globalSample);
   log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
