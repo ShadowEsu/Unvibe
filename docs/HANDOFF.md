@@ -55,6 +55,13 @@ The Mac DMG step has failed twice with "hdiutil detach" errors; the workflow now
 
 ## 5. Current state
 
+> **CHECKPOINT 18 Oct (usage pause): moving storage from Blob to Supabase, not deployed yet.**
+> - Root cause: Blob store `unvibe-waitlist` is suspended (limits exceeded). Every trial counter, install record, activation marker and unsubscribe write since then has failed. The 30-free limit therefore lives only in each server instance's memory. Lifting the suspension is Preston's billing call.
+> - Done: migration `web/supabase/migrations/20261018160000_trial_and_suppression_tables.sql` is **applied in production** (4 tables, RLS on, no policies, plus RPC `trial_reserve`). The marketing suppression move is complete in the working tree: 67/67 tests, not committed.
+> - In progress: the web trial/activation/adminStats move (agent TrialToSupabase; new file `web/src/lib/serviceSupabase.ts`). Check its result and run web tests, then commit both packages. Deploy unvibe-api manually and let the site auto-deploy.
+> - Then verify: writes persist across two cold instances; the 30-free limit holds after a redeploy; admin/stats shows real rows (run the device test to create them).
+> - Failed unsubscribe POSTs: **0** found in unvibe-site logs for the last 24 h, across 12 deployments. Older logs are not retained, so earlier losses can't be ruled out.
+
 - **Latest release: v0.1.42** (18 Oct), published from `f90d09e` by [release run 39102708728](https://github.com/ShadowEsu/Unvibe/actions/runs/39102708728); all four installers 206; Mac signed with the stable identity. It is the new three-step first run. Before publishing, the same app code (`a3f80b3`, `app/` identical) was built without publishing ([39102087100](https://github.com/ShadowEsu/Unvibe/actions/runs/39102087100)) and passed the device test on that build ([39102449853](https://github.com/ShadowEsu/Unvibe/actions/runs/39102449853)). Launch to first explanation took **17.8 s on Mac and 11.0 s on Windows** (GitHub runners, one run each). v0.1.41 (`bef3c1f`) shipped the Windows "this PC" wording; v0.1.40 was the first stable-signed Mac build.
 - **First run (v0.1.42):**
   1. Hello, with the name optional and Google sign-in optional.
