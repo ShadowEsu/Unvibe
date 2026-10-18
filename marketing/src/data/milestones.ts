@@ -11,6 +11,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "18 OCT 2026",
+    category: "PRODUCT",
+    title: "Your first explanation in under a minute",
+    summary: "Setup is three steps instead of five. The second step explains a real piece of code right away, with no permission needed. The third shows the shortcut that works everywhere (Control+U on Mac, Ctrl+Alt+U on Windows) and one clear Accessibility button on Mac. You no longer see a sign-in screen every time you open Unvibe.",
+    figure: "v0.1.42",
+  },
+  {
     date: "17 OCT 2026",
     category: "PRODUCT",
     title: "Windows says PC, and the site teaches the right shortcut",
