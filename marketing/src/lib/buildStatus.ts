@@ -69,7 +69,7 @@ export function defaultBuildStatus(now = new Date()): BuildStatus {
     todayKey: buildDayKey(now),
     isBuilding: false,
     focus: "Live on Mac and Windows",
-    note: "Unvibe is out. 800+ followers across Instagram, TikTok, X, and LinkedIn.",
+    note: "Unvibe is out. 800+ followers across Instagram, TikTok and LinkedIn.",
     sessionStartedAt: null,
     lastHeartbeatAt: null,
     updatedAt: INITIAL_UPDATED_AT,

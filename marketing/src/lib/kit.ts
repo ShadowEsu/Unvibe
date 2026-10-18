@@ -83,7 +83,7 @@ export function kitSections(): KitSection[] {
         "After-Agent Review: when an agent changes many files, Unvibe ranks the real diff and gives a checklist.",
         "Privacy: secrets like API keys and .env files are filtered on your computer before anything is sent. No training on private code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
-        "Invite a friend: when someone joins with your link, you both get a month of Pro (up to five friends, it stacks).",
+        "Invite a friend: when someone joins with your link using a new email, you each get a month of Pro (Expert depth and answers that use nearby files). Up to five friends, and months stack.",
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, partner perks worth about $21.5K to $23K).",
         "Founder: Preston Susanto, student founder in California. Contact preston@unvibe.site.",
       ],

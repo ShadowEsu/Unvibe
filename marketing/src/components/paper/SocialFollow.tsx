@@ -158,7 +158,7 @@ export function SocialFollowLinks({ includeMail = false, className = "paper-foot
 export function GrowthFollowSum() {
   return (
     <div className="paper-keys-stage">
-      <div className="paper-follow" aria-label={`${SOCIAL_FOLLOWERS} followers across X, LinkedIn, Instagram, and TikTok`}>
+      <div className="paper-follow" aria-label={`${SOCIAL_FOLLOWERS} followers across LinkedIn, Instagram, and TikTok`}>
         {followSum.map((profile, index) => {
           const Mark = profile.Mark;
           return (
@@ -176,7 +176,7 @@ export function GrowthFollowSum() {
           <span>followers</span>
         </div>
       </div>
-      <p className="paper-caption">Followers across Instagram, TikTok, X, and LinkedIn.</p>
+      <p className="paper-caption">Followers across Instagram, TikTok and LinkedIn.</p>
     </div>
   );
 }
