@@ -3,14 +3,38 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import React from "react";
 
-export const alt = "Unvibe. Learn the code AI shipped.";
+export const alt = "Unvibe: understand the code AI writes for you. Free for Mac and Windows.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+const PAPER = "#f7f4ee";
+const INK = "#1b1a17";
+const LILAC = "#b8a6ff";
+const ACCENT = "#5b3fd1";
+
+/** Vibe, same shape and colours as src/components/paper/Vibe.tsx, without the animation. */
+function VibeBlob({ size: px }: { size: number }) {
+  return (
+    <svg width={px} height={px} viewBox="0 0 48 48" fill="none">
+      <ellipse cx="24" cy="45.5" rx="12" ry="1.8" fill={INK} fillOpacity="0.14" />
+      <path
+        d="M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z"
+        fill={LILAC}
+        stroke={INK}
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" fill={INK} />
+      <circle cx="17.6" cy="22.6" r="1.15" fill="#fff" />
+      <ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" fill={INK} />
+      <circle cx="28.4" cy="22.6" r="1.15" fill="#fff" />
+    </svg>
+  );
+}
+
 export default async function Image() {
   const root = process.cwd();
-  const [photo, newsreader, newsreaderItalic, inter] = await Promise.all([
-    readFile(join(root, "public/hero/golden-gate.png")),
+  const [newsreader, newsreaderItalic, inter] = await Promise.all([
     readFile(join(root, "src/app/og/Newsreader-Regular.ttf")),
     readFile(join(root, "src/app/og/Newsreader-Italic.ttf")),
     readFile(join(root, "src/app/og/Inter-SemiBold.ttf")),
@@ -23,122 +47,66 @@ export default async function Image() {
           width: "100%",
           height: "100%",
           display: "flex",
-          position: "relative",
-          overflow: "hidden",
-          color: "#f7f4ee",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "56px 72px",
+          background: PAPER,
+          color: INK,
         }}
       >
-        <img
-          src={`data:image/png;base64,${photo.toString("base64")}`}
-          alt=""
-          width={1200}
-          height={630}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: 1200,
-            height: 630,
-            objectFit: "cover",
-            objectPosition: "62% 40%",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(12,16,28,0.16) 0%, rgba(12,16,28,0.1) 38%, rgba(18,12,32,0.58) 100%)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 36,
-            left: 44,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2.4 20.4 7.2 V16.8 L12 21.6 3.6 16.8 V7.2 Z"
-              stroke="#f7f4ee"
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M8.8 8.4 V12.3 A3.2 3.2 0 0 0 15.2 12.3 V8.4"
-              stroke="#f7f4ee"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span
-            style={{
-              fontFamily: "Inter",
-              fontSize: 22,
-              fontWeight: 600,
-              letterSpacing: "-0.04em",
-            }}
-          >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <VibeBlob size={40} />
+          <span style={{ fontFamily: "Inter", fontSize: 28, fontWeight: 600, letterSpacing: "-0.03em" }}>
             Unvibe
           </span>
         </div>
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            paddingBottom: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textAlign: "center",
-            }}
-          >
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", flexDirection: "column", width: 800 }}>
             <div
               style={{
                 fontFamily: "Newsreader",
-                fontSize: 92,
-                lineHeight: 0.92,
-                letterSpacing: "-0.045em",
-                textShadow: "0 0 46px rgba(167,139,250,0.42)",
+                fontSize: 88,
+                lineHeight: 1,
+                letterSpacing: "-0.035em",
               }}
             >
-              Learn the code
-            </div>
-            <div
-              style={{
-                fontFamily: "Newsreader",
-                fontSize: 92,
-                lineHeight: 0.92,
-                letterSpacing: "-0.045em",
-                marginTop: 6,
-                textShadow: "0 0 46px rgba(167,139,250,0.42)",
-              }}
-            >
-              AI shipped.
+              Understand the code
             </div>
             <div
               style={{
                 fontFamily: "Newsreader",
                 fontStyle: "italic",
-                fontSize: 28,
-                marginTop: 22,
-                opacity: 0.9,
+                fontSize: 88,
+                lineHeight: 1,
+                letterSpacing: "-0.035em",
+                marginTop: 8,
+                color: ACCENT,
               }}
             >
-              Select it. Press Command U. Keep it.
+              AI writes for you.
+            </div>
+            <div
+              style={{
+                fontFamily: "Inter",
+                fontSize: 25,
+                whiteSpace: "nowrap",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                marginTop: 34,
+                opacity: 0.72,
+              }}
+            >
+              Free for Mac and Windows · Select code, press one shortcut
             </div>
           </div>
+          <div style={{ display: "flex", marginRight: 4, transform: "rotate(-6deg)" }}>
+            <VibeBlob size={260} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <span style={{ fontFamily: "Inter", fontSize: 22, fontWeight: 600, opacity: 0.6 }}>unvibe.site</span>
         </div>
       </div>
     ),

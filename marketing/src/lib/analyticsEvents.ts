@@ -33,8 +33,8 @@ export const ANALYTICS_EVENTS = [
   "selection_explain_tried",
   "palette_opened",
   "playground_used",
-  "phone_link_sent",
-  "phone_try_clicked",
+  "hero_try_clicked",
+  "email_link_cta_clicked",
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

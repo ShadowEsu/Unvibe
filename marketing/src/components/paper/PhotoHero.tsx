@@ -1,52 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { DownloadRow } from "@/components/paper/DownloadLink";
+import { useEffect, useState, type FormEvent } from "react";
+import { DownloadLink } from "@/components/paper/DownloadLink";
+import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
+import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { markRefUsed, storedRef } from "@/lib/referral";
 import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
 const LEAD = "Understand the code";
-const ACCENT = "AI ships for you.";
+const ACCENT = "AI writes for you.";
 
 /**
- * Phones can't run the desktop app. Instead of dead download buttons, let the visitor
- * send the link to their computer (share sheet or copy) or try Vibe right here.
+ * Phones can't run the desktop app, so the one action there is "email me the link".
+ * It joins the existing list (waitlist_entries) and sends the welcome email with the download.
  */
-function SendToDesktop() {
-  const [copied, setCopied] = useState(false);
-  const send = async () => {
-    const url = "https://unvibe.site/?ref=phone";
+function EmailMeLink() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+  const [error, setError] = useState("");
+  const [code, setCode] = useState("");
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setState("busy");
+    setError("");
+    const params = new URLSearchParams(window.location.search);
+    const referredBy = storedRef();
     try {
-      if (typeof navigator.share === "function") {
-        await navigator.share({ title: "Unvibe", text: "Install Unvibe on my Mac or PC", url });
-        track("phone_link_sent", { method: "share" });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      track("phone_link_sent", { method: "copy" });
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      /* share sheet closed or clipboard blocked */
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          firstName: "",
+          lastName: "",
+          referredBy,
+          utmSource: (params.get("utm_source") ?? "").slice(0, 64),
+          utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
+          utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { referralCode?: string; duplicate?: boolean; error?: string };
+      if (!response.ok) throw new Error(body.error || "That didn't go through. Try again in a minute.");
+      if (referredBy) markRefUsed();
+      setCode(body.referralCode ?? "");
+      setState("done");
+      track("waitlist_completed", { surface: "phone_hero", duplicate: Boolean(body.duplicate) });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "That didn't go through. Try again in a minute.");
+      setState("idle");
     }
   };
-  return (
-    <div className="vhero__phone">
-      <p>Unvibe runs on your Mac or PC, right beside your editor.</p>
-      <div className="paper-join-row">
-        <button type="button" className="paper-join paper-join--mac" onClick={() => void send()}>
-          <span className="paper-join__label">{copied ? "Link copied" : "Send the link to my computer"}</span>
-        </button>
-        <a className="paper-join paper-join--win" href="#try-it" onClick={() => track("phone_try_clicked")}>
-          <span className="paper-join__label">Try it here first</span>
-        </a>
+
+  if (state === "done") {
+    return (
+      <div className="vhero__phone" id="email-link" role="status">
+        <p><strong>Sent.</strong> Open the email on your Mac or PC to download Unvibe.</p>
+        {code ? <ShareStep code={code} surface="phone_hero" /> : null}
       </div>
+    );
+  }
+
+  return (
+    <div className="vhero__phone" id="email-link">
+      <p>Unvibe runs on your Mac or PC. We&apos;ll email you the download link.</p>
+      <form className="vhero__email" onSubmit={submit}>
+        <input
+          type="email"
+          required
+          maxLength={254}
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          aria-label="Your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button type="submit" className="paper-join paper-join--win" disabled={state === "busy"}>
+          <span className="paper-join__label">{state === "busy" ? "Sending…" : "Email me the link"}</span>
+        </button>
+      </form>
+      {error ? <p className="vhero__error" role="alert">{error}</p> : null}
+      <p className="vhero__fine">One email with the link. Unsubscribe any time.</p>
     </div>
   );
 }
 
-/** Homepage hero: Vibe, one line of promise, the download buttons (or send-to-computer on phones). */
+/** Desktop: one download button for this computer, plus the other OS as a quiet link. */
+function DownloadForThisComputer({ device }: { device: "mac" | "windows" }) {
+  const other = device === "mac" ? "windows" : "mac";
+  return (
+    <div className="vhero__cta">
+      <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} />
+      <p className="vhero__fine">
+        Free · No card · No API key ·{" "}
+        <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => track("download_cta_clicked", { platform: other, surface: "hero_other_os" })}>
+          {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
+        </a>
+      </p>
+    </div>
+  );
+}
+
+/** Homepage hero: one promise, one action for this device, a way to try it first. */
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
   const [device, setDevice] = useState<VisitorDevice>("mac");
@@ -62,37 +120,26 @@ export function PhotoHero() {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  const bubble =
-    device === "phone"
-      ? "psst, I live on your Mac or PC"
-      : `psst, select any code and press ${device === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere}`;
+  const shortcut = device === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere;
 
   return (
     <section className={ready ? "vhero is-ready" : "vhero"} aria-label="Unvibe">
       <div className="vhero__copy">
         <div className="vhero__vibe">
-          <Vibe size={104} />
-          <span className="vhero__bubble">{bubble}</span>
+          <Vibe size={96} />
+          <span className="vhero__bubble">{device === "phone" ? "psst, I live on your Mac or PC" : `psst, select code and press ${shortcut}`}</span>
         </div>
         <h1 aria-label={`${LEAD} ${ACCENT}`}>
           <span className="vhero__lead">{LEAD}</span> <em>{ACCENT}</em>
         </h1>
         <p className="vhero__kicker">
-          Select code in Cursor, VS Code or Terminal. Vibe explains it right beside your editor, checks you got it, and keeps the lesson.
+          Select code, press one shortcut. Vibe explains it beside your editor, then checks you got it.
         </p>
-        <div className="vhero__stickers" aria-hidden="true">
-          <span className="vsticker vsticker--lime">Explain in place</span>
-          <span className="vsticker vsticker--sky">Five depths</span>
-          <span className="vsticker vsticker--sun">Test me</span>
-          <span className="vsticker vsticker--lilac">Saved for later</span>
-        </div>
-        {device === "phone" ? <SendToDesktop /> : <DownloadRow />}
-        <p className="vhero__fine">Free · No API key · No card</p>
-        <a className="vhero__program" href="#backing">In <b>Claude for Startups</b></a>
+        {device === "phone" ? <EmailMeLink /> : <DownloadForThisComputer device={device} />}
+        <a className="vhero__try" href="#try-it" onClick={() => track("hero_try_clicked", { device })}>
+          Or try it in your browser first
+        </a>
       </div>
-      <a href="#tour" className="vhero__scroll" aria-label="See the app">
-        <span />
-      </a>
     </section>
   );
 }

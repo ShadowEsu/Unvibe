@@ -7,9 +7,9 @@ export function AppTour() {
   return (
     <section className="vtour" id="tour" aria-label="A tour of the Unvibe app">
       <div className="vtour__head">
-        <p className="vtour__eyebrow">the new app</p>
+        <p className="vtour__eyebrow">see it work</p>
         <h2>
-          Paper, ink and <em>a little blob.</em>
+          The real app, <em>recorded.</em>
         </h2>
       </div>
       <div className="vtour__window">

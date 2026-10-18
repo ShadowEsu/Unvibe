@@ -1,45 +1,31 @@
 import type { Metadata } from "next";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
-import { FreeRibbon } from "@/components/paper/FreeRibbon";
 import { TryIt } from "@/components/paper/TryIt";
-import { LiveCounter } from "@/components/paper/LiveCounter";
 import { InviteFriend } from "@/components/paper/InviteFriend";
-import { WhyNow } from "@/components/paper/WhyNow";
-import { DecoderBoard } from "@/components/paper/DecoderBoard";
-import { LiveDemo } from "@/components/paper/LiveDemo";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
-import { ToolsMarquee } from "@/components/paper/ToolsMarquee";
-import { StoryStage } from "@/components/paper/StoryStage";
 import { TypingFaq } from "@/components/paper/TypingFaq";
-import { ChangelogList } from "@/components/paper/ChangelogList";
 import { DownloadCta } from "@/components/paper/DownloadCta";
 import { HomeBenefits } from "@/components/paper/HomeBenefits";
-import { StatsStrip } from "@/components/paper/StatsStrip";
-import { DepthPlayground } from "@/components/paper/DepthPlayground";
-import { Reveal } from "@/components/redesign/Reveal";
 import { faqItems } from "@/data/faq";
-import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
-  title: "Unvibe. Understand the AI-generated code you ship.",
+  title: { absolute: "Unvibe: understand the code AI writes for you" },
 };
 
-const homeFaq = faqItems.filter((item) =>
-  ["what-is-it", "generator", "vs-cursor", "editors", "sent", "beta", "windows", "teams"].includes(item.id),
-);
+const homeFaq = faqItems.filter((item) => ["what-is-it", "sent", "editors", "windows", "beta"].includes(item.id));
 
 export const revalidate = 300;
 
+/**
+ * One promise, proof right under it, then try it, how it works, install, trust, questions.
+ * Keep it short: visitors decide in seconds and read a fraction of the words.
+ */
 export default function HomePage() {
   return (
     <div>
       <PhotoHero />
-
-      <FreeRibbon />
-
-      <LiveCounter />
 
       <AppTour />
 
@@ -52,62 +38,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      <StatsStrip />
-
       <section className="paper-section" id="product">
-        <Reveal className="paper-wrap paper-center">
-          <div>
-            <HomeBenefits />
-          </div>
-        </Reveal>
-      </section>
-
-      <section className="paper-section" id="why-now">
         <div className="paper-wrap paper-center">
-          <p className="paper-meta">Why get it today</p>
-          <h2 className="mt-3">Free now. <em>Smarter every day you use it.</em></h2>
-          <div className="mt-10"><WhyNow /></div>
+          <HomeBenefits />
         </div>
       </section>
 
       <section className="paper-section paper-install" id="install">
-        <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" showFeedback={false} />
-        </Reveal>
-      </section>
-
-      <ToolsMarquee />
-
-      <section className="paper-section paper-section--loop" id="loop">
         <div className="paper-wrap paper-center">
-          <Reveal>
-            <p className="paper-meta">The loop</p>
-            <h2 className="mt-3">One shortcut. The rest <em>stays with you.</em></h2>
-          </Reveal>
-          <div className="mt-10">
-            <LiveDemo />
-          </div>
-          <div className="mt-12">
-            <DecoderBoard />
-          </div>
+          <BetaInstall tone="page" showFeedback={false} />
         </div>
       </section>
 
-      <section className="paper-section" id="try">
-        <Reveal className="paper-wrap paper-center">
-          <p className="paper-meta">Try it here</p>
-          <h2 className="mt-3">Same code. <em>Five depths.</em></h2>
-          <p className="paper-lead mt-3">Pick a snippet and slide the depth. This is how Unvibe meets you where you are.</p>
-          <div className="mt-10">
-            <DepthPlayground />
-          </div>
-        </Reveal>
-      </section>
-
-      <StoryStage />
-
       <section className="paper-section">
-        <Reveal className="paper-wrap paper-center">
+        <div className="paper-wrap paper-center">
           <p className="paper-meta">From testers</p>
           <div className="paper-quotes mt-8">
             <blockquote className="paper-glass">
@@ -119,32 +63,19 @@ export default function HomePage() {
               <footer>Om Anand Khaunte, officer, Los Altos Hacks</footer>
             </blockquote>
           </div>
-        </Reveal>
+        </div>
       </section>
 
       <BackingStrip />
 
       <section className="paper-section">
-        <Reveal className="paper-wrap">
-          <div className="paper-center mb-8">
-            <p className="paper-meta">Change log</p>
-            <h2 className="mt-3">What <em>shipped.</em></h2>
-            <a href="/releases" className="paper-text-link">Full change log</a>
-          </div>
-          <div className="paper-log-wrap paper-glass">
-            <ChangelogList items={changelogPreview(5)} />
-          </div>
-        </Reveal>
-      </section>
-
-      <section className="paper-section">
-        <Reveal className="paper-wrap paper-center">
+        <div className="paper-wrap paper-center">
           <p className="paper-meta">Questions</p>
           <h2 className="mt-3">Short <em>answers.</em></h2>
           <div className="mt-10">
             <TypingFaq items={homeFaq} />
           </div>
-        </Reveal>
+        </div>
       </section>
 
       <section className="paper-section" id="invite">

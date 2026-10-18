@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { storedRef } from "@/lib/referral";
+import { REFERRAL_OFFER } from "@/components/paper/ShareStep";
 
 /** Get a personal link. When a friend joins with it, you both get a month of Pro. */
 export function InviteFriend() {
@@ -62,7 +63,7 @@ export function InviteFriend() {
       <div className="invite__copy">
         <p className="paper-meta">Bring a friend</p>
         <h2>One link. <em>A month of Pro each.</em></h2>
-        <p className="paper-lead">Grab your personal link and send it to a friend. When they join with it, you both get a month of Pro, up to five friends. Months stack, and land when you sign in to the app with the same email.</p>
+        <p className="paper-lead">{REFERRAL_OFFER} It lands when you sign in to the app with that email.</p>
       </div>
       {link ? (
         <div className="invite__result">

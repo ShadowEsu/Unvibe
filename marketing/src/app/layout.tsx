@@ -53,35 +53,25 @@ const siteUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe. Learn the code AI shipped.",
+    default: "Unvibe: understand the code AI writes for you",
     template: "%s · Unvibe",
   },
   description:
-    "Select code in Cursor, VS Code, or Terminal. Press Command U. Unvibe explains it in place so you keep what you ship.",
+    "Free for Mac and Windows. Select code in Cursor, VS Code or Terminal, press one shortcut, and Vibe explains it in plain English beside your editor, then quizzes you so it sticks.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Unvibe. Learn the code AI shipped.",
+    title: "Unvibe: understand the code AI writes for you",
     description:
-      "Select code, press Command U, and keep an explanation you can reopen and quiz yourself on.",
+      "Free for Mac and Windows. Select code in Cursor, VS Code or Terminal, press one shortcut, and Vibe explains it in plain English beside your editor, then quizzes you so it sticks.",
     siteName: "Unvibe",
     locale: "en_US",
-    images: [
-      {
-        url: "/unvibe-social-preview-v6.png",
-        width: 1200,
-        height: 630,
-        alt: "Unvibe. Learn the code AI shipped.",
-        type: "image/png",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe. Learn the code AI shipped.",
+    title: "Unvibe: understand the code AI writes for you",
     description:
-      "A Mac overlay that explains selected code beside the tools you already use.",
-    images: ["/unvibe-social-preview-v6.png"],
+      "Free for Mac and Windows. Select code in Cursor, VS Code or Terminal, press one shortcut, and Vibe explains it in plain English beside your editor, then quizzes you so it sticks.",
   },
   robots: { index: true, follow: true },
   verification: {

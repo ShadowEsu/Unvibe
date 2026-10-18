@@ -20,24 +20,28 @@ html.dark body {
   color: var(--ink);
 }
 
+/* Paper, like the app (v7) and the share card: calm, fast, and readable. The old full-screen
+   blurred photo cost a 36px blur on every frame and put body text on saturated blue. */
 body::before {
   content: "";
   position: fixed;
-  inset: -18%;
+  inset: 0;
   z-index: -2;
-  background: var(--page-photo) 62% 40% / cover no-repeat;
-  transform: scale(1.22);
-  filter: blur(36px) saturate(1.55) contrast(1.08) brightness(1.05);
+  background:
+    radial-gradient(60% 45% at 8% 0%, rgba(184, 166, 255, 0.32), transparent 70%),
+    radial-gradient(45% 35% at 100% 8%, rgba(214, 255, 111, 0.16), transparent 70%),
+    #f7f4ee;
   pointer-events: none;
 }
 
+html.dark body::before {
+  background:
+    radial-gradient(60% 45% at 8% 0%, rgba(112, 68, 207, 0.32), transparent 70%),
+    #15111c;
+}
+
 body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--dusk-veil);
-  pointer-events: none;
+  content: none;
 }
 
 .paper-logo__mark {
@@ -1481,7 +1485,6 @@ h2 {
   main > .paper-section:not(.paper-install--front) { content-visibility: auto; contain-intrinsic-size: 1px 850px; }
 }
 
-html[data-performance="lite"] body::before { inset: -8%; transform: scale(1.08); filter: blur(18px) saturate(1.25) contrast(1.04) brightness(1.05); }
 html[data-performance="lite"] .paper-partners__track,
 html[data-performance="lite"] .paper-marquee__track,
 html[data-performance="lite"] .paper-follow,
