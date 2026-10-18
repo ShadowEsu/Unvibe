@@ -10,7 +10,8 @@ export async function GET(req: Request): Promise<Response> {
   }
   try {
     return Response.json(await installStats(), { headers: { 'cache-control': 'no-store' } });
-  } catch {
+  } catch (error) {
+    console.error('admin stats failed', error instanceof Error ? error.message : error);
     return Response.json({ error: 'stats_unavailable' }, { status: 503, headers: { 'cache-control': 'no-store' } });
   }
 }
