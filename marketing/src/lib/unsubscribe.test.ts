@@ -67,7 +67,7 @@ describe("unsubscribe route", () => {
     assert.ok(html.includes(`<form method="post" action="${action}"`));
     assert.match(html, />Unsubscribe<\/button>/);
     assert.doesNotMatch(html, /You're unsubscribed/);
-    // No Blob token in tests, so this reads the local fallback: GET wrote nothing.
+    // No Supabase env in this file, so this reads the local fallback: GET wrote nothing.
     assert.equal(await isEmailUnsubscribed("friend@example.com"), false);
   });
 

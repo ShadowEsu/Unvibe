@@ -83,8 +83,8 @@ async function main(): Promise<void> {
   const needle = argValue("--to");
   const send = process.argv.includes("--send");
   const resolved = await resolveInvitees(needle);
-  // Unsubscribes live in Vercel Blob; without the token this only sees the local dev file.
-  const suppressionReady = Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+  // Unsubscribes live in Supabase (email_suppression); without its env this only sees the local dev file.
+  const suppressionReady = Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
   const entries = withoutUnsubscribed(resolved, await listUnsubscribedKeys());
   const unsubscribed = resolved.length - entries.length;
   const keyReady = Boolean(process.env.RESEND_API_KEY?.trim());
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     ? "REWARD_LINK_SECRET"
     : process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ? "SUPABASE_SERVICE_ROLE_KEY fallback" : "";
   console.log(`Unsubscribe links: ${signing ? `signed with ${signing}` : "missing secret"}`);
-  console.log(`Unsubscribe list: ${suppressionReady ? "Vercel Blob" : "missing BLOB_READ_WRITE_TOKEN, local file only"}`);
+  console.log(`Unsubscribe list: ${suppressionReady ? "Supabase" : "missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY, local file only"}`);
   console.log(`Resend key: ${keyReady ? "set" : "missing"}`);
   console.log(`From address: ${fromReady ? "set" : "missing, will use Resend onboarding sender"}`);
   if (needle) console.log(`Filter: ${needle}`);
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     return;
   }
   if (!signing) throw new Error("REWARD_LINK_SECRET is required so every invite has a working unsubscribe link.");
-  if (!suppressionReady) throw new Error("BLOB_READ_WRITE_TOKEN is required so unsubscribed addresses are skipped.");
+  if (!suppressionReady) throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required so unsubscribed addresses are skipped.");
   let sent = 0;
   for (const batch of chunks(entries)) {
     await sendBatch(batch);

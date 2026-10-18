@@ -2,10 +2,11 @@
  * Sealed desktop trial access. The shared trial token is NOT a provider API key —
  * Gemini/Anthropic keys stay server-side. Each install receives a hard 30-day AI and follow-up budget.
  *
- * Durable counters prefer Vercel Blob (cross-instance). Falls back to process memory.
+ * Durable counters live in Supabase (trial_installs / trial_usage, atomic trial_reserve RPC).
+ * Process memory is used only when Supabase is not configured (dev/tests).
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { head, put } from '@vercel/blob';
+import { serviceSupabase } from '@/lib/serviceSupabase';
 import type { UsageKind } from '@/billing/types';
 
 export type TrialKind = Extract<UsageKind, 'ai_explanation' | 'project_question'>;
@@ -103,83 +104,64 @@ function memoryKey(installKey: string, kind: TrialKind): string {
   return `${installKey}:${kind}`;
 }
 
-function blobPath(installKey: string, kind: TrialKind): string {
-  return `trial-usage/v2/${kind}/${installKey}.json`;
-}
-
-function installBlobPath(installKey: string): string {
-  return `trial-usage/v2/installs/${installKey}.json`;
-}
-
-function blobToken(): string | undefined {
-  return process.env.BLOB_READ_WRITE_TOKEN?.trim() || undefined;
-}
-
+/** Create the install record on first use (write-once), then return its start time. */
 async function readInstall(installKey: string, now = new Date()): Promise<TrialInstallRecord> {
-  const mem = installMemoryBucket().get(installKey);
-  if (mem) return mem;
-  const token = blobToken();
-  if (token) {
-    try {
-      const meta = await head(installBlobPath(installKey), { token });
-      const response = await fetch(meta.url, { headers: { authorization: `Bearer ${token}` } });
-      if (response.ok) {
-        const body = (await response.json().catch(() => null)) as TrialInstallRecord | null;
-        if (body?.startedAt && !Number.isNaN(new Date(body.startedAt).getTime())) {
-          installMemoryBucket().set(installKey, body);
-          return body;
-        }
-      }
-    } catch {
-      // First-use records do not exist yet; create one below.
+  const db = serviceSupabase();
+  if (!db) {
+    const bucket = installMemoryBucket();
+    let record = bucket.get(installKey);
+    if (!record) {
+      record = { startedAt: now.toISOString() };
+      bucket.set(installKey, record);
     }
+    return record;
   }
-  const record = { startedAt: now.toISOString() };
-  installMemoryBucket().set(installKey, record);
-  if (token) {
-    try {
-      await put(installBlobPath(installKey), JSON.stringify(record), {
-        access: 'private', addRandomSuffix: false, allowOverwrite: false,
-        contentType: 'application/json', token,
-      });
-    } catch (error) {
-      // A concurrent first request may have created the same record. The next read converges.
-      if (!/already exists/i.test(String(error))) console.error('trial install record write failed', String(error));
-    }
-  }
-  return record;
+  const { error: writeError } = await db
+    .from('trial_installs')
+    .upsert({ install_key: installKey, started_at: now.toISOString() }, { onConflict: 'install_key', ignoreDuplicates: true });
+  if (writeError) console.error('trial install record write failed', writeError.message);
+  const { data, error } = await db.from('trial_installs').select('started_at').eq('install_key', installKey).maybeSingle();
+  if (error) console.error('trial install record read failed', error.message);
+  const startedAt = typeof data?.started_at === 'string' ? data.started_at : now.toISOString();
+  return { startedAt };
 }
 
 async function readUsed(installKey: string, kind: TrialKind): Promise<number> {
-  const mem = memoryBucket().get(memoryKey(installKey, kind));
-  const token = blobToken();
-  if (!token) return mem?.used ?? 0;
-  try {
-    const meta = await head(blobPath(installKey, kind), { token });
-    const response = await fetch(meta.url, { headers: { authorization: `Bearer ${token}` } });
-    if (!response.ok) return mem?.used ?? 0;
-    const body = (await response.json().catch(() => null)) as TrialCounter | null;
-    const used = Number(body?.used ?? mem?.used ?? 0);
-    memoryBucket().set(memoryKey(installKey, kind), { used });
-    return used;
-  } catch {
-    return mem?.used ?? 0;
+  const db = serviceSupabase();
+  if (!db) return memoryBucket().get(memoryKey(installKey, kind))?.used ?? 0;
+  const { data, error } = await db
+    .from('trial_usage')
+    .select('used')
+    .eq('install_key', installKey)
+    .eq('kind', kind)
+    .maybeSingle();
+  if (error) {
+    console.error('trial usage read failed', error.message);
+    return 0;
   }
+  return Number(data?.used ?? 0);
 }
 
-async function writeUsed(installKey: string, kind: TrialKind, used: number): Promise<void> {
-  memoryBucket().set(memoryKey(installKey, kind), { used });
-  const token = blobToken();
-  if (!token) return;
-  try {
-    await put(blobPath(installKey, kind), JSON.stringify({ used, updatedAt: new Date().toISOString() }), {
-      access: 'private', addRandomSuffix: false, allowOverwrite: true,
-      contentType: 'application/json', token,
-    });
-  } catch (error) {
-    // Memory counter still applies for this instance, but the limit is no longer durable: say so.
-    console.error('trial usage write failed', String(error));
+/**
+ * Atomically add one use when under `limit`. Returns the new count, -1 when the limit is reached,
+ * or null when storage failed (logged; the request is allowed rather than blocked by an outage).
+ */
+async function reserveUnit(installKey: string, kind: TrialKind, limit: number): Promise<number | null> {
+  const db = serviceSupabase();
+  if (!db) {
+    const bucket = memoryBucket();
+    const key = memoryKey(installKey, kind);
+    const used = bucket.get(key)?.used ?? 0;
+    if (used >= limit) return -1;
+    bucket.set(key, { used: used + 1 });
+    return used + 1;
   }
+  const { data, error } = await db.rpc('trial_reserve', { p_install_key: installKey, p_kind: kind, p_limit: limit });
+  if (error) {
+    console.error('trial usage reserve failed', error.message);
+    return null;
+  }
+  return Number(data);
 }
 
 export async function trialUsageLine(installKey: string, kind: TrialKind, now = new Date()): Promise<TrialUsageLine> {
@@ -210,15 +192,18 @@ export async function reserveTrialAction(
   const record = await readInstall(installKey, now);
   const { expiresAt, expired } = trialWindow(record.startedAt, now);
   const limit = limitFor(kind);
-  const used = await readUsed(installKey, kind);
   if (expired) {
+    const used = await readUsed(installKey, kind);
     return Response.json({
       error: 'plan_limit_reached',
       message: `Your 30-day public-beta access ended on ${new Date(expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`,
       usage: { kind, used, limit, remaining: 0, resetsAt: expiresAt }, upgradePath: '/plan',
     }, { status: 429 });
   }
-  if (used >= limit) {
+
+  const reserved = await reserveUnit(installKey, kind, limit);
+  if (reserved === -1) {
+    const used = await readUsed(installKey, kind);
     return Response.json({
       error: 'plan_limit_reached',
       message: `This 30-day beta includes ${limit} ${kind === 'ai_explanation' ? 'AI explanations' : 'follow-up questions'}.`,
@@ -226,18 +211,14 @@ export async function reserveTrialAction(
     }, { status: 429 });
   }
 
-  if (kind === 'ai_explanation') {
-    const globalUsed = await readUsed(GLOBAL_INSTALL_KEY, kind);
-    if (globalUsed >= globalLimit()) {
-      return Response.json({
-        error: 'plan_limit_reached',
-        message: 'The public-beta allowance is temporarily full. Please try again later or add your own API key in Settings.',
-        usage: { kind, used, limit, remaining: Math.max(0, limit - used), resetsAt: expiresAt }, upgradePath: '/plan',
-      }, { status: 429 });
-    }
-    await writeUsed(GLOBAL_INSTALL_KEY, kind, globalUsed + 1);
+  if (kind === 'ai_explanation' && (await reserveUnit(GLOBAL_INSTALL_KEY, kind, globalLimit())) === -1) {
+    // The per-install unit stays spent: a rare over-count beats a non-atomic give-back.
+    const used = reserved ?? (await readUsed(installKey, kind));
+    return Response.json({
+      error: 'plan_limit_reached',
+      message: 'The public-beta allowance is temporarily full. Please try again later or add your own API key in Settings.',
+      usage: { kind, used, limit, remaining: Math.max(0, limit - used), resetsAt: expiresAt }, upgradePath: '/plan',
+    }, { status: 429 });
   }
-
-  await writeUsed(installKey, kind, used + 1);
   return null;
 }

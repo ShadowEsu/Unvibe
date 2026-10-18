@@ -19,11 +19,11 @@ test('admin stats accepts only the exact bearer token', () => {
 
 test('summarizeInstalls counts new and active installs by window', () => {
   const now = new Date('2026-09-29T12:00:00Z');
-  const at = (iso: string) => ({ pathname: iso, uploadedAt: new Date(iso) });
+  const at = (iso: string) => new Date(iso);
   const installs = [at('2026-09-29T01:00:00Z'), at('2026-09-25T00:00:00Z'), at('2026-09-10T00:00:00Z'), at('2026-07-01T00:00:00Z')];
   const explanations = [at('2026-09-28T00:00:00Z'), at('2026-09-15T00:00:00Z')];
-  assert.deepEqual(summarizeInstalls(installs, explanations, now), {
-    installs: 4, newToday: 1, new7d: 2, new30d: 3, active7d: 1, active30d: 2,
+  assert.deepEqual(summarizeInstalls(5, installs, explanations, now), {
+    installs: 5, newToday: 1, new7d: 2, new30d: 3, active7d: 1, active30d: 2,
   });
 });
 
@@ -31,12 +31,10 @@ test('daily activation counts each install once per marker and splits sample fro
   const now = new Date('2026-10-18T12:00:00Z');
   const at = (iso: string) => new Date(iso);
   const rows = dailyActivation(
-    [{ pathname: 'trial-usage/v2/installs/a.json', uploadedAt: at('2026-10-18T01:00:00Z') },
-     { pathname: 'trial-usage/v2/installs/b.json', uploadedAt: at('2026-10-17T23:59:59Z') },
-     { pathname: 'trial-usage/v2/installs/old.json', uploadedAt: at('2026-09-01T00:00:00Z') }],
-    [{ pathname: 'trial-usage/v2/activation/sample/a.json', uploadedAt: at('2026-10-18T01:00:05Z') },
-     { pathname: 'trial-usage/v2/activation/code/a.json', uploadedAt: at('2026-10-18T02:00:00Z') },
-     { pathname: 'trial-usage/v2/activation/sample/b.json', uploadedAt: at('2026-10-18T00:00:01Z') }],
+    [at('2026-10-18T01:00:00Z'), at('2026-10-17T23:59:59Z'), at('2026-09-01T00:00:00Z')],
+    [{ kind: 'sample', at: at('2026-10-18T01:00:05Z') },
+     { kind: 'code', at: at('2026-10-18T02:00:00Z') },
+     { kind: 'sample', at: at('2026-10-18T00:00:01Z') }],
     now, 2,
   );
   assert.deepEqual(rows, [

@@ -72,3 +72,47 @@ test('trial access expires 30 days after the first action', async () => {
   assert.ok(denied);
   assert.equal(denied.status, 429);
 });
+
+test('with Supabase, reserveTrialAction uses trial_reserve for the install and the global counter', async () => {
+  process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = '2';
+  process.env.UNVIBE_TRIAL_GLOBAL_LIMIT = '100';
+  process.env.SUPABASE_URL = 'https://trial.supabase.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test-key';
+  const key = trialInstallKey('supabase-path-test');
+  const rpcCalls: Array<{ p_install_key: string; p_kind: string; p_limit: number }> = [];
+  const results: Record<string, number> = { [key]: 1, __global__: -1 };
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/rest/v1/rpc/trial_reserve') {
+      const args = JSON.parse(String(init?.body));
+      rpcCalls.push(args);
+      return Response.json(results[args.p_install_key]);
+    }
+    if (url.pathname === '/rest/v1/trial_installs' && init?.method === 'POST') return new Response(null, { status: 201 });
+    if (url.pathname === '/rest/v1/trial_installs') return Response.json([{ started_at: new Date().toISOString() }]);
+    if (url.pathname === '/rest/v1/trial_usage') return Response.json([{ used: 2 }]);
+    throw new Error(`unexpected request ${url}`);
+  }) as typeof fetch;
+  try {
+    const globalFull = await reserveTrialAction(key, 'ai_explanation');
+    assert.equal(globalFull?.status, 429);
+    assert.match((await globalFull!.json()).message, /temporarily full/);
+    assert.deepEqual(rpcCalls, [
+      { p_install_key: key, p_kind: 'ai_explanation', p_limit: 2 },
+      { p_install_key: '__global__', p_kind: 'ai_explanation', p_limit: 100 },
+    ]);
+
+    results[key] = -1;
+    const installFull = await reserveTrialAction(key, 'ai_explanation');
+    assert.equal(installFull?.status, 429);
+    const body = await installFull!.json();
+    assert.match(body.message, /includes 2 AI explanations/);
+    assert.equal(body.usage.used, 2);
+    assert.equal(rpcCalls.length, 3);
+  } finally {
+    globalThis.fetch = original;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});

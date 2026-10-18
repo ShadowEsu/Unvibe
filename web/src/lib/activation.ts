@@ -8,7 +8,7 @@
  * Each marker stores only a timestamp. No code, prompt, email or IP is stored.
  */
 import { createHash } from 'node:crypto';
-import { put } from '@vercel/blob';
+import { serviceSupabase } from '@/lib/serviceSupabase';
 
 /** Must match FIRST_RUN_SAMPLE in app/src/main/main.ts. */
 export const FIRST_RUN_SAMPLE = [
@@ -22,7 +22,6 @@ export const FIRST_RUN_SAMPLE = [
 ].join('\n');
 
 export type ActivationKind = 'sample' | 'code';
-export const ACTIVATION_PREFIX = 'trial-usage/v2/activation/';
 
 const normalize = (code: string) => code.replace(/\r\n/g, '\n').trim();
 const SAMPLE_HASH = createHash('sha256').update(normalize(FIRST_RUN_SAMPLE)).digest('hex');
@@ -33,20 +32,21 @@ export function activationKind(code: string | undefined): ActivationKind {
   return createHash('sha256').update(normalize(code)).digest('hex') === SAMPLE_HASH ? 'sample' : 'code';
 }
 
+/** Markers this instance already wrote, so repeat explanations skip the round trip. */
 const written = new Set<string>();
 
-/** Write-once, best effort: activation never blocks or fails an explanation. */
+/** Write-once (trial_activation), best effort: activation never blocks or fails an explanation. */
 export async function recordActivation(installKey: string, code: string | undefined, now = new Date()): Promise<void> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  const path = `${ACTIVATION_PREFIX}${activationKind(code)}/${installKey}.json`;
-  if (!token || written.has(path)) return;
-  written.add(path);
-  try {
-    await put(path, JSON.stringify({ at: now.toISOString() }), {
-      access: 'private', addRandomSuffix: false, allowOverwrite: false, contentType: 'application/json', token,
-    });
-  } catch (error) {
-    // Already recorded (allowOverwrite: false) is expected; anything else is a storage problem.
-    if (!/already exists/i.test(String(error))) console.error('activation marker write failed', String(error));
+  const db = serviceSupabase();
+  const kind = activationKind(code);
+  const marker = `${kind}:${installKey}`;
+  if (!db || written.has(marker)) return;
+  const { error } = await db
+    .from('trial_activation')
+    .upsert({ install_key: installKey, kind, at: now.toISOString() }, { onConflict: 'install_key,kind', ignoreDuplicates: true });
+  if (error) {
+    console.error('activation marker write failed', error.message);
+    return;
   }
+  written.add(marker);
 }

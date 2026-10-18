@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { BlobNotFoundError, del, get, list, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
@@ -376,14 +376,14 @@ export async function recordWaitlistBetaEmail(
 }
 
 /**
- * Suppression storage. waitlist_entries.beta_email_status has a CHECK allowing only sent/failed
- * and we add no migration, so unsubscribes live in the private Vercel Blob store this file
- * already uses: one blob per address at email-suppression/v1/<sha256 of the lowercased
- * email>.json holding only {at}, never the plaintext address. It works for any address we
- * emailed, waitlist row or not. Without BLOB_READ_WRITE_TOKEN (local dev) the same keys live
- * in email-suppression.json beside the local waitlist file.
+ * Suppression storage: public.email_suppression in Supabase, one row per address keyed by
+ * suppressionKey (sha256 of the trimmed, lowercased email), never the plaintext address. It
+ * works for any address we emailed, waitlist row or not. Without SUPABASE_URL and
+ * SUPABASE_SERVICE_ROLE_KEY (local dev, tests) the same keys live in email-suppression.json
+ * beside the local waitlist file.
  */
-const SUPPRESSION_PREFIX = "email-suppression/v1/";
+const SUPPRESSION_TABLE = "email_suppression";
+const SUPPRESSION_PAGE_SIZE = 1000;
 
 async function localSuppressionFile(): Promise<string> {
   return path.join(path.dirname(await resolveDataFile()), "email-suppression.json");
@@ -398,20 +398,18 @@ async function readLocalSuppressions(): Promise<Record<string, { at: string }>> 
   }
 }
 
+/** Throws when the write fails, so the unsubscribe page never claims a success it did not save. */
 export async function recordEmailUnsubscribe(email: string, at: string): Promise<void> {
   const key = suppressionKey(email);
-  if (blobConfigured()) {
-    await put(`${SUPPRESSION_PREFIX}${key}.json`, JSON.stringify({ at }), {
-      access: "private",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-      token: blobToken(),
-    });
+  if (supabaseConfigured()) {
+    const { error } = await supabaseClient()
+      .from(SUPPRESSION_TABLE)
+      .upsert({ email_hash: key, unsubscribed_at: at }, { onConflict: "email_hash", ignoreDuplicates: true });
+    if (error) throw new Error(`Supabase unsubscribe write failed: ${error.message}`);
     return;
   }
   const records = await readLocalSuppressions();
-  records[key] = { at };
+  records[key] ??= { at };
   await fs.writeFile(await localSuppressionFile(), JSON.stringify(records, null, 2), "utf8");
 }
 
@@ -421,12 +419,16 @@ export async function recordEmailUnsubscribe(email: string, at: string): Promise
  */
 export async function isEmailUnsubscribed(email: string): Promise<boolean> {
   const key = suppressionKey(email);
+  if (!supabaseConfigured()) return key in (await readLocalSuppressions());
   try {
-    if (!blobConfigured()) return key in (await readLocalSuppressions());
-    const result = await get(`${SUPPRESSION_PREFIX}${key}.json`, { access: "private", token: blobToken(), useCache: false });
-    return result?.statusCode === 200;
+    const { data, error } = await supabaseClient()
+      .from(SUPPRESSION_TABLE)
+      .select("email_hash")
+      .eq("email_hash", key)
+      .maybeSingle();
+    if (error) throw new Error(`Supabase unsubscribe read failed: ${error.message}`);
+    return data !== null;
   } catch (error) {
-    if (error instanceof BlobNotFoundError) return false;
     console.error("unsubscribe check failed", error);
     return false;
   }
@@ -434,17 +436,19 @@ export async function isEmailUnsubscribed(email: string): Promise<boolean> {
 
 /** Every suppressed key, for bulk sends. Throws on a read error so a batch never ignores it. */
 export async function listUnsubscribedKeys(): Promise<Set<string>> {
-  if (!blobConfigured()) return new Set(Object.keys(await readLocalSuppressions()));
+  if (!supabaseConfigured()) return new Set(Object.keys(await readLocalSuppressions()));
   const keys = new Set<string>();
-  let cursor: string | undefined;
-  do {
-    const page = await list({ prefix: SUPPRESSION_PREFIX, cursor, limit: 1000, token: blobToken() });
-    for (const blob of page.blobs) {
-      if (blob.pathname.endsWith(".json")) keys.add(blob.pathname.slice(SUPPRESSION_PREFIX.length, -".json".length));
-    }
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
-  return keys;
+  for (let from = 0; ; from += SUPPRESSION_PAGE_SIZE) {
+    const { data, error } = await supabaseClient()
+      .from(SUPPRESSION_TABLE)
+      .select("email_hash")
+      .order("email_hash")
+      .range(from, from + SUPPRESSION_PAGE_SIZE - 1);
+    if (error) throw new Error(`Supabase unsubscribe list failed: ${error.message}`);
+    const rows = (data ?? []) as { email_hash: string }[];
+    for (const row of rows) keys.add(row.email_hash);
+    if (rows.length < SUPPRESSION_PAGE_SIZE) return keys;
+  }
 }
 
 export async function updateWaitlistDetails(
