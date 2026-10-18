@@ -210,6 +210,8 @@ loop/       LEDGER.md: an older marketing-loop log (Sep)
 
 ### Real device test
 `gh workflow run real-device-test.yml -R ShadowEsu/Unvibe --ref main -f version=0.1.NN`.
+Before a release, test the unpublished build: `gh workflow run app-release.yml -R ShadowEsu/Unvibe --ref main -f publish=false`,
+then add `-f build_run=<that run id>` to the command above. The report includes "Time from launch to first explanation" (budget 60 s).
 Read results: `gh run view <id> -R ShadowEsu/Unvibe --log | grep -E '(PASS|FAIL)  '`.
 Screenshots: `gh run download <id> -R ShadowEsu/Unvibe -D /tmp/<folder>` (works from this Mac).
 It now fails the job if any step fails. It proves, on GitHub's Mac and Windows runners: install,
@@ -408,9 +410,9 @@ When you finish one, move it to the session log with the evidence.
       deferred (`docs/release/founder-decisions.md`). Plan, do not just bump (change-control rule).
 
 ### First-run funnel (most important for the business)
-- [ ] **[agent]** Design a guided first-run step: "select this sample and press <shortcut>", with
-      visible success/failure and the correct key per OS. Measure with Mixpanel (connected as
-      `unvibe` in Composio). Get Preston's OK on the design before building.
+- [x] Guided first run, shipped in v0.1.42. Launch to first explanation took 17.8 s on Mac and 11.0 s on Windows (device test 39102449853).
+- [ ] **[agent]** Add `onboarding_sample_explained` and `first_shortcut_explanation` events (Mixpanel) so the
+      real-user funnel shows install → sample → first real-code explanation.
 - [ ] **[agent]** Re-measure the funnel every session (recipe in section 4, "Measure the site
       funnel") and add a row to the funnel table in section 14. First check of the new phone path:
       `phone_link_sent` / `phone_try_clicked` counts vs. phone page views.
@@ -601,4 +603,16 @@ GitHub counts are file downloads, not people, and include bots and repeats. The 
   - a real email send with the new footer (no test send, by rule);
   - the Resend scheduled-email cancel on unsubscribe (best effort, untested against the live API);
   - a real phone share sheet.
-- Next leak to fix: `reviews` ignores Pro (product decision: should Pro raise the allowance?). Also the guided first-run step in the app.
+- Next leak to fix: `reviews` ignores Pro. That is Preston's pricing call, queued by BOSS; keep the copy as it is until he decides.
+
+### 2026-10-18: first run in under a minute (v0.1.42)
+- The app has three onboarding steps instead of five. Step 2 explains a built-in sample for real, with no permission. Step 3 shows the real shortcut, plus one "Allow Accessibility" button with its reason. The sign-in wall on every launch is gone. The Mac hint now says Control+U instead of ⌘U (`18a6b73`).
+- The device test times launch to first explanation and can install a build-only run (`1e001a1`).
+- Evidence:
+  - the build-only run 39102087100 passed the device test 39102449853 on Mac (17.8 s) and Windows (11.0 s), and I opened the screenshots;
+  - release run 39102708728: signing lines present, all four installers 206;
+  - site bump to v0.1.42.
+- Site: confirmed the demo video poster, and that it plays inline in Playwright WebKit on the iPhone 15 Pro profile (not a real device). The phone fine print is plain text.
+- Lesson: a local dev build has no baked trial token, so a cloud explanation fails with "Sign in to use cloud explanations". Time and prove explanations on a CI build only.
+- Device test on the published v0.1.42 ([39104616040](https://github.com/ShadowEsu/Unvibe/actions/runs/39104616040)): 19/19 PASS on each OS. Launch to first explanation took 10.8 s on Mac and 8.6 s on Windows, and I opened the screenshots.
+- The first device run on the release (39103096634) failed twice at "Install Unvibe (Windows)" with "Unvibe.exe was not installed". The installer itself was intact: same SHA-256 as `SHA256SUMS-windows.txt`, no zone mark. The install step now logs the size, hash, zone mark and exit code, and waits up to 60 s for the files. The next run passed, with exit code 0. That the cause was the files landing after `Start-Process -Wait` returned is an [INFERENCE]; the logs don't show which loop iteration found the exe.
