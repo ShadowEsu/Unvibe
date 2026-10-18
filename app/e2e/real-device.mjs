@@ -6,7 +6,7 @@
 //      UNVIBE_OS ("mac" | "windows").
 import { _electron as electron, chromium } from 'playwright';
 import { execFile, execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -263,4 +263,17 @@ await sleep(1000);
 desktopShot('final');
 writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
 await app.close().catch(() => {});
+
+// Leave this CI install out of founder stats (needs the UNVIBE_ADMIN_STATS_TOKEN secret).
+if (process.env.UNVIBE_ADMIN_STATS_TOKEN) {
+  try {
+    const { installId } = JSON.parse(readFileSync(path.join(userData, 'unvibe-store.json'), 'utf8'));
+    const res = await fetch('https://api.unvibe.site/api/v1/admin/qa-install', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${process.env.UNVIBE_ADMIN_STATS_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ installId }),
+    });
+    console.log(`QA install flag: ${res.status}`);
+  } catch (e) { console.log('QA install flag failed', e.message); }
+}
 process.exit(report.some((line) => line.startsWith('FAIL')) ? 1 : 0);

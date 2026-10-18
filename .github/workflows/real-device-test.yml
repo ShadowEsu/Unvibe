@@ -128,6 +128,7 @@ jobs:
           SHOTS_DIR: ${{ runner.temp }}/shots
           UNVIBE_OS: ${{ matrix.label }}
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          UNVIBE_ADMIN_STATS_TOKEN: ${{ secrets.UNVIBE_ADMIN_STATS_TOKEN }}
         run: |
           cp app/e2e/real-device.mjs "$RUNNER_TEMP/pw/real-device.mjs"
           cd "$RUNNER_TEMP/pw" && node real-device.mjs

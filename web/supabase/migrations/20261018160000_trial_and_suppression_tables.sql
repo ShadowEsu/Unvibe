@@ -61,3 +61,6 @@ begin
 end;
 $$;
 revoke all on function public.trial_reserve(text, text, integer) from public, anon, authenticated;
+
+-- QA installs (CI device tests) are flagged so founder stats count real people only.
+alter table public.trial_installs add column if not exists qa boolean not null default false;

@@ -21,6 +21,8 @@ export interface InstallStats {
    * explained; `code`: first explanation of the user's own code (the activation number).
    */
   daily: DailyActivation[];
+  /** CI/QA installs left out of every number above (flagged by the real-device test). */
+  qaExcluded: number;
   source: 'supabase' | 'unavailable';
   generatedAt: string;
 }
@@ -62,7 +64,7 @@ export function summarizeInstalls(
   installStarts: Date[],
   explanationUpdates: Date[],
   now = new Date(),
-): Omit<InstallStats, 'source' | 'generatedAt' | 'daily'> {
+): Omit<InstallStats, 'source' | 'generatedAt' | 'daily' | 'qaExcluded'> {
   const since = (days: number) => now.getTime() - days * DAY_MS;
   const startOfDay = new Date(now);
   startOfDay.setUTCHours(0, 0, 0, 0);
@@ -109,11 +111,12 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<PageR
   }
 }
 
-async function countInstalls(db: SupabaseClient): Promise<number> {
+async function countInstalls(db: SupabaseClient, qa: boolean): Promise<number> {
   const { count, error } = await db
     .from('trial_installs')
     .select('install_key', { count: 'exact', head: true })
-    .neq('install_key', GLOBAL_INSTALL_KEY);
+    .neq('install_key', GLOBAL_INSTALL_KEY)
+    .eq('qa', qa);
   if (error) throw new Error(`trial_installs count failed: ${error.message}`);
   return count ?? 0;
 }
@@ -122,17 +125,25 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
   const generatedAt = now.toISOString();
   const db = serviceSupabase();
   if (!db) {
-    return { installs: 0, newToday: 0, new7d: 0, new30d: 0, active7d: 0, active30d: 0, daily: [], source: 'unavailable', generatedAt };
+    return { installs: 0, newToday: 0, new7d: 0, new30d: 0, active7d: 0, active30d: 0, daily: [], qaExcluded: 0, source: 'unavailable', generatedAt };
   }
   const since30d = new Date(now.getTime() - 30 * DAY_MS).toISOString();
   const firstDay = new Date(now.getTime() - (DAILY_DAYS - 1) * DAY_MS);
   firstDay.setUTCHours(0, 0, 0, 0);
-  const [total, installs, explanations, activation] = await Promise.all([
-    countInstalls(db),
+  const [total, qaExcluded, qaKeys, installs, explanations, activation] = await Promise.all([
+    countInstalls(db, false),
+    countInstalls(db, true),
+    fetchAll<{ install_key: string }>((from, to) => db
+      .from('trial_installs')
+      .select('install_key')
+      .eq('qa', true)
+      .order('install_key')
+      .range(from, to), 'trial_installs qa'),
     fetchAll<{ install_key: string; started_at: string }>((from, to) => db
       .from('trial_installs')
       .select('install_key, started_at')
       .neq('install_key', GLOBAL_INSTALL_KEY)
+      .eq('qa', false)
       .gte('started_at', since30d)
       .order('install_key')
       .range(from, to), 'trial_installs'),
@@ -152,10 +163,14 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
       .order('kind')
       .range(from, to), 'trial_activation'),
   ]);
+  const qa = new Set(qaKeys.map((row) => row.install_key));
   const installStarts = installs.map((row) => new Date(row.started_at));
+  const realExplanations = explanations.filter((row) => !qa.has(row.install_key));
+  const realActivation = activation.filter((row) => !qa.has(row.install_key));
   return {
-    ...summarizeInstalls(total, installStarts, explanations.map((row) => new Date(row.updated_at)), now),
-    daily: dailyActivation(installStarts, activation.map((row) => ({ kind: row.kind, at: new Date(row.at) })), now),
+    ...summarizeInstalls(total, installStarts, realExplanations.map((row) => new Date(row.updated_at)), now),
+    daily: dailyActivation(installStarts, realActivation.map((row) => ({ kind: row.kind, at: new Date(row.at) })), now),
+    qaExcluded,
     source: 'supabase',
     generatedAt,
   };
