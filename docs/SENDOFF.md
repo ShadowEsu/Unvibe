@@ -548,62 +548,24 @@ Stop rules: same blocker three times, a decision only Preston can make, or no me
 - Unreleased on `main` at the time: `b88ee5a` (shipped in v0.1.41, see next entry).
 - Blocked on Preston: Stripe approval; X account (deferred).
 
-### 2026-10-17 (evening)
-- Site: the shortcut copy now matches the app (Control+U on Mac, Ctrl+Alt+U on Windows, ⌘U/Ctrl+U
-  only with the editor bridge), one source in `marketing/src/lib/shortcuts.ts`; phones get "Send
-  the link to my computer" and "Try it here first" instead of dead download buttons (`35cb0ba`).
-- Released **v0.1.41** (`bef3c1f`, ships `b88ee5a`): run 39076009281, signing `1 valid identities
-  found` + `identity=C9DA4F61…A99D0E`, all four installers 206; site bump `f44649d`, live
-  `install.sh` TAG v0.1.41. Real device test 39076481851 PASS on both OSes; screenshots opened
-  (Windows shows "Saved on this PC", Ctrl+Alt+U explains in Notepad).
-- Tests: app 72, marketing 48 (+2 for `detectVisitorDevice`).
-- Live check: phone UA on unvibe.site shows the phone block and no .dmg links.
-- Unverified: real phone share sheet (headless only); Accessibility persistence on a real
-  v0.1.40 → v0.1.41 Mac upgrade; native portable self-update.
+### 2026-10-17: v0.1.41 and the homepage rebuild
+- Released v0.1.41 (`bef3c1f`), workflow 39076009281 and device run 39076481851 PASS on both OSes; screenshots checked. Stable Mac identity reused. Shortcut copy now comes from `marketing/src/lib/shortcuts.ts` (`35cb0ba`).
+- Homepage (`917b581`): one promise, OS-aware desktop download, one-field phone email form, browser try-it and real recorded proof. Eight sections instead of seventeen; paper replaces the blurred photo. Local mobile lab LCP 1.8 s versus 5.7 s on the old live site, one run each, not field data.
+- BOSS approved “Download free” / “Email me the link,” not a literal waitlist. Never promise queue rank.
+- Referral copy (`9ab1e78`) describes the existing new-email friend reward: a month of Pro each. Pro enables Expert and nearby-file context, not a higher explanation allowance. The pricing decision remains Preston’s.
+- Unsubscribe flow (`e45d5f6`): signed links, scanner-safe GET confirmation, POST persistence, hashed suppression and list-unsubscribe headers. Suppression subsequently moved from suspended Blob to Supabase; see HANDOFF §5.
+- No real email sends tested or authorized. Scheduled-email cancellation and native phone share sheet remain unverified.
+- Removed an unsupported X follower claim. Instagram 707 verified through Composio; combined 800+ across other accounts unverified. Updated SEO and the brand OG card.
+- Live desktop/390/320 checks found OS-appropriate CTAs, no document overflow, OG 200. Later element-bound checks found clipping at 320 despite that overflow result; see the 18 Oct update.
 
-Funnel table (Mixpanel, 30 days ending on the date):
+Growth snapshots for the 100k goal:
 
-| Date | Page views | Install views | Command copies | Release downloads | Try-it explains | Waitlist | App users (Supabase) |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 17 Oct | 700 | 525 | 5 | 13 | 9 | 2 | 3 |
-
-Growth count for the 100k goal (report these three numbers each session; never add downloads and signups together raw):
-
-| Date | Email signups (`waitlist_entries` rows) | Installer downloads (GitHub dmg+exe, all releases) | Mixpanel people: signup only / download only / both |
+| Observed | Email signups | Installer downloads (.dmg + .exe) | Tracked browser conversion identities |
 | --- | --- | --- | --- |
-| 17 Oct | 14 | 610 | 14 / 24 / 1 (deduped people with either: 39) |
+| 17 Oct | 14 | 610 | 39 |
+| 18 Oct 21:31 UTC | 14 | 634 (316 Mac, 318 Windows) | 39 |
 
-GitHub counts are file downloads, not people, and include bots and repeats. The deduped people number only covers browsers Mixpanel saw (JQL `groupByUser` over `waitlist_completed` vs `download_cta_clicked`/`release_download_clicked`/`beta_install_copied`, 1 Jul to the date).
-
-### 2026-10-17 (night): homepage rebuild for downloads and email signups
-- BOSS brief: website bar plus growth from `~/boss-handoff/research-inputs/`. Decisions approved by BOSS: desktop primary is "Download free"; phones get a one-field "Email me the link" (stored in `waitlist_entries`, existing welcome email); the share step offers only the existing referral; never "move up the list".
-- Homepage (`917b581`):
-  - one promise, then one action for this device (Mac or Windows download, with the other OS as a small link; phones get the email form);
-  - "Or try it in your browser first";
-  - the recorded app as proof under the hero;
-  - a share step after the email signup;
-  - 8 sections instead of 17;
-  - paper background instead of a 36 px blurred full-screen photo.
-  Mobile lab LCP (4x CPU, 1.6 Mbps, 150 ms) went from 5.7 s on the old live site to 1.8 s locally. That is one run each, not field data.
-- Referral truth (code trace): a friend joining with a **new** email gives both a month of Pro. Pro unlocks Expert depth and nearby-file context, but it does **not** raise the 30/20 explanation allowance (`web/app/api/v1/reviews/route.ts` never checks the plan). All copy now says exactly that (`9ab1e78`).
-- Email (`e45d5f6`):
-  - every signup email has an Unsubscribe link plus `List-Unsubscribe` and one-click headers;
-  - the GET page only asks for confirmation and the POST records it, so link scanners can't unsubscribe anyone;
-  - suppression is a hashed key in Blob (`email-suppression/v1/`), because `waitlist_entries_beta_email_status_check` only allows sent/failed;
-  - the welcome, setup reminder and invite script all skip unsubscribed addresses;
-  - footers state what follows.
-- Removed the false "X" follower claim (there is no X account). Instagram live count is 707 (Composio, 17 Oct); the 800+ total also counts TikTok and LinkedIn, which I didn't verify.
-- New SEO title/description, plus a brand share card (`opengraph-image.tsx`) with no stock photo.
-- Verified:
-  - marketing 60/60 tests, typecheck and build pass on a clean worktree of HEAD;
-  - live at 1440/390/320: no sideways scroll and the right CTA for each device;
-  - the live OG image returns 200;
-  - `/api/unsubscribe` returns 400 on a bad token (live). Locally GET doesn't record and POST does.
-- Not verified:
-  - a real email send with the new footer (no test send, by rule);
-  - the Resend scheduled-email cancel on unsubscribe (best effort, untested against the live API);
-  - a real phone share sheet.
-- Next leak to fix: `reviews` ignores Pro. That is Preston's pricing call, queued by BOSS; keep the copy as it is until he decides.
+Downloads are files, including repeats, updates and CI, not people. Mixpanel’s union is 14 signup-only, 24 download-only and 1 both, from 1 Jul through the observation date. It covers tracked browser conversions, not verified installs or a person-level dedupe of GitHub downloads against emails. Never sum downloads and signups as users.
 
 ### 2026-10-18: first run in under a minute (v0.1.42)
 - The app has three onboarding steps instead of five. Step 2 explains a built-in sample for real, with no permission. Step 3 shows the real shortcut, plus one "Allow Accessibility" button with its reason. The sign-in wall on every launch is gone. The Mac hint now says Control+U instead of ⌘U (`18a6b73`).

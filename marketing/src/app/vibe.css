@@ -70,7 +70,7 @@ h1 em, h2 em, h3 em, .serif-em {
   color: var(--v-ink);
 }
 
-.vhero__copy { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1rem; width: min(64rem, 94vw); text-align: center; }
+.vhero__copy { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1rem; width: min(64rem, 100%); text-align: center; }
 .vhero__vibe { position: relative; display: inline-flex; align-items: flex-end; gap: 0.6rem; }
 .vhero__bubble {
   position: absolute; left: calc(100% + 0.4rem); top: 0.2rem; white-space: nowrap;
