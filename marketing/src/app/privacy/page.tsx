@@ -84,6 +84,12 @@ export default function PrivacyPage() {
           <a href="/account-deletion">account deletion</a>. We use no advertising
           trackers.
         </p>
+        <p>
+          Without an account, the app sends a random install ID with each cloud explanation so we can
+          count your free explanations. We store that ID with a few dates and counts: when it first
+          asked, how many it has used, and when it first explained the setup sample and your own code.
+          We do not store your code or prompts with it.
+        </p>
       </LegalSection>
 
       <LegalSection heading="This website">
