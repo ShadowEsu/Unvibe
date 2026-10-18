@@ -13,9 +13,11 @@ export const deviceName = isMac ? 'Mac' : 'PC';
 /** Value for <html data-platform>, used by CSS that only applies to one OS. */
 export const platformAttr = isWindows ? 'win' : isMac ? 'mac' : 'other';
 
-/** The review shortcut as onboarding shows it before settings load (the platform default). */
-export const reviewKeyParts = isWindows ? ['Ctrl', 'Alt', 'U'] : ['⌘', 'U'];
-export const reviewKeyHint = isWindows ? 'Ctrl+Alt+U' : '⌘U';
+/**
+ * The shortcut that works in every app before settings load (the platform default in
+ * main/settings.ts). ⌘U / Ctrl+U only work inside VS Code and Cursor with the editor bridge.
+ */
+export const reviewKeyHint = isWindows ? 'Ctrl+Alt+U' : '⌃U';
 
 /** One-line voice instructions: macOS Dictation, or Windows voice typing (Win+H). */
 export const voiceHowTo = isWindows

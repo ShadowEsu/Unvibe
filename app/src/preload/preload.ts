@@ -123,6 +123,8 @@ const api = {
 
   // onboarding
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
+  /** First run: explain a built-in sample for real, so the first explanation needs no permission. */
+  explainSample: () => ipcRenderer.send('onboarding:explainSample'),
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
 
   // account

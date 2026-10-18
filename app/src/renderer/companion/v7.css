@@ -606,41 +606,26 @@
   & .ob2__opt { color: var(--v-faint); font-weight: 500; }
   & .ob2__google { padding: 14px 16px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
   & .ob2__ok { margin: 0; color: var(--v-good); font-weight: 700; }
-  & .ob2__google--you { margin-bottom: 14px; }
-  & .ob2__google--you + .ob2__form, .ob2__ok + .ob2__form { margin-top: 12px; }
+  & .ob2__more { width: min(440px, 100%); justify-self: center; text-align: left; }
+  & .ob2__more summary { cursor: pointer; color: var(--v-muted); font: 600 13px var(--font-sans); }
+  & .ob2__more[open] summary { margin-bottom: 10px; }
   & .ob2 .ob__integrations { max-height: 300px; overflow: auto; padding-right: 4px; }
   & .ob2 .ob__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 
-  /* The six second demo */
-  & .obd { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
-  & .obd__editor { position: relative; border: 1.5px solid var(--v-ink); border-radius: 14px; background: #151514; overflow: hidden; box-shadow: var(--hard-sm); }
+  /* First run: a real sample to explain, then the shortcut and its one permission */
+  & .ob2__try { display: grid; gap: 12px; justify-items: stretch; }
+  & .obd__editor { position: relative; border: 1.5px solid var(--v-ink); border-radius: 14px; background: #151514; overflow: hidden; box-shadow: var(--hard-sm); text-align: left; }
   & .obd__bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid #2c2c29; }
   & .obd__bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--coral); }
   & .obd__bar i:nth-child(2) { background: var(--sun); }
   & .obd__bar i:nth-child(3) { background: var(--lime); }
   & .obd__bar span { margin-left: 4px; color: #9e9a92; font: 500 11.5px var(--font-mono); }
-  & .obd pre { margin: 0; padding: 12px 14px 54px; color: #f4f2ea; font: 12.5px/1.7 var(--font-mono); white-space: pre; overflow: hidden; }
-  & .obd__line { background: linear-gradient(90deg, rgb(184 166 255 / 0.4), rgb(184 166 255 / 0.4)) no-repeat; background-size: 0% 100%; animation: obdSelect 260ms ease-out forwards; animation-delay: var(--d); }
-  & .obd__keys { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; opacity: 0; transform: translateY(6px); transition: opacity 200ms ease, transform 200ms ease; }
-  & .obd__keys kbd { display: grid; place-items: center; min-width: 34px; height: 34px; border: 1.5px solid #f4f2ea; border-bottom-width: 4px; border-radius: 9px; background: #232321; color: #f4f2ea; font: 700 15px var(--font-sans); }
-  & .obd__keys.is-pressed { opacity: 1; transform: none; }
-  & .obd__keys.is-pressed kbd { animation: obdPress 260ms ease 2; }
-  & .obd__panel { min-height: 100%; padding: 12px 14px; border: 1.5px solid var(--v-ink); border-radius: 14px; background: var(--v-surface); box-shadow: var(--hard-sm); opacity: 0; transform: translateX(16px) scale(0.98); transition: opacity 300ms ease, transform 420ms var(--press); }
-  & .obd__panel.is-in { opacity: 1; transform: none; }
-  & .obd__panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
-  & .obd__panel-head b { font-family: var(--font-display); }
-  & .obd__panel-head span { margin-left: auto; color: var(--v-muted); font-size: 11.5px; }
-  & .obd__answer { margin: 0; min-height: 84px; font-size: 13.5px; line-height: 1.55; color: var(--v-ink); }
-  & .obd__caret { display: inline-block; width: 2px; height: 1em; margin-left: 1px; vertical-align: -0.12em; background: var(--v-ink); animation: v7Blink 900ms steps(1) infinite; }
-  & .obd__caret.is-off { display: none; }
-  & .obd__quiz { margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed var(--v-line); animation: v7Rise 360ms var(--press) both; }
-  & .obd__quiz p { margin: 0 0 8px; font-size: 13px; }
-  & .obd__opts { display: grid; gap: 6px; }
-  & .obd__opts button { padding: 8px 10px; border: 1.5px solid var(--v-ink); border-radius: 10px; background: var(--v-surface); color: var(--v-ink); text-align: left; font: 600 12.5px var(--font-sans); cursor: pointer; box-shadow: 0 2px 0 var(--v-ink); }
-  & .obd__opts button:hover { background: var(--v-sunken); }
-  & .obd__opts button.is-right { background: var(--mint); }
-  & .obd__yay { margin: 8px 0 0 !important; color: var(--v-good); font: italic 400 18px var(--font-hand) !important; }
-  & .obd__replay { position: absolute; left: 0; bottom: -30px; border: 0; background: none; color: var(--v-muted); font: 600 12px var(--font-sans); text-decoration: underline; cursor: pointer; }
+  & .obd__editor pre { margin: 0; padding: 12px 14px; color: #f4f2ea; font: 13px/1.7 var(--font-mono); white-space: pre; overflow: auto; }
+  & .ob2__explain { justify-self: center; min-width: 220px; height: 46px; font-size: 16px; background: var(--lime); }
+  & .ob2__explain:disabled { opacity: 1; background: var(--v-sunken); color: var(--v-muted); }
+  & .ob2__keys { display: flex; justify-content: center; gap: 8px; }
+  & .ob2__keys .kbd-lg { display: grid; place-items: center; min-width: 52px; height: 52px; padding: 0 12px; border-radius: 12px; font: 700 22px var(--font-sans); }
+  & .perm-steps { margin: 8px 0 0; font-size: 13.5px; color: var(--v-ink); }
 
   & .ob__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
   & .ob__confetti i { position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border: 1.5px solid var(--v-ink); border-radius: 3px; background: var(--lime); animation: obConfetti 1.6s cubic-bezier(.2,.7,.4,1) forwards; animation-delay: calc(var(--i) * 18ms); }
@@ -649,13 +634,8 @@
   & .ob__confetti i:nth-child(4n+4) { background: var(--lilac); border-radius: 50%; width: 12px; height: 12px; }
 }
 @keyframes v7Blink { 50% { opacity: 0; } }
-@keyframes obdSelect { to { background-size: 100% 100%; } }
-@keyframes obdPress { 50% { transform: translateY(3px); border-bottom-width: 1px; } }
 @keyframes obConfetti { to { transform: translateY(105vh) rotate(540deg); } }
-@media (max-width: 760px) { :root[data-ui="v3"][data-v7] .obd { grid-template-columns: minmax(0, 1fr); } }
 :root[data-ui="v3"][data-v7] {
-  & .obd, & .obd pre, & .obd__panel, & .obd__answer, & .obd__quiz { text-align: left; }
-  & .obd__panel-head { justify-content: flex-start; }
   & .ob2__opt { font-style: normal; }
   & .ob2__form { width: min(440px, 100%); justify-self: center; }
   & .ob2__speech { min-height: 0; }

@@ -383,7 +383,18 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
-async function startReview(options: { preferClipboard?: boolean } = {}): Promise<void> {
+/** First-run sample. Kept in the main process so the renderer can't send arbitrary code this way. */
+const FIRST_RUN_SAMPLE = [
+  'function debounce(fn, wait) {',
+  '  let timer;',
+  '  return (...args) => {',
+  '    clearTimeout(timer);',
+  '    timer = setTimeout(() => fn(...args), wait);',
+  '  };',
+  '}',
+].join('\n');
+
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -418,7 +429,7 @@ async function startReview(options: { preferClipboard?: boolean } = {}): Promise
   // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
-  const capture = await captureSelection(options);
+  const capture = options.sample ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' } : await captureSelection(options);
   const code = capture.code;
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
@@ -1279,6 +1290,7 @@ app.whenReady().then(() => {
   });
 
   // --- onboarding ---
+  ipcMain.on('onboarding:explainSample', () => void startReview({ sample: true }));
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     if (next.barVisibility === 'always') showBar(bar);

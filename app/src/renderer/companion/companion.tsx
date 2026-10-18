@@ -8,7 +8,7 @@ import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
-import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, reviewKeyParts, voiceHowTo } from '../shared/platform';
+import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
@@ -386,27 +386,35 @@ function PermRow({ compact }: { compact?: boolean }) {
   }, []);
   const granted = state?.granted ?? false;
   const na = state?.platform !== 'darwin';
+  const [asked, setAsked] = useState(false);
+  // One button does what a person expects: macOS shows its prompt and the right Settings pane opens.
+  const allow = async () => {
+    setAsked(true);
+    await window.unvibe.promptAccessibility();
+    await window.unvibe.openAccessibility();
+  };
   return (
     <div className={compact ? '' : 'perm-block'}>
       <div className="perm-head">
-        <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'N/A' : granted ? 'Granted' : 'Not granted'}</span>
+        <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'Not needed' : granted ? 'Allowed' : 'Not allowed yet'}</span>
         <span className="perm-title">Accessibility</span>
       </div>
       <div className="perm-why">{isWindows
-        ? 'Windows needs no permission. The Unvibe Desktop Bridge handles Ctrl+U inside VS Code and Cursor. In other apps, Ctrl+Alt+U copies your selection.'
-        : 'The Unvibe Desktop Bridge handles ⌘U inside VS Code and Cursor. In Terminal and other Mac apps, Control+U reads your selection through Accessibility.'}</div>
+        ? 'Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app.'
+        : 'macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U. It never reads your keystrokes or your screen.'}</div>
       {!granted && !na && (
         <div className="perm-actions">
-          <button className="act" onClick={() => window.unvibe.promptAccessibility()}>Request access</button>
-          <button className="act" onClick={() => window.unvibe.openAccessibility()}>Open System Settings</button>
-          <button className="act" onClick={check}>Re-check</button>
+          <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
         </div>
       )}
-      {!granted && !na && (
+      {!granted && !na && asked && (
+        <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
+      )}
+      {!granted && !na && asked && (
         <div className="perm-fix">
-          <p><b>Switched it on but it still says Not granted?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
+          <p><b>Switched it on but it still says Not allowed?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
           <div className="perm-actions">
-            <button className="act act--primary" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
+            <button className="act" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
             <button className="act" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
           </div>
         </div>
@@ -435,90 +443,48 @@ function useVibeSays(text: string, enabled: boolean): string {
   return shown;
 }
 
-const DEMO_LINES = [
-  'function activeUsers(users) {',
-  '  return users',
-  '    .filter((u) => u.active)',
-  '    .sort((a, b) => b.lastSeen - a.lastSeen);',
+/** Shown on step 2; main/main.ts FIRST_RUN_SAMPLE is what actually gets explained. Keep them equal. */
+const SAMPLE_LINES = [
+  'function debounce(fn, wait) {',
+  '  let timer;',
+  '  return (...args) => {',
+  '    clearTimeout(timer);',
+  '    timer = setTimeout(() => fn(...args), wait);',
+  '  };',
   '}',
 ];
-const DEMO_ANSWER = 'Keeps only active users, newest activity first. The filter drops inactive accounts, then the sort puts whoever was seen most recently at the top.';
 
-/** A 6 second, self-playing taste of the real loop: select, ⌘U, explanation, quick check. */
-function OnboardingDemo({ sound, onDone }: { sound: boolean; onDone: () => void }) {
-  const [phase, setPhase] = useState(0); // 0 select, 1 keys, 2 panel, 3 quiz, 4 correct
-  const [typed, setTyped] = useState('');
-  const [run, setRun] = useState(0);
-  const tone = (kind: Parameters<typeof playTone>[0]) => { if (sound) playTone(kind); };
-
-  useEffect(() => {
-    setPhase(0); setTyped('');
-    const timers: number[] = [];
-    const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
-    at(1200, () => { setPhase(1); tone('key'); });
-    at(1450, () => tone('key'));
-    at(1900, () => { setPhase(2); tone('whoosh'); });
-    at(2300, () => {
-      let i = 0;
-      const id = window.setInterval(() => {
-        i += 3;
-        setTyped(DEMO_ANSWER.slice(0, i));
-        if (i % 9 === 0) tone('talk');
-        if (i >= DEMO_ANSWER.length) { window.clearInterval(id); tone('done'); }
-      }, 22);
-      timers.push(id);
-    });
-    at(5200, () => setPhase(3));
-    return () => timers.forEach((t) => { window.clearTimeout(t); window.clearInterval(t); });
-  }, [run]);
-
-  return (
-    <div className="obd">
-      <div className={`obd__editor${phase >= 0 ? ' is-selecting' : ''}`}>
-        <div className="obd__bar"><i /><i /><i /><span>users.ts</span></div>
-        <pre>{DEMO_LINES.map((line, index) => <span key={index} className="obd__line" style={{ '--d': `${index * 160}ms` } as React.CSSProperties}>{line}{'\n'}</span>)}</pre>
-        <div className={`obd__keys${phase >= 1 ? ' is-pressed' : ''}`} aria-hidden="true">{reviewKeyParts.map((key) => <kbd key={key}>{key}</kbd>)}</div>
-      </div>
-      <div className={`obd__panel${phase >= 2 ? ' is-in' : ''}`}>
-        <div className="obd__panel-head"><Buddy mood={phase >= 4 ? 'celebrate' : phase === 2 ? 'reading' : 'happy'} size={26} label="Vibe" /><b>Unvibe</b><span>{phase >= 3 ? 'ready to learn' : 'explaining'}</span></div>
-        <p className="obd__answer">{typed}<i className={typed.length < DEMO_ANSWER.length ? 'obd__caret' : 'obd__caret is-off'} /></p>
-        {phase >= 3 ? (
-          <div className="obd__quiz">
-            <p><b>Quick check:</b> who ends up first?</p>
-            <div className="obd__opts">
-              <button type="button" className={phase === 4 ? 'is-right' : ''} onClick={() => { if (phase === 4) return; setPhase(4); tone('correct'); setBuddyMood('celebrate'); onDone(); }}>The user seen most recently</button>
-              <button type="button" onClick={() => tone('wrong')}>The first user in the list</button>
-            </div>
-            {phase === 4 ? <p className="obd__yay">Nailed it. That is the whole loop.</p> : null}
-          </div>
-        ) : null}
-      </div>
-      {phase >= 3 ? <button type="button" className="obd__replay" onClick={() => setRun((r) => r + 1)}>Replay</button> : null}
-    </div>
-  );
-}
-
-function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; onDone: () => void }) {
+/**
+ * First run in three steps, built so the first real explanation lands within a minute:
+ * 1 hello (name optional), 2 explain a sample for real (no permission needed),
+ * 3 use the shortcut anywhere (the Mac Accessibility ask lives here, with its reason).
+ * Google sign-in and editor bridges are optional and stay reachable later.
+ */
+function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
-  const [nameError, setNameError] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
-  const [demoDone, setDemoDone] = useState(false);
+  const [explained, setExplained] = useState(false);
   const [signedIn, setSignedIn] = useState('');
-  const steps = ['Hello', 'You', 'Connect', 'Permissions', 'Try it'];
+  const steps = ['Hello', 'Try it', 'Anywhere'];
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
+  const keys = prettyAccel(shortcut);
+  // Glyphs on the key caps; words in sentences, since many people don't know ⌃ is Control.
+  const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
 
   const lines = [
     "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
-    firstName ? `Nice to meet you, ${firstName}! I'll remember that.` : 'First things first. Tap Google and I fill this in for you, or just type it.',
-    signedIn ? `You're signed in as ${signedIn}. Now let's hook up your editors.` : "Let's hook me up to your editors. Google sign-in is optional, it just syncs your progress.",
-    'One permission so I can read code you select in Terminal and other apps. Nothing leaves without your OK.',
-    demoDone ? "That's me! Ready when you are." : "Watch this. It's the whole thing in six seconds.",
+    explained
+      ? "That's me, explaining it in the panel. Real answer, not a demo."
+      : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
+    isWindows
+      ? `Now use it anywhere: select code in any app and press ${spoken}.`
+      : `Now use it anywhere: select code in any app and press ${spoken}. macOS asks one thing first.`,
   ];
   const said = useVibeSays(lines[step] ?? '', soundEffects);
 
@@ -526,7 +492,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
   const fillFromGoogle = (email: string, name?: string) => {
     setSignedIn(email);
     if (email.includes('@')) setProfileEmail((current) => current.trim() || email);
-    if (name) { setDisplayName((current) => current.trim() || name); setNameError(''); }
+    if (name) setDisplayName((current) => current.trim() || name);
     if (soundEffects) playTone('correct');
     setBuddyMood('happy');
   };
@@ -534,14 +500,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
     if (soundEffects) playTone('boop');
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
-  const saveProfile = () => {
-    const name = displayName.replace(/\s+/g, ' ').trim();
-    if (!name) { setNameError('Add a name so I know what to call you.'); return false; }
-    setNameError('');
-    return true;
+  const explainSample = () => {
+    window.unvibe.explainSample();
+    setExplained(true);
+    setBuddyMood('reading');
   };
   const finish = async () => {
-    if (saving || !saveProfile()) return;
+    if (saving) return;
     setSaving(true);
     setSaveError('');
     try {
@@ -551,7 +516,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
       setBuddyMood('celebrate');
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         setCelebrating(true);
-        await new Promise((resolve) => window.setTimeout(resolve, 1600));
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
       }
       await onDone();
     } catch {
@@ -559,7 +524,6 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
     } finally { setSaving(false); }
   };
   const advance = () => {
-    if (step === 1 && !saveProfile()) return;
     if (step === steps.length - 1) void finish();
     else go(step + 1);
   };
@@ -575,8 +539,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (firstName ? 'happy' : 'idle') : step === 2 ? 'reading' : step === 3 ? 'thinking' : demoDone ? 'happy' : 'reading';
-  const continueLabel = step === 0 ? "Let's go" : step === steps.length - 1 ? (celebrating ? 'Welcome!' : saving ? 'Saving…' : 'Start using Unvibe') : 'Continue';
+  const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy') : 'thinking';
+  const continueLabel = step === 0 ? "Let's go" : step === 1 ? (explained ? 'Next' : 'Skip for now') : celebrating ? 'Welcome!' : saving ? 'Saving…' : 'Start using Unvibe';
 
   return (
     <div className={`ob ob2 ob--scene-${step}`}>
@@ -598,57 +562,58 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, onDone }: { soundEf
         <FadeIn animKey={step} className="ob__step ob2__body">
           {step === 0 && (
             <>
-              <h2 className="ob__title">Understand what AI <em>changed.</em></h2>
-              <p className="ob__sub">Select code anywhere, press <span className="kbd-lg">{reviewKeyHint}</span>, and I explain it. Five quick steps and you are in.</p>
+              <h2 className="ob__title">Understand the code <em>AI writes.</em></h2>
+              <form className="ob__form ob2__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
+                <label>
+                  <span>What should I call you? <em className="ob2__opt">optional</em></span>
+                  <input className="field" value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
+                    onChange={(event) => setDisplayName(event.target.value)} />
+                </label>
+                <button type="submit" hidden />
+              </form>
+              {signedIn ? <p className="ob2__ok">✓ Signed in as {signedIn}</p> : (
+                <details className="ob2__more">
+                  <summary>Sync across devices with Google (optional)</summary>
+                  <div className="ob2__google"><SignInForm label="Fill this in with Google" onDone={fillFromGoogle} /></div>
+                </details>
+              )}
             </>
           )}
 
           {step === 1 && (
-            <>
-            {signedIn ? <p className="ob2__ok">✓ Filled in from Google ({signedIn})</p> : (
-              <div className="ob2__google ob2__google--you">
-                <SignInForm label="Fill this in with Google" onDone={fillFromGoogle} />
+            <div className="ob2__try">
+              <div className="obd__editor">
+                <div className="obd__bar"><i /><i /><i /><span>debounce.js</span></div>
+                <pre>{SAMPLE_LINES.join('\n')}</pre>
               </div>
-            )}
-            <form className="ob__form ob2__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
-              <label>
-                <span>Your name</span>
-                <input className="field" value={displayName} autoFocus autoComplete="given-name" placeholder="What should Vibe call you?"
-                  onChange={(event) => { setDisplayName(event.target.value); if (nameError) setNameError(''); }} />
-              </label>
-              <label>
-                <span>Email <em className="ob2__opt">optional</em></span>
-                <input className="field" type="email" value={profileEmail} autoComplete="email" placeholder="you@example.com" onChange={(event) => setProfileEmail(event.target.value)} />
-              </label>
-              {nameError ? <p className="field-err" role="alert">{nameError}</p> : null}
-              <button type="submit" hidden />
-            </form>
-            </>
+              <button type="button" className="field-btn ob2__explain" onClick={explainSample} disabled={explained}>
+                {explained ? 'Explaining in the panel →' : 'Explain this code'}
+              </button>
+              <p className="ob__sub">{explained
+                ? `That's what ${spoken} does with any code you select. Read it, then press Next.`
+                : 'Uses one of your free explanations. No setup needed.'}</p>
+            </div>
           )}
 
           {step === 2 && (
             <>
-              <div className="ob2__google">
-                {signedIn ? <p className="ob2__ok">✓ Signed in as {signedIn}</p> : <SignInForm onDone={fillFromGoogle} />}
+              <div className="ob2__keys" aria-label={`Shortcut ${keys}`}>
+                {(isWindows ? keys.split('+') : Array.from(keys)).map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
               </div>
-              <div className="ob__integrations"><IntegrationsPanel /></div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
+              <p className="ob__sub">Select code in Cursor, VS Code, Terminal or anywhere else, then press {spoken}.</p>
               <PermRow />
-              <div className="ob__trust"><span>✓</span><div><b>Private by default</b><small>Secrets are filtered on this computer before anything is sent.</small></div></div>
+              <details className="ob2__more">
+                <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
+                <div className="ob__integrations"><IntegrationsPanel /></div>
+              </details>
             </>
           )}
-
-          {step === 4 && <OnboardingDemo sound={soundEffects} onDone={() => setDemoDone(true)} />}
         </FadeIn>
 
         {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
         <div className="ob__actions">
           <button className="ob__skip" disabled={step === 0 || saving} onClick={() => go(step - 1)}>Back</button>
-          <button className="field-btn inline" disabled={saving || (step === 1 && !displayName.trim())} onClick={advance}>{continueLabel}</button>
+          <button className="field-btn inline" disabled={saving} onClick={advance}>{continueLabel}</button>
         </div>
       </div>
     </div>
@@ -1649,10 +1614,12 @@ function App() {
     void window.unvibe.appInfo().then((i) => setInfo(i as typeof info));
     void (async () => {
       try {
-        const { acct, st } = await refresh();
-        setGate(!st.onboarded ? 'onboarding' : acct ? 'app' : 'login');
+        const { st } = await refresh();
+        // Local mode is a full product: no sign-in wall on every launch. Sign in stays in the
+        // sidebar account menu for people who want sync.
+        setGate(!st.onboarded ? 'onboarding' : 'app');
       } catch {
-        setGate('login');
+        setGate('app');
       }
     })();
     const onFocus = () => void refresh();
@@ -1808,7 +1775,7 @@ function App() {
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
-    return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} onDone={async () => { await refresh(); setGate('app'); }} /></>);
+    return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);

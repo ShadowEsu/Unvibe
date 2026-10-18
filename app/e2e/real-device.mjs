@@ -51,14 +51,28 @@ async function clickText(page, text, timeout = 8000) {
   await page.getByRole('button', { name: text, exact: typeof text === 'string' }).first().click({ timeout });
 }
 
+// Must match FIRST_RUN_SAMPLE in app/src/main/main.ts: onboarding explains it for real.
+const FIRST_RUN_SAMPLE = [
+  'function debounce(fn, wait) {',
+  '  let timer;',
+  '  return (...args) => {',
+  '    clearTimeout(timer);',
+  '    timer = setTimeout(() => fn(...args), wait);',
+  '  };',
+  '}',
+].join('\n');
+// The promise to a new user: from opening the app to their first explanation within a minute.
+const FIRST_EXPLANATION_BUDGET_S = 60;
+
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-e2e-'));
 // Shell-launched protocol handlers must use the same isolated profile as the driven app.
 process.env.UNVIBE_USER_DATA = userData;
-const app = await electron.launch({ executablePath: exe, env: { ...process.env, UNVIBE_USER_DATA: userData }, timeout: 90000 });
+const launchedAt = Date.now();
+// UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
+const app = await electron.launch({ executablePath: exe, args: process.env.UNVIBE_APP_DIR ? [process.env.UNVIBE_APP_DIR] : [], env: { ...process.env, UNVIBE_USER_DATA: userData }, timeout: 90000 });
 const companion = await windowWith(app, 'companion.html', 60000);
 if (!companion) { log(false, 'App opens'); writeFileSync(path.join(out, 'report.txt'), report.join('\n')); process.exit(1); }
 await companion.waitForLoadState('domcontentloaded');
-await sleep(2500);
 log(true, 'App opens', `version ${await app.evaluate(({ app }) => app.getVersion())}`);
 if (os === 'windows') {
   const registered = await app.evaluate(({ app }) =>
@@ -67,24 +81,53 @@ if (os === 'windows') {
 }
 desktopShot('first-launch');
 
-// --- Onboarding ---------------------------------------------------------------------------
+// --- First run, timed: hello → explain the sample for real → shortcut and permission ------------
+// The walkthrough acts at a brisk human pace (no sleeps beyond what the UI needs), so the time is
+// close to what a new user who reads and clicks straight through would see.
 try {
+  await companion.locator('.ob2__count').filter({ hasText: '1 / 3' }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
+  await companion.getByPlaceholder('Your name').fill('Preston Test');
   await clickText(companion, "Let's go");
-  await sleep(1200);
-  await shot(companion, 'onboarding-2-you');
-  await companion.getByPlaceholder('What should Vibe call you?').fill('Preston Test');
-  await sleep(400);
-  await shot(companion, 'onboarding-2-name-filled');
-  log(true, 'Onboarding: hello and name');
-} catch (e) { log(false, 'Onboarding: hello and name', e.message.split('\n')[0]); }
+  await companion.locator('.ob2__count').filter({ hasText: '2 / 3' }).waitFor({ timeout: 8000 });
+  await shot(companion, 'onboarding-2-try-it');
+  await clickText(companion, 'Explain this code');
+  log(true, 'Onboarding: hello and sample');
+} catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
-// Google sign-in: start the device flow from the app, then open the approval page in a browser.
+const first = await waitForExplanation('first-run-explanation', FIRST_RUN_SAMPLE);
+const seconds = Math.round((Date.now() - launchedAt) / 100) / 10;
+log(first.ok, 'First-run sample explains code', first.why);
+log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
+writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
+
+try {
+  await clickText(companion, 'Next');
+  await companion.locator('.ob2__count').filter({ hasText: '3 / 3' }).waitFor({ timeout: 8000 });
+  await companion.locator('.perm-block').waitFor({ timeout: 8000 });
+  await shot(companion, 'onboarding-3-anywhere');
+  await clickText(companion, 'Start using Unvibe');
+  await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
+  await shot(companion, 'after-onboarding');
+  log(true, 'Onboarding: all three steps');
+} catch (e) { log(false, 'Onboarding: all three steps', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
+
+// Local mode is the default: no sign-in wall after onboarding.
+try {
+  await companion.locator('.topbar__title').waitFor({ timeout: 15000 });
+  assert.equal((await companion.locator('.topbar__title').innerText()).trim(), 'Today');
+  assert.equal(await companion.locator('.login').count(), 0, 'no sign-in wall after onboarding');
+  await shot(companion, 'home');
+  log(true, 'Home opens');
+} catch (e) { log(false, 'Home opens', e.message.split('\n')[0]); }
+
+// Google sign-in from the account menu: start the device flow, then open the approval page.
 let userCode = '';
 try {
-  await clickText(companion, 'Fill this in with Google');
-  await companion.locator('.signin__code b, .signin__code').first().waitFor({ timeout: 20000 });
-  await sleep(800);
+  await companion.locator('.acct-trigger').click();
+  await companion.getByRole('menuitem', { name: 'Sign in to sync' }).click();
+  await clickText(companion, 'Continue with Google');
+  await companion.locator('.signin__code b').first().waitFor({ timeout: 20000 });
   userCode = ((await companion.locator('.signin__code b').first().innerText().catch(() => '')) || '').trim();
   await shot(companion, 'google-signin-code-in-app');
   log(Boolean(userCode), 'Google sign-in starts in the app', userCode ? `code ${userCode}` : 'no code shown');
@@ -107,35 +150,13 @@ if (userCode) {
   await browser?.close();
 }
 
-try {
-  await clickText(companion, 'Continue');
-  await sleep(1500);
-  assert.equal((await companion.locator('.ob2__count').innerText()).trim(), '3 / 5');
-  await shot(companion, 'onboarding-3-connect-editors');
-  await clickText(companion, 'Continue');
-  await sleep(1500);
-  assert.equal((await companion.locator('.ob2__count').innerText()).trim(), '4 / 5');
-  await shot(companion, 'onboarding-4-permissions');
-  await clickText(companion, 'Continue');
-  await sleep(8000);
-  assert.equal((await companion.locator('.ob2__count').innerText()).trim(), '5 / 5');
-  await shot(companion, 'onboarding-5-demo');
-  await clickText(companion, 'Start using Unvibe');
-  await sleep(3500);
-  await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
-  await shot(companion, 'after-onboarding');
-  log(true, 'Onboarding: all five steps');
-} catch (e) { log(false, 'Onboarding: all five steps', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
-
-// Not signed in yet, so the app asks; continue without an account.
+// Back to the app without an account.
 try {
   const skip = companion.locator('.login__local');
-  if (await skip.count()) { await skip.first().click(); await sleep(2500); }
-  await companion.locator('.topbar__title').waitFor({ timeout: 15000 });
-  assert.equal((await companion.locator('.topbar__title').innerText()).trim(), 'Today');
-  await shot(companion, 'home');
-  log(true, 'Home opens');
-} catch (e) { log(false, 'Home opens', e.message.split('\n')[0]); }
+  if (await skip.count()) await skip.first().click();
+  await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
+  log(true, 'Back to the app without signing in');
+} catch (e) { log(false, 'Back to the app without signing in', e.message.split('\n')[0]); }
 
 for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']) {
   try {
