@@ -1,10 +1,11 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { del, get, list, put } from "@vercel/blob";
+import { BlobNotFoundError, del, get, list, put } from "@vercel/blob";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { decryptWaitlistJson, encryptWaitlistJson } from "@/lib/waitlistCrypto";
 import { dayKey, lastNDates } from "@/lib/siteStatsStore";
+import { suppressionKey } from "@/lib/unsubscribe";
 
 export interface WaitlistNotificationRecord {
   status: "sent" | "failed";
@@ -372,6 +373,78 @@ export async function recordWaitlistBetaEmail(
   if (!entry) throw new Error("Waitlist entry was not found while recording beta email status");
   entry.betaEmail = betaEmail;
   await writeLocal(entries);
+}
+
+/**
+ * Suppression storage. waitlist_entries.beta_email_status has a CHECK allowing only sent/failed
+ * and we add no migration, so unsubscribes live in the private Vercel Blob store this file
+ * already uses: one blob per address at email-suppression/v1/<sha256 of the lowercased
+ * email>.json holding only {at}, never the plaintext address. It works for any address we
+ * emailed, waitlist row or not. Without BLOB_READ_WRITE_TOKEN (local dev) the same keys live
+ * in email-suppression.json beside the local waitlist file.
+ */
+const SUPPRESSION_PREFIX = "email-suppression/v1/";
+
+async function localSuppressionFile(): Promise<string> {
+  return path.join(path.dirname(await resolveDataFile()), "email-suppression.json");
+}
+
+async function readLocalSuppressions(): Promise<Record<string, { at: string }>> {
+  try {
+    const parsed: unknown = JSON.parse(await fs.readFile(await localSuppressionFile(), "utf8"));
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, { at: string }>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function recordEmailUnsubscribe(email: string, at: string): Promise<void> {
+  const key = suppressionKey(email);
+  if (blobConfigured()) {
+    await put(`${SUPPRESSION_PREFIX}${key}.json`, JSON.stringify({ at }), {
+      access: "private",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: "application/json",
+      token: blobToken(),
+    });
+    return;
+  }
+  const records = await readLocalSuppressions();
+  records[key] = { at };
+  await fs.writeFile(await localSuppressionFile(), JSON.stringify(records, null, 2), "utf8");
+}
+
+/**
+ * Send time suppression check for the welcome email and setup reminder. A failed read does
+ * not block an email the person just asked for; it is logged instead.
+ */
+export async function isEmailUnsubscribed(email: string): Promise<boolean> {
+  const key = suppressionKey(email);
+  try {
+    if (!blobConfigured()) return key in (await readLocalSuppressions());
+    const result = await get(`${SUPPRESSION_PREFIX}${key}.json`, { access: "private", token: blobToken(), useCache: false });
+    return result?.statusCode === 200;
+  } catch (error) {
+    if (error instanceof BlobNotFoundError) return false;
+    console.error("unsubscribe check failed", error);
+    return false;
+  }
+}
+
+/** Every suppressed key, for bulk sends. Throws on a read error so a batch never ignores it. */
+export async function listUnsubscribedKeys(): Promise<Set<string>> {
+  if (!blobConfigured()) return new Set(Object.keys(await readLocalSuppressions()));
+  const keys = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: SUPPRESSION_PREFIX, cursor, limit: 1000, token: blobToken() });
+    for (const blob of page.blobs) {
+      if (blob.pathname.endsWith(".json")) keys.add(blob.pathname.slice(SUPPRESSION_PREFIX.length, -".json".length));
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+  return keys;
 }
 
 export async function updateWaitlistDetails(

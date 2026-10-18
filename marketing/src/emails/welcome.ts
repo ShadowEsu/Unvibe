@@ -9,6 +9,10 @@ export interface WelcomeInput {
   feedbackUrl: string;
   /** Present when they came from a download, so the email can hand the installer back. */
   downloadUrl?: string;
+  /** Signed unsubscribe link for the footer, see lib/unsubscribe. */
+  unsubscribeUrl: string;
+  /** True on the download path, where scheduleSetupReminder sends one tip the next day. */
+  setupTipFollows?: boolean;
   siteUrl?: string;
 }
 
@@ -74,13 +78,13 @@ export function welcomeHtml(input: WelcomeInput): string {
 <p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">First time opening it needs one extra click on Mac or Windows. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
 </td></tr>
 ${card(`<h2 style="${h2}">Want Pro?</h2><p style="${p}">Deeper explanations, more projects and the full learning history. Your app account already starts with a free month of Pro.</p>${imageButton(l.site, l.pro, "pro")}`)}
-${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this to a friend. When they join, you both get a month of Pro. Up to five friends, and the months stack.</p><p style="margin:0 0 16px;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>${imageButton(l.site, l.rewards, "months")}`, "#eef9c8")}
+${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this to a friend. When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.</p><p style="margin:0 0 16px;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>${imageButton(l.site, l.rewards, "months")}`, "#eef9c8")}
 ${card(`<h2 style="${h2}">Tell us what you think, get another month</h2><p style="${p}">Give Unvibe some stars and a few honest words (up to 100). Do it from this link and we add <b>another free month of Pro</b> to this email. More deals are coming for people who help early.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
 <tr><td style="padding:6px 28px 28px">
 <p style="${p}">Thank you so much. Seriously. Reply to this email any time, it comes straight to me.</p>
 <p style="margin:0;font-size:16px;line-height:1.55;color:${INK}"><b>Preston</b><br><span style="color:#6b6b6b">Founder, Unvibe</span></p>
 </td></tr>
-<tr><td style="padding:0 28px 12px;font-size:12px;line-height:1.5;color:#7a7a7a">You get this because ${escape(input.email)} joined Unvibe at <a href="${l.site}" style="color:#7a7a7a">unvibe.site</a>. One welcome email, no spam.</td></tr>
+<tr><td style="padding:0 28px 12px;font-size:12px;line-height:1.5;color:#7a7a7a">You get this because ${escape(input.email)} joined Unvibe at <a href="${l.site}" style="color:#7a7a7a">unvibe.site</a>. ${followUp(input)} <a href="${escape(input.unsubscribeUrl)}" style="color:#7a7a7a">Unsubscribe</a> any time.</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -98,7 +102,7 @@ Your app account already starts with a free month of Pro. See Pro: ${l.pro}
 
 YOUR INVITE LINK
 ${l.referral}
-When a friend joins with it, you both get a month of Pro. Up to five friends, and the months stack.
+When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.
 Your Pro months: ${l.rewards}
 
 TELL US WHAT YOU THINK, GET ANOTHER MONTH
@@ -106,5 +110,12 @@ Stars and a few honest words (up to 100). Do it from this link and we add anothe
 ${input.feedbackUrl}
 
 Thank you so much. Reply any time, it comes straight to me.
-Preston, Founder, Unvibe`;
+Preston, Founder, Unvibe
+
+${followUp(input)} Unsubscribe any time: ${input.unsubscribeUrl}`;
+}
+
+/** The footer promise must match what we really send next; used by both parts. */
+function followUp(input: WelcomeInput): string {
+  return input.setupTipFollows ? "This email and one setup tip tomorrow." : "Just this email.";
 }

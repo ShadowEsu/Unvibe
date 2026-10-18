@@ -38,7 +38,7 @@ export function betaFeedbackText(): string {
   return `The beta includes 30 AI explanations. After you try it, fill the feedback form:
 ${BETA_FEEDBACK_URL}
 
-The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. Every friend who joins with your link gets you both a month of Pro, up to five friends. Months stack.`;
+The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.`;
 }
 
 export function betaSignOffText(): string {

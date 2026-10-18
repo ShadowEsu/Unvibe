@@ -7,6 +7,7 @@ const input = {
   email: "friend@example.com",
   referralCode: "AB12CD34",
   feedbackUrl: "https://unvibe.site/?feedback=1&e=friend%40example.com&t=abc",
+  unsubscribeUrl: "https://unvibe.site/api/unsubscribe?e=friend%40example.com&t=def",
   siteUrl: "https://unvibe.site",
 };
 
@@ -22,6 +23,26 @@ describe("welcome email", () => {
     assert.match(text, /Congrats/);
     assert.match(text, /feedback=1/);
     assert.doesNotMatch(text + html + WELCOME_SUBJECT, /[—–]/);
+  });
+
+  it("states the real referral reward in both parts", () => {
+    const rule = /When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./;
+    assert.match(welcomeHtml(input), rule);
+    assert.match(welcomeText(input), rule);
+  });
+
+  it("has a visible unsubscribe link in both parts", () => {
+    assert.match(welcomeHtml(input), /<a href="https:\/\/unvibe\.site\/api\/unsubscribe\?e=friend%40example\.com&amp;t=def"[^>]*>Unsubscribe<\/a>/);
+    assert.match(welcomeText(input), /Unsubscribe any time: https:\/\/unvibe\.site\/api\/unsubscribe\?e=friend%40example\.com&t=def/);
+  });
+
+  it("promises only what follows: nothing from the waitlist, one tip from a download", () => {
+    assert.match(welcomeHtml(input), /Just this email\. <a [^>]+>Unsubscribe<\/a> any time\./);
+    assert.match(welcomeText(input), /Just this email\. Unsubscribe any time:/);
+    const download = { ...input, setupTipFollows: true };
+    assert.match(welcomeHtml(download), /This email and one setup tip tomorrow\. <a [^>]+>Unsubscribe<\/a> any time\./);
+    assert.match(welcomeText(download), /This email and one setup tip tomorrow\. Unsubscribe any time:/);
+    assert.doesNotMatch(welcomeHtml(input) + welcomeHtml(download), /One welcome email/);
   });
 
   it("escapes the address it is sent to", () => {

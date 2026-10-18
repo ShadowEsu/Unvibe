@@ -7,7 +7,8 @@
  */
 import { loadEnvConfig } from "@next/env";
 import { BETA_INVITE_SUBJECT, betaInviteHtml, betaInviteText } from "../src/emails/betaInvite";
-import { listUninvitedWaitlistEntries, listWaitlistEntries, markBetaInviteSent } from "../src/lib/waitlistStore";
+import { unsubscribeHeaders, unsubscribeUrl, withoutUnsubscribed } from "../src/lib/unsubscribe";
+import { listUninvitedWaitlistEntries, listUnsubscribedKeys, listWaitlistEntries, markBetaInviteSent } from "../src/lib/waitlistStore";
 
 loadEnvConfig(process.cwd());
 
@@ -59,14 +60,18 @@ async function sendBatch(entries: Invitee[]): Promise<void> {
   const response = await fetch("https://api.resend.com/emails/batch", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify(entries.map((entry) => ({
-      from,
-      to: entry.email,
-      reply_to: "preston@unvibe.site",
-      subject: BETA_INVITE_SUBJECT,
-      html: betaInviteHtml(entry.firstName),
-      text: betaInviteText(entry.firstName),
-    }))),
+    body: JSON.stringify(entries.map((entry) => {
+      const unsubscribe = unsubscribeUrl(entry.email);
+      return {
+        from,
+        to: entry.email,
+        reply_to: "preston@unvibe.site",
+        subject: BETA_INVITE_SUBJECT,
+        html: betaInviteHtml(entry.firstName, unsubscribe),
+        text: betaInviteText(entry.firstName, unsubscribe),
+        headers: unsubscribeHeaders(entry.email),
+      };
+    })),
   });
   if (!response.ok) {
     const detail = await response.text();
@@ -77,13 +82,24 @@ async function sendBatch(entries: Invitee[]): Promise<void> {
 async function main(): Promise<void> {
   const needle = argValue("--to");
   const send = process.argv.includes("--send");
-  const entries = await resolveInvitees(needle);
+  const resolved = await resolveInvitees(needle);
+  // Unsubscribes live in Vercel Blob; without the token this only sees the local dev file.
+  const suppressionReady = Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+  const entries = withoutUnsubscribed(resolved, await listUnsubscribedKeys());
+  const unsubscribed = resolved.length - entries.length;
   const keyReady = Boolean(process.env.RESEND_API_KEY?.trim());
   const fromReady = Boolean(process.env.WAITLIST_FROM_EMAIL?.trim() || process.env.RESEND_FROM_EMAIL?.trim());
+  // Unsubscribe links are verified by the site, so they must be signed with the same secret as production.
+  const signing = process.env.REWARD_LINK_SECRET?.trim()
+    ? "REWARD_LINK_SECRET"
+    : process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ? "SUPABASE_SERVICE_ROLE_KEY fallback" : "";
+  console.log(`Unsubscribe links: ${signing ? `signed with ${signing}` : "missing secret"}`);
+  console.log(`Unsubscribe list: ${suppressionReady ? "Vercel Blob" : "missing BLOB_READ_WRITE_TOKEN, local file only"}`);
   console.log(`Resend key: ${keyReady ? "set" : "missing"}`);
   console.log(`From address: ${fromReady ? "set" : "missing, will use Resend onboarding sender"}`);
   if (needle) console.log(`Filter: ${needle}`);
   console.log(`${entries.length} ${entries.length === 1 ? "person" : "people"} to email.`);
+  if (unsubscribed > 0) console.log(`Skipped ${unsubscribed} unsubscribed.`);
   for (const entry of entries.slice(0, 20)) {
     console.log(`  ${entry.email} (${entry.firstName || "no first name"})${entry.onWaitlist ? "" : " not on waitlist"}`);
   }
@@ -96,6 +112,8 @@ async function main(): Promise<void> {
     console.log("Nobody to send to.");
     return;
   }
+  if (!signing) throw new Error("REWARD_LINK_SECRET is required so every invite has a working unsubscribe link.");
+  if (!suppressionReady) throw new Error("BLOB_READ_WRITE_TOKEN is required so unsubscribed addresses are skipped.");
   let sent = 0;
   for (const batch of chunks(entries)) {
     await sendBatch(batch);

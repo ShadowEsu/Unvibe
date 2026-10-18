@@ -4,9 +4,11 @@ import { betaDownloadHtml, betaDownloadText } from "../emails/betaDownload";
 import { BETA_INVITE_SUBJECT, betaInviteHtml, betaInviteText } from "../emails/betaInvite";
 import { BETA_CURL, BETA_FEEDBACK_URL } from "../emails/betaShared";
 
+const UNSUBSCRIBE = "https://unvibe.site/api/unsubscribe?e=ohm%40example.com&t=abc";
+
 describe("beta waitlist invite email", () => {
   it("includes curl, feedback, and the live reward rule", () => {
-    const text = betaInviteText("Ohm");
+    const text = betaInviteText("Ohm", UNSUBSCRIBE);
     assert.match(BETA_INVITE_SUBJECT, /private beta/);
     assert.match(text, /Thank you so much for waitlisting/);
     assert.match(text, /💜/);
@@ -17,9 +19,14 @@ describe("beta waitlist invite email", () => {
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
     assert.match(text, /1 week of Pro/);
-    assert.match(text, /month of Pro, up to five friends/);
+    assert.match(text, /you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
     assert.doesNotMatch(text, /[—–]/);
-    assert.doesNotMatch(betaInviteHtml("Ohm"), /[—–]/);
+    assert.doesNotMatch(betaInviteHtml("Ohm", UNSUBSCRIBE), /[—–]/);
+  });
+
+  it("has a visible unsubscribe link in both parts", () => {
+    assert.match(betaInviteText("Ohm", UNSUBSCRIBE), /Unsubscribe: https:\/\/unvibe\.site\/api\/unsubscribe\?e=ohm%40example\.com&t=abc/);
+    assert.match(betaInviteHtml("Ohm", UNSUBSCRIBE), /<a href="https:\/\/unvibe\.site\/api\/unsubscribe\?e=ohm%40example\.com&amp;t=abc"[^>]*>Unsubscribe<\/a>/);
   });
 });
 
@@ -28,6 +35,7 @@ describe("beta download email", () => {
     firstName: "Test User",
     macDownloadUrl: "https://example.com/unvibe.zip",
     referralCode: "AB12CD34",
+    unsubscribeUrl: UNSUBSCRIBE,
   };
 
   it("contains curl, the real download, feedback, and referral rule", () => {
@@ -38,10 +46,12 @@ describe("beta download email", () => {
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
     assert.match(text, /1 week of Pro/);
-    assert.match(text, /month of Pro, up to five friends/);
+    assert.match(text, /you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
     assert.match(text, /AB12CD34/);
     assert.doesNotMatch(text, /\$25/);
     assert.doesNotMatch(text, /[—–]/);
+    assert.match(text, /Unsubscribe: https:\/\/unvibe\.site\/api\/unsubscribe/);
+    assert.match(betaDownloadHtml(input), />Unsubscribe<\/a>/);
   });
 
   it("escapes personalized HTML", () => {
