@@ -55,12 +55,19 @@ The Mac DMG step has failed twice with "hdiutil detach" errors; the workflow now
 
 ## 5. Current state
 
-> **CHECKPOINT 18 Oct (usage pause): moving storage from Blob to Supabase, not deployed yet.**
-> - Root cause: Blob store `unvibe-waitlist` is suspended (limits exceeded). Every trial counter, install record, activation marker and unsubscribe write since then has failed. The 30-free limit therefore lives only in each server instance's memory. Lifting the suspension is Preston's billing call.
-> - Done: migration `web/supabase/migrations/20261018160000_trial_and_suppression_tables.sql` is **applied in production** (4 tables, RLS on, no policies, plus RPC `trial_reserve`). The marketing suppression move is complete in the working tree: 67/67 tests, not committed.
-> - Code complete on the work branch `claude/website-app-review-82c93b-q2ajlz` at `0595168` (web 63/63, marketing 67/67). **Not on `main` and not deployed.** Next: fast-forward `main`, which auto-deploys the site; deploy unvibe-api manually (link, deploy, then clean up `.env.local`); confirm health.
-> - Then verify: writes persist across two cold instances; the 30-free limit holds after a redeploy; admin/stats shows real rows (run the device test to create them).
-> - Failed unsubscribe POSTs: **0** found in unvibe-site logs for the last 24 h, across 12 deployments. Older logs are not retained, so earlier losses can't be ruled out.
+- **Storage (18 Oct): Supabase, not Blob.** The Blob store `unvibe-waitlist` is suspended (limits exceeded), so writes there had been failing. Lifting the suspension is Preston's billing call.
+  - Tables (RLS on, no policies, service role only; migration `20261018160000`):
+    - `email_suppression`: sha256 of the email;
+    - `trial_installs`;
+    - `trial_counters` + RPC `trial_reserve`: atomic, returns −1 at the limit. The older `trial_usage` table (monthly periods) is unused and left alone;
+    - `trial_activation`: write-once markers, sample and own code.
+  - Both Supabase clients fetch with `cache: 'no-store'`, because the Next.js fetch cache had served stale counts (`5003517`).
+- **Verified on 18 Oct:**
+  - `trial_reserve` returned 1, 2, −1 at limit 2.
+  - Across 3 device runs and 4 API redeploys, rows persisted. Each run's install shows used 3 and the global counter 6.
+  - `admin/stats` shows real rows. Its token is in `~/.config/preston-secrets/unvibe-admin-stats.env`, and it is set only on `unvibe-api`.
+  - All rows so far come from CI device runs, not real users.
+- **Failed unsubscribes:** 0 found in unvibe-site logs for the last 24 h, across 12 deployments. Older logs are not retained.
 
 - **Latest release: v0.1.42** (18 Oct), published from `f90d09e` by [release run 39102708728](https://github.com/ShadowEsu/Unvibe/actions/runs/39102708728); all four installers 206; Mac signed with the stable identity. It is the new three-step first run. Before publishing, the same app code (`a3f80b3`, `app/` identical) was built without publishing ([39102087100](https://github.com/ShadowEsu/Unvibe/actions/runs/39102087100)) and passed the device test on that build ([39102449853](https://github.com/ShadowEsu/Unvibe/actions/runs/39102449853)). Launch to first explanation took **17.8 s on Mac and 11.0 s on Windows** (GitHub runners, one run each). v0.1.41 (`bef3c1f`) shipped the Windows "this PC" wording; v0.1.40 was the first stable-signed Mac build.
 - **First run (v0.1.42):**
