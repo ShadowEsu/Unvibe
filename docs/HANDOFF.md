@@ -115,3 +115,48 @@ Also: several contacts distrusted outreach emails that read as AI-written; perso
 - Supabase cleanup is complete with Preston's authorization: deleted only the two test `site_feedback` rows (`short`, `deploy check please delete`), preserving the real feedback. The CauliformAI paused project was subsequently deleted; Unvibe and jaymini-prod were preserved. No further destructive cleanup is authorized by this handoff.
 - Preston owns email follow-ups. Do not inspect or prepare the inbox or send messages.
 - Optional Apple Developer ID/notarization requires a separate purchase/owner decision. No purchase or credit redemption is authorized.
+
+## 11. Plan: verify the three unproven paths (written 17 Oct, planning only, nothing run yet)
+
+Nothing below needs a new release: v0.1.41 is the newest release, so v0.1.40 → v0.1.41 is the upgrade under test. Every step that touches a machine, CI or production data needs BOSS/Preston's go first; the gate is named on each step.
+
+### 11.1 Accessibility survives a stable-signed update (Mac)
+Evidence already gathered (read-only, 17 Oct): `codesign -d -r-` on the released arm64 zips gives
+- v0.1.39: `designated => cdhash H"ad7c58ba…"` (ad-hoc, so it changed every build; this is why permission dropped),
+- v0.1.40 and v0.1.41: the same `designated => identifier "com.unvibe.app" and certificate leaf = H"c9da4f61…a99d0e"`, `Authority=Unvibe Self Signed`. `codesign --verify --deep --strict` passes on both.
+
+macOS stores that requirement with the Accessibility grant, and the two requirements are identical, so the grant should carry over [INFERENCE]. The updater's ad-hoc re-sign fallback (`updater.ts`, `codesign --verify … || codesign --force --deep --sign -`) only runs if verify fails, and verify passes on the released bundles. CI can't prove persistence: `real-device-test.yml` writes TCC rows by bundle id with no `csreq`, so they match any signature. It needs a real Mac with a grant made by a person:
+1. Gate: Preston's OK and a Mac he chooses (his own, or a spare user account on it).
+2. Quit Unvibe. Install v0.1.40 from `Unvibe-0.1.40-mac-arm64.dmg` into /Applications. Note `codesign -dvv /Applications/Unvibe.app` shows `Unvibe Self Signed`.
+3. Open it, switch it on in System Settings → Privacy & Security → Accessibility by hand, then select text in TextEdit and press Control+U. It must explain. Screenshot it.
+4. Update from inside the app (the Home update card or the notification; it calls `update:install`). Wait for the relaunch, then confirm About shows 0.1.41.
+5. Pass if all of these hold: there is **no** "Unvibe updated. Switch Unvibe on in Accessibility once more…" notification (`repairAccessibilityAfterUpdate` only fires when access was lost); the Accessibility switch is still on; Control+U in TextEdit explains on the first try; `cat ~/Library/Application\ Support/Unvibe/last-run-version.txt` prints `0.1.41` (the userData folder name is [UNVERIFIED]; find it with `ls ~/Library/Application\ Support | grep -i unvibe`). Screenshot each one.
+6. If it fails: run `codesign -d -r- /Applications/Unvibe.app` after the update and compare it with step 2. If the requirement changed, the update path re-signed the app (look at the fallback line). If it didn't change, collect `log show --last 10m --predicate 'subsystem == "com.apple.TCC"'` and stop. Don't regenerate the certificate.
+7. On pass: shorten the post-update repair note (SENDOFF §9) and record the result in §5 here.
+
+### 11.2 Windows portable self-update replaces the pinned .exe
+How the code works (`updater.ts`): `PORTABLE_EXECUTABLE_FILE` marks a portable run. The update downloads to `<exe>.download`, renames the running exe to `<exe>.old`, moves the download onto `<exe>`, starts it, and the new process deletes `.old` (`cleanupPortableUpdate`). The release picked is the newest non-draft release with a `win-x64-portable.exe` asset.
+Plan: add a separate job, `portable-update`, to `real-device-test.yml` that runs on `windows-latest` only. The setup-based walkthrough stays as it is.
+1. Gate: BOSS OK to edit the workflow and run it. Running it is a QA run, not a release.
+2. Inputs: `from` (default the release before the newest, e.g. 0.1.40) and `to` (default newest, 0.1.41). Skip with a clear message if `to` isn't the newest release, because the updater always picks the newest.
+3. Download `Unvibe-<from>-win-x64-portable.exe` to `$RUNNER_TEMP\pin\Unvibe.exe`. Keep its SHA-256 and `VersionInfo.ProductVersion`.
+4. Launch it with `--remote-debugging-port=9333` and a throwaway `UNVIBE_USER_DATA`. Then `chromium.connectOverCDP`, find the companion page, and wait for onboarding to render. Playwright `_electron.launch` won't attach through the portable launcher [INFERENCE; confirm on the first run].
+5. From the companion page, call `window.unvibe.updateCheck()`. Expect `available: true, latest: <to>`. Then call `window.unvibe.updateInstall()`. Use locators or evaluate with a function argument only, because CSP blocks string evaluation.
+6. Poll for up to 5 min until all of these hold: `Unvibe.exe` ProductVersion = `<to>`, its SHA-256 matches `SHA256SUMS-windows.txt` for `<to>`, `Unvibe.exe.download` is gone, `Unvibe.exe.old` is gone (deleted by the new process), and an `Unvibe.exe` process is running from the pinned path (`Get-CimInstance Win32_Process` ExecutablePath).
+7. Reconnect over CDP if the port is reused, or else check the process. Screenshot the About page showing `<to>`. Upload the screenshots with the existing artifact step.
+8. Failure classes to report separately: download failed (network or redirect), rename blocked (file lock or AV), new exe never started, `.old` left behind.
+Also worth testing after this works: the setup (NSIS) path, `/S --force-run`, from the installed setup build.
+
+### 11.3 Completed Google sign-in
+The flow (`web/app/api/v1/auth/{device,approve,token}`, `marketing/src/app/activate/page.tsx`): the app gets a device and user code, then opens `unvibe.site/activate`. The browser signs in to Supabase (Google OAuth with PKCE, or a magic link), then POSTs `/approve` with the user code and the Supabase bearer token. The app polls `/token` (202 pending, then the account).
+Automating Google's own login page in CI isn't viable: Google blocks automated browsers and asks for 2FA or captcha [INFERENCE from common behaviour; not tried]. So split it:
+1. **Everything except Google's page, automated.** Gate: Preston OKs (a) a dedicated test user in Supabase `aupxkhoczqnubiznqazp` (e.g. `qa+device@unvibe.site`) and (b) storing a service-role key as a GitHub secret. In the walkthrough, after "Google sign-in starts in the app: code X":
+   - mint a session with `auth.admin.generateLink({ type: 'magiclink' })` + `verifyOtp({ token_hash })`;
+   - POST `/api/v1/auth/approve` with `userCode=X` and the bearer token;
+   - assert the app shows the signed-in account (name or email in the account menu) and that `usage:get` reflects that user.
+   - Then delete the user's device-code row. Keep the test user and record its id here.
+2. **Google's page itself, by hand, once per auth change.** Gate: Preston. On a real Mac and on Windows: Sign in → Continue with Google → pick an account → "Connect this device" → the app shows the account within 10 s. Screenshot every step. The Windows 11 report "Google sign-in did not open the default browser" is part of this check.
+3. Pass is (1) green in CI plus (2) screenshots from both OSes.
+
+### Order
+11.2 first: it needs only workflow edits and an OK, no people or production data. Then 11.1, which needs Preston and a Mac for about 10 minutes. Then 11.3, which needs two approvals.
