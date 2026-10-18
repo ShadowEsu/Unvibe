@@ -58,7 +58,7 @@ The Mac DMG step has failed twice with "hdiutil detach" errors; the workflow now
 > **CHECKPOINT 18 Oct (usage pause): moving storage from Blob to Supabase, not deployed yet.**
 > - Root cause: Blob store `unvibe-waitlist` is suspended (limits exceeded). Every trial counter, install record, activation marker and unsubscribe write since then has failed. The 30-free limit therefore lives only in each server instance's memory. Lifting the suspension is Preston's billing call.
 > - Done: migration `web/supabase/migrations/20261018160000_trial_and_suppression_tables.sql` is **applied in production** (4 tables, RLS on, no policies, plus RPC `trial_reserve`). The marketing suppression move is complete in the working tree: 67/67 tests, not committed.
-> - In progress: the web trial/activation/adminStats move (agent TrialToSupabase; new file `web/src/lib/serviceSupabase.ts`). Check its result and run web tests, then commit both packages. Deploy unvibe-api manually and let the site auto-deploy.
+> - Code complete on the work branch `claude/website-app-review-82c93b-q2ajlz` at `0595168` (web 63/63, marketing 67/67). **Not on `main` and not deployed.** Next: fast-forward `main`, which auto-deploys the site; deploy unvibe-api manually (link, deploy, then clean up `.env.local`); confirm health.
 > - Then verify: writes persist across two cold instances; the 30-free limit holds after a redeploy; admin/stats shows real rows (run the device test to create them).
 > - Failed unsubscribe POSTs: **0** found in unvibe-site logs for the last 24 h, across 12 deployments. Older logs are not retained, so earlier losses can't be ruled out.
 
