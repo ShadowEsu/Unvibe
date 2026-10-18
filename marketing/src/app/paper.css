@@ -20,15 +20,14 @@ html.dark body {
   color: var(--ink);
 }
 
-/* San Francisco at dusk: the original Golden Gate colors and gradient veil. */
+/* San Francisco at dusk. Blur and color treatment are baked into the WebP, not the viewport. */
 body::before {
   content: "";
   position: fixed;
   inset: -18%;
   z-index: -2;
-  background: var(--page-photo) 62% 40% / cover no-repeat;
+  background: url("/hero/golden-gate-dusk.webp") 62% 40% / cover no-repeat;
   transform: scale(1.22);
-  filter: blur(36px) saturate(1.55) contrast(1.08) brightness(1.05);
   pointer-events: none;
 }
 
@@ -44,7 +43,6 @@ body::after {
 html[data-performance="lite"] body::before {
   inset: -8%;
   transform: scale(1.08);
-  filter: blur(18px) saturate(1.25) contrast(1.04) brightness(1.05);
 }
 
 .paper-logo__mark {
