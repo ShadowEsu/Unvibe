@@ -103,6 +103,8 @@ function supabaseClient(): SupabaseClient {
   if (!url || !key) throw new Error("Supabase waitlist storage is not configured");
   cachedSupabase = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
+    // Next.js caches fetch() GETs across requests; an unsubscribe check must read live rows.
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
   });
   return cachedSupabase;
 }
