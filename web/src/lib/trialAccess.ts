@@ -142,8 +142,9 @@ async function readInstall(installKey: string, now = new Date()): Promise<TrialI
         access: 'private', addRandomSuffix: false, allowOverwrite: false,
         contentType: 'application/json', token,
       });
-    } catch {
+    } catch (error) {
       // A concurrent first request may have created the same record. The next read converges.
+      if (!/already exists/i.test(String(error))) console.error('trial install record write failed', String(error));
     }
   }
   return record;
@@ -175,8 +176,9 @@ async function writeUsed(installKey: string, kind: TrialKind, used: number): Pro
       access: 'private', addRandomSuffix: false, allowOverwrite: true,
       contentType: 'application/json', token,
     });
-  } catch {
-    // Memory counter still applies for this instance.
+  } catch (error) {
+    // Memory counter still applies for this instance, but the limit is no longer durable: say so.
+    console.error('trial usage write failed', String(error));
   }
 }
 

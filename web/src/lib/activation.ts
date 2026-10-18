@@ -45,7 +45,8 @@ export async function recordActivation(installKey: string, code: string | undefi
     await put(path, JSON.stringify({ at: now.toISOString() }), {
       access: 'private', addRandomSuffix: false, allowOverwrite: false, contentType: 'application/json', token,
     });
-  } catch {
-    // Already recorded (allowOverwrite: false) or storage unavailable.
+  } catch (error) {
+    // Already recorded (allowOverwrite: false) is expected; anything else is a storage problem.
+    if (!/already exists/i.test(String(error))) console.error('activation marker write failed', String(error));
   }
 }
