@@ -103,10 +103,23 @@ jobs:
           } else {
             Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-setup.exe" -OutFile $setup
           }
-          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
-          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $exe) { $exe = Get-ChildItem "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 }
-          if (-not $exe) { Write-Error 'Unvibe.exe was not installed'; exit 1 }
+          $item = Get-Item $setup
+          "setup: $($item.Length) bytes, sha256 $((Get-FileHash $setup -Algorithm SHA256).Hash)"
+          $motw = Get-Content $setup -Stream Zone.Identifier -ErrorAction SilentlyContinue
+          "zone identifier: $(if ($motw) { $motw -join ' ' } else { 'none' })"
+          $proc = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+          "setup exit code: $($proc.ExitCode)"
+          # The NSIS installer can hand off to a child process; give the files a moment to land.
+          $exe = $null
+          for ($i = 0; $i -lt 30 -and -not $exe; $i++) {
+            $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $exe) { Start-Sleep -Seconds 2 }
+          }
+          if (-not $exe) {
+            Get-ChildItem "$env:LOCALAPPDATA\Programs" -ErrorAction SilentlyContinue | Format-Table Name, LastWriteTime | Out-String | Write-Host
+            Get-Process | Where-Object { $_.ProcessName -match 'Unvibe|setup|nsis' } | Format-Table ProcessName, Id | Out-String | Write-Host
+            Write-Error 'Unvibe.exe was not installed'; exit 1
+          }
           "UNVIBE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Walk through the app
