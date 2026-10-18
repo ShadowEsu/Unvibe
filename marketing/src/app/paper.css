@@ -20,28 +20,31 @@ html.dark body {
   color: var(--ink);
 }
 
-/* Paper, like the app (v7) and the share card: calm, fast, and readable. The old full-screen
-   blurred photo cost a 36px blur on every frame and put body text on saturated blue. */
+/* San Francisco at dusk: the original Golden Gate colors and gradient veil. */
 body::before {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: -18%;
   z-index: -2;
-  background:
-    radial-gradient(60% 45% at 8% 0%, rgba(184, 166, 255, 0.32), transparent 70%),
-    radial-gradient(45% 35% at 100% 8%, rgba(214, 255, 111, 0.16), transparent 70%),
-    #f7f4ee;
+  background: var(--page-photo) 62% 40% / cover no-repeat;
+  transform: scale(1.22);
+  filter: blur(36px) saturate(1.55) contrast(1.08) brightness(1.05);
   pointer-events: none;
 }
 
-html.dark body::before {
-  background:
-    radial-gradient(60% 45% at 8% 0%, rgba(112, 68, 207, 0.32), transparent 70%),
-    #15111c;
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--dusk-veil);
+  pointer-events: none;
 }
 
-body::after {
-  content: none;
+html[data-performance="lite"] body::before {
+  inset: -8%;
+  transform: scale(1.08);
+  filter: blur(18px) saturate(1.25) contrast(1.04) brightness(1.05);
 }
 
 .paper-logo__mark {
