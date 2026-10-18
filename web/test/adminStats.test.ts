@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isAdminStatsRequest, summarizeInstalls } from '../src/lib/adminStats';
+import { dailyActivation, isAdminStatsRequest, summarizeInstalls } from '../src/lib/adminStats';
+import { activationKind, FIRST_RUN_SAMPLE } from '../src/lib/activation';
 
 const SECRET = 'a'.repeat(32);
 const req = (auth?: string) => new Request('https://api.test/api/v1/admin/stats', { headers: auth ? { authorization: auth } : {} });
@@ -24,4 +25,28 @@ test('summarizeInstalls counts new and active installs by window', () => {
   assert.deepEqual(summarizeInstalls(installs, explanations, now), {
     installs: 4, newToday: 1, new7d: 2, new30d: 3, active7d: 1, active30d: 2,
   });
+});
+
+test('daily activation counts each install once per marker and splits sample from own code', () => {
+  const now = new Date('2026-10-18T12:00:00Z');
+  const at = (iso: string) => new Date(iso);
+  const rows = dailyActivation(
+    [{ pathname: 'trial-usage/v2/installs/a.json', uploadedAt: at('2026-10-18T01:00:00Z') },
+     { pathname: 'trial-usage/v2/installs/b.json', uploadedAt: at('2026-10-17T23:59:59Z') },
+     { pathname: 'trial-usage/v2/installs/old.json', uploadedAt: at('2026-09-01T00:00:00Z') }],
+    [{ pathname: 'trial-usage/v2/activation/sample/a.json', uploadedAt: at('2026-10-18T01:00:05Z') },
+     { pathname: 'trial-usage/v2/activation/code/a.json', uploadedAt: at('2026-10-18T02:00:00Z') },
+     { pathname: 'trial-usage/v2/activation/sample/b.json', uploadedAt: at('2026-10-18T00:00:01Z') }],
+    now, 2,
+  );
+  assert.deepEqual(rows, [
+    { day: '2026-10-17', installs: 1, sample: 0, code: 0 },
+    { day: '2026-10-18', installs: 1, sample: 2, code: 1 },
+  ]);
+});
+
+test('only the built-in first-run sample counts as the sample, whatever its line endings', () => {
+  assert.equal(activationKind(FIRST_RUN_SAMPLE.replace(/\n/g, '\r\n') + '\n'), 'sample');
+  assert.equal(activationKind(FIRST_RUN_SAMPLE.replace('wait);', 'wait * 2);')), 'code');
+  assert.equal(activationKind(undefined), 'code');
 });

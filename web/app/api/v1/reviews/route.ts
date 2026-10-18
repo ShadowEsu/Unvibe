@@ -5,6 +5,7 @@ import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { getStore } from '@/data/store';
 import { quotaMessage } from '@/billing/plans';
 import { trialInstallFromRequest, reserveTrialAction } from '@/lib/trialAccess';
+import { recordActivation } from '@/lib/activation';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,9 @@ export async function POST(req: Request): Promise<Response> {
   } else if (!provider.mock && trialInstall) {
     const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
     if (denied) return denied;
+    if (payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
+      void recordActivation(trialInstall, payload.context.code);
+    }
   }
 
   const system = buildSystemPrompt(payload);
