@@ -37,9 +37,6 @@ export async function POST(req: Request): Promise<Response> {
   } else if (!provider.mock && trialInstall) {
     const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
     if (denied) return denied;
-    if (payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
-      void recordActivation(trialInstall, payload.context.code);
-    }
   }
 
   const system = buildSystemPrompt(payload);
@@ -51,8 +48,17 @@ export async function POST(req: Request): Promise<Response> {
       const send = (event: StreamEvent) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       try {
-        await provider.stream(system, user, (text) => send({ type: 'token', text }));
+        let hasText = false;
+        await provider.stream(system, user, (text) => {
+          if (text.trim()) hasText = true;
+          send({ type: 'token', text });
+        });
         send({ type: 'done', model: provider.name, mock: provider.mock });
+        if (hasText && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
+          await recordActivation(trialInstall, payload.context.code).catch((error) => {
+            console.error('activation marker write failed', error);
+          });
+        }
       } catch (err) {
         send({ type: 'error', message: err instanceof Error ? err.message : String(err) });
       }

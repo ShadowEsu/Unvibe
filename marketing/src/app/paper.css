@@ -3324,6 +3324,10 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   min-width: 78rem;
 }
 
+.founder-page .founder-analytics__activation table {
+  min-width: 36rem;
+}
+
 .founder-table-wrap {
   overflow-x: auto;
 }

@@ -80,12 +80,12 @@ function appUserNote(users: AppUserStats | null, locked: boolean): string {
   if (locked) return "Unlock with the admin token";
   if (!users) return "Loading";
   switch (users.source) {
-    case "blob":
-      return `Installs that used AI · ${users.newToday} new today`;
+    case "supabase":
+      return `Trial installs that used AI · ${users.newToday} new today · CI excluded`;
     case "not_configured":
-      return "Set UNVIBE_API_URL and UNVIBE_ADMIN_STATS_TOKEN on the site";
+      return "Set UNVIBE_APP_BACKEND_URL and UNVIBE_ADMIN_STATS_TOKEN on the site";
     case "unavailable":
-      return "Backend has no Blob storage configured";
+      return "Backend storage is unavailable";
     default:
       return "Backend did not answer";
   }
@@ -269,11 +269,11 @@ export function FounderAnalytics() {
         <>
           <div className="founder-analytics__grid founder-analytics__grid--tight">
             <article>
-              <span>Downloads, all time</span>
+              <span>Installer downloads, all time</span>
               <strong>{data.downloads?.source === "github" ? data.downloads.total.toLocaleString() : "—"}</strong>
               <small>
                 {data.downloads?.source === "github"
-                  ? `${data.downloads.mac.toLocaleString()} Mac · ${data.downloads.windows.toLocaleString()} Windows · from GitHub`
+                  ? `${data.downloads.mac.toLocaleString()} Mac · ${data.downloads.windows.toLocaleString()} Windows · includes updates and CI, not unique people`
                   : "GitHub release counts are unavailable right now"}
               </small>
             </article>
@@ -283,20 +283,20 @@ export function FounderAnalytics() {
               <small>{data.downloads?.currentTag ?? ""} · {data.downloads?.currentMac ?? 0} Mac · {data.downloads?.currentWindows ?? 0} Windows</small>
             </article>
             <article>
-              <span>App users</span>
-              <strong>{appUsers && (appUsers.source === "blob") ? appUsers.installs.toLocaleString() : "—"}</strong>
+              <span>Trial installs using AI</span>
+              <strong>{appUsers?.source === "supabase" ? appUsers.installs.toLocaleString() : "—"}</strong>
               <small>{appUserNote(appUsers, locked)}</small>
             </article>
             <article>
               <span>Active this week</span>
-              <strong>{appUsers?.source === "blob" ? appUsers.active7d.toLocaleString() : "—"}</strong>
-              <small>{appUsers?.source === "blob" ? `${appUsers.active30d} in 30 days · ${appUsers.new7d} new this week` : "Installs that asked for an explanation"}</small>
+              <strong>{appUsers?.source === "supabase" ? appUsers.active7d.toLocaleString() : "—"}</strong>
+              <small>{appUsers?.source === "supabase" ? `${appUsers.active30d} in 30 days · ${appUsers.new7d} new this week` : "Trial installs that requested an explanation"}</small>
             </article>
           </div>
 
           <div className="founder-analytics__grid founder-analytics__grid--tight">
             <article>
-              <span>Waitlist joined</span>
+              <span>Email signups</span>
               <strong>{data.waitlist.total.toLocaleString()}</strong>
               <small>{data.waitlist.referred.toLocaleString()} referred · {people.length.toLocaleString()} real emails below</small>
             </article>
@@ -336,6 +336,34 @@ export function FounderAnalytics() {
               <small>{data.stats.allTime.views.toLocaleString()} page views since Aug 13, 2026</small>
             </article>
           </div>
+
+          {appUsers?.source === "supabase" ? (
+            <article className="founder-analytics__people founder-analytics__activation">
+              <header>
+                <div>
+                  <span>Activation, last 14 days</span>
+                  <h2>First completed explanations</h2>
+                </div>
+                <small>UTC · {appUsers.qaExcluded} CI installs excluded</small>
+              </header>
+              <p>Anonymous trial installs only. Own code includes any selection, not only the shortcut. Downloads and email signups are separate counts, not a combined people total.</p>
+              <div className="founder-table-wrap">
+                <table>
+                  <thead>
+                    <tr><th scope="col">Date (UTC)</th><th scope="col">New trial installs</th><th scope="col">First sample</th><th scope="col">First own code</th></tr>
+                  </thead>
+                  <tbody>
+                    {[...appUsers.daily].reverse().map((day) => (
+                      <tr key={day.day}>
+                        <th scope="row">{compactDate(day.day)}</th>
+                        <td>{day.installs}</td><td>{day.sample}</td><td>{day.code}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          ) : null}
 
           <div className="founder-analytics__panels">
             <article className="founder-analytics__activity">

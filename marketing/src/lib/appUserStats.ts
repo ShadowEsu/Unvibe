@@ -1,6 +1,6 @@
 /**
  * Desktop install counts from the product backend (web/ /api/v1/admin/stats).
- * Needs UNVIBE_API_URL and UNVIBE_ADMIN_STATS_TOKEN on the marketing deployment.
+ * Needs UNVIBE_APP_BACKEND_URL and UNVIBE_ADMIN_STATS_TOKEN on the marketing deployment.
  */
 export interface AppUserStats {
   installs: number;
@@ -9,13 +9,15 @@ export interface AppUserStats {
   new30d: number;
   active7d: number;
   active30d: number;
-  source: "blob" | "unavailable" | "not_configured" | "error";
+  daily: Array<{ day: string; installs: number; sample: number; code: number }>;
+  qaExcluded: number;
+  source: "supabase" | "unavailable" | "not_configured" | "error";
 }
 
-const EMPTY = { installs: 0, newToday: 0, new7d: 0, new30d: 0, active7d: 0, active30d: 0 };
+const EMPTY = { installs: 0, newToday: 0, new7d: 0, new30d: 0, active7d: 0, active30d: 0, daily: [], qaExcluded: 0 };
 
 export async function getAppUserStats(): Promise<AppUserStats> {
-  const base = process.env.UNVIBE_API_URL?.trim().replace(/\/+$/, "");
+  const base = process.env.UNVIBE_APP_BACKEND_URL?.trim().replace(/\/+$/, "");
   const token = process.env.UNVIBE_ADMIN_STATS_TOKEN?.trim();
   if (!base || !token) return { ...EMPTY, source: "not_configured" };
   try {
@@ -32,7 +34,9 @@ export async function getAppUserStats(): Promise<AppUserStats> {
       new30d: Number(body.new30d) || 0,
       active7d: Number(body.active7d) || 0,
       active30d: Number(body.active30d) || 0,
-      source: body.source === "blob" ? "blob" : "unavailable",
+      daily: body.daily ?? [],
+      qaExcluded: Number(body.qaExcluded) || 0,
+      source: body.source === "supabase" ? "supabase" : "unavailable",
     };
   } catch (error) {
     console.error("app user stats failed", error);

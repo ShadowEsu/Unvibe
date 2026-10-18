@@ -27,7 +27,7 @@ const RELEASES_URL = "https://api.github.com/repos/ShadowEsu/Unvibe/releases?per
 
 export function platformOf(name: string): "mac" | "windows" | null {
   if (name.endsWith(".sha256") || name.endsWith(".blockmap")) return null;
-  if (/\.(dmg|zip)$/i.test(name)) return "mac";
+  if (/\.dmg$/i.test(name)) return "mac";
   if (/\.exe$/i.test(name)) return "windows";
   return null;
 }

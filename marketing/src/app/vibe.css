@@ -104,16 +104,8 @@ h1 em, h2 em, h3 em, .serif-em {
   .vhero { padding-top: 6rem; }
 }
 
-/* Hero entrance: Vibe pops, words rise, stickers bounce in. */
-.vhero .vhero__copy > * { opacity: 0; transform: translateY(14px); }
-.vhero.is-ready .vhero__copy > * { animation: vRise 620ms var(--v-press) forwards; }
-.vhero.is-ready .vhero__copy > *:nth-child(2) { animation-delay: 90ms; }
-.vhero.is-ready .vhero__copy > *:nth-child(3) { animation-delay: 170ms; }
-.vhero.is-ready .vhero__copy > *:nth-child(4) { animation-delay: 240ms; }
-.vhero.is-ready .vhero__copy > *:nth-child(5) { animation-delay: 300ms; }
-.vhero.is-ready .vhero__copy > *:nth-child(n+6) { animation-delay: 360ms; }
+/* Keep the promise and CTA visible before hydration. Only the mascot bubble enters. */
 .vhero.is-ready .vhero__bubble { animation: vPop 520ms var(--v-press) 700ms both; }
-@keyframes vRise { to { opacity: 1; transform: none; } }
 @keyframes vPop { 0% { opacity: 0; transform: scale(0.6) rotate(-6deg); } 70% { opacity: 1; transform: scale(1.05); } 100% { transform: none; } }
 
 /* Download buttons pick up the ink and press like keys. */
