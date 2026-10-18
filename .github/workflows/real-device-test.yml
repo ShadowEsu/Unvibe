@@ -1,7 +1,8 @@
 name: Real device test
 
-# Installs a published Unvibe release on real macOS and Windows machines, walks through
-# onboarding, Google sign-in (up to Google's own page), every page, the editor shortcut path
+# Installs Unvibe on real macOS and Windows machines (a published release, or the artifacts of a
+# build-only "Desktop app release" run so a change is proven before it ships), walks through the
+# timed first run, Google sign-in (up to Google's own page), every page, the editor shortcut path
 # and the global shortcut, and uploads a screenshot of every step plus a pass/fail report.
 on:
   workflow_dispatch:
@@ -10,9 +11,14 @@ on:
         description: "Release version to test, without the v (empty = latest on unvibe.site)"
         required: false
         default: ""
+      build_run:
+        description: "Optional: id of a build-only Desktop app release run to test instead of a release"
+        required: false
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   walkthrough:
@@ -50,13 +56,26 @@ jobs:
           npm install playwright@1.48.2 >/dev/null
           npx playwright install chromium
 
+      - name: Get the build-only artifacts
+        if: inputs.build_run != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: unvibe-${{ matrix.os }}
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build
+
       - name: Install Unvibe (Mac)
         if: matrix.label == 'mac'
         shell: bash
         run: |
           v="${{ steps.ver.outputs.v }}"
           arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
-          curl -fL -o "$RUNNER_TEMP/Unvibe.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-mac-$arch.dmg"
+          if [ -n "${{ inputs.build_run }}" ]; then
+            cp "$(ls "$RUNNER_TEMP"/build/*-mac-$arch.dmg | head -1)" "$RUNNER_TEMP/Unvibe.dmg"
+          else
+            curl -fL -o "$RUNNER_TEMP/Unvibe.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-mac-$arch.dmg"
+          fi
           mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt"
           hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/Unvibe.dmg"
           ditto "$mnt/Unvibe.app" /Applications/Unvibe.app
@@ -79,7 +98,11 @@ jobs:
         run: |
           $v = "${{ steps.ver.outputs.v }}"
           $setup = "$env:RUNNER_TEMP\Unvibe-setup.exe"
-          Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-setup.exe" -OutFile $setup
+          if ("${{ inputs.build_run }}") {
+            Copy-Item (Get-ChildItem "$env:RUNNER_TEMP\build" -Filter '*-win-x64-setup.exe' | Select-Object -First 1).FullName $setup
+          } else {
+            Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-setup.exe" -OutFile $setup
+          }
           Start-Process -FilePath $setup -ArgumentList '/S' -Wait
           $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $exe) { $exe = Get-ChildItem "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 }
