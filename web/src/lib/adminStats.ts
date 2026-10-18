@@ -137,13 +137,13 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
       .order('install_key')
       .range(from, to), 'trial_installs'),
     fetchAll<{ install_key: string; updated_at: string }>((from, to) => db
-      .from('trial_usage')
+      .from('trial_counters')
       .select('install_key, updated_at')
       .eq('kind', 'ai_explanation')
       .neq('install_key', GLOBAL_INSTALL_KEY)
       .gte('updated_at', since30d)
       .order('install_key')
-      .range(from, to), 'trial_usage'),
+      .range(from, to), 'trial_counters'),
     fetchAll<{ install_key: string; kind: ActivationKind; at: string }>((from, to) => db
       .from('trial_activation')
       .select('install_key, kind, at')

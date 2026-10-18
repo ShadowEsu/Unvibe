@@ -16,15 +16,16 @@ create table if not exists public.trial_installs (
 );
 alter table public.trial_installs enable row level security;
 
--- Trial counters per install and kind ('ai_explanation' | 'project_question').
-create table if not exists public.trial_usage (
+-- Trial counters per install and kind ('ai_explanation' | 'project_question'). A new name: the older
+-- trial_usage table (20260721000000, monthly periods) already exists and is left untouched.
+create table if not exists public.trial_counters (
   install_key text not null,
   kind text not null check (kind in ('ai_explanation', 'project_question')),
   used integer not null default 0 check (used >= 0),
   updated_at timestamptz not null default now(),
   primary key (install_key, kind)
 );
-alter table public.trial_usage enable row level security;
+alter table public.trial_counters enable row level security;
 
 -- Write-once activation markers: first sample explained, first own-code explanation.
 create table if not exists public.trial_activation (
@@ -47,11 +48,11 @@ as $$
 declare
   next_used integer;
 begin
-  insert into public.trial_usage (install_key, kind, used, updated_at)
+  insert into public.trial_counters (install_key, kind, used, updated_at)
   values (p_install_key, p_kind, 0, now())
   on conflict (install_key, kind) do nothing;
 
-  update public.trial_usage
+  update public.trial_counters
      set used = used + 1, updated_at = now()
    where install_key = p_install_key and kind = p_kind and used < p_limit
   returning used into next_used;

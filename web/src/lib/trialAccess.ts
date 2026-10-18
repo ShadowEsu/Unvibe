@@ -2,7 +2,7 @@
  * Sealed desktop trial access. The shared trial token is NOT a provider API key —
  * Gemini/Anthropic keys stay server-side. Each install receives a hard 30-day AI and follow-up budget.
  *
- * Durable counters live in Supabase (trial_installs / trial_usage, atomic trial_reserve RPC).
+ * Durable counters live in Supabase (trial_installs / trial_counters, atomic trial_reserve RPC).
  * Process memory is used only when Supabase is not configured (dev/tests).
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
@@ -130,7 +130,7 @@ async function readUsed(installKey: string, kind: TrialKind): Promise<number> {
   const db = serviceSupabase();
   if (!db) return memoryBucket().get(memoryKey(installKey, kind))?.used ?? 0;
   const { data, error } = await db
-    .from('trial_usage')
+    .from('trial_counters')
     .select('used')
     .eq('install_key', installKey)
     .eq('kind', kind)

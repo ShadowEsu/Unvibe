@@ -91,7 +91,7 @@ test('with Supabase, reserveTrialAction uses trial_reserve for the install and t
     }
     if (url.pathname === '/rest/v1/trial_installs' && init?.method === 'POST') return new Response(null, { status: 201 });
     if (url.pathname === '/rest/v1/trial_installs') return Response.json([{ started_at: new Date().toISOString() }]);
-    if (url.pathname === '/rest/v1/trial_usage') return Response.json([{ used: 2 }]);
+    if (url.pathname === '/rest/v1/trial_counters') return Response.json([{ used: 2 }]);
     throw new Error(`unexpected request ${url}`);
   }) as typeof fetch;
   try {
