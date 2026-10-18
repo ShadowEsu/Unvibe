@@ -241,7 +241,7 @@ p { font-size: 1.02rem; }
 .vhero__kicker { font-size: clamp(1.15rem, 1.8vw, 1.4rem) !important; max-width: 44rem; }
 .vhero .paper-join { min-height: 3.6rem; padding: 0 1.7rem !important; font-size: 1.12rem !important; border-radius: 14px !important; }
 .vhero__fine { font-size: 1rem; padding: 0.4rem 1rem; background: var(--v-lime); }
-.vhero__phone .vhero__fine { padding: 0; background: none; font-size: 0.85rem; color: #4d4a44; }
+.vhero__phone .vhero__fine { padding: 0; border: 0; box-shadow: none; background: none; font-size: 0.85rem; color: #4d4a44; }
 @media (max-width: 520px) {
   .vhero__copy { gap: 0.8rem; }
   .vhero__kicker { font-size: 1.05rem !important; }

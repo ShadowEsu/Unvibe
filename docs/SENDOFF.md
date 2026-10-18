@@ -564,3 +564,41 @@ Funnel table (Mixpanel, 30 days ending on the date):
 | Date | Page views | Install views | Command copies | Release downloads | Try-it explains | Waitlist | App users (Supabase) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 17 Oct | 700 | 525 | 5 | 13 | 9 | 2 | 3 |
+
+Growth count for the 100k goal (report these three numbers each session; never add downloads and signups together raw):
+
+| Date | Email signups (`waitlist_entries` rows) | Installer downloads (GitHub dmg+exe, all releases) | Mixpanel people: signup only / download only / both |
+| --- | --- | --- | --- |
+| 17 Oct | 14 | 610 | 14 / 24 / 1 (deduped people with either: 39) |
+
+GitHub counts are file downloads, not people, and include bots and repeats. The deduped people number only covers browsers Mixpanel saw (JQL `groupByUser` over `waitlist_completed` vs `download_cta_clicked`/`release_download_clicked`/`beta_install_copied`, 1 Jul to the date).
+
+### 2026-10-17 (night): homepage rebuild for downloads and email signups
+- BOSS brief: website bar plus growth from `~/boss-handoff/research-inputs/`. Decisions approved by BOSS: desktop primary is "Download free"; phones get a one-field "Email me the link" (stored in `waitlist_entries`, existing welcome email); the share step offers only the existing referral; never "move up the list".
+- Homepage (`917b581`):
+  - one promise, then one action for this device (Mac or Windows download, with the other OS as a small link; phones get the email form);
+  - "Or try it in your browser first";
+  - the recorded app as proof under the hero;
+  - a share step after the email signup;
+  - 8 sections instead of 17;
+  - paper background instead of a 36 px blurred full-screen photo.
+  Mobile lab LCP (4x CPU, 1.6 Mbps, 150 ms) went from 5.7 s on the old live site to 1.8 s locally. That is one run each, not field data.
+- Referral truth (code trace): a friend joining with a **new** email gives both a month of Pro. Pro unlocks Expert depth and nearby-file context, but it does **not** raise the 30/20 explanation allowance (`web/app/api/v1/reviews/route.ts` never checks the plan). All copy now says exactly that (`9ab1e78`).
+- Email (`e45d5f6`):
+  - every signup email has an Unsubscribe link plus `List-Unsubscribe` and one-click headers;
+  - the GET page only asks for confirmation and the POST records it, so link scanners can't unsubscribe anyone;
+  - suppression is a hashed key in Blob (`email-suppression/v1/`), because `waitlist_entries_beta_email_status_check` only allows sent/failed;
+  - the welcome, setup reminder and invite script all skip unsubscribed addresses;
+  - footers state what follows.
+- Removed the false "X" follower claim (there is no X account). Instagram live count is 707 (Composio, 17 Oct); the 800+ total also counts TikTok and LinkedIn, which I didn't verify.
+- New SEO title/description, plus a brand share card (`opengraph-image.tsx`) with no stock photo.
+- Verified:
+  - marketing 60/60 tests, typecheck and build pass on a clean worktree of HEAD;
+  - live at 1440/390/320: no sideways scroll and the right CTA for each device;
+  - the live OG image returns 200;
+  - `/api/unsubscribe` returns 400 on a bad token (live). Locally GET doesn't record and POST does.
+- Not verified:
+  - a real email send with the new footer (no test send, by rule);
+  - the Resend scheduled-email cancel on unsubscribe (best effort, untested against the live API);
+  - a real phone share sheet.
+- Next leak to fix: `reviews` ignores Pro (product decision: should Pro raise the allowance?). Also the guided first-run step in the app.
