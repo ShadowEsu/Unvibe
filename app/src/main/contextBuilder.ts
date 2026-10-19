@@ -9,6 +9,7 @@ import { detectLanguage, guessLanguage } from '../core/language';
 import type { DiffHunk, ExplanationLevel, ReviewRequestPayload, ReviewScope } from '../core/protocol';
 import { store } from './store';
 import { settings } from './settings';
+import { fenceBlock } from './promptFence';
 
 const MAX_NEARBY_CHARS = 8_000;
 const MAX_SNAPSHOT_CHARS = 12_000;
@@ -60,7 +61,7 @@ async function readNearbyFiles(repoRoot: string, fromFile: string, code: string)
         const text = await readFile(candidate, 'utf8');
         const clipped = text.slice(0, Math.floor(MAX_NEARBY_CHARS / 2));
         const relPath = path.relative(repoRoot, candidate);
-        snippets.push(`### ${relPath}\n\`\`\`\n${clipped}\n\`\`\``);
+        snippets.push(`### ${relPath}\n${fenceBlock(clipped)}`);
         resolved.push(relPath);
         break;
       } catch {
