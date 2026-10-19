@@ -1578,5 +1578,12 @@ code.inline {
 /* Code comments readable on the dark code surface (was 3.5:1). */
 .card .tk-c { color: #8f8b82; }
 
+/* Plan-locked depth reads as "on Pro", not as broken: full opacity, dashed edge, a visible Pro tag. */
+.card .lvl.lvl--locked:disabled { opacity: 1; border-style: dashed; color: var(--p-muted); }
+.card .lvl__pro {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 99px;
+  background: #5b4bd6; color: #fff; font-size: 0.78em; font-weight: 650; line-height: 1.4; letter-spacing: 0.02em; vertical-align: 1px;
+}
+
 /* Long explanations fade into the action row instead of being sliced by it. */
 .card .stage > .body { padding-bottom: 26px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }

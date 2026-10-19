@@ -755,7 +755,7 @@ function Widget() {
       ) : null}
 
       {!collapsed && !sessionPaused && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
-        <div className="levels" aria-label="Explanation depth">
+        <div className="levels" role="group" aria-label="Explanation depth">
           <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
             const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
@@ -763,9 +763,10 @@ function Widget() {
               <button
                 key={l.id}
                 data-level={l.id}
-                className={`lvl${l.id === active.level ? ' on' : ''}`}
+                className={`lvl${l.id === active.level ? ' on' : ''}${expertLocked ? ' lvl--locked' : ''}`}
                 disabled={outOfExplanations || expertLocked}
                 title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
+                aria-label={expertLocked ? `${l.label}, included with Unvibe Pro` : undefined}
                 onClick={() => {
                   if (expertLocked) {
                     setProGate(true);
@@ -780,6 +781,7 @@ function Widget() {
                 }}
               >
                 {l.label}
+                {expertLocked ? <span className="lvl__pro" aria-hidden="true">Pro</span> : null}
               </button>
             );
           })}
