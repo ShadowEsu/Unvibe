@@ -23,7 +23,8 @@ const name = (label) => `${String(++n).padStart(2, '0')}-${label}.png`;
 
 async function shot(page, label) {
   const file = name(label);
-  try { await page.screenshot({ path: path.join(out, file) }); } catch (e) { console.log('screenshot failed', label, e.message); }
+  try { await page.screenshot({ path: path.join(out, file), animations: 'disabled' }); }
+  catch (e) { log(false, `Screenshot ${label}`, e.message.split('\n')[0]); }
   return file;
 }
 
@@ -34,7 +35,7 @@ function desktopShot(label) {
     if (os === 'mac') execFileSync('screencapture', ['-x', file]);
     else execFileSync('powershell', ['-NoProfile', '-Command',
       `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b=[System.Windows.Forms.SystemInformation]::VirtualScreen; $bmp=New-Object System.Drawing.Bitmap $b.Width,$b.Height; $g=[System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size); $bmp.Save('${file}')`]);
-  } catch (e) { console.log('desktop screenshot failed', e.message); }
+  } catch (e) { log(false, `Desktop screenshot ${label}`, e.message.split('\n')[0]); }
 }
 
 async function windowWith(app, part, timeout = 30000) {
@@ -168,6 +169,48 @@ for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan',
   } catch (e) { log(false, `Page ${page}`, e.message.split('\n')[0]); }
 }
 
+// Internal navigation is also used by deep links and the command palette.
+for (const page of ['Projects', 'Concepts', 'Notebook', 'Library', 'Profile']) {
+  try {
+    await app.evaluate(({ BrowserWindow }, id) => {
+      const win = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('companion.html'));
+      if (!win) throw new Error('Companion window missing');
+      win.webContents.send('companion:showPage', id);
+    }, page);
+    await companion.locator('.topbar__title').filter({ hasText: page }).waitFor();
+    await shot(companion, `internal-${page.toLowerCase()}`);
+    log(true, `Internal page ${page}`);
+  } catch (e) { log(false, `Internal page ${page}`, e.message.split('\n')[0]); }
+}
+
+// Design coverage includes the controls people use after their first explanation.
+try {
+  await companion.locator('.side-settings').click();
+  for (const tab of ['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data', 'Integrations', 'AI', 'Account & Plan', 'About']) {
+    await companion.locator('.mside').getByRole('button', { name: tab, exact: true }).click();
+    await companion.locator('.mbody h2').filter({ hasText: tab }).waitFor();
+    await shot(companion, `settings-${tab.toLowerCase().replace(/[^a-z]+/g, '-')}`);
+  }
+  await companion.getByRole('button', { name: 'Close settings', exact: true }).click();
+  await companion.getByRole('dialog', { name: 'Settings', exact: true }).waitFor({ state: 'detached' });
+  log(true, 'All settings tabs are reachable and dismissible');
+} catch (e) { log(false, 'Settings design coverage', e.message.split('\n')[0]); await shot(companion, 'settings-stuck'); }
+
+try {
+  await companion.locator('.topbar__search').click();
+  await companion.getByRole('dialog').waitFor();
+  await shot(companion, 'search-empty');
+  await companion.keyboard.press('Escape');
+  await companion.locator('.acct-trigger').click();
+  await companion.getByRole('menu', { name: 'Account', exact: true }).waitFor();
+  await shot(companion, 'account-menu');
+  await companion.getByRole('menuitem', { name: 'Send feedback', exact: true }).click();
+  await companion.locator('.fbk').waitFor();
+  await shot(companion, 'feedback-unsent');
+  await companion.locator('.fbk__close').click();
+  log(true, 'Search, account menu and feedback open without sending');
+} catch (e) { log(false, 'Dialog design coverage', e.message.split('\n')[0]); await shot(companion, 'dialog-stuck'); }
+
 const { shortcut } = await companion.evaluate(() => window.unvibe.appInfo());
 const shortcutRegistered = await app.evaluate(({ globalShortcut }, accelerator) =>
   globalShortcut.isRegistered(accelerator), shortcut);
@@ -182,7 +225,8 @@ async function waitForExplanation(label, expectedCode) {
     await preview.waitFor({ timeout: 30000 });
     assert.equal((await preview.innerText()).trim(), expectedCode.trim());
     // The selected-code preview alone is not an AI explanation.
-    await panel.locator('.local-save-note').waitFor({ timeout: 90000 });
+    await panel.locator('.card--done .local-save-note').waitFor({ timeout: 90000 });
+    await panel.locator('.body .cursor').waitFor({ state: 'detached', timeout: 30000 });
     const bodyText = await panel.locator('.body').innerText();
     const codeContext = await panel.locator('.code-context').innerText();
     const text = bodyText.replace(codeContext, '').trim();

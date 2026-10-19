@@ -39,14 +39,20 @@ function page(outcome: Outcome, url: URL): Response {
   const { title, body } = MESSAGES[outcome];
   const action = escapeEmailHtml(`${url.pathname}${url.search}`);
   const button = outcome === "confirm"
-    ? `<form method="post" action="${action}" style="margin:0 0 28px"><button type="submit" style="padding:13px 22px;border:2px solid #141414;border-radius:12px;background:#141414;color:#f6f1e7;font-size:16px;font-weight:700;cursor:pointer">Unsubscribe</button></form>`
+    ? `<form method="post" action="${action}"><button type="submit">Unsubscribe</button></form>`
     : "";
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Unvibe email</title></head>
-<body style="margin:0;background:#f6f1e7;color:#141414;font-family:Helvetica,Arial,sans-serif">
-<main style="max-width:480px;margin:0 auto;padding:72px 24px">
-<h1 style="margin:0 0 12px;font-size:28px;line-height:1.2">${title}</h1>
-<p style="margin:0 0 28px;font-size:17px;line-height:1.55;color:#3b3b3b">${body}</p>
-${button}<p style="margin:0;font-size:15px"><a href="/" style="color:#141414;font-weight:700">Back to unvibe.site</a></p>
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Unvibe email</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;padding:32px 20px;background:#b8b2d9 url("/hero/golden-gate-dusk.webp") 62% 40%/cover fixed;color:#141414;font-family:Helvetica,Arial,sans-serif}
+main{width:min(100%,500px);padding:clamp(24px,6vw,40px);border:1px solid #141414;border-radius:24px;background:#fff;box-shadow:5px 5px 0 #141414}
+.brand{margin:0 0 28px;font-size:17px;font-weight:700}h1{margin:0 0 16px;font-size:clamp(26px,5vw,32px);line-height:1.16;letter-spacing:-.025em}
+p{margin:0 0 28px;font-size:17px;line-height:1.55;color:#3b3b3b}form{margin:0 0 28px}button{min-height:48px;padding:13px 22px;border:2px solid #141414;border-radius:12px;background:#141414;color:#fff;font:700 16px Helvetica,Arial,sans-serif;cursor:pointer}
+a{color:#141414;font-weight:700;text-underline-offset:4px}button:focus-visible,a:focus-visible{outline:3px solid #6d48b7;outline-offset:4px}.back{margin:0;font-size:15px}
+</style></head>
+<body><main>
+<div class="brand">Unvibe email</div>
+<h1>${title}</h1><p>${body}</p>
+${button}<p class="back"><a href="/">Back to unvibe.site</a></p>
 </main></body></html>`;
   return new Response(html, {
     status: STATUS[outcome],
