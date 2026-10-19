@@ -363,7 +363,7 @@ export function Chat({
                 <ThinkingStatus label={providerLabel} />
               </div>
             ) : null}
-            {error ? <p className="form-error">{error}</p> : null}
+            {error ? <p className="form-error" role="alert">{error}</p> : null}
             <div ref={endRef} />
           </div>
         )}
@@ -398,7 +398,10 @@ export function Chat({
               <span className="chat-composer__hint">{isWindows
                 ? (empty ? 'Enter to send' : 'Enter to send, Shift+Enter for a new line')
                 : (empty ? 'Return to send' : 'Return to send, Shift Return for a new line')}</span>
-              <button className="chat-mic" type="button" aria-pressed={showVoice} onClick={() => { setShowVoice(true); areaRef.current?.focus(); }}>🎙 Speak</button>
+              <button className="chat-mic" type="button" aria-pressed={showVoice} onClick={() => { setShowVoice(true); areaRef.current?.focus(); }}>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 10 3z M5.5 9.5a4.5 4.5 0 0 0 9 0 M10 14v3 M7.5 17h5" /></svg>
+                Speak
+              </button>
               <button className="chat-send" type="submit" disabled={busy || !draft.trim()} aria-label={busy ? 'Sending' : 'Send'}>
                 {busy ? '·' : '↑'}
               </button>
@@ -422,7 +425,7 @@ export function Chat({
           title={`${remaining ?? usage.remaining} of ${usage.limit} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
           onClick={() => void onRefresh()}
         >
-          <span>{pct}% used</span>
+          <span>{pct}% used this month</span>
         </button>
       ) : null}
     </div>

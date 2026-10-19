@@ -65,7 +65,9 @@ export function AccountMenu(props: AccountMenuProps) {
       if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      triggerRef.current?.focus();
     };
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('keydown', onKey);
@@ -82,11 +84,11 @@ export function AccountMenu(props: AccountMenuProps) {
   };
   const external = (url: string) => run(() => void window.unvibe.openUrl(url));
 
-  // Arrow keys move through the menu items.
+  // Arrow keys move through every menu item, including the invite button.
   const onMenuKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
-    const items = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>('.acct-menu__item') ?? []);
+    const items = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
     const next = event.key === 'ArrowDown' ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
     items[next]?.focus();
@@ -105,9 +107,9 @@ export function AccountMenu(props: AccountMenuProps) {
             <span className="acct-menu__plan">{planLabel}</span>
           </div>
 
-          <button type="button" className="acct-menu__cta" onClick={run(props.onInvite)}>
+          <button type="button" role="menuitem" className="acct-menu__cta" onClick={run(props.onInvite)}>
             <MenuIcon d={ICONS.invite} />
-            Invite a friend, both get Pro
+            Invite friends to Unvibe
           </button>
 
           <div className="acct-menu__group">

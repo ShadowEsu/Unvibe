@@ -289,6 +289,7 @@ const NAV = [...NAV_PINNED, ...NAV_SPACES];
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
+const MIC_ICON = 'M10 3a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 10 3z M5.5 9.5a4.5 4.5 0 0 0 9 0 M10 14v3 M7.5 17h5';
 
 /** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
 function FadeIn({
@@ -803,7 +804,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
         <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
       </button>
       <button type="button" className="voice-cta" onClick={onTryVoice}>
-        <span className="voice-cta__mic" aria-hidden="true">🎙</span>
+        <span className="voice-cta__mic" aria-hidden="true"><Icon d={MIC_ICON} /></span>
         <span className="voice-cta__text">
           <b>Try voice: ask Vibe out loud</b>
           <small>{voiceHowTo} No typing.</small>
@@ -878,10 +879,10 @@ function Progress({ profile }: { profile: Profile | null }) {
       <div className="topline"><h1>Momentum</h1></div>
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
-        <article className="metric-card"><span className="v">{coverage ?? '—'}</span><span className="l">Understanding Coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness ?? '—'}</span><span className="l">Knowledge Freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.reviews : '—'}</span><span className="l">Briefings Completed</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '—'}</span><span className="l">Knowledge Revisited</span><span className="note">{profile && profile.needsReview > 0 ? 'Marked to revisit' : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{coverage ?? '—'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{freshness ?? '—'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{profile ? profile.reviews : '—'}</span><span className="l">Briefings completed</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '—'}</span><span className="l">Knowledge revisited</span><span className="note">{profile && profile.needsReview > 0 ? 'Marked to revisit' : 'Not enough data yet.'}</span></article>
       </div>
       <div className="panel-card">
         <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
@@ -977,7 +978,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     <article className="plan-pick__card plan-pick__card--teams">
       <span>For clubs, classes and small teams</span>
       <h2>Teams $8/seat{interval === 'annual' ? ' · $72/yr' : '/mo'}</h2>
-      <p>One shared workspace, invites, and who reviewed what. 2 to 20 seats. Each person keeps their explanations on their own Mac.</p>
+      <p>One shared workspace, invites, and who reviewed what. 2 to 20 seats. Each person keeps their explanations on their own computer.</p>
       <div className="teams-form">
         <label>Team name<input value={teamName} maxLength={60} placeholder="My team" onChange={(e) => setTeamName(e.target.value)} /></label>
         <label>Seats
@@ -1142,8 +1143,8 @@ function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
   );
 }
 
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
-  return <button className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} onClick={onClick}><span className="knob" /></button>;
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return <button type="button" className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} onClick={onClick}><span className="knob" /></button>;
 }
 
 function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: () => void; onNotice: (message: string) => void }) {
@@ -1162,11 +1163,11 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
       <>
         <PlanUsageBoard compact signedIn={false} onSignedIn={onChange} />
         <div className="settings-section-label">ACCOUNT</div>
-        <div className="setrow" style={{ display: 'block' }}>
-          <div className="sl">This Mac</div>
+        <div className="setrow setrow--stack">
+          <div className="sl">This {deviceName}</div>
           <div className="sd">You are using Unvibe locally right now. Sign in above to attach a cloud plan.</div>
         </div>
-        <div className="setrow" style={{ display: 'block' }}>
+        <div className="setrow setrow--stack">
           <div className="sl">Erase learning on this {deviceName}</div>
           <div className="sd" style={{ marginBottom: 12 }}>Removes every saved explanation on this {deviceName}. This cannot be undone.</div>
           {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Erase everything…</button> : (
@@ -1193,8 +1194,8 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
             ? result.warning ? `Signed out locally. ${result.warning}` : 'Signed out securely.'
             : result.error ?? `Sign-out could not be saved on this ${deviceName}.`);
         }}>Sign out</button></div>
-      <div className="setrow" style={{ display: 'block' }}>
-        <div className="sl" style={{ color: '#a1291f' }}>Delete account</div>
+      <div className="setrow setrow--stack">
+        <div className="sl sl--danger">Delete account</div>
         <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this {deviceName} and on our servers. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
@@ -1259,7 +1260,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
         <span>AI on your terms</span>
         <p>Use included Unvibe AI, or securely connect a provider key kept on this {deviceName}.</p>
       </div>
-      <div className="setrow" style={{ display: 'block' }}>
+      <div className="setrow setrow--stack">
         <div className="sl">Your own API key</div>
         <div className="sd" style={{ marginBottom: 12 }}>
           Works with Gemini, OpenAI, Anthropic, Grok, DeepSeek, or Kimi. The key stays encrypted on this {deviceName} and is never sent to Unvibe.
@@ -1267,6 +1268,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
         <div className="ai-key-row">
           <input
             className="field"
+            aria-label="API key"
             type="password"
             autoComplete="off"
             spellCheck={false}
@@ -1284,7 +1286,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
           <div className="sl">Use my own AI</div>
           <div className="sd">Always call your provider from this {deviceName} instead of Unvibe cloud AI.</div>
         </div>
-        <Toggle on={Boolean(settings.useOwnAi)} onClick={() => void onSettings({ useOwnAi: !settings.useOwnAi })} />
+        <Toggle label="Use my own AI" on={Boolean(settings.useOwnAi)} onClick={() => void onSettings({ useOwnAi: !settings.useOwnAi })} />
       </div>
       <div className="setrow">
         <div>
@@ -1293,6 +1295,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
         </div>
         <select
           className="sel-input"
+          aria-label="Provider"
           value={provider}
           onChange={(e) => void onSettings({ aiProvider: e.target.value as Settings['aiProvider'] })}
         >
@@ -1308,7 +1311,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
           ))}
         </select>
       </div>
-      <div className="setrow" style={{ display: 'block' }}>
+      <div className="setrow setrow--stack">
         <div className="sl">Rough cost per explanation · {selected?.label ?? provider}{selected?.model ? ` · ${selected.model}` : ''}</div>
         <div className="sd" style={{ marginBottom: 10 }}>
           Estimates update when you change the provider. List prices only — your provider bill may differ.
@@ -1415,6 +1418,8 @@ function IntegrationsPanel() {
   );
 }
 
+const SETTINGS_FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
 function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice, initialTab = 'General' }: {
   info: { version: string }; account: Account; settings: Settings;
   onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void; onNotice: (message: string) => void;
@@ -1425,7 +1430,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   const [recording, setRecording] = useState(false);
   const [shortcutErr, setShortcutErr] = useState('');
   const bodyRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const recRef = useRef(recording); recRef.current = recording;
+  const closeRef = useRef(onClose); closeRef.current = onClose;
 
   const chooseTab = (next: string) => {
     setTab(next);
@@ -1436,6 +1443,12 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
     const onKey = async (e: KeyboardEvent) => {
       if (!recRef.current) return;
       e.preventDefault();
+      // Escape cancels recording instead of closing Settings.
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setRecording(false);
+        return;
+      }
       const accel = accelFromEvent(e);
       if (!accel) return;
       setRecording(false);
@@ -1446,18 +1459,55 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onSettings]);
 
+  // Modal behaviour: focus moves in on open, Tab stays inside, Escape closes, focus returns on close.
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    modalRef.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeRef.current();
+        return;
+      }
+      const modal = modalRef.current;
+      if (e.key !== 'Tab' || !modal) return;
+      const items = Array.from(modal.querySelectorAll<HTMLElement>(SETTINGS_FOCUSABLE)).filter((el) => el.getClientRects().length > 0);
+      if (items.length === 0) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      const active = document.activeElement;
+      const inside = active instanceof Node && modal.contains(active);
+      if (e.shiftKey && (!inside || active === first || active === modal)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      if (previous?.isConnected) previous.focus();
+      else document.querySelector<HTMLElement>('.side-settings')?.focus();
+    };
+  }, []);
+
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" ref={modalRef} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="settings-close" aria-label="Close settings" title="Close (Esc)" onClick={onClose}>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10 M15 5L5 15" /></svg>
+        </button>
         <div className="mside">
           <div className="settings-brand"><span>Settings</span></div>
           <div className="mside-group">
-            <div className="mh">PREFERENCES</div>
-            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => chooseTab(t)}><span className="settings-nav-icon"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
+            <div className="mh">Preferences</div>
+            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><span className="settings-nav-icon" aria-hidden="true"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
           </div>
           <div className="mside-group">
-            <div className="mh">UNVIBE</div>
-            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => chooseTab(t)}><span className="settings-nav-icon"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
+            <div className="mh">Unvibe</div>
+            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><span className="settings-nav-icon" aria-hidden="true"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
           </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
@@ -1468,40 +1518,40 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'General' && (
             <>
-              <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
-              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
-              <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
-              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ' Control+U is always registered as well.'}</div>{shortcutErr && <div className="field-err">{shortcutErr}</div>}</div><button className={`act kbd-cap${recording ? ' rec' : ''}`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
+              <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
+              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
+              <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
+              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ' Control+U is always registered as well.'}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow compact />
             </>
           )}
 
           {tab === 'Island' && (
             <>
-              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
               <div className="settings-section-label">OVERLAY PREVIEW</div>
+              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
                 <div className="location-grid" role="group" aria-label="Island location">
                   {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
                 </div>
               </div>
-              <div className="setrow settings-location"><div><div className="sl">Island size</div><div className="sd">Medium matches the Mac notch. Change it if you want a smaller or larger pill.</div></div>
+              <div className="setrow settings-location"><div><div className="sl">Island size</div><div className="sd">{isWindows ? 'Medium is the default size.' : 'Medium matches the Mac notch.'} Change it if you want a smaller or larger pill.</div></div>
                 <div className="location-grid" role="group" aria-label="Island size">
                   {([['small', 'Small'], ['medium', 'Notch'], ['large', 'Large']] as const).map(([size, label]) => <button key={size} type="button" className={settings.barSize === size ? 'on' : ''} onClick={() => void onSettings({ barSize: size })}>{label}</button>)}
                 </div>
               </div>
-              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Recommended: show it only while learning. Select code anywhere and press {prettyAccel(settings.shortcut)} whenever you want to start.</div></div><select className="sel-input" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
-              <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Recommended: show it only while learning. Select code anywhere and press {prettyAccel(settings.shortcut)} whenever you want to start.</div></div><select className="sel-input" aria-label="Quiet Island visibility" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
+              <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle label="Expand on hover" on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
-              <div className="setrow"><div><div className="sl">Rotate learning stats</div><div className="sd">Cycle through streak, lines understood, and completed reviews in the compact top Island.</div></div><Toggle on={settings.rotateIslandStats} onClick={() => onSettings({ rotateIslandStats: !settings.rotateIslandStats })} /></div>
-              <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
+              <div className="setrow"><div><div className="sl">Rotate learning stats</div><div className="sd">Cycle through streak, lines understood, and completed reviews in the compact top Island.</div></div><Toggle label="Rotate learning stats" on={settings.rotateIslandStats} onClick={() => onSettings({ rotateIslandStats: !settings.rotateIslandStats })} /></div>
+              <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle label="Follow active display" on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
-                <select className="sel-input" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
+                <select className="sel-input" aria-label="Inactive widget" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
                   <option value="dim">Dim (keep size)</option><option value="stay">Stay solid</option>
                 </select>
               </div>
               <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
-                <input className="range" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
+                <input className="range" aria-label="Dimmed opacity" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
               </div>
             </>
           )}
@@ -1509,26 +1559,26 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Sound & alerts' && (
             <>
               <div className="settings-section-label">LOCAL SOUND</div>
-              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
-              <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
+              <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle label="Interface sounds" on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
+              <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" aria-label="Sound character" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
               <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
               <div className="settings-section-label">NOTIFICATIONS</div>
-              <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
-              <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
-              {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
+              <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle label="Bar notifications" on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
+              <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle label="Quiet hours" on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
+              {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" aria-label="Quiet hours start" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" aria-label="Quiet hours end" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
             </>
           )}
 
           {tab === 'Learning' && <>
-            <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
+            <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" aria-label="Default explanation depth" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
             <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this {deviceName}. Open Learn to search, revisit, or remove a lesson.</div></div></div>
-            <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
-            <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
-            <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
+            <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Change Brief" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
+            <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle label="Why does this exist" on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
+            <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle label="Teach it back" on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
             <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. {isWindows
                 ? 'To talk: click any question box, press Win+H, speak, then press Enter. It uses Windows voice typing, so Unvibe never records in the background.'
-                : <>To talk: click any question box, press fn twice (or 🌐), speak, press fn, then Return. It uses Mac Dictation, so Unvibe never records in the background. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Dictation settings</button></>}</div></div><Toggle on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
-            <div className="setrow"><div><div className="sl">Live change watch</div><div className="sd">Quiet Island notes after meaningful git edits settle. Debounced, grouped, and silent during quiet hours.</div></div><Toggle on={Boolean(settings.features?.live)} onClick={() => onSettings({ features: { ...settings.features, live: !settings.features?.live } })} /></div>
+                : <>To talk: click any question box, press fn twice (or 🌐), speak, press fn, then Return. It uses Mac Dictation, so Unvibe never records in the background. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Dictation settings</button></>}</div></div><Toggle label="Voice questions" on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
+            <div className="setrow"><div><div className="sl">Live change watch</div><div className="sd">Quiet Island notes after meaningful git edits settle. Debounced, grouped, and silent during quiet hours.</div></div><Toggle label="Live change watch" on={Boolean(settings.features?.live)} onClick={() => onSettings({ features: { ...settings.features, live: !settings.features?.live } })} /></div>
             {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</button></div> : null}
           </>}
 
@@ -1536,7 +1586,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Privacy & Data' && (
             <>
-              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your {deviceName}. Always on.</div></div><button className="act" disabled>On</button></div>
+              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Every selection is scanned for keys and tokens before it leaves your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>

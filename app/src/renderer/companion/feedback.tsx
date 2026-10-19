@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { playTone } from '../shared/tones';
 
@@ -19,6 +19,7 @@ export function FeedbackCard({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const count = words(message);
   const tooLong = count > MAX_WORDS;
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try { window.localStorage.setItem(FEEDBACK_ASKED_KEY, '1'); } catch { /* storage blocked */ }
@@ -26,6 +27,13 @@ export function FeedbackCard({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Focus moves into the card when it opens and returns to where it was when it closes.
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.focus({ preventScroll: true });
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -46,8 +54,10 @@ export function FeedbackCard({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fbk-overlay" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="fbk" role="dialog" aria-modal="true" aria-labelledby="fbk-title">
-        <button type="button" className="fbk__close" aria-label="Close" onClick={onClose}>×</button>
+      <div className="fbk" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="fbk-title">
+        <button type="button" className="fbk__close" aria-label="Close feedback" onClick={onClose}>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10 M15 5L5 15" /></svg>
+        </button>
         {state === 'done' ? (
           <div className="fbk__done">
             <Buddy mood="celebrate" size={76} label="Vibe" />

@@ -759,3 +759,25 @@
 :root[data-ui="v3"][data-v7] .side button, :root[data-ui="v3"][data-v7] .side a, :root[data-ui="v3"][data-v7] .side input,
 :root[data-ui="v3"][data-v7] .side nav, :root[data-ui="v3"][data-v7] .side [role="button"] { -webkit-app-region: no-drag; }
 :root[data-ui="v3"][data-v7] .topbar a, :root[data-ui="v3"][data-v7] .topbar input, :root[data-ui="v3"][data-v7] .topbar kbd { -webkit-app-region: no-drag; }
+
+/* ── Companion design wave 1 (checkpoint): settings close, stacked rows, Learn no-match ── */
+:root[data-ui="v3"][data-v7] {
+  & .modal { position: relative; }
+  & .modal:focus { outline: none; }
+  & .settings-close {
+    position: absolute; top: 14px; right: 18px; z-index: 2; display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
+    border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--v-surface); color: var(--v-ink); cursor: pointer;
+    transition: background-color 120ms ease, transform 160ms var(--press);
+  }
+  & .settings-close:hover { background: var(--v-hover); }
+  & .settings-close:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 3px; }
+  & .settings-close svg, & .fbk__close svg, & .chat-mic svg, & .voice-cta__mic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  & .mbody h2 { padding-right: 56px; text-wrap: balance; }
+  & .setrow--stack { display: block; }
+  & .setrow--stack > * { justify-self: auto; }
+  & .setrow > :only-child { grid-column: 1 / -1; justify-self: stretch; }
+  & .sl--danger { color: #a1291f; }
+  & .fbk__close { display: grid; place-items: center; width: 40px; height: 40px; }
+  & .chat-mic { display: inline-flex; align-items: center; gap: 6px; }
+  & .learn-no-match { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+}

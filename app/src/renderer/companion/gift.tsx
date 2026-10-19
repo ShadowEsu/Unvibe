@@ -82,7 +82,7 @@ export function Gift() {
 
   const remaining = Math.max(0, 5 - used);
   const link = code ? `https://unvibe.site/?ref=${code}` : '';
-  const message = `I've been using Unvibe to actually understand the code AI writes for me. It's free. Join with my link and we both get a month of Pro: ${link}`;
+  const message = `I've been using Unvibe to actually understand the code AI writes for me. It's free. If you join with my link using a new email, we each get a month of Pro: ${link}`;
   const [linkCopied, setLinkCopied] = useState(false);
   const [msgCopied, setMsgCopied] = useState(false);
   const copyText = (text: string, done: (v: boolean) => void) => {
@@ -106,11 +106,11 @@ export function Gift() {
           <div className="gift-view__brand">
             <div className="eyebrow">Share Unvibe</div>
           </div>
-          <h1>Send one link. You both get a month of Pro.</h1>
+          <h1>Invite friends to Unvibe.</h1>
           <p>
             {needsSignIn
               ? 'Sign in with Google first so your invite link is tied to you.'
-              : 'When a friend opens your link and joins with their email, a month of Pro lands on both accounts. Up to five friends, and the months stack.'}
+              : 'When a friend joins with your link using an email that has not been invited before, you each get a month of Pro. It counts for up to five friends and does not change a paid subscription.'}
           </p>
         </div>
       </div>
@@ -121,7 +121,7 @@ export function Gift() {
             <GoogleMark />
             {signInBusy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
           </button>
-          {signInError && <div className="field-err">{signInError}</div>}
+          {signInError && <div className="field-err" role="alert">{signInError}</div>}
           {deviceCode ? <div className="signin__code"><span>Approve this code in your browser</span><b>{deviceCode}</b></div> : null}
           <p className="field-note">
             {deviceCode
@@ -152,7 +152,7 @@ export function Gift() {
               <strong>{used}/5</strong>
             </div>
             <i><em style={{ width: `${(used / 5) * 100}%` }} /></i>
-            <p>{remaining === 0 ? 'All five used. Thank you for spreading Unvibe!' : used === 0 ? 'Nobody yet. Your first friend gets you a free month.' : `${used} month${used === 1 ? '' : 's'} of Pro earned. ${remaining} to go.`}</p>
+            <p>{remaining === 0 ? 'All five invites used. Thank you for spreading Unvibe!' : used === 0 ? 'Nobody yet. Share your link to invite your first friend.' : `${used} joined. ${remaining} invite${remaining === 1 ? '' : 's'} left.`}</p>
           </section>
         </>
       )}
@@ -160,7 +160,7 @@ export function Gift() {
       <ol className="gift-steps">
         <li><b>1</b><div><strong>Copy or share your link</strong><p>One tap above. It opens unvibe.site with your invite already filled in.</p></div></li>
         <li><b>2</b><div><strong>Your friend pops in their email</strong><p>They see a small &ldquo;A friend invited you&rdquo; card and download Unvibe.</p></div></li>
-        <li><b>3</b><div><strong>You both get a month of Pro</strong><p>It shows up when they sign in to the app with the same email.</p></div></li>
+        <li><b>3</b><div><strong>You each get a month of Pro</strong><p>If their email is new to Unvibe referrals, it shows up when they sign in to the app with that email.</p></div></li>
       </ol>
     </div>
   );

@@ -84,10 +84,12 @@ export function Briefings() {
           <h1>Briefings</h1>
           <p>A clear recap of what changed in your project. Available offline from local git.</p>
         </div>
-        <div className="briefings__actions">
-          <button type="button" className="btn ghost" disabled={busy} onClick={() => void build(true)}>Choose repo</button>
-          <button type="button" className="btn" disabled={busy} onClick={() => void build(false)}>{busy ? 'Reading…' : 'Refresh'}</button>
-        </div>
+        {needsRepo && !busy ? null : (
+          <div className="briefings__actions">
+            <button type="button" className="soft-btn" disabled={busy} onClick={() => void build(true)}>Choose repo</button>
+            <button type="button" className="soft-btn" disabled={busy} onClick={() => void build(false)}>{busy ? 'Reading…' : 'Refresh'}</button>
+          </div>
+        )}
       </div>
 
       <div className="briefings__scopes" role="tablist" aria-label="Git scope">
@@ -107,12 +109,12 @@ export function Briefings() {
       </div>
 
       {error ? <div className="briefings__empty" role="alert">{error}</div> : null}
-      {busy && <p role="status">Reading your project…</p>}
+      {busy && <p className="briefings__busy" role="status">Reading your project…</p>}
       {needsRepo && !busy && (
         <section className="briefings__empty">
           <h2>Your next change, made clear.</h2>
           <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}; AI explanations ask for your consent separately.</p>
-          <button className="btn" onClick={() => void build(true)}>Choose a project</button>
+          <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}
 
