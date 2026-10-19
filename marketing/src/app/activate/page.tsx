@@ -116,7 +116,7 @@ export default function ActivatePage() {
         setStatus("error");
         setMessage(
           res.status === 401
-            ? "Sign in with Google first, then approve this device."
+            ? "Sign in first, then connect this device."
             : res.status === 404
               ? "That code was not recognised. Check the desktop app and try again."
               : "Something went wrong. Please try again.",
@@ -157,8 +157,8 @@ export default function ActivatePage() {
       if (error) {
         setAuthMessage(
           error.message?.includes("provider")
-            ? "Google is not enabled yet in Supabase Auth. Enable the Google provider and add this redirect URL."
-            : "Google sign-in failed. Check Supabase Auth, Google, and try again.",
+            ? "Google sign-in is not available right now. Use the email link below instead."
+            : "Google sign-in did not start. Try again, or use the email link below.",
         );
         setAuthBusy(false);
       }
@@ -199,16 +199,16 @@ export default function ActivatePage() {
       <div className="activate-brand">Unvibe</div>
       <div className="activate-card">
         {status === "done" ? (
-          <div className="activate-success">
-            <h2>You are connected</h2>
+          <div className="activate-success" role="status">
+            <h1>You are connected</h1>
             <p>Return to the Unvibe desktop app. It will finish signing in on its own.</p>
           </div>
         ) : (
           <>
             <div className="activate-kicker">Device approval</div>
-            <h1 className="activate-title">Make this Mac yours.</h1>
+            <h1 className="activate-title">Connect your Unvibe app.</h1>
             <p className="activate-sub">
-              Sign in with Google, approve the short code from the app, then go back to Unvibe.
+              Sign in, enter the short code shown in the Unvibe app, then go back to the app.
             </p>
             {!accessToken && (
               <div>
@@ -220,7 +220,7 @@ export default function ActivatePage() {
                 >
                   {authBusy ? "Opening Google…" : "Continue with Google"}
                 </button>
-                {authMessage && <p className="activate-note activate-note--error">{authMessage}</p>}
+                {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
                 <div className="activate-divider">or email a link</div>
                 <label className="activate-label" htmlFor="activate-email">Email</label>
                 <input
@@ -231,7 +231,6 @@ export default function ActivatePage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@school.edu"
-                  aria-label="Email address"
                 />
                 <button
                   className="activate-btn activate-btn--ghost"
@@ -252,7 +251,6 @@ export default function ActivatePage() {
                 value={code}
                 onChange={(event) => setCode(event.target.value.toUpperCase())}
                 placeholder="XXXXXXXX"
-                aria-label="Device code"
                 autoCapitalize="characters"
                 spellCheck={false}
               />
@@ -264,11 +262,11 @@ export default function ActivatePage() {
               >
                 {status === "working" ? "Connecting…" : "Connect this device"}
               </button>
-              {status === "error" && <p className="activate-note activate-note--error">{message}</p>}
+              {status === "error" && <p className="activate-note activate-note--error" role="alert">{message}</p>}
               {!accessToken && (
                 <p className="activate-note">
                   {configured
-                    ? "Sign in with Google above before approving this device."
+                    ? "Sign in above before connecting this device."
                     : message || "Sign-in is not configured for this environment yet."}
                 </p>
               )}
@@ -277,7 +275,7 @@ export default function ActivatePage() {
           </>
         )}
       </div>
-      <p className="activate-foot">Private by design. Secrets stay on your Mac.</p>
+      <p className="activate-foot">Private by design. Secrets stay on your computer.</p>
     </div>
   );
 }
