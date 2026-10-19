@@ -386,7 +386,7 @@ export function Learn({
           {intent === 'quiz' ? (
             <span className="survey-cleared">{cleared} cleared this sitting</span>
           ) : (
-            <div className="lesson-modes" role="tablist" aria-label="Lesson mode">
+            <div className="lesson-modes" role="group" aria-label="Lesson mode">
               {([
                 ['read', 'Read'],
                 ['restudy', 'Restudy'],
@@ -395,8 +395,7 @@ export function Learn({
                 <button
                   key={id}
                   type="button"
-                  role="tab"
-                  aria-selected={mode === id}
+                  aria-pressed={mode === id}
                   className={mode === id ? 'on' : ''}
                   onClick={() => setMode(id)}
                 >
@@ -456,7 +455,7 @@ export function Learn({
                     {noteStatus === 'saving' ? 'Saving' : 'Save note'}
                   </button>
                 </div>
-                {noteError ? <p className="form-error">{noteError}</p> : null}
+                {noteError ? <p className="form-error" role="alert">{noteError}</p> : null}
               </section>
             </>
           ) : null}
@@ -491,8 +490,8 @@ export function Learn({
                   {askBusy ? 'Working' : 'Ask'}
                 </button>
                 {askBusy ? <ThinkingStatus label="Unvibe" /> : null}
-                {askError ? <p className="form-error">{askError}</p> : null}
-                {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><div className="lesson-explain__body">{answer}</div></div> : null}
+                {askError ? <p className="form-error" role="alert">{askError}</p> : null}
+                {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><RichText className="lesson-explain__body" text={answer} /></div> : null}
               </div>
             </>
           ) : null}
@@ -561,9 +560,9 @@ export function Learn({
                   {result && !result.correct ? (
                     <p className="survey__nudge">{result.rationale} Try another option, or press its letter.</p>
                   ) : (
-                    <p className="survey__hint">Press A to D, or 1 to 4</p>
+                    <p className="survey__hint">Press A to {letters[card.options.length - 1] ?? 'D'}, or 1 to {card.options.length}</p>
                   )}
-                  {quizError ? <p className="form-error">{quizError}</p> : null}
+                  {quizError ? <p className="form-error" role="alert">{quizError}</p> : null}
                 </div>
               ) : (
                 <div className="survey__welcome">
@@ -590,7 +589,7 @@ export function Learn({
                   {quizBusy ? <ThinkingStatus label="Unvibe" /> : (
                     <button className="primary-btn" type="button" onClick={() => void startQuiz(open)}>Start this check</button>
                   )}
-                  {quizError ? <p className="form-error">{quizError}</p> : null}
+                  {quizError ? <p className="form-error" role="alert">{quizError}</p> : null}
                   {!quizBusy ? <p className="survey__hint">Press Return to start</p> : null}
                 </div>
               )}
@@ -618,7 +617,7 @@ export function Learn({
           ) : null}
         </div>
         {catalog.length > 0 && intent !== 'quiz' ? (
-          <div className="learn-filters" role="tablist" aria-label="Filter lessons">
+          <div className="learn-filters" role="group" aria-label="Filter lessons">
             {([
               ['all', 'All', counts.all],
               ['understood', 'Understood', counts.understood],
@@ -627,8 +626,7 @@ export function Learn({
               <button
                 key={id}
                 type="button"
-                role="tab"
-                aria-selected={filter === id}
+                aria-pressed={filter === id}
                 className={filter === id ? 'on' : ''}
                 onClick={() => setFilter(id)}
               >
@@ -660,7 +658,14 @@ export function Learn({
           onReview={onReview}
         />
       ) : filtered.length === 0 ? (
-        <p className="muted">Nothing in this filter.</p>
+        query.trim() ? (
+          <div className="learn-no-match">
+            <p className="muted" role="status">No lessons match “{query.trim()}”{filter === 'all' ? '' : ' in this filter'}.</p>
+            <button type="button" className="soft-btn" onClick={() => setQuery('')}>Clear search</button>
+          </div>
+        ) : (
+          <p className="muted" role="status">Nothing in this filter.</p>
+        )
       ) : (
         <div className="lib-feed" ref={feedRef}>
           {groups.map(([label, items]) => (
@@ -691,7 +696,7 @@ export function Learn({
                           <span className="lib-row__body">
                             <strong>{item.title}</strong>
                             <span className="know-meta">
-                              <span>{item.project || 'This Mac'}</span>
+                              <span>{item.project || `This ${deviceName}`}</span>
                               <span>{item.file || item.scope || 'Selection'}</span>
                             </span>
                           </span>

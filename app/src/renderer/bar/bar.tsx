@@ -259,16 +259,16 @@ function Bar() {
               <button className="island__settings" type="button" aria-label="Island settings" title="Island settings" onClick={() => act('settings')}><SettingsIcon /></button>
             </div>
           </header>
-          <div className="island__metrics" aria-label="Learning metrics">
+          <div className="island__metrics" role="group" aria-label="Learning metrics">
             <span data-tone="sky"><b>{value(snapshot?.explanations)}</b> reviews</span>
             <span data-tone="lime"><b>{value(snapshot?.understood)}</b> understood</span>
             <span data-tone="sun"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
             <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> used</span>
           </div>
-          <div className="island__activity"><span>14d</span><div>{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
+          <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
           <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
           <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
-          {note ? <p className="island__note">{note}</p> : null}
+          {note ? <p className="island__note" role="status">{note}</p> : null}
           <div className="island__actions">
             <button type="button" onClick={() => act('review')}>Understand change</button>
             <button type="button" onClick={() => act('home')}>Open Unvibe</button>

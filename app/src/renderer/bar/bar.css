@@ -169,3 +169,13 @@ button { font: inherit; }
 @keyframes island-hop { 0%, 100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.08, .94); } 60% { transform: translateY(0) scale(.94, 1.06); } }
 @keyframes island-think { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
 @media (prefers-reduced-motion: reduce) { .island__flame, .island__mark, .island__plus { animation: none !important; } }
+
+/* Polish: bigger invisible hit areas inside the notch row, readable activity dots, steady numbers, a dusk rule. */
+.island__tool, .island__settings { position: relative; }
+.island__tool::after, .island__settings::after { content: ""; position: absolute; inset: -7px; }
+.island__actions button { height: 32px; }
+.island__dots { width: 22px; gap: 3px; }
+.island__dots i { width: 3px; height: 3px; }
+.island__streak b, .island__header-streak b, .island__metrics b, .island__allowance b { font-variant-numeric: tabular-nums; }
+.island__header { border-bottom: 1px solid; border-image: linear-gradient(90deg, rgb(249 151 143 / .6), rgb(180 156 240 / .6), rgb(105 158 252 / .6)) 1; }
+@media (prefers-reduced-motion: reduce) { .island__dots i { opacity: .85; } }

@@ -1532,3 +1532,51 @@ code.inline {
 .card .voice-note kbd { padding: 1px 5px; border: 1px solid var(--p-line); border-radius: 5px; background: var(--p-raised); color: var(--p-ink); font: 600 11px ui-monospace, Menlo, monospace; }
 .card .access-note { margin: 10px 0 4px; padding: 10px 12px; border: 1.5px dashed var(--p-ink); border-radius: 10px; background: var(--p-surface); color: var(--p-ink); font-size: 12.5px; line-height: 1.5; text-align: left; }
 .card .access-note .empty-actions { margin-top: 8px; }
+
+/* ── Overlay polish: San Francisco dusk accent, readable secondary text, visible focus, real hit areas. ── */
+.card.card {
+  --p-faint: #8f8b82;
+  --p-focus: var(--p-lime);
+  --p-dusk: linear-gradient(90deg, #f9978f, #b49cf0 50%, #699efc);
+}
+:root[data-panel="light"] .card.card { --p-faint: #6f6b63; --p-focus: #5b4bd6; }
+.card.card :focus-visible { outline: 2px solid var(--p-focus); outline-offset: 2px; }
+
+/* Golden Gate dusk: a soft coral → lilac → sky wash behind the header and a dusk rule under it. */
+.card .head { background: linear-gradient(100deg, rgb(249 151 143 / 0.12), rgb(180 156 240 / 0.12) 50%, rgb(105 158 252 / 0.12)); }
+.card .head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--p-dusk); opacity: 0.85; }
+:root[data-panel="light"] .card .head { background: linear-gradient(100deg, rgb(255 196 150 / 0.32), rgb(243 238 248 / 0.9) 50%, rgb(140 190 255 / 0.28)); }
+.card.card.card--away .head, :root[data-panel="light"] .card.card.card--away .head { background: transparent; }
+.card .head__usage { color: var(--p-muted); font-variant-numeric: tabular-nums; }
+:root[data-panel="light"] .card .head__status i { box-shadow: inset 0 0 0 1.5px #141414; }
+
+/* Header controls: 30px targets, glyphs large enough to read. */
+.card .head__actions button { min-height: 30px; min-width: 30px; }
+.card .head__actions .head__glyph, .card .head__actions .head__theme { width: 30px; padding: 0; display: grid; place-items: center; font-size: 15px; line-height: 1; }
+
+/* Review tabs: the close control is its own keyboard-reachable button. */
+.card .tab { display: inline-flex; align-items: center; gap: 0; max-width: 180px; min-height: 30px; padding: 0 3px 0 0; }
+.card .tab__label {
+  flex: 1 1 auto; min-width: 0; min-height: 28px; padding: 0 4px 0 10px; border: 0; border-radius: inherit;
+  background: transparent; color: inherit; font: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+}
+.card .tab__x {
+  flex: 0 0 auto; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: inherit; font-size: 15px; line-height: 1; opacity: 0.75; cursor: pointer;
+}
+.card .tab__x:hover, .card .tab__x:focus-visible { opacity: 1; background: var(--p-raised); }
+.card .tab-add { width: 30px; height: 30px; }
+
+/* Disabled controls stay legible as "not yet" instead of vanishing. */
+.card .widget-tools button:disabled { opacity: 0.55; }
+.card .lvl:disabled { opacity: 0.55; cursor: default; }
+
+/* Saved note: a round dot that reads on paper and ink, not a lime square. */
+.card .local-save-note::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--p-lime); vertical-align: 1px; }
+:root[data-panel="light"] .card .local-save-note::before { background: #5b4bd6; }
+
+/* Code comments readable on the dark code surface (was 3.5:1). */
+.card .tk-c { color: #8f8b82; }
+
+/* Long explanations fade into the action row instead of being sliced by it. */
+.card .stage > .body { padding-bottom: 26px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }

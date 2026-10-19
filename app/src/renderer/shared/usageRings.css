@@ -78,3 +78,5 @@ button.usage-rings { cursor: pointer; }
 .usage-plan:hover { background: #a78bfa22; }
 @keyframes uv-ring-in { from { stroke-dasharray: 0 95; } }
 @media (prefers-reduced-motion: reduce) { .usage-ring *, .usage-ring { animation: none !important; transition: none !important; } }
+/* Never wider than the window it opens in (narrow panels, compact Island). */
+.usage-ring__detail { max-width: calc(100vw - 24px); }

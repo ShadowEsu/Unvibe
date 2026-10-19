@@ -643,7 +643,7 @@ function Widget() {
           <span className="head__product">Unvibe</span>
           {src}
         </div>
-        <span className={`head__status head__status--${phase}`}><i />{phaseLabel}</span>
+        <span className={`head__status head__status--${phase}`} role="status"><i aria-hidden="true" />{phaseLabel}</span>
         <div className="head__actions">
           {usage && (
             <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
@@ -661,11 +661,11 @@ function Widget() {
           <button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
             Saved
           </button>
-          <button aria-label={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
-            {collapsed ? '▾' : '▴'}
+          <button className="head__glyph" aria-label={collapsed ? 'Expand panel' : 'Collapse panel'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
+            <span aria-hidden="true">{collapsed ? '▾' : '▴'}</span>
           </button>
-          <button aria-label="Close panel" onClick={() => window.unvibe.closeWidget()}>
-            ✕
+          <button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
       </div>
@@ -694,7 +694,7 @@ function Widget() {
               <button type="button" className="tool--why" title="Why does this exist" disabled={phase !== 'done' || stillTyping} onClick={askWhy}><ToolIcon name="why" /><b>Why</b></button>
             ) : null}
             {features.teachBack ? (
-              <button type="button" className={`tool--teach${teachOpen ? ' on' : ''}`} title="Teach it back" disabled={phase !== 'done' || stillTyping} onClick={() => setTeachOpen((open) => !open)}><ToolIcon name="teach" /><b>Teach</b></button>
+              <button type="button" className={`tool--teach${teachOpen ? ' on' : ''}`} title="Teach it back" aria-expanded={teachOpen} disabled={phase !== 'done' || stillTyping} onClick={() => setTeachOpen((open) => !open)}><ToolIcon name="teach" /><b>Teach</b></button>
             ) : null}
             <div className="widget-tools__spacer" />
             <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
@@ -710,31 +710,35 @@ function Widget() {
       {!collapsed && !sessionPaused && (
         <div className="tabs" role="tablist" aria-label="Review tabs">
           {tabs.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={t.id === activeTabId}
-              className={`tab${t.id === activeTabId ? ' on' : ''}`}
-              onClick={() => selectTab(t.id)}
-            >
-              <span>{t.label}</span>
-              <span
+            <div key={t.id} className={`tab${t.id === activeTabId ? ' on' : ''}`} role="presentation">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={t.id === activeTabId}
+                className="tab__label"
+                onClick={() => selectTab(t.id)}
+              >
+                {t.label}
+              </button>
+              <button
+                type="button"
                 className="tab__x"
                 aria-label={`Close ${t.label}`}
+                title={`Close ${t.label}`}
                 onClick={(e) => closeTab(t.id, e)}
               >
-                ×
-              </span>
-            </button>
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
           ))}
-          <button className="tab-add" aria-label="Add tab" title="Add another review tab" onClick={addTab}>
+          <button type="button" className="tab-add" aria-label="Add tab" title="Add another review tab" onClick={addTab}>
             +
           </button>
         </div>
       )}
 
       {!collapsed && sessionPaused && offer ? (
-        <div className="state state--limit state--pause">
+        <div className="state state--limit state--pause" role="status">
           <div className="big">{offer.title}</div>
           <div className="sub">{offer.body}</div>
           <div className="pause-actions">
@@ -785,7 +789,7 @@ function Widget() {
       {!collapsed && !sessionPaused && (
         <>
           {phase === 'boot' && (
-            <div className="state">
+            <div className="state" role="status">
               <div className="sub">Capturing selection…</div>
             </div>
           )}
@@ -806,7 +810,7 @@ function Widget() {
           {phase === 'empty' && <EmptyPicker shortcut={shortcut} level={active.level} />}
 
           {phase === 'consent' && (
-            <div className="state">
+            <div className="state" role="alert">
               <div className="big">Possible secret detected</div>
               <div className="findings">
                 {active.findings.map((f, i) => (
@@ -826,7 +830,7 @@ function Widget() {
           )}
 
           {phase === 'blocked' && (
-            <div className="state">
+            <div className="state" role="alert">
               <div className="big">Blocked — credential detected</div>
               <div className="findings">
                 {active.findings.map((f, i) => (
@@ -840,7 +844,7 @@ function Widget() {
           )}
 
           {phase === 'error' && (
-            <div className={`state${outOfExplanations ? ' state--limit' : ''}`}>
+            <div className={`state${outOfExplanations ? ' state--limit' : ''}`} role="alert">
               <div className="big">
                 {outOfExplanations && offer ? offer.title : proGate ? 'Pro feature' : "Couldn't explain that"}
               </div>
@@ -892,9 +896,9 @@ function Widget() {
             {active.quiz && (
               <aside className="quiz-rail" aria-label="Test me">
                 {active.quiz.phase === 'loading' && (
-                  <div className="quiz-rail__wait">
+                  <div className="quiz-rail__wait" role="status">
                     <span>Writing a question…</span>
-                    <i /><i /><i />
+                    <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
                   </div>
                 )}
                 {active.quiz.phase !== 'loading' && (
@@ -937,7 +941,7 @@ function Widget() {
                     </div>
                     {active.quiz.phase === 'graded' ? (
                       <>
-                        <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`}>
+                        <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`} role="status">
                           {active.quiz.correct ? 'Correct. That one is understood.' : 'Not quite. Saved to revisit.'}
                         </div>
                         {active.quiz.rationale && (
