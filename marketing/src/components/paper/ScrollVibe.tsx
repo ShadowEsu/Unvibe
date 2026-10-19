@@ -28,10 +28,12 @@ export function ScrollVibe() {
   const [progress, setProgress] = useState(0);
   const [tilt, setTilt] = useState(0);
   const [bubbleHidden, setBubbleHidden] = useState(false);
+  const [ctaVisible, setCtaVisible] = useState(false);
   const last = useRef({ y: 0, t: 0 });
 
   useEffect(() => {
     let frame = 0;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const onScroll = () => {
       if (frame) return;
       frame = window.requestAnimationFrame(() => {
@@ -42,10 +44,10 @@ export function ScrollVibe() {
         const velocity = (y - last.current.y) / Math.max(16, now - last.current.t);
         last.current = { y, t: now };
         setProgress(Math.min(1, Math.max(0, y / max)));
-        setTilt(Math.max(-14, Math.min(14, velocity * 10)));
+        if (!reduce) setTilt(Math.max(-14, Math.min(14, velocity * 10)));
       });
     };
-    const settle = window.setInterval(() => setTilt((t) => (Math.abs(t) < 0.5 ? 0 : t * 0.6)), 120);
+    const settle = reduce ? undefined : window.setInterval(() => setTilt((t) => (Math.abs(t) < 0.5 ? 0 : t * 0.6)), 120);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
@@ -59,10 +61,25 @@ export function ScrollVibe() {
 
   useEffect(() => setBubbleHidden(false), [pathname]);
 
+  useEffect(() => {
+    setCtaVisible(false);
+    if (pathname !== "/") return;
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      setCtaVisible(visible.size > 0);
+    });
+    document.querySelectorAll("#install, #invite, .paper-invite, .paper-footer").forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [pathname]);
+
   if (HIDDEN.some((p) => pathname.startsWith(p))) return null;
 
   const line = [...LINES].reverse().find(([at]) => progress >= at)?.[1] ?? "";
-  const showBar = progress > 0.5 && progress < 0.97;
+  const showBar = progress > 0.5 && progress < 0.97 && !ctaVisible;
   const onBeta = pathname.startsWith("/beta");
 
   return (
@@ -83,15 +100,15 @@ export function ScrollVibe() {
       >
         {line && !bubbleHidden ? <span className="svibe__bubble" key={line}>{line}</span> : null}
         <span className="svibe__body" style={{ transform: `rotate(${tilt}deg)` }}>
-          <Vibe size={64} />
+          <Vibe size={44} />
         </span>
       </button>
       {!onBeta ? (
         <div className={showBar ? "sfree is-in" : "sfree"} aria-hidden={!showBar}>
           <p><b>Unvibe is free.</b> <span>Mac and Windows · no card · no API key</span></p>
           <div className="sfree__links">
-            <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "mac", surface: "sticky_free" }); }}>Free for Mac</a>
-            <a href={BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "windows", surface: "sticky_free" }); }}>Free for Windows</a>
+            <a href={BETA_MAC_DIRECT_DOWNLOAD} tabIndex={showBar ? 0 : -1} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "mac", surface: "sticky_free" }); }}>Download for Mac</a>
+            <a href={BETA_WINDOWS_DIRECT_DOWNLOAD} tabIndex={showBar ? 0 : -1} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "windows", surface: "sticky_free" }); }}>Download for Windows</a>
           </div>
         </div>
       ) : null}

@@ -3201,7 +3201,7 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 }
 
 .founder-page .founder-signin h1,
-.founder-page .founder-console h1 {
+.founder-page .founder-console h2 {
   color: var(--ink);
   font-family: var(--font-display);
   font-weight: 400;

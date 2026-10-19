@@ -160,7 +160,7 @@ export function AdminWaitlist() {
   };
 
   return (
-    <main className="admin-shell">
+    <div className="admin-shell">
       <div className="admin-topbar">
         <Logo />
         <a href="/">Back to site</a>
@@ -332,6 +332,6 @@ export function AdminWaitlist() {
           )}
         </section>
       )}
-    </main>
+    </div>
   );
 }

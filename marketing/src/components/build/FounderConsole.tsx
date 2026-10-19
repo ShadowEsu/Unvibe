@@ -93,7 +93,7 @@ export function FounderConsole() {
   return (
     <div className="founder-console">
       <p className="paper-meta">Founder control</p>
-      <h1>{live ? "Hours and minutes are on." : "Hours and minutes are off."}</h1>
+      <h2>{live ? "Hours and minutes are on." : "Hours and minutes are off."}</h2>
       <p>{message}</p>
       <p className="founder-console__clock" aria-live="polite">
         <b>{liveClock.hours}</b>

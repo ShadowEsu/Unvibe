@@ -1,5 +1,6 @@
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
+import { SHORTCUTS } from "@/lib/shortcuts";
 
 /** Closing call to action on the homepage. Replaces the old waitlist form. */
 export function DownloadCta() {
@@ -9,8 +10,8 @@ export function DownloadCta() {
         <p className="paper-meta">Free during the beta</p>
         <h2>Download <em>Unvibe.</em></h2>
         <p className="paper-lead">
-          Mac (Apple silicon) and Windows. No API key and no credit card.
-          Select code, press {"⌘"}U, and keep what you ship.
+          Mac (Apple silicon or Intel) and Windows. No API key and no credit card.
+          Select code, press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows), and keep what you ship.
         </p>
         <DownloadRow />
         <p className="paper-caption mt-4">

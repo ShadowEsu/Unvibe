@@ -1136,7 +1136,7 @@
 
 .founder-page { min-height: 100vh; padding: clamp(70px, 10vw, 120px) 20px; }
 .founder-signin, .founder-console { padding: clamp(30px, 6vw, 64px); border: 1px solid rgba(255,255,255,.11); border-radius: 18px; background: rgba(19,13,28,.88); }
-.founder-signin h1, .founder-console h1 { margin-top: 18px; color: #fff; font-family: var(--font-sans); font-size: clamp(2rem,3vw,2.8rem); line-height: 1.04; letter-spacing: -.045em; }
+.founder-signin h1, .founder-console h2 { margin-top: 18px; color: #fff; font-family: var(--font-sans); font-size: clamp(2rem,3vw,2.8rem); line-height: 1.04; letter-spacing: -.045em; }
 .founder-signin > p:not(.launch-label), .founder-console__message { margin-top: 20px; color: #918596; }
 .founder-console__message--error { color: #e0b6c3; }
 .founder-signin button, .founder-actions button { min-height: 48px; margin-top: 30px; padding: 0 20px; border: 1px solid #6f568f; border-radius: 9px; color: #d9c9ff; font-weight: 700; }

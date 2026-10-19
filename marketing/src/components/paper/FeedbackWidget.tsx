@@ -46,10 +46,27 @@ export function FeedbackWidget() {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Tab") return;
+      const controls = dialogRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), a[href], input:not([tabindex='-1']), textarea, select");
+      const first = controls?.[0];
+      const last = controls?.[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     dialogRef.current?.querySelector<HTMLButtonElement>(".fb-star")?.focus();
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      previousFocus?.focus();
+    };
   }, [open]);
 
   if (HIDDEN.some((p) => pathname.startsWith(p))) return null;

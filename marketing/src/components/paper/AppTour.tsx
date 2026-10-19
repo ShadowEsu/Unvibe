@@ -2,12 +2,12 @@
 
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 
-/** A quick look at the current desktop app: onboarding, Today, the ⌘U panel, the library. */
+/** A quick look at the current desktop app and its explanation panel. */
 export function AppTour() {
   return (
     <section className="vtour" id="tour" aria-label="A tour of the Unvibe app">
       <div className="vtour__head">
-        <p className="vtour__eyebrow">see it work</p>
+        <p className="vtour__eyebrow">See it work</p>
         <h2>
           The real app, <em>recorded.</em>
         </h2>
@@ -20,10 +20,10 @@ export function AppTour() {
         <AutoPlayVideo
           src="/videos/unvibe-demo-v3.mp4"
           poster="/videos/unvibe-demo-v3-poster.jpg"
-          label="Click-through of the Unvibe app: Today, Library, a quiz, After-Agent Review, Ask Vibe and the Command U panel explaining code"
+          label="Click-through of the Unvibe app: Today, Library, a quiz, After-Agent Review, Ask Vibe and the code explanation panel"
         />
       </div>
-      <p className="vtour__caption">A recorded click-through of the app: Today, the library, a quiz, After-Agent Review, Ask Vibe and the ⌘U panel. The explanation text in the panel is a written sample.</p>
+      <p className="vtour__caption">A recorded click-through of the app: Today, the library, a quiz, After-Agent Review, Ask Vibe and the explanation panel. The explanation text in the panel is a written sample.</p>
     </section>
   );
 }

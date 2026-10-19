@@ -16,14 +16,20 @@ export function MobileDownloadBar() {
 
   useEffect(() => {
     setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone");
+    const hero = document.querySelector(".vhero");
     const onScroll = () => {
       const nearBottom = window.innerHeight + window.scrollY > document.documentElement.scrollHeight - 420;
-      setVisible(window.scrollY > window.innerHeight * 0.85 && !nearBottom);
+      const pastHero = hero ? hero.getBoundingClientRect().bottom <= 0 : window.scrollY > window.innerHeight * 0.85;
+      setVisible(pastHero && !nearBottom);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [pathname]);
 
   if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist")) return null;
 

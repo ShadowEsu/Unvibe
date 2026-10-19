@@ -26,7 +26,6 @@ export function BackingStrip() {
           <p className="claude-startups__title">Unvibe is in <em>Claude for Startups.</em></p>
           <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors">investors page</a>.</p>
         </div>
-      </div>
       <div className="paper-partners" aria-label="Startup programs Unvibe is in">
         <p className="paper-meta">Also in the startup programs of</p>
         <div className="paper-partners__viewport">
@@ -49,6 +48,7 @@ export function BackingStrip() {
             ))}
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

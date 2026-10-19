@@ -68,6 +68,10 @@ export function TryIt() {
   // Reveal the answer a few characters at a time so it feels like Vibe is writing.
   useEffect(() => {
     if (!answer) { setShown(""); return; }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(answer);
+      return;
+    }
     let i = 0;
     const step = () => {
       i = Math.min(answer.length, i + 6);
@@ -107,25 +111,26 @@ export function TryIt() {
         <textarea
           aria-label="Code to explain"
           spellCheck={false}
+          wrap="off"
           value={code}
           maxLength={1500}
           onChange={(e) => setCode(e.target.value)}
         />
-        <div className="try__levels" role="radiogroup" aria-label="Depth">
+        <div className="try__levels" role="group" aria-label="Explanation depth">
           {LEVELS.map(([id, label]) => (
-            <button key={id} type="button" role="radio" aria-checked={level === id} className={level === id ? "is-on" : ""} onClick={() => setLevel(id)}>
+            <button key={id} type="button" aria-pressed={level === id} className={level === id ? "is-on" : ""} onClick={() => setLevel(id)}>
               {label}
             </button>
           ))}
         </div>
         <button type="button" className="try__go" disabled={state === "thinking" || !code.trim()} onClick={() => void explain()}>
-          {state === "thinking" ? "Vibe is thinking…" : "Explain it ⌘U"}
+          {state === "thinking" ? "Vibe is thinking…" : "Explain it"}
         </button>
         <p className="try__fine">Small snippets only. Do not paste keys or passwords; we block them anyway.</p>
       </div>
       <div className="try__output" aria-live="polite">
         {state === "idle" ? (
-          <div className="try__empty"><Vibe size={84} /><p>Paste any code on the left and press <b>Explain it</b>.</p></div>
+          <div className="try__empty"><Vibe size={84} /><p>Paste code into the editor and press <b>Explain it</b>.</p></div>
         ) : state === "thinking" ? (
           <div className="try__thinking"><span className="try__bob"><Vibe size={70} follow={false} /></span><p key={note}>{NOTES[note]}</p><i /><i /><i /></div>
         ) : state === "error" ? (

@@ -66,7 +66,7 @@ export function InviteFriend() {
         <p className="paper-lead">{REFERRAL_OFFER} It lands when you sign in to the app with that email.</p>
       </div>
       {link ? (
-        <div className="invite__result">
+        <div className="invite__result" role="status">
           <code>{link}</code>
           <div className="invite__actions">
             <button type="button" onClick={() => void copy()}>{copied ? "Copied!" : "Copy link"}</button>
@@ -75,11 +75,11 @@ export function InviteFriend() {
         </div>
       ) : (
         <form className="invite__form" onSubmit={submit}>
-          <input type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" aria-label="Your email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" aria-label="Your email" aria-invalid={Boolean(error)} aria-describedby={error ? "invite-error" : undefined} value={email} onChange={(e) => setEmail(e.target.value)} />
           <button type="submit" disabled={busy}>{busy ? "Making your link…" : "Get my link"}</button>
         </form>
       )}
-      {error ? <p className="invite__error" role="alert">{error}</p> : null}
+      {error ? <p className="invite__error" id="invite-error" role="alert">{error}</p> : null}
     </div>
   );
 }

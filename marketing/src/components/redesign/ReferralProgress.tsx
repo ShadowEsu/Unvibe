@@ -46,7 +46,7 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
 
   const months = progress ? Math.min(progress.proMonths, progress.rewardCap) : 0;
   const left = progress ? Math.max(0, progress.rewardCap - months) : 5;
-  return <main className="reward-page"><section className="reward-panel">
+  return <div className="reward-page"><section className="reward-panel">
     <p className="pixel-label">UNVIBE / PRIVATE BETA</p>
     <h1>Your Pro months, <em>kept simple.</em></h1>
     <p className="reward-lead">Every friend who joins with your link gets you both a month of Pro, up to five friends. Months stack and land on the app account with the same email.</p>
@@ -62,5 +62,5 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
       <button className="reward-copy" type="button" onClick={copyLink}>{copied ? <><Check size={16} /> Link copied</> : <><Copy size={16} /> Copy my referral link</>}</button>
     </div>}
     <p className="reward-note">No names or emails are shown here. Questions about eligibility? <a href="mailto:support@unvibe.site?subject=Unvibe%20referral%20rewards">Contact support</a>.</p>
-  </section></main>;
+  </section></div>;
 }

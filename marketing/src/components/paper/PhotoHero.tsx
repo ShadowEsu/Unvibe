@@ -75,6 +75,8 @@ function EmailMeLink() {
           inputMode="email"
           placeholder="you@example.com"
           aria-label="Your email"
+          aria-describedby={error ? "hero-email-note hero-email-error" : "hero-email-note"}
+          aria-invalid={Boolean(error)}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -82,8 +84,8 @@ function EmailMeLink() {
           <span className="paper-join__label">{state === "busy" ? "Sending…" : "Email me the link"}</span>
         </button>
       </form>
-      {error ? <p className="vhero__error" role="alert">{error}</p> : null}
-      <p className="vhero__fine">One email with the link. Unsubscribe any time.</p>
+      {error ? <p className="vhero__error" id="hero-email-error" role="alert">{error}</p> : null}
+      <p className="vhero__fine" id="hero-email-note">One email with the link. Unsubscribe any time.</p>
     </div>
   );
 }
