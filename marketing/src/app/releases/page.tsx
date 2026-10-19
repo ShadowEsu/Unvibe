@@ -25,7 +25,7 @@ export default async function ReleasesPage() {
           <h1>What shipped.</h1>
           <p>
             {latest
-              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Download the private beta below.`
+              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Download the beta below.`
               : error
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}
@@ -36,6 +36,7 @@ export default async function ReleasesPage() {
 
       <section className="paper-section">
         <div className="paper-wrap paper-log-wrap paper-glass">
+          <h2 className="sr-only">Release notes</h2>
           <ChangelogList items={changelogEntries()} />
         </div>
       </section>

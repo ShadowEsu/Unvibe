@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function InstallHelpPage() {
   return (
-    <main className="fos-page">
+    <article className="fos-page">
       <header className="fos-page__head">
         <Vibe size={96} />
         <div>
@@ -19,6 +19,7 @@ export default function InstallHelpPage() {
           <p className="fos-page__lead">Unvibe is free and brand new, so Apple and Microsoft have not verified it yet. That means one extra click the first time. Here is exactly what to press.</p>
         </div>
       </header>
+      <h2 className="sr-only">First-open steps for Mac and Windows</h2>
       <FirstOpenSteps />
       <section className="verify" aria-labelledby="verify-title">
         <h2 id="verify-title">Check it before you run it</h2>
@@ -36,6 +37,6 @@ Get-FileHash $HOME\\Downloads\\Unvibe-*.exe -Algorithm SHA256`}</code></pre>
         <p>The number it prints should match the line for that file in the checksum list.</p>
       </section>
       <p className="fos-page__help">Still stuck? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20install%20help">preston@unvibe.site</a> with a screenshot and your Mac or Windows version. A real person answers.</p>
-    </main>
+    </article>
   );
 }

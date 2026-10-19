@@ -53,7 +53,7 @@ export default function AccountDeletionPage() {
 
       <LegalSection heading="If you never made an account">
         <p>
-          Then all your data already lives only on your Mac. Deleting it is as simple as
+          Then all your data already lives only on your computer. Deleting it is as simple as
           removing the app&apos;s data folder, which is also exposed in{" "}
           <strong>Settings → Data</strong>.
         </p>

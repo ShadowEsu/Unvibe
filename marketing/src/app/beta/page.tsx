@@ -4,7 +4,7 @@ import { Reveal } from "@/components/redesign/Reveal";
 
 export const metadata: Metadata = {
   title: "Download Unvibe for Mac and Windows",
-  description: "Download the Unvibe private beta. 30 free AI code explanations. No API key, no credit card. Available for Mac (Apple Silicon) and Windows (x64).",
+  description: "Download the Unvibe beta. 30 free AI code explanations. No API key, no credit card. Available for Mac (Apple silicon and Intel) and Windows (x64).",
   robots: { index: true, follow: true },
 };
 

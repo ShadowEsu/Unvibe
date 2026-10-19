@@ -41,7 +41,7 @@ const AWARDS = [
 export default function AboutPage() {
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   return (
-    <main className="founder-about">
+    <article className="founder-about">
       <header className="founder-about__hero paper-wrap">
         <div className="founder-about__avatar" aria-hidden="true">
           <span>PS</span>
@@ -107,6 +107,6 @@ export default function AboutPage() {
         <p>Feedback, bugs, partnerships or investing: I read every email myself.</p>
         <a className="founder-about__btn founder-about__btn--lime" href="mailto:preston@unvibe.site">preston@unvibe.site</a>
       </section>
-    </main>
+    </article>
   );
 }

@@ -30,7 +30,7 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
   const updated = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles", dateStyle: "medium", timeStyle: "short" });
 
   return (
-    <div className="pstats">
+    <article className="pstats">
       <header className="pstats__head">
         <p className="pstats__eyebrow">Private · only you have this link</p>
         <h1>Unvibe, <em>by the numbers.</em></h1>
@@ -48,7 +48,7 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
           <Tile tone="sky" label="Try it in browser" value={n(s.tryIt?.total)} note={`${n(s.tryIt?.today)} in the last 24h`} />
         </div>
         {days.length ? (
-          <div className="pstats__chart" aria-label="Visits, last 14 days">
+          <div className="pstats__chart" role="group" aria-label="Visits, last 14 days">
             {days.map((d) => (
               <div key={d.date} title={`${d.date}: ${d.views} visits, ${d.visitors} people`}>
                 <i style={{ height: `${Math.max(4, (d.views / peak) * 100)}%` }} />
@@ -114,6 +114,6 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
         <p>Signup details and deleting entries still need your admin token.</p>
         <FounderAnalytics embedded />
       </section>
-    </div>
+    </article>
   );
 }

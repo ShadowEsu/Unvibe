@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function KitPage() {
   const sections = kitSections();
   return (
-    <main className="kit">
+    <article className="kit">
       <header className="kit__head">
         <div>
           <p className="pstats__eyebrow">Resource kit</p>
@@ -60,6 +60,6 @@ export default function KitPage() {
           ))}
         </div>
       </section>
-    </main>
+    </article>
   );
 }

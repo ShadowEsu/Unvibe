@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+};
 
 export default function NotFound() {
   return (
@@ -14,7 +19,7 @@ export default function NotFound() {
         <p>Let us take you somewhere that exists.</p>
         <div className="nf__actions">
           <Link href="/" className="nf__btn nf__btn--ink">Back home</Link>
-          <Link href="/beta" className="nf__btn">Download Unvibe</Link>
+          <Link href="/beta" className="nf__btn">Download free</Link>
         </div>
       </div>
     </section>
