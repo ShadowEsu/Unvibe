@@ -786,7 +786,7 @@ p { font-size: 1.02rem; }
 
 /* ── Scroll-synced list: underline the middle line; keep every line readable ── */
 .ssync { display: grid; gap: 0.5rem 2.5rem; width: min(1080px, 100%); margin-inline: auto; color: var(--v-ink); font: 800 clamp(2rem, 5vw, 4rem) / 1.1 var(--font-display); letter-spacing: -0.04em; }
-.ssync__prefix { margin: 0; }
+.ssync__prefix { margin: 0; letter-spacing: normal; }
 .ssync__list { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .ssync__list li { font-family: var(--font-serif); font-style: italic; font-weight: 500; }
 .ssync__list--live li { text-decoration: underline transparent; text-decoration-thickness: 0.06em; text-underline-offset: 0.12em; transition: text-decoration-color 260ms ease; }
