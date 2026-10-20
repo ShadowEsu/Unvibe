@@ -87,6 +87,7 @@ const shots = {
   momentum: [1600],
   "ask-vibe-answer": [1600],
   "settings-privacy": [1600],
+  quiz: [1600],
 };
 const realDir = join(site, "public/unvibe/real");
 mkdirSync(realDir, { recursive: true });

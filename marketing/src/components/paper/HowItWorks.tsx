@@ -67,11 +67,11 @@ const PAGES: readonly FlexAccordionItem[] = [
     image: appShot("momentum", "The Unvibe Momentum page with understanding coverage and a streak calendar"),
   },
   {
-    id: "ask-vibe",
-    label: "Ask Vibe",
-    title: "Ask Vibe",
-    body: "A chat for broader questions about code you have been learning, typed or spoken.",
-    image: appShot("ask-vibe-answer", "Ask Vibe answering a question about debounce"),
+    id: "quiz",
+    label: "Quiz",
+    title: "Quiz",
+    body: "Pick a saved lesson and check what stayed with you, days after you first read it.",
+    image: appShot("quiz", "The Unvibe Quick Quiz page listing a saved Debouncing lesson"),
   },
   {
     id: "privacy",
