@@ -2900,7 +2900,7 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 .ob__form label { color:#5e5a68; }.ob .field { background:#fff; border-color:#d9d3ef; color:#302e37; }.ob .field::placeholder { color:#aaa6af; }
 .ob__skip { color:#777480; }.ob__skip:hover { color:#302e37; }
 .ob .field-btn.inline { background:#5942bc; border-color:#5942bc; color:#fff; }.ob .field-btn.inline:hover { background:#4935a4; }
-.ob .perm-block { background:#faf9fd; border-color:#e2ddef; color:#302e37; }.ob .perm-title { color:#302e37; }.ob .perm-why { color:#777480; }
+.ob .perm-block { background:#faf9fd; border-color:#e2ddef; color:#302e37; }.ob .perm-title { color:#302e37; }.ob .perm-why { color:#6b665f; }
 .ob__integrations { max-height:290px; overflow:auto; margin-bottom:12px; padding-right:5px; text-align:left; }
 .ob__integrations .integ__lead { display:none; }.ob__integrations .integ { gap:10px; }.ob__integrations .integ__group { margin:0; }.ob__integrations .integ__group h3 { margin:7px 0; }
 .ob__integrations .integ-card { padding:10px; grid-template-columns:32px minmax(0,1fr); background:#faf9fd; }.ob__integrations .integ-card__mark { width:32px;height:32px; }.ob__integrations .integ-card__body p { display:none; }

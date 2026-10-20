@@ -885,7 +885,7 @@ function Widget() {
                     <span>Selected code</span>
                     <span>{active.meta.file || active.meta.language || 'Local selection'}</span>
                   </div>
-                  <pre><code>{active.meta.preview}</code></pre>
+                  <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
               {showText
