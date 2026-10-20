@@ -3037,11 +3037,11 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   color: var(--ink);
 }
 
-.founder-page .founder-analytics h1,
+.founder-page .founder-analytics .founder-analytics__title,
 .founder-page .founder-analytics__grid strong,
-.founder-page .founder-analytics__panels h2,
-.founder-page .founder-analytics__visits h2,
-.founder-page .founder-analytics__people h2,
+.founder-page .founder-analytics__panels .founder-analytics__subhead,
+.founder-page .founder-analytics__visits .founder-analytics__subhead,
+.founder-page .founder-analytics__people .founder-analytics__subhead,
 .founder-page .founder-analytics__sources li strong,
 .founder-page .founder-analytics__error strong {
   color: var(--ink);

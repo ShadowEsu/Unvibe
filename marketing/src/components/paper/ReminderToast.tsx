@@ -11,8 +11,8 @@ export const DOWNLOADED_EVENT = "unvibe:downloaded";
 const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 
 /**
- * One small email ask. Opens when a friend's invite link brings you here (you both get a month
- * of Pro) or right after a download click (setup guide plus a nudge tomorrow).
+ * One small email ask. Opens when a friend's invite link brings you here (a qualifying referral
+ * gives you both a month of Pro) or right after a download click (setup guide plus a nudge tomorrow).
  */
 export function ReminderToast() {
   const pathname = usePathname() ?? "/";
@@ -78,16 +78,16 @@ export function ReminderToast() {
   };
 
   return (
-    <div className="remind" role="dialog" aria-label={invited ? "Claim your free month of Pro" : "Get the setup guide"}>
+    <div className="remind" role="dialog" aria-label={invited ? "A friend invited you" : "Get the setup guide"}>
       <button type="button" className="remind__close" aria-label="No thanks" onClick={close}>×</button>
       {state === "done" ? (
         <p className="remind__done">
-          {invited ? <>You&apos;re in! A month of Pro is waiting for you <em>and your friend.</em></> : <>Sent! Check your inbox. <em>Have fun.</em></>}
+          {invited ? <>Thanks! If the referral qualifies, a month of Pro waits for you <em>and your friend.</em></> : <>Sent! Check your inbox. <em>Have fun.</em></>}
         </p>
       ) : (
         <form onSubmit={submit}>
           {invited ? (
-            <p><b>A friend invited you.</b> Pop your email in and you both get <em>a month of Pro</em> free. Use the same email when you sign in to the app.</p>
+            <p><b>A friend invited you.</b> If your email is new to Unvibe, you each get <em>a month of Pro</em> (up to five friends per link). Use the same email when you sign in to the app.</p>
           ) : (
             <p><b>Downloading!</b> First time opening it? <a href="/install-help">See the one extra click</a>. Want the setup guide and a nudge tomorrow too?</p>
           )}

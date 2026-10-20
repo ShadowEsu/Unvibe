@@ -30,7 +30,7 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
   const updated = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles", dateStyle: "medium", timeStyle: "short" });
 
   return (
-    <main className="pstats">
+    <div className="pstats">
       <header className="pstats__head">
         <p className="pstats__eyebrow">Private · only you have this link</p>
         <h1>Unvibe, <em>by the numbers.</em></h1>
@@ -112,8 +112,8 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
       <section className="pstats__admin">
         <h2>Admin tools</h2>
         <p>Signup details and deleting entries still need your admin token.</p>
-        <FounderAnalytics />
+        <FounderAnalytics embedded />
       </section>
-    </main>
+    </div>
   );
 }

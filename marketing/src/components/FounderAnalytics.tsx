@@ -91,7 +91,10 @@ function appUserNote(users: AppUserStats | null, locked: boolean): string {
   }
 }
 
-export function FounderAnalytics() {
+/** `embedded` drops the headings one level below a host page's h1 and section h2 (the private /s page). */
+export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
+  const Title = embedded ? "h3" : "h1";
+  const Subhead = embedded ? "h4" : "h2";
   const [data, setData] = useState<AnalyticsPayload | null>(null);
   const [people, setPeople] = useState<WaitlistPerson[]>([]);
   const [peopleError, setPeopleError] = useState<string | null>(null);
@@ -216,7 +219,7 @@ export function FounderAnalytics() {
       <header className="founder-analytics__header">
         <div>
           <span className="founder-analytics__eyebrow">Founder analytics</span>
-          <h1>Unvibe, by the numbers.</h1>
+          <Title className="founder-analytics__title">Unvibe, by the numbers.</Title>
           <p>Joined people stay on the roster. Form starts, copies, and drop-off come from PostHog so unfinished traffic is not invented as accounts.</p>
         </div>
         <div className="founder-analytics__actions">
@@ -342,7 +345,7 @@ export function FounderAnalytics() {
               <header>
                 <div>
                   <span>Activation, last 14 days</span>
-                  <h2>First completed explanations</h2>
+                  <Subhead className="founder-analytics__subhead">First completed explanations</Subhead>
                 </div>
                 <small>UTC · {appUsers.qaExcluded} CI installs excluded</small>
               </header>
@@ -370,7 +373,7 @@ export function FounderAnalytics() {
               <header>
                 <div>
                   <span>Page views</span>
-                  <h2>Last 14 days</h2>
+                  <Subhead className="founder-analytics__subhead">Last 14 days</Subhead>
                 </div>
                 <small>Pacific time</small>
               </header>
@@ -393,7 +396,7 @@ export function FounderAnalytics() {
             <article className="founder-analytics__sources">
               <header>
                 <span>Sources</span>
-                <h2>Where joins came from</h2>
+                <Subhead className="founder-analytics__subhead">Where joins came from</Subhead>
               </header>
               <ol>
                 {data.waitlist.sourceCounts.length ? data.waitlist.sourceCounts.map((source) => (
@@ -410,7 +413,7 @@ export function FounderAnalytics() {
             <header>
               <div>
                 <span>Waitlist</span>
-                <h2>Joined people only</h2>
+                <Subhead className="founder-analytics__subhead">Joined people only</Subhead>
               </div>
               {probeCount > 0 ? (
                 <button

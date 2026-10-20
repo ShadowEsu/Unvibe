@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Vibe } from "@/components/paper/Vibe";
-import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
-import { track } from "@/lib/analytics";
 import { delight } from "@/lib/delight";
 
 /** What Vibe says as you scroll further down the page. */
@@ -20,15 +18,14 @@ const LINES: Array<[number, string]> = [
 const HIDDEN = ["/founder", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate"];
 
 /**
- * Site-wide scroll companion: a lime progress bar, Vibe riding down the right edge and
- * chatting, and a free download bar that slides in once you are most of the way down.
+ * Site-wide scroll companion: a lime progress bar and Vibe riding down the right edge,
+ * chatting on hover/focus and jumping to the free download when clicked.
  */
 export function ScrollVibe() {
   const pathname = usePathname() ?? "/";
   const [progress, setProgress] = useState(0);
   const [tilt, setTilt] = useState(0);
   const [bubbleHidden, setBubbleHidden] = useState(false);
-  const [ctaVisible, setCtaVisible] = useState(false);
   const last = useRef({ y: 0, t: 0 });
 
   useEffect(() => {
@@ -61,26 +58,9 @@ export function ScrollVibe() {
 
   useEffect(() => setBubbleHidden(false), [pathname]);
 
-  useEffect(() => {
-    setCtaVisible(false);
-    if (pathname !== "/") return;
-    const visible = new Set<Element>();
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) visible.add(entry.target);
-        else visible.delete(entry.target);
-      }
-      setCtaVisible(visible.size > 0);
-    });
-    document.querySelectorAll("#install, #invite, .paper-invite, .paper-footer").forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
-  }, [pathname]);
-
   if (HIDDEN.some((p) => pathname.startsWith(p))) return null;
 
   const line = [...LINES].reverse().find(([at]) => progress >= at)?.[1] ?? "";
-  const showBar = progress > 0.5 && progress < 0.97 && !ctaVisible;
-  const onBeta = pathname.startsWith("/beta");
 
   return (
     <>
@@ -103,15 +83,6 @@ export function ScrollVibe() {
           <Vibe size={44} />
         </span>
       </button>
-      {!onBeta ? (
-        <div className={showBar ? "sfree is-in" : "sfree"} aria-hidden={!showBar}>
-          <p><b>Unvibe is free.</b> <span>Mac and Windows · no card · no API key</span></p>
-          <div className="sfree__links">
-            <a href={BETA_MAC_DIRECT_DOWNLOAD} tabIndex={showBar ? 0 : -1} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "mac", surface: "sticky_free" }); }}>Download for Mac</a>
-            <a href={BETA_WINDOWS_DIRECT_DOWNLOAD} tabIndex={showBar ? 0 : -1} onClick={() => { delight(); window.dispatchEvent(new Event("unvibe:downloaded")); track("download_cta_clicked", { platform: "windows", surface: "sticky_free" }); }}>Download for Windows</a>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

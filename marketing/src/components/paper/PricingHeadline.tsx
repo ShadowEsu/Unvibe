@@ -17,8 +17,8 @@ export function PricingHeadline() {
 
   return (
     <h1 className={ready ? "pricing-headline is-ready" : "pricing-headline"}>
-      You will spend <span>15,000 hours+</span> on vibe coding.
-      <span className="pricing-headline__next">Make them count.</span>
+      Keep vibe coding.{" "}
+      <span className="pricing-headline__next">Understand what you ship.</span>
     </h1>
   );
 }

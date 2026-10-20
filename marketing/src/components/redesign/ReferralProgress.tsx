@@ -49,16 +49,16 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
   return <div className="reward-page"><section className="reward-panel">
     <p className="pixel-label">UNVIBE / PRIVATE BETA</p>
     <h1>Your Pro months, <em>kept simple.</em></h1>
-    <p className="reward-lead">Every friend who joins with your link gets you both a month of Pro, up to five friends. Months stack and land on the app account with the same email.</p>
+    <p className="reward-lead">When a friend joins with your link and their email has never been referred before, you each get a month of Pro, for up to five friends. Months go to the Unvibe account with the same email and never change a paid subscription.</p>
     <form className="reward-code" onSubmit={(event) => { event.preventDefault(); void load(); }}>
       <label htmlFor="referral-code">Your referral code</label>
       <div><input id="referral-code" value={code} maxLength={8} autoCapitalize="none" spellCheck={false} onChange={(event) => setCode(event.target.value)} placeholder="8 characters" /><button type="submit" disabled={state === "loading"}>{state === "loading" ? <Loader2 className="spin" size={17} /> : "Check progress"}</button></div>
     </form>
     {state === "error" && <p className="reward-error" role="alert">{message}</p>}
     {progress && <div className="reward-progress" aria-live="polite">
-      <div className="reward-stat"><span>Pro months earned</span><strong>{months}</strong><small>{left > 0 ? `${left} more friend${left === 1 ? "" : "s"} can still get you one` : "You hit the max. Thank you!"}</small></div>
-      <div className="reward-track" aria-label={`${months} of ${progress.rewardCap} Pro months earned`}>{Array.from({ length: progress.rewardCap }, (_, i) => <i key={i} className={i < months ? "on" : ""} />)}</div>
-      <div className="reward-review"><Gift size={18} /><span><strong>{progress.joinedReferrals} friend{progress.joinedReferrals === 1 ? "" : "s"} joined with your link</strong><small>A friend counts once, and only if they were new to Unvibe.</small></span></div>
+      <div className="reward-stat"><span>Friends who qualified</span><strong>{months}</strong><small>{left > 0 ? `${left} more friend${left === 1 ? "" : "s"} can still qualify` : "You reached the five-friend limit. Thank you!"}</small></div>
+      <div className="reward-track" role="img" aria-label={`${months} of ${progress.rewardCap} qualifying friends`}>{Array.from({ length: progress.rewardCap }, (_, i) => <i key={i} className={i < months ? "on" : ""} />)}</div>
+      <div className="reward-review"><Gift size={18} /><span><strong>{progress.joinedReferrals} friend{progress.joinedReferrals === 1 ? "" : "s"} joined with your link</strong><small>A friend counts once, and only if their email was never referred before.</small></span></div>
       <button className="reward-copy" type="button" onClick={copyLink}>{copied ? <><Check size={16} /> Link copied</> : <><Copy size={16} /> Copy my referral link</>}</button>
     </div>}
     <p className="reward-note">No names or emails are shown here. Questions about eligibility? <a href="mailto:support@unvibe.site?subject=Unvibe%20referral%20rewards">Contact support</a>.</p>

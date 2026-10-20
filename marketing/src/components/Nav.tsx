@@ -37,7 +37,8 @@ export function Nav() {
           <button
             type="button"
             className="nav-kbd"
-            aria-label="Search the site"
+            aria-label="⌘K, search the site"
+            aria-keyshortcuts="Meta+K Control+K"
             onClick={() => window.dispatchEvent(new Event("unvibe:palette"))}
           >
             <kbd>{"⌘"}K</kbd>
