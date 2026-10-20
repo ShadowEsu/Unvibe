@@ -708,13 +708,12 @@ function Widget() {
           <section className="widget-main">
 
       {!collapsed && !sessionPaused && (
-        <div className="tabs" role="tablist" aria-label="Review tabs">
+        <div className="tabs" role="group" aria-label="Review tabs">
           {tabs.map((t) => (
-            <div key={t.id} className={`tab${t.id === activeTabId ? ' on' : ''}`} role="presentation">
+            <div key={t.id} className={`tab${t.id === activeTabId ? ' on' : ''}`}>
               <button
                 type="button"
-                role="tab"
-                aria-selected={t.id === activeTabId}
+                aria-pressed={t.id === activeTabId}
                 className="tab__label"
                 onClick={() => selectTab(t.id)}
               >

@@ -18,7 +18,7 @@
   --v-ink: #141414;
   --v-ink-2: #2e2e2e;
   --v-muted: #66635d;
-  --v-faint: #9e9a92;
+  --v-faint: #6b665f;
   --v-line: #e6e1d6;
   --v-line-2: #efebe2;
   --v-hover: #efebe1;
@@ -51,6 +51,7 @@
   }
   & ::selection { background: var(--lime); color: var(--v-ink); }
   & :focus-visible { outline: 2px solid var(--v-ink); outline-offset: 2px; }
+  & .page:focus-visible, & .mbody:focus-visible { outline-offset: -3px; }
   & ::-webkit-scrollbar { width: 10px; height: 10px; }
   & ::-webkit-scrollbar-thumb { background: #d9d3c6; border: 3px solid transparent; background-clip: content-box; border-radius: 99px; }
   & ::-webkit-scrollbar-track { background: transparent; }

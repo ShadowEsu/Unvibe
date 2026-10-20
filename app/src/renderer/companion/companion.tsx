@@ -1319,12 +1319,12 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
         {costs ? (
           <div className="cost-table" role="table" aria-label="Estimated cost by mode and lines">
             <div className="cost-row head" role="row">
-              <span>Mode</span><span>~50 lines</span><span>~200 lines</span><span>~500 lines</span>
+              <span role="columnheader">Mode</span><span role="columnheader">~50 lines</span><span role="columnheader">~200 lines</span><span role="columnheader">~500 lines</span>
             </div>
             {costs.map((row) => (
               <div className="cost-row" role="row" key={row.level}>
-                <span>{row.level}</span>
-                {row.samples.map((s) => <span key={s.lines}>{s.label}</span>)}
+                <span role="rowheader">{row.level}</span>
+                {row.samples.map((s) => <span role="cell" key={s.lines}>{s.label}</span>)}
               </div>
             ))}
           </div>
@@ -1511,7 +1511,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
-        <div className="mbody" ref={bodyRef}>
+        <div className="mbody" ref={bodyRef} tabIndex={0} role="region" aria-label="Settings content">
           <h2>{tab}</h2>
 
           {tab === 'AI' && <AiSettingsPanel settings={settings} onSettings={onSettings} onNotice={onNotice} />}
@@ -1914,7 +1914,7 @@ function App() {
             <button type="button" className="topbar__side" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? `Show sidebar (${modKey}\\)` : `Hide sidebar (${modKey}\\)`} onClick={() => toggleSideRef.current()}>
               <Icon d="M4 4h12v12H4z M7 4v12" />
             </button>
-            <h2 className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
+            <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
             <span className="topbar__spacer" />
             <button type="button" className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
               <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>{modKey}K</kbd>
@@ -1923,7 +1923,7 @@ function App() {
               <kbd>{shortcutLabel}</kbd><span>Explain</span>
             </button>
           </header>
-          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`}>
+          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
               {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
