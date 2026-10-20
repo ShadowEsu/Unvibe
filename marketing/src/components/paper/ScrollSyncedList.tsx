@@ -10,8 +10,8 @@ interface ScrollSyncedListProps {
 
 /**
  * A fixed prefix beside a list that scrolls normally; the line nearest the middle of the
- * screen is lit and the rest stay dim. No scroll snapping or hijacking. With reduced motion
- * (or on lite devices) every line is simply shown at full strength.
+ * screen is underlined. Every line stays fully opaque, including inactive lines.
+ * No scroll snapping or hijacking; reduced motion and lite devices skip the scroll work.
  */
 export function ScrollSyncedList({ prefix, items }: ScrollSyncedListProps) {
   const listRef = useRef<HTMLUListElement>(null);

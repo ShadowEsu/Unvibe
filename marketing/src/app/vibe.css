@@ -732,10 +732,11 @@ p { font-size: 1.02rem; }
 .vtour > :not(.dotgrid) { position: relative; z-index: 1; }
 .dotgrid { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 
-/* ── Scroll statement: words brighten as they pass ───────────────────────── */
+/* ── Scroll statement: underline progress without fading readable text ───── */
 .treveal { max-width: 22ch; margin: 0 auto 4rem; color: var(--v-ink); font: 800 clamp(2rem, 5.2vw, 4.2rem) / 1.06 var(--font-display); letter-spacing: -0.04em; text-align: center; }
 .treveal__accent { font-family: var(--font-serif); font-style: italic; font-weight: 500; }
-.treveal--live [data-word] { transition: opacity 120ms linear; }
+.treveal--live [data-word] { text-decoration: underline transparent; text-decoration-thickness: 0.06em; text-underline-offset: 0.12em; transition: text-decoration-color 120ms linear; }
+.treveal--live [data-word].is-lit { text-decoration-color: currentColor; }
 
 /* ── Flexible accordion of real screenshots ──────────────────────────────── */
 .hiw__head { margin-bottom: 2.25rem; text-align: center; }
@@ -783,13 +784,13 @@ p { font-size: 1.02rem; }
 }
 @keyframes flexaccIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* ── Scroll-synced list: the line in the middle of the screen is lit ─────── */
+/* ── Scroll-synced list: underline the middle line; keep every line readable ── */
 .ssync { display: grid; gap: 0.5rem 2.5rem; width: min(1080px, 100%); margin-inline: auto; color: var(--v-ink); font: 800 clamp(2rem, 5vw, 4rem) / 1.1 var(--font-display); letter-spacing: -0.04em; }
 .ssync__prefix { margin: 0; }
 .ssync__list { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .ssync__list li { font-family: var(--font-serif); font-style: italic; font-weight: 500; }
-.ssync__list--live li { opacity: 0.22; transition: opacity 260ms ease; }
-.ssync__list--live li.is-lit { opacity: 1; }
+.ssync__list--live li { text-decoration: underline transparent; text-decoration-thickness: 0.06em; text-underline-offset: 0.12em; transition: text-decoration-color 260ms ease; }
+.ssync__list--live li.is-lit { text-decoration-color: currentColor; }
 @media (min-width: 900px) {
   .ssync { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: start; }
   .ssync__prefix { position: sticky; top: calc(50vh - 2.5rem); }

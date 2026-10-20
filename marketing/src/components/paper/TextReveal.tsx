@@ -12,12 +12,11 @@ interface TextRevealProps {
 
 const START = 0.9; // reveal begins when the block's top reaches 90% of the viewport
 const END = 0.3; // and is complete when its bottom reaches 30%
-const DIM = 0.18;
 
 /**
- * A statement that brightens word by word as it scrolls through the viewport.
- * The text is real text from the first paint; only opacity changes, and visitors who
- * prefer reduced motion (or lite devices) get it fully visible with no scroll work.
+ * A statement underlined word by word as it scrolls through the viewport.
+ * Text stays fully opaque before, during and after the animation. Visitors who
+ * prefer reduced motion (or lite devices) get readable text with no scroll work.
  */
 export function TextReveal({ text, accent = [], className }: TextRevealProps) {
   const rootRef = useRef<HTMLParagraphElement>(null);
@@ -38,10 +37,7 @@ export function TextReveal({ text, accent = [], className }: TextRevealProps) {
       const span = rect.height + vh * (START - END);
       const progress = Math.min(1, Math.max(0, (vh * START - rect.top) / span));
       const lit = progress * spans.length;
-      spans.forEach((word, index) => {
-        const amount = Math.min(1, Math.max(0, lit - index));
-        word.style.opacity = String(DIM + (1 - DIM) * amount);
-      });
+      spans.forEach((word, index) => word.classList.toggle("is-lit", index < lit));
     };
     const schedule = () => { if (visible && !frame) frame = window.requestAnimationFrame(paint); };
     const observer = new IntersectionObserver(([entry]) => {
@@ -60,7 +56,7 @@ export function TextReveal({ text, accent = [], className }: TextRevealProps) {
       window.removeEventListener("resize", schedule);
       if (frame) window.cancelAnimationFrame(frame);
       root.classList.remove("treveal--live");
-      spans.forEach((word) => { word.style.opacity = ""; });
+      spans.forEach((word) => word.classList.remove("is-lit"));
     };
   }, [text]);
 
