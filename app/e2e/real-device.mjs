@@ -3,10 +3,10 @@
 // support, saves a screenshot after every step, and writes a plain report of what passed.
 //
 // Env: UNVIBE_EXE (path to the installed app executable), SHOTS_DIR (output folder),
-//      UNVIBE_OS ("mac" | "windows").
+//      UNVIBE_OS ("mac" | "windows"), AXE_PATH (optional axe.min.js for the a11y check).
 import { _electron as electron, chromium } from 'playwright';
 import { execFile, execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -21,10 +21,35 @@ const log = (ok, step, detail = '') => { report.push(`${ok ? 'PASS' : 'FAIL'}  $
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const name = (label) => `${String(++n).padStart(2, '0')}-${label}.png`;
 
+// axe-core runs after every in-app screenshot; serious/critical violations become FAIL lines.
+// CI does not install the website's node_modules, so a missing axe file skips the check (noted).
+const axePath = [process.env.AXE_PATH, path.resolve('node_modules/axe-core/axe.min.js'),
+  '/tmp/unvibe-work/marketing/node_modules/axe-core/axe.min.js'].find((p) => p && existsSync(p));
+const axeSource = axePath ? readFileSync(axePath, 'utf8') : null;
+report.push(axeSource
+  ? 'NOTE  a11y: axe-core checks each screenshot; color-contrast in Electron depends on what was rendered at that moment.'
+  : 'NOTE  a11y: skipped, axe-core not found (set AXE_PATH to axe.min.js).');
+let a11yMs = 0; // kept out of the timed first-run measurement
+
+async function a11y(page, label) {
+  // Only Unvibe's own screens: Google's account page is not ours to gate on.
+  if (!axeSource || /^https?:/.test(page.url()) && !/^https:\/\/unvibe\.site\//.test(page.url())) return;
+  const start = Date.now();
+  try {
+    // evaluate() goes through the debugger, so the pages' script-src 'self' CSP does not block it.
+    if (!(await page.evaluate(() => Boolean(window.axe)))) await page.evaluate(axeSource);
+    const ids = await page.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id));
+    if (ids.length) log(false, `a11y ${label}`, ids.join(', '));
+  } catch (e) { report.push(`NOTE  a11y ${label}: not checked (${e.message.split('\n')[0]})`); }
+  a11yMs += Date.now() - start;
+}
+
 async function shot(page, label) {
   const file = name(label);
   try { await page.screenshot({ path: path.join(out, file), animations: 'disabled' }); }
   catch (e) { log(false, `Screenshot ${label}`, e.message.split('\n')[0]); }
+  await a11y(page, label);
   return file;
 }
 
@@ -97,7 +122,7 @@ try {
 } catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
 const first = await waitForExplanation('first-run-explanation', FIRST_RUN_SAMPLE);
-const seconds = Math.round((Date.now() - launchedAt) / 100) / 10;
+const seconds = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
 log(first.ok, 'First-run sample explains code', first.why);
 log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
 writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);

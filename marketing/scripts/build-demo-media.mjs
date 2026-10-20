@@ -13,7 +13,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const mediaDir = process.argv[2];
@@ -31,7 +31,8 @@ const mark = (label) => {
 const video = (name) => {
   const found = timeline.videos.find((v) => v.window === name);
   if (!found) throw new Error(`no recording for ${name}`);
-  return found;
+  const localPath = join(mediaDir, "raw", basename(found.path));
+  return { ...found, path: existsSync(localPath) ? localPath : found.path };
 };
 
 const companion = video("companion.html");
@@ -85,7 +86,6 @@ const shots = {
   library: [1600],
   briefs: [1600],
   momentum: [1600],
-  "ask-vibe-answer": [1600],
   "settings-privacy": [1600],
   quiz: [1600],
 };

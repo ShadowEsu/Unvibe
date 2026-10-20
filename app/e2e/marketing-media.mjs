@@ -188,6 +188,9 @@ await step('ask vibe answer', async () => {
   await chat.press('Enter');
   await companion.locator('.chat-thinking').waitFor({ timeout: 10000 }).catch(() => {});
   await companion.locator('.chat-thinking').waitFor({ state: 'detached', timeout: 90000 });
+  const error = companion.locator('.form-error');
+  if (await error.count()) throw new Error(`Ask Vibe failed: ${await error.innerText()}`);
+  await companion.locator('.chat-assistant__body').last().waitFor({ timeout: 10000 });
   await sleep(2000);
   await shot(companion, 'ask-vibe-answer');
 });
