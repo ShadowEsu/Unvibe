@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { delight } from "@/lib/delight";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { detectVisitorDevice } from "@/lib/shortcuts";
 
 interface DownloadLinkProps {
   href: string;
@@ -43,18 +45,21 @@ export function DownloadLink({
   className,
   onClick,
 }: DownloadLinkProps) {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone"), []);
   const tone = platform === "windows" ? "win" : "mac";
-  const label =
+  const label = phone ? "Email me the link" :
     platform === "mac"
       ? "Download free for Mac"
       : platform === "windows"
         ? "Download free for Windows"
-        : "Download";
+        : "Download free";
 
   return (
     <Link
-      href={href}
+      href={phone ? "/#email-link" : href}
       onClick={() => {
+        if (phone) { onClick?.(); return; }
         track("download_cta_clicked", {
           platform: platform ?? "generic",
           surface: size,
@@ -70,8 +75,8 @@ export function DownloadLink({
         className,
       )}
     >
-      {platform === "mac" ? <AppleMark /> : null}
-      {platform === "windows" ? <WindowsMark /> : null}
+      {!phone && platform === "mac" ? <AppleMark /> : null}
+      {!phone && platform === "windows" ? <WindowsMark /> : null}
       <span className="paper-join__label">{label}</span>
     </Link>
   );
@@ -82,6 +87,9 @@ export function DownloadLink({
  * installer directly from the current GitHub release.
  */
 export function DownloadRow({ href }: { href?: string }) {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone"), []);
+  if (phone) return <div className="paper-join-row"><DownloadLink href="/#email-link" /></div>;
   return (
     <div className="paper-join-row">
       <DownloadLink href={href ?? BETA_MAC_DIRECT_DOWNLOAD} platform="mac" />

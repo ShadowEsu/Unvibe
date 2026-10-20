@@ -14,7 +14,7 @@ export const milestones: Milestone[] = [
     date: "19 OCT 2026",
     category: "PRODUCT",
     title: "Ask Vibe works before you sign in, and a design pass everywhere",
-    summary: "Ask Vibe and re-explaining a saved lesson now work on the free plan without signing in; before, they could fail with a 401 error. The review panel, the companion app and the Island got a design pass: clearer focus rings, a steadier panel header in light and dark, and larger Island buttons. The homepage now opens with a real recording of the app and a walkthrough in real screenshots.",
+    summary: "Ask Vibe and re-explaining a saved lesson now work on the free plan without signing in; before, they could fail with a 401 error. The review panel, companion and Island have clearer focus, readable muted text, keyboard-scrollable content and accessible review controls. The homepage now opens with a real recording of the app and a walkthrough in real screenshots.",
     figure: "v0.1.43",
   },
   {

@@ -34,6 +34,19 @@ const video = (name) => {
   const localPath = join(mediaDir, "raw", basename(found.path));
   return { ...found, path: existsSync(localPath) ? localPath : found.path };
 };
+const shots = {
+  "panel-explained-top": [880],
+  "panel-beginner": [880],
+  "panel-follow-up": [880],
+  "panel-test-me": [880],
+  today: [1600],
+  briefs: [1600],
+  momentum: [1600],
+  "settings-privacy": [1600],
+  quiz: [1600],
+};
+const missing = Object.keys(shots).filter((name) => !existsSync(join(mediaDir, "shots", `${name}.png`)));
+if (missing.length) throw new Error(`Recapture required screenshots before building: ${missing.join(", ")}`);
 
 const companion = video("companion.html");
 const panel = video("widget.html");
@@ -77,24 +90,10 @@ const posterPng = join(mediaDir, "poster.png");
 execFileSync("ffmpeg", ["-v", "error", "-y", "-ss", posterAt.toFixed(2), "-i", out, "-frames:v", "1", posterPng]);
 execFileSync("cwebp", ["-quiet", "-q", "78", posterPng, "-o", poster]);
 
-const shots = {
-  "panel-explained-top": [880],
-  "panel-beginner": [880],
-  "panel-follow-up": [880],
-  "panel-test-me": [880],
-  today: [1600],
-  library: [1600],
-  briefs: [1600],
-  momentum: [1600],
-  "settings-privacy": [1600],
-  quiz: [1600],
-};
 const realDir = join(site, "public/unvibe/real");
 mkdirSync(realDir, { recursive: true });
-const missing = [];
 for (const [name, [width]] of Object.entries(shots)) {
   const src = join(mediaDir, "shots", `${name}.png`);
-  if (!existsSync(src)) { missing.push(name); continue; }
   execFileSync("cwebp", ["-quiet", "-q", "82", "-resize", String(width), "0", src, "-o", join(realDir, `${name}.webp`)]);
 }
 
@@ -102,4 +101,4 @@ writeFileSync(
   join(site, "src/data/demoMedia.json"),
   `${JSON.stringify({ version: timeline.version, platform: "Mac", seconds: Math.round(length) }, null, 2)}\n`,
 );
-console.log(`demo ${length.toFixed(1)}s from Unvibe ${timeline.version}${missing.length ? `; missing shots: ${missing.join(", ")}` : ""}`);
+console.log(`demo ${length.toFixed(1)}s from Unvibe ${timeline.version}`);

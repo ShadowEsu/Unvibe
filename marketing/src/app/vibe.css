@@ -755,6 +755,7 @@ p { font-size: 1.02rem; }
 .flexacc__item:nth-child(4n+3).is-open .flexacc__num { background: var(--v-sun); }
 .flexacc__item:nth-child(4n+4).is-open .flexacc__num { background: var(--v-lilac); }
 .flexacc__body { display: grid; gap: 1rem; padding: 0 1.1rem 1.1rem; }
+.flexacc__body[hidden] { display: none; }
 .flexacc__count { margin: 0; color: #4d4a44; font: 700 0.8rem var(--font-mono, ui-monospace, monospace); letter-spacing: 0.08em; }
 .flexacc__title { margin: 0.2rem 0 0; color: var(--v-ink); font: 800 clamp(1.5rem, 3vw, 2.2rem) / 1.08 var(--font-display); letter-spacing: -0.035em; }
 .flexacc__text { margin: 0.6rem 0 0; max-width: 34rem; color: #2f2c28; font-size: 1.02rem; line-height: 1.55; }
