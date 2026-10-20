@@ -1307,7 +1307,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
             { id: 'grok' as const, label: 'Grok' },
             { id: 'kimi' as const, label: 'Kimi' },
           ]).map((m) => (
-            <option key={m.id} value={m.id}>{m.label}{m.id === 'gemini' ? ' (cheapest)' : ''}</option>
+            <option key={m.id} value={m.id}>{m.label}{m.id === 'gemini' ? ' (usually cheapest)' : ''}</option>
           ))}
         </select>
       </div>

@@ -56,7 +56,8 @@
   & ::-webkit-scrollbar-track { background: transparent; }
 
   /* ── Shell ─────────────────────────────────────────────────────────────── */
-  & .layout { background: var(--v-bg); }
+  /* Light San Francisco dusk behind the shell; the working card stays white. */
+  & .layout { background: linear-gradient(160deg, #fcf1ea 0%, #faedf3 36%, #f2eefc 70%, #edf3fc 100%); }
   & .shell-tools button { color: var(--v-muted); }
   & .shell-tools button:hover { background: var(--v-hover); color: var(--v-ink); }
 
@@ -78,7 +79,7 @@
   }
   & .side-search:hover { border-color: var(--v-ink); color: var(--v-muted); }
   & .side-search kbd { border-color: var(--v-line); background: var(--v-sunken); color: var(--v-muted); }
-  & .side-spaces { margin: 16px 0 4px; padding: 0 8px; color: var(--v-faint); opacity: 1; font: italic 400 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .side-spaces { margin: 16px 0 4px; padding: 0 8px; color: var(--v-muted); opacity: 1; font: italic 400 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
 
   & .nav button,
   & .side-settings {
@@ -111,7 +112,7 @@
   & .nav--spaces button:nth-child(6).on svg { background: var(--lilac); }
   & .nav button.on svg { color: var(--v-ink); }
 
-  & .sync-state { color: var(--v-faint); font-size: 12px; padding: 4px 8px; }
+  & .sync-state { color: var(--v-muted); font-size: 12px; padding: 4px 8px; }
   & .side-usage { padding: 10px; border: 1.5px solid var(--v-line); background: var(--v-surface); backdrop-filter: none; border-radius: var(--v-radius-sm); box-shadow: none; }
   & .side-usage:hover { border-color: var(--v-ink); }
   & .side-usage__row { font-size: 12px; color: var(--v-muted); }
@@ -158,7 +159,7 @@
   & .topbar__explain:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--v-ink); }
   & .topbar__explain:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  & .page { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: none; margin: 0; padding: 28px clamp(20px, 4vw, 48px) 110px; }
+  & .page { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: none; margin: 0; padding: 28px clamp(20px, 4vw, 48px) 150px; }
   & .page > .fade-in { max-width: 920px; margin: 0 auto; }
   & .page--learn { padding: 22px 22px 100px; }
   & .page--learn > .fade-in { max-width: none; }
@@ -383,12 +384,13 @@
   & .bar-track i { background: var(--sky); box-shadow: inset 0 0 0 1.5px var(--v-ink); border-radius: 99px; }
   & .plan-toggle { border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--v-sunken); }
   & .plan-toggle button { color: var(--v-muted); border-radius: 9px; }
+  & .plan-toggle button span { margin-top: 3px; color: #1d6b3f; font: 700 11px/1.2 var(--font-sans); letter-spacing: 0; }
   & .plan-toggle button.on { background: var(--v-ink); color: #fff; box-shadow: none; }
   & .plan-toggle button.on span { color: var(--lime); }
   & .plan-pick__card.is-current { border-color: var(--v-ink); box-shadow: var(--hard); }
 
   /* ── Ask Vibe ──────────────────────────────────────────────────────────── */
-  & .chat-hello h2 { font: 800 34px var(--font-display); letter-spacing: -0.04em; background: none; color: var(--v-ink); -webkit-background-clip: border-box; background-clip: border-box; }
+  & .chat-hello h2 { font: 800 34px var(--font-display); letter-spacing: -0.04em; background: none; color: var(--v-ink); -webkit-background-clip: border-box; background-clip: border-box; text-wrap: balance; }
   & .chat-hello__vibe .buddy { filter: none; }
   & .chat-composer { border: 1.5px solid var(--v-ink); border-radius: 18px; background: var(--v-surface); box-shadow: var(--hard); }
   & .chat-composer:focus-within { border-color: var(--v-ink); box-shadow: var(--hard), 0 0 0 4px rgb(214 244 90 / 0.55); }
@@ -401,7 +403,7 @@
   }
   & .chat-starters button:hover, & .chat-suggestions button:hover { border-color: var(--v-ink); color: var(--v-ink); background: var(--lime); transform: rotate(-1deg); }
   & .chat-context span { border: 1.5px solid var(--v-line); border-radius: 99px; background: var(--v-sunken); color: var(--v-muted); }
-  & .chat-meter { color: var(--v-faint); }
+  & .chat-meter { color: var(--v-muted); }
 
   /* ── Vibe in the corner ────────────────────────────────────────────────── */
   & .vibe-float { right: 22px; bottom: 82px; }
@@ -427,7 +429,7 @@
   & .modal { border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--v-surface); box-shadow: 6px 6px 0 var(--v-ink); }
   & .modal .mside, & .mside { background: var(--v-bg); border-right: 1.5px solid var(--v-line); }
   & .settings-brand { font: 800 22px var(--font-display); letter-spacing: -0.04em; color: var(--v-ink); }
-  & .mside .mh { color: var(--v-faint); font: italic 400 17px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
+  & .mside .mh { color: var(--v-muted); font: 600 12px/1.2 var(--font-sans); font-style: normal; letter-spacing: 0; text-transform: none; }
   & .modal .mside button, & .mside button { height: 34px; border: 1.5px solid transparent; color: var(--v-ink-2); font: 550 13.5px var(--font-sans); }
   & .mside button:hover { background: var(--v-hover); color: var(--v-ink); }
   & .mside button.on { background: var(--v-surface); border-color: var(--v-ink); color: var(--v-ink); font-weight: 700; box-shadow: var(--hard-sm); }
@@ -456,12 +458,9 @@
   & .integration-state.detected, & .integration-state.available { border-color: var(--v-ink); color: var(--v-ink); background: var(--mint); }
 
   /* ── Sign in and onboarding ────────────────────────────────────────────── */
+  /* SF dusk, matching the website hero palette, instead of sticker blobs. */
   & .login, & .ob {
-    background:
-      radial-gradient(circle at 12% 18%, rgb(214 244 90 / 0.35) 0 80px, transparent 81px),
-      radial-gradient(circle at 88% 82%, rgb(159 216 255 / 0.4) 0 110px, transparent 111px),
-      radial-gradient(circle at 92% 12%, rgb(255 216 77 / 0.35) 0 60px, transparent 61px),
-      var(--v-bg);
+    background: linear-gradient(160deg, #fde7da 0%, #f8dbe8 34%, #e6defa 68%, #dbe7fa 100%);
   }
   & .login__card, & .login__local, & .ob__card {
     border: 1.5px solid var(--v-ink); border-radius: 22px; background: var(--v-surface); backdrop-filter: none;
@@ -760,7 +759,7 @@
 :root[data-ui="v3"][data-v7] .side nav, :root[data-ui="v3"][data-v7] .side [role="button"] { -webkit-app-region: no-drag; }
 :root[data-ui="v3"][data-v7] .topbar a, :root[data-ui="v3"][data-v7] .topbar input, :root[data-ui="v3"][data-v7] .topbar kbd { -webkit-app-region: no-drag; }
 
-/* ── Companion design wave 1 (checkpoint): settings close, stacked rows, Learn no-match ── */
+/* ── Companion design wave 1: settings, dialogs, sign in, Share, Ask Vibe, Learn no-match ── */
 :root[data-ui="v3"][data-v7] {
   & .modal { position: relative; }
   & .modal:focus { outline: none; }
@@ -780,4 +779,31 @@
   & .fbk__close { display: grid; place-items: center; width: 40px; height: 40px; }
   & .chat-mic { display: inline-flex; align-items: center; gap: 6px; }
   & .learn-no-match { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* Settings: 40px tall hit area on the switch, readable "Always on" status. */
+  & .toggle::before { content: ""; position: absolute; inset: -8px -4px; border-radius: 999px; }
+  & .setting-status { justify-self: end; padding: 3px 10px; font: 700 12px/18px var(--font-sans); white-space: nowrap; }
+
+  /* Sign in and onboarding scroll on short windows instead of clipping the card. */
+  & .login { overflow-y: auto; align-items: safe center; padding: 32px 0; }
+  & .ob { overflow-y: auto; }
+  & .ob2 { align-items: safe center; justify-items: center; }
+
+  /* Device sign-in fallback buttons (login and Share). */
+  & .inline-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  & .inline-actions .field-btn { width: auto; }
+
+  /* Share: the sign-in card spans the page like the share link card. */
+  & .gift-signin { max-width: none; border: 1.5px solid var(--v-ink); border-radius: 16px; background: var(--v-surface); box-shadow: var(--hard); }
+  & .gift-signin .field-btn--google { width: min(100%, 360px); }
+
+  /* Momentum and feature pages: the lead sits right under its heading. */
+  & .topline:has(+ .lead) { margin-bottom: 6px; }
+  & .topline h1 { margin: 0; }
+
+  /* Ask Vibe: usage sits under the composer; starters get their own breathing room. */
+  & .chat-dock .chat-meter { display: block; margin: 8px 6px 0 auto; padding: 4px 2px; font: 600 12px/1 var(--font-sans); letter-spacing: 0; }
+  & .chat-dock .chat-starters { margin-top: 14px; }
+  & .chat-meter--warn { color: var(--v-warn); }
+  & .chat-meter--hot { color: #b42318; }
 }

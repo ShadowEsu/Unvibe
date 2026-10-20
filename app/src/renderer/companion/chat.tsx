@@ -407,6 +407,17 @@ export function Chat({
               </button>
             </div>
           </div>
+          {usage ? (
+            <button
+              type="button"
+              className={`chat-meter chat-meter--${tone}`}
+              aria-label={`${pct} percent of monthly AI used. ${remaining ?? usage.remaining} of ${usage.limit} left.`}
+              title={`${remaining ?? usage.remaining} of ${usage.limit} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
+              onClick={() => void onRefresh()}
+            >
+              <span>{pct}% used this month</span>
+            </button>
+          ) : null}
           {empty ? (
             <div className="chat-starters">
               {STARTERS.map((item) => (
@@ -416,18 +427,6 @@ export function Chat({
           ) : null}
         </form>
       </div>
-
-      {usage ? (
-        <button
-          type="button"
-          className={`chat-meter chat-meter--${tone}`}
-          aria-label={`${pct} percent of monthly AI used. ${remaining ?? usage.remaining} of ${usage.limit} left.`}
-          title={`${remaining ?? usage.remaining} of ${usage.limit} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
-          onClick={() => void onRefresh()}
-        >
-          <span>{pct}% used this month</span>
-        </button>
-      ) : null}
     </div>
   );
 }
