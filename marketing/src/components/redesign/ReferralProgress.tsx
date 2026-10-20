@@ -47,7 +47,7 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
   const months = progress ? Math.min(progress.proMonths, progress.rewardCap) : 0;
   const left = progress ? Math.max(0, progress.rewardCap - months) : 5;
   return <div className="reward-page"><section className="reward-panel">
-    <p className="pixel-label">UNVIBE / PRIVATE BETA</p>
+    <p className="pixel-label">UNVIBE / REFERRALS</p>
     <h1>Your Pro months, <em>kept simple.</em></h1>
     <p className="reward-lead">When a friend joins with your link and their email has never been referred before, you each get a month of Pro, for up to five friends. Months go to the Unvibe account with the same email and never change a paid subscription.</p>
     <form className="reward-code" onSubmit={(event) => { event.preventDefault(); void load(); }}>
