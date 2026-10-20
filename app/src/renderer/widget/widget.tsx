@@ -878,7 +878,7 @@ function Widget() {
 
           {(phase === 'streaming' || phase === 'done') && (
             <div className="stage">
-            <div className="body" ref={bodyRef} aria-live="polite" aria-atomic="false">
+            <div className="body" ref={bodyRef} tabIndex={0} role="region" aria-label="Explanation" aria-live="polite" aria-atomic="false">
               {active.meta.preview ? (
                 <section className="code-context" aria-label="Selected code context">
                   <div className="code-context__head">
