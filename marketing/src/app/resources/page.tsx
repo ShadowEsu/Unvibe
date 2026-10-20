@@ -37,7 +37,7 @@ export default function ResourcesPage() {
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Resources</p>
-          <h1>Resources and guides.</h1>
+          <h1>Resources and <em>guides.</em></h1>
           <p>
             Get set up, choose an explanation depth, and see exactly how your code is handled.
           </p>

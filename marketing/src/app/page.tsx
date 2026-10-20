@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: { absolute: "Unvibe: understand the code AI writes for you" },
 };
 
-const homeFaq = faqItems.filter((item) => ["what-is-it", "sent", "editors", "windows", "beta"].includes(item.id));
+const homeFaq = faqItems.filter((item) => ["what-is-it", "which-shortcut", "editors", "sent", "beta", "accuracy"].includes(item.id));
 
 export const revalidate = 300;
 
@@ -41,50 +41,70 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="paper-section" id="try-it">
-        <div className="paper-wrap paper-center">
-          <p className="paper-meta">Try it right now</p>
-          <h2 className="mt-3">Paste code. <em>Vibe explains it.</em></h2>
-          <p className="paper-lead mt-3">A real explanation, right here. No download, no account.</p>
-          <div className="mt-10"><TryIt /></div>
+      <section className="paper-section" id="try-it" aria-labelledby="try-it-title">
+        <div className="paper-wrap">
+          <div className="sec-head">
+            <p className="paper-meta">Try it here</p>
+            <h2 id="try-it-title">Paste code. <em>Vibe explains it.</em></h2>
+            <p className="paper-lead">A real explanation in your browser. No download, no account.</p>
+          </div>
+          <TryIt />
         </div>
       </section>
 
-      <section className="paper-section paper-install" id="install">
-        <div className="paper-wrap paper-center">
-          <BetaInstall tone="page" showFeedback={false} />
+      <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
+        <div className="paper-wrap">
+          <div className="sec-head">
+            <p className="paper-meta">Download</p>
+            <h2 id="install-title">Free for <em>Mac and Windows.</em></h2>
+            <p className="paper-lead">Pick your computer, open the app, then press the shortcut in any app.</p>
+          </div>
+          <BetaInstall tone="page" showFeedback={false} title={null} />
         </div>
       </section>
 
-      <section className="paper-section">
-        <div className="paper-wrap paper-center">
-          <p className="paper-meta">From testers</p>
-          <div className="paper-quotes mt-8">
-            <blockquote className="paper-glass">
-              <p>The interface was simple to navigate, the explanations were clear, and Test Me made it easy to recap what I learned.</p>
-              <footer>Sharice Gustian, private beta tester</footer>
-            </blockquote>
-            <blockquote className="paper-glass">
-              <p>Setup was smooth. The floating Island feels distinctive, and the explanation depth controls make learning feel genuinely tailored.</p>
-              <footer>Om Anand Khaunte, officer, Los Altos Hacks</footer>
-            </blockquote>
+      <section className="paper-section" aria-labelledby="quotes-title">
+        <div className="paper-wrap">
+          <div className="sec-head">
+            <p className="paper-meta">From beta testers</p>
+            <h2 id="quotes-title">In their <em>own words.</em></h2>
+          </div>
+          <div className="quotes">
+            <figure className="quote">
+              <blockquote>
+                <p>The interface was simple to navigate, the explanations were clear, and Test Me made it easy to recap what I learned.</p>
+              </blockquote>
+              <figcaption>
+                <span className="quote__avatar" aria-hidden="true">SG</span>
+                <span><b>Sharice Gustian</b>Beta tester</span>
+              </figcaption>
+            </figure>
+            <figure className="quote quote--lime">
+              <blockquote>
+                <p>Setup was smooth. The floating Island feels distinctive, and the explanation depth controls make learning feel genuinely tailored.</p>
+              </blockquote>
+              <figcaption>
+                <span className="quote__avatar" aria-hidden="true">OK</span>
+                <span><b>Om Anand Khaunte</b>Officer, Los Altos Hacks</span>
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>
 
       <BackingStrip />
 
-      <section className="paper-section">
-        <div className="paper-wrap paper-center">
-          <p className="paper-meta">Questions</p>
-          <h2 className="mt-3">Short <em>answers.</em></h2>
-          <div className="mt-10">
-            <TypingFaq items={homeFaq} />
+      <section className="paper-section" aria-labelledby="faq-title">
+        <div className="paper-wrap">
+          <div className="sec-head">
+            <p className="paper-meta">Questions</p>
+            <h2 id="faq-title">Short <em>answers.</em></h2>
           </div>
+          <TypingFaq items={homeFaq} />
         </div>
       </section>
 
-      <section className="paper-section" id="invite">
+      <section className="paper-section" id="invite" aria-labelledby="invite-title">
         <div className="paper-wrap"><InviteFriend /></div>
       </section>
 

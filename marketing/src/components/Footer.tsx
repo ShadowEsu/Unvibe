@@ -8,15 +8,16 @@ import { Logo } from "@/components/Logo";
 
 const product = [
   ["Product", "/#product"],
-  ["Resources", "/resources"],
-  ["Pricing", "/pricing"],
   ["Download", "/beta"],
-  ["Change Log", "/releases"],
+  ["Pricing", "/pricing"],
+  ["Change log", "/releases"],
+  ["Install help", "/install-help"],
+  ["Resources", "/resources"],
 ];
 
 const company = [
   ["Founder", "/about"],
-  ["Growth", "/build"],
+  ["Building Unvibe", "/build"],
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
@@ -32,7 +33,7 @@ export function Footer() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-4 text-sm leading-relaxed">
-            Select code → Unvibe explains it beside your editor → save it, quiz yourself, keep ownership.
+            Select code in any app and Vibe explains it beside your editor, at your level. Free for Mac and Windows.
           </p>
           <SocialFollowLinks includeMail />
         </div>
@@ -46,8 +47,9 @@ export function Footer() {
       ) : null}
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
+        {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
         <p className="paper-footer__status">
-          <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>{"⌘"}K</kbd> to search, or select any text and press <kbd>{"⌘"}U</kbd>
+          <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
         </p>
       </div>
       <div className="paper-footer__word" aria-hidden="true">unvibe</div>

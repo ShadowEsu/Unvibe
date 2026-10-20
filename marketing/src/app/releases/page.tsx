@@ -22,10 +22,10 @@ export default async function ReleasesPage() {
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Change log</p>
-          <h1>What shipped.</h1>
+          <h1>What <em>shipped.</em></h1>
           <p>
             {latest
-              ? `${latest.name.replace(/[—–]/g, ",")} is the newest GitHub build. Download the beta below.`
+              ? `${latest.name.replace(/[—–]/g, ",")} is the newest build on GitHub.`
               : error
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}

@@ -1,1 +1,459 @@
-/* pages lane styles. Loaded after vibe.css, so rules here win ties. */
+/* pages lane styles. Loaded after vibe.css, so rules here win ties.
+   Secondary pages: beta, pricing, resources, releases, kit, install-help, about, rewards,
+   legal pages, 404, /app, /waitlist, /activate, /founder. */
+
+/* ── Shared contrast fix ───────────────────────────────────────────────────
+   The faint text token was #8a8478 (3.6:1 on the light surface). #6b665c is 5.6:1 on
+   the surface and 5.2:1 on surface-2. :not(.dark) keeps the dark value (4.9:1+) intact. */
+:root:not(.dark) {
+  --fg-faint: 107 102 92;
+}
+
+/* ── Nav clearance: the fixed .mnav bar is 4rem tall ─────────────────────── */
+
+/* Photo-band pages run the photo under the bar; the band copy already has 7rem of top room. */
+.beta-page,
+.paper-resources-page {
+  padding-top: 0;
+}
+
+.legal-page {
+  margin-top: calc(4rem + clamp(1.5rem, 5vw, 3.5rem));
+}
+
+.reward-page {
+  padding-top: 6rem;
+}
+
+.founder-page {
+  padding-top: 6rem;
+}
+
+.web-workspace {
+  padding-top: 5.25rem;
+}
+
+@media (min-width: 640px) {
+  .web-workspace {
+    padding-top: 6rem;
+  }
+}
+
+/* ── Photo bands: deliberate under the dark bar, readable at every width ── */
+
+:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
+  background: linear-gradient(
+    180deg,
+    rgb(16 13 20 / 0.92) 0,
+    rgb(16 13 20 / 0.5) 7rem,
+    rgb(18 12 32 / 0.38) 45%,
+    rgb(18 12 32 / 0.82) 100%
+  );
+}
+
+/* vibe.css paints every .paper-meta #3c2fb8 !important (1.2:1 on the veil). Higher specificity wins. */
+:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
+  color: var(--hero-type) !important;
+  font-size: clamp(1.2rem, 2vw, 1.45rem) !important;
+}
+
+:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band__copy > p {
+  opacity: 1;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.45);
+}
+
+:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band h1 {
+  overflow-wrap: break-word;
+}
+
+/* ── Section heads that sit on the dusk field: homepage pill + reading box ── */
+
+.beta-page .paper-center > .paper-meta,
+.pricing-plans__intro > .paper-meta,
+.resources-section__head > .paper-meta {
+  display: inline-block;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+}
+
+.pricing-plans__intro > p:not(.paper-meta),
+.resources-section__head > .paper-lead,
+.paper-pricing .pricing-disclosure {
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.92);
+  color: #26241f;
+}
+
+.paper-pricing .pricing-disclosure {
+  max-width: 46rem;
+  margin: 2rem auto 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+/* ── Beta ───────────────────────────────────────────────────────────────── */
+
+/* Beats vibe.css `.paper-section h2 { font-size … !important }` inside the steps card. */
+.beta-page .beta-page__steps h2 {
+  font-size: clamp(1.7rem, 3.2vw, 2.3rem) !important;
+}
+
+.beta-page .paper-beta__os-meta {
+  color: #5c5a57;
+}
+
+.beta-page__trust-item {
+  border: 1.5px solid var(--v-ink);
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--v-ink);
+  color: var(--v-ink);
+}
+
+.beta-page__trust-item svg {
+  color: var(--v-ink);
+}
+
+.beta-page__trust-item a.paper-text-link {
+  color: var(--v-ink);
+}
+
+/* ── Pricing: the homepage card, not glass ──────────────────────────────── */
+
+.paper-pricing .marketing-plan-card {
+  --ink: var(--v-ink);
+  --ink-muted: #3b3b3b;
+  border: 1.5px solid var(--v-ink);
+  border-radius: var(--v-radius);
+  background: var(--v-card);
+  box-shadow: var(--v-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--v-ink);
+  transition: transform 260ms var(--v-press), box-shadow 260ms var(--v-press);
+}
+
+.paper-pricing .marketing-plan-card.featured {
+  border: 1.5px solid var(--v-ink);
+  background: var(--v-lime);
+  box-shadow: var(--v-shadow);
+}
+
+.paper-pricing .marketing-plan-card:hover {
+  border-color: var(--v-ink);
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0 var(--v-ink);
+}
+
+.paper-pricing .marketing-plan-card .plan-badge {
+  color: var(--v-ink);
+}
+
+@media (min-width: 1120px) {
+  .paper-pricing .marketing-plan-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.pricing-plans .pricing-toggle {
+  border: 1.5px solid var(--v-ink);
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--v-ink);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.pricing-plans .pricing-toggle button {
+  min-height: 2.75rem;
+  color: var(--v-ink);
+}
+
+.pricing-plans .pricing-toggle button.is-on {
+  color: #fff;
+}
+
+.pricing-plans .pricing-toggle__thumb {
+  background: var(--v-ink);
+}
+
+.paper-pricing .pricing-headline {
+  font-weight: 750;
+}
+
+.paper-pricing .pricing-headline__next {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+html[data-performance="lite"] .paper-pricing .pricing-headline {
+  opacity: 1;
+  animation: none;
+}
+
+/* ── Releases ───────────────────────────────────────────────────────────── */
+
+/* vibe.css sets .paper-meta to 1.55rem !important; a log category label needs less. */
+.paper-log .paper-meta {
+  font-size: 1.05rem !important;
+}
+
+/* ── Resources ──────────────────────────────────────────────────────────── */
+
+.resources-filters {
+  border: 1.5px solid var(--v-ink);
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--v-ink);
+}
+
+.resources-filter-pill,
+.resources-depth-tab {
+  min-height: 2.75rem;
+  color: var(--v-ink);
+  font-weight: 650;
+}
+
+.resources-filter-pill:hover {
+  color: var(--v-ink);
+  background: rgb(214 244 90 / 0.45);
+}
+
+.resources-filter-pill.is-active,
+.resources-depth-tab.is-active {
+  border-color: var(--v-ink);
+  background: var(--v-ink);
+  color: #fff;
+  box-shadow: none;
+}
+
+.resources-depth-tabs {
+  border-bottom-color: #e4ded1;
+}
+
+.resources-depth-tab {
+  border: 1.5px solid var(--v-ink);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.resources-depth-tab:hover {
+  border-color: var(--v-ink);
+  background: var(--v-lime);
+  color: var(--v-ink);
+}
+
+.resources-explanation-bubble,
+.resources-arch-node,
+.resources-swatch {
+  border: 1.5px solid var(--v-ink);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--v-ink);
+}
+
+.resources-arch-node--shield {
+  border-color: var(--v-ink);
+  background: #efeaff;
+}
+
+.resources-arch-node--island {
+  border-color: var(--v-ink);
+  background: #e6f4ff;
+}
+
+.resources-swatch:hover {
+  border-color: var(--v-ink);
+  box-shadow: 3px 3px 0 var(--v-ink);
+}
+
+.resources-swatch__circle {
+  border: 1.5px solid var(--v-ink);
+}
+
+.resources-grid--3 {
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+}
+
+.resources-grid--2 {
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+}
+
+.resources-display-demo {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: var(--v-ink);
+}
+
+.resources-serif-demo {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+}
+
+.resources-cta-copy h3 {
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+@media (max-width: 520px) {
+  .resources-cta-banner {
+    padding: 1.6rem 1.3rem;
+  }
+
+  .resources-depth-box,
+  .resources-architecture {
+    padding: 1.2rem;
+  }
+}
+
+/* ── Kit and install help: the head gets the same reading card as the body ── */
+
+.kit__head,
+.fos-page__head {
+  --ink: var(--v-ink);
+  padding: clamp(1.2rem, 4vw, 2rem);
+  border: 1.5px solid var(--v-ink);
+  border-radius: var(--v-radius);
+  background: var(--v-card);
+  box-shadow: var(--v-shadow);
+  color: var(--v-ink);
+}
+
+.kit__toc a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.fos-page .fos-page__help a {
+  text-decoration: underline;
+  text-decoration-color: var(--v-lime);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+
+/* ── About ──────────────────────────────────────────────────────────────── */
+
+.founder-about__btn {
+  min-height: 2.75rem;
+}
+
+/* ── 404 ────────────────────────────────────────────────────────────────── */
+
+/* vibe.css `.paper-glass p` (#2e2c27) out-ranks .nf__code and put dark text on the dark strip. */
+.nf__card .nf__code {
+  color: #e9e4f4;
+  overflow-wrap: anywhere;
+}
+
+.nf__btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  border: 1.5px solid var(--v-ink);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--v-ink);
+  font-weight: 750;
+  box-shadow: 3px 3px 0 var(--v-ink);
+}
+
+.nf__btn--ink {
+  border-color: var(--v-ink);
+  background: var(--v-ink);
+  color: #fff;
+}
+
+/* ── /app web workspace (dark by design) ────────────────────────────────── */
+
+/* The base h1/h2 colour is ink, which vanished on the dark workspace and sign-in dialog. */
+.web-workspace :is(h1, h2) {
+  color: #f7f4ff;
+}
+
+.web-workspace :is(input, textarea)::placeholder {
+  color: #9a90a8;
+  opacity: 1;
+}
+
+/* ── /waitlist (private founder view) ───────────────────────────────────── */
+
+/* globals.css later turns .admin-shell dark with #f8f4ff text, which then sat on the light
+   login card (1.05:1). Back to the light tokens the admin rules were written for. */
+.admin-shell {
+  padding-top: 4rem;
+  background: rgb(243 238 248 / 0.94);
+  color: #141414;
+}
+
+.admin-shell .admin-login {
+  border: 1.5px solid var(--v-ink);
+  border-radius: var(--v-radius);
+  background: var(--v-card);
+  box-shadow: var(--v-shadow);
+  color: #141414;
+}
+
+.admin-shell .admin-login form button {
+  background: var(--v-ink);
+  color: #fff;
+}
+
+/* ── /activate: solid card over the blurred photo ───────────────────────── */
+
+.activate-root .activate-card {
+  --ink: var(--v-ink);
+  --ink-muted: #3b3b3b;
+  border: 1.5px solid var(--v-ink);
+  border-radius: var(--v-radius);
+  background: var(--v-card);
+  box-shadow: var(--v-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--v-ink);
+}
+
+/* ── Focus ──────────────────────────────────────────────────────────────── */
+
+.resources-filter-pill:focus-visible,
+.resources-depth-tab:focus-visible,
+.resources-swatch:focus-visible,
+.pricing-plans .pricing-toggle button:focus-visible,
+.kit__toc a:focus-visible,
+.kit__btn:focus-visible,
+.nf__btn:focus-visible,
+.founder-about__btn:focus-visible,
+.beta-page__trust-item a:focus-visible,
+.fos-page__help a:focus-visible {
+  outline: 3px solid var(--v-ink);
+  outline-offset: 2px;
+}
+
+/* ── Motion: no hover lifts for reduced motion or the lite experience ──── */
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-pricing .marketing-plan-card,
+  .paper-pricing .marketing-plan-card:hover,
+  :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
+  .resources-card:hover,
+  .resources-swatch:hover,
+  .founder-about__btn:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+html[data-performance="lite"] .paper-pricing .marketing-plan-card,
+html[data-performance="lite"] .paper-pricing .marketing-plan-card:hover,
+html[data-performance="lite"] :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
+html[data-performance="lite"] .resources-card:hover,
+html[data-performance="lite"] .resources-swatch:hover,
+html[data-performance="lite"] .founder-about__btn:hover {
+  transform: none;
+  transition: none;
+}

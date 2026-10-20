@@ -38,9 +38,13 @@ async function a11y(page, label) {
   try {
     // evaluate() goes through the debugger, so the pages' script-src 'self' CSP does not block it.
     if (!(await page.evaluate(() => Boolean(window.axe)))) await page.evaluate(axeSource);
-    const ids = await page.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations
-      .filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id));
-    if (ids.length) log(false, `a11y ${label}`, ids.join(', '));
+    const found = await page.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => ({ id: v.id, nodes: v.nodes.slice(0, 6).map((n) => ({ target: n.target.join(' '), html: n.html.slice(0, 160), why: n.failureSummary?.split('\n').slice(1, 2).join(' ').trim() })) })));
+    if (found.length) {
+      log(false, `a11y ${label}`, found.map((v) => v.id).join(', '));
+      for (const v of found) for (const n of v.nodes) report.push(`      ${v.id}: ${n.target} | ${n.why ?? ''} | ${n.html}`);
+    }
   } catch (e) { report.push(`NOTE  a11y ${label}: not checked (${e.message.split('\n')[0]})`); }
   a11yMs += Date.now() - start;
 }

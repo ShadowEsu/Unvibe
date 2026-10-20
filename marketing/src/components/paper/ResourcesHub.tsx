@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCopyToast } from "@/components/paper/CopyToast";
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { track } from "@/lib/analytics";
+import { SHORTCUTS } from "@/lib/shortcuts";
 
 type DepthLevel = "new" | "beginner" | "intermediate" | "advanced" | "expert";
 
@@ -57,7 +58,7 @@ const DEPTH_DATA: Record<
   },
   expert: {
     name: "Expert",
-    badge: "Depth 5 · Internals",
+    badge: "Depth 5 · Internals · Pro",
     description: "V8 engine optimizations, allocation profiles, and runtime memory layout.",
     targetAudience: "Systems engineers, runtime specialists, and compiler enthusiasts.",
     sampleExplanation:
@@ -66,9 +67,9 @@ const DEPTH_DATA: Record<
   },
 };
 
-const SHORTCUTS = [
-  { mac: "Control U", win: "Ctrl Alt U", action: "Explain the selected code", context: "Any app. You can change this shortcut in Settings" },
-  { mac: "\u2318 U", win: "Ctrl U", action: "Explain the selected code", context: "Cursor and VS Code, after installing the Unvibe editor bridge" },
+const SHORTCUT_ROWS = [
+  { mac: SHORTCUTS.mac.anywhere, win: SHORTCUTS.windows.anywhere, action: "Explain the selected code", context: "Any app. You can change this shortcut in Settings" },
+  { mac: SHORTCUTS.mac.editor, win: SHORTCUTS.windows.editor, action: "Explain the selected code", context: "Cursor and VS Code, after installing the Unvibe editor bridge" },
   { mac: "Escape", win: "Escape", action: "Collapse the explanation card", context: "While a card is focused" },
 ];
 
@@ -95,7 +96,7 @@ export function ResourcesHub() {
   return (
     <div className="resources-hub">
       {/* Category Filter Bar */}
-      <div className="resources-filters" role="tablist" aria-label="Resource Categories">
+      <div className="resources-filters" role="group" aria-label="Show resources">
         {[
           { id: "all", label: "All" },
           { id: "quickstart", label: "Quickstart" },
@@ -107,8 +108,7 @@ export function ResourcesHub() {
           <button
             key={tab.id}
             type="button"
-            role="tab"
-            aria-selected={activeCategory === tab.id}
+            aria-pressed={activeCategory === tab.id}
             className={`resources-filter-pill ${activeCategory === tab.id ? "is-active" : ""}`}
             onClick={() => {
               setActiveCategory(tab.id);
@@ -125,43 +125,43 @@ export function ResourcesHub() {
         <section className="resources-section" id="quickstart">
           <div className="resources-section__head">
             <span className="paper-meta">Quickstart</span>
-            <h2>Get started in about a minute</h2>
+            <h2>Get started in <em>about a minute.</em></h2>
             <p className="paper-lead">
-              Unvibe is a desktop overlay that sits beside Cursor, VS Code, or any app where you can select code. It reads only what you select and never touches your git repo.
+              Unvibe is a desktop app that opens a panel beside Cursor, VS Code, or any app where you can select code. It reads only what you select and never uploads your repo.
             </p>
           </div>
 
           <div className="resources-grid resources-grid--3">
             <div className="resources-card paper-glass">
               <div className="resources-card__step">01</div>
-              <h3>Download & Launch</h3>
+              <h3>Download and open</h3>
               <p>
-                Grab the .dmg for Apple silicon Macs or the portable .exe for Windows x64. Open the app and it waits in your menu bar or tray.
+                Get the .dmg for Mac (Apple silicon or Intel) or the portable .exe for Windows x64. Open it and Unvibe waits in your menu bar or tray.
               </p>
               <div className="resources-card__code">
-                <code>Mac: Apple silicon .dmg &middot; Windows: x64 portable .exe</code>
+                <code>Mac: .dmg &middot; Windows: x64 portable .exe</code>
               </div>
             </div>
 
             <div className="resources-card paper-glass">
               <div className="resources-card__step">02</div>
-              <h3>Highlight Code in Cursor</h3>
+              <h3>Select code anywhere</h3>
               <p>
-                Open your favorite editor. Highlight any complex function, unfamiliar AI generation, or gnarly git diff.
+                In your editor, terminal or browser, select a function you did not write or an AI change you do not fully trust.
               </p>
               <div className="resources-card__code">
-                <code>Control+U on Mac &middot; Ctrl+Alt+U on Windows</code>
+                <code>{SHORTCUTS.mac.anywhere} on Mac &middot; {SHORTCUTS.windows.anywhere} on Windows</code>
               </div>
             </div>
 
             <div className="resources-card paper-glass">
               <div className="resources-card__step">03</div>
-              <h3>Understand & Retain</h3>
+              <h3>Understand and keep it</h3>
               <p>
-                The floating Island displays a clean, syntax-highlighted breakdown. Click <strong>Test me</strong> to check what stuck.
+                A panel beside your editor explains the code at the depth you pick. Ask a follow-up, or click <strong>Test me</strong> to check what stuck.
               </p>
               <div className="resources-card__code">
-                <code>Saved on your device in Study</code>
+                <code>Lessons save to your Library, on your computer</code>
               </div>
             </div>
           </div>
@@ -173,22 +173,21 @@ export function ResourcesHub() {
         <section className="resources-section" id="depths">
           <div className="resources-section__head">
             <span className="paper-meta">Explanation depths</span>
-            <h2>Five explanation depths</h2>
+            <h2>Five explanation <em>depths.</em></h2>
             <p className="paper-lead">
-              The same code, explained five ways. Pick the depth that matches what you already know. The sample below is written by hand to show the range. It is not live model output.
+              The same code, explained five ways. Pick the depth that matches what you already know. New through Advanced are free; Expert is Pro. The sample below is written by hand to show the range. It is not live model output.
             </p>
           </div>
 
           {/* Interactive Depth Playground */}
           <div className="resources-depth-box paper-glass">
             {/* Depth Selector Pills */}
-            <div className="resources-depth-tabs" role="tablist">
+            <div className="resources-depth-tabs" role="group" aria-label="Explanation depth">
               {(Object.keys(DEPTH_DATA) as DepthLevel[]).map((level) => (
                 <button
                   key={level}
                   type="button"
-                  role="tab"
-                  aria-selected={selectedDepth === level}
+                  aria-pressed={selectedDepth === level}
                   className={`resources-depth-tab ${selectedDepth === level ? "is-active" : ""}`}
                   onClick={() => {
                     setSelectedDepth(level);
@@ -271,7 +270,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="privacy">
           <div className="resources-section__head">
             <span className="paper-meta">What leaves your machine</span>
-            <h2>How your code is handled</h2>
+            <h2>How your code is <em>handled.</em></h2>
             <p className="paper-lead">
               Unvibe is not a local-only tool. Your selected code is sent to a cloud model to write the explanation. A secret scanner runs on your machine first, and anything that looks like a key or token is blocked or held for your confirmation.
             </p>
@@ -281,8 +280,8 @@ export function ResourcesHub() {
             <div className="resources-arch-flow">
               <div className="resources-arch-node">
                 <div className="resources-arch-badge">Step 1 · Editor</div>
-                <h3>Selected Code</h3>
-                <p>Highlighted selection or uncommitted git diff</p>
+                <h3>Selected code</h3>
+                <p>The code you select, or a git diff with Pro</p>
               </div>
 
               <div className="resources-arch-arrow" aria-hidden="true">→</div>
@@ -306,8 +305,8 @@ export function ResourcesHub() {
 
               <div className="resources-arch-node resources-arch-node--island">
                 <div className="resources-arch-badge">Step 4 · Desktop</div>
-                <h3>Floating Island</h3>
-                <p>Instant syntax-highlighted review card & comprehension quiz</p>
+                <h3>Panel beside your editor</h3>
+                <p>The explanation, follow-ups and a Test me question</p>
               </div>
             </div>
 
@@ -334,7 +333,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="shortcuts">
           <div className="resources-section__head">
             <span className="paper-meta">Shortcuts</span>
-            <h2>Keyboard shortcuts</h2>
+            <h2>Keyboard <em>shortcuts.</em></h2>
             <p className="paper-lead">
               One shortcut starts a review. Everything after that works from the keyboard too.
             </p>
@@ -347,7 +346,7 @@ export function ResourcesHub() {
               <span>Action</span>
               <span>Context</span>
             </div>
-            {SHORTCUTS.map((s, idx) => (
+            {SHORTCUT_ROWS.map((s, idx) => (
               <div key={idx} className="resources-table-row">
                 <span className="resources-key-pill">{s.mac}</span>
                 <span className="resources-key-pill">{s.win}</span>
@@ -359,12 +358,12 @@ export function ResourcesHub() {
         </section>
       )}
 
-      {/* SECTION 5: Brand & Brand */}
+      {/* SECTION 5: Brand */}
       {(activeCategory === "all" || activeCategory === "brand") && (
         <section className="resources-section" id="brand">
           <div className="resources-section__head">
             <span className="paper-meta">Brand</span>
-            <h2>Brand colors and type</h2>
+            <h2>Brand colors and <em>type.</em></h2>
             <p className="paper-lead">
               Writing about Unvibe? Copy the colors below and use the fonts as listed.
             </p>
@@ -374,14 +373,16 @@ export function ResourcesHub() {
             {/* Color Palette */}
             <div className="resources-card paper-glass">
               <h3>Colors</h3>
-              <p>The colors used on this site and in the app.</p>
+              <p>The colors used on this site.</p>
               <div className="resources-swatches">
                 {[
-                  { name: "Ink", hex: "#12110F" },
+                  { name: "Ink", hex: "#141414" },
+                  { name: "Lime", hex: "#D6F45A" },
+                  { name: "Sky", hex: "#9FD8FF" },
+                  { name: "Sun", hex: "#FFD84D" },
+                  { name: "Lilac", hex: "#B8A6FF" },
+                  { name: "Coral", hex: "#FF9A76" },
                   { name: "Paper", hex: "#F3EEF8" },
-                  { name: "Hero white", hex: "#F7F4EE" },
-                  { name: "Violet", hex: "#6F45D2" },
-                  { name: "Deep violet", hex: "#3D2080" },
                 ].map((color) => (
                   <button
                     key={color.hex}
@@ -403,16 +404,20 @@ export function ResourcesHub() {
               <h3>Type</h3>
               <div className="resources-typography-guide">
                 <div className="resources-type-sample">
-                  <span className="resources-type-label">Editorial Serif</span>
-                  <p className="resources-serif-demo">Newsreader Italic. Calm and editorial.</p>
+                  <span className="resources-type-label">Headings</span>
+                  <p className="resources-display-demo">Bricolage Grotesque, bold and tight.</p>
                 </div>
                 <div className="resources-type-sample">
-                  <span className="resources-type-label">Monospace Code</span>
+                  <span className="resources-type-label">Accents</span>
+                  <p className="resources-serif-demo">Instrument Serif Italic, for the one word that matters.</p>
+                </div>
+                <div className="resources-type-sample">
+                  <span className="resources-type-label">Code</span>
                   <p className="resources-mono-demo">JetBrains Mono for code and shortcuts.</p>
                 </div>
                 <div className="resources-type-sample">
-                  <span className="resources-type-label">System UI</span>
-                  <p className="resources-sans-demo">Inter for interface text and small labels.</p>
+                  <span className="resources-type-label">Body</span>
+                  <p className="resources-sans-demo">Inter for body text and small labels.</p>
                 </div>
               </div>
             </div>
@@ -423,9 +428,9 @@ export function ResourcesHub() {
       {/* Bottom Download CTA Bar */}
       <section className="resources-cta-banner paper-glass">
         <div className="resources-cta-copy">
-          <span className="paper-meta">Free during the beta</span>
+          <span className="paper-meta">Free for Mac and Windows</span>
           <h3>Ready to understand the code you ship?</h3>
-          <p>Download Unvibe for Mac (Apple silicon) or Windows (x64) and run your first review.</p>
+          <p>Download Unvibe for Mac or Windows (x64) and explain your first selection.</p>
         </div>
         <div className="resources-cta-actions">
           <DownloadRow href="/beta" />

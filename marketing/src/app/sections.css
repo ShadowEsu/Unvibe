@@ -1,1 +1,134 @@
 /* sections lane styles. Loaded after vibe.css, so rules here win ties. */
+
+/* ── Shared section head: eyebrow chip, display h2, short lead chip ── */
+.sec-head { display: grid; justify-items: center; gap: 0.85rem; max-width: 46rem; margin: 0 auto clamp(2rem, 4vw, 3rem); text-align: center; }
+.sec-head > * { margin: 0; }
+.sec-head h2 { text-wrap: balance; }
+/* Paper-white chips keep the forced vibe.css text colours readable on the dusk photo in both themes. */
+.sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: rgb(255 255 255 / 0.92); }
+.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: rgb(255 255 255 / 0.92); text-wrap: pretty; }
+
+/* ── Try it: editor on the left, Vibe panel on the right ── */
+.try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; border: 1.5px solid var(--v-ink); border-radius: 24px; box-shadow: 6px 6px 0 var(--v-ink); overflow: hidden; }
+.try__editor { background: #151514; }
+.try__editor textarea { flex: 1; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); tab-size: 2; }
+.try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
+.try__foot { display: grid; gap: 0.55rem; padding: 0.9rem 1rem 1rem; border-top: 1px solid #2c2c29; }
+.try__foot .try__go { margin: 0; padding: 0 1.2rem; }
+.try__foot .try__fine { margin: 0; color: #c9c5bc; }
+.try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+.try__panel { background: #fff; color: #141414; min-height: 26rem; }
+.try__head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; border-bottom: 1.5px solid #ece8de; }
+.try__head p { display: grid; margin: 0; line-height: 1.2; }
+.try__head b { font: 800 1.1rem var(--font-display); letter-spacing: -0.02em; }
+.try__head span { color: #55524b; font: 500 0.85rem var(--font-mono); }
+
+/* Overrides vibe.css `.try__levels` / `.try__levels button` (written for the old dark input card). */
+.try__levels { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.8rem 1.1rem; border-bottom: 1.5px solid #ece8de; background: #faf8f3; }
+.try__levels button { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.75rem; padding: 0 0.95rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font: 650 0.92rem var(--font-sans); cursor: pointer; transition: background 160ms ease, transform 160ms ease; }
+.try__levels button:hover:not(:disabled) { transform: translateY(-1px); }
+.try__levels button[aria-pressed="true"] { background: var(--v-lime); box-shadow: 0 2px 0 var(--v-ink); }
+.try__levels button:disabled { cursor: wait; opacity: 0.6; }
+.try__levels button:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
+.try__levels small { padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--v-ink); color: #fff; font: 700 0.68rem var(--font-mono); letter-spacing: 0.02em; }
+
+.try__body { display: flex; flex: 1; }
+.try__state { display: grid; place-items: center; align-content: center; gap: 1rem; width: 100%; padding: 2rem 1.5rem; text-align: center; font-size: 1.08rem; line-height: 1.5; }
+.try__state p { max-width: 24rem; margin: 0; }
+.try__state--thinking p { color: #3c2fb8; font: italic 400 1.5rem var(--font-serif); animation: vWrite 600ms ease-out both; }
+.try__state--thinking > i { display: block; width: min(320px, 80%); height: 10px; border-radius: 6px; background: linear-gradient(90deg, #f1eee6, #e4dfd3, #f1eee6); background-size: 200% 100%; animation: vShimmer 1.3s linear infinite; }
+.try__state--thinking > i:nth-of-type(2) { width: min(260px, 65%); }
+.try__state--thinking > i:nth-of-type(3) { width: min(200px, 50%); }
+.try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; box-shadow: 0 3px 0 var(--v-ink); }
+.try__retry:focus-visible, .try__phone:focus-visible, .try .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
+.try__after p { margin: 0 0 0.9rem; }
+
+/* Download buttons inside the always-light panel: fixed ink colours so they read in both themes. */
+.try .paper-join-row { justify-content: flex-start; }
+.try__state .paper-join-row { justify-content: center; }
+.try .paper-join { min-height: 2.9rem; border: 1.5px solid #141414; border-radius: 12px; box-shadow: 0 3px 0 #141414; font-weight: 700; }
+.try .paper-join--mac { background: var(--v-lime); color: #141414; }
+.try .paper-join--win { background: #141414; color: #fff; }
+.try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: 12px; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-display); text-decoration: none; box-shadow: 0 3px 0 #141414; }
+
+.dark .try__editor, .dark .try__panel { border-color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
+
+@media (max-width: 520px) {
+  .try__editor textarea { min-height: 12rem; font-size: 0.88rem; }
+  .try__panel { min-height: 22rem; }
+  .try__levels { padding-inline: 0.8rem; }
+  .try__levels button { padding: 0 0.75rem; }
+  .try__answer { padding: 1.2rem 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .try__state--thinking p, .try__state--thinking > i { animation: none; }
+  .try__levels button { transition: none; }
+  .try__levels button:hover:not(:disabled) { transform: none; }
+}
+html[data-performance="lite"] .try__state--thinking p,
+html[data-performance="lite"] .try__state--thinking > i,
+html[data-performance="lite"] .try__bob { animation: none; }
+
+/* ── Install card (BetaInstall) ── */
+.paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
+.paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
+/* vibe.css paints these white without a dark rule, so keep their text ink in dark mode. */
+.dark .paper-beta--page .paper-beta__os button,
+.dark .paper-beta--page .paper-beta__step { color: #141414; }
+/* vibe.css forces `color: var(--v-ink) !important` on the title; re-point the variable instead of fighting it. */
+.dark .paper-beta__title { --v-ink: #f2eef9; }
+.dark .paper-beta__update { color: #d9d2e6; }
+.dark .paper-beta__update b, .dark .paper-beta__update a { color: #f2eef9; }
+
+/* ── Tester quotes ── */
+.quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: clamp(1.2rem, 3vw, 2rem); max-width: 1000px; margin-inline: auto; }
+.quote { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; margin: 0; padding: clamp(1.5rem, 3vw, 2.2rem); border: 1.5px solid var(--v-ink); border-radius: 24px; background: #fff; color: #141414; box-shadow: 6px 6px 0 var(--v-ink); }
+.quote--lime { background: var(--v-lime); }
+.quote blockquote { margin: 0; }
+.quote blockquote::before { content: "\201C"; display: block; height: 2.2rem; color: #3c2fb8; font: 800 4rem/1 var(--font-display); }
+.quote blockquote p { margin: 0; font: italic 400 clamp(1.3rem, 2.3vw, 1.65rem)/1.32 var(--font-serif); }
+.quote figcaption { display: flex; align-items: center; gap: 0.8rem; font-size: 0.95rem; line-height: 1.3; }
+.quote figcaption b { display: block; font: 800 1.05rem var(--font-display); letter-spacing: -0.02em; }
+.quote__avatar { display: grid; flex: none; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: #141414; color: #fff; font: 800 0.9rem var(--font-display); }
+.dark .quote { border-color: #f2eef9; background: #1f1729; color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
+.dark .quote blockquote::before { color: #c4b5fd; }
+.dark .quote .quote__avatar { background: #f2eef9; color: #141414; }
+.dark .quote--lime { background: var(--v-lime); color: #141414; }
+.dark .quote--lime blockquote::before { color: #3c2fb8; }
+.dark .quote--lime .quote__avatar { background: #141414; color: #fff; }
+
+/* ── Startup programs ── */
+.paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
+.paper-backing .paper-partners { max-width: 1000px; margin: 0 auto; }
+.claude-startups__tag { color: #141414; }
+.claude-startups__copy a { color: #141414; font-weight: 700; }
+.paper-partners__viewport:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; border-radius: 12px; }
+.dark .claude-startups { border-color: #f2eef9; background: #1f1729; box-shadow: 5px 5px 0 #f2eef9; }
+.dark .claude-startups__title { color: #f2eef9; }
+.dark .claude-startups__copy, .dark .claude-startups__copy a { color: #e6e0f0; }
+.dark .paper-partners { border-color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
+
+/* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
+.paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }
+.paper-faq details { padding: 1.1rem 1.3rem; }
+.paper-faq summary { display: flex; align-items: center; min-height: 2.75rem; font-size: clamp(1.2rem, 2.4vw, 1.6rem); text-shadow: none; }
+.paper-faq summary:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; }
+.dark .paper-faq p { color: #e6e0f0; }
+.dark .paper-faq summary:focus-visible { outline-color: #c4b5fd; }
+
+/* ── Invite ── */
+.invite__copy { display: grid; justify-items: center; gap: 0.7rem; text-align: center; }
+.invite__copy > * { margin: 0; }
+.invite__fine { color: #d8d4cb; font-size: 0.92rem; }
+.invite__form { flex-wrap: wrap; }
+.invite__label { flex-basis: 100%; color: #fff; font: 700 0.95rem var(--font-sans); text-align: left; }
+.invite__result code { max-width: 100%; }
+.invite__actions button { min-width: 2.75rem; }
+.dark .invite { border-color: #f2eef9; }
+
+/* ── Footer ── */
+.paper-footer nav { gap: 0; }
+.paper-footer nav a { display: flex; align-items: center; min-height: 2.75rem; }
+.paper-footer nav a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }

@@ -5,7 +5,7 @@ import { PRICING } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year. Lifetime is $${PRICING.proLifetime} once. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
+  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
 };
 
 export default function PricingPage() {
@@ -15,6 +15,7 @@ export default function PricingPage() {
         <img src="/hero/golden-gate.png" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
+          <p className="paper-meta">Pricing</p>
           <PricingHeadline />
         </div>
       </header>

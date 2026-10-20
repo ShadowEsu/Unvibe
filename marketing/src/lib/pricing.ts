@@ -5,7 +5,6 @@
 export const PRICING = {
   proMonthly: 9,
   proAnnual: 81,
-  proLifetime: 80,
   teamsSeatMonthly: 8,
   teamsSeatAnnual: 72,
   annualDiscountPercent: 25,

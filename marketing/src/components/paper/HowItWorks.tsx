@@ -49,8 +49,8 @@ const PAGES: readonly FlexAccordionItem[] = [
     id: "library",
     label: "Library",
     title: "Library",
-    body: "Every explanation you save stays on your computer, with where it came from and whether the code has changed since.",
-    image: appShot("library", "The Unvibe Library listing a saved Debouncing lesson"),
+    body: "Saved explanations, their source and whether the code has changed since. Shown: Unvibe 0.1.37 with sample lessons, from the product screenshot collection.",
+    image: { src: "/press/app/03-library.jpg", width: 2000, height: 1281, alt: "Unvibe 0.1.37 Library with sample lessons and Current or Review freshness labels" },
   },
   {
     id: "briefs",
@@ -108,7 +108,7 @@ export function HowItWorks() {
             <h2 id="pages-title" className="mt-3">Where it <em>sticks.</em></h2>
           </div>
           <FlexAccordion items={PAGES} shape="wide" label="Pages in the Unvibe app" />
-          <p className="hiw__note">Screenshots from Unvibe {demo.version} on a {demo.platform}, taken during the recorded session above.</p>
+          <p className="hiw__note">Recorded on a {demo.platform} with Unvibe {demo.version}, except Library: Unvibe 0.1.37 with sample lessons.</p>
         </div>
       </section>
     </>

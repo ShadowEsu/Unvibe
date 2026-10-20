@@ -1,11 +1,12 @@
+import { BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
+import { SHORTCUTS } from "@/lib/shortcuts";
 
 /**
- * FAQ content.
- *
- * Answers match the product as actually scoped:
- * Mac and Windows private beta; selection based (not screen OCR); no local-only mode yet;
- * no enterprise certifications; AI explanations can be wrong.
+ * FAQ content, kept short and true to the shipped app (app/src):
+ * free public beta for Mac and Windows; selection based (no screen recording or OCR);
+ * keys and tokens filtered on the device; no local-only mode yet; AI explanations can be wrong.
+ * No allowance numbers here until the live trial configuration is confirmed.
  */
 
 export interface FaqItem {
@@ -22,143 +23,139 @@ export const faqCategories: Record<FaqItem["category"], string> = {
   pricing: "Access & pricing",
 };
 
+const { mac, windows } = SHORTCUTS;
+
 export const faqItems: FaqItem[] = [
   {
     id: "what-is-it",
     question: "What is Unvibe?",
-    answer:
-      "Unvibe is a desktop overlay that explains AI-generated code in place. Select code in Cursor, VS Code or Terminal, press Control+U (Ctrl+Alt+U on Windows), and get a leveled explanation beside your editor. You can save it, follow up, and quiz yourself later. It is not a code generator and not another chat window.",
+    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, take a one-question Test me, and save the lesson to your Library.`,
     category: "product",
   },
   {
     id: "generator",
     question: "Is Unvibe a code generator?",
-    answer:
-      "No. Unvibe does not write features for you. AI agents can write the code; Unvibe helps you understand, review, and remember it.",
+    answer: "No. Your AI tools write the code. Unvibe helps you understand, review and remember it.",
     category: "product",
   },
   {
     id: "vs-cursor",
     question: "Why not just ask the agent to explain itself?",
     answer:
-      "Agent chat answers live in that conversation and disappear when you move on. Unvibe opens beside the code, offers five depths, and saves the explanation so you can reopen it, follow up, and take a Test me quiz later. Coding agents answer “can I build this?” Unvibe answers “will I still understand this in three weeks?”",
+      "Agent chat answers vanish when you move on. Unvibe opens beside the code, explains it at five depths, saves it to your Library and checks you got it with Test me.",
     category: "product",
   },
   {
     id: "editors",
-    question: "Which applications will it support?",
-    answer:
-      "The Mac app is designed to work beside tools you already use, including Cursor, VS Code, GitHub, Claude Code, Terminal, and other editors where you can select code. Some integrations are still planned or in development and are labeled that way on the site.",
+    question: "Which apps does it work with?",
+    answer: `Any app where you can select code: Cursor, VS Code, Xcode, Terminal, your browser and more. In Cursor and VS Code, an optional editor bridge adds ${mac.editor} (${windows.editor} on Windows).`,
     category: "platform",
   },
   {
     id: "which-shortcut",
     question: "Which shortcut do I press?",
-    answer:
-      "Anywhere, including Terminal, Chrome and Xcode, press Control+U on Mac or Ctrl+Alt+U on Windows. On Mac the first time, allow Unvibe in System Settings, Privacy and Security, Accessibility, so it can copy what you selected. In VS Code and Cursor you can also use ⌘U (Ctrl+U on Windows) after installing the tiny editor bridge from Settings, Integrations. You can change the shortcut in Settings.",
+    answer: `${mac.anywhere} on a Mac, ${windows.anywhere} on Windows, in any app. The first time on a Mac, allow Unvibe in System Settings › Privacy & Security › Accessibility so it can copy your selection. With the editor bridge (Settings › Integrations), ${mac.editor} or ${windows.editor} also works in VS Code and Cursor. You can change the shortcut in Settings.`,
     category: "product",
   },
   {
     id: "app-or-extension",
-    question: "Is Unvibe an extension or an app? How does it get context?",
+    question: "Is it an extension or an app?",
     answer:
-      "It is a desktop app for Mac and Windows that runs beside your editor, not an editor extension. When you press ⌘U it copies only the code you selected, plus the file name and language. For change briefs it reads the git diff of the project on your Mac. Secrets like API keys and .env values are filtered on your computer before anything is sent, and nothing runs in the background.",
+      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection, plus the file name and language. Briefs read the git changes of a project on your computer. Keys and tokens are filtered on your computer before anything is sent.",
     category: "product",
   },
   {
     id: "screen",
     question: "Does it read my entire screen?",
     answer:
-      "No. Unvibe activates intentionally. You choose what to review: a selection, file, diff, or project scope. It does not record your screen or use OCR to watch everything you do.",
+      "No. It never records your screen or uses OCR. It only sees the code you select, or the git changes you ask a Brief about.",
     category: "privacy",
   },
   {
     id: "sent",
-    question: "What code is sent to AI providers?",
+    question: "What gets sent to the AI?",
     answer:
-      "Only the filtered context you approve for an explanation: typically the selection plus limited surrounding context. Secrets are scanned on your machine first. Default exclusions cover .env files, keys, node_modules, and build output. Your whole repository is never uploaded.",
+      "Only what you ask about: the selected code with its file name and language (with Pro, some nearby code for context), or the git changes in a Brief. Keys and tokens are filtered on your computer first. Your repo is never uploaded.",
     category: "privacy",
   },
   {
     id: "levels",
     question: "Can I choose the explanation level?",
     answer:
-      "Yes. Depths include First time, Beginner, Intermediate, Advanced, and Expert. The same code can be explained with analogies, syntax walkthroughs, patterns, architecture, or implementation tradeoffs.",
+      "Yes. New, Beginner, Intermediate and Advanced are free. Expert is part of Pro. Switch any time and the same code is explained again at that depth.",
     category: "product",
   },
   {
     id: "repo",
     question: "Can it explain an entire repository?",
     answer:
-      "Yes at a summary level. You can move from a line to a function, file, folder, git change, or repository overview. Repo summaries describe modules, data flow, and concepts to learn. They do not dump the entire codebase to a model.",
+      "Not in one go. It explains what you select, and Briefs recap git changes: your working tree, staged files, the latest commit or a branch. The whole codebase is never sent.",
     category: "product",
   },
   {
     id: "local-mode",
     question: "Is there a local-only mode?",
     answer:
-      "Not yet. Explanations are generated by a cloud AI provider after on-device secret filtering and your consent. A fully offline local-model mode is not part of the current release.",
+      "Not yet. Explanations come from a cloud AI provider, after keys and tokens are filtered on your computer.",
     category: "privacy",
   },
   {
     id: "training",
-    question: "Will my private code be used for training?",
+    question: "Will my code be used for training?",
     answer:
-      "Unvibe does not build its own training dataset from your repositories. Before cloud beta access, we will name the configured provider and disclose its applicable retention and data-use terms; do not treat a secret filter as a guarantee that every sensitive value will be found.",
+      "Unvibe doesn't build a training dataset from your code. During the beta, explanations come from Google Gemini's paid API, which Google states isn't used to train its models. The secret filter catches common keys and tokens, but no filter can promise to find every sensitive value.",
     category: "privacy",
   },
   {
     id: "free",
     question: "Is Free actually usable?",
     answer:
-      "Yes. Free includes the main selected-code explanation experience, saved learning, and study features. No payment card or separate AI provider key is required.",
+      "Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library, within a usage allowance. No card and no API key.",
     category: "pricing",
   },
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Monthly Pro is $${PRICING.proMonthly} per month. Annual Pro is $${PRICING.proAnnual} per year, ${PRICING.annualDiscountPercent}% off. Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year.`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year.`,
     category: "pricing",
   },
   {
     id: "cancel",
     question: "What happens if I cancel?",
-    answer: "Paid access continues through the end of the billing period. Your account then returns to the Free plan, subject to the Free plan’s limits.",
+    answer: "Pro stays on until the end of the billing period, then your account moves back to Free.",
     category: "pricing",
   },
   {
     id: "beta",
-    question: "How do I get the product?",
+    question: "How do I get it?",
     answer:
-      "Download it from the Download page. The beta runs on Apple silicon Macs and Windows x64, with 30 free AI explanations and no card or API key. For partnerships, contact preston@unvibe.site.",
+      "Download it free from the Download page, for Mac (Apple silicon or Intel) or Windows 10 and 11 (x64). No card and no API key. On a phone? We can email you the link.",
     category: "pricing",
   },
   {
     id: "windows",
     question: "Is Windows supported?",
-    answer:
-      "Yes, in beta. Download the portable .exe from the Download page, or paste irm https://unvibe.site/install.ps1 | iex in PowerShell. It has the same 30 free explanations as Mac. The app is unsigned for now, so SmartScreen may warn. Select code in any app and press Ctrl+Alt+U to explain it.",
+    answer: `Yes. Download the .exe from the Download page, or paste ${BETA_WINDOWS_INSTALL_COMMAND} into PowerShell. The app isn't signed yet, so SmartScreen may warn the first time. Then select code in any app and press ${windows.anywhere}.`,
     category: "platform",
   },
   {
     id: "teams",
     question: "Can educators or teams use it?",
-    answer:
-      `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, with ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email preston@unvibe.site to request seats. For more than ${PRICING.teamsMaxSeats} seats, write to the same address about Enterprise.`,
+    answer: `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, for ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email preston@unvibe.site for seats, or about Enterprise if you need more than ${PRICING.teamsMaxSeats}.`,
     category: "platform",
   },
   {
     id: "delete",
     question: "Can I delete my account and data?",
     answer:
-      "Yes. You can disconnect repositories and delete your account and stored learning data. See Account deletion and Data controls for the process.",
+      "Yes. You can delete your account and the learning records synced to it. Data controls explains the process.",
     category: "privacy",
   },
   {
     id: "accuracy",
     question: "Can the explanations be wrong?",
     answer:
-      "Yes. AI output can be inaccurate even when it sounds confident. Unvibe cites the code it is describing so you can verify it, and comprehension checks help you notice when something does not add up.",
+      "Yes. AI can be wrong even when it sounds sure. Each explanation sits next to the code it describes so you can check it, and Test me helps you spot what doesn't add up.",
     category: "product",
   },
 ];

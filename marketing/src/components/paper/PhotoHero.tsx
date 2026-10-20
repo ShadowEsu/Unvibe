@@ -9,9 +9,6 @@ import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/be
 import { markRefUsed, storedRef } from "@/lib/referral";
 import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
-const LEAD = "Understand the code";
-const ACCENT = "AI writes for you.";
-
 /**
  * Phones can't run the desktop app, so the one action there is "email me the link".
  * It joins the existing list (waitlist_entries) and sends the welcome email with the download.
@@ -65,7 +62,6 @@ function EmailMeLink() {
 
   return (
     <div className="vhero__phone" id="email-link">
-      <p>Unvibe runs on your Mac or PC. We&apos;ll email you the download link.</p>
       <form className="vhero__email" onSubmit={submit}>
         <input
           type="email"
@@ -85,19 +81,31 @@ function EmailMeLink() {
         </button>
       </form>
       {error ? <p className="vhero__error" id="hero-email-error" role="alert">{error}</p> : null}
-      <p className="vhero__fine" id="hero-email-note">One email with the link. Unsubscribe any time.</p>
+      <p className="vhero__fine" id="hero-email-note">One email with the download link for your Mac or PC. Unsubscribe any time.</p>
     </div>
   );
 }
 
-/** Desktop: one download button for this computer, plus the other OS as a quiet link. */
+/** A way to see a real explanation before installing anything. */
+function TryInBrowser({ device }: { device: VisitorDevice }) {
+  return (
+    <a className="vhero__try" href="#try-it" onClick={() => track("hero_try_clicked", { device })}>
+      Or try it in your browser first
+    </a>
+  );
+}
+
+/** Desktop: one download button for this computer, the browser demo beside it, the other OS in the trust line. */
 function DownloadForThisComputer({ device }: { device: "mac" | "windows" }) {
   const other = device === "mac" ? "windows" : "mac";
   return (
     <div className="vhero__cta">
-      <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} />
-      <p className="vhero__fine">
-        Free · No card · No API key ·{" "}
+      <div className="vhero__actions">
+        <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} />
+        <TryInBrowser device={device} />
+      </div>
+      <p className="vhero__trust">
+        Free for Mac + Windows · No API key · Keys and tokens filtered on your computer ·{" "}
         <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => track("download_cta_clicked", { platform: other, surface: "hero_other_os" })}>
           {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
         </a>
@@ -106,7 +114,7 @@ function DownloadForThisComputer({ device }: { device: "mac" | "windows" }) {
   );
 }
 
-/** Homepage hero: one promise, one action for this device, a way to try it first. */
+/** Homepage hero: one promise, what happens when you use it, one action for this device. The recording follows. */
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
   const [device, setDevice] = useState<VisitorDevice>("mac");
@@ -125,22 +133,33 @@ export function PhotoHero() {
   const shortcut = device === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere;
 
   return (
-    <section className={ready ? "vhero is-ready" : "vhero"} aria-label="Unvibe">
+    <section className={ready ? "vhero is-ready" : "vhero"} aria-labelledby="hero-title">
       <div className="vhero__copy">
         <div className="vhero__vibe">
-          <Vibe size={96} />
-          <span className="vhero__bubble">{device === "phone" ? "psst, I live on your Mac or PC" : `psst, select code and press ${shortcut}`}</span>
+          <Vibe size={72} />
+          <span className="vhero__bubble">{device === "phone" ? "psst, I live on your Mac or PC" : "hi, I'm Vibe"}</span>
         </div>
-        <h1 aria-label={`${LEAD} ${ACCENT}`}>
-          <span className="vhero__lead">{LEAD}</span> <em>{ACCENT}</em>
+        <h1 id="hero-title">
+          <span className="vhero__lead">Understand the code</span> <em>your AI just wrote.</em>
         </h1>
         <p className="vhero__kicker">
-          Select code, press one shortcut. Vibe explains it beside your editor, then checks you got it.
+          {device === "phone" ? (
+            "Select code on your Mac or PC, press one shortcut, and Vibe explains it in plain English beside your editor."
+          ) : (
+            <>
+              Select code in any app, press <kbd>{shortcut}</kbd>, and Vibe explains it in plain English beside your editor.
+            </>
+          )}
         </p>
-        {device === "phone" ? <EmailMeLink /> : <DownloadForThisComputer device={device} />}
-        <a className="vhero__try" href="#try-it" onClick={() => track("hero_try_clicked", { device })}>
-          Or try it in your browser first
-        </a>
+        {device === "phone" ? (
+          <>
+            <EmailMeLink />
+            <p className="vhero__trust">Free for Mac + Windows · No API key · Keys and tokens filtered on your computer</p>
+            <TryInBrowser device={device} />
+          </>
+        ) : (
+          <DownloadForThisComputer device={device} />
+        )}
       </div>
     </section>
   );

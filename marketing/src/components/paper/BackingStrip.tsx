@@ -19,36 +19,41 @@ const sponsors = [
  */
 export function BackingStrip() {
   return (
-    <section id="backing" className="paper-section paper-backing" aria-label="Startup programs">
+    <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
       <div className="paper-wrap">
+        <div className="sec-head">
+          <p className="paper-meta">Behind Unvibe</p>
+          <h2 id="backing-title">Supported by <em>startup programs.</em></h2>
+        </div>
         <div className="claude-startups">
           <span className="claude-startups__tag">Startup program</span>
           <p className="claude-startups__title">Unvibe is in <em>Claude for Startups.</em></p>
           <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors">investors page</a>.</p>
         </div>
-      <div className="paper-partners" aria-label="Startup programs Unvibe is in">
-        <p className="paper-meta">Also in the startup programs of</p>
-        <div className="paper-partners__viewport">
-          <div className="paper-partners__track">
-            {[0, 1].map((copy) => (
-              <div className="paper-partners__group" aria-hidden={copy === 1} key={copy}>
-                {sponsors.map((sponsor) => (
-                  <span className="paper-partners__item" key={`${copy}-${sponsor.name}`}>
-                    <Image
-                      className={`paper-partners__logo paper-partners__logo--${sponsor.name.toLowerCase().replace(/\s+/g, "-")}`}
-                      src={sponsor.src}
-                      alt={sponsor.name}
-                      width={72}
-                      height={72}
-                      loading="lazy"
-                    />
-                  </span>
-                ))}
-              </div>
-            ))}
+        <div className="paper-partners">
+          <p className="paper-meta">Also in the startup programs of</p>
+          {/* Focusable so keyboard users can pause the scroll (hover and focus pause it; reduced motion and lite mode stop it). */}
+          <div className="paper-partners__viewport" tabIndex={0} role="region" aria-label="Startup program logos (focus to pause)">
+            <div className="paper-partners__track">
+              {[0, 1].map((copy) => (
+                <div className="paper-partners__group" aria-hidden={copy === 1} key={copy}>
+                  {sponsors.map((sponsor) => (
+                    <span className="paper-partners__item" key={`${copy}-${sponsor.name}`}>
+                      <Image
+                        className={`paper-partners__logo paper-partners__logo--${sponsor.name.toLowerCase().replace(/\s+/g, "-")}`}
+                        src={sponsor.src}
+                        alt={sponsor.name}
+                        width={72}
+                        height={72}
+                        loading="lazy"
+                      />
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </section>
   );

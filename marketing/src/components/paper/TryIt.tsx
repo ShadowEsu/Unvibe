@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Vibe } from "@/components/paper/Vibe";
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
+import { detectVisitorDevice } from "@/lib/shortcuts";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
 const LEVELS = [
@@ -14,6 +15,7 @@ const LEVELS = [
   ["advanced", "Advanced"],
   ["expert", "Expert"],
 ] as const;
+type Level = (typeof LEVELS)[number][0];
 
 const SAMPLE = `function debounce(fn, ms) {
   let timer;
@@ -23,7 +25,8 @@ const SAMPLE = `function debounce(fn, ms) {
   };
 }`;
 
-const NOTES = ["hmm, reading your code…", "checking what each line does…", "writing it up for you…"];
+const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
+const FALLBACK_ERROR = "Vibe could not answer just now.";
 
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
 function render(text: string): string {
@@ -47,16 +50,34 @@ function render(text: string): string {
   return out.join("");
 }
 
-/** Paste code, pick a depth, get a real explanation from Vibe. Strictly limited, no account. */
+/** Desktop gets the download buttons; a phone can't run the app, so it gets the email link. */
+function GetIt({ phone }: { phone: boolean }) {
+  if (!phone) return <DownloadRow />;
+  return (
+    <a className="try__phone" href="#email-link" onClick={() => track("email_link_cta_clicked", { surface: "try_it" })}>
+      Email me the link
+    </a>
+  );
+}
+
+/**
+ * Paste code, pick a depth, get a real explanation from Vibe. Laid out like the desktop
+ * panel: depth buttons along the top, the explanation streaming in below. No account.
+ */
 export function TryIt() {
   const [code, setCode] = useState(SAMPLE);
-  const [level, setLevel] = useState<(typeof LEVELS)[number][0]>("intermediate");
+  const [level, setLevel] = useState<Level>("intermediate");
   const [state, setState] = useState<"idle" | "thinking" | "done" | "error">("idle");
   const [answer, setAnswer] = useState("");
   const [shown, setShown] = useState("");
   const [error, setError] = useState("");
   const [note, setNote] = useState(0);
+  const [phone, setPhone] = useState(false);
   const timer = useRef<number | null>(null);
+
+  useEffect(() => {
+    setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone");
+  }, []);
 
   useEffect(() => {
     if (state !== "thinking") return;
@@ -82,7 +103,7 @@ export function TryIt() {
     return () => { if (timer.current) window.clearTimeout(timer.current); };
   }, [answer]);
 
-  const explain = async () => {
+  const explain = async (depth: Level = level) => {
     setState("thinking");
     setError("");
     setAnswer("");
@@ -90,62 +111,114 @@ export function TryIt() {
       const response = await fetch(`${API}/api/v1/try`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, level }),
+        body: JSON.stringify({ code, level: depth }),
       });
       const body = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
-      if (!response.ok || !body.text) throw new Error(body.error || "Vibe could not answer just now.");
+      if (!response.ok || !body.text) throw new Error(body.error || FALLBACK_ERROR);
       setAnswer(body.text);
       setState("done");
       delight();
-      track("try_explained", { level });
+      track("try_explained", { level: depth });
     } catch (reason) {
       setState("error");
-      setError(reason instanceof Error ? reason.message : "Vibe could not answer just now.");
+      setError(reason instanceof Error ? reason.message : FALLBACK_ERROR);
     }
   };
 
+  // Like the app: switching depth after an answer explains the same code again at that depth.
+  const pickLevel = (next: Level) => {
+    if (next === level) return;
+    setLevel(next);
+    if (state === "done") void explain(next);
+  };
+
+  const onEditorKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim()) {
+      event.preventDefault();
+      void explain();
+    }
+  };
+
+  const lines = code ? code.split("\n").length : 0;
+  const writing = state === "done" && shown.length < answer.length;
+  const status =
+    state === "thinking" ? "Vibe is thinking." : state === "error" ? error : state === "done" && !writing ? "Explanation ready." : "";
+  const depthLabel = LEVELS.find(([id]) => id === level)?.[1] ?? "";
+
   return (
     <div className="try">
-      <div className="try__input">
+      <div className="try__editor">
         <div className="try__bar"><i /><i /><i /><span>your-code.js</span></div>
+        <label className="sr-only" htmlFor="try-code">Code to explain</label>
         <textarea
-          aria-label="Code to explain"
+          id="try-code"
+          aria-describedby="try-fine"
           spellCheck={false}
           wrap="off"
           value={code}
           maxLength={1500}
           onChange={(e) => setCode(e.target.value)}
+          onKeyDown={onEditorKey}
         />
+        <div className="try__foot">
+          <button type="button" className="try__go" disabled={state === "thinking" || !code.trim()} onClick={() => void explain()}>
+            {state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
+          </button>
+          <p className="try__fine" id="try-fine">Up to 60 lines. Keys and passwords are blocked.</p>
+        </div>
+      </div>
+
+      <div className="try__panel">
+        <div className="try__head">
+          <Vibe size={34} follow={false} />
+          <p><b>Vibe</b><span>{lines} {lines === 1 ? "line" : "lines"} selected</span></p>
+        </div>
         <div className="try__levels" role="group" aria-label="Explanation depth">
           {LEVELS.map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={level === id} className={level === id ? "is-on" : ""} onClick={() => setLevel(id)}>
+            <button
+              key={id}
+              type="button"
+              aria-pressed={level === id}
+              disabled={state === "thinking"}
+              onClick={() => pickLevel(id)}
+            >
               {label}
+              {id === "expert" ? <small>Pro<span className="sr-only"> in the app</span></small> : null}
             </button>
           ))}
         </div>
-        <button type="button" className="try__go" disabled={state === "thinking" || !code.trim()} onClick={() => void explain()}>
-          {state === "thinking" ? "Vibe is thinking…" : "Explain it"}
-        </button>
-        <p className="try__fine">Small snippets only. Do not paste keys or passwords; we block them anyway.</p>
-      </div>
-      <div className="try__output" aria-live="polite">
-        {state === "idle" ? (
-          <div className="try__empty"><Vibe size={84} /><p>Paste code into the editor and press <b>Explain it</b>.</p></div>
-        ) : state === "thinking" ? (
-          <div className="try__thinking"><span className="try__bob"><Vibe size={70} follow={false} /></span><p key={note}>{NOTES[note]}</p><i /><i /><i /></div>
-        ) : state === "error" ? (
-          <div className="try__empty"><Vibe size={70} /><p className="try__error">{error}</p><DownloadRow /></div>
-        ) : (
-          <div className="try__answer">
-            <div dangerouslySetInnerHTML={{ __html: render(shown) }} />
-            {shown.length >= answer.length ? (
-              <div className="try__after">
-                <p>Like that? It does this right beside your editor, for free.</p>
-                <DownloadRow />
-              </div>
-            ) : null}
-          </div>
-        )}
+        <p className="sr-only" role="status">{status}</p>
+        <div className="try__body">
+          {state === "idle" ? (
+            <div className="try__state">
+              <Vibe size={72} />
+              <p>Press <b>Explain it</b> for the sample, or paste your own code first.</p>
+            </div>
+          ) : state === "thinking" ? (
+            <div className="try__state try__state--thinking" aria-hidden="true">
+              <span className="try__bob"><Vibe size={60} follow={false} /></span>
+              <p key={note}>{NOTES[note]}</p>
+              <i /><i /><i />
+            </div>
+          ) : state === "error" ? (
+            <div className="try__state">
+              <Vibe size={60} follow={false} />
+              <p className="try__error">{error}</p>
+              <button type="button" className="try__retry" onClick={() => void explain()}>Try again</button>
+              <GetIt phone={phone} />
+            </div>
+          ) : (
+            <div className="try__answer">
+              <div dangerouslySetInnerHTML={{ __html: render(shown) }} />
+              {writing ? null : (
+                <div className="try__after">
+                  <p>Pick another depth above to explain it again. The app does this beside your editor, free.</p>
+                  <GetIt phone={phone} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

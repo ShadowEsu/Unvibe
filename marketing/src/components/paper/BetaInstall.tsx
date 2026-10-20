@@ -1,12 +1,11 @@
 "use client";
 
-import { delight } from "@/lib/delight";
-
 import { useEffect, useState } from "react";
 import { useCopyToast } from "@/components/paper/CopyToast";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
-import { SHORTCUTS } from "@/lib/shortcuts";
+import { delight } from "@/lib/delight";
+import { SHORTCUTS, detectVisitorDevice } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
   BETA_INSTALL_COMMAND,
@@ -21,15 +20,11 @@ import {
 interface BetaInstallProps {
   tone?: "hero" | "page";
   showFeedback?: boolean;
-  title?: string;
+  /** `null` hides the built-in title when the surrounding section already has a heading. */
+  title?: string | null;
 }
 
 type InstallOs = "mac" | "windows";
-
-function detectInstallOs(): InstallOs {
-  if (typeof navigator === "undefined") return "mac";
-  return /Windows/i.test(navigator.userAgent) ? "windows" : "mac";
-}
 
 export function BetaInstall({
   tone = "hero",
@@ -43,6 +38,8 @@ export function BetaInstall({
   // Chromium browsers can tell an Intel Mac apart; Safari cannot, so Intel users also get a link.
   const [intelMac, setIntelMac] = useState(false);
   const [clicked, setClicked] = useState(false);
+  // Phones can't run the desktop app, so the primary action there is the emailed link.
+  const [phone, setPhone] = useState(false);
   const { showCopyToast } = useCopyToast();
   const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
   const prompt = os === "windows" ? "PS>" : "$";
@@ -53,8 +50,10 @@ export function BetaInstall({
   const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : intelMac ? BETA_MAC_INTEL_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
 
   useEffect(() => {
-    const detected = detectInstallOs();
+    const device = detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints);
+    const detected: InstallOs = device === "windows" ? "windows" : "mac";
     setOs(detected);
+    setPhone(device === "phone");
     const uaData = (navigator as Navigator & { userAgentData?: { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string; platform?: string }> } }).userAgentData;
     void uaData?.getHighEntropyValues?.(["architecture", "platform"]).then((v) => {
       if (v.platform === "macOS" && v.architecture === "x86") setIntelMac(true);
@@ -89,14 +88,12 @@ export function BetaInstall({
 
   return (
     <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
-      <p className="paper-beta__title">{title}</p>
+      {title ? <p className="paper-beta__title">{title}</p> : null}
 
-      {/* OS selector tabs */}
-      <div className="paper-beta__os" role="tablist" aria-label="Install platform">
+      <div className="paper-beta__os" role="group" aria-label="Install platform">
         <button
           type="button"
-          role="tab"
-          aria-selected={os === "mac"}
+          aria-pressed={os === "mac"}
           className={os === "mac" ? "is-on" : undefined}
           onClick={() => selectOs("mac")}
         >
@@ -106,46 +103,61 @@ export function BetaInstall({
         </button>
         <button
           type="button"
-          role="tab"
-          aria-selected={os === "windows"}
+          aria-pressed={os === "windows"}
           className={os === "windows" ? "is-on" : undefined}
           onClick={() => selectOs("windows")}
         >
           <span className="paper-beta__os-icon"><WindowsIcon /></span>
           <span className="paper-beta__os-name">Windows</span>
-          <span className="paper-beta__os-meta">x64 PowerShell</span>
+          <span className="paper-beta__os-meta">10 or 11, x64</span>
         </button>
       </div>
 
-      {/* Primary download button */}
-      <a
-        className="paper-beta__download-btn"
-        href={directHref}
-        rel="noreferrer"
-        onClick={() => {
-          track("release_download_clicked", { os, surface: tone });
-          delight();
-          window.dispatchEvent(new Event("unvibe:downloaded"));
-          setClicked(true);
-        }}
-      >
-        <DownloadIcon />
-        <span>{os === "windows" ? "Download free for Windows" : "Download free for Mac"}</span>
-      </a>
-      {os === "mac" ? (
+      {phone ? (
+        <>
+          <a
+            className="paper-beta__download-btn"
+            href="/#email-link"
+            onClick={() => track("email_link_cta_clicked", { surface: `install_${tone}` })}
+          >
+            <span>Email me the link</span>
+          </a>
+          <p className="paper-beta__update">Unvibe runs on a Mac or PC. Open the email there to install it.</p>
+        </>
+      ) : (
+        <a
+          className="paper-beta__download-btn"
+          href={directHref}
+          rel="noreferrer"
+          onClick={() => {
+            track("release_download_clicked", { os, surface: tone });
+            delight();
+            window.dispatchEvent(new Event("unvibe:downloaded"));
+            setClicked(true);
+          }}
+        >
+          <DownloadIcon />
+          <span>{os === "windows" ? "Download free for Windows" : "Download free for Mac"}</span>
+        </a>
+      )}
+
+      <div className="paper-beta__specs" aria-label="Download details">
+        <span>{BETA_INSTALL_VERSION}</span>
+        <span aria-hidden="true">·</span>
+        <span>{os === "windows" ? "~81 MB .exe" : "~112 MB .dmg"}</span>
+        <span aria-hidden="true">·</span>
+        <span>No card</span>
+        <span aria-hidden="true">·</span>
+        <span>No API key</span>
+      </div>
+
+      {os === "mac" && !phone ? (
         <p className="paper-beta__update">
           {intelMac
             ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD}>M1 or newer instead</a></>
-            : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD}>Download the Intel build</a></>}
+            : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD}>Get the Intel build</a></>}
         </p>
       ) : null}
-      <p className="paper-beta__update">
-        <b>Already have Unvibe?</b>{" "}
-        {os === "windows"
-          ? "Quit it from the tray icon first, then run the new installer."
-          : "Quit it from the menu bar first (Unvibe icon, Quit), then drag the new one into Applications and choose Replace."}
-        {" "}From v0.1.30 on, Unvibe updates itself with one click.
-      </p>
       {clicked ? (
         <div className="paper-beta__next" role="status">
           <p className="paper-beta__next-title">Downloading! Now open it the first time:</p>
@@ -153,22 +165,34 @@ export function BetaInstall({
         </div>
       ) : (
         <p className="paper-beta__update">
-          <a href="/install-help">How to open it the first time</a> · takes one extra click because Unvibe is new
+          Unvibe is new, so the first open takes one extra click. <a href="/install-help">Show me how</a>
         </p>
       )}
 
-      {/* Spec pills */}
-      <div className="paper-beta__specs" aria-label="System requirements">
-        <span>{BETA_INSTALL_VERSION}</span>
-        <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "Windows 10+ x64" : "Mac, M1 or Intel"}</span>
-        <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "~81 MB .exe" : "~112 MB .dmg"}</span>
-        <span aria-hidden="true">·</span>
-        <span>No API key</span>
-      </div>
+      <ol className="paper-beta__quickstart" aria-label="Get started">
+        <li className="paper-beta__step">
+          <span className="paper-beta__step-num" aria-hidden="true">1</span>
+          <span className="paper-beta__step-text">Download &amp; open</span>
+        </li>
+        <li className="paper-beta__step-arrow" aria-hidden="true">→</li>
+        <li className="paper-beta__step">
+          <span className="paper-beta__step-num" aria-hidden="true">2</span>
+          <span className="paper-beta__step-text">Select code in any app</span>
+        </li>
+        <li className="paper-beta__step-arrow" aria-hidden="true">→</li>
+        <li className="paper-beta__step">
+          <span className="paper-beta__step-num" aria-hidden="true">3</span>
+          <span className="paper-beta__step-text">Press <kbd>{os === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere}</kbd></span>
+        </li>
+      </ol>
 
-      {/* Collapsible terminal install */}
+      <p className="paper-beta__update">
+        <b>Updating?</b> From v0.1.30 on, Unvibe updates itself.{" "}
+        {os === "windows"
+          ? "On an older version, quit it from the tray icon, then run the new installer."
+          : "On an older version, quit it from the menu bar, drag the new one into Applications and choose Replace."}
+      </p>
+
       <button
         type="button"
         className="paper-beta__term-toggle"
@@ -176,7 +200,7 @@ export function BetaInstall({
         aria-expanded={termOpen}
       >
         <TerminalIcon />
-        <span>Or install via Terminal</span>
+        <span>Or install from the terminal</span>
         <ChevronIcon open={termOpen} />
       </button>
 
@@ -216,35 +240,10 @@ export function BetaInstall({
         </div>
       )}
 
-      {/* Value proposition line */}
-      <p className="paper-beta__blurb">
-        {os === "windows"
-          ? "30 free AI explanations included. No credit card required."
-          : "30 free AI explanations included. No credit card required."}
-      </p>
-
-      {/* 3-step quickstart */}
-      <div className="paper-beta__quickstart">
-        <div className="paper-beta__step">
-          <span className="paper-beta__step-num">1</span>
-          <span className="paper-beta__step-text">Download &amp; open</span>
-        </div>
-        <span className="paper-beta__step-arrow" aria-hidden="true">→</span>
-        <div className="paper-beta__step">
-          <span className="paper-beta__step-num">2</span>
-          <span className="paper-beta__step-text">Select code in your editor</span>
-        </div>
-        <span className="paper-beta__step-arrow" aria-hidden="true">→</span>
-        <div className="paper-beta__step">
-          <span className="paper-beta__step-num">3</span>
-          <span className="paper-beta__step-text">Press {os === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere}</span>
-        </div>
-      </div>
-
       {showFeedback ? (
         <>
           <p className="paper-beta__offer">
-            After 30 explanations, fill the feedback form to unlock 1 week of Pro.
+            After you try it, tell us what clicked and what didn&apos;t.
           </p>
           <a
             className="paper-beta__survey"

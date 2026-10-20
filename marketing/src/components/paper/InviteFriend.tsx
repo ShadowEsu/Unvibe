@@ -62,8 +62,9 @@ export function InviteFriend() {
     <div className="invite">
       <div className="invite__copy">
         <p className="paper-meta">Bring a friend</p>
-        <h2>One link. <em>A month of Pro each.</em></h2>
-        <p className="paper-lead">{REFERRAL_OFFER} It lands when you sign in to the app with that email.</p>
+        <h2 id="invite-title">One link. <em>A month of Pro each.</em></h2>
+        <p className="paper-lead">{REFERRAL_OFFER} Months stack up to 12 ahead and never apply to an active paid subscription.</p>
+        <p className="invite__fine">Your month lands when you sign in to the app with the email you enter here.</p>
       </div>
       {link ? (
         <div className="invite__result" role="status">
@@ -75,7 +76,8 @@ export function InviteFriend() {
         </div>
       ) : (
         <form className="invite__form" onSubmit={submit}>
-          <input type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" aria-label="Your email" aria-invalid={Boolean(error)} aria-describedby={error ? "invite-error" : undefined} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="invite__label" htmlFor="invite-email">Your email</label>
+          <input id="invite-email" type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(error)} aria-describedby={error ? "invite-error" : undefined} value={email} onChange={(e) => setEmail(e.target.value)} />
           <button type="submit" disabled={busy}>{busy ? "Making your link…" : "Get my link"}</button>
         </form>
       )}

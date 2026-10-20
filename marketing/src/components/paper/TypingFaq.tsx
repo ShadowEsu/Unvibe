@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { FaqItem } from "@/data/faq";
+import { prefersLiteExperience } from "@/lib/performanceMode";
 
+/** FAQ whose answers type themselves in. The full answer is always in the DOM for screen readers and search. */
 export function TypingFaq({ items }: { items: readonly FaqItem[] }) {
   const [openId, setOpenId] = useState("");
   const [typed, setTyped] = useState("");
@@ -13,8 +15,7 @@ export function TypingFaq({ items }: { items: readonly FaqItem[] }) {
       return;
     }
     const answer = items.find((item) => item.id === openId)?.answer ?? "";
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
+    if (prefersLiteExperience()) {
       setTyped(answer);
       return;
     }
@@ -44,8 +45,11 @@ export function TypingFaq({ items }: { items: readonly FaqItem[] }) {
           >
             <summary>{item.question}</summary>
             <p>
-              {open ? typed : ""}
-              {open && typed.length < item.answer.length ? <span className="paper-faq__caret" aria-hidden="true" /> : null}
+              <span className="sr-only">{item.answer}</span>
+              <span aria-hidden="true">
+                {open ? typed : ""}
+                {open && typed.length < item.answer.length ? <span className="paper-faq__caret" /> : null}
+              </span>
             </p>
           </details>
         );

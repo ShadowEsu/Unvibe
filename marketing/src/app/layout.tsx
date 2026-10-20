@@ -60,13 +60,13 @@ export const metadata: Metadata = {
     template: "%s · Unvibe",
   },
   description:
-    "Free for Mac and Windows. Select code in Cursor, VS Code or Terminal, press one shortcut, and Vibe explains it in plain English beside your editor, then quizzes you so it sticks.",
+    "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
   openGraph: {
     type: "website",
     url: siteUrl,
     title: "Unvibe: understand the code AI writes for you",
     description:
-      "Free for Mac and Windows. Select code in Cursor, VS Code or Terminal, press one shortcut, and Vibe explains it in plain English beside your editor, then quizzes you so it sticks.",
+      "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
     siteName: "Unvibe",
     locale: "en_US",
   },
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Unvibe: understand the code AI writes for you",
     description:
-      "Free for Mac and Windows. Select code in Cursor, VS Code or Terminal, press one shortcut, and Vibe explains it in plain English beside your editor, then quizzes you so it sticks.",
+      "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
   },
   robots: { index: true, follow: true },
   verification: {
