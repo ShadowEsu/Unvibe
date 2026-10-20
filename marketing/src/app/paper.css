@@ -117,56 +117,6 @@ h2 {
   color: var(--ink);
 }
 
-.paper-nav {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 40;
-  border-bottom: 1px solid transparent;
-  background: transparent;
-  color: #fff;
-  box-shadow: none;
-  transition: background 280ms var(--ease-emphatic), border-color 280ms ease, color 280ms ease, box-shadow 280ms ease, backdrop-filter 280ms ease;
-}
-
-.paper-nav--scrolled,
-.paper-nav--solid {
-  background: rgb(255 252 248 / 0.78);
-  border-bottom-color: rgb(212 204 224 / 0.55);
-  color: var(--ink);
-  box-shadow: 0 0.4rem 1.4rem rgb(14 8 20 / 0.06);
-  backdrop-filter: blur(18px) saturate(1.12);
-  -webkit-backdrop-filter: blur(18px) saturate(1.12);
-}
-
-.paper-nav .paper-logo__word {
-  color: inherit;
-}
-
-.paper-nav a,
-.paper-nav button {
-  color: inherit;
-  transition: color 200ms ease, opacity 200ms ease;
-}
-
-.paper-nav a:hover,
-.paper-nav button:hover {
-  color: var(--brand);
-}
-
-.paper-nav .paper-join,
-.paper-nav .paper-join:hover {
-  color: var(--ink);
-  border-color: #fff;
-  background: #fff;
-}
-
-.paper-nav .paper-join--win,
-.paper-nav .paper-join--win:hover {
-  color: var(--ink);
-}
-
 .paper-hero {
   position: relative;
   min-height: 100svh;
@@ -815,10 +765,6 @@ h2 {
   min-height: 2.35rem;
   padding: 0.42rem 0.9rem;
   font-size: 0.84rem;
-}
-
-.paper-sheet .paper-join {
-  width: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1490,9 +1436,7 @@ html[data-performance="lite"] .paper-glass,
 html[data-performance="lite"] .paper-video,
 html[data-performance="lite"] .paper-frame,
 html[data-performance="lite"] .paper-footer,
-html[data-performance="lite"] .paper-nav,
-html[data-performance="lite"] .paper-nav--scrolled,
-html[data-performance="lite"] .paper-nav--solid,
+html[data-performance="lite"] .mnav,
 html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: none; -webkit-backdrop-filter: none; }
 html[data-performance="lite"] .paper-story { min-height: 42rem; height: auto; }
 html[data-performance="lite"] .paper-story__meter { display: none; }
@@ -2238,61 +2182,6 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   .paper-island {
     grid-template-columns: 1.1fr 0.9fr;
   }
-}
-
-.paper-sheet {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-  padding: 4.5rem 0.75rem 1.25rem;
-}
-
-.paper-sheet__scrim {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: var(--nav-menu-scrim);
-}
-
-.paper-sheet__panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  width: min(21rem, calc(100vw - 1.5rem));
-  max-height: calc(100svh - 5.75rem);
-  overflow: auto;
-  padding: 1rem 1rem 1.1rem;
-  border: 1px solid var(--nav-menu-edge);
-  border-radius: var(--radius-card);
-  background: var(--nav-menu-fill);
-  color: var(--ink);
-  box-shadow: var(--shadow-glass);
-  backdrop-filter: var(--glass-blur);
-}
-
-.paper-sheet__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.paper-sheet__link {
-  display: block;
-  padding: 0.75rem 0.2rem;
-  border-bottom: 1px solid var(--hairline);
-  font-size: 1.05rem;
-}
-
-.paper-sheet__link:last-of-type {
-  border-bottom: 0;
-  margin-bottom: 0.4rem;
 }
 
 .skip-link {
@@ -5531,17 +5420,6 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   gap: 1rem;
 }
 
-
-/* ── Homepage benefits row ── */
-
-.home-benefits {
-  text-align: left;
-}
-
-.home-benefits .resources-card p {
-  margin: 0;
-  line-height: 1.55;
-}
 
 /* Pricing buttons wrap instead of overflowing their pill. */
 .paper-pricing .pricing-button {

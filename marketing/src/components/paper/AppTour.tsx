@@ -1,29 +1,34 @@
 "use client";
 
+import demo from "@/data/demoMedia.json";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
+import { DotGrid } from "@/components/paper/DotGrid";
 
-/** A quick look at the current desktop app and its explanation panel. */
+/** The real app, recorded in one session, directly under the hero promise. */
 export function AppTour() {
   return (
-    <section className="vtour" id="tour" aria-label="A tour of the Unvibe app">
+    <section className="vtour" id="tour" aria-labelledby="tour-title">
+      <DotGrid />
       <div className="vtour__head">
-        <p className="vtour__eyebrow">See it work</p>
-        <h2>
-          The real app, <em>recorded.</em>
+        <p className="vtour__eyebrow">Watch a real session</p>
+        <h2 id="tour-title">
+          Select code. <em>Get it explained.</em>
         </h2>
       </div>
       <div className="vtour__window">
         <div className="vtour__bar" aria-hidden="true">
           <i /><i /><i />
-          <span>Unvibe</span>
+          <span>Unvibe {demo.version}</span>
         </div>
         <AutoPlayVideo
-          src="/videos/unvibe-demo-v3.mp4"
-          poster="/videos/unvibe-demo-v3-poster.jpg"
-          label="Click-through of the Unvibe app: Today, Library, a quiz, After-Agent Review, Ask Vibe and the code explanation panel"
+          src="/videos/unvibe-real-demo.mp4"
+          poster="/videos/unvibe-real-demo-poster.webp"
+          label="Screen recording of Unvibe: first launch, a code explanation streaming in, switching to Beginner depth, a follow-up question, a Test me question, then the Today, Library, Quiz, Briefs and Momentum pages"
         />
       </div>
-      <p className="vtour__caption">A recorded click-through of the app: Today, the library, a quiz, After-Agent Review, Ask Vibe and the explanation panel. The explanation text in the panel is a written sample.</p>
+      <p className="vtour__caption">
+        Screen recording of Unvibe {demo.version} on a {demo.platform}. Every explanation was generated live; only the waits between steps are cut.
+      </p>
     </section>
   );
 }

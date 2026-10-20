@@ -1,11 +1,13 @@
 import { DownloadRow } from "@/components/paper/DownloadLink";
+import { LiquidBackground } from "@/components/paper/LiquidBackground";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 /** Closing call to action on the homepage. Replaces the old waitlist form. */
 export function DownloadCta() {
   return (
-    <div className="paper-invite is-lit">
+    <div className="paper-invite paper-invite--liquid">
+      <LiquidBackground />
       <div className="paper-invite__card paper-glass">
         <p className="paper-meta">Free during the beta</p>
         <h2>Download <em>Unvibe.</em></h2>

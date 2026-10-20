@@ -39,7 +39,7 @@ export function SitePalette() {
       { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
       { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
       { id: "home", label: "Home", hint: "/", run: go("/") },
-      { id: "demo", label: "Watch the demo", hint: "Product", run: go("/#product") },
+      { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },
       { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
       { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
       { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },

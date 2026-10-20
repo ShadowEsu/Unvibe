@@ -40,7 +40,7 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "Investor one pager", path: "/investors/unvibe-investor-one-pager.png", use: "Investor intros", kind: "image" },
   { name: "Pitch deck (PDF)", path: "/investors/unvibe-pitch-deck.pdf", use: "Investor follow ups", kind: "pdf" },
   { name: "Short investor deck (PDF)", path: "/investors/unvibe-investor-deck-short.pdf", use: "Cold investor emails", kind: "pdf" },
-  { name: "Product demo video", path: "/videos/unvibe-demo-v3.mp4", use: "Show the product in 30 seconds", kind: "video" },
+  { name: "Product demo video", path: "/videos/unvibe-real-demo.mp4", use: "A real recorded session: explain, depth, follow-up, Test me", kind: "video" },
   { name: "Screenshot: home", path: "/product/v3/home-today.jpg", use: "What the app looks like", kind: "image" },
   { name: "Screenshot: after agent review", path: "/product/v3/after-agent-review.jpg", use: "Reviewing what Cursor or Claude changed", kind: "image" },
   { name: "Screenshot: quiz", path: "/product/v3/quiz.jpg", use: "The Test me check", kind: "image" },

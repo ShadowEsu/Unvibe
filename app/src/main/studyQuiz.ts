@@ -6,7 +6,7 @@ import { SseParser } from '../core/sse';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { BACKEND, fetchQuestion, networkFetch } from './backend';
+import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
 import { store } from './store';
 import { flush } from './sync';
 import { readAiKey } from './aiKey';
@@ -75,7 +75,7 @@ async function collectReviewText(payload: ReviewRequestPayload): Promise<{ text:
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...aiAuthHeaders(token),
       },
       body: JSON.stringify(payload),
       signal: abort.signal,

@@ -7,7 +7,8 @@ import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { DownloadCta } from "@/components/paper/DownloadCta";
-import { HomeBenefits } from "@/components/paper/HomeBenefits";
+import { HowItWorks } from "@/components/paper/HowItWorks";
+import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { faqItems } from "@/data/faq";
 
 export const metadata: Metadata = {
@@ -19,8 +20,8 @@ const homeFaq = faqItems.filter((item) => ["what-is-it", "sent", "editors", "win
 export const revalidate = 300;
 
 /**
- * One promise, proof right under it, then try it, how it works, install, trust, questions.
- * Keep it short: visitors decide in seconds and read a fraction of the words.
+ * One promise, then the real app recorded, how it works in real screenshots, try it,
+ * install, trust, questions. Visitors decide in seconds and read a fraction of the words.
  */
 export default function HomePage() {
   return (
@@ -29,18 +30,23 @@ export default function HomePage() {
 
       <AppTour />
 
+      <HowItWorks />
+
+      <section className="paper-section" aria-label="What Unvibe can explain">
+        <div className="paper-wrap">
+          <ScrollSyncedList
+            prefix="Select it, and Vibe explains"
+            items={["a React hook.", "a SQL query.", "a regex.", "a shell script.", "the diff your agent just wrote."]}
+          />
+        </div>
+      </section>
+
       <section className="paper-section" id="try-it">
         <div className="paper-wrap paper-center">
           <p className="paper-meta">Try it right now</p>
           <h2 className="mt-3">Paste code. <em>Vibe explains it.</em></h2>
           <p className="paper-lead mt-3">A real explanation, right here. No download, no account.</p>
           <div className="mt-10"><TryIt /></div>
-        </div>
-      </section>
-
-      <section className="paper-section" id="product">
-        <div className="paper-wrap paper-center">
-          <HomeBenefits />
         </div>
       </section>
 

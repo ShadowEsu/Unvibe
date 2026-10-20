@@ -119,7 +119,12 @@ const explained = firstRun && await step('first explanation', async () => {
   await panel.locator('.body .cursor').waitFor({ timeout: 60000 }).catch(() => {});
   await sleep(2500);
   await shot(panel, 'panel-streaming');
-  await shot(await settledPanel(), 'panel-explained');
+  const done = await settledPanel();
+  await shot(done, 'panel-explained');
+  // The panel follows the stream to the end; the site also needs the opening of the answer.
+  await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+  await sleep(600);
+  await shot(done, 'panel-explained-top');
 });
 
 if (explained) {
@@ -192,7 +197,7 @@ await step('settings privacy', async () => {
   await companion.locator('.mside').getByRole('button', { name: 'Privacy & Data', exact: true }).click();
   await sleep(1200);
   await shot(companion, 'settings-privacy');
-  await companion.getByRole('button', { name: 'Close settings', exact: true }).click();
+  await companion.keyboard.press('Escape');
 });
 
 await step('island', async () => {
