@@ -23,7 +23,7 @@ export function betaEarlyNoteText(): string {
 }
 
 export function betaInstallText(): string {
-  return `Install (${BETA_INSTALL_VERSION}). 30 AI explanations, then it stops.
+  return `Install (${BETA_INSTALL_VERSION}). Free AI explanations every month.
 
 Apple silicon Mac:
 ${BETA_CURL}
@@ -35,7 +35,7 @@ macOS may warn that Unvibe is unsigned. Windows SmartScreen may say the same. Th
 }
 
 export function betaFeedbackText(): string {
-  return `The beta includes 30 AI explanations. After you try it, fill the feedback form:
+  return `The free plan includes AI explanations every month. After you try it, fill the feedback form:
 ${BETA_FEEDBACK_URL}
 
 The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.`;

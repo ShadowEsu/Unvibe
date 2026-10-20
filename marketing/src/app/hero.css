@@ -1,22 +1,13 @@
 /* hero lane styles. Loaded after vibe.css, so rules here win ties. */
 
-/*
- * Fold budget (html is 18px at >=1100px wide, 17px below; the fixed .mnav is 4rem).
- * 1440x900: top pad 5.5rem (99) + Vibe 72 + h1 2 x 75.6 (151) + kicker 2 x 36.5 (73)
- *   + button row 68 + trust chip ~42 + gaps 3 x 0.9rem + 0.6rem (60) + bottom pad 27 ≈ 592px.
- *   The tour heading above the video adds ~167px, so the window bar starts near 760px
- *   and roughly 100px of the recording shows above 900px.
- * 390x844: top pad 5.25rem (89) + Vibe 72 + h1 2 x 36.7 (74) + kicker 3 x 25.9 (78)
- *   + input 51 + button 61 + gaps (~59) ≈ 485px to the bottom of "Email me the link",
- *   well inside the ~660px Safari leaves visible with its toolbars showing.
- */
+/* Keep the real recording visible in the opening desktop viewport, not just its title bar. */
 .home-page .vhero { padding: 5.5rem 1.25rem 1.5rem; }
 .vhero__copy { gap: 0.9rem; }
 
-.vhero h1 { max-width: none; font-size: clamp(2.6rem, 5.4vw, 4.2rem); line-height: 1; }
+.vhero h1 { max-width: none; font-size: clamp(2.6rem, 4.6vw, 3.6rem); line-height: 1; }
 .vhero__lead { display: block; }
 
-.vhero__kicker { max-width: 44rem; line-height: 1.45; text-wrap: balance; }
+.vhero__kicker { max-width: 44rem; font-size: 1.1rem; line-height: 1.45; text-wrap: balance; }
 .vhero__kicker kbd {
   display: inline-block; padding: 0.05em 0.45em; border: 1.5px solid var(--v-ink); border-radius: 8px;
   background: #fff; box-shadow: 0 2px 0 var(--v-ink); color: var(--v-ink);
@@ -32,6 +23,7 @@
 }
 .vhero__trust a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .vhero a:focus-visible { outline: 3px solid #5b4bd6; outline-offset: 3px; }
+.vtour h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
 
 /* Tablets keep the speech bubble above Vibe (vibe.css), so they need the old headroom under the nav. */
 @media (max-width: 720px) {

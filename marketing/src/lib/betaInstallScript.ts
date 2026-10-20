@@ -1,6 +1,6 @@
-export const BETA_INSTALL_TAG = "v0.1.42";
-export const BETA_INSTALL_ASSET = "Unvibe-0.1.42-mac-arm64.dmg";
-export const BETA_WINDOWS_ASSET = "Unvibe-0.1.42-win-x64-portable.exe";
+export const BETA_INSTALL_TAG = "v0.1.43";
+export const BETA_INSTALL_ASSET = "Unvibe-0.1.43-mac-arm64.dmg";
+export const BETA_WINDOWS_ASSET = "Unvibe-0.1.43-win-x64-portable.exe";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 
 /** Private beta installer. Curl download so macOS never quarantines the app. */
@@ -89,9 +89,9 @@ export const BETA_MAC_DOWNLOAD_URL =
 /** Older Intel Macs need the x64 build; the Apple silicon one cannot run there. */
 export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-arm64.dmg", "mac-x64.dmg");
 
-/** Private beta installer. Downloads a portable Windows exe with the same 30 explanation trial. */
+/** Private beta installer. Downloads the portable Windows exe, which uses the free plan. */
 export function betaWindowsInstallScript(): string {
-  return `# Unvibe private beta installer for Windows. 30 AI explanations. Unsigned.
+  return `# Unvibe private beta installer for Windows. Free AI explanations every month. Unsigned.
 # Paste this in Windows PowerShell or pwsh (not Command Prompt, not Git Bash):
 # irm https://unvibe.site/install.ps1 | iex
 \$ErrorActionPreference = "Stop"
@@ -108,7 +108,7 @@ try {
 \$destDir = Join-Path \$env:LOCALAPPDATA "Unvibe"
 \$dest = Join-Path \$destDir "Unvibe.exe"
 \$track = "${BETA_INSTALL_TRACK_URL}"
-\$ua = "UnvibeBetaInstaller/0.1.42"
+\$ua = "UnvibeBetaInstaller/0.1.43"
 
 if (\$env:OS -notlike "*Windows*") {
   Write-Error "This installer is for Windows. On a Mac run: curl -fsSL https://unvibe.site/install.sh | bash"

@@ -51,7 +51,7 @@ if (missing.length) throw new Error(`Recapture required screenshots before build
 const companion = video("companion.html");
 const panel = video("widget.html");
 const segments = {
-  onboarding: [0, mark("onboarding") - companion.opened + 0.8],
+  onboarding: [Math.max(0, mark(`app open ${timeline.version}`) - companion.opened + 0.5), mark("onboarding") - companion.opened + 0.8],
   panel: [0, mark("test me") - panel.opened + 0.5],
   companion: [mark("test me") - companion.opened, mark("Momentum") - companion.opened + 0.4],
 };

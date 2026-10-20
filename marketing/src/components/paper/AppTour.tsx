@@ -10,9 +10,8 @@ export function AppTour() {
     <section className="vtour" id="tour" aria-labelledby="tour-title">
       <DotGrid />
       <div className="vtour__head">
-        <p className="vtour__eyebrow">Watch a real session</p>
         <h2 id="tour-title">
-          Select code. <em>Get it explained.</em>
+          Watch Unvibe <em>in action.</em>
         </h2>
       </div>
       <div className="vtour__window">

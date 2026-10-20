@@ -42,7 +42,7 @@ observation wins**. Then fix this file.
   "vibe coding") and want to actually own what they ship. Team leads are the next market
   ("does the author understand this PR").
 - Pricing (source of truth `web/src/billing/plans.ts`): Free; Pro $9/month or $81/year; Teams
-  $8/seat/month or $72/seat/year (2 to 20 seats); Pro Lifetime $80 exists in code. Stripe is still
+  $8/seat/month or $72/seat/year (2 to 20 seats); Pro Lifetime $80 exists in code but is not offered on the site (the app has no Lifetime checkout). Stripe is still
   in **test mode**.
 - Wording rules: say "in Claude for Startups", never "Anthropic partner" or "backed by Anthropic",
   no Anthropic logo. Avoid "completely free", "always private", "never trains" unless the exact
@@ -587,3 +587,9 @@ Downloads are files, including repeats, updates and CI, not people. Mixpanel’s
 - Web 64 tests, marketing 66 tests, typechecks and builds pass. Device run [39168828120](https://github.com/ShadowEsu/Unvibe/actions/runs/39168828120) PASS both OSes: first sample Mac 16.4 s, Windows 23.0 s. Panel screenshots checked; both new QA installs persisted sample and own-code markers.
 - Real activation remains 0 on every day of the 14-day window; 12 QA installs excluded. Email signups: 1 each on 7/8 Oct, 0 on the other days. Snapshot totals: 634 installer downloads, 14 emails, 39 tracked browser conversion identities. Exact cross-system people dedupe and historical daily GitHub downloads are unavailable.
 - No new desktop release, email send or signup-delivery change. Accessibility upgrade persistence, portable self-update and completed Google login remain unverified. Windows whole-screen capture can show an older review while the panel capture shows the current one; do not call that compositor evidence a product regression without reproducing it.
+
+### 2026-10-20: design audit and v0.1.43
+- Released v0.1.43 from `8b22c66`, a prerelease built from `work/windows-release`. The publish run, [39420567994](https://github.com/ShadowEsu/Unvibe/actions/runs/39420567994), passed and all four installers return 206. electron-builder tagged `main` (`bb2f93c`), so I moved the tag to `8b22c66`. Check `git rev-list -n1 vX` after every publish from a non-main branch.
+- Gates: build run [39417063196](https://github.com/ShadowEsu/Unvibe/actions/runs/39417063196) passed, and device run [39419576081](https://github.com/ShadowEsu/Unvibe/actions/runs/39419576081) passed on both OSes with a strict axe gate. I opened the screenshots. The axe gate found two real issues earlier, and both are fixed; keep it strict.
+- Site: the homepage now opens on a real 0.1.43 recording that is visible in the 1440x900 first viewport. Real screenshots, no allowance number, download v0.1.43. Details are in HANDOFF §13.
+- Lesson: `site-shots.mjs` across every route can run past the 20-minute verify slot. Run only the changed routes, and set a time limit (`timeout`) on the command.
