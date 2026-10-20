@@ -1,8 +1,8 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.42",
+  "version": "0.1.43",
   "private": true,
-  "description": "Unvibe desktop \u2014 floating learning layer for code",
+  "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -35,7 +35,7 @@
   "build": {
     "appId": "com.unvibe.app",
     "productName": "Unvibe",
-    "copyright": "Copyright \u00a9 2026 Unvibe",
+    "copyright": "Copyright © 2026 Unvibe",
     "files": [
       "dist/**/*",
       "package.json"
