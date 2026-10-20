@@ -402,16 +402,11 @@ h2 {
   font: inherit;
   letter-spacing: -0.02em;
   cursor: pointer;
-  opacity: 0.72;
-  transition: opacity 140ms ease, background-color 140ms ease, border-width 140ms ease, transform 140ms ease;
-}
-
-.paper-beta__os button:hover {
-  opacity: 0.88;
+  transition: background-color 140ms ease, border-width 140ms ease, transform 140ms ease;
 }
 
 .paper-beta__os button.is-on {
-  opacity: 1;
+  /* Selection shows through fill and border, not fading the other tab (its meta line failed 4.5:1). */
   border-width: 2.5px;
   background: rgb(255 255 255 / 0.42);
   transform: translateY(-1px);
@@ -2542,11 +2537,29 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   color: var(--ink-faint);
 }
 
+/* Legal copy reads on an opaque sheet; the dusk photo stays visible around it. Theme tokens keep
+   body ink at 7:1 or better on the sheet in both light and dark. */
+.legal-page {
+  width: min(100% - 2rem, 46rem);
+  max-width: none;
+  margin-block: clamp(1.5rem, 5vw, 3.5rem);
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  border: 1.5px solid rgb(var(--fg));
+  border-radius: 24px;
+  background: rgb(var(--surface));
+  box-shadow: 6px 6px 0 rgb(var(--fg));
+  color: rgb(var(--fg));
+}
+
+.legal-page h1 {
+  color: rgb(var(--fg));
+}
+
 .legal-page > div:last-child {
-  border-color: var(--hairline) !important;
-  background: var(--paper-raised) !important;
-  color: var(--ink-muted) !important;
-  box-shadow: var(--shadow-card) !important;
+  border-color: rgb(var(--line)) !important;
+  background: rgb(var(--surface-2)) !important;
+  color: rgb(var(--fg-muted)) !important;
+  box-shadow: none !important;
 }
 
 .launch-subpage .marketing-plan-card,
@@ -5143,7 +5156,7 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 .resources-code-lang {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  color: #5c6370;
+  color: #abb2bf;
   text-transform: uppercase;
 }
 
@@ -5254,7 +5267,7 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   color: var(--ink-muted);
 }
 
-.resources-arch-node h4 {
+.resources-arch-node h3 {
   margin: 0;
   font-size: 0.98rem;
   font-weight: 600;

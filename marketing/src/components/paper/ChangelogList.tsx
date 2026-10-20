@@ -26,7 +26,7 @@ export function ChangelogList({ items, limit }: ChangelogListProps) {
             <p className="paper-meta">{item.category}</p>
             <h3>
               {item.pinned ? (
-                <span className="paper-log__star" aria-label="Highlighted">
+                <span className="paper-log__star" role="img" aria-label="Highlighted">
                   <StarMark />
                 </span>
               ) : null}

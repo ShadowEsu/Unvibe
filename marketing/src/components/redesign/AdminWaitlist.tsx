@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { founderHeaders, saveFounderToken } from "@/lib/founderToken";
+import { founderHeaders, readFounderToken, saveFounderToken } from "@/lib/founderToken";
 import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { SiteStatsSummary } from "@/lib/siteStatsStore";
@@ -10,7 +10,8 @@ import type { WaitlistAdminEntry } from "@/lib/waitlistStore";
 const PRIOR_PEOPLE = 300;
 const missing = "n/a";
 
-type ViewState = "loading" | "ready" | "error";
+/** locked: no token in this session; denied: the server rejected the token; error: anything else failed. */
+type ViewState = "loading" | "locked" | "denied" | "error" | "ready";
 
 export function AdminWaitlist() {
   const [entries, setEntries] = useState<WaitlistAdminEntry[]>([]);
@@ -22,6 +23,7 @@ export function AdminWaitlist() {
   const [retryError, setRetryError] = useState("");
   const [tokenDraft, setTokenDraft] = useState("");
   const [actionError, setActionError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
   const notified = useMemo(
@@ -30,14 +32,24 @@ export function AdminWaitlist() {
   );
 
   const load = useCallback(async (background = false) => {
+    // Both admin endpoints require the WAITLIST_ADMIN_TOKEN bearer. Without one, ask for it
+    // instead of sending requests the server can only answer with 401.
+    if (!readFounderToken()) {
+      setState("locked");
+      return;
+    }
     if (background) setRefreshing(true);
     else setState("loading");
     try {
-      const [waitlistResponse, statsResponse, founderResponse] = await Promise.all([
-        fetch("/api/waitlist/admin", { cache: "no-store", headers: founderHeaders() }),
-        fetch("/api/stats", { cache: "no-store" }),
-        fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() }),
-      ]);
+      const statsRequest = fetch("/api/stats", { cache: "no-store" });
+      const waitlistResponse = await fetch("/api/waitlist/admin", { cache: "no-store", headers: founderHeaders() });
+
+      if (waitlistResponse.status === 401) {
+        // Both endpoints share one check, so the fallback below would be rejected too.
+        saveFounderToken("");
+        setState("denied");
+        return;
+      }
 
       if (waitlistResponse.ok) {
         const data = (await waitlistResponse.json()) as {
@@ -46,8 +58,14 @@ export function AdminWaitlist() {
         };
         setEntries(data.entries);
         setUpdatedAt(data.generatedAt);
-      } else if (founderResponse.ok) {
+      } else {
         // Same admin token, older founder shape.
+        const founderResponse = await fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() });
+        if (!founderResponse.ok) {
+          throw new Error(
+            `The waitlist API answered ${waitlistResponse.status} and the founder API answered ${founderResponse.status}.`
+          );
+        }
         const roster = (await founderResponse.json()) as {
           entries?: Array<{ name: string; email: string; joinedAt: string; tool: string }>;
         };
@@ -65,18 +83,19 @@ export function AdminWaitlist() {
         });
         setEntries(mapped);
         setUpdatedAt(new Date().toISOString());
-      } else {
-        throw new Error("load failed");
       }
 
+      const statsResponse = await statsRequest;
       if (statsResponse.ok) {
         const statsData = (await statsResponse.json()) as { stats?: SiteStatsSummary };
         setSiteStats(statsData.stats ?? null);
       } else {
         setSiteStats(null);
       }
+      setLoadError("");
       setState("ready");
-    } catch {
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "The request did not complete.");
       setState("error");
     } finally {
       setRefreshing(false);
@@ -167,14 +186,20 @@ export function AdminWaitlist() {
       </div>
 
       {state === "loading" ? (
-        <section className="admin-login">
-          <Loader2 className="spin" size={22} aria-label="Loading" />
+        <section className="admin-login" role="status">
+          <Loader2 className="spin" size={22} aria-hidden="true" />
           <p>Loading signups…</p>
         </section>
-      ) : state === "error" ? (
+      ) : state === "ready" ? null : (
         <section className="admin-login">
-          <h1>Could not load the waitlist.</h1>
-          <p className="admin-error" role="alert">Enter the admin token (WAITLIST_ADMIN_TOKEN). If it is already correct, check storage on this deployment.</p>
+          <h1>{state === "error" ? "Could not load the waitlist." : "Waitlist"}</h1>
+          {state === "locked" ? (
+            <p>This view is private. Enter the admin token (WAITLIST_ADMIN_TOKEN) to see signups.</p>
+          ) : state === "denied" ? (
+            <p className="admin-error" role="alert">That admin token was not accepted. Check WAITLIST_ADMIN_TOKEN and try again.</p>
+          ) : (
+            <p className="admin-error" role="alert">{loadError} Check storage on this deployment, then retry.</p>
+          )}
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -183,22 +208,24 @@ export function AdminWaitlist() {
               void load();
             }}
           >
+            <label htmlFor="admin-token">Admin token</label>
             <input
+              id="admin-token"
               type="password"
               autoComplete="off"
-              aria-label="Admin token"
-              placeholder="Admin token"
+              required
               value={tokenDraft}
               onChange={(event) => setTokenDraft(event.target.value)}
             />
-            <button type="submit">Unlock and retry</button>
+            <button type="submit">{state === "locked" ? "Unlock" : "Unlock and retry"}</button>
           </form>
         </section>
-      ) : (
+      )}
+      {state === "ready" && (
         <section className="admin-content">
           <div className="admin-heading">
             <div>
-              <p className="pixel-label">PRIVATE BETA</p>
+              <p className="pixel-label">FOUNDER VIEW</p>
               <h1>Waitlist</h1>
               <p>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : ""}</p>
             </div>

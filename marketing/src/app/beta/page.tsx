@@ -114,7 +114,7 @@ export default function BetaDownloadsPage() {
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />
-              <p>Need help? <a href="mailto:preston@unvibe.site?subject=Unvibe%20private%20beta%20help">Email Preston</a></p>
+              <p>Need help? <a href="mailto:preston@unvibe.site?subject=Unvibe%20beta%20help">Email Preston</a></p>
             </div>
           </div>
         </Reveal>

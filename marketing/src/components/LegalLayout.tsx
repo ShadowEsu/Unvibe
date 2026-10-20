@@ -29,7 +29,7 @@ export function LegalLayout({ title, updated, intro, children }: LegalLayoutProp
         <ArrowLeft size={15} aria-hidden="true" /> Back to Unvibe
       </Link>
       <h1 className="text-balance text-fluid-3xl font-semibold text-fg">{title}</h1>
-      <p className="mt-2 text-fluid-sm text-fg-faint">Last updated {updated}</p>
+      <p className="mt-2 text-fluid-sm text-fg-muted">Last updated {updated}</p>
       <p className="mt-6 text-pretty text-fluid-lg leading-relaxed text-fg-muted">
         {intro}
       </p>
@@ -60,7 +60,7 @@ export function LegalSection({
   return (
     <section>
       <h2 className="text-fluid-xl font-semibold text-fg">{heading}</h2>
-      <div className="mt-3 space-y-3 text-pretty text-fluid-base leading-relaxed text-fg-muted [&_a]:text-primary [&_a:hover]:underline [&_li]:ml-1 [&_strong]:text-fg">
+      <div className="mt-3 space-y-3 text-pretty text-fluid-base leading-relaxed text-fg-muted [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-fg [&_li]:ml-1 [&_strong]:text-fg">
         {children}
       </div>
     </section>

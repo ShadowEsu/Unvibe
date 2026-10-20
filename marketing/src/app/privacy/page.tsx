@@ -4,7 +4,7 @@ import { LegalLayout, LegalSection } from "@/components/LegalLayout";
 export const metadata: Metadata = {
   title: "Privacy",
   description:
-    "How Unvibe handles code and learning data during the private beta, including on-device secret filtering and cloud-provider disclosure.",
+    "How Unvibe handles code and learning data during the beta, including on-device secret filtering and cloud-provider disclosure.",
 };
 
 export default function PrivacyPage() {

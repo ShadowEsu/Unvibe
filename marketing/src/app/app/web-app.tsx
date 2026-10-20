@@ -31,6 +31,7 @@ export function UnvibeWebApp() {
   const [model, setModel] = useState('');
   const [isMock, setIsMock] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void fetch('/api/app/session').then(async (response) => {
@@ -44,7 +45,27 @@ export function UnvibeWebApp() {
     const returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     emailInputRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setAuthOpen(false);
+      if (event.key === 'Escape') {
+        setAuthOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      // Keep Tab and Shift+Tab inside the modal while it is open.
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      const inside = active instanceof Node && dialogRef.current.contains(active);
+      if (event.shiftKey && (active === first || !inside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !inside)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
@@ -165,7 +186,7 @@ export function UnvibeWebApp() {
         </div>
       </div>
 
-      {authOpen && <div role="dialog" aria-modal="true" aria-labelledby="signin-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4"><form onSubmit={(event: FormEvent) => { event.preventDefault(); void authenticate('signin'); }} className="relative w-full max-w-md border border-[#9e80f4] bg-[#211a30] p-6 shadow-[10px_10px_0_#6f45a8]"><button type="button" aria-label="Close sign-in" onClick={() => setAuthOpen(false)} className="absolute right-2 top-2 grid h-10 w-10 place-items-center text-[#bfb5cc] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bda4ff]"><X size={19} /></button><p className="font-mono text-[11px] font-bold tracking-[.16em] text-[#bda4ff]">UNVIBE WEB</p><h2 id="signin-title" className="mt-3 pr-8 text-3xl font-semibold tracking-[-.05em]">Sign in to learn across sessions.</h2><p className="mt-3 text-sm leading-relaxed text-[#bcb3ca]">Your browser workspace stays local until you request an explanation. Sign-in connects permitted learning activity to your account.</p><label className="mt-6 grid gap-2 text-sm font-semibold text-[#e4deed]">Email<input ref={emailInputRef} value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="border border-[#71588f] bg-[#120e1c] px-3 py-3 font-normal text-white outline-none focus:border-[#bda4ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bda4ff]" placeholder="you@example.com" /></label>{authError && <p role="alert" className="mt-3 text-sm text-[#ffd5d0]">{authError}</p>}<div className="mt-6 grid gap-3 sm:grid-cols-2"><button disabled={authBusy} className="inline-flex items-center justify-center gap-2 bg-[#9e80f4] px-4 py-3 text-sm font-bold text-[#1b1429] disabled:opacity-50"><LogIn size={16} />{authBusy ? 'Connecting…' : 'Sign in'}</button><button type="button" disabled={authBusy} onClick={() => void authenticate('signup')} className="border border-[#8064a2] px-4 py-3 text-sm font-bold text-white hover:border-[#bda4ff] disabled:opacity-50">Create account</button></div><p className="mt-4 text-xs leading-relaxed text-[#9e93ac]">If cloud sign-in is not configured yet, Unvibe will tell you directly rather than create a placeholder account.</p></form></div>}
+      {authOpen && <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="signin-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4"><form onSubmit={(event: FormEvent) => { event.preventDefault(); void authenticate('signin'); }} className="relative w-full max-w-md border border-[#9e80f4] bg-[#211a30] p-6 shadow-[10px_10px_0_#6f45a8]"><button type="button" aria-label="Close sign-in" onClick={() => setAuthOpen(false)} className="absolute right-2 top-2 grid h-10 w-10 place-items-center text-[#bfb5cc] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bda4ff]"><X size={19} /></button><p className="font-mono text-[11px] font-bold tracking-[.16em] text-[#bda4ff]">UNVIBE WEB</p><h2 id="signin-title" className="mt-3 pr-8 text-3xl font-semibold tracking-[-.05em]">Sign in to learn across sessions.</h2><p className="mt-3 text-sm leading-relaxed text-[#bcb3ca]">Your browser workspace stays local until you request an explanation. Sign-in connects permitted learning activity to your account.</p><label className="mt-6 grid gap-2 text-sm font-semibold text-[#e4deed]">Email<input ref={emailInputRef} value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="border border-[#71588f] bg-[#120e1c] px-3 py-3 font-normal text-white outline-none focus:border-[#bda4ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bda4ff]" placeholder="you@example.com" /></label>{authError && <p role="alert" className="mt-3 text-sm text-[#ffd5d0]">{authError}</p>}<div className="mt-6 grid gap-3 sm:grid-cols-2"><button disabled={authBusy} className="inline-flex items-center justify-center gap-2 bg-[#9e80f4] px-4 py-3 text-sm font-bold text-[#1b1429] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bda4ff] disabled:opacity-50"><LogIn size={16} />{authBusy ? 'Connecting…' : 'Sign in'}</button><button type="button" disabled={authBusy} onClick={() => void authenticate('signup')} className="border border-[#8064a2] px-4 py-3 text-sm font-bold text-white hover:border-[#bda4ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bda4ff] disabled:opacity-50">Create account</button></div><p className="mt-4 text-xs leading-relaxed text-[#9e93ac]">If cloud sign-in is not configured yet, Unvibe will tell you directly rather than create a placeholder account.</p></form></div>}
     </div>
   );
 }

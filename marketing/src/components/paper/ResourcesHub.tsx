@@ -281,32 +281,32 @@ export function ResourcesHub() {
             <div className="resources-arch-flow">
               <div className="resources-arch-node">
                 <div className="resources-arch-badge">Step 1 · Editor</div>
-                <h4>Selected Code</h4>
+                <h3>Selected Code</h3>
                 <p>Highlighted selection or uncommitted git diff</p>
               </div>
 
-              <div className="resources-arch-arrow">→</div>
+              <div className="resources-arch-arrow" aria-hidden="true">→</div>
 
               <div className="resources-arch-node resources-arch-node--shield">
                 <div className="resources-arch-badge">Step 2 · On-Device</div>
-                <h4>Local secret scan</h4>
+                <h3>Local secret scan</h3>
                 <p>Pattern checks for cloud keys, API tokens, private keys, and risky assignments</p>
                 <div className="resources-arch-tag">Runs on-device</div>
               </div>
 
-              <div className="resources-arch-arrow">→</div>
+              <div className="resources-arch-arrow" aria-hidden="true">→</div>
 
               <div className="resources-arch-node">
                 <div className="resources-arch-badge">Step 3 · Cloud model</div>
-                <h4>Filtered snippet</h4>
+                <h3>Filtered snippet</h3>
                 <p>Sent over HTTPS to the model provider, and the answer streams back</p>
               </div>
 
-              <div className="resources-arch-arrow">→</div>
+              <div className="resources-arch-arrow" aria-hidden="true">→</div>
 
               <div className="resources-arch-node resources-arch-node--island">
                 <div className="resources-arch-badge">Step 4 · Desktop</div>
-                <h4>Floating Island</h4>
+                <h3>Floating Island</h3>
                 <p>Instant syntax-highlighted review card & comprehension quiz</p>
               </div>
             </div>
