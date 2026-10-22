@@ -51,7 +51,7 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
     <p className="reward-lead">{GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. {GIFT_LINK_NOTE} This page shows how many friends joined with your invite link.</p>
     <form className="reward-code" onSubmit={(event) => { event.preventDefault(); void load(); }}>
       <label htmlFor="referral-code">Your invite link code</label>
-      <div><input id="referral-code" value={code} maxLength={8} autoCapitalize="none" spellCheck={false} onChange={(event) => setCode(event.target.value)} placeholder="8 characters" /><button type="submit" disabled={state === "loading"}>{state === "loading" ? <Loader2 className="spin" size={17} /> : "Check link"}</button></div>
+      <div><input id="referral-code" value={code} maxLength={8} size={8} autoCapitalize="none" spellCheck={false} onChange={(event) => setCode(event.target.value)} placeholder="8 characters" /><button type="submit" disabled={state === "loading"}>{state === "loading" ? <Loader2 className="spin" size={17} /> : "Check link"}</button></div>
     </form>
     {state === "error" && <p className="reward-error" role="alert">{message}</p>}
     {progress && <div className="reward-progress" aria-live="polite">
