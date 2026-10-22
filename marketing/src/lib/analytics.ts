@@ -9,27 +9,35 @@
  * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
  * An anonymous id is kept in localStorage. Automated browsers, visitors who
  * opted out with ?notrack=1 (trackingOptOut.ts), and admin or capability pages
- * load no SDK and send nothing.
+ * load no SDK and send nothing. Reaching an admin page by client navigation
+ * stops replay there (syncSessionRecording).
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
 import {
+  INITIAL_REPLAY_STATE,
+  MIXPANEL_REPLAY_PERCENT,
   POSTHOG_PRIVACY_CONFIG,
   analyticsAllowedOnPath,
+  mixpanelMayInit,
   mixpanelPrivacyConfig,
   sanitizeUrl,
+  syncReplayForPage,
+  type MixpanelReplay,
+  type PosthogReplay,
+  type ReplayState,
 } from "@/lib/analyticsPrivacy";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export type { AnalyticsEvent };
 
 type Props = Record<string, string | number | boolean | undefined>;
-type MixpanelClient = {
+type MixpanelClient = MixpanelReplay & {
   init: (token: string, config: Record<string, unknown>) => void;
   identify: (id: string) => void;
   track: (event: string, props?: Record<string, unknown>) => void;
 };
-type PosthogClient = {
+type PosthogClient = PosthogReplay & {
   init: (token: string, config: Record<string, unknown>) => void;
   identify: (id: string) => void;
   capture: (event: string, props?: Record<string, unknown>) => void;
@@ -84,11 +92,22 @@ export const analyticsEnabled = Boolean(POSTHOG_KEY || MIXPANEL_BROWSER_TOKEN);
 
 let mixpanelClient: MixpanelClient | null = null;
 let mixpanelStart: Promise<void> | null = null;
+/** Loaded but not initialised yet, because the load finished on an admin or capability page. */
+let mixpanelLoaded: MixpanelClient | null = null;
 const mixpanelQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
 
 let posthogClient: PosthogClient | null = null;
 let posthogStart: Promise<void> | null = null;
 const posthogQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
+
+let replayState: ReplayState = INITIAL_REPLAY_STATE;
+/** One sampling roll per page load for the Mixpanel replay. */
+const mixpanelReplaySampled = Math.random() * 100 < MIXPANEL_REPLAY_PERCENT;
+/** Re-checks every 100 ms, for up to 5 s, while a stopped Mixpanel recorder may still come up. */
+const REPLAY_RECHECK_MS = 100;
+const REPLAY_RECHECK_LIMIT = 50;
+let replayRecheckScheduled = false;
+let replayRechecks = 0;
 
 function anonId(): string {
   if (typeof window === "undefined") return "server";
@@ -253,6 +272,7 @@ function startPosthog(): void {
       posthog.identify(anonId());
       posthogClient = posthog;
       flushPosthog();
+      syncSessionRecording();
     })
     .catch(() => {
       posthogStart = null;
@@ -264,21 +284,27 @@ function startMixpanel(): void {
   if (mixpanelClient || mixpanelStart) return;
   mixpanelStart = import("mixpanel-browser")
     .then((mod) => {
-      const mixpanel = mod.default as MixpanelClient;
-      // Mixpanel for Startups Pro credits: autocapture + session replay are included.
-      mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
-        ...mixpanelPrivacyConfig(window.location.href),
-        persistence: "localStorage",
-        track_pageview: true,
-        ip: true,
-      });
-      mixpanel.identify(anonId());
-      mixpanelClient = mixpanel;
-      flushMixpanel();
+      mixpanelLoaded = mod.default as MixpanelClient;
+      syncSessionRecording();
     })
     .catch(() => {
       mixpanelStart = null;
     });
+}
+
+function initMixpanel(mixpanel: MixpanelClient): void {
+  mixpanelLoaded = null;
+  if (!MIXPANEL_BROWSER_TOKEN) return;
+  // Mixpanel for Startups Pro credits: autocapture + session replay are included.
+  mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
+    ...mixpanelPrivacyConfig(),
+    persistence: "localStorage",
+    track_pageview: true,
+    ip: true,
+  });
+  mixpanel.identify(anonId());
+  mixpanelClient = mixpanel;
+  flushMixpanel();
 }
 
 /** Load Mixpanel + PostHog browser SDKs when tokens are present. */
@@ -286,4 +312,31 @@ export function initAnalytics(): void {
   if (analyticsOff()) return;
   startPosthog();
   startMixpanel();
+}
+
+/**
+ * Starts and stops session replay for the current page (rules in syncReplayForPage), and
+ * initialises a Mixpanel SDK that finished loading on an admin page once the visitor leaves it.
+ * Call after every navigation; the SDK loaders call it too, and it re-runs itself while a
+ * stopped Mixpanel recorder may still come up.
+ */
+export function syncSessionRecording(): void {
+  if (typeof window === "undefined") return;
+  const page = { href: window.location.href, trackingDisabled: browserTrackingDisabled() };
+  if (mixpanelLoaded && mixpanelMayInit(page)) initMixpanel(mixpanelLoaded);
+  replayState = syncReplayForPage(
+    replayState,
+    { ...page, mixpanelSampled: mixpanelReplaySampled },
+    { posthog: posthogClient, mixpanel: mixpanelClient },
+  );
+  if (!replayState.mixpanelStopPending) {
+    replayRechecks = 0;
+  } else if (!replayRecheckScheduled && replayRechecks < REPLAY_RECHECK_LIMIT) {
+    replayRechecks += 1;
+    replayRecheckScheduled = true;
+    setTimeout(() => {
+      replayRecheckScheduled = false;
+      syncSessionRecording();
+    }, REPLAY_RECHECK_MS);
+  }
 }
