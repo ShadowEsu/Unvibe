@@ -148,7 +148,7 @@ export function BetaInstall({
       <div className="paper-beta__specs" aria-label="Download details">
         <span>{BETA_INSTALL_VERSION}</span>
         <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "~81 MB .exe" : "~112 MB .dmg"}</span>
+        <span>{os === "windows" ? "~88 MB .exe" : intelMac ? "~117 MB .dmg" : "~109 MB .dmg"}</span>
         <span aria-hidden="true">·</span>
         <span>No card</span>
         <span aria-hidden="true">·</span>
@@ -165,7 +165,7 @@ export function BetaInstall({
         <p className="paper-beta__update">
           {os === "windows"
             ? "Unvibe is not signed for Windows yet, so the first run shows a blue warning with Run anyway. "
-            : "Unvibe is not verified by Apple yet, so the first open needs one approval in System Settings. "}
+            : "Unvibe is not verified by Apple yet, so the first open takes a few extra steps in System Settings. "}
           <a href="/install-help">Show me how</a>
         </p>
       )}
@@ -190,7 +190,7 @@ export function BetaInstall({
       <p className="paper-beta__update">
         <b>Updating?</b> From v0.1.30 on, Unvibe updates itself.{" "}
         {os === "windows"
-          ? "On an older version, quit it from the tray icon, then run the new installer."
+          ? "On an older version, quit it from the tray icon, then run the new .exe."
           : "On an older version, quit it from the menu bar, drag the new one into Applications and choose Replace."}
       </p>
 

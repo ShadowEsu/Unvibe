@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BETA_INSTALL_COMMAND, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
+import { BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 
 type Os = "mac" | "windows";
@@ -28,8 +29,8 @@ function Copy({ text, label }: { text: string; label: string }) {
 }
 
 /**
- * How to open Unvibe the first time. Unvibe is not notarized by Apple yet, so macOS 15+ asks
- * for one approval in System Settings, and Windows SmartScreen asks once. The Terminal and
+ * How to open Unvibe the first time. Unvibe is not notarized by Apple yet, so macOS 15+ needs
+ * Open Anyway in Privacy & Security, and Windows SmartScreen needs Run anyway. The Terminal and
  * PowerShell installs skip both because command line downloads are not quarantined.
  */
 export function FirstOpenSteps({ initialOs, compact = false }: { initialOs?: Os; compact?: boolean }) {
@@ -59,10 +60,10 @@ export function FirstOpenSteps({ initialOs, compact = false }: { initialOs?: Os;
             <ol>
               <li><b>Open the .dmg</b> you downloaded and drag <b>Unvibe</b> onto <b>Applications</b>. If it asks, choose <b>Replace</b>.</li>
               <li><b>Open Unvibe</b> from Applications. macOS shows <i>&ldquo;Unvibe Not Opened&rdquo;</i> because Unvibe is not verified by Apple yet. Press <b>Done</b>.</li>
-              <li>Open <b>System Settings</b>, then <b>Privacy &amp; Security</b>. Scroll down to <i>&ldquo;Unvibe was blocked&rdquo;</i> and press <b>Open Anyway</b>, then enter your Mac password.</li>
+              <li>Open <b>System Settings</b>, click <b>Privacy &amp; Security</b>, and scroll down to <b>Security</b>. Press <b>Open Anyway</b>, confirm when macOS asks again, then enter your Mac password. The button stays for about an hour after you try to open Unvibe. If it&apos;s gone, open Unvibe again first.</li>
               <li>That&apos;s it. You only do this once, and future versions update themselves.</li>
             </ol>
-            <p className="fos__note">On macOS 14 or older you can instead right click Unvibe in Applications and choose <b>Open</b>.</p>
+            <p className="fos__note">On macOS 14 or older you can instead Control-click (right-click) Unvibe in Applications, choose <b>Open</b>, then press <b>Open</b> again.</p>
           </section>
 
           <section className="fos__card">
@@ -82,11 +83,12 @@ export function FirstOpenSteps({ initialOs, compact = false }: { initialOs?: Os;
           <section className="fos__card">
             <p className="fos__tag">Or with the download</p>
             <ol>
-              <li><b>Run the installer</b> you downloaded.</li>
+              <li>If your browser warns about the download, keep it. In Edge, press <b>…</b> next to the download, then <b>Keep</b>, then <b>Show more</b>, then <b>Keep anyway</b>.</li>
+              <li>Run <b>{BETA_WINDOWS_ASSET}</b>, the file you downloaded.</li>
               <li>If a blue <i>&ldquo;Windows protected your PC&rdquo;</i> box appears, press <b>More info</b>, then <b>Run anyway</b>. It shows because Unvibe is new and not yet signed with a paid certificate.</li>
               <li>Unvibe opens and stays in your taskbar. Future versions update themselves.</li>
             </ol>
-            <p className="fos__note">If your browser warns about the download, choose <b>Keep</b>.</p>
+            <p className="fos__note">No <b>Run anyway</b> button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it blocks unsigned apps like Unvibe and can&apos;t make an exception for one app. Email <a href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a> and we&apos;ll help.</p>
           </section>
         </>
       )}
