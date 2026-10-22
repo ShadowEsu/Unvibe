@@ -88,7 +88,7 @@ export function FirstOpenSteps({ initialOs, compact = false }: { initialOs?: Os;
               <li>If a blue <i>&ldquo;Windows protected your PC&rdquo;</i> box appears, press <b>More info</b>, then <b>Run anyway</b>. It shows because Unvibe is new and not yet signed with a paid certificate.</li>
               <li>Unvibe opens and stays in your taskbar. Future versions update themselves.</li>
             </ol>
-            <p className="fos__note">No <b>Run anyway</b> button? Work and school PCs can remove it. On Windows 11, Smart App Control also blocks unsigned apps like Unvibe, and it can&apos;t make an exception for one app. Email <a href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a> and we&apos;ll tell you when the signed build is out.</p>
+            <p className="fos__note">No <b>Run anyway</b> button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it blocks unsigned apps like Unvibe and can&apos;t make an exception for one app. Email <a href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a> and we&apos;ll help.</p>
           </section>
         </>
       )}

@@ -41,7 +41,7 @@ export default function BetaDownloadsPage() {
                   <strong>Download and open Unvibe</strong>
                   <p>
                     On Mac, move Unvibe to Applications and open it. macOS blocks the first open: press <b>Done</b>,
-                    then go to System Settings → Privacy &amp; Security, press <b>Open Anyway</b>, confirm, and enter
+                    then go to System Settings → Privacy &amp; Security, scroll down to Security, press <b>Open Anyway</b>, confirm, and enter
                     your Mac password.
                   </p>
                   <p>
@@ -107,7 +107,7 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
             <details>
-              <summary>Your browser blocks the Windows download</summary>
+              <summary>Your browser warns about the Windows download</summary>
               <p>
                 In Edge, press <strong>…</strong> next to the download, then <strong>Keep</strong>, then
                 {" "}<strong>Show more</strong>, then <strong>Keep anyway</strong>. Chrome also lets you keep a file after it warns.
@@ -120,10 +120,10 @@ export default function BetaDownloadsPage() {
                 {" "}<strong>Run anyway</strong>. Only do this for the file downloaded from unvibe.site or our GitHub releases.
               </p>
               <p>
-                No Run anyway button? Work and school PCs can remove it. On Windows 11, Smart App Control also blocks
-                unsigned apps like Unvibe, and it can’t make an exception for one app. Email{" "}
+                No Run anyway button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it
+                blocks unsigned apps like Unvibe and can’t make an exception for one app. Email{" "}
                 <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a>
-                {" "}and we’ll tell you when the signed build is out.
+                {" "}and we’ll help.
               </p>
             </details>
             <details>
