@@ -1,4 +1,4 @@
--- Shared request limits for the public signup forms (waitlist, beta download).
+-- Shared request limits for the marketing site's public signup forms (waitlist, beta download).
 -- Limits used to live in each serverless instance's memory, so every cold start or extra
 -- instance reset them. This counts calls (not rows) per bucket per fixed window.
 -- Buckets are "<rule>:<sha256 prefix>"; raw IPs and emails are never stored.
@@ -29,7 +29,7 @@ create or replace function public.consume_rate_limit(
 returns boolean
 language plpgsql
 security invoker
-set search_path = public
+set search_path = public, pg_temp
 as $$
 declare
   v_window timestamptz;
@@ -59,4 +59,6 @@ $$;
 
 revoke all on table public.request_rate_limits from public, anon, authenticated;
 revoke all on function public.consume_rate_limit(text, integer, integer) from public, anon, authenticated;
+-- The function is security invoker, so the service role needs the table rights it uses.
+grant select, insert, update, delete on table public.request_rate_limits to service_role;
 grant execute on function public.consume_rate_limit(text, integer, integer) to service_role;

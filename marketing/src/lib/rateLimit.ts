@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Request limits shared by every serverless instance. Calls are counted in Supabase
- * (public.consume_rate_limit, supabase/migrations/0010_request_rate_limits.sql), so a cold
+ * (public.consume_rate_limit, web/supabase/migrations/20261022080000_request_rate_limits.sql), so a cold
  * start or a second instance does not reset them. Function memory is used only in local
  * development; deployed, a missing or failing store means "unavailable" (fail closed).
  */
