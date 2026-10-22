@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { CaptureResult } from "posthog-js";
 import {
-  NO_PAUSED_REPLAYS,
+  INITIAL_REPLAY_STATE,
   POSTHOG_PRIVACY_CONFIG,
+  REPLAY_BLOCK_CLASS,
   analyticsAllowedOnPath,
   maskReplayNetworkEntry,
   mixpanelBeforeSend,
+  mixpanelMayInit,
   mixpanelPrivacyConfig,
   posthogBeforeSend,
   sanitizeUrl,
@@ -165,15 +167,26 @@ describe("analytics privacy config", () => {
     assert.equal(POSTHOG_PRIVACY_CONFIG.mask_all_element_attributes, true);
   });
 
-  it("Mixpanel replay masks all text and inputs, and skips pages whose URL carries a secret", () => {
-    const clean = mixpanelPrivacyConfig("https://unvibe.site/pricing");
-    assert.equal(clean.record_mask_all_text, true);
-    assert.equal(clean.record_mask_all_inputs, true);
-    assert.equal(clean.autocapture.capture_text_content, false);
-    assert.equal(clean.record_sessions_percent, 100);
-    assert.equal(mixpanelPrivacyConfig(feedbackRewardUrl(EMAIL)).record_sessions_percent, 0);
-    assert.equal(mixpanelPrivacyConfig("https://unvibe.site/activate?user_code=ABCD1234").record_sessions_percent, 0);
-    assert.equal(mixpanelPrivacyConfig("https://unvibe.site/founder").record_sessions_percent, 0, "SDK finished loading after a client navigation to an admin page");
+  it("Mixpanel never starts a replay on its own, and holds a new replay's first frames back", () => {
+    const config = mixpanelPrivacyConfig();
+    assert.equal(config.record_sessions_percent, 0);
+    assert.ok(config.record_min_ms > 0, "a recorder stopped right after it came up is discarded unsent");
+    assert.equal(config.record_mask_all_text, true);
+    assert.equal(config.record_mask_all_inputs, true);
+    assert.equal(config.autocapture.capture_text_content, false);
+  });
+
+  it("both recorders blank out elements marked with the block class", () => {
+    assert.equal(POSTHOG_PRIVACY_CONFIG.session_recording.blockClass, REPLAY_BLOCK_CLASS);
+    assert.ok(mixpanelPrivacyConfig().record_block_class.test(REPLAY_BLOCK_CLASS));
+    assert.ok(mixpanelPrivacyConfig().record_block_class.test("mp-block"), "Mixpanel's own default class still blocks");
+  });
+
+  it("Mixpanel starts only on a public page, for a tracked browser", () => {
+    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/pricing", trackingDisabled: false }), true);
+    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/founder", trackingDisabled: false }), false, "in-flight load that lands on an admin page");
+    assert.equal(mixpanelMayInit({ href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false }), false);
+    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/pricing", trackingDisabled: true }), false);
   });
 
   it("admin and capability pages load no analytics SDK", () => {
@@ -186,84 +199,142 @@ describe("analytics privacy config", () => {
   });
 });
 
-/** Fake SDK clients that log which replay controls were called. */
-function fakeSdks({ mixpanelRecording = true } = {}) {
+/**
+ * Fake SDK clients that log which replay controls were called. Like the real Mixpanel recorder,
+ * which reads IndexedDB first, a start only runs when the test calls `recorderComesUp`, and a stop
+ * issued before then does not cancel it. A running recorder reports a replay id until stopped.
+ */
+function fakeSdks({ recording = false } = {}) {
   const calls: string[] = [];
+  let mixpanelRecording = recording;
+  let startPending = false;
   return {
     calls,
+    recorderComesUp: () => {
+      if (!startPending) return;
+      startPending = false;
+      mixpanelRecording = true;
+      calls.push("mixpanel.recorder-running");
+    },
     sdk: {
       posthog: {
         stopSessionRecording: () => void calls.push("posthog.stop"),
         startSessionRecording: () => void calls.push("posthog.start"),
       },
       mixpanel: {
-        stop_session_recording: () => void calls.push("mixpanel.stop"),
-        start_session_recording: () => void calls.push("mixpanel.start"),
+        stop_session_recording: () => {
+          calls.push("mixpanel.stop");
+          mixpanelRecording = false;
+        },
+        start_session_recording: () => {
+          calls.push("mixpanel.start");
+          startPending = true;
+        },
         get_session_recording_properties: () => (mixpanelRecording ? { $mp_replay_id: "replay-1" } : {}),
       },
     },
   };
 }
 
-const tracked = { trackingDisabled: false };
+const tracked = { trackingDisabled: false, mixpanelSampled: true };
+const PUBLIC = "https://unvibe.site/pricing";
+const ADMIN = "https://unvibe.site/waitlist-admin";
 
 describe("session replay on client navigation", () => {
-  it("public to admin or capability page stops both recordings", () => {
-    for (const href of ["https://unvibe.site/founder", "https://unvibe.site/waitlist", `https://unvibe.site/s/${STATS_KEY}`]) {
+  it("a public page starts the Mixpanel replay once, and only when sampled", () => {
+    const { calls, sdk } = fakeSdks();
+    const state = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, sdk);
+    assert.deepEqual(syncReplayForPage(state, { href: "https://unvibe.site/", ...tracked }, sdk), state);
+    assert.deepEqual(calls, ["mixpanel.start"]);
+    const unsampled = fakeSdks();
+    syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, trackingDisabled: false, mixpanelSampled: false }, unsampled.sdk);
+    assert.deepEqual(unsampled.calls, []);
+  });
+
+  it("an admin or capability page never starts Mixpanel, even as the first page the SDK sees", () => {
+    for (const href of ["https://unvibe.site/founder", "https://unvibe.site/waitlist", ADMIN, `https://unvibe.site/s/${STATS_KEY}`]) {
       const { calls, sdk } = fakeSdks();
-      const paused = syncReplayForPage(NO_PAUSED_REPLAYS, { href, ...tracked }, sdk);
-      assert.deepEqual(calls, ["posthog.stop", "mixpanel.stop"], href);
-      assert.deepEqual(paused, { posthog: true, mixpanel: true }, href);
+      syncReplayForPage(INITIAL_REPLAY_STATE, { href, ...tracked }, sdk);
+      assert.ok(!calls.includes("mixpanel.start"), href);
     }
   });
 
-  it("private to private calls nothing again", () => {
+  it("public to admin page stops both recordings, without waiting for a replay id", () => {
     const { calls, sdk } = fakeSdks();
-    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: "https://unvibe.site/waitlist-admin", ...tracked }, sdk);
-    assert.deepEqual(calls, []);
-    assert.deepEqual(paused, { posthog: true, mixpanel: true });
+    const started = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, sdk);
+    const state = syncReplayForPage(started, { href: ADMIN, ...tracked }, sdk);
+    assert.deepEqual(calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop"]);
+    assert.equal(state.posthogPaused, true);
+    assert.equal(state.mixpanelStarted, false);
+    assert.deepEqual(syncReplayForPage(state, { href: "https://unvibe.site/founder", ...tracked }, sdk), state, "private to private calls nothing");
+    assert.equal(calls.length, 3);
   });
 
-  it("private to public resumes the recordings it stopped", () => {
+  it("a recorder still starting when the visitor reaches an admin page is stopped as soon as it runs", () => {
+    const { calls, sdk, recorderComesUp } = fakeSdks();
+    let state = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, sdk);
+    state = syncReplayForPage(state, { href: ADMIN, ...tracked }, sdk);
+    assert.equal(state.mixpanelStopPending, true, "the caller must check again");
+    state = syncReplayForPage(state, { href: ADMIN, ...tracked }, sdk);
+    assert.equal(state.mixpanelStopPending, true, "still not running: keep checking, call nothing");
+    recorderComesUp();
+    state = syncReplayForPage(state, { href: ADMIN, ...tracked }, sdk);
+    assert.deepEqual(calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop", "mixpanel.recorder-running", "mixpanel.stop"]);
+    assert.deepEqual(sdk.mixpanel.get_session_recording_properties(), {});
+    assert.deepEqual(state, { posthogPaused: true, mixpanelStarted: false, mixpanelStopPending: false });
+  });
+
+  it("a stop with no start in flight needs no further checks", () => {
+    const { sdk } = fakeSdks({ recording: true });
+    const state = syncReplayForPage({ ...INITIAL_REPLAY_STATE, mixpanelStarted: true }, { href: ADMIN, ...tracked }, sdk);
+    assert.equal(state.mixpanelStopPending, false);
+  });
+
+  it("returning to a public page while a stopped start is still in flight keeps that recorder", () => {
+    const { calls, sdk, recorderComesUp } = fakeSdks();
+    let state = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, sdk);
+    state = syncReplayForPage(state, { href: ADMIN, ...tracked }, sdk);
+    state = syncReplayForPage(state, { href: PUBLIC, ...tracked }, sdk);
+    recorderComesUp();
+    state = syncReplayForPage(state, { href: PUBLIC, ...tracked }, sdk);
+    assert.deepEqual(calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop", "posthog.start", "mixpanel.start", "mixpanel.recorder-running"]);
+    assert.deepEqual(state, { posthogPaused: false, mixpanelStarted: true, mixpanelStopPending: false });
+  });
+
+  it("a replay the SDK resumed on its own is stopped on an admin page", () => {
+    const { calls, sdk } = fakeSdks({ recording: true });
+    syncReplayForPage(INITIAL_REPLAY_STATE, { href: ADMIN, ...tracked }, sdk);
+    assert.deepEqual(calls, ["posthog.stop", "mixpanel.stop"]);
+  });
+
+  it("admin to public page resumes PostHog and starts Mixpanel again", () => {
     const { calls, sdk } = fakeSdks();
-    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: "https://unvibe.site/pricing", ...tracked }, sdk);
+    const state = syncReplayForPage({ ...INITIAL_REPLAY_STATE, posthogPaused: true }, { href: PUBLIC, ...tracked }, sdk);
     assert.deepEqual(calls, ["posthog.start", "mixpanel.start"]);
-    assert.deepEqual(paused, NO_PAUSED_REPLAYS);
+    assert.deepEqual(state, { posthogPaused: false, mixpanelStarted: true, mixpanelStopPending: false });
   });
 
-  it("public to public calls nothing", () => {
+  it("never starts or resumes for automated or opted-out browsers", () => {
     const { calls, sdk } = fakeSdks();
-    for (const href of ["https://unvibe.site/", "https://unvibe.site/pricing#faq", "https://unvibe.site/activate"]) {
-      assert.deepEqual(syncReplayForPage(NO_PAUSED_REPLAYS, { href, ...tracked }, sdk), NO_PAUSED_REPLAYS, href);
-    }
+    const paused = { ...INITIAL_REPLAY_STATE, posthogPaused: true };
+    const state = syncReplayForPage(paused, { href: PUBLIC, trackingDisabled: true, mixpanelSampled: true }, sdk);
     assert.deepEqual(calls, []);
+    assert.deepEqual(state, paused);
   });
 
-  it("never resumes for automated or opted-out browsers", () => {
+  it("never starts Mixpanel while the URL carries a secret, and stops it if one appears", () => {
     const { calls, sdk } = fakeSdks();
-    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: "https://unvibe.site/pricing", trackingDisabled: true }, sdk);
-    assert.deepEqual(calls, []);
-    assert.deepEqual(paused, { posthog: true, mixpanel: true });
-  });
-
-  it("does not resume Mixpanel while the URL carries a secret", () => {
-    const { calls, sdk } = fakeSdks();
-    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: feedbackRewardUrl(EMAIL), ...tracked }, sdk);
+    syncReplayForPage({ ...INITIAL_REPLAY_STATE, posthogPaused: true }, { href: feedbackRewardUrl(EMAIL), ...tracked }, sdk);
     assert.deepEqual(calls, ["posthog.start"]);
-    assert.deepEqual(paused, { posthog: false, mixpanel: true });
-  });
-
-  it("never force-starts a Mixpanel replay that was not recording", () => {
-    const { calls, sdk } = fakeSdks({ mixpanelRecording: false });
-    const paused = syncReplayForPage(NO_PAUSED_REPLAYS, { href: "https://unvibe.site/founder", ...tracked }, sdk);
-    assert.deepEqual(syncReplayForPage(paused, { href: "https://unvibe.site/", ...tracked }, sdk), NO_PAUSED_REPLAYS);
-    assert.deepEqual(calls, ["posthog.stop", "posthog.start"]);
+    const running = fakeSdks({ recording: true });
+    syncReplayForPage({ ...INITIAL_REPLAY_STATE, mixpanelStarted: true }, { href: "https://unvibe.site/activate?user_code=ABCD1234", ...tracked }, running.sdk);
+    assert.deepEqual(running.calls, ["mixpanel.stop"]);
   });
 
   it("does nothing, and does not throw, before the SDKs have loaded", () => {
     for (const href of ["https://unvibe.site/founder", "https://unvibe.site/"]) {
-      const paused = syncReplayForPage(NO_PAUSED_REPLAYS, { href, ...tracked }, { posthog: null, mixpanel: null });
-      assert.deepEqual(paused, NO_PAUSED_REPLAYS, href);
+      const state = syncReplayForPage(INITIAL_REPLAY_STATE, { href, ...tracked }, { posthog: null, mixpanel: null });
+      assert.deepEqual(state, INITIAL_REPLAY_STATE, href);
     }
   });
 });

@@ -157,6 +157,13 @@ export function analyticsAllowedOnPath(pathname: string): boolean {
 }
 
 /**
+ * Elements with this class are left out of every replay (both SDKs record a blank box instead).
+ * Admin and capability pages wrap their content in it: a client navigation renders the new page
+ * before `syncReplayForPage` stops the replay, and the frames of that moment show no content.
+ */
+export const REPLAY_BLOCK_CLASS = "ph-no-capture";
+
+/**
  * posthog-js init options (besides the host and project defaults). `maskTextSelector: "*"`
  * masks the text of every element, present or future; inputs are masked too.
  */
@@ -167,28 +174,50 @@ export const POSTHOG_PRIVACY_CONFIG = {
   session_recording: {
     maskAllInputs: true,
     maskTextSelector: "*",
+    blockClass: REPLAY_BLOCK_CLASS,
     maskCapturedNetworkRequestFn: maskReplayNetworkEntry,
   },
 } as const;
 
+/** Share of tracked sessions with a Mixpanel replay; `syncReplayForPage` applies it, not the SDK. */
+export const MIXPANEL_REPLAY_PERCENT = 100;
+
 /**
  * Mixpanel replays take the page URL straight from the address bar with no hook, so a page
- * whose URL still carries a secret is not recorded at all, and neither is an admin page (the
- * SDK can finish loading after a client navigation into one).
+ * whose URL still carries a secret is not recorded at all, and neither is an admin page.
  */
 function mixpanelMayRecord(href: string): boolean {
   return analyticsAllowedOnPath(pagePath(href)) && sanitizeUrl(href) === href;
 }
 
-/** mixpanel-browser init options. Replay masks all text and inputs. */
-export function mixpanelPrivacyConfig(currentHref: string) {
+/**
+ * Mixpanel holds a new replay's frames in the browser until it has this much activity, and a
+ * replay stopped before then is discarded unsent. That is what makes a recorder which came up on
+ * an admin page, and was stopped by `syncReplayForPage` right after, send nothing. Also drops
+ * replays shorter than 3 seconds, which are of no use anyway.
+ */
+export const MIXPANEL_REPLAY_MIN_MS = 3000;
+
+/**
+ * mixpanel-browser init options. Replay masks all text and inputs. The SDK never starts a replay
+ * on its own (`record_sessions_percent: 0`): `syncReplayForPage` starts and stops it per page.
+ */
+export function mixpanelPrivacyConfig() {
   return {
     autocapture: { capture_text_content: false },
-    record_sessions_percent: mixpanelMayRecord(currentHref) ? 100 : 0,
+    record_sessions_percent: 0,
+    record_min_ms: MIXPANEL_REPLAY_MIN_MS,
     record_mask_all_text: true,
     record_mask_all_inputs: true,
+    // Mixpanel's default classes plus ours.
+    record_block_class: new RegExp(`^(${REPLAY_BLOCK_CLASS}|mp-block|fs-exclude|amp-block|rr-block)$`),
     hooks: { before_send_events: mixpanelBeforeSend },
   };
+}
+
+/** Whether Mixpanel may initialise now: a public page in a tracked browser (not after a navigation into an admin page). */
+export function mixpanelMayInit(page: { href: string; trackingDisabled: boolean }): boolean {
+  return !page.trackingDisabled && analyticsAllowedOnPath(pagePath(page.href));
 }
 
 /** posthog-js session replay controls. */
@@ -199,53 +228,68 @@ export type PosthogReplay = {
 
 /** mixpanel-browser session replay controls. */
 export type MixpanelReplay = {
-  stop_session_recording(): void;
-  start_session_recording(): void;
+  stop_session_recording(): unknown;
+  start_session_recording(): unknown;
   get_session_recording_properties(): { $mp_replay_id?: string };
 };
 
-/** Replays that `syncReplayForPage` stopped, so only those are resumed. */
-export type PausedReplays = { readonly posthog: boolean; readonly mixpanel: boolean };
+/**
+ * What `syncReplayForPage` did last: the PostHog replay it paused, the Mixpanel replay it started,
+ * and whether a Mixpanel recorder it stopped before it was running may still come up (then the
+ * caller must run `syncReplayForPage` again shortly, until this clears).
+ */
+export type ReplayState = {
+  readonly posthogPaused: boolean;
+  readonly mixpanelStarted: boolean;
+  readonly mixpanelStopPending: boolean;
+};
 
-export const NO_PAUSED_REPLAYS: PausedReplays = { posthog: false, mixpanel: false };
+export const INITIAL_REPLAY_STATE: ReplayState = { posthogPaused: false, mixpanelStarted: false, mixpanelStopPending: false };
 
 /**
- * Call on every client navigation. The SDKs decide on the first page only, so without this a
- * visitor who opens a public page and then follows a link to an admin or capability page keeps
- * being recorded there. Stops both replays on those pages and resumes them on leaving, but only
- * the ones it stopped, never for automated or opted-out browsers, and never Mixpanel while the
- * URL carries a secret.
+ * Call on every client navigation, after each SDK loads, and again shortly while
+ * `mixpanelStopPending`. Without it a visitor who opens a public page and then follows a link to
+ * an admin or capability page keeps being recorded there.
  *
- * PostHog: stopping also keeps a recorder that is still loading from starting, and
- * `startSessionRecording()` without overrides keeps the project's sampling and triggers.
- * Mixpanel: `start_session_recording()` starts a replay unconditionally, so a Mixpanel replay is
- * only stopped, and later resumed, when one is actually running.
+ * PostHog keeps its own sampling: on admin pages (and for automated or opted-out browsers) its
+ * replay is stopped, which also keeps a recorder that is still loading from starting, and only a
+ * replay this function stopped is resumed, without overrides.
+ *
+ * Mixpanel never starts by itself, so this is its only start: on a public page with no secret in
+ * the URL, in a tracked and sampled browser. Anywhere else it is stopped, whether or not a replay
+ * id exists yet. Mixpanel's start finishes asynchronously (the recorder reads IndexedDB first)
+ * and a stop issued before then cannot cancel it, so after such a stop `mixpanelStopPending` asks
+ * for re-checks, and the recorder is stopped as soon as it reports a replay id. It is stopped
+ * well inside MIXPANEL_REPLAY_MIN_MS, so Mixpanel discards what it held and sends nothing.
  */
 export function syncReplayForPage(
-  paused: PausedReplays,
-  page: { href: string; trackingDisabled: boolean },
+  state: ReplayState,
+  page: { href: string; trackingDisabled: boolean; mixpanelSampled: boolean },
   sdk: { posthog: PosthogReplay | null; mixpanel: MixpanelReplay | null },
-): PausedReplays {
+): ReplayState {
   const publicPage = !page.trackingDisabled && analyticsAllowedOnPath(pagePath(page.href));
-  let { posthog, mixpanel } = paused;
+  let { posthogPaused, mixpanelStarted, mixpanelStopPending } = state;
   if (sdk.posthog) {
-    if (!publicPage && !posthog) {
+    if (!publicPage && !posthogPaused) {
       sdk.posthog.stopSessionRecording();
-      posthog = true;
-    } else if (publicPage && posthog) {
+      posthogPaused = true;
+    } else if (publicPage && posthogPaused) {
       sdk.posthog.startSessionRecording();
-      posthog = false;
+      posthogPaused = false;
     }
   }
   if (sdk.mixpanel) {
-    const record = publicPage && mixpanelMayRecord(page.href);
-    if (!record && !mixpanel && "$mp_replay_id" in sdk.mixpanel.get_session_recording_properties()) {
+    const record = publicPage && page.mixpanelSampled && mixpanelMayRecord(page.href);
+    const running = "$mp_replay_id" in sdk.mixpanel.get_session_recording_properties();
+    if (record) {
+      if (!mixpanelStarted) sdk.mixpanel.start_session_recording();
+      mixpanelStarted = true;
+      mixpanelStopPending = false;
+    } else if (mixpanelStarted || running) {
       sdk.mixpanel.stop_session_recording();
-      mixpanel = true;
-    } else if (record && mixpanel) {
-      sdk.mixpanel.start_session_recording();
-      mixpanel = false;
+      mixpanelStopPending = mixpanelStarted && !running;
+      mixpanelStarted = false;
     }
   }
-  return { posthog, mixpanel };
+  return { posthogPaused, mixpanelStarted, mixpanelStopPending };
 }
