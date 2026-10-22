@@ -9,6 +9,7 @@ interface Props {
   initialWorkspaces: WorkspaceAccess[];
   checkoutAvailable: boolean;
   lifetimeAvailable: boolean;
+  paymentsOpen: boolean;
 }
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -21,7 +22,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvailable, lifetimeAvailable }: Props) {
+export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvailable, lifetimeAvailable, paymentsOpen }: Props) {
   const [overview, setOverview] = useState(initialOverview);
   const [workspaces, setWorkspaces] = useState(initialWorkspaces);
   const [interval, setInterval] = useState<Exclude<BillingInterval, 'lifetime'>>('monthly');
@@ -206,7 +207,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
       </header>
 
       {notice && <p className="plan-notice" role="status">{notice}</p>}
-      {!checkoutAvailable && <p className="plan-notice plan-notice--quiet">Checkout is safely disabled until the server has Stripe keys, Pro price IDs, and a webhook secret.</p>}
+      {!checkoutAvailable && <p className="plan-notice plan-notice--quiet">{paymentsOpen ? 'Checkout is safely disabled until the server has Stripe keys, Pro price IDs, and a webhook secret.' : 'Payments open soon. Your Free plan keeps working until then.'}</p>}
 
       <section className="current-plan">
         <div><span>Current plan</span><strong>{overview.subscription.plan === 'teams' ? 'Teams' : overview.subscription.plan === 'pro' ? 'Pro' : 'Free'}</strong></div>
@@ -229,14 +230,16 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
           <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>100 AI explanations/month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Upgrade to Pro</button></article>
         </section>
 
-        <section className="plan-card plan-lifetime-band">
-          <div>
-            <p>Pro Lifetime</p>
-            <h2>$80</h2>
-            <small>One-time. Personal Pro forever. No monthly bill.</small>
-          </div>
-          <button className="btn btn--primary" type="button" onClick={() => void checkout('lifetime')} disabled={busy || !lifetimeAvailable || overview.workspace.type !== 'personal'}>{lifetimeAvailable ? 'Buy Lifetime · $80' : 'Lifetime soon'}</button>
-        </section>
+        {lifetimeAvailable && (
+          <section className="plan-card plan-lifetime-band">
+            <div>
+              <p>Pro Lifetime</p>
+              <h2>$80</h2>
+              <small>One-time. Personal Pro forever. No monthly bill.</small>
+            </div>
+            <button className="btn btn--primary" type="button" onClick={() => void checkout('lifetime')} disabled={busy || overview.workspace.type !== 'personal'}>Buy Lifetime · $80</button>
+          </section>
+        )}
 
         <section className="plan-card plan-teams-band">
           <div>

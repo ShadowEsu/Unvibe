@@ -2,7 +2,7 @@ import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { getStripe, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { getStripe, lifetimeCheckoutOpen, livePaymentsLocked, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -16,6 +16,7 @@ function isBillingInterval(value: unknown): value is BillingInterval {
 export async function POST(req: Request): Promise<Response> {
   const user = await requireUser(req);
   if (isResponse(user)) return user;
+  if (livePaymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
   try {
     const body = (await req.json()) as CheckoutBody;
     if (body.plan === 'teams' && !teamsCheckoutEnabled()) {
@@ -27,8 +28,8 @@ export async function POST(req: Request): Promise<Response> {
     if (body.interval === 'lifetime' && body.plan !== 'pro') {
       return Response.json({ error: 'invalid_checkout', message: 'Lifetime is only available for Pro.' }, { status: 400 });
     }
-    if (body.interval === 'lifetime' && !process.env.STRIPE_PRICE_PRO_LIFETIME?.trim()) {
-      return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime checkout is not configured yet.' }, { status: 503 });
+    if (body.interval === 'lifetime' && !lifetimeCheckoutOpen()) {
+      return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime is not available. Choose monthly or annual Pro.' }, { status: 503 });
     }
     const billing = getBillingStore();
     const requestedSeats = typeof body.seats === 'number' ? body.seats : Number(body.seats ?? (body.plan === 'teams' ? 2 : 1));

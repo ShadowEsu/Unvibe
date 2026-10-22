@@ -121,7 +121,7 @@ export interface BillingOverview {
   hasBillingAccount: boolean;
 }
 
-export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean }> {
+export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean; paymentsOpen?: boolean }> {
   return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
 }
 

@@ -33,9 +33,30 @@ export function stripeIsConfigured(): boolean {
   );
 }
 
-/** One-time Pro Lifetime requires its own trusted Price ID. */
-export function stripeLifetimeConfigured(): boolean {
-  return stripeIsConfigured() && Boolean(process.env.STRIPE_PRICE_PRO_LIFETIME?.trim());
+/**
+ * Live money stays off until Preston approves it: a live (or restricted live) secret key
+ * alone never opens checkout. Set BILLING_LIVE_PAYMENTS_APPROVED=true only after that approval.
+ * Test-mode keys are never locked, so sandbox checkout keeps working.
+ */
+export function livePaymentsLocked(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!key || key.startsWith('sk_test_') || key.startsWith('rk_test_')) return false;
+  return process.env.BILLING_LIVE_PAYMENTS_APPROVED?.trim() !== 'true';
+}
+
+export const PAYMENTS_NOT_OPEN = {
+  error: 'payments_not_open',
+  message: 'Payments open soon. Your Free plan keeps working until then.',
+} as const;
+
+/** Monthly and annual checkout: configured, and not a locked live account. */
+export function checkoutOpen(): boolean {
+  return stripeIsConfigured() && !livePaymentsLocked();
+}
+
+/** Pro Lifetime is hidden unless explicitly enabled (pending Preston's keep/drop decision). */
+export function lifetimeCheckoutOpen(): boolean {
+  return checkoutOpen() && Boolean(process.env.STRIPE_PRICE_PRO_LIFETIME?.trim()) && process.env.BILLING_LIFETIME_ENABLED?.trim() === 'true';
 }
 
 export function publicAppUrl(req: Request): string {
