@@ -205,6 +205,23 @@ function clearPanelSessions(): void {
   panelReady = false;
 }
 
+/**
+ * The review panel, opened if needed. A fresh panel starts with no tab sessions, and the session the
+ * caller then puts on its active tab is started once by the renderer's widget:ready, never twice.
+ */
+function openPanel(): { win: BrowserWindow; fresh: boolean } {
+  if (currentWidget()) return { win: getOrCreateWidget(), fresh: false };
+  const win = getOrCreateWidget();
+  const windowId = win.id;
+  clearPanelSessions();
+  win.on('closed', () => {
+    clearPanelSessions();
+    normalBounds.delete(windowId);
+    if (settings().all().barVisibility === 'during-review') hideBar(bar);
+  });
+  return { win, fresh: true };
+}
+
 function beginCaptureOnActiveTab(
   win: BrowserWindow,
   code: string | null,
@@ -247,12 +264,12 @@ function loadCodeIntoSession(
   void runReview(win, session, { level: session.level });
 }
 
-async function requireProOrError(win: BrowserWindow, session: ReviewSession, feature: string): Promise<boolean> {
+async function requireProOrError(win: BrowserWindow, tabId: string, feature: string): Promise<boolean> {
   const usage = await resolveAppUsage();
   if (isProPlan(usage.plan)) return true;
   win.webContents.send('review:event', {
     type: 'error',
-    tabId: session.tabId,
+    tabId,
     code: 'pro_required',
     upgradePath: '/plan',
     message: `${feature} is included with Unvibe Pro. Pro connects explanations across diffs, nearby files, and what you already understood.`,
@@ -273,6 +290,8 @@ async function startBuiltReview(
     session.sourceApp = sourceLabel;
     session.reviewId = randomUUID();
     applyBuiltReview(session, built);
+    // A panel that is still loading starts this tab itself on widget:ready.
+    if (!panelReady) return { ok: true };
     initWidget(win, session, { autoStart: true });
     void runReview(win, session, { level: session.level });
     return { ok: true };
@@ -450,19 +469,10 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
       return;
     }
   }
-  const existing = currentWidget();
-  const win = getOrCreateWidget();
-  const windowId = win.id;
-  if (!existing) {
+  const { win, fresh } = openPanel();
+  if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
-    clearPanelSessions();
-    activeTabId = '1';
     tabSessions.set(activeTabId, makeSession(activeTabId, code, sourceApp));
-    win.on('closed', () => {
-      clearPanelSessions();
-      normalBounds.delete(windowId);
-      if (settings().all().barVisibility === 'during-review') hideBar(bar);
-    });
     return;
   }
   beginCaptureOnActiveTab(win, code, sourceApp);
@@ -951,11 +961,13 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('review:explainDiff', async (e, opts?: { brief?: boolean; level?: ExplanationLevel; scope?: BriefScope }) => {
-    const win = widgetOf(e) ?? getOrCreateWidget();
-    showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
-    tabSessions.set(activeTabId, session);
-    if (opts?.level) session.level = opts.level;
+    const brief = Boolean(opts?.brief);
+    const feature = brief ? 'Change briefs' : 'Git diff explanations';
+    // Plan check first, so a Free user is never asked to pick a folder for a feature they cannot use.
+    // The window that asked shows the upgrade prompt (the panel, or Briefs from the returned error).
+    if (!(await requireProOrError(widgetOf(e) ?? getOrCreateWidget(), activeTabId, feature))) {
+      return { ok: false, error: 'Pro required' };
+    }
     let root = await resolveRepoRoot();
     if (!root) {
       const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
@@ -963,11 +975,12 @@ app.whenReady().then(() => {
       root = await resolveRepoRoot(picked.filePaths[0]);
     }
     if (!root) return { ok: false, error: 'Pick a git repository to explain changes.' };
-    const brief = Boolean(opts?.brief);
-    const feature = brief ? 'Change briefs' : 'Git diff explanations';
-    if (!(await requireProOrError(win, session, feature))) {
-      return { ok: false, error: 'Pro required' };
-    }
+    // Briefs asks from the companion window, which does not render reviews; the review always goes to the panel.
+    const { win } = openPanel();
+    showBar(bar);
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
+    tabSessions.set(activeTabId, session);
+    if (opts?.level) session.level = opts.level;
     const scope = opts?.scope ?? 'working';
     return startBuiltReview(
       win,
@@ -1087,7 +1100,7 @@ app.whenReady().then(() => {
     const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
     tabSessions.set(activeTabId, session);
     if (opts?.level) session.level = opts.level;
-    if (!(await requireProOrError(win, session, 'Since last understood'))) {
+    if (!(await requireProOrError(win, session.tabId, 'Since last understood'))) {
       return { ok: false, error: 'Pro required' };
     }
     const picked = await dialog.showOpenDialog({
@@ -1104,7 +1117,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('review:reopenItem', async (_e, item: { id?: string; file?: string; project?: string; level?: string }) => {
-    const win = getOrCreateWidget();
+    const { win } = openPanel();
     showBar(bar);
     const level = (item.level as ExplanationLevel) || 'intermediate';
     const session = sessionFor() ?? makeSession(activeTabId, null, null, level);
@@ -1126,6 +1139,8 @@ app.whenReady().then(() => {
       applyBuiltReview(session, built);
       session.sourceApp = 'Study';
       session.reviewId = randomUUID();
+      // A panel that is still loading starts this tab itself on widget:ready.
+      if (!panelReady) return { ok: true as const };
       initWidget(win, session, { autoStart: true });
       void runReview(win, session, { level: session.level });
       return { ok: true as const };
