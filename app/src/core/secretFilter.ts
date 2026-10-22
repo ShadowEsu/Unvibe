@@ -5,6 +5,9 @@
  *
  * See docs/privacy.md. This is the privacy backbone — the backend never sees the repo, and
  * nothing leaves the machine without passing through here first.
+ *
+ * extension/src/security/secretFilter.ts carries a copy of the rules (without the app-only
+ * helpers at the end). Change both together and keep the two test suites identical.
  */
 
 import type { ReviewRequestPayload } from './protocol';
