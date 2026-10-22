@@ -76,7 +76,7 @@ export function welcomeHtml(input: WelcomeInput): string {
 <h1 style="margin:0 0 12px;font-size:30px;line-height:1.15;color:${INK}">Congrats, you're in early!</h1>
 <p style="${p}">Thank you so much for trying Unvibe this early. You're one of the first people using it, and that means a lot. Unvibe explains the code AI writes for you, right beside your editor, so you actually understand what you ship.</p>
 <p style="margin:0">${imageButton(l.site, l.download, input.downloadUrl ? "download" : "get")}</p>
-<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">First time opening it needs one extra click on Mac or Windows. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
+<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">The first time you open it, your Mac or PC asks you to approve it once. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
 </td></tr>
 ${card(`<h2 style="${h2}">Want Pro?</h2><p style="${p}">Deeper explanations, more projects and the full learning history. Your app account already starts with a free month of Pro.</p>${imageButton(l.site, l.pro, "pro")}`)}
 ${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this link to a friend so they can get Unvibe. ${GIFT_CODE_HOME} ${GIFT_OFFER}</p><p style="margin:0;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>`, "#eef9c8")}
@@ -96,7 +96,7 @@ export function welcomeText(input: WelcomeInput): string {
 Thank you so much for trying Unvibe this early. You're one of the first people using it, and that means a lot. Unvibe explains the code AI writes for you, right beside your editor.
 
 ${input.downloadUrl ? "Download Unvibe" : "Get Unvibe free"}: ${l.download}
-First time opening it needs one extra click: ${l.site}/install-help
+The first time you open it, your Mac or PC asks you to approve it once: ${l.site}/install-help
 
 WANT PRO?
 Your app account already starts with a free month of Pro. See Pro: ${l.pro}

@@ -163,7 +163,10 @@ export function BetaInstall({
         </div>
       ) : (
         <p className="paper-beta__update">
-          Unvibe is new, so the first open takes one extra click. <a href="/install-help">Show me how</a>
+          {os === "windows"
+            ? "Unvibe is not signed for Windows yet, so the first run shows a blue warning with Run anyway. "
+            : "Unvibe is not verified by Apple yet, so the first open needs one approval in System Settings. "}
+          <a href="/install-help">Show me how</a>
         </p>
       )}
 

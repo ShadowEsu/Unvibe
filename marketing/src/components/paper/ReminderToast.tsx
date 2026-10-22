@@ -91,7 +91,7 @@ export function ReminderToast() {
           ) : invited ? (
             <p><b>A friend invited you.</b> Want the download link and setup guide by email?</p>
           ) : (
-            <p><b>Downloading!</b> First time opening it? <a href="/install-help">See the one extra click</a>. Want the setup guide and a nudge tomorrow too?</p>
+            <p><b>Downloading!</b> First time opening it? <a href="/install-help">See how to approve it</a>. Want the setup guide and a nudge tomorrow too?</p>
           )}
           <div className="remind__row">
             <input type="email" required maxLength={240} autoComplete="email" placeholder="you@example.com" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
