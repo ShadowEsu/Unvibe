@@ -1,5 +1,6 @@
 import { getBillingStore } from '@/billing/store';
 import { billingError, isResponse, requireUser } from '@/billing/http';
+import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
 
 export const runtime = 'nodejs';
 
@@ -17,5 +18,8 @@ export async function POST(req: Request): Promise<Response> {
     const body = (await req.json()) as { name?: unknown };
     if (typeof body.name !== 'string' || !body.name.trim()) return Response.json({ error: 'invalid_name' }, { status: 400 });
     return Response.json({ workspace: await getBillingStore().createTeamWorkspace(user, body.name) }, { status: 201 });
-  } catch (error) { return billingError(error); }
+  } catch (error) {
+    if (error instanceof TeamWorkspaceLimitError) return teamWorkspaceLimitResponse();
+    return billingError(error);
+  }
 }

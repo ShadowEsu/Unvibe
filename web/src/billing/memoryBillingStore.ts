@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
+import { MAX_TEAM_WORKSPACES_PER_OWNER, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
 import type { TokenUsage } from '@/ai/provider';
 import type {
   BillingOverview,
@@ -187,6 +188,8 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
+    const owned = [...this.data.workspaces.values()].filter((workspace) => workspace.type === 'team' && workspace.ownerUserId === userId).length;
+    if (owned >= MAX_TEAM_WORKSPACES_PER_OWNER) throw new TeamWorkspaceLimitError();
     const id = randomUUID();
     const workspace = { id, name: name.trim(), type: 'team' as const, ownerUserId: userId };
     this.data.workspaces.set(id, workspace);

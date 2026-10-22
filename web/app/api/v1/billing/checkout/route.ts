@@ -2,6 +2,7 @@ import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
+import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
 import { CHECKOUT_SESSION_TTL_MS, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
 import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, WorkspaceAccess } from '@/billing/types';
@@ -162,6 +163,8 @@ export async function POST(req: Request): Promise<Response> {
     await billing.recordAudit(user, workspace.id, 'checkout.created', { plan: body.plan, interval: body.interval, seats });
     return Response.json({ url: session.url }, { status: 201 });
   } catch (error) {
+    // Every owned team workspace is paid for and the owner is at the cap: no new one for this checkout.
+    if (error instanceof TeamWorkspaceLimitError) return teamWorkspaceLimitResponse();
     return billingError(error, 503);
   }
 }
