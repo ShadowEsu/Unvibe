@@ -118,13 +118,6 @@ function asPlanId(value: string | undefined): PlanId {
   return 'free';
 }
 
-function planDisplayName(plan: PlanId): string {
-  if (plan === 'pro' || plan === 'full') return 'Pro';
-  if (plan === 'teams') return 'Team';
-  if (plan === 'trial') return 'Trial';
-  return 'Free';
-}
-
 function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
   if (plan === 'full') return 'Included';
   if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
@@ -136,10 +129,12 @@ function daysUntil(iso: string): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
 }
 
-function resetLabel(iso: string): string {
+function resetLabel(iso: string, plan: PlanId): string {
   const date = new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const days = daysUntil(iso);
-  return `Usage limits reset on ${date} (${days} day${days === 1 ? '' : 's'} left)`;
+  const left = `${days} day${days === 1 ? '' : 's'} left`;
+  // The public beta is a 30-day window that ends; it does not reset.
+  return plan === 'trial' ? `Free beta ends on ${date} (${left})` : `Usage limits reset on ${date} (${left})`;
 }
 
 function percentLeft(remaining: number, limit: number): number {
@@ -1034,11 +1029,11 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       <div className="plan-pick">
         <article className="plan-pick__card is-current">
           <span>Current plan</span>
-          <h2>{planDisplayName(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
+          <h2>{planLabel(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
           <p>
             {gifted ? 'Pro from a gift. Limits follow the Pro plan.'
               : unlimited ? 'This build is not metered locally.'
-                : resetIso ? resetLabel(resetIso)
+                : resetIso ? resetLabel(resetIso, currentPlan)
                   : `Monthly explanation limits apply to this ${deviceName}.`}
           </p>
           {canPortal

@@ -134,6 +134,45 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
           cat "$SHOTS_DIR/report.txt"
 
+      # The website's Windows download is the portable exe, so open that exact file too.
+      - name: Open the portable exe the website serves (Windows)
+        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != ''
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.v }}"
+          $exe = "$env:RUNNER_TEMP\portable\Unvibe.exe"
+          New-Item -ItemType Directory -Force (Split-Path $exe), "$env:RUNNER_TEMP\shots" | Out-Null
+          if ("${{ inputs.build_run }}") {
+            Copy-Item (Get-ChildItem "$env:RUNNER_TEMP\build" -Filter '*-win-x64-portable.exe' | Select-Object -First 1).FullName $exe
+          } else {
+            Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-portable.exe" -OutFile $exe
+          }
+          "portable: $((Get-Item $exe).Length) bytes, version $((Get-Item $exe).VersionInfo.ProductVersion), sha256 $((Get-FileHash $exe -Algorithm SHA256).Hash)"
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          $env:UNVIBE_USER_DATA = "$env:RUNNER_TEMP\portable-profile"
+          Start-Process -FilePath $exe
+          $win = $null
+          for ($i = 0; $i -lt 45 -and -not $win; $i++) {
+            Start-Sleep -Seconds 2
+            $win = Get-Process Unvibe -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+          }
+          if (-not $win) {
+            Get-Process | Where-Object { $_.ProcessName -match 'Unvibe' } | Format-Table ProcessName, Id, Path | Out-String | Write-Host
+            Write-Error 'The portable exe did not open a window'; exit 1
+          }
+          "window '$($win.MainWindowTitle)' from $($win.Path)"
+          # Still open after 10 seconds: the first run did not crash behind its window.
+          Start-Sleep -Seconds 10
+          if (-not (Get-Process -Id $win.Id -ErrorAction SilentlyContinue)) { Write-Error 'The portable app closed itself after opening'; exit 1 }
+          Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+          $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+          $bmp.Save("$env:RUNNER_TEMP\shots\portable-first-launch.png")
+          "PASS  Portable exe opens and stays open"
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

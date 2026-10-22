@@ -100,6 +100,20 @@ process.env.UNVIBE_USER_DATA = userData;
 const launchedAt = Date.now();
 // UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
 const app = await electron.launch({ executablePath: exe, args: process.env.UNVIBE_APP_DIR ? [process.env.UNVIBE_APP_DIR] : [], env: { ...process.env, UNVIBE_USER_DATA: userData }, timeout: 90000 });
+// Zero runtime errors is part of the gate: console errors and uncaught errors in Unvibe's own
+// windows fail the run. Google's account page is not ours. Main-process output is kept for review.
+const runtimeErrors = [];
+const ours = (url) => !/^https?:/.test(url) || /^https:\/\/unvibe\.site\//.test(url);
+const where = (page) => page.url().split('/').pop() || page.url();
+const watch = (page) => {
+  page.on('console', (msg) => { if (msg.type() === 'error' && ours(page.url())) runtimeErrors.push(`console ${where(page)}: ${msg.text()}`); });
+  page.on('pageerror', (err) => { if (ours(page.url())) runtimeErrors.push(`pageerror ${where(page)}: ${err.message}`); });
+};
+app.windows().forEach(watch);
+app.on('window', watch);
+const mainLog = [];
+app.process().stdout?.on('data', (d) => mainLog.push(String(d)));
+app.process().stderr?.on('data', (d) => mainLog.push(String(d)));
 const companion = await windowWith(app, 'companion.html', 60000);
 if (!companion) { log(false, 'App opens'); writeFileSync(path.join(out, 'report.txt'), report.join('\n')); process.exit(1); }
 await companion.waitForLoadState('domcontentloaded');
@@ -334,6 +348,9 @@ try {
 
 await sleep(1000);
 desktopShot('final');
+log(runtimeErrors.length === 0, 'No console or uncaught errors in Unvibe windows', runtimeErrors.length ? `${runtimeErrors.length} found` : '');
+for (const line of runtimeErrors) report.push(`      ${line}`);
+writeFileSync(path.join(out, 'main-process.log'), mainLog.join(''));
 writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
 await app.close().catch(() => {});
 
