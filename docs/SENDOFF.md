@@ -291,7 +291,11 @@ real Windows behaviour needs the real device workflow.
 - **Billing:** `web/src/billing/*`. Checkout needs `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
   `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL` (+ `STRIPE_PRICE_PRO_LIFETIME`,
   `STRIPE_PRICE_TEAMS_MONTHLY`, `STRIPE_PRICE_TEAMS_ANNUAL`), `APP_URL` in production.
-  Webhook: `https://api.unvibe.site/api/v1/billing/webhook`.
+  Webhook: `https://api.unvibe.site/api/v1/billing/webhook`. Checkout stays locked in production
+  until `BILLING_LIVE_PAYMENTS_APPROVED=true` (live key) or `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`
+  (test key). Public `GET /api/v1/billing/status` returns `{ paymentsOpen }` from `checkoutOpen()`;
+  unvibe.site `/pricing` and `/terms` read it every 5 minutes and show "opens soon" copy whenever it
+  is false or unreachable, so opening payments on the API flips the site with no copy edit.
 
 ---
 

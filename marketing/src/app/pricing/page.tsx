@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import { PricingHeadline } from "@/components/paper/PricingHeadline";
 import { PricingPlans } from "@/components/redesign/PricingPlans";
-import { PRICING } from "@/lib/pricing";
+import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
+import { pricingCopy } from "@/lib/pricingCopy";
 
-export const metadata: Metadata = {
-  title: "Pricing",
-  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
-};
+/** Re-read the API's payments status at most every 5 minutes (PAYMENTS_STATUS_REVALIDATE_SECONDS). */
+export const revalidate = 300;
 
-export default function PricingPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: "Pricing", description: pricingCopy(await fetchPaymentsOpen()).description };
+}
+
+export default async function PricingPage() {
+  const paymentsOpen = await fetchPaymentsOpen();
   return (
     <article className="launch-subpage paper-pricing">
       <header className="paper-photo-band paper-photo-band--short">
@@ -21,7 +25,7 @@ export default function PricingPage() {
       </header>
       <section className="paper-section">
         <div className="paper-wrap">
-          <PricingPlans />
+          <PricingPlans paymentsOpen={paymentsOpen} />
         </div>
       </section>
     </article>

@@ -5395,6 +5395,18 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   padding-inline: 1rem;
 }
 
+/* While Pro and Teams are not on sale, Download free on the Free card is the only filled button. */
+.pricing-button.pricing-button--quiet {
+  border: 1px solid var(--purple);
+  background: transparent !important;
+  color: var(--purple) !important;
+  box-shadow: none;
+}
+
+.pricing-button.pricing-button--quiet:hover {
+  background: color-mix(in srgb, var(--purple) 8%, transparent) !important;
+}
+
 .paper-hero__fine {
   margin: 0;
   color: var(--hero-type);
