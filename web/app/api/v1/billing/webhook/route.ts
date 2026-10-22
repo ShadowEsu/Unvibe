@@ -24,6 +24,13 @@ export async function POST(req: Request): Promise<Response> {
     await processStripeEvent(store, event, {
       retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
       retrieveCheckoutSession: (id) => stripe.checkout.sessions.retrieve(id, { expand: ['line_items.data.price'] }),
+      invoicesForPaymentIntent: async (paymentIntent) => {
+        const payments = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: paymentIntent }, expand: ['data.invoice'] });
+        return payments.data.flatMap(({ invoice }) => (typeof invoice === 'string' || invoice.deleted ? [] : [invoice]));
+      },
+      cancelSubscription: async (id) => {
+        await stripe.subscriptions.cancel(id, undefined, { idempotencyKey: `uncode-revoke-${id}` });
+      },
     });
     await store.completeWebhook(event.id);
     return Response.json({ received: true });

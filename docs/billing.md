@@ -39,7 +39,8 @@ privileges are also restricted to `service_role`.
 3. Register `POST /api/v1/billing/webhook` and subscribe to:
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`,
    `customer.subscription.updated`, `customer.subscription.deleted`,
-   `invoice.payment_failed`, and `invoice.paid`.
+   `invoice.payment_failed`, `invoice.paid`, `charge.refunded`, `charge.dispute.created`, and
+   `charge.dispute.closed`. The same list goes on the live endpoint.
 4. Keep the Customer Portal configured for payment-method updates and cancellation. Do not enable
    customer-controlled quantities unless its minimums can match the server rules.
 5. Exercise the staging matrix below with Stripe test clocks/cards. Production keys and live-mode
@@ -55,6 +56,14 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
   effective entitlements fall back to Free while saved content remains.
 - Cancellation at period end is displayed from Stripe state. A deleted subscription becomes
   canceled and paid entitlements fall back to Free.
+- A full refund (`charge.refunded`, whole amount) cancels the paid subscription at Stripe at once
+  and the account drops to Free; a full Lifetime refund revokes Lifetime. A partial refund keeps
+  access. The charge is linked to its subscription through Stripe Invoice Payments (API dahlia has
+  no `charge.invoice`), falling back to the customer's subscription row. Every refund is audited
+  (`refund.full` / `refund.partial`).
+- A dispute does not change access while it is open (`dispute.opened` audit row with the evidence
+  deadline; `/api/v1/admin/stats` reports `disputesOpen` and `disputeNextDueBy`). A lost dispute
+  cancels like a full refund; a won one keeps access.
 - Teams invitations reserve purchased seats. An invitation is accepted only by the invited email.
   Seat reductions cannot go below two or below occupied plus unexpired pending seats.
 - Team owners manage billing and roles; admins manage invitations/members but not billing; members
