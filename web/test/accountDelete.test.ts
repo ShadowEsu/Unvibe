@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 import { DELETE as deleteAccount, GET as accountInfo } from '../app/api/v1/account/route';
 import { getBillingStore } from '../src/billing/store';
 import { getStripe } from '../src/billing/stripe';
@@ -106,7 +106,21 @@ test('a cancel_at after the current period still renews once more and blocks del
 });
 
 test('if Stripe cannot be reached, nothing is deleted', async () => {
-  const me = await userWith({ cancelAtPeriodEnd: true }, new Error('Stripe is down'));
+  const me = await userWith({ cancelAtPeriodEnd: true }, new Stripe.errors.StripeConnectionError({ message: 'An error occurred with our connection to Stripe.' }));
+  assert.deepEqual(await remove(me.token), { status: 503, error: 'billing_unavailable' });
+  assert.equal(await stillSignedIn(me.token), true);
+});
+
+test('a stored subscription Stripe no longer has cannot charge, so it does not block deletion', async () => {
+  const missing = new Stripe.errors.StripeInvalidRequestError({ type: 'invalid_request_error', code: 'resource_missing', message: 'No such subscription' });
+  const me = await userWith({}, missing);
+  assert.equal((await remove(me.token)).status, 200);
+  assert.equal(await stillSignedIn(me.token), false);
+});
+
+test('any other Stripe request error still blocks deletion', async () => {
+  const other = new Stripe.errors.StripeInvalidRequestError({ type: 'invalid_request_error', code: 'parameter_invalid_empty', message: 'Invalid request' });
+  const me = await userWith({}, other);
   assert.deepEqual(await remove(me.token), { status: 503, error: 'billing_unavailable' });
   assert.equal(await stillSignedIn(me.token), true);
 });
