@@ -38,7 +38,6 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "Outreach email banner", path: "/email/outreach-banner.png", use: "Top of cold outreach emails", kind: "image" },
   { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Top of waitlist and download emails", kind: "image" },
   { name: "Social preview", path: "/og.png", use: "Link previews, social posts", kind: "image" },
-  { name: "Investor one pager", path: "/investors/unvibe-investor-one-pager.png", use: "Investor intros", kind: "image" },
   { name: "Product demo video", path: "/videos/unvibe-real-demo.mp4", use: "A real recorded session: explain, depth, follow-up, Test me", kind: "video" },
   { name: "Screenshot: home", path: "/product/v3/home-today.jpg", use: "What the app looks like", kind: "image" },
   { name: "Screenshot: after agent review", path: "/product/v3/after-agent-review.jpg", use: "Reviewing what Cursor or Claude changed", kind: "image" },

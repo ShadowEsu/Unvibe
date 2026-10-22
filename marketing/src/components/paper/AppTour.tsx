@@ -22,7 +22,7 @@ export function AppTour() {
         <AutoPlayVideo
           src="/videos/unvibe-real-demo.mp4"
           poster="/videos/unvibe-real-demo-poster.webp"
-          label="Screen recording of Unvibe: first launch, a code explanation streaming in, switching to Beginner depth, a follow-up question, a Test me question, then the Today, Library, Quiz, Briefs and Momentum pages"
+          label="Screen recording of Unvibe: a code explanation streaming in, switching to Beginner depth, a follow-up question, then a Test me question"
         />
       </div>
       <p className="vtour__caption">

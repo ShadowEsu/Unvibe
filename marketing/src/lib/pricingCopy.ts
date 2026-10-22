@@ -33,7 +33,7 @@ export type PricingCopy = {
 };
 
 const TEAMS_MAILTO =
-  "mailto:preston@unvibe.site?subject=Unvibe%20Teams%20founding%20pilot&body=Company%20email%3A%20%0ASeats%20wanted%20(2%E2%80%9320)%3A%20%0A%0AWe%20want%20the%20Teams%20founding%20pilot%20(workspace%20%2B%20who%20reviewed%20what).";
+  "mailto:hello@unvibe.site?subject=Unvibe%20Teams%20founding%20pilot&body=Company%20email%3A%20%0ASeats%20wanted%20(2%E2%80%9320)%3A%20%0A%0AWe%20want%20the%20Teams%20founding%20pilot%20(workspace%20%2B%20who%20reviewed%20what).";
 
 const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
 

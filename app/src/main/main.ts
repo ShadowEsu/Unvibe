@@ -531,11 +531,12 @@ app.on('open-url', (event, url) => {
   handleExternalReviewUrl(url);
 });
 
-// CFBundleURLTypes below registers packaged builds. This additionally makes local development
-// and a manually installed app respond to the same privacy-safe desktop bridge.
+// CFBundleURLTypes below registers packaged builds. A dev launch (npm start, electron .) would
+// otherwise re-point every unvibe:// link on the machine at the bare Electron binary, so local
+// development registers only when asked: UNVIBE_DEV_PROTOCOL=1.
 if (process.defaultApp) {
   const entry = process.argv[1];
-  if (entry) app.setAsDefaultProtocolClient('unvibe', process.execPath, [path.resolve(entry)]);
+  if (entry && process.env.UNVIBE_DEV_PROTOCOL === '1') app.setAsDefaultProtocolClient('unvibe', process.execPath, [path.resolve(entry)]);
 } else {
   app.setAsDefaultProtocolClient('unvibe');
 }

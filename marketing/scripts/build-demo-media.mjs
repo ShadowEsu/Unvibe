@@ -5,9 +5,10 @@
  *   node scripts/build-demo-media.mjs <MEDIA_DIR>
  *
  * Needs ffmpeg and cwebp on PATH. Writes:
- *   public/videos/unvibe-real-demo.mp4 (+ -poster.webp): onboarding, the panel explaining live,
- *     depth, follow-up and Test me at real speed, then the companion pages. Waits between
- *     steps are cut where segments join; nothing inside a segment is sped up or edited.
+ *   public/videos/unvibe-real-demo.mp4 (+ -poster.webp): onboarding, then the panel explaining
+ *     live, depth, follow-up and Test me at real speed. It ends there: the companion pages show
+ *     the capture account's name. Waits between steps are cut where segments join; nothing
+ *     inside a segment is sped up or edited.
  *   public/unvibe/real/*.webp: the screenshots the homepage walkthrough uses.
  *   src/data/demoMedia.json: version and length, so captions never drift from the recording.
  */
@@ -53,7 +54,6 @@ const panel = video("widget.html");
 const segments = {
   onboarding: [Math.max(0, mark(`app open ${timeline.version}`) - companion.opened + 0.5), mark("onboarding") - companion.opened + 0.8],
   panel: [0, mark("test me") - panel.opened + 0.5],
-  companion: [mark("test me") - companion.opened, mark("Momentum") - companion.opened + 0.4],
 };
 const length = Object.values(segments).reduce((sum, [a, b]) => sum + (b - a), 0);
 
@@ -71,8 +71,7 @@ const filter = [
   `[2:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},gblur=sigma=18,eq=brightness=-0.06,loop=-1:1,${fmt}[bg]`,
   `[1:v]${trim(segments.panel)},crop=620:800:0:0,scale=-2:740,${fmt}[p]`,
   `[bg][p]overlay=(W-w)/2:(H-h)/2:shortest=1,${fmt}[b]`,
-  `[0:v]${trim(segments.companion)},scale=${W}:${H},${fmt}[c]`,
-  `[a][b][c]concat=n=3:v=1:a=0[v]`,
+  `[a][b]concat=n=2:v=1:a=0[v]`,
 ].join(";");
 
 mkdirSync(dirname(out), { recursive: true });

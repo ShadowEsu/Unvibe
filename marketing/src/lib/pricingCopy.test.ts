@@ -33,7 +33,7 @@ describe("pricing copy while payments are closed", () => {
   });
 
   it("has no button that leads to a dead end", () => {
-    for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:preston@unvibe.site"), plan.id);
+    for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:hello@unvibe.site"), plan.id);
     assert.equal(closed.plans.find((plan) => plan.id === "pro")?.cta, "Download free");
   });
 
@@ -73,7 +73,7 @@ describe("pricing copy once payments open", () => {
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
-    assert.match(open.plans[2].href, /^mailto:preston@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
+    assert.match(open.plans[2].href, /^mailto:hello@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
   });
 
   it("shares features and the featured card with the closed copy", () => {
