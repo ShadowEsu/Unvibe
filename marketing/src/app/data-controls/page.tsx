@@ -52,8 +52,7 @@ export default function DataControlsPage() {
           Cloud analysis begins only after an explicit review action. Full payload preview
           and per-repository consent controls are still being completed. Default exclusions cover{" "}
           <code className="font-mono">.env</code> files, keys,{" "}
-          <code className="font-mono">node_modules</code>, and build output, and you can
-          add your own rules in a <code className="font-mono">.unvibeignore</code> file.
+          <code className="font-mono">node_modules</code>, and build output.
         </p>
       </LegalSection>
 

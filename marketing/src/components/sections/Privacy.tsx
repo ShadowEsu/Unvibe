@@ -125,9 +125,6 @@ export function Privacy() {
               </ul>
             </div>
           </div>
-          <p className="border-t border-line px-5 py-3 text-fluid-sm text-fg-muted">
-            Add your own rules with a <code className="font-mono text-primary">.unvibeignore</code> file.
-          </p>
         </motion.div>
       </div>
     </Section>
