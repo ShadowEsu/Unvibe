@@ -2,8 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
 
-const DEVICE_CODE_KEY = "unvibe_device_user_code";
+function sessionStore(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 function activateOrigin(): string {
   if (typeof window === "undefined") return "";
@@ -19,6 +26,7 @@ function publicSupabase(): { url: string; key: string } | null {
 
 export default function ActivatePage() {
   const [code, setCode] = useState("");
+  const [codeFromLink, setCodeFromLink] = useState(false);
   const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -42,23 +50,11 @@ export default function ActivatePage() {
   }, [config?.url, config?.key]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const fromDevice = params.get("user_code") || params.get("device") || params.get("device_code");
-    if (fromDevice) {
-      const normalized = fromDevice.trim().toUpperCase();
-      setCode(normalized);
-      try {
-        window.sessionStorage.setItem(DEVICE_CODE_KEY, normalized);
-      } catch {
-        /* ignore */
-      }
-    } else {
-      try {
-        const saved = window.sessionStorage.getItem(DEVICE_CODE_KEY);
-        if (saved) setCode(saved);
-      } catch {
-        /* ignore */
-      }
+    const pending = pendingDeviceCode(window.location.search, sessionStore());
+    setCode(pending.code);
+    setCodeFromLink(pending.fromLink);
+    if (pending.cleanSearch !== null) {
+      window.history.replaceState({}, "", `${window.location.pathname}${pending.cleanSearch}${window.location.hash}`);
     }
   }, []);
 
@@ -116,18 +112,14 @@ export default function ActivatePage() {
         setStatus("error");
         setMessage(
           res.status === 401
-            ? "Sign in first, then connect this device."
+            ? "Sign in first, then approve."
             : res.status === 404
               ? "That code was not recognised. Check the desktop app and try again."
               : "Something went wrong. Please try again.",
         );
         return;
       }
-      try {
-        window.sessionStorage.removeItem(DEVICE_CODE_KEY);
-      } catch {
-        /* ignore */
-      }
+      clearDeviceCode(sessionStore());
       setStatus("done");
     } catch {
       setStatus("error");
@@ -140,13 +132,7 @@ export default function ActivatePage() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      if (code.trim()) {
-        try {
-          window.sessionStorage.setItem(DEVICE_CODE_KEY, code.trim().toUpperCase());
-        } catch {
-          /* ignore */
-        }
-      }
+      saveDeviceCode(code, codeFromLink, sessionStore());
       const { error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -173,13 +159,7 @@ export default function ActivatePage() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      if (code.trim()) {
-        try {
-          window.sessionStorage.setItem(DEVICE_CODE_KEY, code.trim().toUpperCase());
-        } catch {
-          /* ignore */
-        }
-      }
+      saveDeviceCode(code, codeFromLink, sessionStore());
       const { error } = await client.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: activateOrigin() },
@@ -205,11 +185,27 @@ export default function ActivatePage() {
           </div>
         ) : (
           <>
-            <div className="activate-kicker">Device approval</div>
-            <h1 className="activate-title">Connect your Unvibe app.</h1>
+            <h1 className="activate-title">Sign in the Unvibe app on your computer</h1>
             <p className="activate-sub">
-              Sign in, enter the short code shown in the Unvibe app, then go back to the app.
+              Sign in here, check the code, then go back to the app.
             </p>
+            {codeFromLink && (
+              <section className="activate-check" aria-labelledby="activate-check-title">
+                <h2 className="activate-check__title" id="activate-check-title">
+                  <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" focusable="false">
+                    <path d="M8 1.5 15 14.5H1z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path d="M8 6v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <circle cx="8" cy="12.2" r="0.9" fill="currentColor" />
+                  </svg>
+                  Check before you approve
+                </h2>
+                <ul>
+                  <li>Approving signs in an Unvibe app with your account.</li>
+                  <li>Only approve if the code below matches the code your Unvibe app is showing right now.</li>
+                  <li>If someone else sent you this link, stop here. Approving would let them use your account.</li>
+                </ul>
+              </section>
+            )}
             {!accessToken && (
               <div>
                 <button
@@ -260,17 +256,17 @@ export default function ActivatePage() {
                 onClick={() => void approve()}
                 disabled={status === "working" || code.length < 4 || !accessToken || bootstrapping}
               >
-                {status === "working" ? "Connecting…" : "Connect this device"}
+                {status === "working" ? "Approving…" : "Approve sign-in"}
               </button>
               {status === "error" && <p className="activate-note activate-note--error" role="alert">{message}</p>}
               {!accessToken && (
                 <p className="activate-note">
                   {configured
-                    ? "Sign in above before connecting this device."
+                    ? "Sign in above, then approve."
                     : message || "Sign-in is not configured for this environment yet."}
                 </p>
               )}
-              {accessToken && <p className="activate-note">Signed in. Enter the device code to finish.</p>}
+              {accessToken && <p className="activate-note">Signed in. Check the code matches your app, then approve.</p>}
             </div>
           </>
         )}

@@ -59,13 +59,40 @@
   -webkit-backdrop-filter: var(--glass-blur);
 }
 
-.activate-kicker {
-  margin-bottom: 0.9rem;
-  color: var(--ink-muted);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.activate-check {
+  margin: 0 0 1.4rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-left: 4px solid #8a5a00;
+  border-radius: var(--radius-field);
+  background: #fff6e0;
+  color: var(--ink);
+}
+
+.activate-check__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.activate-check__title svg {
+  flex: none;
+  color: #8a5a00;
+}
+
+.activate-check ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.activate-check li + li {
+  margin-top: 0.35rem;
 }
 
 .activate-title {

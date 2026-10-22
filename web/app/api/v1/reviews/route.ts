@@ -11,6 +11,9 @@ import { recordActivation } from '@/lib/activation';
 
 export const runtime = 'nodejs';
 
+/** Provider errors carry status codes and response bodies (project ids, key hints); those stay in the server log. */
+const PROVIDER_FAILURE = 'The AI service had a problem. Try again in a minute.';
+
 export async function POST(req: Request): Promise<Response> {
   const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
   if (!payload?.scope || !payload?.level || !payload?.context) {
@@ -73,7 +76,8 @@ export async function POST(req: Request): Promise<Response> {
           });
         }
       } catch (err) {
-        send({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+        if (!req.signal.aborted) console.error('review provider failed', err);
+        send({ type: 'error', message: PROVIDER_FAILURE });
       }
       // Refund only when the provider failed or wrote nothing. A client that disconnects keeps the
       // charge: otherwise dropping the connection would make any request free to repeat.

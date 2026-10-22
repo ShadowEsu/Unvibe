@@ -2,36 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from '@/lib/deviceCode';
 
-const DEVICE_CODE_KEY = 'unvibe_device_user_code';
-const DEVICE_CODE_TTL_MS = 15 * 60_000;
-
-/** Remember the device code across tabs so an emailed sign-in link can still finish approval. */
-function rememberDeviceCode(code: string): void {
+function localStore(): Storage | null {
   try {
-    window.localStorage.setItem(DEVICE_CODE_KEY, JSON.stringify({ code, at: Date.now() }));
+    return window.localStorage;
   } catch {
-    /* storage blocked: the code stays in the field for this tab */
-  }
-}
-
-function recallDeviceCode(): string {
-  try {
-    const raw = window.localStorage.getItem(DEVICE_CODE_KEY);
-    if (!raw) return '';
-    const saved = JSON.parse(raw) as { code?: string; at?: number };
-    if (!saved.code || !saved.at || Date.now() - saved.at > DEVICE_CODE_TTL_MS) return '';
-    return saved.code;
-  } catch {
-    return '';
-  }
-}
-
-function forgetDeviceCode(): void {
-  try {
-    window.localStorage.removeItem(DEVICE_CODE_KEY);
-  } catch {
-    /* ignore */
+    return null;
   }
 }
 
@@ -53,6 +30,7 @@ function activateOrigin(): string {
 
 export default function ActivatePage() {
   const [code, setCode] = useState('');
+  const [codeFromLink, setCodeFromLink] = useState(false);
   const [editingCode, setEditingCode] = useState(false);
   const initialCodeRef = useRef('');
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
@@ -82,23 +60,13 @@ export default function ActivatePage() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
     // Device codes use user_code (or legacy device). Never treat OAuth ?code= as a device code.
-    const fromDevice =
-      params.get('user_code') ||
-      params.get('device') ||
-      params.get('device_code');
-    if (fromDevice) {
-      const normalized = fromDevice.trim().toUpperCase();
-      initialCodeRef.current = normalized;
-      setCode(normalized);
-      rememberDeviceCode(normalized);
-    } else {
-      const saved = recallDeviceCode();
-      if (saved) {
-        initialCodeRef.current = saved;
-        setCode(saved);
-      }
+    const pending = pendingDeviceCode(window.location.search, localStore());
+    initialCodeRef.current = pending.code;
+    setCode(pending.code);
+    setCodeFromLink(pending.fromLink);
+    if (pending.cleanSearch !== null) {
+      window.history.replaceState({}, '', `${window.location.pathname}${pending.cleanSearch}${window.location.hash}`);
     }
   }, []);
 
@@ -159,14 +127,14 @@ export default function ActivatePage() {
         setStatus('error');
         setMessage(
           res.status === 401
-            ? 'Sign in with Google first, then approve this device.'
+            ? 'Sign in with Google first, then approve.'
             : res.status === 404
               ? 'That code was not recognised. Check the desktop app and try again.'
               : 'Something went wrong. Please try again.',
         );
         return;
       }
-      forgetDeviceCode();
+      clearDeviceCode(localStore());
       setStatus('done');
     } catch {
       setStatus('error');
@@ -179,7 +147,7 @@ export default function ActivatePage() {
     setAuthBusy(true);
     setAuthMessage('');
     try {
-      if (code.trim()) rememberDeviceCode(code.trim().toUpperCase());
+      saveDeviceCode(code, codeFromLink, localStore());
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -207,7 +175,7 @@ export default function ActivatePage() {
     setAuthBusy(true);
     setAuthMessage('');
     try {
-      if (code.trim()) rememberDeviceCode(code.trim().toUpperCase());
+      saveDeviceCode(code, codeFromLink, localStore());
       const { error } = await client.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: activateOrigin() },
@@ -243,15 +211,33 @@ export default function ActivatePage() {
           <>
             <ol className="activate-progress" aria-label="Sign-in progress">
               <li className={accessToken ? 'is-done' : 'is-current'}><span>1</span>Sign in</li>
-              <li className={accessToken ? 'is-current' : ''}><span>2</span>Connect</li>
+              <li className={accessToken ? 'is-current' : ''}><span>2</span>Approve</li>
               <li><span>3</span>Back to the app</li>
             </ol>
-            <h1 className="activate-title">{accessToken ? 'One last step.' : 'Connect Unvibe to your account.'}</h1>
+            <h1 className="activate-title">Sign in the Unvibe app on your computer</h1>
             <p className="activate-sub">
               {accessToken
-                ? 'You are signed in. Click Connect this device so the Unvibe app can finish. It is waiting for this.'
-                : 'Sign in once, connect this device, and Unvibe finishes on its own.'}
+                ? 'You are signed in. Check the code below matches your Unvibe app, then approve.'
+                : 'Sign in here, check the code, and the Unvibe app finishes on its own.'}
             </p>
+
+            {codeFromLink && (
+              <section className="activate-check" aria-labelledby="activate-check-title">
+                <h2 className="activate-check__title" id="activate-check-title">
+                  <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" focusable="false">
+                    <path d="M8 1.5 15 14.5H1z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path d="M8 6v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <circle cx="8" cy="12.2" r="0.9" fill="currentColor" />
+                  </svg>
+                  Check before you approve
+                </h2>
+                <ul>
+                  <li>Approving signs in an Unvibe app with your account.</li>
+                  <li>Only approve if the code below matches the code your Unvibe app is showing right now.</li>
+                  <li>If someone else sent you this link, stop here. Approving would let them use your account.</li>
+                </ul>
+              </section>
+            )}
 
             {!accessToken && (
               <div className="activate-section">
@@ -329,12 +315,11 @@ export default function ActivatePage() {
                 className="activate-btn"
                 type="button"
                 onClick={approve}
-                autoFocus={Boolean(accessToken)}
                 disabled={
                   status === 'working' || code.length < 4 || !accessToken || bootstrapping
                 }
               >
-                {status === 'working' ? 'Connecting…' : 'Connect this device'}
+                {status === 'working' ? 'Approving…' : 'Approve sign-in'}
               </button>
               {status === 'error' && (
                 <p className="activate-note activate-note--error">{message}</p>
@@ -342,7 +327,7 @@ export default function ActivatePage() {
               {!accessToken && (
                 <p className="activate-note">
                   {configured
-                    ? 'Sign in with Google (or email) above before approving this device.'
+                    ? 'Sign in with Google (or email) above, then approve.'
                     : message ||
                       'Sign-in is not configured for this environment yet.'}
                 </p>
@@ -350,8 +335,8 @@ export default function ActivatePage() {
               {accessToken && (
                 <p className="activate-note activate-note--ok">
                   {code.length >= 4
-                    ? 'Signed in. Check the code matches the one in the Unvibe app, then click Connect this device.'
-                    : 'Signed in. Type the code shown in the Unvibe app, then click Connect this device.'}
+                    ? 'Signed in. Check the code matches the one in the Unvibe app, then approve.'
+                    : 'Signed in. Type the code shown in the Unvibe app, then approve.'}
                 </p>
               )}
             </div>
