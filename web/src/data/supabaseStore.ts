@@ -8,11 +8,8 @@ import type {
   ProfileSummary,
   ProjectSummary,
   Store,
-  UsageResult,
-  UsageSummary,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
-import { limitFor } from '../billing/plans';
 
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
@@ -259,33 +256,5 @@ export class SupabaseStore implements Store {
       .order('ts', { ascending: true });
     if (error) throw new Error(error.message || 'workspace projects failed');
     return computeProjects((data ?? []).map((r) => this.mapEventRow(r as Record<string, unknown>)));
-  }
-
-  async usage(userId: string): Promise<UsageSummary> {
-    const { data } = await this.db
-      .from('usage_counters')
-      .select('selections_used, asks_used')
-      .eq('user_id', userId)
-      .maybeSingle();
-    return {
-      selectionsUsed: (data?.selections_used as number | undefined) ?? 0,
-      selectionsLimit: limitFor('selection'),
-      asksUsed: (data?.asks_used as number | undefined) ?? 0,
-      asksLimit: limitFor('ask'),
-    };
-  }
-
-  async consumeUsage(userId: string, kind: 'selection' | 'ask'): Promise<UsageResult> {
-    const limit = limitFor(kind);
-    const { data, error } = await this.db
-      .rpc('consume_usage', { p_user_id: userId, p_kind: kind, p_limit: limit })
-      .maybeSingle();
-    const row = data as { used: number; allowed: boolean } | null;
-    if (error || !row) {
-      // Fail open rather than blocking a review on a metering hiccup.
-      console.warn('consume_usage rpc failed', error?.message);
-      return { allowed: true, used: 0, limit };
-    }
-    return { allowed: Boolean(row.allowed), used: row.used ?? 0, limit };
   }
 }

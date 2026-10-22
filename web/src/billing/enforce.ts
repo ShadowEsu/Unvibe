@@ -23,3 +23,11 @@ export async function reserveMeteredAction(userId: string, kind: UsageKind, req:
     return Response.json({ error: 'entitlements_unavailable', message: 'We could not verify your plan safely. Try again shortly.' }, { status: 503 });
   }
 }
+
+/** Best effort: give back the unit `reserveMeteredAction` took when the AI produced nothing. */
+export async function releaseMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<void> {
+  const workspaceId = req.headers.get('x-uncode-workspace-id')?.trim() || undefined;
+  await getBillingStore().releaseUsage(userId, kind, workspaceId).catch((error: unknown) => {
+    console.error('usage release failed', error instanceof Error ? error.message : error);
+  });
+}

@@ -2,9 +2,8 @@ import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import { getStore } from '@/data/store';
-import { quotaMessage } from '@/billing/plans';
-import { trialInstallFromRequest, reserveTrialAction } from '@/lib/trialAccess';
+import { releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
+import { trialInstallFromRequest, releaseTrialAction, reserveTrialAction } from '@/lib/trialAccess';
 import { recordActivation } from '@/lib/activation';
 
 export const runtime = 'nodejs';
@@ -25,18 +24,19 @@ export async function POST(req: Request): Promise<Response> {
     return unauthorized();
   }
 
-  if (userId) {
-    const kind: 'selection' | 'ask' = payload.question || payload.variant === 'different' ? 'ask' : 'selection';
-    const usage = await getStore().consumeUsage(userId, kind);
-    if (!usage.allowed) {
-      return Response.json(
-        { error: 'quota_exceeded', kind, limit: usage.limit, message: quotaMessage(kind, usage.limit) },
-        { status: 402 }
-      );
-    }
+  // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows).
+  // Follow-ups and "Explain differently" are follow-up questions; anything else is an explanation.
+  // The sealed trial keeps one explanation budget for both.
+  let release: (() => Promise<void>) | null = null;
+  if (!provider.mock && userId) {
+    const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
+    const denied = await reserveMeteredAction(userId, kind, req);
+    if (denied) return denied;
+    release = () => releaseMeteredAction(userId, kind, req);
   } else if (!provider.mock && trialInstall) {
     const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
     if (denied) return denied;
+    release = () => releaseTrialAction(trialInstall, 'ai_explanation');
   }
 
   const system = buildSystemPrompt(payload);
@@ -45,16 +45,22 @@ export async function POST(req: Request): Promise<Response> {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (event: StreamEvent) =>
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      // False once the reader has gone away (the app gave up or closed the panel).
+      const send = (event: StreamEvent): boolean => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      let delivered = false;
       try {
-        let hasText = false;
         await provider.stream(system, user, (text) => {
-          if (text.trim()) hasText = true;
-          send({ type: 'token', text });
-        });
+          if (send({ type: 'token', text }) && text.trim()) delivered = true;
+        }, req.signal);
         send({ type: 'done', model: provider.name, mock: provider.mock });
-        if (hasText && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
+        if (delivered && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
           await recordActivation(trialInstall, payload.context.code).catch((error) => {
             console.error('activation marker write failed', error);
           });
@@ -62,7 +68,13 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         send({ type: 'error', message: err instanceof Error ? err.message : String(err) });
       }
-      controller.close();
+      // Nothing reached the reader: the allowance is only spent on an answer the person got.
+      if (!delivered) await release?.();
+      try {
+        controller.close();
+      } catch {
+        // Already closed by a cancelled reader.
+      }
     },
   });
 

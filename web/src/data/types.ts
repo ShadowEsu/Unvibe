@@ -42,19 +42,6 @@ export interface ProjectSummary {
   lastActive: string;
 }
 
-export interface UsageSummary {
-  selectionsUsed: number;
-  selectionsLimit: number;
-  asksUsed: number;
-  asksLimit: number;
-}
-
-export interface UsageResult {
-  allowed: boolean;
-  used: number;
-  limit: number;
-}
-
 export type SkillEvidenceState = 'seen' | 'familiar' | 'strong' | 'needs_review';
 
 export interface SkillRecord {
@@ -124,8 +111,4 @@ export interface Store {
   /** Team feed: all members' metadata events in a workspace, with authorship. Caller must verify membership. */
   workspaceHistoryPage(workspaceId: string, limit: number, cursor?: string): Promise<HistoryPage>;
   workspaceProjects(workspaceId: string): Promise<ProjectSummary[]>;
-
-  // Beta usage metering (see src/billing/plans.ts)
-  usage(userId: string): Promise<UsageSummary>;
-  consumeUsage(userId: string, kind: 'selection' | 'ask'): Promise<UsageResult>;
 }
