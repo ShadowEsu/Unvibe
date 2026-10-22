@@ -80,7 +80,8 @@ h1 em, h2 em, h3 em, .serif-em {
 .vhero h1 { max-width: 15ch; margin: 0; font-size: clamp(2.9rem, 7.4vw, 6.4rem); line-height: 0.98; color: var(--v-ink); }
 .vhero h1 em { display: inline-block; font-size: 1.04em; }
 .vhero__kicker { max-width: 40rem; margin: 0; color: #4d4a44; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.55; }
-.vhero__fine { margin: 0; color: #4d4a44; font-size: 0.86rem; }
+/* Info lines under the phone CTA are plain text: only the browser-trial link gets a pill shape. */
+.vhero .vhero__fine { max-width: 26rem; margin: 0; color: var(--v-ink); font-size: 0.94rem; font-weight: 600; line-height: 1.45; text-wrap: balance; }
 .vhero__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .vhero__cta { display: grid; justify-items: center; gap: 0.6rem; }
 .vhero__try { color: var(--v-ink); font-weight: 600; font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px; }
@@ -118,12 +119,12 @@ h1 em, h2 em, h3 em, .serif-em {
 .vhero .paper-join:active, .paper-invite .paper-join:active { transform: translateY(3px); box-shadow: 0 0 0 var(--v-ink); }
 
 /* ── App tour ─────────────────────────────────────────────────────────────── */
-.vtour { display: grid; justify-items: center; gap: 1.4rem; padding: 1.5rem 1.25rem 5rem; }
+.vtour { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.4rem; padding: 1.5rem 1.25rem 5rem; }
 .vtour__head { text-align: center; }
 .vtour__eyebrow { margin: 0 0 0.3rem; font-family: var(--font-serif); font-style: italic; font-size: 1.4rem; color: #5b4bd6; }
 .vtour h2 { margin: 0; font-size: clamp(2rem, 4.4vw, 3.4rem); }
 .vtour__window {
-  width: min(1080px, 94vw); overflow: hidden; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #f5f2ea;
+  width: min(1080px, 100%); overflow: hidden; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #f5f2ea;
   box-shadow: 8px 8px 0 var(--v-ink);
 }
 .vtour__bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1.5px solid var(--v-ink); background: #fff; }
@@ -131,7 +132,9 @@ h1 em, h2 em, h3 em, .serif-em {
 .vtour__bar i:nth-child(2) { background: var(--v-sun); }
 .vtour__bar i:nth-child(3) { background: var(--v-lime); }
 .vtour__bar span { margin-left: 8px; font: 700 0.85rem var(--font-display); letter-spacing: -0.02em; }
-.vtour__window video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.vtour__media { position: relative; }
+.vtour__poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vtour__window video { position: relative; display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
 .vtour__caption { max-width: 40rem; margin: 0; color: #6b6760; text-align: center; font-size: 0.9rem; }
 
 @media (max-width: 720px) {
@@ -154,13 +157,12 @@ h1 em, h2 em, h3 em, .serif-em {
 .dark .vtour__bar span { color: #f2eef9; }
 .dark .vtour__eyebrow { color: #c4b5fd; }
 
-/* On the site's colour field: solid ink copy and a paper chip for the fine print. */
+/* On the site's colour field: solid ink copy; the browser-trial link keeps a paper chip. */
 .vhero__kicker { color: #1c1a17; font-weight: 500; }
-.vhero__fine { padding: 0.25rem 0.75rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: rgb(255 255 255 / 0.85); color: var(--v-ink); font-weight: 600; }
 .vtour__caption { color: #1c1a17; font-weight: 500; }
 .vhero__try { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.35rem 1rem; border-radius: 999px; background: rgb(255 255 255 / 0.9); color: var(--v-ink); }
 .paper-logo__word { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; }
-.dark .vhero__fine { background: #1f1729; color: #f2eef9; border-color: #f2eef9; }
+.dark .vhero__fine { color: #f2eef9; }
 .dark .vhero__try { background: #1f1729; color: #f2eef9; }
 .dark .vhero__kicker, .dark .vtour__caption { color: #e6e0f0; }
 
@@ -210,7 +212,7 @@ p { font-size: 1.02rem; }
 .vtour__window { background: var(--v-card); }
 
 /* The download box: big, loud, free. */
-.paper-beta { width: min(980px, 94vw) !important; max-width: none !important; padding: clamp(2rem, 4vw, 3.4rem) !important; margin-inline: auto; }
+.paper-beta { width: min(980px, 100%) !important; max-width: none !important; padding: clamp(2rem, 4vw, 3.4rem) !important; margin-inline: auto; }
 .paper-beta__title { font-family: var(--font-display) !important; font-size: clamp(2.2rem, 4.6vw, 3.6rem) !important; font-weight: 800 !important; letter-spacing: -0.045em !important; line-height: 1.02 !important; color: var(--v-ink) !important; }
 .paper-beta__os { gap: 0.9rem !important; }
 .paper-beta__os button { min-height: 4.2rem; padding: 0.8rem 1.6rem !important; border: 1.5px solid var(--v-ink) !important; border-radius: 16px !important; background: #fff !important; box-shadow: 0 3px 0 var(--v-ink); }
@@ -233,8 +235,6 @@ p { font-size: 1.02rem; }
 .vhero h1 { font-size: clamp(2.3rem, 10.5vw, 7rem); overflow-wrap: break-word; }
 .vhero__kicker { font-size: clamp(1.15rem, 1.8vw, 1.4rem) !important; max-width: 44rem; }
 .vhero .paper-join { min-height: 3.6rem; padding: 0 1.7rem !important; font-size: 1.12rem !important; border-radius: 14px !important; }
-.vhero__fine { font-size: 1rem; padding: 0.4rem 1rem; background: var(--v-lime); }
-.vhero__phone .vhero__fine { padding: 0.35rem 0.75rem; background: rgb(255 255 255 / 0.9); font-size: 0.85rem; color: var(--v-ink); }
 @media (max-width: 520px) {
   .vhero__copy { gap: 0.8rem; }
   .vhero__kicker { font-size: 1.05rem !important; }
@@ -452,10 +452,6 @@ p { font-size: 1.02rem; }
 .invite__error { margin: 0; color: #fca5a5; }
 .invite__copy, .invite__result { min-width: 0; max-width: 100%; }
 .invite :is(input, button):focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
-@media (max-width: 520px) {
-  .invite__form { flex-direction: column; }
-  .invite__form input { width: 100%; flex: auto; }
-}
 
 /* ── Feedback ──────────────────────────────────────────────────────────────── */
 .fb-tab {
@@ -609,7 +605,7 @@ p { font-size: 1.02rem; }
 
 /* Claude for Startups: one big, plain callout above the backing numbers. */
 .claude-startups { display: grid; gap: 8px; margin: 0 0 28px; padding: clamp(22px, 4vw, 36px); border: 2px solid #141414; border-radius: 24px; background: #fff; box-shadow: 5px 5px 0 #141414; text-align: center; }
-.claude-startups__tag { justify-self: center; padding: 3px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #d6f45a; font: 700 12px/1.4 Inter, sans-serif; letter-spacing: .02em; }
+.claude-startups__tag { justify-self: center; padding: 3px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #d6f45a; font: 700 13px/1.4 Inter, sans-serif; letter-spacing: .02em; }
 .claude-startups__title { margin: 0; font: 800 clamp(28px, 5vw, 48px)/1.08 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.035em; color: #141414; }
 .claude-startups__title em { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-style: italic; }
 .claude-startups__copy { margin: 0 auto; max-width: 560px; font-size: 16px; line-height: 1.5; color: #3b3b3b; }

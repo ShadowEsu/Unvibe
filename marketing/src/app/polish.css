@@ -955,7 +955,7 @@ html[data-performance="lite"] .ambient__orb {
   border-radius: 6px;
   background: rgb(255 255 255 / 0.7);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: max(13px, 0.7rem);
   font-weight: 600;
 }
 
@@ -1282,7 +1282,8 @@ html[data-performance="lite"] .ambient__orb {
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-pill);
   background: rgb(139 92 246 / 0.2);
-  font-size: 0.68rem;
+  font-size: max(13px, 0.68rem);
+  white-space: nowrap;
 }
 
 .pricing-toggle__thumb {

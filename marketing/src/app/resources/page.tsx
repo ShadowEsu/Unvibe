@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ResourcesHub } from "@/components/paper/ResourcesHub";
+import "./resources.css";
 
 export const metadata: Metadata = {
   title: "Resources and guides",

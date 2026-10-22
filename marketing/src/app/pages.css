@@ -41,7 +41,7 @@
 
 /* ── Photo bands: deliberate under the dark bar, readable at every width ── */
 
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
   background: linear-gradient(
     180deg,
     rgb(16 13 20 / 0.92) 0,
@@ -52,17 +52,17 @@
 }
 
 /* vibe.css paints every .paper-meta #3c2fb8 !important (1.2:1 on the veil). Higher specificity wins. */
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
   color: var(--hero-type) !important;
   font-size: clamp(1.2rem, 2vw, 1.45rem) !important;
 }
 
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band__copy > p {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band__copy > p {
   opacity: 1;
   text-shadow: 0 1px 14px rgb(0 0 0 / 0.45);
 }
 
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band h1 {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band h1 {
   overflow-wrap: break-word;
 }
 
@@ -92,6 +92,35 @@
   font-size: 0.88rem;
   line-height: 1.55;
   text-align: center;
+}
+
+/* ── Pricing: one heading, then the tier cards inside the first viewport at 1440 and 390 ── */
+
+/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important. */
+.paper-pricing > .paper-section {
+  padding-top: clamp(1.5rem, 4vw, 3rem) !important;
+}
+
+.paper-pricing .pricing-plans__intro {
+  margin-bottom: 1.5rem;
+}
+
+.paper-pricing .pricing-plans__intro h1 {
+  margin: 0.5rem 0 0;
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  font-weight: 750;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.paper-pricing .pricing-plans__intro > p:not(.paper-meta) {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.paper-pricing .pricing-toggle {
+  margin-bottom: 1.5rem;
 }
 
 /* ── Beta ───────────────────────────────────────────────────────────────── */
@@ -178,137 +207,11 @@
   background: var(--v-ink);
 }
 
-.paper-pricing .pricing-headline {
-  font-weight: 750;
-}
-
-.paper-pricing .pricing-headline__next {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-}
-
-html[data-performance="lite"] .paper-pricing .pricing-headline {
-  opacity: 1;
-  animation: none;
-}
-
 /* ── Releases ───────────────────────────────────────────────────────────── */
 
 /* vibe.css sets .paper-meta to 1.55rem !important; a log category label needs less. */
 .paper-log .paper-meta {
   font-size: 1.05rem !important;
-}
-
-/* ── Resources ──────────────────────────────────────────────────────────── */
-
-.resources-filters {
-  border: 1.5px solid var(--v-ink);
-  background: #fff;
-  box-shadow: 3px 3px 0 var(--v-ink);
-}
-
-.resources-filter-pill,
-.resources-depth-tab {
-  min-height: 2.75rem;
-  color: var(--v-ink);
-  font-weight: 650;
-}
-
-.resources-filter-pill:hover {
-  color: var(--v-ink);
-  background: rgb(214 244 90 / 0.45);
-}
-
-.resources-filter-pill.is-active,
-.resources-depth-tab.is-active {
-  border-color: var(--v-ink);
-  background: var(--v-ink);
-  color: #fff;
-  box-shadow: none;
-}
-
-.resources-depth-tabs {
-  border-bottom-color: #e4ded1;
-}
-
-.resources-depth-tab {
-  border: 1.5px solid var(--v-ink);
-  border-radius: 999px;
-  background: #fff;
-}
-
-.resources-depth-tab:hover {
-  border-color: var(--v-ink);
-  background: var(--v-lime);
-  color: var(--v-ink);
-}
-
-.resources-explanation-bubble,
-.resources-arch-node,
-.resources-swatch {
-  border: 1.5px solid var(--v-ink);
-  border-radius: 16px;
-  background: #fff;
-  color: var(--v-ink);
-}
-
-.resources-arch-node--shield {
-  border-color: var(--v-ink);
-  background: #efeaff;
-}
-
-.resources-arch-node--island {
-  border-color: var(--v-ink);
-  background: #e6f4ff;
-}
-
-.resources-swatch:hover {
-  border-color: var(--v-ink);
-  box-shadow: 3px 3px 0 var(--v-ink);
-}
-
-.resources-swatch__circle {
-  border: 1.5px solid var(--v-ink);
-}
-
-.resources-grid--3 {
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-}
-
-.resources-grid--2 {
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
-}
-
-.resources-display-demo {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 750;
-  letter-spacing: -0.03em;
-  color: var(--v-ink);
-}
-
-.resources-serif-demo {
-  font-family: var(--font-serif);
-  font-size: 1.35rem;
-}
-
-.resources-cta-copy h3 {
-  font-weight: 750;
-  letter-spacing: -0.03em;
-}
-
-@media (max-width: 520px) {
-  .resources-cta-banner {
-    padding: 1.6rem 1.3rem;
-  }
-
-  .resources-depth-box,
-  .resources-architecture {
-    padding: 1.2rem;
-  }
 }
 
 /* ── Kit and install help: the head gets the same reading card as the body ── */
@@ -441,7 +344,6 @@ html[data-performance="lite"] .paper-pricing .pricing-headline {
   .paper-pricing .marketing-plan-card:hover,
   :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
   .resources-card:hover,
-  .resources-swatch:hover,
   .founder-about__btn:hover {
     transform: none;
     transition: none;
@@ -452,7 +354,6 @@ html[data-performance="lite"] .paper-pricing .marketing-plan-card,
 html[data-performance="lite"] .paper-pricing .marketing-plan-card:hover,
 html[data-performance="lite"] :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
 html[data-performance="lite"] .resources-card:hover,
-html[data-performance="lite"] .resources-swatch:hover,
 html[data-performance="lite"] .founder-about__btn:hover {
   transform: none;
   transition: none;

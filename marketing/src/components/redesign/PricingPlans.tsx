@@ -36,14 +36,11 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
 
   return (
     <div className="pricing-plans">
-      <div className="pricing-plans__intro">
-        <p className="paper-meta">Simple pricing</p>
-        <h2>{copy.heading.lead}<em>{copy.heading.emphasis}</em>{copy.heading.tail}</h2>
-        <p>
-          Free explains any code you select at four depths, with follow-ups and Test me. No card and no API key.
-          Pro adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot with a shared workspace.
-        </p>
-      </div>
+      <header className="pricing-plans__intro">
+        <p className="paper-meta">Pricing</p>
+        <h1 id="pricing-title">{copy.heading.lead}<em>{copy.heading.emphasis}</em>{copy.heading.tail}</h1>
+        <p>Free needs no card and no API key.</p>
+      </header>
       <div className="pricing-toggle" role="radiogroup" aria-label="Billing interval">
         {(['monthly', 'annual'] as const).map((value) => (
           <button
@@ -60,6 +57,8 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
         ))}
         <span className="pricing-toggle__thumb" data-on={interval} aria-hidden="true" />
       </div>
+      {/* The h1 above is the page heading; this keeps the outline h1 > h2 > h3 for the plan cards. */}
+      <h2 className="sr-only">Plans</h2>
       <div className="marketing-plan-grid marketing-plan-grid--core">
         {copy.plans.map((plan) => (
           <article key={plan.id} id={plan.id} className={`marketing-plan-card${plan.featured ? ' featured' : ''}`}>
