@@ -3,6 +3,9 @@ import { getStripe } from '@/billing/stripe';
 import { processStripeEvent } from '@/billing/webhooks';
 
 export const runtime = 'nodejs';
+// A claim is a 5-minute lease (claim_billing_webhook). Cap the run well below it so a re-claimed
+// delivery never overlaps a still-running original (Vercel's default duration is 300 s).
+export const maxDuration = 60;
 
 export async function POST(req: Request): Promise<Response> {
   const signature = req.headers.get('stripe-signature');
