@@ -30,13 +30,9 @@ export async function GET(request: Request, { params }: { params: { code: string
   }
   try {
     const progress = await referralProgress(params.code);
-    // An unknown code gets the same 200 and zero counts, so a code (sha256 of an email) cannot
+    // An unknown code gets the same 200 and zero count, so a code (sha256 of an email) cannot
     // be used to check whether someone is on the list.
-    return NextResponse.json({
-      joinedReferrals: progress.joinedReferrals,
-      proMonths: progress.proMonths,
-      rewardCap: 5,
-    }, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+    return NextResponse.json({ joinedReferrals: progress.joinedReferrals }, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   } catch (error) {
     console.error("referral progress lookup failed", error);
     return NextResponse.json({ error: "Could not load referral progress." }, { status: 500, headers: { "Cache-Control": "no-store" } });

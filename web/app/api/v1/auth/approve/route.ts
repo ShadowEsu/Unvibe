@@ -1,4 +1,3 @@
-import { applyGiftsForEmail } from '@/billing/gifts';
 import { getStore } from '@/data/store';
 import { createClient } from '@supabase/supabase-js';
 
@@ -23,7 +22,6 @@ export async function POST(req: Request): Promise<Response> {
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });
   }
-  if (data.user.email) await applyGiftsForEmail(data.user.email);
   // Keep the Google profile name so the app can greet people without asking again.
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
   const googleName = [meta.full_name, meta.name].find((v): v is string => typeof v === 'string' && v.trim().length > 0);

@@ -1100,6 +1100,7 @@ function Widget() {
                   <input
                     placeholder="Why does this exist? What breaks if I remove it?"
                     value={active.ask}
+                    maxLength={4000}
                     disabled={stillTyping}
                     aria-label="Follow-up question"
                     onChange={(e) =>

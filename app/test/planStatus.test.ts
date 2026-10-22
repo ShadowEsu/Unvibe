@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { paidStatusLine, resetLabel } from '../src/renderer/shared/planStatus';
+import { giftStatusLine, paidStatusLine, resetLabel } from '../src/renderer/shared/planStatus';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');
 const END = '2026-11-21T12:00:00.000Z';
@@ -32,4 +32,18 @@ test('free beta ends while paid and free plans reset', () => {
   assert.match(resetLabel(END, 'trial', NOW), /^Free beta ends on .+ \(30 days left\)$/);
   assert.match(resetLabel(END, 'free', NOW), /^Usage limits reset on .+ \(30 days left\)$/);
   assert.match(resetLabel('2026-10-23T12:00:00.000Z', 'pro', NOW), /\(1 day left\)$/);
+});
+
+test('a gifted Pro says when it ends and that nothing is charged after', () => {
+  const line = giftStatusLine(END, NOW);
+  const date = new Date(END).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  assert.equal(line, `Pro from a gift until ${date}. Then you move to Free, and nothing is charged.`);
+});
+
+test('a gifted Pro with no usable end date shows no date', () => {
+  for (const end of [undefined, '', 'not-a-date', '2026-10-21T12:00:00.000Z']) {
+    const line = giftStatusLine(end, NOW);
+    assert.equal(line, 'Pro from a gift. When it ends you move to Free, and nothing is charged.');
+    assert.doesNotMatch(line, /Invalid Date|NaN/);
+  }
 });

@@ -25,10 +25,11 @@ describe("welcome email", () => {
     assert.doesNotMatch(text + html + WELCOME_SUBJECT, /[—–]/);
   });
 
-  it("states the real referral reward in both parts", () => {
-    const rule = /When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./;
+  it("states the real gift rule in both parts, and no waitlist reward", () => {
+    const rule = /Your code is on the Share page in the Unvibe app\. When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./;
     assert.match(welcomeHtml(input), rule);
-    assert.match(welcomeText(input), rule);
+    assert.match(welcomeText(input).replace(/\n/g, " "), rule);
+    assert.doesNotMatch(welcomeHtml(input) + welcomeText(input), /joins with your link/);
   });
 
   it("has a visible unsubscribe link in both parts", () => {
