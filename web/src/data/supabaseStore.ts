@@ -13,6 +13,7 @@ import type {
 } from './types';
 import { computeProfile, computeProjects } from './progress';
 import { limitFor } from '../billing/plans';
+import { EventOwnershipError } from './eventOwnership';
 
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
@@ -143,16 +144,35 @@ export class SupabaseStore implements Store {
   }
 
   async deleteAccount(userId: string): Promise<void> {
-    // Order matters if FKs are enforced: children before the user row.
-    await this.db.from('events').delete().eq('user_id', userId);
-    await this.db.from('usage_counters').delete().eq('user_id', userId);
-    await this.db.from('tokens').delete().eq('user_id', userId);
-    await this.db.from('device_codes').delete().eq('user_id', userId);
-    await this.db.from('consent_log').delete().eq('user_id', userId);
-    await this.db.from('users').delete().eq('id', userId);
+    // Order matters if FKs are enforced: children before the user row. Stop at the first failure
+    // so the caller never reports a deletion that did not happen.
+    const steps: Array<[table: string, column: string]> = [
+      ['events', 'user_id'], ['usage_counters', 'user_id'], ['tokens', 'user_id'],
+      ['device_codes', 'user_id'], ['consent_log', 'user_id'], ['users', 'id'],
+    ];
+    for (const [table, column] of steps) {
+      const { error } = await this.db.from(table).delete().eq(column, userId);
+      if (error) throw new Error(`Could not delete ${table}: ${error.message}`);
+    }
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
+    // events.id is a global primary key chosen by the client. Find which ids already exist so an id
+    // owned by another account is refused (never re-assigned), and new ids are plain inserts: a
+    // concurrent insert of the same id then fails on the key instead of overwriting.
+    const owned = new Set<string>();
+    const foreign: string[] = [];
+    const ids = [...new Set(events.map((e) => e.id))];
+    for (let start = 0; start < ids.length; start += 100) {
+      const { data, error } = await this.db.from('events').select('id, user_id').in('id', ids.slice(start, start + 100));
+      if (error) throw new Error(`Could not check event ownership: ${error.message}`);
+      for (const row of data ?? []) {
+        if (row.user_id === userId) owned.add(String(row.id));
+        else foreign.push(String(row.id));
+      }
+    }
+    if (foreign.length > 0) throw new EventOwnershipError(foreign);
+
     const rows = events.map((e) => ({
       id: e.id,
       user_id: userId,
@@ -172,7 +192,16 @@ export class SupabaseStore implements Store {
       source_app: e.sourceApp ?? null,
       ...(workspaceId ? { workspace_id: workspaceId } : {}),
     }));
-    await this.db.from('events').upsert(rows, { onConflict: 'id' });
+    const updates = rows.filter((row) => owned.has(row.id));
+    const inserts = rows.filter((row) => !owned.has(row.id));
+    if (updates.length > 0) {
+      const { error } = await this.db.from('events').upsert(updates, { onConflict: 'id' });
+      if (error) throw new Error(`Could not save learning events: ${error.message}`);
+    }
+    if (inserts.length > 0) {
+      const { error } = await this.db.from('events').insert(inserts);
+      if (error) throw new Error(`Could not save learning events: ${error.message}`);
+    }
   }
 
   private mapEventRow(r: Record<string, unknown>): EventRecord {
@@ -204,13 +233,30 @@ export class SupabaseStore implements Store {
     };
   }
 
-  private async eventsFor(userId: string): Promise<EventRecord[]> {
-    const { data } = await this.db
-      .from('events')
-      .select('*')
-      .eq('user_id', userId)
-      .order('ts', { ascending: true });
-    return (data ?? []).map((r) => this.mapEventRow(r as Record<string, unknown>));
+  /**
+   * Every matching event, oldest first. Supabase caps a response at 1,000 rows, so read in pages
+   * ordered by (ts, id); a single unpaged select silently drops everything past the cap.
+   */
+  private async allEvents(column: 'user_id' | 'workspace_id', value: string): Promise<EventRecord[]> {
+    const PAGE = 1000;
+    const events: EventRecord[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await this.db
+        .from('events')
+        .select('*')
+        .eq(column, value)
+        .order('ts', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) throw new Error(`Could not load learning history: ${error.message}`);
+      const rows = data ?? [];
+      for (const row of rows) events.push(this.mapEventRow(row as Record<string, unknown>));
+      if (rows.length < PAGE) return events;
+    }
+  }
+
+  private eventsFor(userId: string): Promise<EventRecord[]> {
+    return this.allEvents('user_id', userId);
   }
 
   async profile(userId: string): Promise<ProfileSummary> {
@@ -252,13 +298,7 @@ export class SupabaseStore implements Store {
   }
 
   async workspaceProjects(workspaceId: string): Promise<ProjectSummary[]> {
-    const { data, error } = await this.db
-      .from('events')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('ts', { ascending: true });
-    if (error) throw new Error(error.message || 'workspace projects failed');
-    return computeProjects((data ?? []).map((r) => this.mapEventRow(r as Record<string, unknown>)));
+    return computeProjects(await this.allEvents('workspace_id', workspaceId));
   }
 
   async usage(userId: string): Promise<UsageSummary> {
