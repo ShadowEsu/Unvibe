@@ -31,9 +31,16 @@ export async function POST(req: Request): Promise<Response> {
         const payments = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: paymentIntent }, expand: ['data.invoice'] });
         return payments.data.flatMap(({ invoice }) => (typeof invoice === 'string' || invoice.deleted ? [] : [invoice]));
       },
-      cancelSubscription: async (id) => {
-        await stripe.subscriptions.cancel(id, undefined, { idempotencyKey: `uncode-revoke-${id}` });
+      // Stripe's cancel defaults to no proration credit; the params stay unset so a retried key replays.
+      cancelSubscription: async (id, idempotencyKey) => {
+        await stripe.subscriptions.cancel(id, undefined, { idempotencyKey });
       },
+      latestPaidInvoicePayments: async (subscription) => {
+        const [invoice] = (await stripe.invoices.list({ subscription, status: 'paid', limit: 1 })).data;
+        if (!invoice?.id) return [];
+        return (await stripe.invoicePayments.list({ invoice: invoice.id, status: 'paid' })).data;
+      },
+      refundPayment: async (target, idempotencyKey) => (await stripe.refunds.create(target, { idempotencyKey })).id,
     });
     await store.completeWebhook(event.id);
     return Response.json({ received: true });
