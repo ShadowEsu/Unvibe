@@ -39,3 +39,16 @@ export function paidStatusLine(sub: PaidSubscriptionState, planName: string, now
   }
   return null;
 }
+
+/**
+ * The line for Pro granted by a gift or welcome month. Gift rows have no Stripe customer
+ * (the caller checks `!hasBillingAccount`), so no Stripe subscription can exist and
+ * nothing is charged when the period ends. A missing, invalid or past end date shows no date.
+ */
+export function giftStatusLine(currentPeriodEnd: string | undefined, now = Date.now()): string {
+  const end = currentPeriodEnd ? new Date(currentPeriodEnd).getTime() : Number.NaN;
+  if (!currentPeriodEnd || Number.isNaN(end) || end <= now) {
+    return 'Pro from a gift. When it ends you move to Free, and nothing is charged.';
+  }
+  return `Pro from a gift until ${shortDate(currentPeriodEnd)}. Then you move to Free, and nothing is charged.`;
+}

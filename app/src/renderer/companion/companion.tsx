@@ -8,7 +8,7 @@ import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
-import { paidStatusLine, resetLabel } from '../shared/planStatus';
+import { giftStatusLine, paidStatusLine, resetLabel } from '../shared/planStatus';
 import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
@@ -1022,7 +1022,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
           <span>Current plan</span>
           <h2>{planLabel(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
           <p>
-            {gifted ? 'Pro from a gift. Limits follow the Pro plan.'
+            {gifted && overview ? giftStatusLine(overview.subscription.currentPeriodEnd)
               : unlimited ? 'This build is not metered locally.'
                 : (paid && overview && paidStatusLine(overview.subscription, planLabel(currentPlan)))
                   || (resetIso ? resetLabel(resetIso, currentPlan)
