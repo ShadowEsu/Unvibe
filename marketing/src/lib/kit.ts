@@ -38,8 +38,6 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Top of waitlist and download emails", kind: "image" },
   { name: "Social preview", path: "/og.png", use: "Link previews, social posts", kind: "image" },
   { name: "Investor one pager", path: "/investors/unvibe-investor-one-pager.png", use: "Investor intros", kind: "image" },
-  { name: "Pitch deck (PDF)", path: "/investors/unvibe-pitch-deck.pdf", use: "Investor follow ups", kind: "pdf" },
-  { name: "Short investor deck (PDF)", path: "/investors/unvibe-investor-deck-short.pdf", use: "Cold investor emails", kind: "pdf" },
   { name: "Product demo video", path: "/videos/unvibe-real-demo.mp4", use: "A real recorded session: explain, depth, follow-up, Test me", kind: "video" },
   { name: "Screenshot: home", path: "/product/v3/home-today.jpg", use: "What the app looks like", kind: "image" },
   { name: "Screenshot: after agent review", path: "/product/v3/after-agent-review.jpg", use: "Reviewing what Cursor or Claude changed", kind: "image" },
@@ -113,7 +111,7 @@ export function kitSections(): KitSection[] {
         "Next on the roadmap: Instant Selection Bubble, Ask the codebase, Impact trace. After that: GitHub PR intelligence and shared team knowledge.",
         "Accepted into Claude for Startups (Anthropic's startup program). Say \"in Claude for Startups\", never \"backed by Anthropic\" or \"Anthropic partner\".",
         "In progress: YC application. Listed on product directories including Product Hunt, LaunchKiwi and DevRove.",
-        `Deck: ${SITE}/investors/unvibe-pitch-deck.pdf · Investor page: ${SITE}/investors`,
+        `Investor page: ${SITE}/investors`,
       ],
       table: {
         head: ["Source", "Amount", "What it is", "Status"],

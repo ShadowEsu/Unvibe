@@ -1,12 +1,10 @@
 # Investor materials
 
-Canonical Unvibe investor materials for sharing. The public VC-friendly deck URL is:
-
-`https://unvibe.site/investors/unvibe-pitch-deck.pdf`
-
-Older deck filenames are retained as compatibility copies of the current deck, so prior links
-do not serve outdated investor material. Older slide renders and inspect dumps lived under
-`output/pdf` / `tmp/pdfs` and were removed.
+Canonical Unvibe investor materials for sharing. The deck is no longer published on unvibe.site
+(taken offline 2026-10-22: it disclosed AWS Activate credits, which AWS Activate terms forbid).
+`marketing/scripts/build-deck.mjs` still writes into `marketing/public/investors/`; running it would
+publish the deck again, so do not commit its output. Older slide renders and inspect dumps lived
+under `output/pdf` / `tmp/pdfs` and were removed.
 
 | File | What it is |
 |---|---|

@@ -46,13 +46,6 @@ export const compensationLines: CompensationLine[] = [
     state: "Secured",
   },
   {
-    name: "AWS for Startups",
-    amountUsd: 5_000,
-    detail: "AWS Activate credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
     name: "Linear Founder Value Pack",
     amountUsd: 4_500,
     detail: "Six months of Linear",
