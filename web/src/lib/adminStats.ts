@@ -6,6 +6,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ActivationKind } from '@/lib/activation';
 import { serviceSupabase } from '@/lib/serviceSupabase';
+import { isInstallCounterKey } from '@/lib/trialAccess';
 
 export interface InstallStats {
   /** Installs that have made at least one trial AI request, all time. */
@@ -151,7 +152,7 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
       .from('trial_counters')
       .select('install_key, updated_at')
       .eq('kind', 'ai_explanation')
-      .neq('install_key', GLOBAL_INSTALL_KEY)
+      .not('install_key', 'like', '\\_\\_%')
       .gte('updated_at', since30d)
       .order('install_key')
       .range(from, to), 'trial_counters'),
@@ -165,7 +166,8 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
   ]);
   const qa = new Set(qaKeys.map((row) => row.install_key));
   const installStarts = installs.map((row) => new Date(row.started_at));
-  const realExplanations = explanations.filter((row) => !qa.has(row.install_key));
+  // Per-IP and global rows (`__…`) are not installs; the query skips them and this keeps it exact.
+  const realExplanations = explanations.filter((row) => isInstallCounterKey(row.install_key) && !qa.has(row.install_key));
   const realActivation = activation.filter((row) => !qa.has(row.install_key));
   return {
     ...summarizeInstalls(total, installStarts, realExplanations.map((row) => new Date(row.updated_at)), now),

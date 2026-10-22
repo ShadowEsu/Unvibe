@@ -22,7 +22,23 @@ test('a plan check outage explains itself instead of showing "(503)"', () => {
   assert.doesNotMatch(explanationFailure(500, {}).message, /500/);
 });
 
-test('signed-out and unexpected statuses keep their existing wording', () => {
+test('signed-out wording is unchanged and unexpected statuses never show a bare code', () => {
   assert.equal(explanationFailure(401, { error: 'unauthorized' }).message, 'Sign in to use cloud explanations, or continue with local learning history.');
-  assert.deepEqual(explanationFailure(413, { error: 'too big' }), { message: 'The explanation service could not complete that request (413).', planLimit: false });
+  const unexpected = explanationFailure(400, { error: 'missing scope, level, or context' });
+  assert.equal(unexpected.planLimit, false);
+  assert.doesNotMatch(unexpected.message, /400/);
+});
+
+test('a too-long request (413) keeps the server\'s plain message, or explains itself without "(413)"', () => {
+  const question = explanationFailure(413, { error: 'question_too_long', message: 'That question is too long. Keep it under 4,000 characters and try again.' });
+  assert.deepEqual(question, { message: 'That question is too long. Keep it under 4,000 characters and try again.', planLimit: false });
+  const bare = explanationFailure(413, { error: 'review context exceeds the 120,000 character limit' });
+  assert.equal(bare.planLimit, false);
+  assert.doesNotMatch(bare.message, /413/);
+  assert.match(bare.message, /too much/);
+});
+
+test('trial network and capacity limits (429) show the server\'s message with the Plan offer', () => {
+  const network = explanationFailure(429, { error: 'trial_network_limit', message: 'This network has used today\'s free beta explanations.' });
+  assert.deepEqual(network, { message: 'This network has used today\'s free beta explanations.', planLimit: true });
 });
