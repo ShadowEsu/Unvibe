@@ -58,11 +58,24 @@ describe("payments status (site copy may only promise checkout when the API says
   });
 
   it("fails closed when the API is slower than the timeout", async () => {
+    // Real timers on purpose: this checks that the production AbortSignal.timeout really aborts.
+    // A real hanging fetch holds an open socket that keeps the event loop alive until then, but
+    // AbortSignal.timeout's own timer is unref'd, so without a stand-in for that socket the loop
+    // can empty first and node:test cancels the test. The ref'd timer plays the socket: it is
+    // cleared on abort (no added wait) and fails the test if the abort never comes.
+    let reason: unknown;
     const hang = fakeFetch(({ init }) => new Promise<Response>((_, reject) => {
-      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      const signal = init?.signal;
+      const socket = setTimeout(() => reject(new Error("the timeout never aborted the request")), 5_000);
+      signal?.addEventListener("abort", () => {
+        clearTimeout(socket);
+        reason = signal.reason;
+        reject(signal.reason);
+      }, { once: true });
     }));
     const started = Date.now();
     assert.equal(await fetchPaymentsOpen(hang.impl, 30), false);
+    assert.ok(reason instanceof DOMException && reason.name === "TimeoutError", "the request was aborted by the timeout");
     assert.ok(Date.now() - started < 2_000, "gives up at the timeout");
   });
 
