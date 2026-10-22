@@ -41,7 +41,7 @@
 
 /* ── Photo bands: deliberate under the dark bar, readable at every width ── */
 
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
   background: linear-gradient(
     180deg,
     rgb(16 13 20 / 0.92) 0,
@@ -52,17 +52,17 @@
 }
 
 /* vibe.css paints every .paper-meta #3c2fb8 !important (1.2:1 on the veil). Higher specificity wins. */
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
   color: var(--hero-type) !important;
   font-size: clamp(1.2rem, 2vw, 1.45rem) !important;
 }
 
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band__copy > p {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band__copy > p {
   opacity: 1;
   text-shadow: 0 1px 14px rgb(0 0 0 / 0.45);
 }
 
-:is(.beta-page, .paper-pricing, .releases-page, .paper-resources-page) .paper-photo-band h1 {
+:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band h1 {
   overflow-wrap: break-word;
 }
 
@@ -92,6 +92,35 @@
   font-size: 0.88rem;
   line-height: 1.55;
   text-align: center;
+}
+
+/* ── Pricing: one heading, then the tier cards inside the first viewport at 1440 and 390 ── */
+
+/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important. */
+.paper-pricing > .paper-section {
+  padding-top: clamp(1.5rem, 4vw, 3rem) !important;
+}
+
+.paper-pricing .pricing-plans__intro {
+  margin-bottom: 1.5rem;
+}
+
+.paper-pricing .pricing-plans__intro h1 {
+  margin: 0.5rem 0 0;
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  font-weight: 750;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.paper-pricing .pricing-plans__intro > p:not(.paper-meta) {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.paper-pricing .pricing-toggle {
+  margin-bottom: 1.5rem;
 }
 
 /* ── Beta ───────────────────────────────────────────────────────────────── */
@@ -176,22 +205,6 @@
 
 .pricing-plans .pricing-toggle__thumb {
   background: var(--v-ink);
-}
-
-.paper-pricing .pricing-headline {
-  font-weight: 750;
-}
-
-.paper-pricing .pricing-headline__next {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-}
-
-html[data-performance="lite"] .paper-pricing .pricing-headline {
-  opacity: 1;
-  animation: none;
 }
 
 /* ── Releases ───────────────────────────────────────────────────────────── */

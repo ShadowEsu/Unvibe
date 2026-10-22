@@ -1386,7 +1386,6 @@ h2 {
 .teams-roadmap__grid ul, .teams-principles ul { display: grid; gap: 0.45rem; margin: 1.2rem 0 0; padding-left: 1.15rem; }
 .teams-enterprise { padding-top: 1rem; }
 .pricing-plans__intro { max-width: 46rem; margin: 0 auto 2.5rem; text-align: center; }
-.pricing-plans__intro h2 { margin-top: 0.65rem; }
 .pricing-plans__intro > p:last-child { margin-top: 0.85rem; color: var(--ink-muted); line-height: 1.6; }
 .pricing-comparison { margin-top: clamp(4rem, 8vw, 7rem); }
 .pricing-comparison h2 { margin-top: 0.65rem; }
@@ -2487,8 +2486,7 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   color: var(--paper);
 }
 
-.releases-page,
-.paper-pricing {
+.releases-page {
   padding-top: 0;
 }
 
@@ -2535,47 +2533,6 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   margin-inline: auto;
   color: var(--hero-type);
   opacity: 0.88;
-}
-
-.paper-pricing .paper-photo-band__copy {
-  justify-items: start;
-  text-align: left;
-}
-
-.paper-pricing .pricing-headline {
-  max-width: 11em;
-  margin: 0;
-  opacity: 0;
-  font-family: var(--font-display);
-  font-size: clamp(2.6rem, 8vw, 5.4rem);
-  font-weight: 400;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
-  color: var(--hero-type);
-  text-shadow: var(--glow-hero);
-}
-
-.paper-pricing .pricing-headline span {
-  text-decoration: underline;
-  text-decoration-thickness: 0.06em;
-  text-underline-offset: 0.12em;
-}
-
-.paper-pricing .pricing-headline__next {
-  display: block;
-  text-decoration: none;
-}
-
-.paper-pricing .pricing-headline.is-ready {
-  animation: paperFadeRise 1.85s var(--ease-emphatic) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .paper-pricing .pricing-headline,
-  .paper-pricing .pricing-headline.is-ready {
-    opacity: 1;
-    animation: none;
-  }
 }
 
 .paper-photo-band .paper-join-row {
