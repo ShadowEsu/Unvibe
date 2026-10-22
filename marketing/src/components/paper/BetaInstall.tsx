@@ -257,7 +257,7 @@ export function BetaInstall({
               recordBetaSiteEvent("survey");
             }}
           >
-            {BETA_FEEDBACK_URL}
+            Tell us how the install went
           </a>
         </>
       ) : null}

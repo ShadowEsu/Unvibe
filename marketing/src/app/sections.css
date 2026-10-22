@@ -31,7 +31,7 @@
 .try__levels button[aria-pressed="true"] { background: var(--v-lime); box-shadow: 0 2px 0 var(--v-ink); }
 .try__levels button:disabled { cursor: wait; opacity: 0.6; }
 .try__levels button:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
-.try__levels small { padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--v-ink); color: #fff; font: 700 0.68rem var(--font-mono); letter-spacing: 0.02em; }
+.try__levels small { padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--v-ink); color: #fff; font: 700 max(13px, 0.68rem) var(--font-mono); letter-spacing: 0.02em; }
 
 .try__body { display: flex; flex: 1; }
 .try__state { display: grid; place-items: center; align-content: center; gap: 1rem; width: 100%; padding: 2rem 1.5rem; text-align: center; font-size: 1.08rem; line-height: 1.5; }
