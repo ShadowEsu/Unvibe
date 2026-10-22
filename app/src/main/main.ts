@@ -264,10 +264,11 @@ function loadCodeIntoSession(
   void runReview(win, session, { level: session.level });
 }
 
-async function requireProOrError(win: BrowserWindow, tabId: string, feature: string): Promise<boolean> {
+/** True on Pro. Otherwise the panel, when given, shows the upgrade prompt; callers return 'Pro required'. */
+async function requireProOrError(win: BrowserWindow | null, tabId: string, feature: string): Promise<boolean> {
   const usage = await resolveAppUsage();
   if (isProPlan(usage.plan)) return true;
-  win.webContents.send('review:event', {
+  win?.webContents.send('review:event', {
     type: 'error',
     tabId,
     code: 'pro_required',
@@ -964,8 +965,10 @@ app.whenReady().then(() => {
     const brief = Boolean(opts?.brief);
     const feature = brief ? 'Change briefs' : 'Git diff explanations';
     // Plan check first, so a Free user is never asked to pick a folder for a feature they cannot use.
-    // The window that asked shows the upgrade prompt (the panel, or Briefs from the returned error).
-    if (!(await requireProOrError(widgetOf(e) ?? getOrCreateWidget(), activeTabId, feature))) {
+    // Only the panel renders the upgrade prompt; Briefs shows the returned error and gets no panel.
+    const panel = currentWidget();
+    const askedFromPanel = panel !== null && widgetOf(e) === panel;
+    if (!(await requireProOrError(askedFromPanel ? panel : null, activeTabId, feature))) {
       return { ok: false, error: 'Pro required' };
     }
     let root = await resolveRepoRoot();
