@@ -5,6 +5,7 @@ import { useCopyToast } from "@/components/paper/CopyToast";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { delight } from "@/lib/delight";
+import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import { SHORTCUTS, detectVisitorDevice } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
@@ -19,6 +20,8 @@ import {
 
 interface BetaInstallProps {
   tone?: "hero" | "page";
+  /** Which page this sits on, for `download_cta_clicked`. */
+  surface: Extract<DownloadSurface, "beta" | "home_install" | "investors">;
   showFeedback?: boolean;
   /** `null` hides the built-in title when the surrounding section already has a heading. */
   title?: string | null;
@@ -28,6 +31,7 @@ type InstallOs = "mac" | "windows";
 
 export function BetaInstall({
   tone = "hero",
+  surface,
   showFeedback = true,
   title = BETA_INSTALL_LABEL,
 }: BetaInstallProps) {
@@ -131,8 +135,8 @@ export function BetaInstall({
           rel="noreferrer"
           onClick={() => {
             track("release_download_clicked", { os, surface: tone });
+            trackDownloadClick(surface, os);
             delight();
-            window.dispatchEvent(new Event("unvibe:downloaded"));
             setClicked(true);
           }}
         >
@@ -151,13 +155,7 @@ export function BetaInstall({
         <span>No API key</span>
       </div>
 
-      {os === "mac" && !phone ? (
-        <p className="paper-beta__update">
-          {intelMac
-            ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD}>M1 or newer instead</a></>
-            : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD}>Get the Intel build</a></>}
-        </p>
-      ) : null}
+      {os === "mac" && !phone ? <MacBuildLinks intelMac={intelMac} surface={surface} /> : null}
       {clicked ? (
         <div className="paper-beta__next" role="status">
           <p className="paper-beta__next-title">Downloading! Now open it the first time:</p>
@@ -261,6 +259,18 @@ export function BetaInstall({
         </>
       ) : null}
     </div>
+  );
+}
+
+/** The other Mac build: Apple silicon by default, so Intel Macs get their own link (and the reverse). */
+export function MacBuildLinks({ intelMac, surface }: { intelMac: boolean; surface: DownloadSurface }) {
+  const onClick = () => trackDownloadClick(surface, "mac");
+  return (
+    <p className="paper-beta__update">
+      {intelMac
+        ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={onClick}>M1 or newer instead</a></>
+        : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={onClick}>Get the Intel build</a></>}
+    </p>
   );
 }
 

@@ -4,9 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
+import { DOWNLOADED_EVENT } from "@/lib/downloadTracking";
 import { GIFT_CODE, markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
-
-export const DOWNLOADED_EVENT = "unvibe:downloaded";
 
 const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 

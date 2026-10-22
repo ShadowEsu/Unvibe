@@ -433,7 +433,7 @@ export function ResourcesHub() {
           <p>Download Unvibe for Mac or Windows (x64) and explain your first selection.</p>
         </div>
         <div className="resources-cta-actions">
-          <DownloadRow href="/beta" />
+          <DownloadRow href="/beta" surface="resources" />
           <Link href="/pricing" className="paper-text-link">
             See pricing
           </Link>

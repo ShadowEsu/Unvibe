@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { track } from '@/lib/analytics';
 import { PRICING } from '@/lib/pricing';
 import { pricingCopy } from '@/lib/pricingCopy';
+import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
 type Interval = 'monthly' | 'annual';
 
@@ -13,6 +14,12 @@ function priceFor(id: string, interval: Interval, fallback: string): { price: st
   if (id === 'pro') return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
   if (id === 'teams') return interval === 'annual' ? { price: `$${PRICING.teamsSeatAnnual}`, per: '/seat/year' } : { price: `$${PRICING.teamsSeatMonthly}`, per: '/seat/month' };
   return { price: fallback, per: '' };
+}
+
+/** Plan buttons that open the download page also count as download calls to action. */
+export function trackPlanCta(plan: { id: string; href: string }): void {
+  track('plan_cta_clicked', { plan: plan.id });
+  if (plan.href === '/beta') trackDownloadPageClick('pricing');
 }
 
 /** `paymentsOpen` comes from the server (lib/paymentsStatus); closed copy never promises checkout. */
@@ -74,7 +81,7 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
               size="lg"
               variant={plan.primary ? 'primary' : 'secondary'}
               className={plan.primary ? 'pricing-button' : 'pricing-button pricing-button--quiet'}
-              onClick={() => track('plan_cta_clicked', { plan: plan.id })}
+              onClick={() => trackPlanCta(plan)}
             >
               {plan.cta}
             </Button>

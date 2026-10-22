@@ -166,7 +166,7 @@ export default function InvestorsPage() {
       </section>
 
       <section className="inv-section">
-        <BetaInstall tone="page" />
+        <BetaInstall tone="page" surface="investors" />
       </section>
     </article>
   );
