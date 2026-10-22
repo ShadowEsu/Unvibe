@@ -17,6 +17,8 @@ if (testsOnly) {
     platform: 'node',
     format: 'cjs',
     target: 'node20',
+    // Main-process modules import Electron; tests get a recording stand-in instead of the real binary.
+    alias: { electron: './test/electronStub.ts' },
     define: {
       'process.env.UNVIBE_RELEASE_BACKEND': JSON.stringify(''),
       'process.env.UNVIBE_RELEASE_TRIAL_TOKEN': JSON.stringify(''),

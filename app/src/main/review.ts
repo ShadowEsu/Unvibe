@@ -3,7 +3,7 @@
  * capture → build context → local secret filter → (consent) → stream → record → sync.
  */
 import { net, type BrowserWindow } from 'electron';
-import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter';
+import { scanReviewPayload, hasBlocking, type SecretFinding } from '../core/secretFilter';
 import { SseParser } from '../core/sse';
 import { explanationFailure } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
@@ -119,19 +119,6 @@ async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise
   session.snapshotText = built.snapshotText ?? session.snapshotText;
   session.mode = built.mode;
   return built.payload;
-}
-
-function scanPayload(payload: ReviewRequestPayload): SecretFinding[] {
-  const blocks: Array<{ label: string; text: string }> = [];
-  if (payload.context.code) blocks.push({ label: 'code', text: payload.context.code });
-  if (payload.context.enclosing) blocks.push({ label: 'nearby', text: payload.context.enclosing });
-  for (const line of payload.context.imports) blocks.push({ label: 'import', text: line });
-  for (const h of payload.context.diffHunks ?? []) {
-    blocks.push({ label: h.file, text: h.lines.join('\n') });
-  }
-  const findings: SecretFinding[] = [];
-  for (const b of blocks) findings.push(...scanText(b.text, b.label));
-  return findings;
 }
 
 export function applyBuiltReview(session: ReviewSession, built: {
@@ -307,7 +294,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
 
   pulseBar({ phase: 'analyzing', label: 'Analyzing' });
-  const findings = scanPayload(payload);
+  const findings = scanReviewPayload(payload);
   if (hasBlocking(findings)) {
     send(win, session, { type: 'blocked', findings });
     return;
