@@ -214,116 +214,6 @@
   font-size: 1.05rem !important;
 }
 
-/* ── Resources ──────────────────────────────────────────────────────────── */
-
-.resources-filters {
-  border: 1.5px solid var(--v-ink);
-  background: #fff;
-  box-shadow: 3px 3px 0 var(--v-ink);
-}
-
-.resources-filter-pill,
-.resources-depth-tab {
-  min-height: 2.75rem;
-  color: var(--v-ink);
-  font-weight: 650;
-}
-
-.resources-filter-pill:hover {
-  color: var(--v-ink);
-  background: rgb(214 244 90 / 0.45);
-}
-
-.resources-filter-pill.is-active,
-.resources-depth-tab.is-active {
-  border-color: var(--v-ink);
-  background: var(--v-ink);
-  color: #fff;
-  box-shadow: none;
-}
-
-.resources-depth-tabs {
-  border-bottom-color: #e4ded1;
-}
-
-.resources-depth-tab {
-  border: 1.5px solid var(--v-ink);
-  border-radius: 999px;
-  background: #fff;
-}
-
-.resources-depth-tab:hover {
-  border-color: var(--v-ink);
-  background: var(--v-lime);
-  color: var(--v-ink);
-}
-
-.resources-explanation-bubble,
-.resources-arch-node,
-.resources-swatch {
-  border: 1.5px solid var(--v-ink);
-  border-radius: 16px;
-  background: #fff;
-  color: var(--v-ink);
-}
-
-.resources-arch-node--shield {
-  border-color: var(--v-ink);
-  background: #efeaff;
-}
-
-.resources-arch-node--island {
-  border-color: var(--v-ink);
-  background: #e6f4ff;
-}
-
-.resources-swatch:hover {
-  border-color: var(--v-ink);
-  box-shadow: 3px 3px 0 var(--v-ink);
-}
-
-.resources-swatch__circle {
-  border: 1.5px solid var(--v-ink);
-}
-
-.resources-grid--3 {
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-}
-
-.resources-grid--2 {
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
-}
-
-.resources-display-demo {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 750;
-  letter-spacing: -0.03em;
-  color: var(--v-ink);
-}
-
-.resources-serif-demo {
-  font-family: var(--font-serif);
-  font-size: 1.35rem;
-}
-
-.resources-cta-copy h3 {
-  font-weight: 750;
-  letter-spacing: -0.03em;
-}
-
-@media (max-width: 520px) {
-  .resources-cta-banner {
-    padding: 1.6rem 1.3rem;
-  }
-
-  .resources-depth-box,
-  .resources-architecture {
-    padding: 1.2rem;
-  }
-}
-
 /* ── Kit and install help: the head gets the same reading card as the body ── */
 
 .kit__head,
@@ -454,7 +344,6 @@
   .paper-pricing .marketing-plan-card:hover,
   :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
   .resources-card:hover,
-  .resources-swatch:hover,
   .founder-about__btn:hover {
     transform: none;
     transition: none;
@@ -465,7 +354,6 @@ html[data-performance="lite"] .paper-pricing .marketing-plan-card,
 html[data-performance="lite"] .paper-pricing .marketing-plan-card:hover,
 html[data-performance="lite"] :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
 html[data-performance="lite"] .resources-card:hover,
-html[data-performance="lite"] .resources-swatch:hover,
 html[data-performance="lite"] .founder-about__btn:hover {
   transform: none;
   transition: none;
