@@ -24,3 +24,30 @@ export const safeStorage = {
   encryptString: (value: string): Buffer => Buffer.from(value),
   decryptString: (value: Buffer): string => value.toString(),
 };
+
+/** windows.ts imports these; unit tests never open a window, so any real use fails loudly. */
+export class BrowserWindow {
+  constructor() {
+    throw new Error('Windows are not available in tests.');
+  }
+
+  static getAllWindows(): BrowserWindow[] {
+    return [];
+  }
+
+  static fromWebContents(): null {
+    return null;
+  }
+}
+
+export const screen = {
+  getPrimaryDisplay: (): never => {
+    throw new Error('Displays are not available in tests.');
+  },
+};
+
+export const shell = {
+  openExternal: async (): Promise<never> => {
+    throw new Error('Opening external links is disabled in tests.');
+  },
+};

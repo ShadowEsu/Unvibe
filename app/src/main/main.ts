@@ -212,7 +212,8 @@ function beginCaptureOnActiveTab(
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
-  const session = makeSession(activeTabId, code, sourceApp, prev?.level ?? 'intermediate');
+  // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
+  const session = makeSession(activeTabId, code, sourceApp, prev?.level);
   tabSessions.set(activeTabId, session);
   if (!panelReady) return;
   // No selection → calm picker UI (never auto-error / auto-run).
@@ -952,7 +953,7 @@ app.whenReady().then(() => {
   ipcMain.handle('review:explainDiff', async (e, opts?: { brief?: boolean; level?: ExplanationLevel; scope?: BriefScope }) => {
     const win = widgetOf(e) ?? getOrCreateWidget();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level ?? 'intermediate');
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
     tabSessions.set(activeTabId, session);
     if (opts?.level) session.level = opts.level;
     let root = await resolveRepoRoot();
@@ -1083,7 +1084,7 @@ app.whenReady().then(() => {
   ipcMain.handle('review:explainCompare', async (e, opts?: { level?: ExplanationLevel }) => {
     const win = widgetOf(e) ?? getOrCreateWidget();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level ?? 'intermediate');
+    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
     tabSessions.set(activeTabId, session);
     if (opts?.level) session.level = opts.level;
     if (!(await requireProOrError(win, session, 'Since last understood'))) {

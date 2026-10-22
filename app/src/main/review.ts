@@ -28,7 +28,7 @@ import { knowledgeStore } from './knowledgeStore';
 import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
   | { type: 'status'; tabId: string; message: string }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
@@ -149,7 +149,7 @@ function persistUnderstoodSnapshot(session: ReviewSession): void {
 
 /** Mark the current review understood (Got it) and refresh the file memory baseline when safe. */
 export function markUnderstood(win: BrowserWindow, session: ReviewSession): void {
-  if (!session.recorded) recordReview(win, session);
+  if (!session.recorded) recordReview(win, session, false);
   try {
     store().setOutcome(session.reviewId, 'understood');
     persistUnderstoodSnapshot(session);
@@ -182,6 +182,8 @@ export function initWidget(
     preview: code ? code.slice(0, 600) : undefined,
     autoStart: Boolean(opts?.autoStart && code),
     mode: session.mode,
+    // The panel's depth row and every re-request it sends start from the session depth (the user's default).
+    level: session.level,
   });
 }
 
@@ -189,10 +191,15 @@ function appendExplanation(session: ReviewSession, text: string): void {
   session.explanationText = (session.explanationText ?? '') + text;
 }
 
-function recordReview(win: BrowserWindow, session: ReviewSession): boolean {
+/**
+ * Saves the finished run as the lesson. A follow-up answer is shown in the panel but never replaces
+ * the saved explanation of the code (its first run still records the lesson, so nothing is lost).
+ */
+function recordReview(win: BrowserWindow, session: ReviewSession, followUp: boolean): boolean {
   if (!session.code) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
+    if (followUp) return true;
     try {
       store().updateLesson(session.reviewId, {
         code: session.code,
@@ -368,7 +375,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           signal: abort.signal,
         });
         send(win, session, { type: 'done', model, mock: false });
-        if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
+        if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
         void refreshAppUsage().then((next) => {
           send(win, session, {
             type: 'usage',
@@ -440,7 +447,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         send(win, session, ev);
         if (ev.type === 'done') {
           completed = true;
-          if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
+          if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
             send(win, session, {
               type: 'usage',

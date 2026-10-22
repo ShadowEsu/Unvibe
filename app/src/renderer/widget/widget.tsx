@@ -432,6 +432,7 @@ function Widget() {
               error: '',
               mock: false,
               phase: ev.hasCode ? 'ready' : 'empty',
+              level: ev.level,
             });
           }
           case 'understood':
