@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start -p 8787",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "TSX_TSCONFIG_PATH=test/tsconfig.json node --import tsx --test test/*.test.ts test/*.test.tsx",
     "verify:staging": "node --import tsx scripts/verify-staging.ts",
     "test:rls:staging": "node --import tsx scripts/rls-staging.ts",
     "test:deletion:staging": "node --import tsx scripts/account-deletion-staging.ts"

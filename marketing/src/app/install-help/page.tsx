@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { Vibe } from "@/components/paper/Vibe";
-import { BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
+import { BETA_INSTALL_SCRIPT_SOURCE_URL, BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 
 export const metadata: Metadata = {
   title: "Install help",
@@ -22,12 +22,12 @@ export default function InstallHelpPage() {
       <h2 className="sr-only">First-open steps for Mac and Windows</h2>
       <FirstOpenSteps />
       <section className="verify" aria-labelledby="verify-title">
-        <h2 id="verify-title">Check it before you run it</h2>
+        <h2 id="verify-title">Read the script first</h2>
         <p>Read anything before it touches your computer. Everything is public:</p>
         <ul>
-          <li><a href="/install.sh">Read the Mac install script</a> and <a href="/install.ps1">the Windows one</a>. They download from GitHub, check the file, and copy the app into place. Nothing else.</li>
-          <li><a href={`https://github.com/ShadowEsu/Unvibe/releases/tag/${BETA_INSTALL_TAG}`}>The {BETA_INSTALL_TAG} release on GitHub</a>, with every installer and its SHA-256 checksum (<a href={`https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-mac.txt`}>Mac</a>, <a href={`https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-windows.txt`}>Windows</a>).</li>
-          <li>The Mac script stops by itself if the download does not match the published checksum.</li>
+          <li><a href="/install.sh">The Mac install script</a> and <a href="/install.ps1">the Windows one</a>, exactly as served, and <a href={BETA_INSTALL_SCRIPT_SOURCE_URL}>their source on GitHub</a>. They download from GitHub, check the file, copy the app into place, and send one anonymous &apos;installed&apos; count to unvibe.site. Nothing else.</li>
+          <li><a href="https://github.com/ShadowEsu/Unvibe/releases">Every release on GitHub</a>. The scripts install <a href={`https://github.com/ShadowEsu/Unvibe/releases/tag/${BETA_INSTALL_TAG}`}>{BETA_INSTALL_TAG}</a> and check it against its SHA-256 checksums (<a href={`https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-mac.txt`}>Mac</a>, <a href={`https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-windows.txt`}>Windows</a>).</li>
+          <li>Both scripts stop before installing anything if the checksum list is missing or the download does not match it.</li>
         </ul>
         <p>To check a file you downloaded yourself:</p>
         <pre><code>{`# Mac

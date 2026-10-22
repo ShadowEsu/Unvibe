@@ -9,6 +9,7 @@ import type {
   Store,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
+import { EventOwnershipError } from './eventOwnership';
 
 interface PendingDevice {
   userCode: string;
@@ -157,6 +158,9 @@ export class MemoryStore implements Store {
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
+    const ids = new Set(events.map((e) => e.id));
+    const foreign = this.data.events.filter((x) => ids.has(x.id) && x.userId !== userId).map((x) => x.id);
+    if (foreign.length > 0) throw new EventOwnershipError(foreign);
     for (const e of events) {
       const idx = this.data.events.findIndex((x) => x.userId === userId && x.id === e.id);
       const record: EventRecord = {

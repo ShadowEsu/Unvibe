@@ -18,6 +18,14 @@ export function teamsCheckoutEnabled(env: Record<string, string | undefined> = p
 /** Founding Teams seat cap. Above this is Enterprise conversation pricing. */
 export const TEAMS_MAX_SEATS = 20;
 
+/**
+ * A Stripe Checkout session is payable for this long (Stripe allows 30 minutes to 24 hours). The
+ * server treats its checkout intent as open a little longer, so it never starts a second session
+ * while the first can still be paid.
+ */
+export const CHECKOUT_SESSION_TTL_MS = 31 * 60_000;
+export const CHECKOUT_INTENT_TTL_MS = 32 * 60_000;
+
 /** Published totals in cents. UI copy must stay in lockstep with these numbers. */
 const UNIT_CENTS: Record<PlanId, { monthly: number; annual: number }> = {
   free: { monthly: 0, annual: 0 },

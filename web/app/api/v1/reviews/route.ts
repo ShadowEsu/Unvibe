@@ -46,22 +46,22 @@ export async function POST(req: Request): Promise<Response> {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      // False once the reader has gone away (the app gave up or closed the panel).
-      const send = (event: StreamEvent): boolean => {
+      // Enqueue fails once the reader has gone away (the app gave up or closed the panel).
+      const send = (event: StreamEvent): void => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-          return true;
         } catch {
-          return false;
+          // Nobody is reading any more; the answer still counts.
         }
       };
-      let delivered = false;
+      let produced = false;
       try {
         await provider.stream(system, user, (text) => {
-          if (send({ type: 'token', text }) && text.trim()) delivered = true;
+          if (text.trim()) produced = true;
+          send({ type: 'token', text });
         }, req.signal);
         send({ type: 'done', model: provider.name, mock: provider.mock });
-        if (delivered && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
+        if (produced && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
           await recordActivation(trialInstall, payload.context.code).catch((error) => {
             console.error('activation marker write failed', error);
           });
@@ -69,8 +69,9 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         send({ type: 'error', message: err instanceof Error ? err.message : String(err) });
       }
-      // Nothing reached the reader: the allowance is only spent on an answer the person got.
-      if (!delivered) await release?.();
+      // Refund only when the provider failed or wrote nothing. A client that disconnects keeps the
+      // charge: otherwise dropping the connection would make any request free to repeat.
+      if (!produced && !req.signal.aborted) await release?.();
       try {
         controller.close();
       } catch {
