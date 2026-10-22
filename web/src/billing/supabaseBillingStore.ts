@@ -7,6 +7,7 @@ import type {
   SubscriptionSyncInput,
   UsageKind,
   UsageReservation,
+  WebhookClaim,
   WorkspaceAccess,
   WorkspaceInvitation,
   WorkspaceMember,
@@ -329,6 +330,12 @@ export class SupabaseBillingStore implements BillingStore {
     return data ? this.mapSubscription(data as Record<string, unknown>) : null;
   }
 
+  async subscriptionByWorkspaceId(workspaceId: string): Promise<SubscriptionRecord | null> {
+    const { data, error } = await this.db.from('subscriptions').select('*').eq('workspace_id', workspaceId).maybeSingle();
+    this.require(error, 'find subscription by workspace');
+    return data ? this.mapSubscription(data as Record<string, unknown>) : null;
+  }
+
   async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
     const { data, error } = await this.db.from('subscriptions').select('*').eq('stripe_customer_id', stripeCustomerId).maybeSingle();
     this.require(error, 'find subscription by customer');
@@ -341,10 +348,15 @@ export class SupabaseBillingStore implements BillingStore {
     return this.overview(userId, workspaceId);
   }
 
-  async claimWebhook(eventId: string, eventType: string): Promise<boolean> {
+  async claimWebhook(eventId: string, eventType: string): Promise<WebhookClaim> {
     const { data, error } = await this.db.rpc('claim_billing_webhook', { p_event_id: eventId, p_event_type: eventType });
     this.require(error, 'claim webhook');
-    return Boolean(data);
+    if (data) return 'claimed';
+    // Not claimed: either already processed, or another delivery holds the lease (or just released
+    // it as failed, which a later retry re-claims).
+    const row = await this.db.from('billing_webhook_events').select('status').eq('stripe_event_id', eventId).maybeSingle();
+    this.require(row.error, 'read webhook claim');
+    return row.data?.status === 'completed' ? 'completed' : 'in_progress';
   }
 
   async completeWebhook(eventId: string): Promise<void> {

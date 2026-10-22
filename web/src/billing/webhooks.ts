@@ -46,17 +46,25 @@ export function liveSubscriptionStillCharges(subscription: Stripe.Subscription):
   return !(inGoodStanding && periodEnd !== undefined && endsWithoutRenewing(subscription, periodEnd));
 }
 
-export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, grace = false): Promise<void> {
+export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription): Promise<void> {
   const metadata = requiredMetadata(subscription);
   const item = subscription.items.data[0];
   if (!item) throw new Error('Stripe subscription has no billable item.');
   if (item.price.id !== stripePriceId(metadata.plan, metadata.interval)) throw new Error('Stripe subscription price does not match the trusted plan configuration.');
   if (metadata.plan === 'pro' && (item.quantity ?? 1) !== 1) throw new Error('Pro subscriptions must have exactly one account seat.');
   if (metadata.plan === 'teams' && (item.quantity ?? 0) < 2) throw new Error('Teams subscriptions require at least two seats.');
-  const shouldGrace = grace || subscription.status === 'past_due';
+  const stored = await store.subscriptionByWorkspaceId(metadata.workspaceId);
+  const replacesOther = stored?.stripeSubscriptionId !== undefined && stored.stripeSubscriptionId !== subscription.id;
+  // A late or retried event for a subscription the workspace has since replaced (say ended sub A
+  // after re-subscribing with B) must not overwrite B while B can still charge or entitles.
+  if (replacesOther && stored.status !== 'canceled' && stored.status !== 'inactive'
+    && subscription.status !== 'active' && subscription.status !== 'trialing' && subscription.status !== 'past_due') return;
+  // Only Stripe's live status starts a grace period: a failed-payment event that lands after the
+  // subscription was canceled, went unpaid, or expired grants nothing.
+  const shouldGrace = subscription.status === 'past_due';
   const graceDays = Math.max(1, Math.min(30, Number(process.env.BILLING_GRACE_PERIOD_DAYS ?? 7) || 7));
   // Stripe sends an event on every failed retry; the grace period runs from the first failure only.
-  const prior = shouldGrace ? await store.subscriptionByProviderId(subscription.id) : null;
+  const prior = stored?.stripeSubscriptionId === subscription.id ? stored : null;
   const graceEnds = prior?.status === 'grace_period' && prior.gracePeriodEndsAt
     ? prior.gracePeriodEndsAt
     : new Date(Date.now() + graceDays * 86_400_000).toISOString();
@@ -88,7 +96,7 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
   const expectedPrice = stripePriceId('pro', 'lifetime');
   const linePrice = session.line_items?.data?.[0]?.price;
   const priceId = typeof linePrice === 'string' ? linePrice : linePrice?.id;
-  if (priceId && priceId !== expectedPrice) {
+  if (priceId !== expectedPrice) {
     throw new Error('Stripe lifetime price does not match the trusted plan configuration.');
   }
   const customerId = providerId(session.customer);
@@ -258,12 +266,9 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       await store.recordAudit(null, prior?.workspaceId ?? null, 'subscription.canceled', { eventId: event.id });
       return;
       }
-    case 'invoice.payment_failed': {
-      const id = subscriptionIdFromInvoice(event.data.object);
-      if (id) await syncStripeSubscription(store, await deps.retrieveSubscription(id), true);
-      return;
-    }
+    case 'invoice.payment_failed':
     case 'invoice.paid': {
+      // The live subscription decides: a failure only starts a grace period if Stripe says past_due.
       const id = subscriptionIdFromInvoice(event.data.object);
       if (id) await syncStripeSubscription(store, await deps.retrieveSubscription(id));
       return;

@@ -121,12 +121,12 @@ test('pending invitations reserve paid seats and owners cannot reduce below occu
 test('webhook claims are idempotent but failed processing can retry', async () => {
   const store = new MemoryBillingStore();
   const eventId = `evt_${randomUUID()}`;
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), true);
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'claimed');
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'in_progress');
   await store.failWebhook(eventId, 'temporary database error');
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), true);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'claimed');
   await store.completeWebhook(eventId);
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'completed');
 });
 
 test('public plan payloads never expose provider identifiers', async () => {
@@ -283,6 +283,26 @@ test('lifetime checkout grants permanent Pro', async () => {
   assert.equal(overview.subscription.status, 'active');
   assert.equal(overview.subscription.currentPeriodEnd?.startsWith('2099'), true);
   assert.equal((await store.findCheckoutIntent('cs_lifetime'))?.status, 'completed');
+});
+
+test('a paid Lifetime session whose line items carry no price grants nothing', async () => {
+  process.env.STRIPE_PRICE_PRO_LIFETIME = 'price_pro_lifetime';
+  const userId = randomUUID();
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  const session = {
+    id: `cs_${randomUUID()}`, mode: 'payment', payment_status: 'paid', customer: 'cus_no_price', payment_intent: `pi_${randomUUID()}`,
+    metadata: { workspace_id: workspace.id, user_id: userId, plan: 'pro', interval: 'lifetime' },
+  } as unknown as Stripe.Checkout.Session;
+  const deps = {
+    retrieveSubscription: async (): Promise<Stripe.Subscription> => { throw new Error('unexpected subscription'); },
+    retrieveCheckoutSession: async () => session,
+  };
+  await assert.rejects(
+    processStripeEvent(store, { id: `evt_${randomUUID()}`, type: 'checkout.session.completed', data: { object: session } } as Stripe.Event, deps),
+    /lifetime price/i,
+  );
+  assert.equal((await store.overview(userId)).subscription.plan, 'free');
 });
 
 test('lifetime checkout does not grant Pro until an asynchronous payment succeeds', async () => {
