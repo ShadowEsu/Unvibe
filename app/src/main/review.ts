@@ -39,7 +39,9 @@ export type WidgetEvent =
   | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string }
   | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string }
   | { type: 'usage'; tabId: string; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
-  | { type: 'understood'; tabId: string };
+  | { type: 'understood'; tabId: string }
+  /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
+  | { type: 'quizError'; tabId: string; message: string };
 
 export interface ReviewSession {
   reviewId: string;
@@ -501,7 +503,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
     });
     pulseBar({ phase: 'ready', label: 'Ready' });
   } catch {
-    send(win, session, { type: 'error', message: 'Could not build a question for this one. Try again.' });
+    send(win, session, { type: 'quizError', message: 'Could not write a question for this one. Your explanation is still here.' });
   }
 }
 

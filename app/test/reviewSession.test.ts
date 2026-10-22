@@ -17,6 +17,9 @@ import { store } from '../src/main/store';
 /** Every request body the backend received, by path. */
 const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
 
+/** When set, the question service answers with this HTTP status instead of a question. */
+let quizStatus: number | null = null;
+
 /** A backend that explains code, answers questions differently, and writes one quiz question. */
 net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const url = new URL(String(input instanceof Request ? input.url : input));
@@ -30,6 +33,7 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
     return new Response(events.map((ev) => `data: ${JSON.stringify(ev)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } });
   }
   if (url.pathname === '/api/v1/comprehension') {
+    if (quizStatus) return Response.json({ error: 'unavailable' }, { status: quizStatus });
     return Response.json({ question: 'What does wait control?', options: ['Delay', 'Retries', 'Size', 'Order'], answerIndex: 0, concept: 'debounce', conceptLabel: 'Debounce', rationale: 'It is the quiet period.' });
   }
   return Response.json({ error: 'not_found' }, { status: 404 });
@@ -98,4 +102,22 @@ test('"Explain differently" applies to that request only', async () => {
   assert.match(lesson(s.reviewId)?.explanation ?? '', /\(different\)/);
   await runReview(win, s, { level: 'advanced' });
   assert.equal(reviewBodies().at(-1)?.variant, 'default');
+});
+
+test('a Test me failure stays in the quiz and leaves the finished explanation on screen', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: 'intermediate' });
+  const before = events.length;
+  quizStatus = 503;
+  try {
+    await startComprehension(win, s);
+  } finally {
+    quizStatus = null;
+  }
+  const after = events.slice(before);
+  // A panel-level error replaces the explanation with "Couldn't explain that" and a Retry that re-runs (and re-meters) it.
+  assert.deepEqual(after.filter((ev) => ev.type === 'error'), []);
+  assert.equal(after.filter((ev) => ev.type === 'quizError').length, 1);
+  assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION at intermediate/);
 });
