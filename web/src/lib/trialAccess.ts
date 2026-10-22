@@ -292,8 +292,10 @@ const STORE_UNAVAILABLE = {
 /**
  * Consume one trial unit for `installKey`, then one each from the caller's per-IP daily counter and
  * the global monthly and daily counters. On refusal (429 over a limit, 503 when a counter could not
- * be reserved) every unit already taken is given back. Otherwise `release` gives all of them back,
- * for when the AI produced nothing.
+ * be reserved) every unit already taken is given back: no AI call was made. Otherwise `release`, for
+ * when the AI produced nothing, gives back only the install unit. The per-IP and global counters are
+ * spend meters: the provider call has started and is billed, so failed, empty, blocked or aborted
+ * answers stay on them, or retrying such requests would make every cap free.
  */
 export async function reserveTrialAction(
   installKey: string,
@@ -357,5 +359,5 @@ export async function reserveTrialAction(
     await releaseUnits(taken);
     return { denied: Response.json({ error: refusal.error, message: refusal.message }, { status: refusal.status }) };
   }
-  return { denied: null, release: () => releaseUnits(taken) };
+  return { denied: null, release: () => releaseUnits([{ key: installKey, kind }]) };
 }

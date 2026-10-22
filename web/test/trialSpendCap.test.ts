@@ -17,7 +17,7 @@ import { clientIp } from '../src/lib/tryDemo';
 const BASE_ENV = { ...process.env };
 const TOKEN = 'local-trial-token-abcdefghijklmnop';
 
-let upstream: 'answer' | 'fail' | 'question' = 'answer';
+let upstream: 'answer' | 'fail' | 'empty' | 'question' = 'answer';
 let aiCalls = 0;
 let supabase: ((url: URL, init?: RequestInit) => Promise<Response>) | null = null;
 
@@ -25,10 +25,12 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(String(input));
   if (url.hostname === 'generativelanguage.googleapis.com') {
     aiCalls += 1;
+    // The provider forwards the caller's signal; a request the client already dropped aborts here.
+    init?.signal?.throwIfAborted();
     if (upstream === 'fail') return new Response('upstream unavailable', { status: 503 });
     const text = upstream === 'question'
       ? JSON.stringify({ question: 'What does it return?', options: ['Its input', 'Nothing'], answerIndex: 0, rationale: 'identity', concept: 'functions', conceptLabel: 'Functions' })
-      : 'This function returns its input.';
+      : upstream === 'empty' ? '' : 'This function returns its input.';
     const chunk = { candidates: [{ content: { parts: [{ text }] } }] };
     return url.pathname.endsWith(':streamGenerateContent')
       ? new Response(`data: ${JSON.stringify(chunk)}\n\n`, { headers: { 'content-type': 'text/event-stream' } })
@@ -245,6 +247,7 @@ test('the daily global cap returns 429 once reached and resets the next UTC day'
   assert.equal(await trialCounterUsed(trialGlobalDayKey(today)), 3);
   assert.equal(await trialCounterUsed(trialGlobalMonthKey(today)), 3, 'the refused request gives its monthly unit back');
   assert.equal(await trialCounterUsed(trialIpKey('198.51.100.4', today)), 0, 'the refused request gives its per-IP unit back');
+  assert.equal((await trialUsageLine(trialInstallKey('day-4-install'), 'ai_explanation', today)).used, 0, 'the refused request gives its install unit back');
 
   const tomorrow = new Date('2026-10-23T00:00:00.000Z');
   assert.equal((await reserveTrialAction(trialInstallKey('day-4-install'), 'ai_explanation', '198.51.100.4', tomorrow)).denied, null);
@@ -303,20 +306,66 @@ test('through /reviews, a store error returns 503 and never calls the AI', async
   assert.equal(aiCalls, 0);
 });
 
-test('a failed explanation gives back the install, per-IP, monthly and daily units it took', async () => {
+test('a refusal by a later cap, through /reviews, gives every earlier reservation back and never calls the AI', async () => {
+  process.env.UNVIBE_TRIAL_GLOBAL_DAILY_LIMIT = '1';
+  const now = new Date();
+  assert.equal((await review(explainRequest(trialHeaders('refusal-first-install', '203.0.113.50')))).status, 200);
+  const callsBefore = aiCalls;
+  const refused = await review(explainRequest(trialHeaders('refusal-second-install', '203.0.113.51')));
+  assert.equal(refused.status, 429);
+  assert.equal(aiCalls, callsBefore);
+  assert.equal((await trialUsageLine(trialInstallKey('refusal-second-install'), 'ai_explanation')).used, 0);
+  assert.equal(await trialCounterUsed(trialIpKey('203.0.113.51', now)), 0);
+  assert.equal(await trialCounterUsed(trialGlobalMonthKey(now)), 1, 'only the answered request is on the monthly meter');
+  assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 1);
+});
+
+test('once the AI call starts, a failed, empty or unusable answer refunds only the install unit; per-IP and global stay spent', async () => {
   const ip = '203.0.113.40';
-  const install = 'release-all-install';
+  const install = 'provider-failure-install';
+  const now = new Date();
   upstream = 'fail';
   assert.match(await (await review(explainRequest(trialHeaders(install, ip)))).text(), /"type":"error"/);
-  const now = new Date();
-  assert.equal((await trialUsageLine(trialInstallKey(install), 'ai_explanation')).used, 0);
-  assert.equal(await trialCounterUsed(trialIpKey(ip, now)), 0);
-  assert.equal(await trialCounterUsed(trialGlobalMonthKey(now)), 0);
-  assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 0);
+  upstream = 'empty';
+  await (await review(explainRequest(trialHeaders(install, ip)))).text();
+  assert.equal((await trialUsageLine(trialInstallKey(install), 'ai_explanation')).used, 0, 'the person keeps their allowance');
+  assert.equal(await trialCounterUsed(trialIpKey(ip, now)), 2, 'the per-IP meter counts every AI call');
+  assert.equal(await trialCounterUsed(trialGlobalMonthKey(now)), 2);
+  assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 2);
 
-  upstream = 'question';
-  const quiz = await comprehension(questionRequest(trialHeaders(install, ip)));
-  assert.equal(quiz.status, 200);
-  assert.equal(await trialCounterUsed(trialIpKey(ip, now)), 1, 'Test me counts towards the per-IP cap');
+  upstream = 'fail';
+  assert.equal((await comprehension(questionRequest(trialHeaders(install, ip)))).status, 502);
+  assert.equal((await trialUsageLine(trialInstallKey(install), 'project_question')).used, 0);
+  assert.equal(await trialCounterUsed(trialIpKey(ip, now)), 3, 'Test me counts towards the per-IP cap');
+  assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 3);
+});
+
+test('an abort before the first token leaves the per-IP and global counters consumed', async () => {
+  const ip = '203.0.113.41';
+  const now = new Date();
+  const gone = new AbortController();
+  gone.abort();
+  const dropped = new Request('http://localhost/api/v1/reviews', {
+    method: 'POST',
+    headers: trialHeaders('aborted-install', ip),
+    body: JSON.stringify({ scope: 'selection', level: 'beginner', context: { ...context, code: 'x'.repeat(100_000) } }),
+    signal: gone.signal,
+  });
+  // text() resolves only after the route closes the stream, which is after any refund decision.
+  assert.doesNotMatch(await (await review(dropped)).text(), /"type":"token"/);
+  assert.equal(await trialCounterUsed(trialIpKey(ip, now)), 1);
+  assert.equal(await trialCounterUsed(trialGlobalMonthKey(now)), 1);
   assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 1);
+  assert.equal((await trialUsageLine(trialInstallKey('aborted-install'), 'ai_explanation')).used, 1, 'a disconnect is not a provider failure (#21)');
+
+  const quizGone = new AbortController();
+  quizGone.abort();
+  await comprehension(new Request('http://localhost/api/v1/comprehension', {
+    method: 'POST',
+    headers: trialHeaders('aborted-install', ip),
+    body: JSON.stringify({ scope: 'selection', level: 'beginner', context }),
+    signal: quizGone.signal,
+  }));
+  assert.equal(await trialCounterUsed(trialIpKey(ip, now)), 2);
+  assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 2);
 });
