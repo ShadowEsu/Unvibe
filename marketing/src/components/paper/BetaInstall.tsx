@@ -163,7 +163,10 @@ export function BetaInstall({
         </div>
       ) : (
         <p className="paper-beta__update">
-          Unvibe is new, so the first open takes one extra click. <a href="/install-help">Show me how</a>
+          {os === "windows"
+            ? "Unvibe is not signed for Windows yet, so the first run shows a blue warning with Run anyway. "
+            : "Unvibe is not verified by Apple yet, so the first open needs one approval in System Settings. "}
+          <a href="/install-help">Show me how</a>
         </p>
       )}
 
@@ -271,27 +274,6 @@ export function MacBuildLinks({ intelMac, surface }: { intelMac: boolean; surfac
         ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={onClick}>M1 or newer instead</a></>
         : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={onClick}>Get the Intel build</a></>}
     </p>
-  );
-}
-
-export function BetaFeedback({ source }: { source: string }) {
-  return (
-    <div className="paper-beta-feedback">
-      <p className="paper-beta__offer">After you try the beta, submit your feedback for 1 free week of Pro.</p>
-      <a
-        className="paper-beta__survey"
-        href={BETA_FEEDBACK_URL}
-        target="_blank"
-        rel="noreferrer"
-        onClick={() => {
-          track("survey_opened", { source });
-          track("feedback_opened", { source });
-          recordBetaSiteEvent("survey");
-        }}
-      >
-        {BETA_FEEDBACK_URL}
-      </a>
-    </div>
   );
 }
 

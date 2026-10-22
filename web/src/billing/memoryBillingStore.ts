@@ -10,6 +10,7 @@ import type {
   SubscriptionSyncInput,
   UsageKind,
   UsageReservation,
+  WebhookClaim,
   WorkspaceAccess,
   WorkspaceInvitation,
   WorkspaceMember,
@@ -316,6 +317,10 @@ export class MemoryBillingStore implements BillingStore {
     return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeSubscriptionId === stripeSubscriptionId) ?? null;
   }
 
+  async subscriptionByWorkspaceId(workspaceId: string): Promise<SubscriptionRecord | null> {
+    return this.data.subscriptions.get(workspaceId) ?? null;
+  }
+
   async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
     return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeCustomerId === stripeCustomerId) ?? null;
   }
@@ -328,13 +333,13 @@ export class MemoryBillingStore implements BillingStore {
     return this.overview(userId, workspaceId);
   }
 
-  async claimWebhook(eventId: string, _eventType: string): Promise<boolean> {
+  async claimWebhook(eventId: string, _eventType: string): Promise<WebhookClaim> {
     const prior = this.data.webhooks.get(eventId);
     const now = this.now().getTime();
-    const leaseExpired = prior?.status === 'processing' && now - prior.claimedAt > WEBHOOK_LEASE_MS;
-    if (prior && prior.status !== 'failed' && !leaseExpired) return false;
+    if (prior?.status === 'completed') return 'completed';
+    if (prior?.status === 'processing' && now - prior.claimedAt <= WEBHOOK_LEASE_MS) return 'in_progress';
     this.data.webhooks.set(eventId, { status: 'processing', claimedAt: now });
-    return true;
+    return 'claimed';
   }
 
   async completeWebhook(eventId: string): Promise<void> {

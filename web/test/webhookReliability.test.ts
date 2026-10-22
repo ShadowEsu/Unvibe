@@ -56,16 +56,16 @@ test('a webhook claim is a lease: a delivery stuck in processing is re-claimed a
   let now = new Date('2026-10-22T10:00:00.000Z');
   const store = new MemoryBillingStore(() => now);
   const eventId = `evt_${randomUUID()}`;
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), true);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'claimed');
   // The function died: neither completeWebhook nor failWebhook ran.
   now = new Date('2026-10-22T10:04:59.000Z');
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false, 'inside the lease a retry is a duplicate');
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'in_progress', 'inside the lease a retry waits for the first delivery');
   now = new Date('2026-10-22T10:05:01.000Z');
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), true, 'after the lease Stripe\'s retry processes the event');
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false, 'the re-claim starts a new lease');
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'claimed', 'after the lease Stripe\'s retry processes the event');
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'in_progress', 'the re-claim starts a new lease');
   await store.completeWebhook(eventId);
   now = new Date('2026-10-23T10:00:00.000Z');
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false, 'a completed event is never processed again');
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'completed', 'a completed event is never processed again');
 });
 
 test('the grace period after a failed payment ends on time; later failed retries do not extend it', async () => {
@@ -98,4 +98,62 @@ test('the grace period after a failed payment ends on time; later failed retries
   } finally {
     mock.timers.reset();
   }
+});
+
+function invoiceFailed(subscriptionId: string): Stripe.Event {
+  return {
+    id: `evt_${randomUUID()}`, type: 'invoice.payment_failed',
+    data: { object: { parent: { subscription_details: { subscription: subscriptionId } } } },
+  } as unknown as Stripe.Event;
+}
+
+test('events for an ended old subscription cannot replace the workspace\'s current one', async () => {
+  const userId = randomUUID();
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  const oldId = `sub_${randomUUID()}`;
+  const newId = `sub_${randomUUID()}`;
+  let old = { ...proSubscription(workspace.id, 'active'), id: oldId };
+  const current = { ...proSubscription(workspace.id, 'active'), id: newId };
+  const deps = { retrieveSubscription: async (id: string) => (id === oldId ? old : current) };
+
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.created', old), deps);
+  old = { ...old, status: 'canceled' };
+  await processStripeEvent(store, { id: `evt_${randomUUID()}`, type: 'customer.subscription.deleted', data: { object: old } } as unknown as Stripe.Event, deps);
+  // Re-subscribing replaces the ended subscription.
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.created', current), deps);
+  assert.equal((await store.overview(userId)).subscription.stripeSubscriptionId, newId);
+
+  // Retried or late deliveries for the old subscription arrive afterwards.
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', old), deps);
+  await processStripeEvent(store, invoiceFailed(oldId), deps);
+  const overview = await store.overview(userId);
+  assert.equal(overview.subscription.stripeSubscriptionId, newId, 'the old subscription must not overwrite the current one');
+  assert.equal(overview.subscription.status, 'active');
+  assert.equal(overview.subscription.plan, 'pro');
+
+  // Checkout completing for the current subscription still syncs it.
+  const checkout = {
+    id: `evt_${randomUUID()}`, type: 'checkout.session.completed',
+    data: { object: { id: `cs_${randomUUID()}`, mode: 'subscription', subscription: newId, metadata: {} } },
+  } as unknown as Stripe.Event;
+  await processStripeEvent(store, checkout, deps);
+  assert.equal((await store.overview(userId)).subscription.stripeSubscriptionId, newId);
+});
+
+test('a late failed payment on a canceled subscription does not start a grace period', async () => {
+  const userId = randomUUID();
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  let current = { ...proSubscription(workspace.id, 'active'), id: `sub_${randomUUID()}` };
+  const deps = { retrieveSubscription: async () => current };
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.created', current), deps);
+
+  current = { ...current, status: 'canceled' };
+  await processStripeEvent(store, { id: `evt_${randomUUID()}`, type: 'customer.subscription.deleted', data: { object: current } } as unknown as Stripe.Event, deps);
+  await processStripeEvent(store, invoiceFailed(current.id), deps);
+  const overview = await store.overview(userId);
+  assert.equal(overview.subscription.status, 'canceled');
+  assert.equal(overview.subscription.plan, 'free');
+  assert.equal(overview.subscription.gracePeriodEndsAt, undefined);
 });

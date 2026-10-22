@@ -18,7 +18,6 @@ describe("beta waitlist invite email", () => {
     assert.match(text, new RegExp(BETA_FEEDBACK_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
-    assert.match(text, /1 week of Pro/);
     assert.match(text, /When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
     assert.doesNotMatch(text + betaInviteHtml("Ohm", UNSUBSCRIBE), /joins with your link|Waitlist gifts/);
     assert.doesNotMatch(text, /[—–]/);
@@ -45,7 +44,6 @@ describe("beta download email", () => {
     assert.match(text, new RegExp(BETA_FEEDBACK_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
-    assert.match(text, /1 week of Pro/);
     assert.match(text, /When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
     assert.doesNotMatch(text + betaDownloadHtml(input), /joins with your link|Waitlist gifts|referral code/);
     assert.doesNotMatch(text, /\$25/);

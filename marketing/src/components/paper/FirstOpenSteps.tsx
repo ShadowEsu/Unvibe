@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BETA_INSTALL_COMMAND, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
+import { detectVisitorDevice } from "@/lib/shortcuts";
 
 type Os = "mac" | "windows";
 
@@ -31,8 +32,12 @@ function Copy({ text, label }: { text: string; label: string }) {
  * for one approval in System Settings, and Windows SmartScreen asks once. The Terminal and
  * PowerShell installs skip both because command line downloads are not quarantined.
  */
-export function FirstOpenSteps({ initialOs = "mac", compact = false }: { initialOs?: Os; compact?: boolean }) {
-  const [os, setOs] = useState<Os>(initialOs);
+export function FirstOpenSteps({ initialOs, compact = false }: { initialOs?: Os; compact?: boolean }) {
+  const [os, setOs] = useState<Os>(initialOs ?? "mac");
+  // Without a caller's choice (the /install-help page), open on the visitor's own computer.
+  useEffect(() => {
+    if (!initialOs && detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "windows") setOs("windows");
+  }, [initialOs]);
   return (
     <div className={compact ? "fos fos--compact" : "fos"}>
       <div className="fos__tabs" role="tablist" aria-label="Your computer">

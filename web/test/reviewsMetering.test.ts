@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { POST as review } from '../app/api/v1/reviews/route';
 import { POST as comprehension } from '../app/api/v1/comprehension/route';
+import { POST as createWorkspace } from '../app/api/v1/workspaces/route';
 import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
 import { monthWindow } from '../src/billing/plans';
@@ -201,4 +202,51 @@ test('Test me is charged when the person disconnects, not refunded', async () =>
   });
   await comprehension(dropped);
   assert.equal(await used(pro.userId, 'project_question'), 1);
+});
+
+/** A team workspace the signed-in person creates through the real route. */
+async function newTeamWorkspace(headers: Record<string, string>): Promise<string> {
+  const response = await createWorkspace(new Request('http://localhost/api/v1/workspaces', {
+    method: 'POST', headers, body: JSON.stringify({ name: 'Side project' }),
+  }));
+  assert.equal(response.status, 201);
+  const workspace = (await jsonRecord(response)).workspace;
+  assert.ok(workspace !== null && typeof workspace === 'object' && 'id' in workspace && typeof workspace.id === 'string');
+  return workspace.id;
+}
+
+test('a new free team workspace does not give a Free user a second allowance', async () => {
+  upstream = 'answer';
+  const free = await signedIn('free');
+  const limit = (await getBillingStore().overview(free.userId)).usage.find((line) => line.kind === 'ai_explanation')?.limit ?? 0;
+  for (let i = 0; i < limit; i += 1) assert.equal((await review(explainRequest(free.headers))).status, 200);
+  const teamId = await newTeamWorkspace(free.headers);
+  const viaTeam = await review(explainRequest({ ...free.headers, 'x-uncode-workspace-id': teamId }));
+  assert.equal(viaTeam.status, 429, 'naming a free team workspace must still spend the personal allowance');
+  assert.equal(await used(free.userId, 'ai_explanation'), limit);
+});
+
+test('a paid Teams workspace named in the request pays from the team allowance', async () => {
+  upstream = 'answer';
+  const owner = await signedIn('free');
+  const teamId = await newTeamWorkspace(owner.headers);
+  await getBillingStore().syncSubscription({
+    workspaceId: teamId, plan: 'teams', interval: 'monthly', status: 'active', seats: 2,
+    stripeCustomerId: `cus_team_${owner.userId}`, stripeSubscriptionId: `sub_team_${owner.userId}`, stripePriceId: 'price_teams_monthly',
+    cancelAtPeriodEnd: false,
+  });
+  assert.equal((await review(explainRequest({ ...owner.headers, 'x-uncode-workspace-id': teamId }))).status, 200);
+  const teamLine = (await getBillingStore().overview(owner.userId, teamId)).usage.find((line) => line.kind === 'ai_explanation');
+  assert.equal(teamLine?.used, 1, 'the Teams workspace is charged');
+  assert.equal(await used(owner.userId, 'ai_explanation'), 0, 'the personal allowance is untouched');
+});
+
+test('naming a workspace the person is not a member of is refused without spending anything', async () => {
+  upstream = 'answer';
+  const stranger = await signedIn('free');
+  const other = await signedIn('free');
+  const teamId = await newTeamWorkspace(other.headers);
+  const response = await review(explainRequest({ ...stranger.headers, 'x-uncode-workspace-id': teamId }));
+  assert.notEqual(response.status, 200);
+  assert.equal(await used(stranger.userId, 'ai_explanation'), 0);
 });

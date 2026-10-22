@@ -19,7 +19,10 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'invalid_signature' }, { status: 400 });
   }
   const store = getBillingStore();
-  if (!(await store.claimWebhook(event.id, event.type))) return Response.json({ received: true, duplicate: true });
+  const claim = await store.claimWebhook(event.id, event.type);
+  if (claim === 'completed') return Response.json({ received: true, duplicate: true });
+  // Another delivery holds the lease and may still die; a non-2xx makes Stripe retry later.
+  if (claim === 'in_progress') return Response.json({ error: 'webhook_in_progress' }, { status: 409 });
   try {
     await processStripeEvent(store, event, {
       retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),

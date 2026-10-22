@@ -3,7 +3,7 @@ import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { CHECKOUT_SESSION_TTL_MS, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { getStripe, lifetimeCheckoutOpen, paymentsLocked, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, WorkspaceAccess } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -34,7 +34,8 @@ async function reusableTeamWorkspace(billing: BillingStore, userId: string): Pro
 export async function POST(req: Request): Promise<Response> {
   const user = await requireUser(req);
   if (isResponse(user)) return user;
-  if (paymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
+  // Fully configured (webhook secret included) and not locked; otherwise a paid session could never grant.
+  if (!checkoutOpen()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
   try {
     const body = (await req.json()) as CheckoutBody;
     if (body.plan === 'teams' && !teamsCheckoutEnabled()) {
@@ -90,6 +91,11 @@ export async function POST(req: Request): Promise<Response> {
     } else if (pending) {
       return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
     }
+    // Everything that can fail on configuration runs before the intent, so a config error never
+    // leaves an open intent that answers the next try with checkout_pending.
+    const account = await getStore().accountInfo(user);
+    const appUrl = publicAppUrl(req);
+    const price = stripePriceId(body.plan, body.interval);
     let intent;
     try {
       intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
@@ -98,8 +104,6 @@ export async function POST(req: Request): Promise<Response> {
       if (error instanceof CheckoutPendingError) return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
       throw error;
     }
-    const account = await getStore().accountInfo(user);
-    const appUrl = publicAppUrl(req);
     const metadata = {
       workspace_id: workspace.id,
       user_id: user,
@@ -112,7 +116,6 @@ export async function POST(req: Request): Promise<Response> {
     const customer = current.subscription.stripeCustomerId
       ? { customer: current.subscription.stripeCustomerId }
       : { customer_email: account.email };
-    const price = stripePriceId(body.plan, body.interval);
     let session;
     // Stripe keeps a session payable for 24 hours by default; end it before the intent is
     // considered stale, so the server never opens a second payable session for one workspace.

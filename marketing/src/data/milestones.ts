@@ -292,7 +292,7 @@ export const milestones: Milestone[] = [
     date: "18 AUG 2026",
     category: "DISTRIBUTION",
     title: "Beta waitlist email",
-    summary: "Waitlist and download mails now include the install curl and the Typeform feedback link. Survey still unlocks 1 week of Pro. Nothing is sent until a dry run is approved.",
+    summary: "Waitlist and download mails now include the install curl and the Typeform feedback link. Nothing is sent until a dry run is approved.",
   },
   {
     date: "18 AUG 2026",
@@ -332,7 +332,7 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Try the Mac beta from the homepage",
-    summary: "A copy paste Terminal command sits under the title. No name or email. After 30 explanations, a short survey continues the session for 1 week of Pro. Gifts still add on.",
+    summary: "A copy paste Terminal command sits under the title. No name or email. After 30 explanations, a short survey invitation appears. Gifts still add on.",
     figure: "curl install",
   },
   {

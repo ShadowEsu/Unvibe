@@ -2,9 +2,22 @@ import type { TokenUsage } from '@/ai/provider';
 import { getBillingStore } from './store';
 import type { UsageKind } from './types';
 
+/**
+ * The workspace whose allowance pays for this call. A workspace named in the request is used only
+ * while it is on a paid Teams plan; anything else spends the caller's personal allowance, so
+ * creating free team workspaces cannot multiply the Free allowance. Throws for a workspace the
+ * caller does not belong to.
+ */
+async function meteredWorkspace(userId: string, req: Request): Promise<string | undefined> {
+  const requested = req.headers.get('x-uncode-workspace-id')?.trim();
+  if (!requested) return undefined;
+  const overview = await getBillingStore().overview(userId, requested);
+  return overview.subscription.plan === 'teams' ? overview.workspace.id : undefined;
+}
+
 export async function reserveMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<Response | null> {
-  const workspaceId = req.headers.get('x-uncode-workspace-id')?.trim() || undefined;
   try {
+    const workspaceId = await meteredWorkspace(userId, req);
     const reservation = await getBillingStore().reserveUsage(userId, kind, workspaceId);
     if (reservation.allowed) return null;
     await getBillingStore().recordAudit(userId, workspaceId ?? null, 'upgrade_prompt.impression', { kind, used: reservation.line.used, limit: reservation.line.limit });
@@ -27,10 +40,11 @@ export async function reserveMeteredAction(userId: string, kind: UsageKind, req:
 
 /** Best effort: give back the unit `reserveMeteredAction` took when the AI produced nothing. */
 export async function releaseMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<void> {
-  const workspaceId = req.headers.get('x-uncode-workspace-id')?.trim() || undefined;
-  await getBillingStore().releaseUsage(userId, kind, workspaceId).catch((error: unknown) => {
+  try {
+    await getBillingStore().releaseUsage(userId, kind, await meteredWorkspace(userId, req));
+  } catch (error: unknown) {
     console.error('usage release failed', error instanceof Error ? error.message : error);
-  });
+  }
 }
 
 /** Best effort: write the provider's token counts onto the row `reserveMeteredAction` wrote. Never fails the request. */

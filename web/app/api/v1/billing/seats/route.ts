@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getBillingStore } from '@/billing/store';
 import { billingError, isResponse, requireUser } from '@/billing/http';
 import { getStripe, paymentsLocked, PAYMENTS_NOT_OPEN } from '@/billing/stripe';
@@ -26,7 +27,13 @@ export async function PATCH(req: Request): Promise<Response> {
     const subscription = await stripe.subscriptions.retrieve(overview.subscription.stripeSubscriptionId);
     const item = subscription.items.data[0];
     if (!item) throw new Error('The Stripe subscription has no seat item.');
-    await stripe.subscriptions.update(subscription.id, { items: [{ id: item.id, quantity: seats }], proration_behavior: 'create_prorations' }, { idempotencyKey: `uncode-seats-${subscription.id}-${seats}` });
+    // Stripe replays a reused key's first result for 24 hours, so the key is per request: one built
+    // from (subscription, seats) made 3 -> 4 -> 3 -> 4 replay the first change and bill 3 seats. The
+    // SDK's own network retries reuse this key; a client re-sending the same change finds Stripe
+    // already at the target count and sends nothing.
+    if (item.quantity !== seats) {
+      await stripe.subscriptions.update(subscription.id, { items: [{ id: item.id, quantity: seats }], proration_behavior: 'create_prorations' }, { idempotencyKey: `uncode-seats-${subscription.id}-${randomUUID()}` });
+    }
     const updated = await billing.changeSeatQuantity(user, body.workspaceId, seats);
     await billing.recordAudit(user, body.workspaceId, 'seats.changed', { from: overview.subscription.seats, to: seats });
     return Response.json({ overview: publicBillingOverview(updated) });

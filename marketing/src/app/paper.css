@@ -461,20 +461,6 @@ h2 {
   text-decoration: none;
 }
 
-.paper-beta-feedback {
-  width: min(36rem, 100%);
-  margin: 0 auto 2.2rem;
-  display: grid;
-  gap: 0.7rem;
-  justify-items: stretch;
-  text-align: center;
-}
-
-.paper-beta-feedback .paper-beta__offer,
-.paper-beta-feedback .paper-beta__survey {
-  color: var(--hero-type);
-}
-
 .paper-beta__term {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
