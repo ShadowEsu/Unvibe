@@ -81,7 +81,7 @@ export function kitSections(): KitSection[] {
         "Five explanation depths: New, Beginner, Intermediate and Advanced are free. Expert is Pro.",
         "Test me: one quick question to check you understood. Lessons are saved to a library.",
         "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
-        "Privacy: secrets like API keys and .env files are filtered on your computer before anything is sent. No training on private code.",
+        "Privacy: secrets like API keys and .env files are filtered on your computer before anything is sent. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
         "Invite a friend: when someone joins with your link using a new email, you each get a month of Pro (Expert depth and answers that use nearby files). Up to five friends. Months stack, up to 12 months ahead, and are never applied to an active paid subscription.",
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, partner perks worth about $21.5K to $23K).",
