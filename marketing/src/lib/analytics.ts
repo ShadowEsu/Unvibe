@@ -5,10 +5,12 @@
  * Mixpanel Pro startup credits). PostHog loads via posthog-js when
  * NEXT_PUBLIC_POSTHOG_KEY is set — named events, exception autocapture for
  * Error Tracking, and Surveys. We never send code contents, emails, or other
- * personal data. An anonymous id is kept in localStorage.
+ * personal data. An anonymous id is kept in localStorage. Automated browsers and
+ * visitors who opted out with ?notrack=1 load no SDK and send nothing (trackingOptOut.ts).
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
+import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export type { AnalyticsEvent };
 
@@ -167,7 +169,7 @@ function sendMixpanel(event: AnalyticsEvent, props: Props): void {
 
 /** Count copy and survey clicks in founder stats. Best effort only. */
 export function recordBetaSiteEvent(event: "copied" | "survey"): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || browserTrackingDisabled()) return;
   void fetch("/api/install/event", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -189,7 +191,7 @@ function recordFunnelEvent(event: AnalyticsEvent): void {
 
 /** Track an enumerated event on Mixpanel and PostHog when configured. */
 export function track(event: AnalyticsEvent, props?: Props): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || browserTrackingDisabled()) return;
   const cleaned = cleanedProps(props);
   recordFunnelEvent(event);
   sendPosthog(event, cleaned);
@@ -201,7 +203,7 @@ export function captureClientException(
   error: unknown,
   props?: Props,
 ): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || browserTrackingDisabled()) return;
   initAnalytics();
   const cleaned = cleanedProps(props);
   if (posthogClient) {
@@ -271,7 +273,7 @@ function startMixpanel(): void {
 
 /** Load Mixpanel + PostHog browser SDKs when tokens are present. */
 export function initAnalytics(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || browserTrackingDisabled()) return;
   startPosthog();
   startMixpanel();
 }
