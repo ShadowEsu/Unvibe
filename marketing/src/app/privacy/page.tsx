@@ -11,7 +11,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="September 2026"
+      updated="October 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -99,7 +99,9 @@ export default function PrivacyPage() {
           including page views, clicks, and session replays with form inputs masked. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
-          download email, we store your name and email to contact you about Unvibe.
+          download email, we store your name and email to contact you about Unvibe. The
+          install scripts send one anonymous &apos;installed&apos; count to unvibe.site when
+          they finish, with no code or personal data.
         </p>
       </LegalSection>
 
