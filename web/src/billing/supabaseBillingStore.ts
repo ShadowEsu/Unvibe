@@ -168,7 +168,13 @@ export class SupabaseBillingStore implements BillingStore {
       this.require(error, 'find usage row for token counts');
       if (!data) return;
       const { data: updated, error: updateError } = await this.db.from('usage_events')
-        .update({ estimated_input_tokens: usage.inputTokens, estimated_output_tokens: usage.outputTokens })
+        // tokens_estimated defaults to false, so measured counts don't need the column: they keep
+        // working if this code ships before the migration.
+        .update({
+          estimated_input_tokens: usage.inputTokens,
+          estimated_output_tokens: usage.outputTokens,
+          ...(usage.estimated ? { tokens_estimated: true } : {}),
+        })
         .eq('id', data.id).is('estimated_input_tokens', null)
         .select('id');
       this.require(updateError, 'record token counts');

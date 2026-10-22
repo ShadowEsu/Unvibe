@@ -24,6 +24,8 @@ export interface MemoryUsageEvent {
   kind: UsageKind;
   estimatedInputTokens: number | null;
   estimatedOutputTokens: number | null;
+  /** True when the counts are a chars/4 estimate rather than provider-reported (column tokens_estimated). */
+  tokensEstimated: boolean;
   createdAt: number;
 }
 
@@ -156,7 +158,7 @@ export class MemoryBillingStore implements BillingStore {
     const lastId = this.data.usageEvents.at(-1)?.id ?? 0;
     this.data.usageEvents.push({
       id: lastId + 1, workspaceId: overview.workspace.id, userId, kind,
-      estimatedInputTokens: null, estimatedOutputTokens: null, createdAt: this.now().getTime(),
+      estimatedInputTokens: null, estimatedOutputTokens: null, tokensEstimated: false, createdAt: this.now().getTime(),
     });
     return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining - 1 } };
   }
@@ -168,6 +170,7 @@ export class MemoryBillingStore implements BillingStore {
     if (!row) return;
     row.estimatedInputTokens = usage.inputTokens;
     row.estimatedOutputTokens = usage.outputTokens;
+    row.tokensEstimated = usage.estimated === true;
   }
 
   /** This user's usage rows, oldest first (dev and tests; production reads usage_events in SQL). */

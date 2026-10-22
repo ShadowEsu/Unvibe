@@ -82,9 +82,13 @@ test('a signed-in explanation writes Gemini token counts onto its reserved usage
   assert.equal(rows[0]?.kind, 'ai_explanation');
   assert.equal(rows[0]?.estimatedInputTokens, 812);
   assert.equal(rows[0]?.estimatedOutputTokens, 140);
+  assert.equal(rows[0]?.tokensEstimated, false, 'measured counts are not marked as estimates');
 });
 
-test('without usageMetadata the row keeps null counts and the request still succeeds', async () => {
+/** chars/4 rounded up, the estimate rule. */
+const quarter = (chars: number): number => Math.ceil(chars / 4);
+
+test('without usageMetadata the row gets a chars/4 estimate marked as estimated, and the request still succeeds', async () => {
   upstream = 'no-usage';
   const user = await signedIn();
   const response = await review(post('/api/v1/reviews', user.headers));
@@ -92,11 +96,12 @@ test('without usageMetadata the row keeps null counts and the request still succ
   assert.match(await response.text(), /"type":"done"/);
   const rows = memoryBilling().usageEvents(user.userId);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0]?.estimatedInputTokens, null);
-  assert.equal(rows[0]?.estimatedOutputTokens, null);
+  assert.equal(rows[0]?.tokensEstimated, true);
+  assert.ok((rows[0]?.estimatedInputTokens ?? 0) > 0, 'the prompt was sent, so input is estimated');
+  assert.equal(rows[0]?.estimatedOutputTokens, quarter('This function returns its input.'.length));
 });
 
-test('an aborted stream does not crash and records no counts', async () => {
+test('an aborted stream does not crash and records an estimate of what was delivered', async () => {
   upstream = 'hang-after-first-chunk';
   const user = await signedIn();
   const gone = new AbortController();
@@ -114,7 +119,47 @@ test('an aborted stream does not crash and records no counts', async () => {
   }
   const rows = memoryBilling().usageEvents(user.userId);
   assert.equal(rows.length, 1, 'the person stays charged for a disconnect');
-  assert.equal(rows[0]?.estimatedInputTokens, null);
+  assert.equal(rows[0]?.tokensEstimated, true);
+  assert.ok((rows[0]?.estimatedInputTokens ?? 0) > 0);
+  assert.equal(rows[0]?.estimatedOutputTokens, quarter('This function'.length));
+});
+
+test('an aborted trial stream adds to the estimate totals and leaves the measured totals alone', async () => {
+  upstream = 'hang-after-first-chunk';
+  const installId = `tokens-${crypto.randomUUID().replaceAll('-', '')}`;
+  const headers = { authorization: `Bearer ${process.env.UNVIBE_TRIAL_TOKEN}`, 'x-unvibe-install-id': installId };
+  const measuredBefore = await trialDailyTokens('ai_explanation');
+  const estimatedBefore = await trialDailyTokens('ai_explanation', { estimated: true });
+  const gone = new AbortController();
+  const response = await review(post('/api/v1/reviews', headers, gone.signal));
+  const reader = response.body?.getReader();
+  assert.ok(reader);
+  await reader.read();
+  gone.abort();
+  for (;;) {
+    const { done } = await reader.read();
+    if (done) break;
+  }
+  assert.deepEqual(await trialDailyTokens('ai_explanation'), measuredBefore);
+  const estimatedAfter = await trialDailyTokens('ai_explanation', { estimated: true });
+  assert.ok(estimatedAfter.inputTokens > estimatedBefore.inputTokens);
+  assert.equal(estimatedAfter.outputTokens, estimatedBefore.outputTokens + quarter('This function'.length));
+});
+
+test('a request refused before reaching Gemini records nothing', async () => {
+  upstream = 'with-usage';
+  const user = await signedIn();
+  const billing = getBillingStore();
+  const reserveUsage = billing.reserveUsage;
+  billing.reserveUsage = async () => { throw new Error('billing database unavailable'); };
+  const estimatedBefore = await trialDailyTokens('ai_explanation', { estimated: true });
+  try {
+    assert.equal((await review(post('/api/v1/reviews', user.headers))).status, 503);
+  } finally {
+    billing.reserveUsage = reserveUsage;
+  }
+  assert.equal(memoryBilling().usageEvents(user.userId).length, 0);
+  assert.deepEqual(await trialDailyTokens('ai_explanation', { estimated: true }), estimatedBefore);
 });
 
 test('Test me writes the token counts of its question onto its row', async () => {

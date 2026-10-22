@@ -2,7 +2,7 @@ import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import type { TokenUsage } from '@/ai/provider';
+import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
@@ -78,6 +78,9 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         if (!req.signal.aborted) console.error('review provider failed', err);
         send({ type: 'error', message: PROVIDER_FAILURE });
+        // Gemini accepted the request before it failed (e.g. the stream was cut off): record the estimate.
+        const billed = billedUsage(err);
+        if (billed) await recordTokens?.(billed);
       }
       // Refund only when the provider failed or wrote nothing. A client that disconnects keeps the
       // charge: otherwise dropping the connection would make any request free to repeat.
