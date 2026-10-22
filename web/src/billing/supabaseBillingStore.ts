@@ -13,6 +13,7 @@ import type {
   WorkspaceRole,
 } from './types';
 import { CHECKOUT_INTENT_TTL_MS, monthWindow } from './plans';
+import { CheckoutPendingError } from './checkoutPending';
 
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Persistent billing returned an invalid record.');
@@ -220,9 +221,14 @@ export class SupabaseBillingStore implements BillingStore {
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {
+    // Stale intents (past CHECKOUT_INTENT_TTL_MS, their session no longer payable) must not hold the unique indexes.
+    const cutoff = new Date(Date.now() - CHECKOUT_INTENT_TTL_MS).toISOString();
+    const { error: expiryError } = await this.db.from('checkout_intents').update({ status: 'expired' }).eq('user_id', input.userId).eq('status', 'pending').lte('created_at', cutoff);
+    this.require(expiryError, 'expire stale checkouts');
     const { data, error } = await this.db.from('checkout_intents').insert({
       user_id: input.userId, workspace_id: input.workspaceId, plan: input.plan, interval: input.interval, seats: input.seats,
     }).select('*').single();
+    if (error?.code === '23505') throw new CheckoutPendingError();
     this.require(error, 'create checkout intent');
     const row = asObject(data);
     return {

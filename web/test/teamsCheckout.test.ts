@@ -78,6 +78,28 @@ test('an owner can have only one open Teams checkout across all of their team wo
   assert.equal(second.body.error, 'checkout_pending');
 });
 
+async function sessionsFor(userId: string): Promise<number> {
+  const owned = new Set(await teamWorkspaces(userId));
+  return [...sessions.values()].filter((s) => owned.has(s.workspaceId)).length;
+}
+
+test('a double click on Teams checkout opens exactly one payable session', async () => {
+  const me = await owner();
+  const results = await Promise.all([startTeams(me.token), startTeams(me.token)]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [201, 409]);
+  assert.equal(results.find((r) => r.status === 409)?.body.error, 'checkout_pending');
+  assert.equal(await sessionsFor(me.userId), 1);
+});
+
+test('two tabs checking out two of the owner\'s team workspaces at once open exactly one session', async () => {
+  const me = await owner();
+  const a = await getBillingStore().createTeamWorkspace(me.userId, 'Team A');
+  const b = await getBillingStore().createTeamWorkspace(me.userId, 'Team B');
+  const results = await Promise.all([startTeams(me.token, { workspaceId: a.id }), startTeams(me.token, { workspaceId: b.id })]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [201, 409]);
+  assert.equal(await sessionsFor(me.userId), 1);
+});
+
 test('an unknown workspace id is refused instead of silently creating a workspace', async () => {
   const me = await owner();
   const response = await startTeams(me.token, { workspaceId: randomUUID() });
