@@ -100,7 +100,8 @@ export default function PrivacyPage() {
       <LegalSection heading="This website">
         <p>
           unvibe.site uses Mixpanel and PostHog to understand how visitors use the site,
-          including page views, clicks, and session replays. Replays hide all page text and
+          including page views, clicks, and session replays. Both receive your IP address with
+          each event and use it to estimate a rough location. Replays hide all page text and
           everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
           codes) are removed from page addresses before they are sent. Admin pages and private
           stats links start no analytics; if you open one from another page on the site, replay
