@@ -263,10 +263,18 @@ export function Chat({
     const result = await window.unvibe.chatAsk({
       messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
       question,
-    }) as { ok: boolean; answer?: string; error?: string; remaining?: number };
+    }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string };
     window.clearTimeout(thinkTimer);
     setBusy(false);
     if (result.remaining !== undefined) setLeft(result.remaining);
+    if (!result.ok && result.code === 'secret') {
+      // Nothing was sent: take the message back out of the log so it is not resent next turn.
+      setMessages(messages);
+      setDraft(question);
+      setError(result.error ?? '');
+      setBuddyMood('idle');
+      return;
+    }
     if (!result.ok || !result.answer) {
       setError(result.error ?? 'Chat could not reply.');
       setBuddyMood('confused');
@@ -407,6 +415,7 @@ export function Chat({
               </button>
             </div>
           </div>
+          {empty && error ? <p className="form-error" role="alert">{error}</p> : null}
           {usage ? (
             <button
               type="button"

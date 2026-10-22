@@ -7,9 +7,11 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
 
 - The Electron main process owns network requests; sandboxed renderers have no Node or network
   access.
-- The desktop sends the selected snippet only after the local secret scanner runs. Known keys,
-  tokens, private-key headers, and dangerous secret assignments hard-block transmission. Suspect
-  high-entropy values require an explicit confirmation.
+- The desktop sends the selected snippet, a follow-up question, or a Chat message only after the
+  local secret scanner (`app/src/core/secretFilter.ts`) runs. Known keys, tokens, private-key
+  headers, database URLs with passwords, and password-style assignments hard-block transmission.
+  Suspect high-entropy values in an explanation request require an explicit confirmation; Chat
+  and lesson questions have no confirmation step, so any finding stops the message.
 - Raw selected code is used for the model request but is not included in the learning event sent
   to the persistence API. Synced learning records contain metadata such as timestamp, local date,
   timezone, level, line count, language, source app, outcome, project, and concept.

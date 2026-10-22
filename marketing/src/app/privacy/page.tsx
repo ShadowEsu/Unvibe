@@ -49,11 +49,14 @@ export default function PrivacyPage() {
 
       <LegalSection heading="Secret filtering, before anything is sent">
         <p>
-          Every remote request is scanned on your computer for known credential patterns:
-          API keys, tokens, private keys, plus high-entropy strings and{" "}
-          <code className="font-mono">KEY=</code> style assignments. A hit blocks the
-          request and shows you the file and line so you can redact it or add it to a{" "}
-          <code className="font-mono">.unvibeignore</code> file. Files like{" "}
+          Your selected code, follow-up questions, and Chat messages are scanned on your
+          computer before they are sent: API keys, tokens, private keys, database URLs with
+          passwords, password-style{" "}
+          <code className="font-mono">KEY=</code> assignments, and high-entropy strings. A
+          known credential blocks the request and shows you the rule and line so you can
+          remove it. A string that only looks random is shown to you first, and nothing is
+          sent unless you choose Send anyway. In Chat, a message with any finding is not
+          sent. Files like{" "}
           <code className="font-mono">.env</code>, keys,{" "}
           <code className="font-mono">node_modules</code>, and build output are excluded
           by default, and <code className="font-mono">.gitignore</code> is honored.

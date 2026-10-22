@@ -816,7 +816,7 @@ function Widget() {
               <div className="findings">
                 {active.findings.map((f, i) => (
                   <div key={i}>
-                    {f.rule} · line {f.line} · {f.masked}
+                    {f.rule} · {f.file} line {f.line} · {f.masked}
                   </div>
                 ))}
               </div>
@@ -832,15 +832,15 @@ function Widget() {
 
           {phase === 'blocked' && (
             <div className="state" role="alert">
-              <div className="big">Blocked — credential detected</div>
+              <div className="big">Blocked: credential detected</div>
               <div className="findings">
                 {active.findings.map((f, i) => (
                   <div key={i}>
-                    {f.rule} · line {f.line} · {f.masked}
+                    {f.rule} · {f.file} line {f.line} · {f.masked}
                   </div>
                 ))}
               </div>
-              <div className="sub">This selection stays on your machine. Remove the secret and try again.</div>
+              <div className="sub">Nothing was sent. Remove the secret from the selection or your question and try again.</div>
             </div>
           )}
 

@@ -14,6 +14,12 @@ import { readAiKey } from './aiKey';
 import { settings } from './settings';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, streamLocalAi } from './localAi';
 import { cachedAppUsage, refreshAppUsage } from './usage';
+import { scanTypedText } from '../core/secretFilter';
+
+/** Typed text has no consent step, so any secret finding stops it before anything leaves the Mac. */
+const SECRET_IN_MESSAGE = 'That looks like it contains a key, token, or password, so nothing was sent. Remove it and try again.';
+
+type AskResult = { ok: true; answer: string; remaining: number } | { ok: false; error: string; remaining?: number; code?: 'secret' };
 
 interface PendingQuiz {
   eventId: string;
@@ -121,10 +127,11 @@ export async function askStudyAssistant(input: {
   eventId: string;
   question: string;
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
-}): Promise<{ ok: true; answer: string; remaining: number } | { ok: false; error: string; remaining?: number }> {
+}): Promise<AskResult> {
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Ask a short question about this lesson.' };
   if (question.length > 800) return { ok: false, error: 'Keep questions under 800 characters.' };
+  if (scanTypedText(question, input.messages).length > 0) return { ok: false, error: SECRET_IN_MESSAGE, code: 'secret' };
 
   const built = lessonPayload(input.eventId);
   if ('error' in built) return { ok: false, error: built.error };
@@ -291,10 +298,11 @@ export function answerQuizCard(eventId: string, choice: number):
 export async function askChat(input: {
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   question: string;
-}): Promise<{ ok: true; answer: string; remaining: number } | { ok: false; error: string; remaining?: number }> {
+}): Promise<AskResult> {
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Type a message first.' };
   if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };
+  if (scanTypedText(question, input.messages).length > 0) return { ok: false, error: SECRET_IN_MESSAGE, code: 'secret' };
 
   const usage = await cachedAppUsage();
   const localKey = readAiKey();

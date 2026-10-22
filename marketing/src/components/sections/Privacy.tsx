@@ -11,7 +11,7 @@ const guarantees = [
   {
     Icon: EyeOff,
     title: "Secrets filtered on your Mac",
-    body: "API keys, tokens, and private keys are detected before anything is sent, and a hit blocks the request.",
+    body: "Your code, questions, and Chat messages are checked for keys, tokens, and passwords before anything is sent. A known credential blocks the request. A string that only looks random waits for your OK, and Chat does not send it.",
   },
   {
     Icon: ShieldCheck,
@@ -125,9 +125,6 @@ export function Privacy() {
               </ul>
             </div>
           </div>
-          <p className="border-t border-line px-5 py-3 text-fluid-sm text-fg-muted">
-            Add your own rules with a <code className="font-mono text-primary">.unvibeignore</code> file.
-          </p>
         </motion.div>
       </div>
     </Section>
