@@ -2,6 +2,7 @@ import { compensationLines, compensationTotalLabel, formatUsd } from "@/data/com
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 import { OUTREACH_SUBJECTS, outreachText } from "@/emails/outreach";
 
 /**
@@ -81,7 +82,7 @@ export function kitSections(): KitSection[] {
         "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
         "Privacy: secrets like API keys and .env files are filtered on your computer before anything is sent. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
-        "Invite a friend: when a friend signs in to the Unvibe app and enters your code, you each get a month of Pro (Expert depth and answers that use nearby files). Your code is on the Share page in the app. Up to five friends. Months stack, up to 12 months ahead, and are never applied to an active paid subscription.",
+        `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, partner perks worth about $21.5K to $23K).",
         "Founder: Preston Susanto, student founder in California. Contact preston@unvibe.site.",
       ],
@@ -148,7 +149,7 @@ export function kitSections(): KitSection[] {
         `Investors: ${SITE}/investors`,
         `Founder page: ${SITE}/about`,
         `Changelog: ${SITE}/releases`,
-        `Gift link format: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in)`,
+        `Gift link format, from the next app update: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in). The app people have today shows an 8 character invite link code instead, which counts who joined and grants no Pro.`,
         "Founder email: preston@unvibe.site",
       ],
     },

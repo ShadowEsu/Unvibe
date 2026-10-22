@@ -1,5 +1,5 @@
 import { BETA_FEEDBACK_URL, BETA_INSTALL_COMMAND, BETA_INSTALL_VERSION, BETA_WINDOWS_INSTALL_COMMAND } from "../lib/betaOffer";
-import { GIFT_CODE_HOME, GIFT_OFFER } from "../lib/giftOffer";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "../lib/giftOffer";
 
 export { BETA_FEEDBACK_URL };
 export const BETA_CURL = BETA_INSTALL_COMMAND;
@@ -39,7 +39,7 @@ export function betaFeedbackText(): string {
   return `The free plan includes AI explanations every month. After you try it, tell us how it went in the feedback form:
 ${BETA_FEEDBACK_URL}
 
-${GIFT_CODE_HOME} ${GIFT_OFFER}`;
+${GIFT_LINK_NOTE} ${GIFT_OFFER}`;
 }
 
 export function betaSignOffText(): string {

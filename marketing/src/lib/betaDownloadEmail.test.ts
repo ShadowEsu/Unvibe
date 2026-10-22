@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { betaDownloadHtml, betaDownloadText } from "../emails/betaDownload";
 import { BETA_INVITE_SUBJECT, betaInviteHtml, betaInviteText } from "../emails/betaInvite";
 import { BETA_CURL, BETA_FEEDBACK_URL } from "../emails/betaShared";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "./giftOffer";
 
 const UNSUBSCRIBE = "https://unvibe.site/api/unsubscribe?e=ohm%40example.com&t=abc";
 
@@ -18,7 +19,7 @@ describe("beta waitlist invite email", () => {
     assert.match(text, new RegExp(BETA_FEEDBACK_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
-    assert.match(text, /When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
+    assert.ok(text.includes(GIFT_OFFER) && text.includes(GIFT_LINK_NOTE));
     assert.doesNotMatch(text + betaInviteHtml("Ohm", UNSUBSCRIBE), /joins with your link|Waitlist gifts/);
     assert.doesNotMatch(text, /[—–]/);
     assert.doesNotMatch(betaInviteHtml("Ohm", UNSUBSCRIBE), /[—–]/);
@@ -44,7 +45,7 @@ describe("beta download email", () => {
     assert.match(text, new RegExp(BETA_FEEDBACK_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
-    assert.match(text, /When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
+    assert.ok(text.includes(GIFT_OFFER) && text.includes(GIFT_LINK_NOTE));
     assert.doesNotMatch(text + betaDownloadHtml(input), /joins with your link|Waitlist gifts|referral code/);
     assert.doesNotMatch(text, /\$25/);
     assert.doesNotMatch(text, /[—–]/);

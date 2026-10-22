@@ -4,9 +4,9 @@ import { useState, type FormEvent } from "react";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { storedRef } from "@/lib/referral";
-import { GIFT_CODE_HOME, GIFT_OFFER } from "@/lib/giftOffer";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
-/** Get a personal link to share Unvibe. Gift months come from the code on the app's Share page. */
+/** Get a personal link to share Unvibe. Gift months come from the app's gift code (next app release), never from the link. */
 export function InviteFriend() {
   const [email, setEmail] = useState("");
   const [link, setLink] = useState("");
@@ -64,7 +64,7 @@ export function InviteFriend() {
         <p className="paper-meta">Bring a friend</p>
         <h2 id="invite-title">One code. <em>A month of Pro each.</em></h2>
         <p className="paper-lead">{GIFT_OFFER} Months stack up to 12 ahead and never apply to an active paid subscription.</p>
-        <p className="invite__fine">{GIFT_CODE_HOME} The link below brings your friend to Unvibe.</p>
+        <p className="invite__fine">{GIFT_LINK_NOTE} The link below brings your friend to Unvibe.</p>
       </div>
       {link ? (
         <div className="invite__result" role="status">
