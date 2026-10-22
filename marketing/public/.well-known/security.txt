@@ -1,0 +1,8 @@
+# Report security issues in Unvibe (the desktop app, unvibe.site and api.unvibe.site).
+# Please include the affected URL or app version, steps to reproduce, and the impact.
+# Unvibe has no paid bug bounty. We credit valid reports on request.
+Contact: mailto:support@unvibe.site
+Expires: 2027-10-22T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://unvibe.site/.well-known/security.txt
+Policy: https://unvibe.site/privacy

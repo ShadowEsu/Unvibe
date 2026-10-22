@@ -1,0 +1,46 @@
+name: PR checks
+
+# Typecheck and unit tests for every package on each pull request, so "green CI"
+# means the code was tested, not only that the site preview built.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [web, app, marketing]
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+      - name: Install
+        run: npm ci
+        env:
+          # Electron's binary is not needed for typecheck or unit tests.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - name: Typecheck
+        run: npx tsc --noEmit -p .
+      - name: Unit tests
+        run: npm test
+      - name: Lint
+        if: matrix.package == 'marketing'
+        run: npm run lint
