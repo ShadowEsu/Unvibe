@@ -143,7 +143,15 @@ if (\$env:PROCESSOR_ARCHITECTURE -and \$env:PROCESSOR_ARCHITECTURE -ne "AMD64" -
 }
 
 New-Item -ItemType Directory -Force -Path \$destDir | Out-Null
-if (Test-Path \$dest) { Remove-Item -Force \$dest }
+# Download next to the app and only replace it once the download is verified, so a failed
+# update leaves the working copy in place.
+\$download = "\$dest.download"
+if (Test-Path \$download) { Remove-Item -Force \$download }
+# throw, not exit: under irm | iex, exit closes the window before the message can be read.
+function Stop-UnvibeInstall(\$message) {
+  Remove-Item -Force \$download -ErrorAction SilentlyContinue
+  throw "\$message Nothing was installed. For help, see ${BETA_INSTALL_HELP_URL}"
+}
 
 Write-Host "Checking release asset..."
 try {
@@ -161,29 +169,21 @@ Write-Host "Downloading Unvibe beta from \$url ..."
 \$downloaded = \$false
 \$curl = Get-Command curl.exe -ErrorAction SilentlyContinue
 if (\$curl) {
-  & curl.exe -fL --retry 3 --retry-delay 2 -A \$ua -o \$dest \$url
-  if (\$LASTEXITCODE -eq 0 -and (Test-Path \$dest)) { \$downloaded = \$true }
+  & curl.exe -fL --retry 3 --retry-delay 2 -A \$ua -o \$download \$url
+  if (\$LASTEXITCODE -eq 0 -and (Test-Path \$download)) { \$downloaded = \$true }
 }
 if (-not \$downloaded) {
   try {
-    Invoke-WebRequest -Uri \$url -OutFile \$dest -UseBasicParsing -UserAgent \$ua -MaximumRedirection 8
+    Invoke-WebRequest -Uri \$url -OutFile \$download -UseBasicParsing -UserAgent \$ua -MaximumRedirection 8
     \$downloaded = \$true
   } catch {
-    Write-Error "Could not download \$asset from release \$tag. Open \$url in a browser, or retry in PowerShell as Administrator. Details: \$_"
-    exit 1
+    Stop-UnvibeInstall "Could not download \$asset from release \$tag. Open \$url in a browser, or retry in PowerShell as Administrator. Details: \$_"
   }
 }
-if (-not (Test-Path \$dest) -or (Get-Item \$dest).Length -lt 1000000) {
-  Write-Error "Download finished but the installer looks incomplete. Delete \$dest, then run the install command again, or download \$url in your browser."
-  exit 1
+if (-not (Test-Path \$download) -or (Get-Item \$download).Length -lt 1000000) {
+  Stop-UnvibeInstall "The download looks incomplete. Run the install command again, or download \$url in your browser."
 }
 # Check the download against the SHA-256 published with the release. No checksum, no install.
-function Stop-UnvibeInstall(\$message) {
-  Remove-Item -Force \$dest -ErrorAction SilentlyContinue
-  Write-Host \$message
-  Write-Host "Nothing was installed. For help, see ${BETA_INSTALL_HELP_URL}"
-  exit 1
-}
 \$sumsUrl = "https://github.com/ShadowEsu/Unvibe/releases/download/\$tag/SHA256SUMS-windows.txt"
 try {
   \$sums = (Invoke-WebRequest -Uri \$sumsUrl -UseBasicParsing -UserAgent \$ua -MaximumRedirection 8 -TimeoutSec 20).Content
@@ -191,12 +191,21 @@ try {
 } catch {
   Stop-UnvibeInstall "Could not download the published checksums from \$sumsUrl, so the download can't be checked."
 }
-\$line = (\$sums -split "\`n") | Where-Object { \$_ -match [regex]::Escape(\$asset) } | Select-Object -First 1
+\$line = (\$sums -split "\`n") | Where-Object { (\$_.Trim() -split '\\s+')[1] -in @(\$asset, "*\$asset") } | Select-Object -First 1
 if (-not \$line) { Stop-UnvibeInstall "The published checksums have no line for \$asset, so the download can't be checked." }
-\$expected = (\$line -split '\\s+')[0].Trim().ToLower()
-\$actual = (Get-FileHash -Path \$dest -Algorithm SHA256).Hash.ToLower()
+\$expected = (\$line.Trim() -split '\\s+')[0].ToLower()
+\$actual = (Get-FileHash -Path \$download -Algorithm SHA256).Hash.ToLower()
 if (\$expected -ne \$actual) { Stop-UnvibeInstall "The download does not match the published checksum." }
 Write-Host "Checksum verified."
+
+Write-Host "Closing any running Unvibe..."
+Get-Process -Name Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+try {
+  Move-Item -Force -Path \$download -Destination \$dest
+} catch {
+  Stop-UnvibeInstall "Could not replace \$dest. Quit Unvibe from the tray, then run the install command again. Details: \$_"
+}
 try { Unblock-File -Path \$dest -ErrorAction Stop } catch {}
 
 \$shortcutPath = Join-Path \$env:APPDATA "Microsoft\\Windows\\Start Menu\\Programs\\Unvibe.lnk"

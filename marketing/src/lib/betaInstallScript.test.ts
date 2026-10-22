@@ -189,13 +189,40 @@ describe("Windows install script text", () => {
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
     assert.ok(verifiedAt > 0 && verifiedAt < startAt, "checksum is confirmed before the app runs");
     const check = script.slice(script.indexOf("SHA256SUMS-windows.txt"), verifiedAt);
-    // Each failure (fetch error, no line, mismatch) goes through the stop helper, which exits 1.
+    // Each failure (fetch error, no line, mismatch) goes through the stop helper.
     assert.match(check, /catch \{\s*Stop-UnvibeInstall "Could not download the published checksums/);
     assert.match(check, /if \(-not \$line\) \{ Stop-UnvibeInstall "The published checksums have no line for/);
     assert.match(check, /if \(\$expected -ne \$actual\) \{ Stop-UnvibeInstall "The download does not match/);
     assert.doesNotMatch(check, /catch \{\}/);
+  });
+
+  it("stops with a visible error and removes only the unverified download", () => {
     const helper = script.slice(script.indexOf("function Stop-UnvibeInstall"));
-    assert.match(helper.slice(0, helper.indexOf("\n}")), /Remove-Item[^\n]*\$dest[\s\S]*install-help[\s\S]*exit 1/);
+    const body = helper.slice(0, helper.indexOf("\n}"));
+    assert.match(body, /Remove-Item[^\n]*\$download/);
+    assert.doesNotMatch(body, /\$dest\b/);
+    // exit closes the window under `irm | iex`, so the help link would never be seen.
+    assert.doesNotMatch(body, /\bexit\b/);
+    assert.match(body, /throw "\$message Nothing was installed\. For help, see https:\/\/unvibe\.site\/install-help"/);
+  });
+
+  it("matches the checksum line on the exact file name", () => {
+    assert.ok(script.includes(`Where-Object { ($_.Trim() -split '\\s+')[1] -in @($asset, "*$asset") }`));
+    assert.doesNotMatch(script, /-match \[regex\]::Escape\(\$asset\)/);
+  });
+
+  it("keeps the installed app until the new download is verified", () => {
+    assert.ok(script.includes(`$download = "$dest.download"`));
+    assert.match(script, /curl\.exe [^\n]*-o \$download /);
+    assert.match(script, /Invoke-WebRequest -Uri \$url -OutFile \$download /);
+    const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
+    const moveAt = script.indexOf("Move-Item -Force -Path $download -Destination $dest");
+    const stopAt = script.indexOf("Stop-Process");
+    assert.ok(verifiedAt > 0 && stopAt > verifiedAt, "running Unvibe is closed only after verification");
+    assert.ok(moveAt > stopAt && moveAt < startAt, "the verified download replaces the app before it runs");
+    const beforeMove = script.slice(0, moveAt);
+    assert.doesNotMatch(beforeMove, /Remove-Item[^\n]*\$dest\b(?!\.)/, "nothing deletes the installed exe");
+    assert.doesNotMatch(beforeMove, /(-o|-OutFile|-Path) \$dest\b/, "nothing writes or hashes the installed exe before the move");
   });
 
   it("adds a Start menu shortcut to the installed exe", () => {
