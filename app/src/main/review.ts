@@ -5,6 +5,7 @@
 import { net, type BrowserWindow } from 'electron';
 import { scanText, hasBlocking, type SecretFinding } from '../core/secretFilter';
 import { SseParser } from '../core/sse';
+import { explanationFailure } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
@@ -430,16 +431,12 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         });
         if (body.usage.remaining <= 0) raiseLimitPause(win);
       }
-      const message = res.status === 401
-        ? 'Sign in to use cloud explanations, or continue with local learning history.'
-        : res.status === 429
-          ? (body.message ?? 'You have reached your monthly explanation limit.')
-          : `The explanation service could not complete that request (${res.status}).`;
+      const failure = explanationFailure(res.status, body);
       send(win, session, {
         type: 'error',
-        message,
-        code: body.error === 'plan_limit_reached' ? 'plan_limit_reached' : undefined,
-        upgradePath: body.upgradePath,
+        message: failure.message,
+        code: failure.planLimit ? 'plan_limit_reached' : undefined,
+        upgradePath: body.upgradePath ?? (failure.planLimit ? '/plan' : undefined),
       });
       return;
     }

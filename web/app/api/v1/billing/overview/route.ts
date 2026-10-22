@@ -1,6 +1,6 @@
 import { getBillingStore } from '@/billing/store';
 import { billingError, isResponse, requireUser } from '@/billing/http';
-import { checkoutOpen, lifetimeCheckoutOpen, livePaymentsLocked } from '@/billing/stripe';
+import { checkoutOpen, lifetimeCheckoutOpen, paymentsLocked } from '@/billing/stripe';
 import { publicBillingOverview } from '@/billing/presentation';
 import { teamsCheckoutEnabled } from '@/billing/plans';
 
@@ -21,7 +21,7 @@ export async function GET(req: Request): Promise<Response> {
       checkoutAvailable: checkoutOpen(),
       lifetimeAvailable: lifetimeCheckoutOpen(),
       teamsAvailable: checkoutOpen() && teamsCheckoutEnabled(),
-      paymentsOpen: !livePaymentsLocked(),
+      paymentsOpen: !paymentsLocked(),
     });
   } catch (error) {
     return billingError(error);

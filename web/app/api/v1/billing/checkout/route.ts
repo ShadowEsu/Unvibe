@@ -2,7 +2,7 @@ import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { getStripe, lifetimeCheckoutOpen, livePaymentsLocked, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { getStripe, lifetimeCheckoutOpen, paymentsLocked, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -16,7 +16,7 @@ function isBillingInterval(value: unknown): value is BillingInterval {
 export async function POST(req: Request): Promise<Response> {
   const user = await requireUser(req);
   if (isResponse(user)) return user;
-  if (livePaymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
+  if (paymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
   try {
     const body = (await req.json()) as CheckoutBody;
     if (body.plan === 'teams' && !teamsCheckoutEnabled()) {

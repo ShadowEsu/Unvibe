@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { currentUserId } from '@/lib/session';
 import { getBillingStore } from '@/billing/store';
-import { checkoutOpen, lifetimeCheckoutOpen, livePaymentsLocked } from '@/billing/stripe';
+import { checkoutOpen, lifetimeCheckoutOpen, paymentsLocked } from '@/billing/stripe';
 import { PlanManager } from './PlanManager';
 import { publicBillingOverview } from '@/billing/presentation';
 
@@ -19,7 +19,7 @@ export default async function PlanPage() {
       initialWorkspaces={workspaces}
       checkoutAvailable={checkoutOpen()}
       lifetimeAvailable={lifetimeCheckoutOpen()}
-      paymentsOpen={!livePaymentsLocked()}
+      paymentsOpen={!paymentsLocked()}
     />
   );
 }

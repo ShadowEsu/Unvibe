@@ -31,6 +31,10 @@ test('activation requires a completed, non-empty selection explanation', async (
         : Response.json([{ started_at: new Date().toISOString() }]);
     }
     if (url.pathname === '/rest/v1/rpc/trial_reserve') return Response.json(1);
+    // A failed or empty answer gives the reserved unit back (compare-and-swap on the counter).
+    if (url.pathname === '/rest/v1/trial_counters') {
+      return init?.method === 'PATCH' ? Response.json([{ used: 0 }]) : Response.json([{ used: 1 }]);
+    }
     if (url.pathname === '/rest/v1/trial_activation') {
       markers.push(JSON.parse(String(init?.body)));
       return new Response(null, { status: 201 });

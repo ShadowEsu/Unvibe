@@ -138,6 +138,13 @@ export class MemoryBillingStore implements BillingStore {
     return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining - 1 } };
   }
 
+  async releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void> {
+    const workspace = await this.requireAccess(userId, workspaceId);
+    const key = usageKey(workspace.id, kind, monthWindow(this.now()).startsAt);
+    const used = this.data.usage.get(key) ?? 0;
+    if (used > 0) this.data.usage.set(key, used - 1);
+  }
+
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
     const id = randomUUID();
     const workspace = { id, name: name.trim(), type: 'team' as const, ownerUserId: userId };
