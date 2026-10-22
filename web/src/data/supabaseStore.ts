@@ -264,17 +264,24 @@ export class SupabaseStore implements Store {
   }
 
   async history(userId: string, limit: number): Promise<EventRecord[]> {
-    const events = await this.eventsFor(userId);
-    return events.slice(-limit).reverse();
+    return (await this.historyPage(userId, limit)).events;
   }
 
+  /** One page, newest first, read straight from the database (one row past the page to know if more exist). */
   async historyPage(userId: string, limit: number, cursor?: string): Promise<import('./types').HistoryPage> {
     const offset = cursor ? Number.parseInt(cursor, 10) : 0;
     if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid history cursor.');
-    const events = await this.history(userId, Number.MAX_SAFE_INTEGER);
-    const page = events.slice(offset, offset + limit);
-    const nextOffset = offset + page.length;
-    return { events: page, ...(nextOffset < events.length ? { nextCursor: String(nextOffset) } : {}) };
+    const { data, error } = await this.db
+      .from('events')
+      .select('*')
+      .eq('user_id', userId)
+      .order('ts', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + limit);
+    if (error) throw new Error(`Could not load learning history: ${error.message}`);
+    const rows = data ?? [];
+    const events = rows.slice(0, limit).map((row) => this.mapEventRow(row as Record<string, unknown>));
+    return { events, ...(rows.length > limit ? { nextCursor: String(offset + limit) } : {}) };
   }
 
   async projects(userId: string): Promise<ProjectSummary[]> {

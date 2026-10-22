@@ -17,6 +17,7 @@ type Row = Record<string, unknown> & { id: string; user_id: string; ts: string }
  */
 function fakeEventsTable(rows: Row[], options: { failWrites?: boolean; failReads?: boolean; failDeletes?: boolean } = {}) {
   const writes: string[] = [];
+  const reads = { requests: 0, rowsServed: 0 };
   const fetcher: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? 'GET';
@@ -62,9 +63,12 @@ function fakeEventsTable(rows: Row[], options: { failWrites?: boolean; failReads
     });
     const offset = Number(url.searchParams.get('offset') ?? 0);
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 1000), 1000);
-    return Response.json(result.slice(offset, offset + limit));
+    const page = result.slice(offset, offset + limit);
+    reads.requests += 1;
+    reads.rowsServed += page.length;
+    return Response.json(page);
   };
-  return { fetcher, writes };
+  return { fetcher, writes, reads };
 }
 
 function eventRow(userId: string, index: number): Row {
@@ -116,6 +120,21 @@ test('profile and history include every event past the 1,000-row response cap, n
     cursor = page.nextCursor;
   }
   assert.equal(seen.size, 1205);
+});
+
+test('one /history page reads only that page from the database, not the whole history', async () => {
+  const user = randomUUID();
+  const rows = Array.from({ length: 10_000 }, (_, index) => eventRow(user, index));
+  const { fetcher, reads } = fakeEventsTable(rows);
+  const store = new SupabaseStore('https://events.supabase.test', 'service-key', fetcher);
+  const page = await store.historyPage(user, 200, '400');
+  assert.equal(reads.requests, 1);
+  assert.ok(reads.rowsServed <= 201, `served ${reads.rowsServed} rows for a 200-row page`);
+  assert.deepEqual(page.events.map((event) => event.id), rows.slice().reverse().slice(400, 600).map((row) => row.id));
+  assert.equal(page.nextCursor, '600');
+  const last = await store.historyPage(user, 200, '9900');
+  assert.equal(last.events.length, 100);
+  assert.equal(last.nextCursor, undefined);
 });
 
 test('a failed history read is an error, not an empty learning record', async () => {
