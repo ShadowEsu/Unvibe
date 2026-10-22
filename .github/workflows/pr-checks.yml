@@ -30,7 +30,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
+          # supabase-js 2.110 needs the native WebSocket that Node 22 provides.
+          node-version: "22"
           cache-dependency-path: ${{ matrix.package }}/package-lock.json
       - name: Install
         run: npm ci

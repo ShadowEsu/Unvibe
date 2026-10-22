@@ -1,6 +1,6 @@
 import { getBillingStore } from '@/billing/store';
 import { billingError, isResponse, requireUser } from '@/billing/http';
-import { getStripe, livePaymentsLocked, PAYMENTS_NOT_OPEN } from '@/billing/stripe';
+import { getStripe, paymentsLocked, PAYMENTS_NOT_OPEN } from '@/billing/stripe';
 import { normalizedSeats } from '@/billing/plans';
 import { publicBillingOverview } from '@/billing/presentation';
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 export async function PATCH(req: Request): Promise<Response> {
   const user = await requireUser(req);
   if (isResponse(user)) return user;
-  if (livePaymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
+  if (paymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
   try {
     const body = (await req.json()) as { workspaceId?: unknown; seats?: unknown };
     if (typeof body.workspaceId !== 'string') return Response.json({ error: 'invalid_workspace' }, { status: 400 });

@@ -34,13 +34,18 @@ export function stripeIsConfigured(): boolean {
 }
 
 /**
- * Live money stays off until Preston approves it: a live (or restricted live) secret key
- * alone never opens checkout. Set BILLING_LIVE_PAYMENTS_APPROVED=true only after that approval.
- * Test-mode keys are never locked, so sandbox checkout keeps working.
+ * Checkout stays closed until Preston opens it:
+ * - a live (or restricted live) key never opens checkout unless BILLING_LIVE_PAYMENTS_APPROVED=true;
+ * - a test key on the production deployment is closed too (it would grant real Pro for card 4242
+ *   and refuse every real card) unless BILLING_TEST_CHECKOUT_IN_PRODUCTION=true.
+ * Test keys on previews and local servers stay open, so sandbox checkout keeps working.
  */
-export function livePaymentsLocked(): boolean {
+export function paymentsLocked(): boolean {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!key || key.startsWith('sk_test_') || key.startsWith('rk_test_')) return false;
+  if (!key) return false;
+  if (key.startsWith('sk_test_') || key.startsWith('rk_test_')) {
+    return process.env.VERCEL_ENV === 'production' && process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION?.trim() !== 'true';
+  }
   return process.env.BILLING_LIVE_PAYMENTS_APPROVED?.trim() !== 'true';
 }
 
@@ -49,9 +54,9 @@ export const PAYMENTS_NOT_OPEN = {
   message: 'Payments open soon. Your Free plan keeps working until then.',
 } as const;
 
-/** Monthly and annual checkout: configured, and not a locked live account. */
+/** Monthly and annual checkout: configured, and payments not locked. */
 export function checkoutOpen(): boolean {
-  return stripeIsConfigured() && !livePaymentsLocked();
+  return stripeIsConfigured() && !paymentsLocked();
 }
 
 /** Pro Lifetime is hidden unless explicitly enabled (pending Preston's keep/drop decision). */
