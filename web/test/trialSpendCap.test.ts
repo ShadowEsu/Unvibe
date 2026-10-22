@@ -105,6 +105,47 @@ test('the per-IP key is a salted daily hash, never the raw address', () => {
   assert.notEqual(trialIpKey('203.0.113.7', new Date('2026-10-23T00:00:00.000Z')).split(':')[2], key.split(':')[2]);
 });
 
+test('IPv6 addresses are grouped by /64; IPv4-mapped IPv6 counts as the IPv4', () => {
+  const day = new Date('2026-10-22T08:00:00.000Z');
+  const network = trialIpKey('2001:db8:1:2::1', day);
+  // Same /64, written with :: compression, full zero-padded form, mixed case, brackets and a zone id.
+  assert.equal(trialIpKey('2001:0db8:0001:0002:ffff:eeee:dddd:cccc', day), network);
+  assert.equal(trialIpKey('2001:DB8:1:2:a::b', day), network);
+  assert.equal(trialIpKey('[2001:db8:1:2::99]', day), network);
+  assert.equal(trialIpKey('2001:db8:1:2::1%eth0', day), network);
+  assert.equal(trialIpKey('2001:db8:1:2:0:0:0.0.0.1', day), network, 'a trailing dotted quad is two hextets of the interface id');
+  // Different /64s.
+  assert.notEqual(trialIpKey('2001:db8:1:3::1', day), network);
+  assert.notEqual(trialIpKey('2001:db8::1', day), network);
+  assert.notEqual(trialIpKey('2001:db8:1::2:1', day), network, ':: placement changes which hextets form the /64');
+  // IPv4 is unchanged and the mapped forms equal it.
+  const v4 = trialIpKey('203.0.113.7', day);
+  assert.equal(trialIpKey('::ffff:203.0.113.7', day), v4);
+  assert.equal(trialIpKey('::FFFF:cb00:7107', day), v4);
+  assert.equal(trialIpKey('0:0:0:0:0:ffff:203.0.113.7', day), v4);
+  assert.notEqual(trialIpKey('203.0.113.8', day), v4);
+  assert.notEqual(trialIpKey('::ffff:203.0.113.8', day), v4);
+});
+
+test('rotating addresses inside one /64 shares a single per-IP counter', async () => {
+  process.env.UNVIBE_TRIAL_IP_DAILY_LIMIT = '3';
+  const now = new Date('2026-10-22T12:00:00.000Z');
+  for (let i = 1; i <= 3; i += 1) {
+    const reservation = await reserveTrialAction(trialInstallKey(`v6-rotate-${i}-install`), 'ai_explanation', `2001:db8:aa:bb::${i.toString(16)}`, now);
+    assert.equal(reservation.denied, null, `address #${i}`);
+  }
+  assert.equal(await trialCounterUsed(trialIpKey('2001:db8:aa:bb::ffff', now)), 3);
+  const denied = await reserveTrialAction(trialInstallKey('v6-rotate-4-install'), 'ai_explanation', '2001:db8:aa:bb:1234:5678:9abc:def0', now);
+  assert.equal(denied.denied?.status, 429);
+  assert.equal((await errorBody(denied.denied)).error, 'trial_network_limit');
+  assert.equal((await reserveTrialAction(trialInstallKey('v6-rotate-4-install'), 'ai_explanation', '2001:db8:aa:bc::1', now)).denied, null, 'another /64 is unaffected');
+
+  for (let i = 1; i <= 3; i += 1) {
+    assert.equal((await reserveTrialAction(trialInstallKey(`v4-mapped-${i}-install`), 'ai_explanation', i === 2 ? '::ffff:198.51.100.77' : '198.51.100.77', now)).denied, null);
+  }
+  assert.equal((await reserveTrialAction(trialInstallKey('v4-mapped-4-install'), 'ai_explanation', '::ffff:198.51.100.77', now)).denied?.status, 429, 'the mapped form shares the IPv4 counter');
+});
+
 test('151 distinct install ids from one IP: the default cap of 150 a day refuses the 151st', async () => {
   const now = new Date('2026-10-22T12:00:00.000Z');
   const ip = '203.0.113.7';

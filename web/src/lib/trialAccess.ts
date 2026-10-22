@@ -13,6 +13,7 @@
  * Process memory is used only when Supabase is not configured (dev/tests).
  */
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { isIPv6 } from 'node:net';
 import { serviceSupabase } from '@/lib/serviceSupabase';
 import type { UsageKind } from '@/billing/types';
 
@@ -77,14 +78,39 @@ export function trialGlobalDayKey(now = new Date()): string {
 }
 
 /**
- * Per-network counter for this UTC day. The address is never stored: it is an HMAC keyed by a server
- * secret (TRY_IP_SALT, else the Supabase service-role key) over the day and the IP, so the same
- * network has an unrelated key each day.
+ * The unit the per-IP cap counts. IPv4 is used as is. IPv6 is grouped by its /64, because one host
+ * usually holds a whole /64 and could otherwise rotate addresses past the cap. IPv4-mapped IPv6
+ * (`::ffff:a.b.c.d`) counts as the IPv4. Anything unparseable (e.g. `local`) is used as is.
+ */
+function ipNetwork(raw: string): string {
+  const ip = raw.trim().replace(/^\[(.*)\]$/, '$1').replace(/%.*$/, '').toLowerCase();
+  if (!isIPv6(ip)) return ip;
+  // Hextets of one side of `::`; a trailing dotted quad is the last two hextets.
+  const hextets = (part: string): number[] => (part ? part.split(':') : []).flatMap((group) => {
+    if (!group.includes('.')) return [parseInt(group, 16)];
+    const [a = 0, b = 0, c = 0, d = 0] = group.split('.').map(Number);
+    return [(a << 8) | b, (c << 8) | d];
+  });
+  const gap = ip.indexOf('::');
+  const left = hextets(gap === -1 ? ip : ip.slice(0, gap));
+  const right = gap === -1 ? [] : hextets(ip.slice(gap + 2));
+  const groups = [...left, ...new Array<number>(8 - left.length - right.length).fill(0), ...right];
+  if (groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff) {
+    const [high = 0, low = 0] = groups.slice(6);
+    return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
+  }
+  return `${groups.slice(0, 4).map((group) => group.toString(16)).join(':')}::/64`;
+}
+
+/**
+ * Per-network counter for this UTC day (see `ipNetwork`). The address is never stored: it is an HMAC
+ * keyed by a server secret (TRY_IP_SALT, else the Supabase service-role key) over the day and the
+ * network, so the same network has an unrelated key each day.
  */
 export function trialIpKey(ip: string, now = new Date()): string {
   const day = now.toISOString().slice(0, 10);
   const secret = process.env.TRY_IP_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || 'unvibe-trial-ip';
-  const hash = createHmac('sha256', secret).update(`unvibe-trial-ip:${day}:${ip}`).digest('hex').slice(0, 32);
+  const hash = createHmac('sha256', secret).update(`unvibe-trial-ip:${day}:${ipNetwork(ip)}`).digest('hex').slice(0, 32);
   return `__ip__:${day}:${hash}`;
 }
 
