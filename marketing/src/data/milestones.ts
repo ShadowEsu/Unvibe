@@ -348,7 +348,7 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Gifts, Pro, and Google sign-in actually connect",
-    summary: "A SPECIAL CHAR is proven from the giver email, not a random string. A verified waitlist gift gives both people 1 month of Pro. Stripe Buy still works after a gift month. Continue with Google opens unvibe.site/activate. Changed 22 Oct 2026: waitlist gifts no longer grant Pro, and checkout is closed until payments open.",
+    summary: "A gift code is proven from the giver email, not a random string. A verified waitlist gift gives both people 1 month of Pro. Stripe Buy still works after a gift month. Continue with Google opens unvibe.site/activate. Changed 22 Oct 2026: waitlist gifts no longer grant Pro, and checkout is closed until payments open.",
     figure: "Waitlist + app",
   },
   {
@@ -362,14 +362,14 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Gift Unvibe page and a calmer companion",
-    summary: "Gift Unvibe is its own page in the Mac app: an 8 character SPECIAL CHAR, a 0/5 meter, and the waitlist screenshots from unvibe.site. The companion pane is less compact. Home is a daily feed. Small windows get a menu drawer.",
+    summary: "Gift Unvibe is its own page in the Mac app: an 8 character gift code, a 0/5 meter, and the waitlist screenshots from unvibe.site. The companion pane is less compact. Home is a daily feed. Small windows get a menu drawer.",
     figure: "Mac app",
   },
   {
     date: "17 AUG 2026",
     category: "DISTRIBUTION",
     title: "Gift Unvibe",
-    summary: "Share an 8 character SPECIAL CHAR from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts. Changed 22 Oct 2026: joining the waitlist no longer grants Pro. Gift months come from a code entered in the app, starting with the next app update.",
+    summary: "Share an 8 character gift code from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts. Changed 22 Oct 2026: joining the waitlist no longer grants Pro. Gift months come from a code entered in the app, starting with the next app update.",
     figure: "5 gifts",
   },
   {
