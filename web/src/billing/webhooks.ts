@@ -35,6 +35,17 @@ function endsWithoutRenewing(subscription: Stripe.Subscription, currentPeriodEnd
   return typeof subscription.cancel_at === 'number' && subscription.cancel_at <= currentPeriodEnd;
 }
 
+/**
+ * Whether Stripe can still charge this live subscription: anything but an ended subscription, or
+ * one in good standing that will not renew. A past-due or unpaid one is still being collected.
+ */
+export function liveSubscriptionStillCharges(subscription: Stripe.Subscription): boolean {
+  if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') return false;
+  const periodEnd = subscription.items.data[0]?.current_period_end;
+  const inGoodStanding = subscription.status === 'active' || subscription.status === 'trialing';
+  return !(inGoodStanding && periodEnd !== undefined && endsWithoutRenewing(subscription, periodEnd));
+}
+
 export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, grace = false): Promise<void> {
   const metadata = requiredMetadata(subscription);
   const item = subscription.items.data[0];
