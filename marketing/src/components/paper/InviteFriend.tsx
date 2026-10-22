@@ -62,7 +62,7 @@ export function InviteFriend() {
     <div className="invite">
       <div className="invite__copy">
         <p className="paper-meta">Bring a friend</p>
-        <h2 id="invite-title">One code. <em>A month of Pro each.</em></h2>
+        <h2 id="invite-title">Send a friend <em>your invite link.</em></h2>
         <p className="paper-lead">{GIFT_OFFER} Months stack up to 12 ahead and never apply to an active paid subscription.</p>
         <p className="invite__fine">{GIFT_LINK_NOTE} The link below brings your friend to Unvibe.</p>
       </div>
