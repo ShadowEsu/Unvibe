@@ -64,8 +64,11 @@ const PATTERNS: Pattern[] = [
  * `name = value`, `name: value` and `name := value` pairs. A pair is a secret when the name says so
  * and the value is a literal rather than code, so each match is judged by `assignedSecret`.
  */
+// A name can only start where a run of name characters starts (`(?<![\w$.-])`), so a long
+// `a.a.a…` or `a-a-a…` run is scanned once instead of once per dot. Leading `.`/`-` (as in
+// `--password=` or `?.token`) belong to the run but not to the captured name.
 const ASSIGNMENT =
-  /(?<![\w$])([A-Za-z_$][\w$.-]*)["']?\s*(?::=|=(?![=>~])|:(?![:/]))\s*(?:"([^"\n]*)"|'([^'\n]*)'|`([^`\n]*)`|([^\s"'`,;]+))/g;
+  /(?<![\w$.-])[.-]*([A-Za-z_$][\w$.-]*)["']?\s*(?::=|=(?![=>~])|:(?![:/]))\s*(?:"([^"\n]*)"|'([^'\n]*)'|`([^`\n]*)`|([^\s"'`,;]+))/g;
 /** Names that always hold a secret (compared lowercase, without `_`, `-` and `$`). */
 const SECRET_NAME =
   /(?:passw(?:or)?ds?|pwd|passphrase|secrets?|tokens?|credentials?|(?:api|private|secret|access|auth|signing|encryption|master|client)keys?)$/;

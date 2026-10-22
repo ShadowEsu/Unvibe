@@ -207,3 +207,35 @@ test('ordinary code with secret-sounding names, ids and hashes is not blocked', 
     assert.equal(hasBlocking(scanText(line, 'x.ts')), false, line);
   }
 });
+
+test('long adversarial lines scan in linear time', () => {
+  // Runs on the main process: a pasted 120k-character line must not freeze the app.
+  const adversarial = [
+    'a.'.repeat(60_000),
+    'a-'.repeat(60_000),
+    'a.b-'.repeat(30_000),
+    `${'a.'.repeat(59_990)}password=`,
+    '-----BEGIN ' + 'A '.repeat(59_990),
+    'Bearer '.repeat(17_000),
+    'postgres://a:'.repeat(9_000),
+    'hooks.slack.com/services/'.repeat(4_800),
+    'token: "'.repeat(15_000),
+    'a: '.repeat(40_000),
+    '$.'.repeat(60_000),
+    '_-'.repeat(60_000),
+    'a-.'.repeat(40_000),
+    '-'.repeat(120_000),
+  ];
+  for (const line of adversarial) {
+    const started = performance.now();
+    scanText(line, 'x.ts');
+    const ms = performance.now() - started;
+    assert.ok(ms < 250, `${line.slice(0, 16)}… (${line.length} chars) took ${Math.round(ms)} ms`);
+  }
+});
+
+test('names after dots or dashes still match', () => {
+  for (const line of ['mysql --password=' + 'S3cret!xyz9', 'obj?.token = "' + 'S3cret!xyz9"', 'this.config.apiKey = "' + 'S3cret!xyz9"']) {
+    assert.ok(hasBlocking(scanText(line, 'x.sh')), line);
+  }
+});
