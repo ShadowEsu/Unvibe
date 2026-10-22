@@ -77,7 +77,7 @@ const PAGES: readonly FlexAccordionItem[] = [
     id: "privacy",
     label: "Privacy",
     title: "Privacy & Data",
-    body: "Every selection is scanned for keys and tokens on your computer before anything is sent. Only the snippet you review leaves it.",
+    body: "Every selection is scanned for keys and tokens on your computer before it is sent. Only what you ask about leaves it.",
     image: appShot("settings-privacy", "Unvibe Privacy & Data settings showing the always-on secret scan"),
   },
 ];

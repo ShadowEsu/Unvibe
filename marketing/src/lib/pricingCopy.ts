@@ -38,7 +38,7 @@ const TEAMS_MAILTO =
 const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
 
 const FEATURES = {
-  free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Keys and tokens filtered on your device"],
+  free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Keys and tokens in your code filtered on your device"],
   pro: ["Everything in Free", "Expert depth", "Git diff explanations and change Briefs", "Answers that use nearby files", "More explanations each month than Free"],
   teams: ["One shared workspace", "Invites for your team", "Who reviewed what (metadata only)", SEATS],
 } as const;
