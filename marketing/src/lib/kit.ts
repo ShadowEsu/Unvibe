@@ -1,4 +1,4 @@
-import { compensationLines, compensationTotalLabel, formatUsd } from "@/data/compensation";
+import { compensationCashUsd, compensationCreditsUsd, compensationLines, compensationProgramCount, compensationTotalLabel, formatUsd } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
@@ -104,7 +104,7 @@ export function kitSections(): KitSection[] {
     {
       id: "investors",
       title: "Persuading investors",
-      intro: `Unvibe is live, free, and shipping fast. Support secured: ${total} from ${support.length} startup programs. Credits are not cash, and this is not a priced round. Never say it is.`,
+      intro: `Unvibe is live, free, and shipping fast. Support secured: ${total}, of which ${formatUsd(compensationCreditsUsd())} is credits from ${compensationProgramCount()} startup programs and ${formatUsd(compensationCashUsd())} is committed cash. Credits are not cash, and this is not a priced round. Never say it is.`,
       bullets: [
         "Problem: developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment code changes.",
         "Product: select code, press one key, get an in-place explanation at five depths, a quiz, a saved lesson, and a review of what the agent changed.",

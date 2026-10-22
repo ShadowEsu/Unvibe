@@ -1,3 +1,5 @@
+import { compensationTotalLabel } from "./compensation";
+
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
 export interface Milestone {
@@ -83,7 +85,7 @@ export const milestones: Milestone[] = [
     date: "07 OCT 2026",
     category: "COMPANY",
     title: "Unvibe is in Claude for Startups",
-    summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals $267,700 in credits and committed cash.",
+    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals ${compensationTotalLabel()} in credits and committed cash.`,
     figure: "$21.5K",
   },
   {
@@ -264,8 +266,8 @@ export const milestones: Milestone[] = [
     date: "24 AUG 2026",
     category: "COMPANY",
     title: "Startup support total",
-    summary: "Program credits plus founder-reported cash now total $232,700. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.",
-    figure: "$232,700",
+    summary: `Program credits plus founder-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
+    figure: compensationTotalLabel(),
     pinned: true,
   },
   {
