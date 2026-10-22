@@ -1,7 +1,8 @@
 export type CheckoutOutcome = 'success' | 'canceled';
 
+// Without a session this page cannot know whether a payment went through, so it never says one did.
 const COPY: Record<CheckoutOutcome, { title: string; body: string }> = {
-  success: { title: 'Payment received', body: 'Go back to the Unvibe app. Your plan updates there within a minute.' },
+  success: { title: 'Back from checkout', body: 'If you finished paying, go back to the Unvibe app. Your plan updates there within a minute.' },
   canceled: { title: 'Checkout canceled', body: 'Nothing was charged. You can go back to the Unvibe app.' },
 };
 
