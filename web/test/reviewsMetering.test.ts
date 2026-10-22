@@ -20,6 +20,8 @@ process.env.UNVIBE_TRIAL_TOKEN = 'local-trial-token-abcdefghijklmnop';
 
 type Upstream = 'answer' | 'fail' | 'empty' | 'question' | 'not-json';
 let upstream: Upstream = 'answer';
+/** Runs while the AI call is in flight, between the reservation and any release. */
+let duringUpstream: (() => Promise<void>) | null = null;
 const QUESTION = { question: 'What does it return?', options: ['Its input', 'Nothing'], answerIndex: 0, rationale: 'identity', concept: 'functions', conceptLabel: 'Functions' };
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -27,6 +29,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
   // The provider forwards the caller's signal; a request the client already dropped aborts here.
   init?.signal?.throwIfAborted();
+  await duringUpstream?.();
   if (upstream === 'fail') return new Response('upstream unavailable', { status: 503 });
   const text = upstream === 'empty' ? '' : upstream === 'question' ? JSON.stringify(QUESTION) : upstream === 'not-json' ? 'Sorry, I cannot.' : 'This function returns its input.';
   const chunk = { candidates: [{ content: { parts: [{ text }] } }] };
@@ -239,6 +242,31 @@ test('a paid Teams workspace named in the request pays from the team allowance',
   const teamLine = (await getBillingStore().overview(owner.userId, teamId)).usage.find((line) => line.kind === 'ai_explanation');
   assert.equal(teamLine?.used, 1, 'the Teams workspace is charged');
   assert.equal(await used(owner.userId, 'ai_explanation'), 0, 'the personal allowance is untouched');
+});
+
+test('a unit released after Teams ended mid-request goes back to the Teams workspace it was charged to', async () => {
+  upstream = 'answer';
+  const owner = await signedIn('free');
+  assert.equal((await review(explainRequest(owner.headers))).status, 200);
+  const teamId = await newTeamWorkspace(owner.headers);
+  const teams = {
+    workspaceId: teamId, plan: 'teams' as const, interval: 'monthly' as const, status: 'active' as const, seats: 2,
+    stripeCustomerId: `cus_team_${owner.userId}`, stripeSubscriptionId: `sub_team_${owner.userId}`, stripePriceId: 'price_teams_monthly',
+    cancelAtPeriodEnd: false,
+  };
+  await getBillingStore().syncSubscription(teams);
+  // The Teams plan ends while the AI call runs, and the call then fails.
+  duringUpstream = () => getBillingStore().syncSubscription({ ...teams, status: 'canceled' });
+  upstream = 'fail';
+  try {
+    await (await review(explainRequest({ ...owner.headers, 'x-uncode-workspace-id': teamId }))).text();
+  } finally {
+    duringUpstream = null;
+    upstream = 'answer';
+  }
+  const teamLine = (await getBillingStore().overview(owner.userId, teamId)).usage.find((line) => line.kind === 'ai_explanation');
+  assert.equal(teamLine?.used, 0, 'the Teams workspace gets its unit back');
+  assert.equal(await used(owner.userId, 'ai_explanation'), 1, 'the personal allowance is not credited for a unit it never paid');
 });
 
 test('naming a workspace the person is not a member of is refused without spending anything', async () => {

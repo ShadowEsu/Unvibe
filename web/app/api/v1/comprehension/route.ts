@@ -27,9 +27,9 @@ export async function POST(req: Request): Promise<Response> {
   let release: (() => Promise<void>) | null = null;
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   if (!provider.mock && userId) {
-    const denied = await reserveMeteredAction(userId, 'project_question', req);
-    if (denied) return denied;
-    release = () => releaseMeteredAction(userId, 'project_question', req);
+    const reserved = await reserveMeteredAction(userId, 'project_question', req);
+    if (reserved instanceof Response) return reserved;
+    release = () => releaseMeteredAction(userId, 'project_question', reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, 'project_question', usage);
   } else if (!provider.mock && trialInstall) {
     const trial = await reserveTrialAction(trialInstall, 'project_question', clientIp(req));
