@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { canManageBilling, canManageMembers, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit } from './plans';
+import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit } from './plans';
 import type {
   BillingOverview,
   BillingStore,
@@ -232,7 +232,7 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async pendingCheckout(userId: string, workspaceId: string): Promise<CheckoutIntentRecord | null> {
-    const cutoff = this.now().getTime() - 30 * 60_000;
+    const cutoff = this.now().getTime() - CHECKOUT_INTENT_TTL_MS;
     for (const intent of this.data.checkoutIntents.values()) {
       if (intent.userId === userId && intent.workspaceId === workspaceId && intent.status === 'pending' && new Date(intent.createdAt).getTime() <= cutoff) intent.status = 'expired';
     }
