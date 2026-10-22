@@ -38,11 +38,11 @@ function html(result: PlanResult): string {
   return result.html;
 }
 
-test('a cookie-less browser returning from a successful checkout sees a static confirmation', async () => {
+test('a cookie-less browser returning from a successful checkout sees static copy that does not claim a payment', async () => {
   const page = html(await getPlan('checkout=success&session_id=cs_test_x'));
   assert.equal(page.match(/<h1[\s>]/g)?.length, 1);
-  assert.match(page, /<h1[^>]*>Payment received<\/h1>/);
-  assert.match(page, /Go back to the Unvibe app\. Your plan updates there within a minute\./);
+  // Anyone can open this URL, so it must not say money arrived.
+  assert.doesNotMatch(page, /payment (was |has been )?(received|successful|complete)|you('ve| have) paid|thanks for (your payment|paying)/i);
   assert.doesNotMatch(page, /cs_test_x/);
   assert.doesNotMatch(page, /\u2014/);
 });
@@ -56,7 +56,7 @@ test('a cookie-less browser returning from a canceled checkout sees a neutral no
 
 test('an unknown session token is treated as signed out on the checkout return', async () => {
   const page = html(await getPlan('checkout=success&session_id=cs_test_x', 'not-a-real-session'));
-  assert.match(page, /Payment received/);
+  assert.match(page, /id="checkout-return-title"/);
 });
 
 test('/plan without a session and without a checkout return still redirects to sign in', async () => {
@@ -68,5 +68,5 @@ test('a signed-in buyer returning from checkout still gets the full plan page', 
   const account = await getStore().signIn(`return-${randomUUID()}@checkout.test`);
   const page = html(await getPlan('checkout=success&session_id=cs_test_x', account.token));
   assert.match(page, /Understand more\. Pay only when you need more room\./);
-  assert.doesNotMatch(page, /Payment received/);
+  assert.doesNotMatch(page, /checkout-return-title/);
 });

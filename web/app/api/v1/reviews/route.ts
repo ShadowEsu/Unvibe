@@ -37,9 +37,9 @@ export async function POST(req: Request): Promise<Response> {
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   if (!provider.mock && userId) {
     const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
-    const denied = await reserveMeteredAction(userId, kind, req);
-    if (denied) return denied;
-    release = () => releaseMeteredAction(userId, kind, req);
+    const reserved = await reserveMeteredAction(userId, kind, req);
+    if (reserved instanceof Response) return reserved;
+    release = () => releaseMeteredAction(userId, kind, reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, kind, usage);
   } else if (!provider.mock && trialInstall) {
     const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req));

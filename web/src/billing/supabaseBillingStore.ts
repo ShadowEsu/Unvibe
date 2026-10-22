@@ -16,6 +16,7 @@ import type {
 import type { TokenUsage } from '@/ai/provider';
 import { CHECKOUT_INTENT_TTL_MS, monthWindow, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
+import { TEAM_WORKSPACE_LIMIT_MESSAGE, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
 
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Persistent billing returned an invalid record.');
@@ -185,6 +186,8 @@ export class SupabaseBillingStore implements BillingStore {
 
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
     const { data, error } = await this.db.rpc('create_team_workspace', { p_user_id: userId, p_name: name.trim() });
+    // P0001: the function's own `raise exception` at the per-owner cap.
+    if (error?.code === 'P0001' && error.message === TEAM_WORKSPACE_LIMIT_MESSAGE) throw new TeamWorkspaceLimitError();
     this.require(error, 'create team workspace');
     const access = await this.getWorkspaceAccess(userId, String(data));
     if (!access) throw new Error('Persistent billing did not return the team workspace.');

@@ -15,11 +15,17 @@ async function meteredWorkspace(userId: string, req: Request): Promise<string | 
   return overview.subscription.plan === 'teams' ? overview.workspace.id : undefined;
 }
 
-export async function reserveMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<Response | null> {
+/** A granted reservation: the workspace whose allowance paid for it, or undefined for the caller's personal allowance. */
+export interface MeteredReservation {
+  workspaceId: string | undefined;
+}
+
+/** Takes one unit of the caller's allowance, or returns the response that refuses the call (429, or 503 when the plan cannot be checked). */
+export async function reserveMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<Response | MeteredReservation> {
   try {
     const workspaceId = await meteredWorkspace(userId, req);
     const reservation = await getBillingStore().reserveUsage(userId, kind, workspaceId);
-    if (reservation.allowed) return null;
+    if (reservation.allowed) return { workspaceId };
     await getBillingStore().recordAudit(userId, workspaceId ?? null, 'upgrade_prompt.impression', { kind, used: reservation.line.used, limit: reservation.line.limit });
     const resets = reservation.line.resetsAt
       ? new Date(reservation.line.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
@@ -38,10 +44,13 @@ export async function reserveMeteredAction(userId: string, kind: UsageKind, req:
   }
 }
 
-/** Best effort: give back the unit `reserveMeteredAction` took when the AI produced nothing. */
-export async function releaseMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<void> {
+/**
+ * Best effort: give back the unit `reserveMeteredAction` took when the AI produced nothing. It goes
+ * back to the workspace that was charged, even if the plan changed since (say Teams ended mid-request).
+ */
+export async function releaseMeteredAction(userId: string, kind: UsageKind, reservation: MeteredReservation): Promise<void> {
   try {
-    await getBillingStore().releaseUsage(userId, kind, await meteredWorkspace(userId, req));
+    await getBillingStore().releaseUsage(userId, kind, reservation.workspaceId);
   } catch (error: unknown) {
     console.error('usage release failed', error instanceof Error ? error.message : error);
   }

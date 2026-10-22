@@ -1,18 +1,15 @@
 import { getStore } from '@/data/store';
 import { withSessionCookie } from '@/lib/auth';
+import { devEmailAuthDisabledResponse, devEmailAuthEnabled } from '@/lib/devEmailAuth';
 
 export const runtime = 'nodejs';
 
 /**
- * Sign in with email. Creates a session cookie for the web dashboard.
- * In dev, creates an account if one doesn't exist (passwordless convenience).
- * Production should gate behind UNCODE_ALLOW_DEV_EMAIL_AUTH or use device flow.
+ * Sign in with email (local development only, see devEmailAuthEnabled). Creates a session cookie
+ * for the web dashboard, and an account if one doesn't exist (passwordless convenience).
  */
 export async function POST(req: Request): Promise<Response> {
-  const enabled = process.env.NODE_ENV !== 'production' || process.env.UNCODE_ALLOW_DEV_EMAIL_AUTH === 'true';
-  if (!enabled) {
-    return Response.json({ error: 'Cloud sign-in is not configured for this build. Use local-only mode or configure verified authentication.' }, { status: 501 });
-  }
+  if (!devEmailAuthEnabled()) return devEmailAuthDisabledResponse();
   const body = (await req.json().catch(() => ({}))) as { email?: string };
   const email = (body.email ?? '').trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
