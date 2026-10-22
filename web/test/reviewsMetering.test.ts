@@ -21,9 +21,11 @@ type Upstream = 'answer' | 'fail' | 'empty' | 'question' | 'not-json';
 let upstream: Upstream = 'answer';
 const QUESTION = { question: 'What does it return?', options: ['Its input', 'Nothing'], answerIndex: 0, rationale: 'identity', concept: 'functions', conceptLabel: 'Functions' };
 
-globalThis.fetch = (async (input: RequestInfo | URL) => {
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(String(input));
   if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
+  // The provider forwards the caller's signal; a request the client already dropped aborts here.
+  init?.signal?.throwIfAborted();
   if (upstream === 'fail') return new Response('upstream unavailable', { status: 503 });
   const text = upstream === 'empty' ? '' : upstream === 'question' ? JSON.stringify(QUESTION) : upstream === 'not-json' ? 'Sorry, I cannot.' : 'This function returns its input.';
   const chunk = { candidates: [{ content: { parts: [{ text }] } }] };
@@ -167,5 +169,36 @@ test('Test me charges a follow-up only when a valid question comes back', async 
   const ok = await comprehension(questionRequest(pro.headers));
   assert.equal(ok.status, 200);
   assert.equal((await jsonRecord(ok)).question, QUESTION.question);
+  assert.equal(await used(pro.userId, 'project_question'), 1);
+});
+
+test('a person who disconnects after the allowance was reserved is still charged', async () => {
+  upstream = 'answer';
+  const pro = await signedIn('pro');
+  const gone = new AbortController();
+  gone.abort();
+  const dropped = new Request('http://localhost/api/v1/reviews', {
+    method: 'POST',
+    headers: pro.headers,
+    body: JSON.stringify({ scope: 'selection', level: 'beginner', context }),
+    signal: gone.signal,
+  });
+  // text() resolves only after the route closes the stream, which is after any refund decision.
+  await (await review(dropped)).text();
+  assert.equal(await used(pro.userId, 'ai_explanation'), 1, 'a disconnect is not a provider failure');
+});
+
+test('Test me is charged when the person disconnects, not refunded', async () => {
+  upstream = 'question';
+  const pro = await signedIn('pro');
+  const gone = new AbortController();
+  gone.abort();
+  const dropped = new Request('http://localhost/api/v1/comprehension', {
+    method: 'POST',
+    headers: pro.headers,
+    body: JSON.stringify({ scope: 'selection', level: 'beginner', context }),
+    signal: gone.signal,
+  });
+  await comprehension(dropped);
   assert.equal(await used(pro.userId, 'project_question'), 1);
 });

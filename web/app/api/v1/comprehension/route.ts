@@ -36,8 +36,8 @@ export async function POST(req: Request): Promise<Response> {
   const text = await provider.complete(system, user, req.signal).catch(() => null);
   const question = text === null ? undefined : parseQuestion(text);
   if (!question) {
-    // The allowance is only spent on a question the person can answer.
-    await release?.();
+    // Spent only on a question the person can answer; a client that disconnected keeps the charge.
+    if (!req.signal.aborted) await release?.();
     return Response.json(
       { error: 'question_unavailable', message: 'Could not write a question about this code just now. Try again in a moment.' },
       { status: 502 },
