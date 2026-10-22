@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { getStore } from '@/data/store';
 import { userFromRequest, unauthorized } from '@/lib/auth';
 import { getBillingStore } from '@/billing/store';
@@ -11,11 +12,19 @@ export const runtime = 'nodejs';
  * Whether Stripe can still charge this subscription. Lifetime is a one-time payment, and a canceled
  * subscription stays canceled. Anything else is decided on the live Stripe subscription, not the
  * stored row: a portal change ("Don't cancel", or a new cancel) can be seconds ahead of its webhook.
+ * A subscription Stripe does not have (resource_missing) cannot charge. Any other error throws.
  */
 async function stillCharges(subscription: SubscriptionRecord): Promise<boolean> {
-  if (!subscription.stripeSubscriptionId || subscription.status === 'canceled') return false;
+  const id = subscription.stripeSubscriptionId;
+  if (!id || subscription.status === 'canceled') return false;
   if (subscription.interval === 'lifetime') return false;
-  return liveSubscriptionStillCharges(await getStripe().subscriptions.retrieve(subscription.stripeSubscriptionId));
+  try {
+    return liveSubscriptionStillCharges(await getStripe().subscriptions.retrieve(id));
+  } catch (error) {
+    if (!(error instanceof Stripe.errors.StripeInvalidRequestError) || error.code !== 'resource_missing') throw error;
+    console.warn('account delete: stored subscription not found at Stripe; treated as not charging', id);
+    return false;
+  }
 }
 
 /** Who am I — used by the app to show the signed-in identity. */
