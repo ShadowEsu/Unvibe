@@ -99,9 +99,9 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
             <details>
-              <summary>You can use it without signing in</summary>
+              <summary>You can start without signing in</summary>
               <p>
-                Sign-in only syncs your history across devices. Skip it on the first screen and the free explanations still work.
+                Skip sign-in on the first screen and you get 50 free explanations in your first 30 days. Signing in gives you a free allowance every month, syncs your history across devices, and starts a new account with a free month of Pro.
               </p>
             </details>
           </div>
