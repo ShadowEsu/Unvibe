@@ -68,6 +68,8 @@ function refundTarget(payment: Stripe.InvoicePayment.Payment): RefundTarget | nu
  * refunds its latest paid invoice in full, then cancels it now. Refunding first means a failed
  * cancel fails the event, and Stripe's retry still sees two charging subscriptions and finishes
  * both. Every call carries a key derived from the duplicate's id, so a retry never refunds twice.
+ * A payment that is already refunded (by support, or by an earlier delivery whose key Stripe has
+ * since forgotten after 24 hours) counts as refunded, so the cancel still runs.
  */
 async function stopDuplicate(store: BillingStore, deps: StripeWebhookDependencies, workspaceId: string, kept: string, stopped: string): Promise<void> {
   const { latestPaidInvoicePayments, refundPayment, cancelSubscription } = deps;
@@ -79,7 +81,12 @@ async function stopDuplicate(store: BillingStore, deps: StripeWebhookDependencie
     const target = refundTarget(payment);
     if (!target) continue;
     const paymentId = 'payment_intent' in target ? target.payment_intent : target.charge;
-    refunded.push(await refundPayment(target, `uncode-dup-refund-${stopped}-${paymentId}`));
+    try {
+      refunded.push(await refundPayment(target, `uncode-dup-refund-${stopped}-${paymentId}`));
+    } catch (error) {
+      if (!(typeof error === 'object' && error !== null && 'code' in error && error.code === 'charge_already_refunded')) throw error;
+      refunded.push(`already-refunded:${paymentId}`);
+    }
   }
   await cancelSubscription(stopped, `uncode-dup-cancel-${stopped}`);
   await store.recordAudit(null, workspaceId, 'subscription.duplicate', { kept, stopped, refunded });

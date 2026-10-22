@@ -166,8 +166,9 @@ function liveSubscription(workspaceId: string, id: string, created: number, stat
 /**
  * Stripe holding two subscriptions for one workspace: live state, each one's latest paid invoice
  * payments, and cancels and refunds that, like Stripe, replay the first result for a reused key.
+ * With `refundErrorCode`, every refund fails with that Stripe error code.
  */
-function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscription>, paid: Record<string, string[]>) {
+function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscription>, paid: Record<string, string[]>, refundErrorCode?: string) {
   const cancels: Array<{ id: string; key: string }> = [];
   const refunds: Array<{ target: RefundTarget; key: string }> = [];
   const refunded = new Map<string, string>();
@@ -181,6 +182,7 @@ function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscriptio
     latestPaidInvoicePayments: async (id) => (paid[id] ?? []).map((paymentIntent) => ({ payment: { type: 'payment_intent', payment_intent: paymentIntent } }) as Stripe.InvoicePayment),
     refundPayment: async (target, key) => {
       refunds.push({ target, key });
+      if (refundErrorCode) throw Object.assign(new Error('Stripe refused the refund'), { code: refundErrorCode });
       const refund = refunded.get(key) ?? `re_${randomUUID()}`;
       refunded.set(key, refund);
       return refund;
@@ -313,6 +315,47 @@ test('a duplicate with no paid invoice yet (a trial) is canceled without a refun
   assert.deepEqual(stripe.cancels, [{ id: trialId, key: `uncode-dup-cancel-${trialId}` }]);
   assert.deepEqual(stripe.refunds, []);
   assert.deepEqual(c.audits.find((a) => a.action === 'subscription.duplicate')?.metadata, { kept: keptId, stopped: trialId, refunded: [] });
+});
+
+test('a duplicate whose payment was already refunded is still canceled once, and the event succeeds', async () => {
+  const c = await auditedWorkspace();
+  const keptId = `sub_${randomUUID()}`;
+  const duplicateId = `sub_${randomUUID()}`;
+  const duplicatePayment = `pi_${randomUUID()}`;
+  // Support refunded the double charge in the Dashboard before this webhook ran.
+  const stripe = twoSubscriptionsStripe({
+    [keptId]: liveSubscription(c.workspaceId, keptId, 1_797_000_000),
+    [duplicateId]: liveSubscription(c.workspaceId, duplicateId, 1_797_000_600),
+  }, { [duplicateId]: [duplicatePayment] }, 'charge_already_refunded');
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, keptId, 1_797_000_000)), stripe.deps);
+  const duplicate = subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, duplicateId, 1_797_000_600));
+  await processStripeEvent(c.store, duplicate, stripe.deps);
+  await processStripeEvent(c.store, duplicate, stripe.deps);
+
+  assert.equal((await c.store.overview(c.userId)).subscription.stripeSubscriptionId, keptId);
+  assert.deepEqual(stripe.cancels, [{ id: duplicateId, key: `uncode-dup-cancel-${duplicateId}` }], 'the duplicate stops billing');
+  assert.deepEqual(c.audits.filter((a) => a.action === 'subscription.duplicate').map((a) => a.metadata), [
+    { kept: keptId, stopped: duplicateId, refunded: [`already-refunded:${duplicatePayment}`] },
+  ]);
+});
+
+test('any other refund error fails the event and cancels nothing, so Stripe retries it', async () => {
+  const c = await auditedWorkspace();
+  const keptId = `sub_${randomUUID()}`;
+  const duplicateId = `sub_${randomUUID()}`;
+  const stripe = twoSubscriptionsStripe({
+    [keptId]: liveSubscription(c.workspaceId, keptId, 1_797_000_000),
+    [duplicateId]: liveSubscription(c.workspaceId, duplicateId, 1_797_000_600),
+  }, { [duplicateId]: [`pi_${randomUUID()}`] }, 'balance_insufficient');
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, keptId, 1_797_000_000)), stripe.deps);
+  await assert.rejects(
+    processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, duplicateId, 1_797_000_600)), stripe.deps),
+    /refused the refund/,
+  );
+
+  assert.equal((await c.store.overview(c.userId)).subscription.stripeSubscriptionId, keptId);
+  assert.deepEqual(stripe.cancels, []);
+  assert.equal(c.audits.some((a) => a.action === 'subscription.duplicate'), false);
 });
 
 test('a live subscription that will not renew does not replace a stored one that still charges', async () => {
