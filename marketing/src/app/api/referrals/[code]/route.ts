@@ -30,7 +30,8 @@ export async function GET(request: Request, { params }: { params: { code: string
   }
   try {
     const progress = await referralProgress(params.code);
-    if (!progress.found) return NextResponse.json({ error: "Referral link not found." }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    // An unknown code gets the same 200 and zero counts, so a code (sha256 of an email) cannot
+    // be used to check whether someone is on the list.
     return NextResponse.json({
       joinedReferrals: progress.joinedReferrals,
       proMonths: progress.proMonths,

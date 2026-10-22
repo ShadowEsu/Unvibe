@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { applyBuildAction, defaultBuildStatus, publicBuildStatus, type BuildAction } from "@/lib/buildStatus";
 import { getBuildStatus, saveBuildStatus } from "@/lib/buildStatusStore";
+import { isWaitlistAdminAuthorized } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,14 @@ export async function GET() {
   }
 }
 
+/** Founder only: this text and clock are published on /build and in the site nav. */
 export async function POST(request: Request) {
+  if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) {
+    return NextResponse.json(
+      { error: "Unlock with the admin token to change the clock." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   try {
     const parsed = actionSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
