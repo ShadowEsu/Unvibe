@@ -241,6 +241,10 @@ describe("install_help_viewed", () => {
     assert.equal(installHelpSource("?from=newsletter", "https://unvibe.site/", "unvibe.site"), "other");
     assert.equal(installHelpSource("?from=friend%40example.com", "", "unvibe.site"), "other");
     assert.equal(installHelpSource("?from=", "", "unvibe.site"), "other");
+    for (const key of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+      assert.equal(installHelpSource(`?from=${key}`, "", "unvibe.site"), "other", `?from=${key}`);
+      assert.equal(installHelpSource("", `https://unvibe.site/${key}`, "unvibe.site"), "other", `referrer /${key}`);
+    }
   });
 
   it("maps a same-site referrer path, never passing the referrer through", () => {

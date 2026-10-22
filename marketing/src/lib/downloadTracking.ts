@@ -76,19 +76,21 @@ export function watchDownloadCtaView(element: Element, surface: DownloadSurface,
 
 export type InstallHelpSource = "home" | "beta" | "pricing" | "installer" | "other";
 
-const INSTALL_HELP_SOURCES: Record<string, InstallHelpSource> = {
-  home: "home",
-  beta: "beta",
-  pricing: "pricing",
-  installer: "installer",
-};
+// Maps, not object literals: the keys come from the URL, and `constructor` or `__proto__`
+// would otherwise resolve to Object.prototype members.
+const INSTALL_HELP_SOURCES = new Map<string, InstallHelpSource>([
+  ["home", "home"],
+  ["beta", "beta"],
+  ["pricing", "pricing"],
+  ["installer", "installer"],
+]);
 
 /** Same-site pages that link to /install-help, by path. */
-const SOURCE_BY_PATH: Record<string, InstallHelpSource> = {
-  "/": "home",
-  "/beta": "beta",
-  "/pricing": "pricing",
-};
+const SOURCE_BY_PATH = new Map<string, InstallHelpSource>([
+  ["/", "home"],
+  ["/beta", "beta"],
+  ["/pricing", "pricing"],
+]);
 
 /**
  * Where an /install-help visit came from, as one allowlisted word: `?from=` when present,
@@ -96,7 +98,7 @@ const SOURCE_BY_PATH: Record<string, InstallHelpSource> = {
  */
 export function installHelpSource(search: string, referrer: string, host: string): InstallHelpSource {
   const from = new URLSearchParams(search).get("from");
-  if (from !== null) return INSTALL_HELP_SOURCES[from.trim().toLowerCase()] ?? "other";
+  if (from !== null) return INSTALL_HELP_SOURCES.get(from.trim().toLowerCase()) ?? "other";
   let url: URL;
   try {
     url = new URL(referrer);
@@ -104,7 +106,7 @@ export function installHelpSource(search: string, referrer: string, host: string
     return "other";
   }
   if (url.host !== host) return "other";
-  return SOURCE_BY_PATH[url.pathname.replace(/\/+$/, "") || "/"] ?? "other";
+  return SOURCE_BY_PATH.get(url.pathname.replace(/\/+$/, "") || "/") ?? "other";
 }
 
 /** `install_help_viewed {from}`; call once per /install-help page view. */
