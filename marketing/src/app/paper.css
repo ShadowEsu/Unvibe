@@ -564,7 +564,8 @@ h2 {
   font-family: var(--font-sans);
   font-size: max(14px, 0.9rem);
   line-height: 1.4;
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   text-shadow: var(--glow-hero);
 }
 
@@ -2799,9 +2800,10 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   font-size: 0.92rem;
 }
 
-/* 13 px floor for the card's badge, detail line and feature list. */
+/* 13 px floor for the card's badge, detail line and feature list. Badges read in sentence case, as written. */
 .paper-pricing .plan-badge {
   font-size: max(13px, 0.67rem);
+  text-transform: none;
 }
 
 .paper-pricing .marketing-plan-card > small {

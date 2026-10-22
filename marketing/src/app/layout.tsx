@@ -41,13 +41,13 @@ const display = Bricolage_Grotesque({
   display: "swap",
 });
 
-// The italic accent never holds up or reflows the headline: if it isn't cached in time, the size-matched fallback stays.
+// The italic accent is not one of the two preloaded fold faces; swap shows it as soon as it loads.
 const serif = Instrument_Serif({
   subsets: ["latin"],
   style: ["normal", "italic"],
   weight: "400",
   variable: "--font-serif-face",
-  display: "optional",
+  display: "swap",
   preload: false,
 });
 

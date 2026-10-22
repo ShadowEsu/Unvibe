@@ -1283,6 +1283,7 @@ html[data-performance="lite"] .ambient__orb {
   border-radius: var(--radius-pill);
   background: rgb(139 92 246 / 0.2);
   font-size: max(13px, 0.68rem);
+  white-space: nowrap;
 }
 
 .pricing-toggle__thumb {
