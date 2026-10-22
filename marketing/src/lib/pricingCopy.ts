@@ -2,8 +2,9 @@ import { PRICING } from "@/lib/pricing";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
- * stay visible but nothing promises an upgrade, checkout or renewal, and Download free is the only
- * filled button. Once payments open, this is the copy the site shipped with, unchanged.
+ * stay visible but nothing promises an upgrade, checkout or renewal. Once payments open, the
+ * shipped copy returns. In both states Download free is the only filled button, and no plan
+ * states an allowance number (Pro gets more explanations than Free; see web/src/billing/plans.ts).
  */
 
 export type PlanCopy = {
@@ -38,7 +39,7 @@ const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
 
 const FEATURES = {
   free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Keys and tokens filtered on your device"],
-  pro: ["Everything in Free", "Expert depth", "Git diff explanations and change Briefs", "Answers that use nearby files", "100 explanations each month"],
+  pro: ["Everything in Free", "Expert depth", "Git diff explanations and change Briefs", "Answers that use nearby files", "More explanations each month than Free"],
   teams: ["One shared workspace", "Invites for your team", "Who reviewed what (metadata only)", SEATS],
 } as const;
 
@@ -61,8 +62,8 @@ const OPEN: PricingCopy = {
   description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, cta: "Download, then upgrade", href: "/beta", featured: true, primary: true },
-    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Request Teams seats", href: TEAMS_MAILTO, featured: false, primary: true },
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
+    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Request Teams seats", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
   disclosure: "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
   termsNote: null,

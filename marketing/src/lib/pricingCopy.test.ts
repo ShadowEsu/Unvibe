@@ -32,9 +32,9 @@ describe("pricing copy while payments are closed", () => {
     assert.match(closed.description, new RegExp(`\\$${PRICING.teamsSeatMonthly} per seat per month`));
   });
 
-  it("has one filled button, Download free, and no button that leads to a dead end", () => {
-    assert.deepEqual(closed.plans.filter((plan) => plan.primary).map((plan) => [plan.id, plan.cta, plan.href]), [["free", "Download free", "/beta"]]);
+  it("has no button that leads to a dead end", () => {
     for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:preston@unvibe.site"), plan.id);
+    assert.equal(closed.plans.find((plan) => plan.id === "pro")?.cta, "Download free");
   });
 
   it("follows the copy rules", () => {
@@ -43,19 +43,35 @@ describe("pricing copy while payments are closed", () => {
   });
 });
 
+describe("pricing copy in both states", () => {
+  for (const paymentsOpen of [false, true]) {
+    const copy = pricingCopy(paymentsOpen);
+
+    it(`has one filled button, Download free (payments ${paymentsOpen ? "open" : "closed"})`, () => {
+      assert.deepEqual(copy.plans.filter((plan) => plan.primary).map((plan) => [plan.id, plan.cta, plan.href]), [["free", "Download free", "/beta"]]);
+    });
+
+    it(`states no allowance numbers (payments ${paymentsOpen ? "open" : "closed"})`, () => {
+      const text = allText(copy);
+      assert.doesNotMatch(text, /\d+\s*(ai\s+)?(explanations|questions|projects|items|reviews)/i);
+      assert.ok(copy.plans.find((plan) => plan.id === "pro")?.features.includes("More explanations each month than Free"));
+    });
+  }
+});
+
 describe("pricing copy once payments open", () => {
   const open = pricingCopy(true);
 
-  it("is today's copy, unchanged", () => {
+  it("keeps today's wording", () => {
     assert.equal(`${open.heading.lead}${open.heading.emphasis}${open.heading.tail}`, "Start free. Upgrade when it earns a place in your day.");
     assert.equal(open.heading.emphasis, "earns a place");
     assert.equal(open.description, `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`);
     assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
-    assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href, plan.primary]), [
-      ["free", "No card needed", "Included AI explanations with a usage limit. No card and no separate API key.", "Download free", "/beta", true],
-      ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta", true],
-      ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href, true],
+    assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
+      ["free", "No card needed", "Included AI explanations with a usage limit. No card and no separate API key.", "Download free", "/beta"],
+      ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
+      ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
     assert.match(open.plans[2].href, /^mailto:preston@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
   });
