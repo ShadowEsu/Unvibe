@@ -163,6 +163,8 @@ export interface BillingStore {
   syncSubscription(input: SubscriptionSyncInput): Promise<void>;
   markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void>;
   subscriptionByProviderId(stripeSubscriptionId: string): Promise<SubscriptionRecord | null>;
+  /** The subscription row for a Stripe customer (stripe_customer_id is unique per row). */
+  subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null>;
   changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview>;
   claimWebhook(eventId: string, eventType: string): Promise<boolean>;
   completeWebhook(eventId: string): Promise<void>;

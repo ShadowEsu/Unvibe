@@ -270,6 +270,10 @@ export class MemoryBillingStore implements BillingStore {
     return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeSubscriptionId === stripeSubscriptionId) ?? null;
   }
 
+  async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
+    return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeCustomerId === stripeCustomerId) ?? null;
+  }
+
   async changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview> {
     const overview = await this.overview(userId, workspaceId);
     if (!overview.canManageBilling) throw new Error('Only the workspace owner can change seats.');

@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import type { BillingStore, BillingInterval, PlanId, SubscriptionStatus } from './types';
+import type { BillingStore, BillingInterval, PlanId, SubscriptionRecord, SubscriptionStatus } from './types';
 import { stripePriceId } from './stripe';
 
 /** Far-future end date used for Pro Lifetime grants (effectively permanent). */
@@ -99,6 +99,73 @@ function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
 export interface StripeWebhookDependencies {
   retrieveSubscription(id: string): Promise<Stripe.Subscription>;
   retrieveCheckoutSession?(id: string): Promise<Stripe.Checkout.Session>;
+  /** Invoices a PaymentIntent paid. API 2026-06-24.dahlia has no charge.invoice; Stripe links them through Invoice Payments. */
+  invoicesForPaymentIntent?(paymentIntentId: string): Promise<Stripe.Invoice[]>;
+  /** Cancels a subscription now, not at period end. */
+  cancelSubscription?(id: string): Promise<void>;
+}
+
+type ChargeEventDependencies = Required<Pick<StripeWebhookDependencies, 'invoicesForPaymentIntent' | 'cancelSubscription'>> & StripeWebhookDependencies;
+
+function chargeEventDependencies(deps: StripeWebhookDependencies): ChargeEventDependencies {
+  const { invoicesForPaymentIntent, cancelSubscription } = deps;
+  if (!invoicesForPaymentIntent || !cancelSubscription) throw new Error('Refund and dispute events need invoicesForPaymentIntent and cancelSubscription.');
+  return { ...deps, invoicesForPaymentIntent, cancelSubscription };
+}
+
+/**
+ * The stored subscription a payment paid for: Lifetime grants are stored under their PaymentIntent
+ * id; recurring payments link through Invoice Payments to the invoice's subscription; failing that,
+ * the customer's subscription row (stripe_customer_id is unique). Null for a one-off payment.
+ */
+async function subscriptionForPayment(
+  store: BillingStore,
+  deps: ChargeEventDependencies,
+  paymentIntent: string | Stripe.PaymentIntent | null,
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+): Promise<SubscriptionRecord | null> {
+  const paymentIntentId = paymentIntent ? providerId(paymentIntent) : null;
+  if (paymentIntentId) {
+    const lifetime = await store.subscriptionByProviderId(paymentIntentId);
+    if (lifetime?.interval === 'lifetime') return lifetime;
+    for (const invoice of await deps.invoicesForPaymentIntent(paymentIntentId)) {
+      const subscriptionId = subscriptionIdFromInvoice(invoice);
+      if (subscriptionId) return store.subscriptionByProviderId(subscriptionId);
+    }
+  }
+  return customer ? store.subscriptionByCustomerId(providerId(customer)) : null;
+}
+
+/** Ends paid access now: Lifetime is revoked; a recurring subscription is canceled at Stripe unless it already ended. */
+async function revokeAccess(store: BillingStore, deps: ChargeEventDependencies, subscription: SubscriptionRecord): Promise<void> {
+  if (!subscription.stripeSubscriptionId) return;
+  if (subscription.interval !== 'lifetime') {
+    const live = await deps.retrieveSubscription(subscription.stripeSubscriptionId);
+    if (live.status !== 'canceled' && live.status !== 'incomplete_expired') await deps.cancelSubscription(live.id);
+  }
+  // Free at once; the customer.subscription.deleted that follows is then a no-op.
+  await store.markSubscriptionCanceled(subscription.stripeSubscriptionId);
+}
+
+async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCreatedEvent | Stripe.ChargeDisputeClosedEvent, deps: StripeWebhookDependencies): Promise<void> {
+  const charge = chargeEventDependencies(deps);
+  const dispute = event.data.object;
+  const disputeCharge = typeof dispute.charge === 'string' ? null : dispute.charge;
+  const subscription = await subscriptionForPayment(store, charge, dispute.payment_intent, disputeCharge?.customer ?? null);
+  const lost = event.type === 'charge.dispute.closed' && dispute.status === 'lost';
+  if (lost && subscription) await revokeAccess(store, charge, subscription);
+  await store.recordAudit(null, subscription?.workspaceId ?? null, event.type === 'charge.dispute.created' ? 'dispute.opened' : 'dispute.closed', {
+    eventId: event.id,
+    disputeId: dispute.id,
+    chargeId: typeof dispute.charge === 'string' ? dispute.charge : dispute.charge.id,
+    amount: dispute.amount,
+    currency: dispute.currency,
+    reason: dispute.reason,
+    status: dispute.status,
+    dueBy: dispute.evidence_details?.due_by ? new Date(dispute.evidence_details.due_by * 1000).toISOString() : null,
+    stripeSubscriptionId: subscription?.stripeSubscriptionId ?? null,
+    revoked: lost && Boolean(subscription),
+  });
 }
 
 export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies): Promise<void> {
@@ -148,6 +215,28 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       if (id) await syncStripeSubscription(store, await deps.retrieveSubscription(id));
       return;
     }
+    case 'charge.refunded': {
+      // A full refund ends paid access now; a partial refund is a goodwill credit and keeps it.
+      const charge = event.data.object;
+      const chargeDeps = chargeEventDependencies(deps);
+      const full = charge.refunded || charge.amount_refunded >= charge.amount;
+      const subscription = await subscriptionForPayment(store, chargeDeps, charge.payment_intent, charge.customer);
+      if (full && subscription) await revokeAccess(store, chargeDeps, subscription);
+      await store.recordAudit(null, subscription?.workspaceId ?? null, full ? 'refund.full' : 'refund.partial', {
+        eventId: event.id,
+        chargeId: charge.id,
+        amount: charge.amount,
+        amountRefunded: charge.amount_refunded,
+        currency: charge.currency,
+        stripeSubscriptionId: subscription?.stripeSubscriptionId ?? null,
+        interval: subscription?.interval ?? null,
+      });
+      return;
+    }
+    case 'charge.dispute.created':
+    case 'charge.dispute.closed':
+      await handleDispute(store, event, deps);
+      return;
     default:
       return;
   }

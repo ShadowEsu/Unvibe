@@ -295,6 +295,12 @@ export class SupabaseBillingStore implements BillingStore {
     return data ? this.mapSubscription(data as Record<string, unknown>) : null;
   }
 
+  async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
+    const { data, error } = await this.db.from('subscriptions').select('*').eq('stripe_customer_id', stripeCustomerId).maybeSingle();
+    this.require(error, 'find subscription by customer');
+    return data ? this.mapSubscription(data as Record<string, unknown>) : null;
+  }
+
   async changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview> {
     const { error } = await this.db.rpc('change_workspace_seats', { p_user_id: userId, p_workspace_id: workspaceId, p_seats: seats });
     this.require(error, 'change seats');
