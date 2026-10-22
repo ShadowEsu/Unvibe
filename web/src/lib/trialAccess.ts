@@ -11,7 +11,9 @@
  *
  * AI cost is measured by two more shared rows per UTC day and kind, `__tokens_in__:YYYY-MM-DD` and
  * `__tokens_out__:YYYY-MM-DD`: provider-reported token totals for all trial requests, never per
- * install and never text (`recordTrialTokens`).
+ * install and never text (`recordTrialTokens`). chars/4 estimates (Gemini accepted the request but
+ * reported no usage, e.g. a cut-off stream) go to `__tokens_est_in__` / `__tokens_est_out__`, so
+ * measured and estimated totals are never blended.
  *
  * Durable counters live in Supabase (trial_installs / trial_counters, atomic trial_reserve RPC).
  * Process memory is used only when Supabase is not configured (dev/tests).
@@ -279,14 +281,19 @@ async function addToCounter(key: string, kind: TrialKind, amount: number): Promi
   throw new Error('trial token counter update failed: counter kept changing');
 }
 
-function trialTokenKeys(now: Date): { input: string; output: string } {
+function trialTokenKeys(now: Date, estimated: boolean): { input: string; output: string } {
   const day = now.toISOString().slice(0, 10);
-  return { input: `__tokens_in__:${day}`, output: `__tokens_out__:${day}` };
+  return estimated
+    ? { input: `__tokens_est_in__:${day}`, output: `__tokens_est_out__:${day}` }
+    : { input: `__tokens_in__:${day}`, output: `__tokens_out__:${day}` };
 }
 
-/** Best effort: add one trial request's token counts to today's totals for its kind. Never fails the request. */
+/**
+ * Best effort: add one trial request's token counts to today's totals for its kind, on the
+ * estimate rows when `usage.estimated`. Never fails the request.
+ */
 export async function recordTrialTokens(kind: TrialKind, usage: TokenUsage, now = new Date()): Promise<void> {
-  const keys = trialTokenKeys(now);
+  const keys = trialTokenKeys(now, usage.estimated === true);
   await Promise.all([
     usage.inputTokens > 0 ? addToCounter(keys.input, kind, usage.inputTokens) : undefined,
     usage.outputTokens > 0 ? addToCounter(keys.output, kind, usage.outputTokens) : undefined,
@@ -295,9 +302,12 @@ export async function recordTrialTokens(kind: TrialKind, usage: TokenUsage, now 
   });
 }
 
-/** Today's (UTC) trial token totals for one kind. */
-export async function trialDailyTokens(kind: TrialKind, now = new Date()): Promise<TokenUsage> {
-  const keys = trialTokenKeys(now);
+/** Today's (UTC) trial token totals for one kind: measured by default, or the estimate rows. */
+export async function trialDailyTokens(
+  kind: TrialKind,
+  { estimated = false, now = new Date() }: { estimated?: boolean; now?: Date } = {},
+): Promise<{ inputTokens: number; outputTokens: number }> {
+  const keys = trialTokenKeys(now, estimated);
   const [inputTokens, outputTokens] = await Promise.all([readUsed(keys.input, kind), readUsed(keys.output, kind)]);
   return { inputTokens, outputTokens };
 }

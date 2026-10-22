@@ -1,4 +1,4 @@
-import type { Completion, Provider, TokenUsage } from './provider';
+import { BilledProviderError, billedUsage, estimateTokens, type Completion, type Provider, type TokenUsage } from './provider';
 
 type GeminiPart = { text?: string; thought?: boolean };
 /** https://ai.google.dev/api/generate-content#UsageMetadata (only the fields we bill by). */
@@ -55,6 +55,8 @@ export class GeminiProvider implements Provider {
       throw new Error(`Gemini API ${res.status}: ${await safeText(res)}`);
     }
 
+    // Gemini accepted the request, so from here it may be billed: a failure below carries an
+    // estimate (BilledProviderError) instead of losing the cost.
     // Read the stream as it arrives so the first words show in well under a second, instead of
     // waiting for the whole answer. A gateway that drops alt=sse sends one JSON array instead;
     // that case is parsed once the body ends.
@@ -73,26 +75,31 @@ export class GeminiProvider implements Provider {
       usage = usageFromChunk(chunk) ?? usage;
       emit(textFromChunk(chunk));
     };
-    if (res.body) {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        if (!arrayBody && buffer.trimStart().startsWith('[')) arrayBody = true;
-        if (arrayBody) continue;
-        let match: RegExpExecArray | null;
-        while ((match = /\r?\n\r?\n/.exec(buffer))) {
-          const event = buffer.slice(0, match.index);
-          buffer = buffer.slice(match.index + match[0].length);
-          take(chunkFromEvent(event));
+    try {
+      if (res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          if (!arrayBody && buffer.trimStart().startsWith('[')) arrayBody = true;
+          if (arrayBody) continue;
+          let match: RegExpExecArray | null;
+          while ((match = /\r?\n\r?\n/.exec(buffer))) {
+            const event = buffer.slice(0, match.index);
+            buffer = buffer.slice(match.index + match[0].length);
+            take(chunkFromEvent(event));
+          }
         }
+        buffer += decoder.decode();
+      } else {
+        buffer = await res.text();
+        arrayBody = buffer.trimStart().startsWith('[');
       }
-      buffer += decoder.decode();
-    } else {
-      buffer = await res.text();
-      arrayBody = buffer.trimStart().startsWith('[');
+    } catch (error) {
+      // Cut off midway (client abort, dropped connection): no final totals, so estimate.
+      throw new BilledProviderError(error, estimate(system, user, emitted));
     }
 
     if (arrayBody) {
@@ -105,15 +112,22 @@ export class GeminiProvider implements Provider {
     if (emitted === 0 || !arrayBody) {
       for (const event of splitSseEvents(buffer)) take(chunkFromEvent(event));
     }
+    const streamed = usage ?? estimate(system, user, emitted);
 
     // If stream produced nothing (common when thinking ate the budget), fall back. Both calls are
     // billed, so their counts add up.
     if (emitted === 0) {
-      const full = await this.complete(system, user, signal);
+      let full: Completion;
+      try {
+        full = await this.complete(system, user, signal);
+      } catch (error) {
+        const second = billedUsage(error);
+        throw new BilledProviderError(error, second ? addUsage(streamed, second) : streamed);
+      }
       if (full.text) onToken(full.text);
-      return addUsage(usage, full.usage);
+      return full.usage ? addUsage(streamed, full.usage) : streamed;
     }
-    return usage;
+    return streamed;
   }
 
   async complete(system: string, user: string, signal?: AbortSignal): Promise<Completion> {
@@ -130,8 +144,14 @@ export class GeminiProvider implements Provider {
     if (!res.ok) {
       throw new Error(`Gemini API ${res.status}: ${await safeText(res)}`);
     }
-    const data = (await res.json()) as GeminiChunk;
-    return { text: textFromChunk(data), usage: usageFromChunk(data) };
+    let data: GeminiChunk;
+    try {
+      data = (await res.json()) as GeminiChunk;
+    } catch (error) {
+      throw new BilledProviderError(error, estimate(system, user, 0));
+    }
+    const text = textFromChunk(data);
+    return { text, usage: usageFromChunk(data) ?? estimate(system, user, text.length) };
   }
 }
 
@@ -169,9 +189,15 @@ function usageFromChunk(chunk: GeminiChunk): TokenUsage | undefined {
   return { inputTokens: input, outputTokens: answer + thoughts };
 }
 
-function addUsage(a: TokenUsage | undefined, b: TokenUsage | undefined): TokenUsage | undefined {
-  if (!a || !b) return a ?? b;
-  return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
+/** Two billed calls for one request. The sum is an estimate if either part is. */
+function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
+  const sum = { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
+  return a.estimated || b.estimated ? { ...sum, estimated: true } : sum;
+}
+
+/** chars/4 of the prompt sent and of the answer text delivered, marked as an estimate. */
+function estimate(system: string, user: string, deliveredChars: number): TokenUsage {
+  return { inputTokens: estimateTokens(system.length + user.length), outputTokens: estimateTokens(deliveredChars), estimated: true };
 }
 
 function splitSseEvents(raw: string): string[] {

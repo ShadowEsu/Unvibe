@@ -144,8 +144,9 @@ export interface BillingStore {
   /**
    * Write provider token counts onto the usage row `reserveUsage` wrote for this request: the user's
    * newest row of `kind` from the last 15 minutes that has no counts yet. Updates, never inserts.
-   * Counts only, no text. With two requests of the same kind in flight at once, the counts can land
-   * on the sibling row; per-user and per-kind totals stay exact. No matching row: nothing happens.
+   * Counts only, no text. `usage.estimated` sets `tokens_estimated`, so measured and chars/4
+   * estimates stay separable. With two requests of the same kind in flight at once, the counts can
+   * land on the sibling row; per-user and per-kind totals stay exact. No matching row: nothing happens.
    */
   recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void>;
   createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess>;

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GeminiProvider } from '../src/ai/gemini';
+import { billedUsage } from '../src/ai/provider';
 
 function sse(text: string): string {
   return `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })}\n\n`;
@@ -69,17 +70,66 @@ test('gemini stream returns token counts from the final chunk; thinking is bille
   assert.deepEqual(usage, { inputTokens: 812, outputTokens: 146 });
 });
 
-test('gemini stream without usageMetadata returns no counts', async () => {
-  const usage = await withFetch(sse('Hello'), () => new GeminiProvider('key', 'm', 100).stream('s', 'u', () => undefined));
-  assert.equal(usage, undefined);
+// Prompt = system + user. chars/4, rounded up (https://ai.google.dev/gemini-api/docs/tokens).
+const SYSTEM = 's'.repeat(40);
+const USER = 'u'.repeat(41);
+
+test('gemini stream without usageMetadata estimates chars/4 and marks it estimated', async () => {
+  const usage = await withFetch(sse('Hello there!'), () => new GeminiProvider('key', 'm', 100).stream(SYSTEM, USER, () => undefined));
+  assert.deepEqual(usage, { inputTokens: 21, outputTokens: 3, estimated: true });
 });
 
-test('gemini ignores token counts that are not non-negative integers', async () => {
+test('gemini treats token counts that are not non-negative integers as missing, so they are estimated', async () => {
   for (const bad of [{ promptTokenCount: -1, candidatesTokenCount: 3 }, { promptTokenCount: 1.5, candidatesTokenCount: 3 }, { promptTokenCount: '9', candidatesTokenCount: 3 }]) {
     const body = `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'x' }] } }], usageMetadata: bad })}\n\n`;
-    const usage = await withFetch(body, () => new GeminiProvider('key', 'm', 100).stream('s', 'u', () => undefined));
-    assert.equal(usage, undefined, JSON.stringify(bad));
+    const usage = await withFetch(body, () => new GeminiProvider('key', 'm', 100).stream(SYSTEM, USER, () => undefined));
+    assert.deepEqual(usage, { inputTokens: 21, outputTokens: 1, estimated: true }, JSON.stringify(bad));
   }
+});
+
+test('a stream cut off after Gemini answered rejects with an estimate of what was delivered', async () => {
+  const original = globalThis.fetch;
+  // First read gets one chunk; the next read fails like a dropped connection.
+  let reads = 0;
+  const cut: typeof fetch = async () => new Response(new ReadableStream<Uint8Array>({
+    pull(controller) {
+      reads += 1;
+      if (reads === 1) controller.enqueue(new TextEncoder().encode(sse('12345678')));
+      else controller.error(new DOMException('The operation was aborted.', 'AbortError'));
+    },
+  }), { status: 200 });
+  globalThis.fetch = cut;
+  try {
+    const error: unknown = await new GeminiProvider('key', 'm', 100).stream(SYSTEM, USER, () => undefined).then(() => null, (e: unknown) => e);
+    assert.ok(error instanceof Error, 'the stream still fails, so the route reports the error');
+    assert.deepEqual(billedUsage(error), { inputTokens: 21, outputTokens: 2, estimated: true });
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('a request Gemini refused or never answered carries no usage', async () => {
+  const original = globalThis.fetch;
+  try {
+    const refused: typeof fetch = async () => new Response('quota', { status: 429 });
+    globalThis.fetch = refused;
+    const rejected: unknown = await new GeminiProvider('key', 'm', 100).stream(SYSTEM, USER, () => undefined).then(() => null, (e: unknown) => e);
+    assert.ok(rejected instanceof Error);
+    assert.equal(billedUsage(rejected), undefined);
+    const offline: typeof fetch = async () => { throw new TypeError('fetch failed'); };
+    globalThis.fetch = offline;
+    const unreachable: unknown = await new GeminiProvider('key', 'm', 100).complete(SYSTEM, USER).then(() => null, (e: unknown) => e);
+    assert.ok(unreachable instanceof Error);
+    assert.equal(billedUsage(unreachable), undefined);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('gemini complete without usageMetadata estimates from the prompt and the answer', async () => {
+  const body = JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"q":1}' }] } }] });
+  const result = await withFetch(body, () => new GeminiProvider('key', 'm', 100).complete(SYSTEM, USER));
+  assert.deepEqual(result, { text: '{"q":1}', usage: { inputTokens: 21, outputTokens: 2, estimated: true } });
 });
 
 test('gemini complete returns the text and its token counts', async () => {

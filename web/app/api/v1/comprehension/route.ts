@@ -3,7 +3,7 @@ import { parseQuestion } from '@/ai/comprehension';
 import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
-import type { TokenUsage } from '@/ai/provider';
+import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
@@ -38,9 +38,15 @@ export async function POST(req: Request): Promise<Response> {
     recordTokens = (usage) => recordTrialTokens('project_question', usage);
   }
   const { system, user } = buildComprehensionPrompt(payload);
-  const completion = await provider.complete(system, user, req.signal).catch(() => null);
+  // A failure after Gemini accepted the request still carries its (estimated) usage.
+  let usage: TokenUsage | undefined;
+  const completion = await provider.complete(system, user, req.signal).catch((error: unknown) => {
+    usage = billedUsage(error);
+    return null;
+  });
+  usage = completion?.usage ?? usage;
   // The call was billed whether or not the question parses, so its counts are kept either way.
-  if (completion?.usage) await recordTokens?.(completion.usage);
+  if (usage) await recordTokens?.(usage);
   const question = completion === null ? undefined : parseQuestion(completion.text);
   if (!question) {
     // Spent only on a question the person can answer; a client that disconnected keeps the charge.
