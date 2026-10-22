@@ -1,4 +1,4 @@
-import type { Provider } from './provider';
+import type { Completion, Provider, TokenUsage } from './provider';
 
 /**
  * Deterministic offline provider. Used when ANTHROPIC_API_KEY is not set so the full pipeline
@@ -14,7 +14,7 @@ export class MockProvider implements Provider {
     user: string,
     onToken: (text: string) => void,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<TokenUsage | undefined> {
     const fileMatch = /Primary file: (.+)/.exec(user);
     const langMatch = /Language: (.+)/.exec(user);
     const file = fileMatch?.[1]?.trim() ?? 'this code';
@@ -33,18 +33,19 @@ export class MockProvider implements Provider {
 
     for (const chunk of text.match(/.{1,24}/gs) ?? []) {
       if (signal?.aborted) {
-        return;
+        return undefined;
       }
       onToken(chunk);
       await delay(12);
     }
+    return undefined;
   }
 
-  async complete(_system: string, user: string): Promise<string> {
+  async complete(_system: string, user: string): Promise<Completion> {
     const file = /Primary file: (.+)/.exec(user)?.[1]?.trim() ?? 'this code';
     const lang = /Language: (.+)/.exec(user)?.[1]?.trim() ?? 'code';
     // Returns a deterministic, clearly-mock multiple-choice question as JSON.
-    return JSON.stringify({
+    const text = JSON.stringify({
       question: `(Mock question) What is the most accurate description of ${file}?`,
       options: [
         `It is ${lang} code whose purpose you just reviewed`,
@@ -57,6 +58,7 @@ export class MockProvider implements Provider {
       concept: 'code-comprehension',
       conceptLabel: 'Code comprehension',
     });
+    return { text };
   }
 }
 

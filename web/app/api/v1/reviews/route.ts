@@ -2,8 +2,11 @@ import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import { releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
-import { trialInstallFromRequest, releaseTrialAction, reserveTrialAction } from '@/lib/trialAccess';
+import type { TokenUsage } from '@/ai/provider';
+import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
+import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { payloadSizeError } from '@/lib/reviewLimits';
+import { clientIp } from '@/lib/tryDemo';
 import { recordActivation } from '@/lib/activation';
 
 export const runtime = 'nodejs';
@@ -13,9 +16,8 @@ export async function POST(req: Request): Promise<Response> {
   if (!payload?.scope || !payload?.level || !payload?.context) {
     return Response.json({ error: 'missing scope, level, or context' }, { status: 400 });
   }
-  if (JSON.stringify(payload.context).length > 120_000) {
-    return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
-  }
+  const tooLarge = payloadSizeError(payload);
+  if (tooLarge) return tooLarge;
 
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
@@ -27,16 +29,20 @@ export async function POST(req: Request): Promise<Response> {
   // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows).
   // Follow-ups and "Explain differently" are follow-up questions; anything else is an explanation.
   // The sealed trial keeps one explanation budget for both.
+  // Token counts (no text) go onto the reserved usage row, or the trial's daily totals.
   let release: (() => Promise<void>) | null = null;
+  let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   if (!provider.mock && userId) {
     const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
     const denied = await reserveMeteredAction(userId, kind, req);
     if (denied) return denied;
     release = () => releaseMeteredAction(userId, kind, req);
+    recordTokens = (usage) => recordMeteredTokens(userId, kind, usage);
   } else if (!provider.mock && trialInstall) {
-    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
-    if (denied) return denied;
-    release = () => releaseTrialAction(trialInstall, 'ai_explanation');
+    const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req));
+    if (trial.denied) return trial.denied;
+    release = trial.release;
+    recordTokens = (usage) => recordTrialTokens('ai_explanation', usage);
   }
 
   const system = buildSystemPrompt(payload);
@@ -55,11 +61,12 @@ export async function POST(req: Request): Promise<Response> {
       };
       let produced = false;
       try {
-        await provider.stream(system, user, (text) => {
+        const usage = await provider.stream(system, user, (text) => {
           if (text.trim()) produced = true;
           send({ type: 'token', text });
         }, req.signal);
         send({ type: 'done', model: provider.name, mock: provider.mock });
+        if (usage) await recordTokens?.(usage);
         if (produced && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
           await recordActivation(trialInstall, payload.context.code).catch((error) => {
             console.error('activation marker write failed', error);

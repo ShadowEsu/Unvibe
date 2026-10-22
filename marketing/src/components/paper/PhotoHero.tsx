@@ -39,12 +39,12 @@ function EmailMeLink() {
           utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
         }),
       });
-      const body = (await response.json().catch(() => ({}))) as { referralCode?: string; duplicate?: boolean; error?: string };
+      const body = (await response.json().catch(() => ({}))) as { referralCode?: string; error?: string };
       if (!response.ok) throw new Error(body.error || "That didn't go through. Try again in a minute.");
       if (referredBy) markRefUsed();
       setCode(body.referralCode ?? "");
       setState("done");
-      track("waitlist_completed", { surface: "phone_hero", duplicate: Boolean(body.duplicate) });
+      track("waitlist_completed", { surface: "phone_hero" });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "That didn't go through. Try again in a minute.");
       setState("idle");

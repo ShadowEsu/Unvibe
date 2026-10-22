@@ -125,6 +125,22 @@ export async function billingOverview(token: string): Promise<{ overview: Billin
   return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
 }
 
+export async function giftProgress(token: string): Promise<{ code: string; used: number; shareUrl: string }> {
+  return json(await request(`${BACKEND}/api/v1/gifts/mine`, { headers: { authorization: `Bearer ${token}` } }));
+}
+
+/** Redeem a friend's gift code for the signed-in account. 4xx answers carry a message for the person. */
+export async function claimGiftCode(token: string, code: string): Promise<{ monthAdded: boolean }> {
+  const res = await request(`${BACKEND}/api/v1/gifts/claim`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ code }),
+  });
+  if (res.status === 400 || res.status === 409) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? 'That gift code could not be used.');
+  }
+  return json(res);
+}
+
 export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
   const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/checkout`, {
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(input),

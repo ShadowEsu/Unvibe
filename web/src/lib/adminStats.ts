@@ -6,6 +6,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ActivationKind } from '@/lib/activation';
 import { serviceSupabase } from '@/lib/serviceSupabase';
+import { isInstallCounterKey } from '@/lib/trialAccess';
 
 export interface InstallStats {
   /** Installs that have made at least one trial AI request, all time. */
@@ -23,8 +24,32 @@ export interface InstallStats {
   daily: DailyActivation[];
   /** CI/QA installs left out of every number above (flagged by the real-device test). */
   qaExcluded: number;
+  /** Stripe disputes opened and not yet closed (billing_audit_log, last 120 days). Evidence is due within days. */
+  disputesOpen: number;
+  /** Earliest evidence deadline among open disputes, or null. */
+  disputeNextDueBy: string | null;
   source: 'supabase' | 'unavailable';
   generatedAt: string;
+}
+
+interface DisputeAuditRow {
+  action: string;
+  metadata: Record<string, unknown>;
+}
+
+/** Pure: open disputes from dispute.opened / dispute.closed audit rows (replays count once). */
+export function openDisputes(rows: DisputeAuditRow[]): Pick<InstallStats, 'disputesOpen' | 'disputeNextDueBy'> {
+  const open = new Map<string, string | null>();
+  const closed = new Set<string>();
+  for (const { action, metadata } of rows) {
+    const id = typeof metadata.disputeId === 'string' ? metadata.disputeId : null;
+    if (!id) continue;
+    if (action === 'dispute.closed') closed.add(id);
+    else if (action === 'dispute.opened') open.set(id, typeof metadata.dueBy === 'string' ? metadata.dueBy : null);
+  }
+  const due = [...open].filter(([id]) => !closed.has(id)).map(([, dueBy]) => dueBy);
+  const dated = due.filter((dueBy): dueBy is string => dueBy !== null).sort();
+  return { disputesOpen: due.length, disputeNextDueBy: dated[0] ?? null };
 }
 
 export interface DailyActivation {
@@ -64,7 +89,7 @@ export function summarizeInstalls(
   installStarts: Date[],
   explanationUpdates: Date[],
   now = new Date(),
-): Omit<InstallStats, 'source' | 'generatedAt' | 'daily' | 'qaExcluded'> {
+): Omit<InstallStats, 'source' | 'generatedAt' | 'daily' | 'qaExcluded' | 'disputesOpen' | 'disputeNextDueBy'> {
   const since = (days: number) => now.getTime() - days * DAY_MS;
   const startOfDay = new Date(now);
   startOfDay.setUTCHours(0, 0, 0, 0);
@@ -125,12 +150,12 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
   const generatedAt = now.toISOString();
   const db = serviceSupabase();
   if (!db) {
-    return { installs: 0, newToday: 0, new7d: 0, new30d: 0, active7d: 0, active30d: 0, daily: [], qaExcluded: 0, source: 'unavailable', generatedAt };
+    return { installs: 0, newToday: 0, new7d: 0, new30d: 0, active7d: 0, active30d: 0, daily: [], qaExcluded: 0, disputesOpen: 0, disputeNextDueBy: null, source: 'unavailable', generatedAt };
   }
   const since30d = new Date(now.getTime() - 30 * DAY_MS).toISOString();
   const firstDay = new Date(now.getTime() - (DAILY_DAYS - 1) * DAY_MS);
   firstDay.setUTCHours(0, 0, 0, 0);
-  const [total, qaExcluded, qaKeys, installs, explanations, activation] = await Promise.all([
+  const [total, qaExcluded, qaKeys, installs, explanations, activation, disputes] = await Promise.all([
     countInstalls(db, false),
     countInstalls(db, true),
     fetchAll<{ install_key: string }>((from, to) => db
@@ -151,7 +176,7 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
       .from('trial_counters')
       .select('install_key, updated_at')
       .eq('kind', 'ai_explanation')
-      .neq('install_key', GLOBAL_INSTALL_KEY)
+      .not('install_key', 'like', '\\_\\_%')
       .gte('updated_at', since30d)
       .order('install_key')
       .range(from, to), 'trial_counters'),
@@ -162,15 +187,24 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
       .order('install_key')
       .order('kind')
       .range(from, to), 'trial_activation'),
+    fetchAll<DisputeAuditRow>((from, to) => db
+      .from('billing_audit_log')
+      .select('action, metadata')
+      .in('action', ['dispute.opened', 'dispute.closed'])
+      .gte('created_at', new Date(now.getTime() - 120 * DAY_MS).toISOString())
+      .order('id')
+      .range(from, to), 'billing_audit_log disputes'),
   ]);
   const qa = new Set(qaKeys.map((row) => row.install_key));
   const installStarts = installs.map((row) => new Date(row.started_at));
-  const realExplanations = explanations.filter((row) => !qa.has(row.install_key));
+  // Per-IP and global rows (`__…`) are not installs; the query skips them and this keeps it exact.
+  const realExplanations = explanations.filter((row) => isInstallCounterKey(row.install_key) && !qa.has(row.install_key));
   const realActivation = activation.filter((row) => !qa.has(row.install_key));
   return {
     ...summarizeInstalls(total, installStarts, realExplanations.map((row) => new Date(row.updated_at)), now),
     daily: dailyActivation(installStarts, realActivation.map((row) => ({ kind: row.kind, at: new Date(row.at) })), now),
     qaExcluded,
+    ...openDisputes(disputes),
     source: 'supabase',
     generatedAt,
   };

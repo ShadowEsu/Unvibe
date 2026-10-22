@@ -1,6 +1,7 @@
 import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
+import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { CHECKOUT_SESSION_TTL_MS, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
 import { getStripe, lifetimeCheckoutOpen, paymentsLocked, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, WorkspaceAccess } from '@/billing/types';
@@ -89,7 +90,14 @@ export async function POST(req: Request): Promise<Response> {
     } else if (pending) {
       return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
     }
-    const intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
+    let intent;
+    try {
+      intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
+    } catch (error) {
+      // A parallel request (double click, second tab) created the open intent first.
+      if (error instanceof CheckoutPendingError) return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
+      throw error;
+    }
     const account = await getStore().accountInfo(user);
     const appUrl = publicAppUrl(req);
     const metadata = {

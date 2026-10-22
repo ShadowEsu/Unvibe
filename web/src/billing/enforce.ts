@@ -1,3 +1,4 @@
+import type { TokenUsage } from '@/ai/provider';
 import { getBillingStore } from './store';
 import type { UsageKind } from './types';
 
@@ -29,5 +30,12 @@ export async function releaseMeteredAction(userId: string, kind: UsageKind, req:
   const workspaceId = req.headers.get('x-uncode-workspace-id')?.trim() || undefined;
   await getBillingStore().releaseUsage(userId, kind, workspaceId).catch((error: unknown) => {
     console.error('usage release failed', error instanceof Error ? error.message : error);
+  });
+}
+
+/** Best effort: write the provider's token counts onto the row `reserveMeteredAction` wrote. Never fails the request. */
+export async function recordMeteredTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void> {
+  await getBillingStore().recordUsageTokens(userId, kind, usage).catch((error: unknown) => {
+    console.error('token count write failed', error instanceof Error ? error.message : error);
   });
 }

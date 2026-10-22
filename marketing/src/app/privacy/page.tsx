@@ -113,7 +113,11 @@ export default function PrivacyPage() {
           <li><strong>Google Gemini</strong> generates explanations from the filtered snippet.</li>
           <li><strong>Vercel</strong> hosts the website and API.</li>
           <li><strong>Supabase</strong> stores accounts and synced learning records.</li>
-          <li><strong>Stripe</strong> processes payments. Unvibe never sees your full card number.</li>
+          <li>
+            <strong>Stripe</strong> processes payments. Unvibe never sees your full card number. When you
+            delete your Unvibe account, Stripe keeps its own customer and payment records, as tax and
+            fraud-prevention laws require.
+          </li>
           <li><strong>Resend</strong> delivers sign-in and product emails.</li>
           <li><strong>GitHub</strong> hosts the installer downloads.</li>
           <li><strong>Mixpanel and PostHog</strong> measure website usage.</li>

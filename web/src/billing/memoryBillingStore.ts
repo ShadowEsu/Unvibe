@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit } from './plans';
+import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
+import { CheckoutPendingError } from './checkoutPending';
+import type { TokenUsage } from '@/ai/provider';
 import type {
   BillingOverview,
   BillingStore,
@@ -14,6 +16,17 @@ import type {
   WorkspaceRole,
 } from './types';
 
+/** Mirrors a usage_events row (SQL table of the same name). */
+export interface MemoryUsageEvent {
+  id: number;
+  workspaceId: string;
+  userId: string;
+  kind: UsageKind;
+  estimatedInputTokens: number | null;
+  estimatedOutputTokens: number | null;
+  createdAt: number;
+}
+
 interface MemoryBillingData {
   workspaces: Map<string, Omit<WorkspaceAccess, 'role'>>;
   memberships: Map<string, WorkspaceRole>;
@@ -23,6 +36,7 @@ interface MemoryBillingData {
   checkoutIntents: Map<string, CheckoutIntentRecord>;
   webhooks: Map<string, { status: 'processing' | 'completed' | 'failed'; claimedAt: number }>;
   audits: Array<{ userId: string | null; workspaceId: string | null; action: string; metadata: Record<string, unknown>; at: string }>;
+  usageEvents: MemoryUsageEvent[];
 }
 
 function membershipKey(workspaceId: string, userId: string): string {
@@ -64,6 +78,7 @@ export class MemoryBillingStore implements BillingStore {
       checkoutIntents: new Map(),
       webhooks: new Map(),
       audits: [],
+      usageEvents: [],
     };
     this.data = global.__uncodeBillingData;
   }
@@ -138,7 +153,26 @@ export class MemoryBillingStore implements BillingStore {
     const { startsAt } = monthWindow(this.now());
     const key = usageKey(overview.workspace.id, kind, startsAt);
     this.data.usage.set(key, line.used + 1);
+    const lastId = this.data.usageEvents.at(-1)?.id ?? 0;
+    this.data.usageEvents.push({
+      id: lastId + 1, workspaceId: overview.workspace.id, userId, kind,
+      estimatedInputTokens: null, estimatedOutputTokens: null, createdAt: this.now().getTime(),
+    });
     return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining - 1 } };
+  }
+
+  async recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void> {
+    const since = this.now().getTime() - USAGE_TOKEN_WINDOW_MS;
+    const row = [...this.data.usageEvents].reverse().find((event) => event.userId === userId && event.kind === kind
+      && event.estimatedInputTokens === null && event.createdAt >= since);
+    if (!row) return;
+    row.estimatedInputTokens = usage.inputTokens;
+    row.estimatedOutputTokens = usage.outputTokens;
+  }
+
+  /** This user's usage rows, oldest first (dev and tests; production reads usage_events in SQL). */
+  usageEvents(userId: string): MemoryUsageEvent[] {
+    return this.data.usageEvents.filter((event) => event.userId === userId).map((event) => ({ ...event }));
   }
 
   async releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void> {
@@ -226,6 +260,15 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {
+    // Mirrors the unique indexes on checkout_intents: one pending intent per workspace, and one
+    // pending Teams intent per owner. Stale intents are expired first, as in the Supabase store.
+    const cutoff = this.now().getTime() - CHECKOUT_INTENT_TTL_MS;
+    for (const other of this.data.checkoutIntents.values()) {
+      if (other.userId === input.userId && other.status === 'pending' && new Date(other.createdAt).getTime() <= cutoff) other.status = 'expired';
+    }
+    const clash = [...this.data.checkoutIntents.values()].some((other) => other.status === 'pending'
+      && (other.workspaceId === input.workspaceId || (input.plan === 'teams' && other.plan === 'teams' && other.userId === input.userId)));
+    if (clash) throw new CheckoutPendingError();
     const intent: CheckoutIntentRecord = { ...input, id: randomUUID(), status: 'pending', createdAt: this.now().toISOString() };
     this.data.checkoutIntents.set(intent.id, intent);
     return intent;
@@ -270,6 +313,10 @@ export class MemoryBillingStore implements BillingStore {
     return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeSubscriptionId === stripeSubscriptionId) ?? null;
   }
 
+  async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
+    return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeCustomerId === stripeCustomerId) ?? null;
+  }
+
   async changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview> {
     const overview = await this.overview(userId, workspaceId);
     if (!overview.canManageBilling) throw new Error('Only the workspace owner can change seats.');
@@ -300,6 +347,8 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async deleteUserBilling(userId: string): Promise<void> {
+    // usage_events rows cascade with the user in SQL.
+    this.data.usageEvents = this.data.usageEvents.filter((event) => event.userId !== userId);
     for (const [key] of [...this.data.memberships]) if (key.endsWith(`:${userId}`)) this.data.memberships.delete(key);
     for (const [id, workspace] of [...this.data.workspaces]) {
       if (workspace.ownerUserId === userId) {
@@ -311,24 +360,31 @@ export class MemoryBillingStore implements BillingStore {
     }
   }
 
-  async grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }> {
+  /**
+   * Dev mirror of the SQL `add_pro_months`: complimentary Pro months that stack on a running
+   * gift month, end at most 12 months from now, and never touch a live Stripe subscription.
+   */
+  async addProMonths(userId: string, months: number): Promise<{ applied: boolean }> {
+    if (!Number.isInteger(months) || months <= 0) return { applied: false };
     const workspace = await this.ensurePersonalWorkspace(userId);
     const current = this.data.subscriptions.get(workspace.id) ?? defaultSubscription(workspace.id);
-    if (current.stripeSubscriptionId && (current.status === 'active' || current.status === 'trialing')) {
+    if (current.stripeSubscriptionId && current.status !== 'canceled' && current.status !== 'inactive') {
       return { applied: false };
     }
     const now = this.now();
-    const requestedEnd = new Date(endsAt);
-    const existingEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : now;
-    const later = requestedEnd > existingEnd ? requestedEnd : existingEnd;
+    const runningEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : null;
+    const from = current.plan === 'pro' && current.status === 'trialing' && runningEnd && runningEnd > now ? runningEnd : now;
+    const cap = new Date(now);
+    cap.setUTCMonth(cap.getUTCMonth() + 12);
+    const stacked = new Date(from.getTime() + months * 30 * 24 * 60 * 60 * 1000);
     this.data.subscriptions.set(workspace.id, {
       ...current,
       plan: 'pro',
       interval: 'monthly',
       status: 'trialing',
       seats: 1,
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: later.toISOString(),
+      currentPeriodStart: from > now ? current.currentPeriodStart ?? now.toISOString() : now.toISOString(),
+      currentPeriodEnd: (stacked < cap ? stacked : cap).toISOString(),
     });
     return { applied: true };
   }

@@ -4,7 +4,7 @@ import { ReferralProgress } from "@/components/redesign/ReferralProgress";
 export const metadata: Metadata = {
   title: "Referral rewards",
   description:
-    "Check your Unvibe referral progress. When a friend joins with your link and their email was never referred before, you each get a month of Pro, for up to five friends.",
+    "When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro, for up to five friends. Check how many friends joined with your invite link.",
   robots: { index: false, follow: false },
 };
 
