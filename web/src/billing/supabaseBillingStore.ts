@@ -12,7 +12,8 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from './types';
-import { CHECKOUT_INTENT_TTL_MS, monthWindow } from './plans';
+import type { TokenUsage } from '@/ai/provider';
+import { CHECKOUT_INTENT_TTL_MS, monthWindow, USAGE_TOKEN_WINDOW_MS } from './plans';
 
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Persistent billing returned an invalid record.');
@@ -151,6 +152,27 @@ export class SupabaseBillingStore implements BillingStore {
       if (Array.isArray(updated) && updated.length > 0) return;
     }
     throw new Error('Persistent billing release usage failed: counter kept changing.');
+  }
+
+  /**
+   * Compare-and-set onto the newest uncounted row: the `is null` guard means a concurrent request
+   * that took the same row first makes this one move to the next uncounted row instead of overwriting.
+   */
+  async recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void> {
+    const since = new Date(Date.now() - USAGE_TOKEN_WINDOW_MS).toISOString();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { data, error } = await this.db.from('usage_events').select('id')
+        .eq('user_id', userId).eq('kind', kind).is('estimated_input_tokens', null).gte('created_at', since)
+        .order('id', { ascending: false }).limit(1).maybeSingle();
+      this.require(error, 'find usage row for token counts');
+      if (!data) return;
+      const { data: updated, error: updateError } = await this.db.from('usage_events')
+        .update({ estimated_input_tokens: usage.inputTokens, estimated_output_tokens: usage.outputTokens })
+        .eq('id', data.id).is('estimated_input_tokens', null)
+        .select('id');
+      this.require(updateError, 'record token counts');
+      if (Array.isArray(updated) && updated.length > 0) return;
+    }
   }
 
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
