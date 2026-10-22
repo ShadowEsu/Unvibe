@@ -5395,6 +5395,18 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   padding-inline: 1rem;
 }
 
+/* Download free on the Free card is the only filled pricing button; Pro and Teams use this outline. */
+.pricing-button.pricing-button--quiet {
+  border: 1px solid var(--purple);
+  background: transparent !important;
+  color: var(--purple) !important;
+  box-shadow: none;
+}
+
+.pricing-button.pricing-button--quiet:hover {
+  background: color-mix(in srgb, var(--purple) 8%, transparent) !important;
+}
+
 .paper-hero__fine {
   margin: 0;
   color: var(--hero-type);
