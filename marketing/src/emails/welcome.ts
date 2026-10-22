@@ -3,6 +3,8 @@
  * Table layout and inline styles so it renders in Gmail, Outlook and Apple Mail.
  */
 
+import { GIFT_CODE_HOME, GIFT_OFFER } from "../lib/giftOffer";
+
 export interface WelcomeInput {
   email: string;
   referralCode: string;
@@ -33,7 +35,6 @@ function links(input: WelcomeInput) {
     banner: `${site}/email/welcome-banner.png`,
     pro: `${site}/pricing`,
     referral: `${site}/?ref=${encodeURIComponent(code)}`,
-    rewards: `${site}/rewards?ref=${encodeURIComponent(code)}`,
     download: input.downloadUrl || `${site}/#install`,
   };
 }
@@ -78,7 +79,7 @@ export function welcomeHtml(input: WelcomeInput): string {
 <p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">First time opening it needs one extra click on Mac or Windows. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
 </td></tr>
 ${card(`<h2 style="${h2}">Want Pro?</h2><p style="${p}">Deeper explanations, more projects and the full learning history. Your app account already starts with a free month of Pro.</p>${imageButton(l.site, l.pro, "pro")}`)}
-${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this to a friend. When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.</p><p style="margin:0 0 16px;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>${imageButton(l.site, l.rewards, "months")}`, "#eef9c8")}
+${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this link to a friend so they can get Unvibe. ${GIFT_CODE_HOME} ${GIFT_OFFER}</p><p style="margin:0;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>`, "#eef9c8")}
 ${card(`<h2 style="${h2}">Tell us what you think, get another month</h2><p style="${p}">Give Unvibe some stars and a few honest words (up to 100). Do it from this link and we add <b>another free month of Pro</b> to this email. More deals are coming for people who help early.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
 <tr><td style="padding:6px 28px 28px">
 <p style="${p}">Thank you so much. Seriously. Reply to this email any time, it comes straight to me.</p>
@@ -102,8 +103,8 @@ Your app account already starts with a free month of Pro. See Pro: ${l.pro}
 
 YOUR INVITE LINK
 ${l.referral}
-When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.
-Your Pro months: ${l.rewards}
+Send this link to a friend so they can get Unvibe. ${GIFT_CODE_HOME}
+${GIFT_OFFER}
 
 TELL US WHAT YOU THINK, GET ANOTHER MONTH
 Stars and a few honest words (up to 100). Do it from this link and we add another free month of Pro. More deals are coming for people who help early.

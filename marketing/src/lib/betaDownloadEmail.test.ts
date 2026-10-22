@@ -19,7 +19,8 @@ describe("beta waitlist invite email", () => {
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
     assert.match(text, /1 week of Pro/);
-    assert.match(text, /you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
+    assert.match(text, /When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
+    assert.doesNotMatch(text + betaInviteHtml("Ohm", UNSUBSCRIBE), /joins with your link|Waitlist gifts/);
     assert.doesNotMatch(text, /[—–]/);
     assert.doesNotMatch(betaInviteHtml("Ohm", UNSUBSCRIBE), /[—–]/);
   });
@@ -34,11 +35,10 @@ describe("beta download email", () => {
   const input = {
     firstName: "Test User",
     macDownloadUrl: "https://example.com/unvibe.zip",
-    referralCode: "AB12CD34",
     unsubscribeUrl: UNSUBSCRIBE,
   };
 
-  it("contains curl, the real download, feedback, and referral rule", () => {
+  it("contains curl, the real download, feedback, and the gift rule", () => {
     const text = betaDownloadText(input);
     assert.match(text, /https:\/\/example\.com\/unvibe\.zip/);
     assert.match(text, new RegExp(BETA_CURL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -46,8 +46,8 @@ describe("beta download email", () => {
     assert.match(text, /unvibe\.site\/feedback/);
     assert.doesNotMatch(text, /typeform/);
     assert.match(text, /1 week of Pro/);
-    assert.match(text, /you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
-    assert.match(text, /AB12CD34/);
+    assert.match(text, /When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./);
+    assert.doesNotMatch(text + betaDownloadHtml(input), /joins with your link|Waitlist gifts|referral code/);
     assert.doesNotMatch(text, /\$25/);
     assert.doesNotMatch(text, /[—–]/);
     assert.match(text, /Unsubscribe: https:\/\/unvibe\.site\/api\/unsubscribe/);

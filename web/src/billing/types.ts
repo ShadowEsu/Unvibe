@@ -169,5 +169,4 @@ export interface BillingStore {
   failWebhook(eventId: string, message: string): Promise<void>;
   recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata?: Record<string, unknown>): Promise<void>;
   deleteUserBilling(userId: string): Promise<void>;
-  grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }>;
 }

@@ -1,4 +1,3 @@
-import { applyGiftsForEmail } from '@/billing/gifts';
 import { getStore } from '@/data/store';
 import { withSessionCookie } from '@/lib/auth';
 
@@ -23,6 +22,5 @@ export async function POST(req: Request): Promise<Response> {
   if (!result) {
     return Response.json({ error: 'An account with this email already exists. Sign in instead.' }, { status: 409 });
   }
-  if (result.email) await applyGiftsForEmail(result.email);
   return withSessionCookie(Response.json(result), result.token, req);
 }
