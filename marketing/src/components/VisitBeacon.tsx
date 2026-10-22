@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 const ANON_KEY = "unvibe_anon_id";
 
@@ -31,7 +32,7 @@ function anonId(): string {
 /** Anonymous page-view beacon for founder stats.html — no PII, no code. */
 export function VisitBeacon() {
   useEffect(() => {
-    if (shouldSkip(window.location.pathname)) return;
+    if (shouldSkip(window.location.pathname) || browserTrackingDisabled()) return;
     const visitorId = anonId();
     void fetch("/api/stats/hit", {
       method: "POST",
