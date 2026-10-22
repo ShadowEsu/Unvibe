@@ -1,7 +1,6 @@
 import {
   INSTAGRAM_URL,
   LINKEDIN_URL,
-  SOCIAL_FOLLOWERS,
   SUPPORT_EMAIL,
   TIKTOK_URL,
   X_URL,
@@ -155,28 +154,20 @@ export function SocialFollowLinks({ includeMail = false, className = "paper-foot
   );
 }
 
-export function GrowthFollowSum() {
+export function GrowthFollowLinks() {
   return (
     <div className="paper-keys-stage">
-      <div className="paper-follow" aria-label={`${SOCIAL_FOLLOWERS} followers across LinkedIn, Instagram, and TikTok`}>
-        {followSum.map((profile, index) => {
+      <div className="paper-follow">
+        {followSum.map((profile) => {
           const Mark = profile.Mark;
           return (
-            <span key={profile.name} className="paper-follow__item">
-              {index > 0 ? <span className="paper-keys__plus" aria-hidden="true">+</span> : null}
-              <a className="paper-follow__mark" href={profile.href} target="_blank" rel="noopener noreferrer" aria-label={`Unvibe on ${profile.name}`}>
-                <Mark />
-              </a>
-            </span>
+            <a key={profile.name} className="paper-follow__mark" href={profile.href} target="_blank" rel="noopener noreferrer" aria-label={`Unvibe on ${profile.name}`}>
+              <Mark />
+            </a>
           );
         })}
-        <span className="paper-keys__plus" aria-hidden="true">=</span>
-        <div className="paper-follow__total">
-          <strong>{SOCIAL_FOLLOWERS}</strong>
-          <span>followers</span>
-        </div>
       </div>
-      <p className="paper-caption">Followers across Instagram, TikTok and LinkedIn.</p>
+      <p className="paper-caption">Follow the build on LinkedIn, Instagram and TikTok.</p>
     </div>
   );
 }

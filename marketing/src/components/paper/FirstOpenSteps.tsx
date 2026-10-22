@@ -5,8 +5,6 @@ import { BETA_INSTALL_COMMAND, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOf
 
 type Os = "mac" | "windows";
 
-const REPAIR = "xattr -cr /Applications/Unvibe.app && codesign --force --deep --sign - /Applications/Unvibe.app && open /Applications/Unvibe.app";
-
 function Copy({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false);
   return (
@@ -64,8 +62,7 @@ export function FirstOpenSteps({ initialOs = "mac", compact = false }: { initial
 
           <section className="fos__card">
             <p className="fos__tag">If it says &ldquo;damaged&rdquo;</p>
-            <p>That was a bug in older downloads. Get the newest one, or paste this in Terminal to fix the copy you have:</p>
-            <Copy text={REPAIR} label="repair command" />
+            <p>That was a bug in older downloads. Delete Unvibe from Applications, then get the newest one with the Terminal line above.</p>
             <p className="fos__note">Using an older Intel Mac? Make sure you downloaded the Intel build. The Terminal line above picks it for you.</p>
           </section>
         </>
@@ -74,7 +71,7 @@ export function FirstOpenSteps({ initialOs = "mac", compact = false }: { initial
           <section className="fos__card fos__card--fast">
             <p className="fos__tag">Fastest</p>
             <h3>Paste one line in PowerShell</h3>
-            <p>Open Windows PowerShell (Start, type PowerShell), paste this, press Enter.</p>
+            <p>Open Windows PowerShell (Start, type PowerShell), paste this, press Enter. It installs Unvibe, adds it to your Start menu and opens it.</p>
             <Copy text={BETA_WINDOWS_INSTALL_COMMAND} label="install command" />
           </section>
           <section className="fos__card">

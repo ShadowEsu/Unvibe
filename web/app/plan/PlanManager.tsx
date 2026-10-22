@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BillingInterval, WorkspaceAccess, WorkspaceInvitation, WorkspaceMember } from '@/billing/types';
 import type { PublicBillingOverview as BillingOverview } from '@/billing/presentation';
+import { priceFor, TEAMS_MAX_SEATS } from '@/billing/plans';
 
 interface Props {
   initialOverview: BillingOverview;
   initialWorkspaces: WorkspaceAccess[];
   checkoutAvailable: boolean;
   lifetimeAvailable: boolean;
+  paymentsOpen: boolean;
 }
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -21,7 +23,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvailable, lifetimeAvailable }: Props) {
+export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvailable, lifetimeAvailable, paymentsOpen }: Props) {
   const [overview, setOverview] = useState(initialOverview);
   const [workspaces, setWorkspaces] = useState(initialWorkspaces);
   const [interval, setInterval] = useState<Exclude<BillingInterval, 'lifetime'>>('monthly');
@@ -206,7 +208,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
       </header>
 
       {notice && <p className="plan-notice" role="status">{notice}</p>}
-      {!checkoutAvailable && <p className="plan-notice plan-notice--quiet">Checkout is safely disabled until the server has Stripe keys, Pro price IDs, and a webhook secret.</p>}
+      {!checkoutAvailable && <p className="plan-notice plan-notice--quiet">{paymentsOpen ? 'Checkout is safely disabled until the server has Stripe keys, Pro price IDs, and a webhook secret.' : 'Payments open soon. Your Free plan keeps working until then.'}</p>}
 
       <section className="current-plan">
         <div><span>Current plan</span><strong>{overview.subscription.plan === 'teams' ? 'Teams' : overview.subscription.plan === 'pro' ? 'Pro' : 'Free'}</strong></div>
@@ -229,14 +231,16 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
           <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>100 AI explanations/month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Upgrade to Pro</button></article>
         </section>
 
-        <section className="plan-card plan-lifetime-band">
-          <div>
-            <p>Pro Lifetime</p>
-            <h2>$80</h2>
-            <small>One-time. Personal Pro forever. No monthly bill.</small>
-          </div>
-          <button className="btn btn--primary" type="button" onClick={() => void checkout('lifetime')} disabled={busy || !lifetimeAvailable || overview.workspace.type !== 'personal'}>{lifetimeAvailable ? 'Buy Lifetime · $80' : 'Lifetime soon'}</button>
-        </section>
+        {lifetimeAvailable && (
+          <section className="plan-card plan-lifetime-band">
+            <div>
+              <p>Pro Lifetime</p>
+              <h2>$80</h2>
+              <small>One-time. Personal Pro forever. No monthly bill.</small>
+            </div>
+            <button className="btn btn--primary" type="button" onClick={() => void checkout('lifetime')} disabled={busy || overview.workspace.type !== 'personal'}>Buy Lifetime · $80</button>
+          </section>
+        )}
 
         <section className="plan-card plan-teams-band">
           <div>
@@ -263,7 +267,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
       {overview.workspace.type === 'team' && <section className="team-panel">
         <h2>Team workspace</h2>
         <p>{overview.occupiedSeats} occupied · {overview.pendingInvitations} pending · {Math.max(0, overview.subscription.seats - overview.occupiedSeats - overview.pendingInvitations)} available · {overview.subscription.seats} seats</p>
-        {overview.canManageBilling && overview.subscription.plan === 'teams' && <div className="seat-editor"><label>Paid seats<input type="number" min={overview.minimumBillableSeats} max={500} value={teamSeats} onChange={(event) => setTeamSeats(Number(event.target.value))} /></label><div><small>Estimated recurring total</small><strong>{overview.subscription.interval === 'annual' ? `${money.format(96 * teamSeats)}/year` : `${money.format(8 * teamSeats)}/month`}</strong></div><button className="btn btn--secondary" onClick={() => void updateSeats()} disabled={busy}>Update seats</button></div>}
+        {overview.canManageBilling && overview.subscription.plan === 'teams' && <div className="seat-editor"><label>Paid seats<input type="number" min={overview.minimumBillableSeats} max={TEAMS_MAX_SEATS} value={teamSeats} onChange={(event) => setTeamSeats(Number(event.target.value))} /></label><div><small>Estimated recurring total</small><strong>{overview.subscription.interval === 'annual' ? `${money.format(priceFor('teams', 'annual', teamSeats) / 100)}/year` : `${money.format(priceFor('teams', 'monthly', teamSeats) / 100)}/month`}</strong></div><button className="btn btn--secondary" onClick={() => void updateSeats()} disabled={busy}>Update seats</button></div>}
         <h3>Members</h3>
         <div className="member-list">{members.map((member) => <div className="member-row" key={member.userId}><span>{member.email ?? member.userId}</span><strong>{member.role}</strong>{overview.workspace.role === 'owner' && member.role !== 'owner' && <><select value={member.role} onChange={(event) => void updateRole(member.userId, event.target.value as 'admin' | 'member')}><option value="member">Member</option><option value="admin">Admin</option></select><button onClick={() => void removeMember(member.userId)}>Remove</button></>}</div>)}</div>
         {overview.canManageMembers && <><h3>Invite someone</h3><p className="plan-help">Invitations reserve seats. Share the secure link with the invited person.</p><div className="invite-form"><input type="email" placeholder="coder@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} /><select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as 'admin' | 'member')}><option value="member">Member</option><option value="admin">Admin</option></select><button className="btn btn--primary" onClick={() => void invite()} disabled={busy || !inviteEmail}>Create invite</button></div>{lastInviteUrl && <div className="invite-link"><input readOnly value={lastInviteUrl} /><button onClick={() => void navigator.clipboard.writeText(lastInviteUrl)}>Copy</button></div>}<div className="invitation-list">{invitations.filter((inviteItem) => inviteItem.status === 'pending').map((inviteItem) => <p key={inviteItem.id}>{inviteItem.email} · {inviteItem.role} · expires {new Date(inviteItem.expiresAt).toLocaleDateString()} <button onClick={() => void revokeInvite(inviteItem.id)}>Revoke</button></p>)}</div></>}

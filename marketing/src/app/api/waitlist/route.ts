@@ -63,8 +63,8 @@ export async function POST(req: Request) {
   }
   const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
-  // Stored as the friend's code; a typed email the list does not know yet is kept as is and
-  // the database resolves it (it also accepts app accounts that never used the waitlist).
+  // Stored as the friend's code, for attribution only (it grants nothing). A typed email is
+  // resolved to that waitlister's code when the list knows it.
   const referredBy = referralInput?.includes("@")
     ? (await referralCodeForEmail(referralInput).catch(() => undefined)) ?? referralInput.toLowerCase()
     : referralInput?.toLowerCase() || undefined;

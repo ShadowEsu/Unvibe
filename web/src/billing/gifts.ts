@@ -1,22 +1,54 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getStore } from '@/data/store';
-import { getBillingStore } from './store';
+import { MemoryBillingStore } from './memoryBillingStore';
+
+/**
+ * Gift months: a signed-in friend enters a giver's code and both accounts get a month of Pro.
+ *
+ * - The code is HMAC-SHA256(GIFT_CODE_SECRET, giver email), so only the server can issue it.
+ *   It is issued (and registered against the giver's account) when the giver opens their
+ *   Share page in the app. Without the secret, gifts are off.
+ * - The receiver is always the signed-in caller. Both sides are existing accounts.
+ * - One gift received per account, five friends per giver, months stack up to 12 ahead,
+ *   and an active paid subscription is never changed. In production the SQL `claim_gift`
+ *   enforces this atomically; the memory backend below mirrors it for dev and tests.
+ */
 
 export const MAX_GIFTS = 5;
-export const GIFT_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export const GIFT_CODE_LENGTH = 16;
+const MIN_SECRET_LENGTH = 32;
+const CODE_RE = /^[A-Za-z0-9_-]{16}$/;
 
-export interface GiftClaim {
-  id: string;
-  giverEmail: string;
-  receiverEmail: string;
-  promoCode: string;
-  createdAt: string;
+export type GiftErrorCode =
+  | 'gifts_disabled'
+  | 'email_required'
+  | 'invalid_code'
+  | 'unknown_code'
+  | 'self_gift'
+  | 'already_received'
+  | 'giver_full';
+
+const GIFT_ERRORS: Record<GiftErrorCode, { status: number; message: string }> = {
+  gifts_disabled: { status: 503, message: 'Gifts are not available right now.' },
+  email_required: { status: 400, message: 'Sign in with an email to use gifts.' },
+  invalid_code: { status: 400, message: 'That gift code does not look right. Copy it again from your friend.' },
+  unknown_code: { status: 400, message: 'That gift code was not found. Ask your friend to copy it again from Unvibe.' },
+  self_gift: { status: 400, message: 'You cannot use your own gift code.' },
+  already_received: { status: 409, message: 'This account already received a gift.' },
+  giver_full: { status: 409, message: 'Your friend has already shared all five gifts.' },
+};
+
+export class GiftError extends Error {
+  readonly status: number;
+
+  constructor(readonly code: GiftErrorCode) {
+    super(GIFT_ERRORS[code].message);
+    this.status = GIFT_ERRORS[code].status;
+  }
 }
 
 export interface GiftProgress {
-  found: boolean;
   code: string;
   joined: number;
   used: number;
@@ -26,150 +58,165 @@ export interface GiftProgress {
   shareUrl: string;
 }
 
+type ClaimOutcome =
+  | { status: 'ok'; giverApplied: boolean; receiverApplied: boolean }
+  | { status: Exclude<GiftErrorCode, 'gifts_disabled' | 'invalid_code'> };
+
+interface GiftBackend {
+  registerCode(userId: string, code: string): Promise<void>;
+  codeOwner(code: string): Promise<string | null>;
+  giftsGiven(giverEmail: string): Promise<number>;
+  claim(giverUserId: string, receiverUserId: string, code: string): Promise<ClaimOutcome>;
+}
+
+/** Gifts stay off (503) unless GIFT_CODE_SECRET is set and long enough to be a real secret. */
+function requireSecret(): string {
+  const secret = process.env.GIFT_CODE_SECRET?.trim();
+  if (!secret || secret.length < MIN_SECRET_LENGTH) throw new GiftError('gifts_disabled');
+  return secret;
+}
+
+export function giftCodeForEmail(email: string, secret: string): string {
+  return createHmac('sha256', secret).update(email.trim().toLowerCase()).digest('base64url').slice(0, GIFT_CODE_LENGTH);
+}
+
+async function accountEmail(userId: string): Promise<string> {
+  return ((await getStore().accountInfo(userId)).email ?? '').trim().toLowerCase();
+}
+
+interface GiftRedemption {
+  id: string;
+  giverUserId: string | null;
+  receiverUserId: string | null;
+  giverEmail: string;
+  receiverEmail: string;
+  code: string;
+  createdAt: string;
+}
+
 interface GiftMemory {
-  claims: GiftClaim[];
+  codes: Map<string, string>;
+  redemptions: GiftRedemption[];
+  lock: Promise<unknown>;
 }
 
 function memory(): GiftMemory {
-  const g = globalThis as unknown as { __unvibeGiftClaims?: GiftMemory };
-  g.__unvibeGiftClaims ??= { claims: [] };
-  return g.__unvibeGiftClaims;
+  const g = globalThis as unknown as { __unvibeGifts?: GiftMemory };
+  g.__unvibeGifts ??= { codes: new Map(), redemptions: [], lock: Promise.resolve() };
+  return g.__unvibeGifts;
 }
 
-function supabase(): SupabaseClient | null {
+/** Dev and test mirror of the SQL `claim_gift`; same checks in the same order. */
+const memoryBackend: GiftBackend = {
+  async registerCode(userId, code) {
+    const codes = memory().codes;
+    for (const [existing, owner] of codes) if (owner === userId) codes.delete(existing);
+    codes.set(code, userId);
+  },
+  async codeOwner(code) {
+    return memory().codes.get(code) ?? null;
+  },
+  async giftsGiven(giverEmail) {
+    return memory().redemptions.filter((row) => row.giverEmail === giverEmail).length;
+  },
+  async claim(giverUserId, receiverUserId, code) {
+    const data = memory();
+    const run = data.lock.then(async (): Promise<ClaimOutcome> => {
+      const receiver = await accountEmail(receiverUserId);
+      if (!receiver) return { status: 'email_required' };
+      const giver = data.codes.get(code) === giverUserId ? await accountEmail(giverUserId) : '';
+      if (!giver) return { status: 'unknown_code' };
+      if (giverUserId === receiverUserId || giver === receiver) return { status: 'self_gift' };
+      if (data.redemptions.some((row) => row.receiverEmail === receiver)) return { status: 'already_received' };
+      if (data.redemptions.filter((row) => row.giverEmail === giver).length >= MAX_GIFTS) return { status: 'giver_full' };
+      const billing = new MemoryBillingStore();
+      const applied = new Map<string, boolean>();
+      for (const userId of [giverUserId, receiverUserId].sort()) applied.set(userId, (await billing.addProMonths(userId, 1)).applied);
+      data.redemptions.push({
+        id: randomUUID(), giverUserId, receiverUserId, giverEmail: giver, receiverEmail: receiver, code,
+        createdAt: new Date().toISOString(),
+      });
+      return { status: 'ok', giverApplied: applied.get(giverUserId) === true, receiverApplied: applied.get(receiverUserId) === true };
+    });
+    data.lock = run.catch(() => undefined);
+    return run;
+  },
+};
+
+function supabaseBackend(db: SupabaseClient): GiftBackend {
+  return {
+    async registerCode(userId, code) {
+      const { error } = await db.from('gift_codes').upsert({ user_id: userId, code }, { onConflict: 'user_id' });
+      if (error) throw new Error(`Could not save gift code: ${error.message}`);
+    },
+    async codeOwner(code) {
+      const { data, error } = await db.from('gift_codes').select('user_id').eq('code', code).maybeSingle();
+      if (error) throw new Error(`Could not look up gift code: ${error.message}`);
+      return typeof data?.user_id === 'string' ? data.user_id : null;
+    },
+    async giftsGiven(giverEmail) {
+      const { count, error } = await db.from('gift_redemptions').select('id', { count: 'exact', head: true }).eq('giver_email', giverEmail);
+      if (error) throw new Error(`Could not count gifts: ${error.message}`);
+      return count ?? 0;
+    },
+    async claim(giverUserId, receiverUserId, code) {
+      const { data, error } = await db.rpc('claim_gift', { p_giver_id: giverUserId, p_receiver_id: receiverUserId, p_code: code });
+      if (error) throw new Error(`Could not claim gift: ${error.message}`);
+      const row = (data ?? {}) as { status?: string; giver_applied?: boolean; receiver_applied?: boolean };
+      if (row.status === 'ok') return { status: 'ok', giverApplied: row.giver_applied === true, receiverApplied: row.receiver_applied === true };
+      if (row.status === 'email_required' || row.status === 'unknown_code' || row.status === 'self_gift'
+        || row.status === 'already_received' || row.status === 'giver_full') {
+        return { status: row.status };
+      }
+      throw new Error(`Unexpected gift claim result: ${String(row.status)}`);
+    },
+  };
+}
+
+function giftBackend(): GiftBackend {
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  if (!url || !key) return memoryBackend;
+  return supabaseBackend(createClient(url, key, { auth: { persistSession: false } }));
 }
 
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-/** Same 8-character code the waitlist uses: first 8 hex chars of sha256(email). */
-export function specialCharForEmail(email: string): string {
-  return createHash('sha256').update(normalizeEmail(email)).digest('hex').slice(0, 8);
-}
-
-export function waitlistOrigin(): string {
-  return (process.env.WAITLIST_PUBLIC_URL?.trim() || 'https://unvibe.site').replace(/\/$/, '');
-}
-
-export function giftShareUrl(code: string, giverEmail?: string): string {
-  const base = `${waitlistOrigin()}/?ref=${encodeURIComponent(code)}`;
-  if (!giverEmail) return base;
-  return `${base}&from=${encodeURIComponent(normalizeEmail(giverEmail))}`;
-}
-
-async function listClaims(): Promise<GiftClaim[]> {
-  const db = supabase();
-  if (!db) return memory().claims;
-  const { data, error } = await db.from('gift_claims').select('id,giver_email,receiver_email,promo_code,created_at');
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
-    giverEmail: String(row.giver_email),
-    receiverEmail: String(row.receiver_email),
-    promoCode: String(row.promo_code),
-    createdAt: String(row.created_at),
-  }));
-}
-
-async function insertClaim(claim: GiftClaim): Promise<void> {
-  const db = supabase();
-  if (!db) {
-    memory().claims.push(claim);
-    return;
-  }
-  const { error } = await db.from('gift_claims').insert({
-    id: claim.id,
-    giver_email: claim.giverEmail,
-    receiver_email: claim.receiverEmail,
-    promo_code: claim.promoCode,
-    created_at: claim.createdAt,
-  });
-  if (error) {
-    if (error.code === '23505') throw new Error('This gift was already claimed.');
-    throw new Error(error.message);
-  }
-}
-
-async function grantIfAccount(email: string, endsAt: string): Promise<boolean> {
-  const userId = await getStore().userIdForEmail(email);
-  if (!userId) return false;
-  const result = await getBillingStore().grantGiftMonth(userId, endsAt);
-  return result.applied;
-}
-
-export async function giftProgressForCode(code: string, giverEmail?: string): Promise<GiftProgress> {
-  const normalized = code.trim().toLowerCase();
-  const claims = await listClaims();
-  const joined = claims.filter((claim) => claim.promoCode === normalized).length;
+/** The signed-in giver's code, share link and count. Issuing the code registers it. */
+export async function giftProgressForUser(userId: string): Promise<GiftProgress> {
+  const secret = requireSecret();
+  const email = await accountEmail(userId);
+  if (!email) throw new GiftError('email_required');
+  const code = giftCodeForEmail(email, secret);
+  const backend = giftBackend();
+  await backend.registerCode(userId, code);
+  const used = Math.min(MAX_GIFTS, await backend.giftsGiven(email));
   return {
-    found: joined > 0 || normalized.length === 8,
-    code: normalized,
-    joined,
-    used: joined,
-    remaining: Math.max(0, MAX_GIFTS - joined),
+    code,
+    joined: used,
+    used,
+    remaining: MAX_GIFTS - used,
     max: MAX_GIFTS,
     limit: MAX_GIFTS,
-    shareUrl: giftShareUrl(normalized, giverEmail),
+    shareUrl: `${(process.env.WAITLIST_PUBLIC_URL?.trim() || 'https://unvibe.site').replace(/\/$/, '')}/?ref=${encodeURIComponent(code)}`,
   };
 }
 
-export async function giftProgressForEmail(email: string): Promise<GiftProgress> {
-  return giftProgressForCode(specialCharForEmail(email), email);
-}
-
-export async function applyGiftsForEmail(email: string, now = new Date()): Promise<number> {
-  const normalized = normalizeEmail(email);
-  const claims = await listClaims();
-  let applied = 0;
-  for (const claim of claims) {
-    if (claim.giverEmail !== normalized && claim.receiverEmail !== normalized) continue;
-    const endsAt = new Date(new Date(claim.createdAt).getTime() + GIFT_MONTH_MS);
-    if (endsAt <= now) continue;
-    if (await grantIfAccount(normalized, endsAt.toISOString())) applied += 1;
-  }
-  return applied;
-}
-
-export async function claimGift(input: {
-  giverEmail?: unknown;
-  receiverEmail?: unknown;
-  recipientEmail?: unknown;
-  promoCode?: unknown;
-}, now = new Date()): Promise<{ ok: true; progress: GiftProgress; granted: { giver: boolean; receiver: boolean } }> {
-  const giverEmail = typeof input.giverEmail === 'string' ? normalizeEmail(input.giverEmail) : '';
-  const receiverRaw = typeof input.receiverEmail === 'string' ? input.receiverEmail
-    : typeof input.recipientEmail === 'string' ? input.recipientEmail
-    : '';
-  const receiverEmail = normalizeEmail(receiverRaw);
-  const promoCode = typeof input.promoCode === 'string' ? input.promoCode.trim().toLowerCase() : '';
-  if (!EMAIL_RE.test(giverEmail) || !EMAIL_RE.test(receiverEmail)) {
-    throw new Error('Friend email and your email are both required.');
-  }
-  if (giverEmail === receiverEmail) throw new Error('You cannot gift Unvibe to the same email.');
-  if (promoCode !== specialCharForEmail(giverEmail)) {
-    throw new Error('That SPECIAL CHAR does not match the friend email. Ask them to copy the code from Gift Unvibe.');
-  }
-  const claims = await listClaims();
-  if (claims.some((claim) => claim.giverEmail === giverEmail && claim.receiverEmail === receiverEmail)) {
-    throw new Error('This gift was already claimed.');
-  }
-  const used = claims.filter((claim) => claim.giverEmail === giverEmail).length;
-  if (used >= MAX_GIFTS) throw new Error('This giver has already used all five gifts.');
-  const claim: GiftClaim = {
-    id: randomUUID(),
-    giverEmail,
-    receiverEmail,
-    promoCode,
-    createdAt: now.toISOString(),
-  };
-  await insertClaim(claim);
-  const endsAt = new Date(now.getTime() + GIFT_MONTH_MS).toISOString();
-  const giver = await grantIfAccount(giverEmail, endsAt);
-  const receiver = await grantIfAccount(receiverEmail, endsAt);
-  return { ok: true, progress: await giftProgressForCode(promoCode), granted: { giver, receiver } };
+/**
+ * The signed-in receiver redeems a giver's code. The code alone identifies the giver; any
+ * email in the request is ignored. Returns whether the receiver's month was added (false
+ * when the receiver has an active paid subscription, which a gift never changes).
+ */
+export async function claimGift(receiverUserId: string, rawCode: unknown): Promise<{ monthAdded: boolean }> {
+  const secret = requireSecret();
+  const code = typeof rawCode === 'string' ? rawCode.trim() : '';
+  if (!CODE_RE.test(code)) throw new GiftError('invalid_code');
+  const backend = giftBackend();
+  const giverUserId = await backend.codeOwner(code);
+  const giverEmail = giverUserId ? await accountEmail(giverUserId) : '';
+  // Both sides are exactly GIFT_CODE_LENGTH ASCII characters here, so the buffers match in length.
+  const genuine = giverEmail !== ''
+    && timingSafeEqual(Buffer.from(code), Buffer.from(giftCodeForEmail(giverEmail, secret)));
+  if (!giverUserId || !genuine) throw new GiftError('unknown_code');
+  const outcome = await backend.claim(giverUserId, receiverUserId, code);
+  if (outcome.status !== 'ok') throw new GiftError(outcome.status);
+  return { monthAdded: outcome.receiverApplied };
 }

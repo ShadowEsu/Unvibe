@@ -4,15 +4,15 @@ import { useEffect, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
-import { markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
+import { GIFT_CODE, markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
 
 export const DOWNLOADED_EVENT = "unvibe:downloaded";
 
 const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 
 /**
- * One small email ask. Opens when a friend's invite link brings you here (a qualifying referral
- * gives you both a month of Pro) or right after a download click (setup guide plus a nudge tomorrow).
+ * One small email ask. Opens when a friend's invite link brings you here (with an app gift code,
+ * it tells you where to enter it) or right after a download click (setup guide plus a nudge tomorrow).
  */
 export function ReminderToast() {
   const pathname = usePathname() ?? "/";
@@ -48,6 +48,7 @@ export function ReminderToast() {
 
   if (mode === "closed") return null;
   const invited = Boolean(ref) && !refUsed();
+  const giftCode = GIFT_CODE.test(ref) && (invited || mode === "invited") ? ref : "";
 
   const close = () => {
     if (mode === "invited") markRefUsed();
@@ -82,18 +83,20 @@ export function ReminderToast() {
       <button type="button" className="remind__close" aria-label="No thanks" onClick={close}>×</button>
       {state === "done" ? (
         <p className="remind__done">
-          {invited ? <>Thanks! If the referral qualifies, a month of Pro waits for you <em>and your friend.</em></> : <>Sent! Check your inbox. <em>Have fun.</em></>}
+          {giftCode ? <>Sent! After you sign in to the app, enter <b>{giftCode}</b> on the Share page. <em>A month of Pro each.</em></> : <>Sent! Check your inbox. <em>Have fun.</em></>}
         </p>
       ) : (
         <form onSubmit={submit}>
-          {invited ? (
-            <p><b>A friend invited you.</b> If your email is new to Unvibe, you each get <em>a month of Pro</em> (up to five friends per link). Use the same email when you sign in to the app.</p>
+          {giftCode ? (
+            <p><b>A friend invited you.</b> Sign in to the Unvibe app and enter <b>{giftCode}</b> on the Share page. You each get <em>a month of Pro</em>. Want the download link by email?</p>
+          ) : invited ? (
+            <p><b>A friend invited you.</b> Want the download link and setup guide by email?</p>
           ) : (
             <p><b>Downloading!</b> First time opening it? <a href="/install-help">See the one extra click</a>. Want the setup guide and a nudge tomorrow too?</p>
           )}
           <div className="remind__row">
             <input type="email" required maxLength={240} autoComplete="email" placeholder="you@example.com" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <button type="submit" disabled={state === "sending"}>{state === "sending" ? "…" : invited ? "Claim it" : "Send it"}</button>
+            <button type="submit" disabled={state === "sending"}>{state === "sending" ? "…" : "Send it"}</button>
           </div>
           {error ? <p className="remind__error" role="alert">{error}</p> : null}
         </form>

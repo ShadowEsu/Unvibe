@@ -14,8 +14,9 @@ const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/downlo
 const schema = z.object({
   firstName: z.string().trim().max(80).optional().default(""),
   email: z.string().trim().email().max(240),
-  // A friend's 8 character code from their ?ref= link. The database grants both people Pro.
-  referredBy: z.string().trim().toLowerCase().regex(/^([a-f0-9]{8})?$/).optional().default(""),
+  // The friend's code from their ?ref= link (app gift code or legacy waitlist code). Kept for
+  // attribution only: Pro months come from entering the gift code in the signed-in app.
+  referredBy: z.string().trim().regex(/^([a-f0-9]{8}|[A-Za-z0-9_-]{16})?$/).optional().default(""),
 });
 
 const RATE_LIMIT = { windowMs: 60_000, max: 6 };
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     emailMessageId: existing?.emailMessageId || delivery.messageId,
   };
   await saveBetaDownload(entry).catch((error) => console.error("beta download record failed", error));
-  // Everyone who downloads is on the waitlist too. A new row with a referral claims it.
+  // Everyone who downloads is on the waitlist too. referred_by is attribution only; it grants nothing.
   await saveWaitlistEntry({
     firstName: parsed.data.firstName,
     lastName: "",

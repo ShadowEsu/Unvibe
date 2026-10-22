@@ -145,6 +145,7 @@ const api = {
   billingOverview: () => ipcRenderer.invoke('billing:overview'),
   usageGet: () => ipcRenderer.invoke('usage:get'),
   giftStatus: () => ipcRenderer.invoke('gift:status'),
+  giftClaim: (codeOrLink: string) => ipcRenderer.invoke('gift:claim', codeOrLink) as Promise<{ ok: boolean; monthAdded?: boolean; error?: string }>,
   updateCheck: () => ipcRenderer.invoke('update:check'),
   updateInstall: () => ipcRenderer.invoke('update:install'),
   onUpdateAvailable: (cb: (info: { latest?: string; current: string }) => void) => {

@@ -4,6 +4,7 @@ import {
   TRY_ALLOWED_ORIGINS,
   TRY_GLOBAL_PER_DAY,
   TRY_PER_IP_PER_HOUR,
+  clientIp,
   hashVisitor,
   trySystemPrompt,
   validateTry,
@@ -65,8 +66,7 @@ export async function POST(req: Request): Promise<Response> {
   // Never pass off mock output as a real explanation.
   if (provider.mock) return Response.json({ error: 'The live demo is resting right now. Download Unvibe to try it on your code.' }, { status: 503, headers });
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'local';
-  const limited = await overLimit(hashVisitor(ip)).catch(() => null);
+  const limited = await overLimit(hashVisitor(clientIp(req))).catch(() => null);
   if (limited) return Response.json({ error: limited }, { status: 429, headers });
 
   try {

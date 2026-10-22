@@ -12,6 +12,8 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from './types';
+import { CHECKOUT_INTENT_TTL_MS, monthWindow } from './plans';
+import { CheckoutPendingError } from './checkoutPending';
 
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Persistent billing returned an invalid record.');
@@ -129,6 +131,29 @@ export class SupabaseBillingStore implements BillingStore {
     };
   }
 
+  /**
+   * Compare-and-swap decrement of this month's counter, so a concurrent reservation is never
+   * overwritten and the count never drops below zero. The usage_events audit row is kept.
+   */
+  async releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void> {
+    const { workspace } = await this.overview(userId, workspaceId);
+    const periodStart = monthWindow().startsAt.slice(0, 10);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { data, error } = await this.db.from('usage_monthly').select('used')
+        .eq('workspace_id', workspace.id).eq('kind', kind).eq('period_start', periodStart).maybeSingle();
+      this.require(error, 'read usage for release');
+      const used = Number(data?.used ?? 0);
+      if (used <= 0) return;
+      const { data: updated, error: updateError } = await this.db.from('usage_monthly')
+        .update({ used: used - 1, updated_at: new Date().toISOString() })
+        .eq('workspace_id', workspace.id).eq('kind', kind).eq('period_start', periodStart).eq('used', used)
+        .select('used');
+      this.require(updateError, 'release usage');
+      if (Array.isArray(updated) && updated.length > 0) return;
+    }
+    throw new Error('Persistent billing release usage failed: counter kept changing.');
+  }
+
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
     const { data, error } = await this.db.rpc('create_team_workspace', { p_user_id: userId, p_name: name.trim() });
     this.require(error, 'create team workspace');
@@ -196,9 +221,14 @@ export class SupabaseBillingStore implements BillingStore {
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {
+    // Stale intents (past CHECKOUT_INTENT_TTL_MS, their session no longer payable) must not hold the unique indexes.
+    const cutoff = new Date(Date.now() - CHECKOUT_INTENT_TTL_MS).toISOString();
+    const { error: expiryError } = await this.db.from('checkout_intents').update({ status: 'expired' }).eq('user_id', input.userId).eq('status', 'pending').lte('created_at', cutoff);
+    this.require(expiryError, 'expire stale checkouts');
     const { data, error } = await this.db.from('checkout_intents').insert({
       user_id: input.userId, workspace_id: input.workspaceId, plan: input.plan, interval: input.interval, seats: input.seats,
     }).select('*').single();
+    if (error?.code === '23505') throw new CheckoutPendingError();
     this.require(error, 'create checkout intent');
     const row = asObject(data);
     return {
@@ -210,7 +240,7 @@ export class SupabaseBillingStore implements BillingStore {
   }
 
   async pendingCheckout(userId: string, workspaceId: string): Promise<CheckoutIntentRecord | null> {
-    const cutoff = new Date(Date.now() - 30 * 60_000).toISOString();
+    const cutoff = new Date(Date.now() - CHECKOUT_INTENT_TTL_MS).toISOString();
     const { error: expiryError } = await this.db.from('checkout_intents').update({ status: 'expired' }).eq('user_id', userId).eq('workspace_id', workspaceId).eq('status', 'pending').lte('created_at', cutoff);
     this.require(expiryError, 'expire stale checkouts');
     const { data, error } = await this.db.from('checkout_intents').select('*').eq('user_id', userId).eq('workspace_id', workspaceId).eq('status', 'pending').gt('created_at', cutoff).order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -301,11 +331,5 @@ export class SupabaseBillingStore implements BillingStore {
   async deleteUserBilling(userId: string): Promise<void> {
     const { error } = await this.db.rpc('delete_user_billing_data', { p_user_id: userId });
     this.require(error, 'delete user billing data');
-  }
-
-  async grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }> {
-    const { data, error } = await this.db.rpc('grant_gift_month', { p_user_id: userId, p_ends_at: endsAt });
-    this.require(error, 'grant gift month');
-    return { applied: Boolean(data) };
   }
 }

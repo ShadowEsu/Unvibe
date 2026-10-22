@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { canManageBilling, canManageMembers, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit } from './plans';
+import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit } from './plans';
+import { CheckoutPendingError } from './checkoutPending';
 import type {
   BillingOverview,
   BillingStore,
@@ -21,7 +22,7 @@ interface MemoryBillingData {
   usage: Map<string, number>;
   invitations: Map<string, WorkspaceInvitation & { tokenHash: string }>;
   checkoutIntents: Map<string, CheckoutIntentRecord>;
-  webhooks: Map<string, 'processing' | 'completed' | 'failed'>;
+  webhooks: Map<string, { status: 'processing' | 'completed' | 'failed'; claimedAt: number }>;
   audits: Array<{ userId: string | null; workspaceId: string | null; action: string; metadata: Record<string, unknown>; at: string }>;
 }
 
@@ -32,6 +33,9 @@ function membershipKey(workspaceId: string, userId: string): string {
 function usageKey(workspaceId: string, kind: UsageKind, startsAt: string): string {
   return `${workspaceId}:${kind}:${startsAt}`;
 }
+
+/** A webhook claim is a lease; must match the 5 minutes in claim_billing_webhook (SQL). */
+const WEBHOOK_LEASE_MS = 5 * 60_000;
 
 function defaultSubscription(workspaceId: string): SubscriptionRecord {
   return {
@@ -138,6 +142,13 @@ export class MemoryBillingStore implements BillingStore {
     return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining - 1 } };
   }
 
+  async releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void> {
+    const workspace = await this.requireAccess(userId, workspaceId);
+    const key = usageKey(workspace.id, kind, monthWindow(this.now()).startsAt);
+    const used = this.data.usage.get(key) ?? 0;
+    if (used > 0) this.data.usage.set(key, used - 1);
+  }
+
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
     const id = randomUUID();
     const workspace = { id, name: name.trim(), type: 'team' as const, ownerUserId: userId };
@@ -216,13 +227,22 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {
+    // Mirrors the unique indexes on checkout_intents: one pending intent per workspace, and one
+    // pending Teams intent per owner. Stale intents are expired first, as in the Supabase store.
+    const cutoff = this.now().getTime() - CHECKOUT_INTENT_TTL_MS;
+    for (const other of this.data.checkoutIntents.values()) {
+      if (other.userId === input.userId && other.status === 'pending' && new Date(other.createdAt).getTime() <= cutoff) other.status = 'expired';
+    }
+    const clash = [...this.data.checkoutIntents.values()].some((other) => other.status === 'pending'
+      && (other.workspaceId === input.workspaceId || (input.plan === 'teams' && other.plan === 'teams' && other.userId === input.userId)));
+    if (clash) throw new CheckoutPendingError();
     const intent: CheckoutIntentRecord = { ...input, id: randomUUID(), status: 'pending', createdAt: this.now().toISOString() };
     this.data.checkoutIntents.set(intent.id, intent);
     return intent;
   }
 
   async pendingCheckout(userId: string, workspaceId: string): Promise<CheckoutIntentRecord | null> {
-    const cutoff = this.now().getTime() - 30 * 60_000;
+    const cutoff = this.now().getTime() - CHECKOUT_INTENT_TTL_MS;
     for (const intent of this.data.checkoutIntents.values()) {
       if (intent.userId === userId && intent.workspaceId === workspaceId && intent.status === 'pending' && new Date(intent.createdAt).getTime() <= cutoff) intent.status = 'expired';
     }
@@ -269,15 +289,21 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async claimWebhook(eventId: string, _eventType: string): Promise<boolean> {
-    const status = this.data.webhooks.get(eventId);
-    if (status === 'processing' || status === 'completed') return false;
-    this.data.webhooks.set(eventId, 'processing');
+    const prior = this.data.webhooks.get(eventId);
+    const now = this.now().getTime();
+    const leaseExpired = prior?.status === 'processing' && now - prior.claimedAt > WEBHOOK_LEASE_MS;
+    if (prior && prior.status !== 'failed' && !leaseExpired) return false;
+    this.data.webhooks.set(eventId, { status: 'processing', claimedAt: now });
     return true;
   }
 
-  async completeWebhook(eventId: string): Promise<void> { this.data.webhooks.set(eventId, 'completed'); }
+  async completeWebhook(eventId: string): Promise<void> {
+    this.data.webhooks.set(eventId, { status: 'completed', claimedAt: this.data.webhooks.get(eventId)?.claimedAt ?? this.now().getTime() });
+  }
 
-  async failWebhook(eventId: string, _message: string): Promise<void> { this.data.webhooks.set(eventId, 'failed'); }
+  async failWebhook(eventId: string, _message: string): Promise<void> {
+    this.data.webhooks.set(eventId, { status: 'failed', claimedAt: this.data.webhooks.get(eventId)?.claimedAt ?? this.now().getTime() });
+  }
 
   async recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
     this.data.audits.push({ userId, workspaceId, action, metadata, at: this.now().toISOString() });
@@ -295,24 +321,31 @@ export class MemoryBillingStore implements BillingStore {
     }
   }
 
-  async grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }> {
+  /**
+   * Dev mirror of the SQL `add_pro_months`: complimentary Pro months that stack on a running
+   * gift month, end at most 12 months from now, and never touch a live Stripe subscription.
+   */
+  async addProMonths(userId: string, months: number): Promise<{ applied: boolean }> {
+    if (!Number.isInteger(months) || months <= 0) return { applied: false };
     const workspace = await this.ensurePersonalWorkspace(userId);
     const current = this.data.subscriptions.get(workspace.id) ?? defaultSubscription(workspace.id);
-    if (current.stripeSubscriptionId && (current.status === 'active' || current.status === 'trialing')) {
+    if (current.stripeSubscriptionId && current.status !== 'canceled' && current.status !== 'inactive') {
       return { applied: false };
     }
     const now = this.now();
-    const requestedEnd = new Date(endsAt);
-    const existingEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : now;
-    const later = requestedEnd > existingEnd ? requestedEnd : existingEnd;
+    const runningEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : null;
+    const from = current.plan === 'pro' && current.status === 'trialing' && runningEnd && runningEnd > now ? runningEnd : now;
+    const cap = new Date(now);
+    cap.setUTCMonth(cap.getUTCMonth() + 12);
+    const stacked = new Date(from.getTime() + months * 30 * 24 * 60 * 60 * 1000);
     this.data.subscriptions.set(workspace.id, {
       ...current,
       plan: 'pro',
       interval: 'monthly',
       status: 'trialing',
       seats: 1,
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: later.toISOString(),
+      currentPeriodStart: from > now ? current.currentPeriodStart ?? now.toISOString() : now.toISOString(),
+      currentPeriodEnd: (stacked < cap ? stacked : cap).toISOString(),
     });
     return { applied: true };
   }

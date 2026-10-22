@@ -101,7 +101,7 @@ async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
-    if (res.status === 429) throw new Error(body.message ?? 'Your plan limit has been reached. Open Plan & usage to review options.');
+    if (res.status === 429 || res.status === 402) throw new Error(body.message ?? 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
     throw new Error(`The service could not complete that request (${res.status}).`);
@@ -121,8 +121,24 @@ export interface BillingOverview {
   hasBillingAccount: boolean;
 }
 
-export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean }> {
+export async function billingOverview(token: string): Promise<{ overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean; paymentsOpen?: boolean }> {
   return json(await request(`${BACKEND}/api/v1/billing/overview`, { headers: { authorization: `Bearer ${token}` } }));
+}
+
+export async function giftProgress(token: string): Promise<{ code: string; used: number; shareUrl: string }> {
+  return json(await request(`${BACKEND}/api/v1/gifts/mine`, { headers: { authorization: `Bearer ${token}` } }));
+}
+
+/** Redeem a friend's gift code for the signed-in account. 4xx answers carry a message for the person. */
+export async function claimGiftCode(token: string, code: string): Promise<{ monthAdded: boolean }> {
+  const res = await request(`${BACKEND}/api/v1/gifts/claim`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ code }),
+  });
+  if (res.status === 400 || res.status === 409) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? 'That gift code could not be used.');
+  }
+  return json(res);
 }
 
 export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
@@ -198,14 +214,32 @@ export async function signOut(token: string): Promise<void> {
   await json<{ ok: boolean }>(res);
 }
 
-/** Best-effort event sync. Returns the ids the backend accepted (for outbox clearing). */
+/**
+ * Best-effort event sync. Returns the ids the backend accepted (for outbox clearing).
+ * A 409 names event ids that already belong to a different account; the server refuses the whole
+ * batch, so send the rest once more and clear the refused ids too. They stay in local history but
+ * can never sync to this account, and keeping them queued would fail every future sync.
+ */
 export async function pushEvents(token: string, events: LocalEvent[]): Promise<string[]> {
   if (events.length === 0) return [];
-  const res = await request(`${BACKEND}/api/v1/events`, {
+  const post = (batch: LocalEvent[]) => request(`${BACKEND}/api/v1/events`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ events: events.map(forSync) }),
+    body: JSON.stringify({ events: batch.map(forSync) }),
   });
+  const res = await post(events);
+  if (res.status === 409) {
+    const body: unknown = await res.json().catch(() => null);
+    const refused = new Set(
+      body && typeof body === 'object' && 'eventIds' in body && Array.isArray(body.eventIds)
+        ? body.eventIds.filter((id): id is string => typeof id === 'string')
+        : [],
+    );
+    const rest = events.filter((e) => !refused.has(e.id));
+    if (refused.size === 0 || rest.length === events.length) throw new Error('The service refused these learning records.');
+    if (rest.length > 0) await json<{ ok: boolean }>(await post(rest));
+    return events.map((e) => e.id);
+  }
   await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);
 }

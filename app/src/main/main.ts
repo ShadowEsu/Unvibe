@@ -53,7 +53,7 @@ import {
 } from './review';
 import { store, type ChatThread } from './store';
 import { applyLoginItem, settings, type Settings } from './settings';
-import { capGiftUsed, giftCodeFromEmail, GIFT_LIMIT } from './gift';
+import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
@@ -68,7 +68,8 @@ import {
   billingOverview,
   startBillingCheckout,
   startBillingPortal,
-  resolveBackendUrl,
+  giftProgress,
+  claimGiftCode,
   type Account as BackendAccount,
   warmBackend,
   networkFetch,
@@ -1345,29 +1346,32 @@ app.whenReady().then(() => {
   setTimeout(announceUpdate, 8000);
   setInterval(announceUpdate, 60 * 60_000);
 
+  // The server issues the code (an HMAC only it can compute) and counts friends who used it.
   ipcMain.handle('gift:status', async () => {
     const email = store().account()?.email ?? null;
-    if (!email) {
-      return { ok: true, needsSignIn: true, code: '', used: 0, limit: GIFT_LIMIT, email: null };
+    const token = store().token();
+    if (!email || !token) {
+      return { ok: true, needsSignIn: true, code: '', shareUrl: '', used: 0, limit: GIFT_LIMIT, email: null };
     }
-    const code = giftCodeFromEmail(email);
-    let used = 0;
-    const urls = [
-      `${resolveBackendUrl()}/api/v1/gifts/progress/${code}`,
-      `https://unvibe.site/api/gifts/progress/${code}`,
-    ];
-    for (const url of urls) {
-      try {
-        const response = await fetch(url, { cache: 'no-store' });
-        if (!response.ok) continue;
-        const data = await response.json() as { used?: number };
-        used = capGiftUsed(Number(data.used) || 0);
-        break;
-      } catch {
-        /* try the next origin */
-      }
+    try {
+      const progress = await giftProgress(token);
+      return { ok: true, needsSignIn: false, code: progress.code, shareUrl: progress.shareUrl, used: capGiftUsed(progress.used), limit: GIFT_LIMIT, email };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : 'Your invite link could not load.';
+      return { ok: false, needsSignIn: false, code: '', shareUrl: '', used: 0, limit: GIFT_LIMIT, email, error };
     }
-    return { ok: true, needsSignIn: false, code, used, limit: GIFT_LIMIT, email };
+  });
+  ipcMain.handle('gift:claim', async (_e, input: string) => {
+    const token = store().token();
+    if (!token) return { ok: false, error: 'Sign in before using a gift code.' };
+    const code = giftCodeFromInput(String(input ?? ''));
+    if (!code) return { ok: false, error: 'Paste the code or the whole link your friend shared.' };
+    try {
+      const result = await claimGiftCode(token, code);
+      return { ok: true, monthAdded: result.monthAdded };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'The gift could not be used.' };
+    }
   });
   ipcMain.handle('ai:keyStatus', () => ({ ok: true, data: aiKeyStatus() }));
   ipcMain.handle('ai:setKey', (_e, key: string) => {

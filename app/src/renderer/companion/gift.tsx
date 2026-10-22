@@ -3,6 +3,8 @@ import { GoogleMark } from '../shared/googleMark';
 
 export function Gift() {
   const [code, setCode] = useState('');
+  const [link, setLink] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [used, setUsed] = useState(0);
   const [, setEmail] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
@@ -11,22 +13,26 @@ export function Gift() {
   const [deviceCode, setDeviceCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
   const [browserOpened, setBrowserOpened] = useState(true);
+  const [friendCode, setFriendCode] = useState('');
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimNote, setClaimNote] = useState('');
+  const [claimError, setClaimError] = useState('');
+
+  type GiftStatus = { ok?: boolean; needsSignIn?: boolean; code?: string; shareUrl?: string; used?: number; email?: string | null; error?: string };
+  const applyStatus = (status: GiftStatus, fallbackEmail?: string | null) => {
+    setNeedsSignIn(Boolean(status.needsSignIn));
+    setCode(status.code ?? '');
+    setLink(status.shareUrl ?? '');
+    setLoadError(status.ok === false ? status.error ?? 'Your invite link could not load.' : '');
+    setUsed(Math.min(5, Math.max(0, status.used ?? 0)));
+    setEmail(status.email ?? fallbackEmail ?? null);
+  };
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const result = await window.unvibe.giftStatus() as {
-        ok?: boolean;
-        needsSignIn?: boolean;
-        code?: string;
-        used?: number;
-        email?: string | null;
-      };
-      if (!alive) return;
-      setNeedsSignIn(Boolean(result?.needsSignIn) || !result?.code);
-      setCode(result?.code ?? '');
-      setUsed(Math.min(5, Math.max(0, result.used ?? 0)));
-      setEmail(result.email ?? null);
+      const result = await window.unvibe.giftStatus() as GiftStatus;
+      if (alive) applyStatus(result);
     };
     void load();
     const timer = window.setInterval(() => void load(), 30_000);
@@ -43,13 +49,7 @@ export function Gift() {
         setNeedsSignIn(false);
         setEmail(result.email);
         setSignInError('');
-        void window.unvibe.giftStatus().then((status) => {
-          const next = status as { code?: string; used?: number; email?: string | null; needsSignIn?: boolean };
-          setCode(next.code ?? '');
-          setUsed(Math.min(5, Math.max(0, next.used ?? 0)));
-          setEmail(next.email ?? result.email ?? null);
-          setNeedsSignIn(Boolean(next.needsSignIn) || !next.code);
-        });
+        void window.unvibe.giftStatus().then((status) => applyStatus(status as GiftStatus, result.email));
         return;
       }
       if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
@@ -80,9 +80,24 @@ export function Gift() {
     catch { setSignInError('Could not copy the sign-in link.'); }
   };
 
+  const claimFriendCode = async () => {
+    setClaimBusy(true);
+    setClaimError('');
+    setClaimNote('');
+    const result = await window.unvibe.giftClaim(friendCode);
+    setClaimBusy(false);
+    if (!result.ok) {
+      setClaimError(result.error ?? 'The gift could not be used.');
+      return;
+    }
+    setFriendCode('');
+    setClaimNote(result.monthAdded
+      ? 'Done. A month of Pro was added to your account. Thanks for joining your friend.'
+      : "Done. Your friend's code is applied. Your paid plan stays as it is, so no gift month was added to it.");
+  };
+
   const remaining = Math.max(0, 5 - used);
-  const link = code ? `https://unvibe.site/?ref=${code}` : '';
-  const message = `I've been using Unvibe to actually understand the code AI writes for me. It's free. If you join with my link using a new email, we each get a month of Pro: ${link}`;
+  const message = `I've been using Unvibe to actually understand the code AI writes for me. It's free. When you sign in to the Unvibe app and enter my code, we each get a month of Pro: ${link}`;
   const [linkCopied, setLinkCopied] = useState(false);
   const [msgCopied, setMsgCopied] = useState(false);
   const copyText = (text: string, done: (v: boolean) => void) => {
@@ -109,8 +124,8 @@ export function Gift() {
           <h1>Invite friends to Unvibe.</h1>
           <p>
             {needsSignIn
-              ? 'Sign in with Google first so your invite link is tied to you.'
-              : 'When a friend joins with your link using an email that has not been invited before, you each get a month of Pro. It counts for up to five friends and does not change a paid subscription.'}
+              ? 'Sign in with Google first so your invite code is tied to your account.'
+              : 'When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro. It counts for up to five friends, months stack up to 12 ahead, and it never changes an active paid subscription.'}
           </p>
         </div>
       </div>
@@ -135,16 +150,17 @@ export function Gift() {
           <section className="share-link" aria-label="Your invite link">
             <span className="share-link__label">Your invite link</span>
             <div className="share-link__row">
-              <code>{link || 'unvibe.site/?ref=········'}</code>
+              <code>{link || 'unvibe.site/?ref=················'}</code>
               <button type="button" className="act act--primary" onClick={() => copyText(link, setLinkCopied)} disabled={!link}>{linkCopied ? 'Copied!' : 'Copy link'}</button>
             </div>
+            {loadError ? <div className="field-err" role="alert">{loadError}</div> : null}
             <div className="share-link__targets">
               {shareTargets.map((t) => (
                 <button key={t.label} type="button" className="act" disabled={!link} onClick={() => open(t.url)}>{t.label}</button>
               ))}
               <button type="button" className="act" disabled={!link} onClick={() => copyText(message, setMsgCopied)}>{msgCopied ? 'Message copied' : 'Copy a message'}</button>
             </div>
-            <p className="share-link__fine">Your code is <b>{code}</b> if a friend would rather type it in the Referral box on unvibe.site.</p>
+            {code ? <p className="share-link__fine">Your code is <b>{code}</b>. Your friend enters it, or pastes the whole link, on the Share page in the Unvibe app.</p> : null}
           </section>
           <section className="gift-share__meter share-meter" aria-label={`${used} of 5 friends joined`}>
             <div>
@@ -154,13 +170,24 @@ export function Gift() {
             <i><em style={{ width: `${(used / 5) * 100}%` }} /></i>
             <p>{remaining === 0 ? 'All five invites used. Thank you for spreading Unvibe!' : used === 0 ? 'Nobody yet. Share your link to invite your first friend.' : `${used} joined. ${remaining} invite${remaining === 1 ? '' : 's'} left.`}</p>
           </section>
+          <section className="gift-signin gift-claim" aria-label="Use a friend's gift code">
+            <label className="share-link__label" htmlFor="gift-friend-code">Got a code from a friend?</label>
+            <input id="gift-friend-code" className="field" value={friendCode} placeholder="Paste their code or link" autoComplete="off" spellCheck={false}
+              onChange={(e) => setFriendCode(e.target.value)} />
+            <button className="field-btn" type="button" disabled={claimBusy || !friendCode.trim()} onClick={() => void claimFriendCode()}>
+              {claimBusy ? 'Checking the code…' : 'Use code'}
+            </button>
+            {claimError ? <div className="field-err" role="alert">{claimError}</div> : null}
+            {claimNote ? <p className="field-note" role="status">{claimNote}</p> : null}
+            <p className="field-note">Each account can use one friend's code.</p>
+          </section>
         </>
       )}
 
       <ol className="gift-steps">
-        <li><b>1</b><div><strong>Copy or share your link</strong><p>One tap above. It opens unvibe.site with your invite already filled in.</p></div></li>
-        <li><b>2</b><div><strong>Your friend pops in their email</strong><p>They see a small &ldquo;A friend invited you&rdquo; card and download Unvibe.</p></div></li>
-        <li><b>3</b><div><strong>You each get a month of Pro</strong><p>If their email is new to Unvibe referrals, it shows up when they sign in to the app with that email.</p></div></li>
+        <li><b>1</b><div><strong>Copy or share your link</strong><p>One tap above. It shows your code to your friend.</p></div></li>
+        <li><b>2</b><div><strong>Your friend signs in to the Unvibe app</strong><p>They download Unvibe and sign in with their own email.</p></div></li>
+        <li><b>3</b><div><strong>You each get a month of Pro</strong><p>When they enter your code on their Share page, the month is added to both accounts right away.</p></div></li>
       </ol>
     </div>
   );

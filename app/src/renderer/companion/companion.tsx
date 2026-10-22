@@ -8,6 +8,7 @@ import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
+import { giftStatusLine, paidStatusLine, resetLabel } from '../shared/planStatus';
 import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
@@ -85,7 +86,7 @@ interface Settings {
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
-  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string };
+  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean };
   usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
   canManageBilling: boolean;
   hasBillingAccount: boolean;
@@ -118,28 +119,11 @@ function asPlanId(value: string | undefined): PlanId {
   return 'free';
 }
 
-function planDisplayName(plan: PlanId): string {
-  if (plan === 'pro' || plan === 'full') return 'Pro';
-  if (plan === 'teams') return 'Team';
-  if (plan === 'trial') return 'Trial';
-  return 'Free';
-}
-
 function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
   if (plan === 'full') return 'Included';
   if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
   if (plan === 'teams') return interval === 'annual' ? '$72/seat/yr' : '$8/seat';
   return '$0';
-}
-
-function daysUntil(iso: string): number {
-  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
-}
-
-function resetLabel(iso: string): string {
-  const date = new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const days = daysUntil(iso);
-  return `Usage limits reset on ${date} (${days} day${days === 1 ? '' : 's'} left)`;
 }
 
 function percentLeft(remaining: number, limit: number): number {
@@ -923,6 +907,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
   const [message, setMessage] = useState(compact ? '' : 'Loading plan…');
   const [busy, setBusy] = useState(false);
+  const [paymentsOpen, setPaymentsOpen] = useState(true);
 
   const load = async () => {
     const usage = await window.unvibe.usageGet() as { ok: boolean; data?: AppUsageLine };
@@ -933,7 +918,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       setMessage('');
       return;
     }
-    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean }; error?: string };
+    const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean; paymentsOpen?: boolean }; error?: string };
     if (!result.ok || !result.data) {
       setOverview(null);
       setMessage(result.error ?? 'Could not load cloud plan. Local limits still apply.');
@@ -941,6 +926,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     }
     setOverview(result.data.overview);
     setAvailable(result.data.checkoutAvailable);
+    setPaymentsOpen(result.data.paymentsOpen !== false);
     setTeamsAvailable(Boolean(result.data.teamsAvailable));
     if (result.data.overview.subscription.interval) setInterval(result.data.overview.subscription.interval);
     setMessage('');
@@ -1034,12 +1020,13 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       <div className="plan-pick">
         <article className="plan-pick__card is-current">
           <span>Current plan</span>
-          <h2>{planDisplayName(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
+          <h2>{planLabel(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
           <p>
-            {gifted ? 'Pro from a gift. Limits follow the Pro plan.'
+            {gifted && overview ? giftStatusLine(overview.subscription.currentPeriodEnd)
               : unlimited ? 'This build is not metered locally.'
-                : resetIso ? resetLabel(resetIso)
-                  : `Monthly explanation limits apply to this ${deviceName}.`}
+                : (paid && overview && paidStatusLine(overview.subscription, planLabel(currentPlan)))
+                  || (resetIso ? resetLabel(resetIso, currentPlan)
+                    : `Monthly explanation limits apply to this ${deviceName}.`)}
           </p>
           {canPortal
             ? <button type="button" className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>
@@ -1085,7 +1072,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
           <SignInForm onDone={onSignedIn ?? (() => undefined)} />
         </div>
       )}
-      {signedIn && !available && upgradeIsPro && <div className="plan-message quiet">Checkout is disabled until billing is configured on the server.</div>}
+      {signedIn && !available && upgradeIsPro && <div className="plan-message quiet">{paymentsOpen ? 'Checkout is disabled until billing is configured on the server.' : 'Payments open soon. Your Free plan keeps working until then.'}</div>}
 
       <div className="plan-usage-block">
         <h3>Usage this month</h3>

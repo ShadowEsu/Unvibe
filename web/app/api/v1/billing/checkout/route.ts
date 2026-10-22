@@ -1,9 +1,10 @@
 import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
-import { normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { getStripe, publicAppUrl, stripePriceId } from '@/billing/stripe';
-import type { BillingInterval } from '@/billing/types';
+import { CheckoutPendingError } from '@/billing/checkoutPending';
+import { CHECKOUT_SESSION_TTL_MS, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
+import { getStripe, lifetimeCheckoutOpen, paymentsLocked, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import type { BillingInterval, BillingStore, WorkspaceAccess } from '@/billing/types';
 
 export const runtime = 'nodejs';
 
@@ -13,9 +14,27 @@ function isBillingInterval(value: unknown): value is BillingInterval {
   return value === 'monthly' || value === 'annual' || value === 'lifetime';
 }
 
+/**
+ * The team workspace a Teams checkout without a workspace id should use: one the owner already has
+ * with no live subscription (preferring one with an open checkout), so retries never pile up empty
+ * workspaces or open a second payable session elsewhere.
+ */
+async function reusableTeamWorkspace(billing: BillingStore, userId: string): Promise<WorkspaceAccess | null> {
+  const owned = (await billing.listWorkspaces(userId)).filter((w) => w.type === 'team' && w.role === 'owner');
+  let free: WorkspaceAccess | null = null;
+  for (const workspace of owned) {
+    const { subscription } = await billing.overview(userId, workspace.id);
+    if (subscription.stripeSubscriptionId && subscription.status !== 'canceled') continue;
+    if (await billing.pendingCheckout(userId, workspace.id)) return workspace;
+    free ??= workspace;
+  }
+  return free;
+}
+
 export async function POST(req: Request): Promise<Response> {
   const user = await requireUser(req);
   if (isResponse(user)) return user;
+  if (paymentsLocked()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
   try {
     const body = (await req.json()) as CheckoutBody;
     if (body.plan === 'teams' && !teamsCheckoutEnabled()) {
@@ -27,18 +46,22 @@ export async function POST(req: Request): Promise<Response> {
     if (body.interval === 'lifetime' && body.plan !== 'pro') {
       return Response.json({ error: 'invalid_checkout', message: 'Lifetime is only available for Pro.' }, { status: 400 });
     }
-    if (body.interval === 'lifetime' && !process.env.STRIPE_PRICE_PRO_LIFETIME?.trim()) {
-      return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime checkout is not configured yet.' }, { status: 503 });
+    if (body.interval === 'lifetime' && !lifetimeCheckoutOpen()) {
+      return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime is not available. Choose monthly or annual Pro.' }, { status: 503 });
     }
     const billing = getBillingStore();
     const requestedSeats = typeof body.seats === 'number' ? body.seats : Number(body.seats ?? (body.plan === 'teams' ? 2 : 1));
     const seats = body.interval === 'lifetime' ? 1 : normalizedSeats(body.plan, requestedSeats);
     const personal = body.plan === 'pro';
-    let workspace = personal ? await billing.ensurePersonalWorkspace(user) : null;
-    if (!personal && typeof body.workspaceId === 'string') workspace = await billing.getWorkspaceAccess(user, body.workspaceId);
-    if (!personal && !workspace) {
-      const name = typeof body.workspaceName === 'string' ? body.workspaceName.trim() : 'My team';
-      workspace = await billing.createTeamWorkspace(user, name);
+    let workspace: WorkspaceAccess | null;
+    if (personal) {
+      workspace = await billing.ensurePersonalWorkspace(user);
+    } else if (typeof body.workspaceId === 'string') {
+      workspace = await billing.getWorkspaceAccess(user, body.workspaceId);
+      if (!workspace) return Response.json({ error: 'workspace_not_found', message: 'That team workspace was not found.' }, { status: 404 });
+    } else {
+      const name = typeof body.workspaceName === 'string' && body.workspaceName.trim() ? body.workspaceName.trim().slice(0, 120) : 'My team';
+      workspace = (await reusableTeamWorkspace(billing, user)) ?? (await billing.createTeamWorkspace(user, name));
     }
     if (!workspace || workspace.role !== 'owner' || workspace.type !== (personal ? 'personal' : 'team')) {
       return Response.json({ error: 'forbidden', message: 'Only the workspace owner can start this subscription.' }, { status: 403 });
@@ -52,6 +75,14 @@ export async function POST(req: Request): Promise<Response> {
     }
     const stripe = getStripe();
     const pending = await billing.pendingCheckout(user, workspace.id);
+    if (!personal && !pending) {
+      // One open Teams checkout per owner across all of their team workspaces.
+      for (const other of (await billing.listWorkspaces(user)).filter((w) => w.type === 'team' && w.role === 'owner' && w.id !== workspace.id)) {
+        if (await billing.pendingCheckout(user, other.id)) {
+          return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open Teams checkout before starting another.' }, { status: 409 });
+        }
+      }
+    }
     if (pending?.stripeCheckoutSessionId && pending.plan === body.plan && pending.interval === body.interval && pending.seats === seats) {
       const existing = await stripe.checkout.sessions.retrieve(pending.stripeCheckoutSessionId);
       if (existing.status === 'open' && existing.url) return Response.json({ url: existing.url, reused: true });
@@ -59,7 +90,14 @@ export async function POST(req: Request): Promise<Response> {
     } else if (pending) {
       return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
     }
-    const intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
+    let intent;
+    try {
+      intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
+    } catch (error) {
+      // A parallel request (double click, second tab) created the open intent first.
+      if (error instanceof CheckoutPendingError) return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
+      throw error;
+    }
     const account = await getStore().accountInfo(user);
     const appUrl = publicAppUrl(req);
     const metadata = {
@@ -76,6 +114,9 @@ export async function POST(req: Request): Promise<Response> {
       : { customer_email: account.email };
     const price = stripePriceId(body.plan, body.interval);
     let session;
+    // Stripe keeps a session payable for 24 hours by default; end it before the intent is
+    // considered stale, so the server never opens a second payable session for one workspace.
+    const expires_at = Math.floor((Date.now() + CHECKOUT_SESSION_TTL_MS) / 1000);
     try {
       session = body.interval === 'lifetime'
         ? await stripe.checkout.sessions.create({
@@ -84,6 +125,7 @@ export async function POST(req: Request): Promise<Response> {
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
           client_reference_id: intent.id,
+          expires_at,
           ...customer,
           ...(!current.subscription.stripeCustomerId ? { customer_creation: 'always' as const } : {}),
           metadata,
@@ -101,6 +143,7 @@ export async function POST(req: Request): Promise<Response> {
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
           client_reference_id: intent.id,
+          expires_at,
           ...customer,
           metadata,
           subscription_data: { metadata },

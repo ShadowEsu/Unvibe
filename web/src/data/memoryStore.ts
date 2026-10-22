@@ -7,11 +7,9 @@ import type {
   ProfileSummary,
   ProjectSummary,
   Store,
-  UsageResult,
-  UsageSummary,
 } from './types';
 import { computeProfile, computeProjects } from './progress';
-import { limitFor } from '../billing/plans';
+import { EventOwnershipError } from './eventOwnership';
 
 interface PendingDevice {
   userCode: string;
@@ -19,11 +17,6 @@ interface PendingDevice {
   token?: string;
   createdAt: number;
   used?: boolean;
-}
-
-interface UsageCounters {
-  selections: number;
-  asks: number;
 }
 
 interface TokenRecord {
@@ -36,7 +29,6 @@ interface MemoryData {
   tokens: Map<string, TokenRecord>;
   devices: Map<string, PendingDevice>;
   users: Map<string, { email?: string }>;
-  usage: Map<string, UsageCounters>;
 }
 
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -60,11 +52,9 @@ export class MemoryStore implements Store {
         tokens: new Map(),
         devices: new Map(),
         users: new Map(),
-        usage: new Map(),
       };
     }
     if (!g.__uncodeData.users) g.__uncodeData.users = new Map();
-    if (!g.__uncodeData.usage) g.__uncodeData.usage = new Map();
     this.data = g.__uncodeData;
   }
 
@@ -160,7 +150,6 @@ export class MemoryStore implements Store {
       }
     }
     this.data.users.delete(userId);
-    this.data.usage.delete(userId);
   }
 
   async userIdForEmail(email: string): Promise<string | null> {
@@ -169,6 +158,9 @@ export class MemoryStore implements Store {
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
+    const ids = new Set(events.map((e) => e.id));
+    const foreign = this.data.events.filter((x) => ids.has(x.id) && x.userId !== userId).map((x) => x.id);
+    if (foreign.length > 0) throw new EventOwnershipError(foreign);
     for (const e of events) {
       const idx = this.data.events.findIndex((x) => x.userId === userId && x.id === e.id);
       const record: EventRecord = {
@@ -243,28 +235,5 @@ export class MemoryStore implements Store {
 
   async workspaceProjects(workspaceId: string): Promise<ProjectSummary[]> {
     return computeProjects(this.eventsForWorkspace(workspaceId));
-  }
-
-  async usage(userId: string): Promise<UsageSummary> {
-    const rec = this.data.usage.get(userId) ?? { selections: 0, asks: 0 };
-    return {
-      selectionsUsed: rec.selections,
-      selectionsLimit: limitFor('selection'),
-      asksUsed: rec.asks,
-      asksLimit: limitFor('ask'),
-    };
-  }
-
-  async consumeUsage(userId: string, kind: 'selection' | 'ask'): Promise<UsageResult> {
-    const limit = limitFor(kind);
-    const rec = this.data.usage.get(userId) ?? { selections: 0, asks: 0 };
-    const used = kind === 'selection' ? rec.selections : rec.asks;
-    if (used >= limit) {
-      return { allowed: false, used, limit };
-    }
-    if (kind === 'selection') rec.selections += 1;
-    else rec.asks += 1;
-    this.data.usage.set(userId, rec);
-    return { allowed: true, used: used + 1, limit };
   }
 }

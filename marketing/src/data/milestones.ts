@@ -223,7 +223,7 @@ export const milestones: Milestone[] = [
     date: "28 SEP 2026",
     category: "COMPANY",
     title: "100%. Unvibe is out",
-    summary: "The build meter hit 100 percent. Unvibe is live for Mac and Windows, with 800+ followers across Instagram, TikTok and LinkedIn.",
+    summary: "The build meter hit 100 percent. Unvibe is live for Mac and Windows.",
     figure: "100%",
     pinned: true,
   },

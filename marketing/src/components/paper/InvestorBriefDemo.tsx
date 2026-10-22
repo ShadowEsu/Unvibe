@@ -7,7 +7,7 @@ export function InvestorBriefDemo() {
   return (
     <section className="container-page investor-brief" aria-label="Brief product demo">
       <div className="investor-brief__copy">
-        <p className="launch-label">Product in ninety seconds</p>
+        <p className="inv-eyebrow">Product in ninety seconds</p>
         <h2>A brief look at Unvibe in the editor.</h2>
         <p>
           Select code, get a streamed explanation with project context, then keep what you learned.

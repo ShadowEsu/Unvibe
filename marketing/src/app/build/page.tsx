@@ -3,13 +3,13 @@ import { BuildLive } from "@/components/build/BuildLive";
 import { BuildMap } from "@/components/paper/BuildMap";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { DownloadRow } from "@/components/paper/DownloadLink";
-import { GrowthFollowSum } from "@/components/paper/SocialFollow";
+import { GrowthFollowLinks } from "@/components/paper/SocialFollow";
 import { Reveal } from "@/components/redesign/Reveal";
 import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
   title: "Building Unvibe",
-  description: "Unvibe is out for Mac and Windows. 800+ followers across Instagram, TikTok and LinkedIn.",
+  description: "Unvibe is out for Mac and Windows. Follow the build on Instagram, TikTok and LinkedIn.",
 };
 
 export default function BuildPage() {
@@ -22,7 +22,7 @@ export default function BuildPage() {
           <p className="paper-meta">Building in public</p>
           <h1>100%. Unvibe is out.</h1>
           <p>
-            Built in public, now live on Mac and Windows. 800+ people follow along across Instagram, TikTok and LinkedIn.
+            Built in public, now live on Mac and Windows. Follow along on Instagram, TikTok and LinkedIn.
           </p>
           <div className="paper-meter" aria-label="100 percent: public release is live">
             <div className="paper-meter__track">
@@ -40,7 +40,7 @@ export default function BuildPage() {
             <p className="paper-meta">Growth</p>
             <h2 className="mt-3">The road so far.</h2>
           </div>
-          <GrowthFollowSum />
+          <GrowthFollowLinks />
           <div className="paper-map-frame">
             <BuildMap />
           </div>

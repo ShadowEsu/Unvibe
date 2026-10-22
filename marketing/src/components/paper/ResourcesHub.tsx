@@ -223,7 +223,7 @@ export function ResourcesHub() {
                   <span className="resources-code-filename">useDeduplicatedQuery.ts</span>
                   <span className="resources-code-lang">TypeScript</span>
                 </div>
-                <pre className="resources-code-pre">
+                <pre className="resources-code-pre" tabIndex={0} role="region" aria-label="Sample TypeScript code">
                   <code>{`export function useDeduplicatedQuery<T>(url: string, ttlMs = 30000) {
   const controller = useRef<AbortController | null>(null);
 
@@ -339,7 +339,7 @@ export function ResourcesHub() {
             </p>
           </div>
 
-          <div className="resources-shortcuts-table paper-glass">
+          <div className="resources-shortcuts-table paper-glass" tabIndex={0} role="region" aria-label="Keyboard shortcuts">
             <div className="resources-table-header">
               <span>Mac</span>
               <span>Windows</span>

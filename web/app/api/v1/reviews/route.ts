@@ -2,9 +2,10 @@ import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import { getStore } from '@/data/store';
-import { quotaMessage } from '@/billing/plans';
-import { trialInstallFromRequest, reserveTrialAction } from '@/lib/trialAccess';
+import { releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
+import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { payloadSizeError } from '@/lib/reviewLimits';
+import { clientIp } from '@/lib/tryDemo';
 import { recordActivation } from '@/lib/activation';
 
 export const runtime = 'nodejs';
@@ -14,9 +15,8 @@ export async function POST(req: Request): Promise<Response> {
   if (!payload?.scope || !payload?.level || !payload?.context) {
     return Response.json({ error: 'missing scope, level, or context' }, { status: 400 });
   }
-  if (JSON.stringify(payload.context).length > 120_000) {
-    return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
-  }
+  const tooLarge = payloadSizeError(payload);
+  if (tooLarge) return tooLarge;
 
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
@@ -25,18 +25,19 @@ export async function POST(req: Request): Promise<Response> {
     return unauthorized();
   }
 
-  if (userId) {
-    const kind: 'selection' | 'ask' = payload.question || payload.variant === 'different' ? 'ask' : 'selection';
-    const usage = await getStore().consumeUsage(userId, kind);
-    if (!usage.allowed) {
-      return Response.json(
-        { error: 'quota_exceeded', kind, limit: usage.limit, message: quotaMessage(kind, usage.limit) },
-        { status: 402 }
-      );
-    }
-  } else if (!provider.mock && trialInstall) {
-    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
+  // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows).
+  // Follow-ups and "Explain differently" are follow-up questions; anything else is an explanation.
+  // The sealed trial keeps one explanation budget for both.
+  let release: (() => Promise<void>) | null = null;
+  if (!provider.mock && userId) {
+    const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
+    const denied = await reserveMeteredAction(userId, kind, req);
     if (denied) return denied;
+    release = () => releaseMeteredAction(userId, kind, req);
+  } else if (!provider.mock && trialInstall) {
+    const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req));
+    if (trial.denied) return trial.denied;
+    release = trial.release;
   }
 
   const system = buildSystemPrompt(payload);
@@ -45,16 +46,22 @@ export async function POST(req: Request): Promise<Response> {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (event: StreamEvent) =>
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      // Enqueue fails once the reader has gone away (the app gave up or closed the panel).
+      const send = (event: StreamEvent): void => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        } catch {
+          // Nobody is reading any more; the answer still counts.
+        }
+      };
+      let produced = false;
       try {
-        let hasText = false;
         await provider.stream(system, user, (text) => {
-          if (text.trim()) hasText = true;
+          if (text.trim()) produced = true;
           send({ type: 'token', text });
-        });
+        }, req.signal);
         send({ type: 'done', model: provider.name, mock: provider.mock });
-        if (hasText && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
+        if (produced && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
           await recordActivation(trialInstall, payload.context.code).catch((error) => {
             console.error('activation marker write failed', error);
           });
@@ -62,7 +69,14 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         send({ type: 'error', message: err instanceof Error ? err.message : String(err) });
       }
-      controller.close();
+      // Refund only when the provider failed or wrote nothing. A client that disconnects keeps the
+      // charge: otherwise dropping the connection would make any request free to repeat.
+      if (!produced && !req.signal.aborted) await release?.();
+      try {
+        controller.close();
+      } catch {
+        // Already closed by a cancelled reader.
+      }
     },
   });
 
