@@ -103,7 +103,8 @@ const firstRun = await step('onboarding', async () => {
   await companion.locator('.ob2__count').filter({ hasText: '1 / 3' }).waitFor({ timeout: 20000 });
   await sleep(800);
   await shot(companion, 'onboarding-hello');
-  await companion.getByPlaceholder('Your name').pressSequentially('Preston', { delay: 70 });
+  // A neutral name: the greeting and sidebar show it in every published frame and screenshot.
+  await companion.getByPlaceholder('Your name').pressSequentially('Sam', { delay: 70 });
   await button(companion, "Let's go").click();
   await companion.locator('.ob2__count').filter({ hasText: '2 / 3' }).waitFor();
   await sleep(1200);
