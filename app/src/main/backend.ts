@@ -101,7 +101,7 @@ async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
-    if (res.status === 429) throw new Error(body.message ?? 'Your plan limit has been reached. Open Plan & usage to review options.');
+    if (res.status === 429 || res.status === 402) throw new Error(body.message ?? 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
     throw new Error(`The service could not complete that request (${res.status}).`);

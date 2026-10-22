@@ -164,6 +164,32 @@ async function reserveUnit(installKey: string, kind: TrialKind, limit: number): 
   return Number(data);
 }
 
+/** Compare-and-swap decrement of one counter; never below zero, never overwrites a concurrent reservation. */
+async function releaseUnit(installKey: string, kind: TrialKind): Promise<void> {
+  const db = serviceSupabase();
+  if (!db) {
+    const bucket = memoryBucket();
+    const key = memoryKey(installKey, kind);
+    const used = bucket.get(key)?.used ?? 0;
+    if (used > 0) bucket.set(key, { used: used - 1 });
+    return;
+  }
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const used = await readUsed(installKey, kind);
+    if (used <= 0) return;
+    const { data, error } = await db
+      .from('trial_counters')
+      .update({ used: used - 1, updated_at: new Date().toISOString() })
+      .eq('install_key', installKey)
+      .eq('kind', kind)
+      .eq('used', used)
+      .select('used');
+    if (error) throw new Error(`trial usage release failed: ${error.message}`);
+    if (Array.isArray(data) && data.length > 0) return;
+  }
+  throw new Error('trial usage release failed: counter kept changing');
+}
+
 export async function trialUsageLine(installKey: string, kind: TrialKind, now = new Date()): Promise<TrialUsageLine> {
   const record = await readInstall(installKey, now);
   const { expiresAt, expired } = trialWindow(record.startedAt, now);
@@ -221,4 +247,14 @@ export async function reserveTrialAction(
     }, { status: 429 });
   }
   return null;
+}
+
+/** Best effort: give back what `reserveTrialAction` took when the AI produced nothing. */
+export async function releaseTrialAction(installKey: string, kind: TrialKind): Promise<void> {
+  const keys = kind === 'ai_explanation' ? [installKey, GLOBAL_INSTALL_KEY] : [installKey];
+  for (const key of keys) {
+    await releaseUnit(key, kind).catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : error);
+    });
+  }
 }

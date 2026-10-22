@@ -137,6 +137,8 @@ export interface BillingStore {
   getWorkspaceAccess(userId: string, workspaceId: string): Promise<WorkspaceAccess | null>;
   overview(userId: string, workspaceId?: string): Promise<BillingOverview>;
   reserveUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<UsageReservation>;
+  /** Give back one unit reserved earlier this month when the metered action produced nothing. Never below zero. */
+  releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void>;
   createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess>;
   listMembers(userId: string, workspaceId: string): Promise<WorkspaceMember[]>;
   changeMemberRole(userId: string, workspaceId: string, memberUserId: string, role: Exclude<WorkspaceRole, 'owner'>): Promise<void>;
