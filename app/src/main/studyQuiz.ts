@@ -3,6 +3,7 @@
  * Network stays here; code/explanations used as context never sync as lesson bodies.
  */
 import { SseParser } from '../core/sse';
+import { explanationFailure } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
@@ -81,8 +82,8 @@ async function collectReviewText(payload: ReviewRequestPayload): Promise<{ text:
       signal: abort.signal,
     });
     if (!res.ok || !res.body) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      throw new Error(body.message ?? `Could not reach the explanation service (${res.status}).`);
+      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      throw new Error(explanationFailure(res.status, body).message);
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -133,14 +134,15 @@ export async function askStudyAssistant(input: {
     return { ok: false, error: `Daily study assistant limit reached (${status.limit}). Resets tomorrow.`, remaining: 0 };
   }
 
-  const prior = built.event.explanation?.slice(0, 4_000);
+  // The service refuses questions over 4,000 characters: 2,000 + 1,000 + 800 + the labels stays under.
+  const prior = built.event.explanation?.slice(0, 2_000);
   const conversation = (input.messages ?? [])
     .filter((message) => (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string')
     .slice(-4)
     .map((message) => `${message.role === 'user' ? 'Learner' : 'Unvibe'}: ${message.content.trim().slice(0, 600)}`)
     .filter((message) => !message.endsWith(': '))
     .join('\n\n')
-    .slice(-2_000);
+    .slice(-1_000);
   const payload: ReviewRequestPayload = {
     ...built.payload,
     question: prior

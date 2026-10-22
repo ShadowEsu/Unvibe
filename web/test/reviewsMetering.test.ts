@@ -5,7 +5,7 @@ import { POST as comprehension } from '../app/api/v1/comprehension/route';
 import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
 import { monthWindow } from '../src/billing/plans';
-import { trialInstallKey, trialUsageLine } from '../src/lib/trialAccess';
+import { trialCounterUsed, trialGlobalMonthKey, trialInstallKey, trialUsageLine } from '../src/lib/trialAccess';
 import type { UsageKind } from '../src/billing/types';
 
 // Real route handlers, memory stores; only the remote AI HTTP boundary is local.
@@ -145,11 +145,11 @@ test('an explanation that fails does not spend the signed-out trial allowance', 
   const installId = `metering-${crypto.randomUUID().replaceAll('-', '')}`;
   const install = trialInstallKey(installId);
   const headers = { authorization: `Bearer ${process.env.UNVIBE_TRIAL_TOKEN}`, 'x-unvibe-install-id': installId };
-  const globalBefore = (await trialUsageLine('__global__', 'ai_explanation')).used;
+  const globalBefore = await trialCounterUsed(trialGlobalMonthKey());
   upstream = 'fail';
   assert.match(await (await review(explainRequest(headers))).text(), /"type":"error"/);
   assert.equal((await trialUsageLine(install, 'ai_explanation')).used, 0);
-  assert.equal((await trialUsageLine('__global__', 'ai_explanation')).used, globalBefore);
+  assert.equal(await trialCounterUsed(trialGlobalMonthKey()), globalBefore);
   upstream = 'answer';
   assert.match(await (await review(explainRequest(headers))).text(), /"type":"done"/);
   assert.equal((await trialUsageLine(install, 'ai_explanation')).used, 1);

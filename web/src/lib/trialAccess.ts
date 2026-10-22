@@ -2,10 +2,17 @@
  * Sealed desktop trial access. The shared trial token is NOT a provider API key —
  * Gemini/Anthropic keys stay server-side. Each install receives a hard 30-day AI and follow-up budget.
  *
+ * The token ships in the app and install ids are chosen by the client, so per-install counters alone
+ * do not bound spend. Every trial AI request also counts against:
+ * - its network: `__ip__:YYYY-MM-DD:<hmac of the IP>`, UNVIBE_TRIAL_IP_DAILY_LIMIT (default 150, a classroom NAT);
+ * - everyone this month: `__global__:YYYY-MM`, UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT (default 50,000);
+ * - everyone today: `__global_day__:YYYY-MM-DD`, UNVIBE_TRIAL_GLOBAL_DAILY_LIMIT (default 2,000).
+ * Periods are UTC. If any counter cannot be reserved the request is refused (503), never allowed.
+ *
  * Durable counters live in Supabase (trial_installs / trial_counters, atomic trial_reserve RPC).
  * Process memory is used only when Supabase is not configured (dev/tests).
  */
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { serviceSupabase } from '@/lib/serviceSupabase';
 import type { UsageKind } from '@/billing/types';
 
@@ -28,7 +35,11 @@ interface TrialCounter {
 }
 
 const INSTALL_ID_RE = /^[a-zA-Z0-9_-]{8,128}$/;
-const GLOBAL_INSTALL_KEY = '__global__';
+/**
+ * trial_counters.kind only allows the two trial kinds, so the shared per-IP and global rows,
+ * which count every trial AI request whatever its kind, are stored under this one.
+ */
+const SHARED_COUNTER_KIND: TrialKind = 'ai_explanation';
 
 const TRIAL_DURATION_DAYS = 30;
 
@@ -44,23 +55,42 @@ function trialSecret(): string | null {
   return value || null;
 }
 
-function explanationLimit(): number {
-  const n = Number(process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT ?? '50');
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 50;
-}
-
-function questionLimit(): number {
-  const n = Number(process.env.UNVIBE_TRIAL_FOLLOW_UP_LIMIT ?? '50');
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 50;
-}
-
-function globalLimit(): number {
-  const n = Number(process.env.UNVIBE_TRIAL_GLOBAL_LIMIT ?? '50000');
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 50_000;
+function limitFromEnv(name: string, fallback: number): number {
+  const n = Number(process.env[name] ?? fallback);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
 
 function limitFor(kind: TrialKind): number {
-  return kind === 'ai_explanation' ? explanationLimit() : questionLimit();
+  return kind === 'ai_explanation'
+    ? limitFromEnv('UNVIBE_TRIAL_EXPLANATION_LIMIT', 50)
+    : limitFromEnv('UNVIBE_TRIAL_FOLLOW_UP_LIMIT', 50);
+}
+
+/** Shared counter for all trial AI requests this UTC month. */
+export function trialGlobalMonthKey(now = new Date()): string {
+  return `__global__:${now.toISOString().slice(0, 7)}`;
+}
+
+/** Shared counter for all trial AI requests this UTC day. */
+export function trialGlobalDayKey(now = new Date()): string {
+  return `__global_day__:${now.toISOString().slice(0, 10)}`;
+}
+
+/**
+ * Per-network counter for this UTC day. The address is never stored: it is an HMAC keyed by a server
+ * secret (TRY_IP_SALT, else the Supabase service-role key) over the day and the IP, so the same
+ * network has an unrelated key each day.
+ */
+export function trialIpKey(ip: string, now = new Date()): string {
+  const day = now.toISOString().slice(0, 10);
+  const secret = process.env.TRY_IP_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || 'unvibe-trial-ip';
+  const hash = createHmac('sha256', secret).update(`unvibe-trial-ip:${day}:${ip}`).digest('hex').slice(0, 32);
+  return `__ip__:${day}:${hash}`;
+}
+
+/** True for a real install's counter row, false for the shared per-IP and global rows. */
+export function isInstallCounterKey(key: string): boolean {
+  return /^[0-9a-f]{64}$/.test(key);
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -144,7 +174,7 @@ async function readUsed(installKey: string, kind: TrialKind): Promise<number> {
 
 /**
  * Atomically add one use when under `limit`. Returns the new count, -1 when the limit is reached,
- * or null when storage failed (logged; the request is allowed rather than blocked by an outage).
+ * or null when storage failed (logged; the caller refuses the request).
  */
 async function reserveUnit(installKey: string, kind: TrialKind, limit: number): Promise<number | null> {
   const db = serviceSupabase();
@@ -161,7 +191,7 @@ async function reserveUnit(installKey: string, kind: TrialKind, limit: number): 
     console.error('trial usage reserve failed', error.message);
     return null;
   }
-  return Number(data);
+  return typeof data === 'number' && Number.isInteger(data) ? data : null;
 }
 
 /** Compare-and-swap decrement of one counter; never below zero, never overwrites a concurrent reservation. */
@@ -206,55 +236,100 @@ export async function trialUsageOverview(installKey: string, now = new Date()): 
   return { plan: 'trial', usage: await Promise.all(kinds.map((kind) => trialUsageLine(installKey, kind, now))) };
 }
 
+/** Read one shared per-IP or global counter (see the key helpers above). */
+export async function trialCounterUsed(key: string): Promise<number> {
+  return readUsed(key, SHARED_COUNTER_KIND);
+}
+
+export type TrialReservation =
+  | { denied: Response; release?: undefined }
+  | { denied: null; release: () => Promise<void> };
+
+interface TrialUnit {
+  key: string;
+  kind: TrialKind;
+}
+
+/** Best effort: give units back by compare-and-swap; a failed give-back is logged and leaves an over-count. */
+async function releaseUnits(units: TrialUnit[]): Promise<void> {
+  await Promise.all(units.map((unit) => releaseUnit(unit.key, unit.kind).catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+  })));
+}
+
+const STORE_UNAVAILABLE = {
+  status: 503,
+  error: 'trial_unavailable',
+  message: 'The free beta could not check its allowance just now. Please try again in a few minutes.',
+};
+
 /**
- * Consume one trial unit. Returns a 429 Response when denied, otherwise null.
- * Also enforces a shared global monthly ceiling across all trial installs.
+ * Consume one trial unit for `installKey`, then one each from the caller's per-IP daily counter and
+ * the global monthly and daily counters. On refusal (429 over a limit, 503 when a counter could not
+ * be reserved) every unit already taken is given back. Otherwise `release` gives all of them back,
+ * for when the AI produced nothing.
  */
 export async function reserveTrialAction(
   installKey: string,
   kind: TrialKind,
+  ip: string,
   now = new Date(),
-): Promise<Response | null> {
+): Promise<TrialReservation> {
   const record = await readInstall(installKey, now);
   const { expiresAt, expired } = trialWindow(record.startedAt, now);
   const limit = limitFor(kind);
   if (expired) {
     const used = await readUsed(installKey, kind);
-    return Response.json({
+    return { denied: Response.json({
       error: 'plan_limit_reached',
       message: `Your 30-day public-beta access ended on ${new Date(expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`,
       usage: { kind, used, limit, remaining: 0, resetsAt: expiresAt }, upgradePath: '/plan',
-    }, { status: 429 });
+    }, { status: 429 }) };
   }
 
   const reserved = await reserveUnit(installKey, kind, limit);
+  if (reserved === null) {
+    return { denied: Response.json({ error: STORE_UNAVAILABLE.error, message: STORE_UNAVAILABLE.message }, { status: 503 }) };
+  }
   if (reserved === -1) {
     const used = await readUsed(installKey, kind);
-    return Response.json({
+    return { denied: Response.json({
       error: 'plan_limit_reached',
       message: `This 30-day beta includes ${limit} ${kind === 'ai_explanation' ? 'AI explanations' : 'follow-up questions'}.`,
       usage: { kind, used, limit, remaining: 0, resetsAt: expiresAt }, upgradePath: '/plan',
-    }, { status: 429 });
+    }, { status: 429 }) };
   }
 
-  if (kind === 'ai_explanation' && (await reserveUnit(GLOBAL_INSTALL_KEY, kind, globalLimit())) === -1) {
-    // The per-install unit stays spent: a rare over-count beats a non-atomic give-back.
-    const used = reserved ?? (await readUsed(installKey, kind));
-    return Response.json({
-      error: 'plan_limit_reached',
+  const shared = [
+    {
+      key: trialIpKey(ip, now),
+      limit: limitFromEnv('UNVIBE_TRIAL_IP_DAILY_LIMIT', 150),
+      error: 'trial_network_limit',
+      message: 'This network has used today\'s free beta explanations. Try again tomorrow, sign in, or add your own API key in Settings.',
+    },
+    {
+      key: trialGlobalMonthKey(now),
+      limit: limitFromEnv('UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT', 50_000),
+      error: 'trial_capacity_reached',
       message: 'The public-beta allowance is temporarily full. Please try again later or add your own API key in Settings.',
-      usage: { kind, used, limit, remaining: Math.max(0, limit - used), resetsAt: expiresAt }, upgradePath: '/plan',
-    }, { status: 429 });
+    },
+    {
+      key: trialGlobalDayKey(now),
+      limit: limitFromEnv('UNVIBE_TRIAL_GLOBAL_DAILY_LIMIT', 2_000),
+      error: 'trial_capacity_reached',
+      message: 'The free beta has reached today\'s limit for everyone. Please try again tomorrow or add your own API key in Settings.',
+    },
+  ];
+  const results = await Promise.all(shared.map((counter) => reserveUnit(counter.key, SHARED_COUNTER_KIND, counter.limit)));
+  const taken: TrialUnit[] = [{ key: installKey, kind }];
+  shared.forEach((counter, i) => {
+    if (results[i] !== null && results[i] !== -1) taken.push({ key: counter.key, kind: SHARED_COUNTER_KIND });
+  });
+  const full = shared.find((_, i) => results[i] === -1);
+  const refusal = full ? { status: 429, error: full.error, message: full.message } : results.includes(null) ? STORE_UNAVAILABLE : null;
+  if (refusal) {
+    await releaseUnits(taken);
+    return { denied: Response.json({ error: refusal.error, message: refusal.message }, { status: refusal.status }) };
   }
-  return null;
-}
-
-/** Best effort: give back what `reserveTrialAction` took when the AI produced nothing. */
-export async function releaseTrialAction(installKey: string, kind: TrialKind): Promise<void> {
-  const keys = kind === 'ai_explanation' ? [installKey, GLOBAL_INSTALL_KEY] : [installKey];
-  for (const key of keys) {
-    await releaseUnit(key, kind).catch((error: unknown) => {
-      console.error(error instanceof Error ? error.message : error);
-    });
-  }
+  return { denied: null, release: () => releaseUnits(taken) };
 }

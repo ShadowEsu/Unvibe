@@ -4,7 +4,9 @@ import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
-import { releaseTrialAction, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { payloadSizeError } from '@/lib/reviewLimits';
+import { clientIp } from '@/lib/tryDemo';
 
 export const runtime = 'nodejs';
 
@@ -19,18 +21,17 @@ export async function POST(req: Request): Promise<Response> {
   if (!payload?.context) {
     return Response.json({ error: 'missing context' }, { status: 400 });
   }
-  if (JSON.stringify(payload.context).length > 120_000) {
-    return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
-  }
+  const tooLarge = payloadSizeError(payload);
+  if (tooLarge) return tooLarge;
   let release: (() => Promise<void>) | null = null;
   if (!provider.mock && userId) {
     const denied = await reserveMeteredAction(userId, 'project_question', req);
     if (denied) return denied;
     release = () => releaseMeteredAction(userId, 'project_question', req);
   } else if (!provider.mock && trialInstall) {
-    const denied = await reserveTrialAction(trialInstall, 'project_question');
-    if (denied) return denied;
-    release = () => releaseTrialAction(trialInstall, 'project_question');
+    const trial = await reserveTrialAction(trialInstall, 'project_question', clientIp(req));
+    if (trial.denied) return trial.denied;
+    release = trial.release;
   }
   const { system, user } = buildComprehensionPrompt(payload);
   const text = await provider.complete(system, user, req.signal).catch(() => null);

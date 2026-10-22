@@ -3,7 +3,9 @@ import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
-import { trialInstallFromRequest, releaseTrialAction, reserveTrialAction } from '@/lib/trialAccess';
+import { reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { payloadSizeError } from '@/lib/reviewLimits';
+import { clientIp } from '@/lib/tryDemo';
 import { recordActivation } from '@/lib/activation';
 
 export const runtime = 'nodejs';
@@ -13,9 +15,8 @@ export async function POST(req: Request): Promise<Response> {
   if (!payload?.scope || !payload?.level || !payload?.context) {
     return Response.json({ error: 'missing scope, level, or context' }, { status: 400 });
   }
-  if (JSON.stringify(payload.context).length > 120_000) {
-    return Response.json({ error: 'review context exceeds the 120,000 character limit' }, { status: 413 });
-  }
+  const tooLarge = payloadSizeError(payload);
+  if (tooLarge) return tooLarge;
 
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
@@ -34,9 +35,9 @@ export async function POST(req: Request): Promise<Response> {
     if (denied) return denied;
     release = () => releaseMeteredAction(userId, kind, req);
   } else if (!provider.mock && trialInstall) {
-    const denied = await reserveTrialAction(trialInstall, 'ai_explanation');
-    if (denied) return denied;
-    release = () => releaseTrialAction(trialInstall, 'ai_explanation');
+    const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req));
+    if (trial.denied) return trial.denied;
+    release = trial.release;
   }
 
   const system = buildSystemPrompt(payload);
