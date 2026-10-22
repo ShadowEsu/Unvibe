@@ -1,9 +1,17 @@
 import { BETA_FEEDBACK_URL, BETA_INSTALL_COMMAND, BETA_INSTALL_VERSION, BETA_WINDOWS_INSTALL_COMMAND } from "../lib/betaOffer";
-import { GIFT_CODE_HOME, GIFT_OFFER } from "../lib/giftOffer";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "../lib/giftOffer";
 
 export { BETA_FEEDBACK_URL };
 export const BETA_CURL = BETA_INSTALL_COMMAND;
 export const BETA_WINDOWS_COMMAND = BETA_WINDOWS_INSTALL_COMMAND;
+
+/**
+ * Without an account the app runs on a 30-day trial: 50 explanations and 50 follow-ups, then it
+ * ends (web/src/lib/trialAccess.ts TRIAL_DURATION_DAYS, UNVIBE_TRIAL_EXPLANATION_LIMIT default
+ * 50). Signed-in Free gets a monthly allowance (plan_entitlements). Nothing resets for unsigned use.
+ */
+export const FREE_USE_NOTE =
+  "Without an account you get 50 free AI explanations in your first 30 days. Sign in for a free allowance every month.";
 
 export function escapeEmailHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) =>
@@ -24,7 +32,7 @@ export function betaEarlyNoteText(): string {
 }
 
 export function betaInstallText(): string {
-  return `Install (${BETA_INSTALL_VERSION}). Free AI explanations every month.
+  return `Install (${BETA_INSTALL_VERSION}).
 
 Apple silicon Mac:
 ${BETA_CURL}
@@ -36,10 +44,10 @@ macOS may warn that Unvibe is unsigned. Windows SmartScreen may say the same. Th
 }
 
 export function betaFeedbackText(): string {
-  return `The free plan includes AI explanations every month. After you try it, tell us how it went in the feedback form:
+  return `${FREE_USE_NOTE} After you try it, tell us how it went in the feedback form:
 ${BETA_FEEDBACK_URL}
 
-${GIFT_CODE_HOME} ${GIFT_OFFER}`;
+${GIFT_LINK_NOTE} ${GIFT_OFFER}`;
 }
 
 export function betaSignOffText(): string {

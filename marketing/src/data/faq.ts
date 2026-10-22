@@ -5,7 +5,8 @@ import { SHORTCUTS } from "@/lib/shortcuts";
 /**
  * FAQ content, kept short and true to the shipped app (app/src):
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
- * keys and tokens filtered on the device; no local-only mode yet; AI explanations can be wrong.
+ * keys and tokens in code and diffs filtered on the device (typed questions and Chat are not
+ * scanned in v0.1.43); no local-only mode yet; AI explanations can be wrong.
  * No allowance numbers here until the live trial configuration is confirmed.
  */
 
@@ -61,7 +62,7 @@ export const faqItems: FaqItem[] = [
     id: "app-or-extension",
     question: "Is it an extension or an app?",
     answer:
-      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection, plus the file name and language. Briefs read the git changes of a project on your computer. Keys and tokens are filtered on your computer before anything is sent.",
+      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection, plus the file name and language. Briefs read the git changes of a project on your computer. Keys and tokens in that code are filtered on your computer before it is sent.",
     category: "product",
   },
   {
@@ -75,7 +76,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code with its file name and language (with Pro, some nearby code for context), or the git changes in a Brief. Keys and tokens are filtered on your computer first. Your repo is never uploaded.",
+      "Only what you ask about: the selected code with its file name and language (with Pro, some nearby code for context), or the git changes in a Brief, plus any question you type. Keys and tokens in the code are filtered on your computer first. Questions and Chat messages are not scanned yet, so keep keys out of them. Your repo is never uploaded.",
     category: "privacy",
   },
   {
@@ -96,7 +97,7 @@ export const faqItems: FaqItem[] = [
     id: "local-mode",
     question: "Is there a local-only mode?",
     answer:
-      "Not yet. Explanations come from a cloud AI provider, after keys and tokens are filtered on your computer.",
+      "Not yet. Explanations come from a cloud AI provider, after keys and tokens in your code are filtered on your computer.",
     category: "privacy",
   },
   {

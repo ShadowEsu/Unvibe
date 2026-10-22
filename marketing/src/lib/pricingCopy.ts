@@ -38,7 +38,7 @@ const TEAMS_MAILTO =
 const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
 
 const FEATURES = {
-  free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Keys and tokens filtered on your device"],
+  free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Keys and tokens in your code filtered on your device"],
   pro: ["Everything in Free", "Expert depth", "Git diff explanations and change Briefs", "Answers that use nearby files", "More explanations each month than Free"],
   teams: ["One shared workspace", "Invites for your team", "Who reviewed what (metadata only)", SEATS],
 } as const;
@@ -75,9 +75,9 @@ const CLOSED: PricingCopy = {
   plans: [
     free,
     { id: "pro", name: "Pro", badge: "Opens soon", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Pro opens soon. Your Free plan keeps working until then.", features: FEATURES.pro, cta: "Download free", href: "/beta", featured: true, primary: false },
-    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Founding price. Teams opens soon. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
+    { id: "teams", name: "Teams", badge: "Opens soon", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Teams opens soon. Until then, founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
-  disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
+  disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
   termsNote: "Pro and Teams are not on sale yet. Until they open, nothing is billed and your Free plan keeps working.",
 };
 

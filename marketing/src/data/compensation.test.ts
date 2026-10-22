@@ -4,6 +4,7 @@ import {
   compensationCashUsd,
   compensationCreditsUsd,
   compensationLines,
+  compensationProgramCount,
   compensationTotalLabel,
   compensationTotalUsd,
 } from "./compensation";
@@ -31,5 +32,11 @@ describe("compensation", () => {
 
   it("never publishes AWS Activate credits (AWS Activate terms forbid disclosing them)", () => {
     assert.equal(compensationLines.some((line) => /aws/i.test(`${line.name} ${line.detail}`)), false);
+  });
+
+  it("counts only credit lines as startup programs", () => {
+    const cashLines = compensationLines.filter((line) => line.kind === "cash").length;
+    assert.ok(cashLines > 0);
+    assert.equal(compensationProgramCount(), compensationLines.length - cashLines);
   });
 });

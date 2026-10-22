@@ -1,3 +1,5 @@
+import { compensationTotalLabel } from "./compensation";
+
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
 export interface Milestone {
@@ -83,7 +85,7 @@ export const milestones: Milestone[] = [
     date: "07 OCT 2026",
     category: "COMPANY",
     title: "Unvibe is in Claude for Startups",
-    summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals $267,700 in credits and committed cash.",
+    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals ${compensationTotalLabel()} in credits and committed cash.`,
     figure: "$21.5K",
   },
   {
@@ -139,7 +141,7 @@ export const milestones: Milestone[] = [
     date: "06 OCT 2026",
     category: "PRODUCT",
     title: "Sign in with Google fills you in, and invites really pay out",
-    summary: "On the setup screen, tap Fill this in with Google, pick one of your saved Google accounts, and your name and email are filled in for you. Invite links now actually work: when a friend joins with yours, you both get a month of Pro, up to five friends, and it stacks. Everyone with the app is on the list automatically and starts with a welcome month of Pro.",
+    summary: "On the setup screen, tap Fill this in with Google, pick one of your saved Google accounts, and your name and email are filled in for you. Invite links now actually work: when a friend joins with yours, you both get a month of Pro, up to five friends, and it stacks. Everyone with the app is on the list automatically and starts with a welcome month of Pro. Changed 22 Oct 2026: joining with a link no longer grants Pro. Gift months come from a code entered in the app, starting with the next app update.",
     figure: "v0.1.27",
   },
   {
@@ -264,8 +266,8 @@ export const milestones: Milestone[] = [
     date: "24 AUG 2026",
     category: "COMPANY",
     title: "Startup support total",
-    summary: "Program credits plus founder-reported cash now total $232,700. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.",
-    figure: "$232,700",
+    summary: `Program credits plus founder-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
+    figure: compensationTotalLabel(),
     pinned: true,
   },
   {
@@ -286,7 +288,7 @@ export const milestones: Milestone[] = [
     date: "19 AUG 2026",
     category: "PRODUCT",
     title: "Windows 30 explanation trial",
-    summary: "Private beta now includes a Windows x64 trial with the same 30 AI explanations as Mac. Install from PowerShell. The app is unsigned, so SmartScreen may warn.",
+    summary: "Private beta now includes a Windows x64 trial with the same 30 AI explanations as Mac. Install from PowerShell. The app is unsigned, so SmartScreen may warn. Changed 22 Oct 2026: the free trial is now 50 explanations in the first 30 days.",
   },
   {
     date: "18 AUG 2026",
@@ -298,7 +300,7 @@ export const milestones: Milestone[] = [
     date: "18 AUG 2026",
     category: "PRODUCT",
     title: "Pricing checkout",
-    summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site.",
+    summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site. Changed 22 Oct 2026: checkout is closed until payments open, and /pricing says so.",
   },
   {
     date: "17 AUG 2026",
@@ -332,21 +334,21 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Try the Mac beta from the homepage",
-    summary: "A copy paste Terminal command sits under the title. No name or email. After 30 explanations, a short survey invitation appears. Gifts still add on.",
+    summary: "A copy paste Terminal command sits under the title. No name or email. After 30 explanations, a short survey invitation appears. Gifts still add on. Changed 22 Oct 2026: the free trial is now 50 explanations, and waitlist gifts no longer grant Pro.",
     figure: "curl install",
   },
   {
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Free is 30 explanations a month",
-    summary: "Free, trial, and unsigned beta now stop after 30 AI explanations. Pro stays at 100. Pricing on the site matches that cap.",
+    summary: "Free, trial, and unsigned beta now stop after 30 AI explanations. Pro stays at 100. Pricing on the site matches that cap. Changed 22 Oct 2026: unsigned use is 50 explanations in the first 30 days, and signed-in Free is 50 a month.",
     figure: "30 / month",
   },
   {
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Gifts, Pro, and Google sign-in actually connect",
-    summary: "A SPECIAL CHAR is proven from the giver email, not a random string. A verified waitlist gift gives both people 1 month of Pro. Stripe Buy still works after a gift month. Continue with Google opens unvibe.site/activate.",
+    summary: "A gift code is proven from the giver email, not a random string. A verified waitlist gift gives both people 1 month of Pro. Stripe Buy still works after a gift month. Continue with Google opens unvibe.site/activate. Changed 22 Oct 2026: waitlist gifts no longer grant Pro, and checkout is closed until payments open.",
     figure: "Waitlist + app",
   },
   {
@@ -360,14 +362,14 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Gift Unvibe page and a calmer companion",
-    summary: "Gift Unvibe is its own page in the Mac app: an 8 character SPECIAL CHAR, a 0/5 meter, and the waitlist screenshots from unvibe.site. The companion pane is less compact. Home is a daily feed. Small windows get a menu drawer.",
+    summary: "Gift Unvibe is its own page in the Mac app: an 8 character gift code, a 0/5 meter, and the waitlist screenshots from unvibe.site. The companion pane is less compact. Home is a daily feed. Small windows get a menu drawer.",
     figure: "Mac app",
   },
   {
     date: "17 AUG 2026",
     category: "DISTRIBUTION",
     title: "Gift Unvibe",
-    summary: "Share an 8 character SPECIAL CHAR from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts.",
+    summary: "Share an 8 character gift code from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts. Changed 22 Oct 2026: joining the waitlist no longer grants Pro. Gift months come from a code entered in the app, starting with the next app update.",
     figure: "5 gifts",
   },
   {

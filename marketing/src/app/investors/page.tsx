@@ -7,6 +7,7 @@ import {
   compensationCashUsd,
   compensationCreditsUsd,
   compensationLines,
+  compensationProgramCount,
   compensationTotalLabel,
   formatUsd,
 } from "@/data/compensation";
@@ -42,7 +43,7 @@ export default function InvestorsPage() {
   const lead = sorted[0];
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   const company = milestones.filter((m) => m.category === "COMPANY" || m.category === "DISTRIBUTION").slice(0, 8);
-  const programs = compensationLines.length;
+  const programs = compensationProgramCount();
 
   return (
     <article className="inv">

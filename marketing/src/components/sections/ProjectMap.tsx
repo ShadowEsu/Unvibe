@@ -125,7 +125,7 @@ export function ProjectMap() {
           </motion.p>
           <div className="mt-5 flex items-center gap-2 rounded-xl border border-line bg-surface-2/60 p-3 text-fluid-sm text-fg-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-            Built on your Mac. Secret-filtered before anything is sent.
+            Built on your computer. Code is secret-filtered before it is sent.
           </div>
         </div>
       </div>

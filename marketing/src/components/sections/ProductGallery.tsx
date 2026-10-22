@@ -30,7 +30,7 @@ const shots: Shot[] = [
   { id: "study", label: "Study", caption: "Curricula built from your real projects." },
   { id: "notebook", label: "Notebook", caption: "Saved explanations you can return to." },
   { id: "library", label: "Library", caption: "Concepts collected as you go." },
-  { id: "settings", label: "Settings", caption: "Consent, exclusions, and privacy controls." },
+  { id: "settings", label: "Settings", caption: "Secret scan and privacy controls." },
   { id: "profile", label: "Profile", caption: "Your learning identity in one place." },
   { id: "help", label: "Help", caption: "Guidance without leaving the app." },
 ];

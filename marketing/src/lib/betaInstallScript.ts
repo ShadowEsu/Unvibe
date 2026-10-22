@@ -107,7 +107,7 @@ export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-ar
 
 /** Private beta installer. Downloads the portable Windows exe, which uses the free plan. */
 export function betaWindowsInstallScript(): string {
-  return `# Unvibe private beta installer for Windows. Free AI explanations every month. Unsigned.
+  return `# Unvibe private beta installer for Windows. Free AI explanations: 30 days without an account, monthly with one. Unsigned.
 # Source: ${BETA_INSTALL_SCRIPT_SOURCE_URL}
 # Sends one anonymous 'installed' count to unvibe.site when it finishes. No code or personal data.
 # Paste this in Windows PowerShell or pwsh (not Command Prompt, not Git Bash):

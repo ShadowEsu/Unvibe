@@ -4,7 +4,7 @@ import { LegalLayout, LegalSection } from "@/components/LegalLayout";
 export const metadata: Metadata = {
   title: "Data controls",
   description:
-    "What data Unvibe keeps, where it lives, how long it is retained, and how to export or delete it.",
+    "What data Unvibe keeps, where it lives, how long it is retained, and how to get a copy or delete it.",
 };
 
 export default function DataControlsPage() {
@@ -12,7 +12,7 @@ export default function DataControlsPage() {
     <LegalLayout
       title="Data controls"
       updated="July 2026"
-      intro="What Unvibe keeps, where it lives, and how you stay in control. Private code contents are never written to analytics or application logs, and secrets are filtered on-device before any transmission."
+      intro="What Unvibe keeps, where it lives, and how you stay in control. Private code contents are never written to analytics or application logs, and secrets in the code you send are filtered on-device before it is sent."
     >
       <LegalSection heading="What is stored and where">
         <ul className="list-disc space-y-2 pl-5">
@@ -50,19 +50,22 @@ export default function DataControlsPage() {
       <LegalSection heading="Exclusions and consent">
         <p>
           Cloud analysis begins only after an explicit review action. Full payload preview
-          and per-repository consent controls are still being completed. Default exclusions cover{" "}
-          <code className="font-mono">.env</code> files, keys,{" "}
-          <code className="font-mono">node_modules</code>, and build output.
+          and per-repository consent controls are still being completed. There is no file
+          exclusion list yet: a file you select or open is sent once it passes the secret
+          scan. In a Brief, untracked files that{" "}
+          <code className="font-mono">.gitignore</code> covers are left out.
         </p>
       </LegalSection>
 
-      <LegalSection heading="Access, export, and deletion">
+      <LegalSection heading="Access, copies, and deletion">
         <p>
-          You can access and export your data, and you can{" "}
+          The app has no export button yet. For a copy of your data, email{" "}
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>. You can{" "}
           <a href="/account-deletion">delete your account</a> to remove it from your
-          device and our servers. If you never created an account, your data only ever
-          lived on your computer. Depending on where you live, you may have additional rights
-          under laws such as GDPR or CCPA.
+          device and our servers. If you never created an account, your lessons stay on
+          your computer, and our server keeps only a random install ID with a few dates and
+          usage counts, never your code or prompts. Depending on where you live, you may
+          have additional rights under laws such as GDPR or CCPA.
         </p>
       </LegalSection>
 

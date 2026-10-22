@@ -63,35 +63,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="paper-section" aria-labelledby="quotes-title">
-        <div className="paper-wrap">
-          <div className="sec-head">
-            <p className="paper-meta">From beta testers</p>
-            <h2 id="quotes-title">In their <em>own words.</em></h2>
-          </div>
-          <div className="quotes">
-            <figure className="quote">
-              <blockquote>
-                <p>The interface was simple to navigate, the explanations were clear, and Test Me made it easy to recap what I learned.</p>
-              </blockquote>
-              <figcaption>
-                <span className="quote__avatar" aria-hidden="true">SG</span>
-                <span><b>Sharice Gustian</b>Beta tester</span>
-              </figcaption>
-            </figure>
-            <figure className="quote quote--lime">
-              <blockquote>
-                <p>Setup was smooth. The floating Island feels distinctive, and the explanation depth controls make learning feel genuinely tailored.</p>
-              </blockquote>
-              <figcaption>
-                <span className="quote__avatar" aria-hidden="true">OK</span>
-                <span><b>Om Anand Khaunte</b>Officer, Los Altos Hacks</span>
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
       <BackingStrip />
 
       <section className="paper-section" aria-labelledby="faq-title">
