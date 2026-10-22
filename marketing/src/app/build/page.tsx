@@ -30,7 +30,7 @@ export default function BuildPage() {
             </div>
             <strong>100%</strong>
           </div>
-          <DownloadRow href="/beta" />
+          <DownloadRow href="/beta" surface="build" />
         </div>
       </header>
 

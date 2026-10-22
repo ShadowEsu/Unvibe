@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { track } from "@/lib/analytics";
+import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 
 /**
@@ -41,7 +42,7 @@ export function MobileDownloadBar() {
           Email me the link
         </a>
       ) : (
-        <a href="/beta" tabIndex={visible ? 0 : -1} onClick={() => track("download_cta_clicked", { platform: "generic", surface: "mobile_bar" })}>
+        <a href="/beta" tabIndex={visible ? 0 : -1} onClick={() => trackDownloadPageClick("mobile_bar")}>
           Download
         </a>
       )}

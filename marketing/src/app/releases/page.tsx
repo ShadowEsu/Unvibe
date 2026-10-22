@@ -30,7 +30,7 @@ export default async function ReleasesPage() {
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}
           </p>
-          <DownloadRow href="/beta" />
+          <DownloadRow href="/beta" surface="releases" />
         </div>
       </header>
 

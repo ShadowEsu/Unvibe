@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@/lib/analytics";
 import { BETA_INSTALL_COMMAND, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { trackDownloadClick } from "@/lib/downloadTracking";
 
 interface Command {
   id: string;
@@ -24,6 +25,26 @@ function matches(haystack: string, query: string): boolean {
   return false;
 }
 
+/** Everything the palette can do; `push` is the router's client navigation. */
+export function siteCommands(push: (href: string) => void): Command[] {
+  const go = (href: string) => () => push(href);
+  return [
+    { id: "mac", label: "Download for Mac", hint: ".dmg · M1 or newer", keywords: "install get macos apple", run: () => { trackDownloadClick("palette", "mac"); window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
+    { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { trackDownloadClick("palette", "windows"); window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
+    { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
+    { id: "home", label: "Home", hint: "/", run: go("/") },
+    { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },
+    { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
+    { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
+    { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },
+    { id: "changelog", label: "Change log", hint: "What shipped", run: go("/releases") },
+    { id: "growth", label: "Growth", hint: "Building in public", run: go("/build") },
+    { id: "privacy", label: "Privacy", hint: "What leaves your machine", keywords: "data security secrets policy", run: go("/privacy") },
+    { id: "terms", label: "Terms", hint: "Plain language", run: go("/terms") },
+    { id: "email", label: "Email support", hint: "support@unvibe.site", run: () => { window.location.href = "mailto:support@unvibe.site"; } },
+  ];
+}
+
 /** ⌘K / Ctrl+K palette for jumping around the site. */
 export function SitePalette() {
   const router = useRouter();
@@ -32,24 +53,7 @@ export function SitePalette() {
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const commands = useMemo<Command[]>(() => {
-    const go = (href: string) => () => router.push(href);
-    return [
-      { id: "mac", label: "Download for Mac", hint: ".dmg · M1 or newer", keywords: "install get macos apple", run: () => { window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
-      { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
-      { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
-      { id: "home", label: "Home", hint: "/", run: go("/") },
-      { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },
-      { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
-      { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
-      { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },
-      { id: "changelog", label: "Change log", hint: "What shipped", run: go("/releases") },
-      { id: "growth", label: "Growth", hint: "Building in public", run: go("/build") },
-      { id: "privacy", label: "Privacy", hint: "What leaves your machine", keywords: "data security secrets policy", run: go("/privacy") },
-      { id: "terms", label: "Terms", hint: "Plain language", run: go("/terms") },
-      { id: "email", label: "Email support", hint: "support@unvibe.site", run: () => { window.location.href = "mailto:support@unvibe.site"; } },
-    ];
-  }, [router]);
+  const commands = useMemo(() => siteCommands((href) => router.push(href)), [router]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

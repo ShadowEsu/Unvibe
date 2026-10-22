@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
+import { InstallHelpViewed } from "@/components/paper/InstallHelpViewed";
 import { Vibe } from "@/components/paper/Vibe";
 import { BETA_INSTALL_SCRIPT_SOURCE_URL, BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function InstallHelpPage() {
   return (
     <article className="fos-page">
+      <InstallHelpViewed />
       <header className="fos-page__head">
         <Vibe size={96} />
         <div>

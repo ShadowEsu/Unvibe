@@ -26,7 +26,7 @@ export default function BetaDownloadsPage() {
 
       <section className="paper-section" id="install">
         <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" showFeedback />
+          <BetaInstall tone="page" surface="beta" showFeedback />
         </Reveal>
       </section>
 

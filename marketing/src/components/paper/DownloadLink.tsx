@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { track } from "@/lib/analytics";
+import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import { cn } from "@/lib/utils";
 import { delight } from "@/lib/delight";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
@@ -11,6 +11,8 @@ import { detectVisitorDevice } from "@/lib/shortcuts";
 interface DownloadLinkProps {
   href: string;
   platform?: "mac" | "windows";
+  /** Where the button sits, for `download_cta_clicked`. */
+  surface: DownloadSurface;
   size?: "hero" | "nav";
   className?: string;
   onClick?: () => void;
@@ -41,6 +43,7 @@ function WindowsMark() {
 export function DownloadLink({
   href,
   platform,
+  surface,
   size = "hero",
   className,
   onClick,
@@ -60,12 +63,8 @@ export function DownloadLink({
       href={phone ? "/#email-link" : href}
       onClick={() => {
         if (phone) { onClick?.(); return; }
-        track("download_cta_clicked", {
-          platform: platform ?? "generic",
-          surface: size,
-        });
+        trackDownloadClick(surface, platform ?? "other");
         delight();
-        window.dispatchEvent(new Event("unvibe:downloaded"));
         onClick?.();
       }}
       className={cn(
@@ -86,14 +85,14 @@ export function DownloadLink({
  * Mac and Windows buttons with their logos. With no href they download the
  * installer directly from the current GitHub release.
  */
-export function DownloadRow({ href }: { href?: string }) {
+export function DownloadRow({ href, surface }: { href?: string; surface: DownloadSurface }) {
   const [phone, setPhone] = useState(false);
   useEffect(() => setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone"), []);
-  if (phone) return <div className="paper-join-row"><DownloadLink href="/#email-link" /></div>;
+  if (phone) return <div className="paper-join-row"><DownloadLink href="/#email-link" surface={surface} /></div>;
   return (
     <div className="paper-join-row">
-      <DownloadLink href={href ?? BETA_MAC_DIRECT_DOWNLOAD} platform="mac" />
-      <DownloadLink href={href ?? BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" />
+      <DownloadLink href={href ?? BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface={surface} />
+      <DownloadLink href={href ?? BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" surface={surface} />
     </div>
   );
 }

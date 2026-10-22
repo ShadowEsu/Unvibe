@@ -244,8 +244,10 @@ Project id `4054892` via Composio. `MIXPANEL_AGGREGATE_EVENTS` wants `event` as 
 *string* (`"event": "[\"beta_install_viewed\", ...]"`); `events` errors. `MIXPANEL_TOP_EVENT_PROPERTY_VALUES`
 is broken (`query_id`); break down with `MIXPANEL_QUERY_SEGMENTATION` and
 `"on": "properties[\"$os\"]"`. Key events: `$mp_web_page_view`, `beta_install_viewed`,
-`beta_install_copied`, `download_cta_clicked`, `release_download_clicked`, `try_explained`,
-`phone_link_sent`, `phone_try_clicked`. App side: Supabase `users` / `device_codes` row counts.
+`beta_install_copied`, `download_cta_viewed`, `download_cta_clicked` (break down by `surface`;
+list in `marketing/src/lib/downloadTracking.ts`), `install_help_viewed` (`from`),
+`release_download_clicked`, `try_explained`, `phone_link_sent`, `phone_try_clicked`. App side:
+Supabase `users` / `device_codes` row counts.
 
 ### Windows/Mac UI checks without a Windows machine
 Run the app with a throwaway profile and a debug port, then drive it over CDP:

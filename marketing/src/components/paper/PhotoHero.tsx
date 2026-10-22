@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
 import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
@@ -95,18 +96,21 @@ function TryInBrowser({ device }: { device: VisitorDevice }) {
   );
 }
 
-/** Desktop: one download button for this computer, the browser demo beside it, the other OS in the trust line. */
-function DownloadForThisComputer({ device }: { device: "mac" | "windows" }) {
+/**
+ * Desktop: one download button for this computer, the browser demo beside it, the other OS in the trust line.
+ * `actionsRef` marks the main call to action for the viewed event.
+ */
+export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" | "windows"; actionsRef: RefObject<HTMLDivElement> }) {
   const other = device === "mac" ? "windows" : "mac";
   return (
     <div className="vhero__cta">
-      <div className="vhero__actions">
-        <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} />
+      <div className="vhero__actions" ref={actionsRef}>
+        <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} surface="hero" />
         <TryInBrowser device={device} />
       </div>
       <p className="vhero__trust">
         Free for Mac + Windows · No API key · Keys and tokens filtered on your computer ·{" "}
-        <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => track("download_cta_clicked", { platform: other, surface: "hero_other_os" })}>
+        <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
           {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
         </a>
       </p>
@@ -118,9 +122,13 @@ function DownloadForThisComputer({ device }: { device: "mac" | "windows" }) {
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
   const [device, setDevice] = useState<VisitorDevice>("mac");
+  // Until detection runs, `device` is a guess; the viewed event waits for the real platform.
+  const [detected, setDetected] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDevice(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints));
+    setDetected(true);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
       setReady(true);
@@ -129,6 +137,11 @@ export function PhotoHero() {
     const frame = window.requestAnimationFrame(() => setReady(true));
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (!detected || device === "phone" || !actionsRef.current) return undefined;
+    return watchDownloadCtaView(actionsRef.current, "hero", device);
+  }, [detected, device]);
 
   const shortcut = device === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere;
 
@@ -158,7 +171,7 @@ export function PhotoHero() {
             <TryInBrowser device={device} />
           </>
         ) : (
-          <DownloadForThisComputer device={device} />
+          <DownloadForThisComputer device={device} actionsRef={actionsRef} />
         )}
       </div>
     </section>
