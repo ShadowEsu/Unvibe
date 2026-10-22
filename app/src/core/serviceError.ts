@@ -20,8 +20,11 @@ export function explanationFailure(status: number, body: { error?: string; messa
       planLimit: true,
     };
   }
+  if (status === 413) {
+    return { message: body.message ?? 'That is too much to send in one go. Select less code or shorten your question, then try again.', planLimit: false };
+  }
   if (status >= 500) {
     return { message: body.message ?? 'The explanation service is temporarily unavailable. Please try again shortly.', planLimit: false };
   }
-  return { message: `The explanation service could not complete that request (${status}).`, planLimit: false };
+  return { message: body.message ?? 'The explanation service could not complete that request. Please try again.', planLimit: false };
 }

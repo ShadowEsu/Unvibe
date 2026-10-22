@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import type Stripe from 'stripe';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { processStripeEvent } from '../src/billing/webhooks';
@@ -66,4 +66,36 @@ test('a webhook claim is a lease: a delivery stuck in processing is re-claimed a
   await store.completeWebhook(eventId);
   now = new Date('2026-10-23T10:00:00.000Z');
   assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false, 'a completed event is never processed again');
+});
+
+test('the grace period after a failed payment ends on time; later failed retries do not extend it', async () => {
+  mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-01T00:00:00.000Z') });
+  try {
+    const userId = randomUUID();
+    const store = new MemoryBillingStore(() => new Date());
+    const workspace = await store.ensurePersonalWorkspace(userId);
+    // Memory billing data is shared across tests; use this test's own Stripe subscription id.
+    const id = `sub_${randomUUID()}`;
+    const pastDue = { ...proSubscription(workspace.id, 'past_due'), id };
+    const deps = { retrieveSubscription: async () => pastDue };
+    await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', pastDue), deps);
+    const firstEnd = (await store.overview(userId)).subscription.gracePeriodEndsAt;
+    assert.equal(firstEnd, '2026-10-08T00:00:00.000Z');
+
+    // Stripe retries the card on day 5 and it fails again.
+    mock.timers.setTime(new Date('2026-10-06T00:00:00.000Z').getTime());
+    await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', pastDue), deps);
+    assert.equal((await store.overview(userId)).subscription.gracePeriodEndsAt, firstEnd);
+
+    mock.timers.setTime(new Date('2026-10-09T00:00:00.000Z').getTime());
+    assert.equal((await store.overview(userId)).subscription.plan, 'free', 'Pro ends when the grace period does');
+
+    // A later, separate payment failure after recovery starts a fresh grace period.
+    const active = { ...proSubscription(workspace.id, 'active'), id };
+    await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', active), { retrieveSubscription: async () => active });
+    await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', pastDue), deps);
+    assert.equal((await store.overview(userId)).subscription.gracePeriodEndsAt, '2026-10-16T00:00:00.000Z');
+  } finally {
+    mock.timers.reset();
+  }
 });

@@ -2,11 +2,14 @@
 unvibe.site
 
 A code-comprehension layer for AI-generated code. When an AI agent or you change code,
-Uncode offers a quiet review and explains **what changed and why**, using your project's
-context — then checks that you understood it and tracks what you're learning.
+Unvibe offers a quiet review and explains **what changed and why**, using your project's
+context, then checks that you understood it and tracks what you're learning.
 
-> Codename: "Unvibe". The primary value is understanding, verifying, and retaining
-> AI-written code — not generating more of it.
+**Just want the app?** Download it free for Mac or Windows at [unvibe.site](https://unvibe.site).
+No API key is needed. Select code and press **Control+U** on Mac or **Ctrl+Alt+U** on Windows.
+
+> The primary value is understanding, verifying, and retaining AI-written code, not
+> generating more of it.
 
 ## Status
 **Desktop-first since July 2026** — Unvibe is a desktop overlay app (`app/`): a menu-bar agent,
@@ -29,8 +32,9 @@ cd app
 npm install
 npm run dev          # builds + launches: ◆ in the menu bar, floating bar bottom-center
 ```
-Select code anywhere and press **⌥ Space** (grant Accessibility when asked), or use the
-clipboard fallback in the widget. Requires the backend below on localhost:8787.
+Select code anywhere and press **Control+U** on Mac or **Ctrl+Alt+U** on Windows (on Mac,
+grant Accessibility when asked; the shortcut can be changed in Settings), or use the clipboard
+fallback in the widget. Expects the backend below on localhost:8787 (`UNVIBE_BACKEND` overrides).
 
 ## Run the backend + dashboard (dev)
 ```
@@ -39,9 +43,12 @@ npm install
 npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 ```
 - No keys needed for dev: a **mock AI provider** and an **in-memory dev store** are used.
-- `ANTHROPIC_API_KEY` → real explanations. `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` → real DB.
-- The extension talks to this origin (`uncode.backendUrl`, default `http://localhost:8787`).
-  Run **Uncode: Sign In** in the editor to connect and sync your learning to the dashboard.
+- Real explanations need one provider key on the backend only (first one set wins):
+  `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` / `GOOGLE_API_KEY`
+  (see `web/src/ai/index.ts`). App users never supply a key.
+- `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` → real DB.
+- The parked VS Code extension talks to this origin (setting `uncode.backendUrl`, default
+  `http://localhost:8787`; its sign-in command still uses the old name, **Uncode: Sign In**).
 
 `server/` is an optional AI-only dev harness (superseded by `web/`).
 

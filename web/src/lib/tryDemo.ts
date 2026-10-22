@@ -46,6 +46,11 @@ export function validateTry(input: unknown): { ok: true; code: string; level: Tr
   return { ok: true, code, level: lvl };
 }
 
+/** The caller's address as Vercel reports it: first x-forwarded-for hop, then x-real-ip. */
+export function clientIp(req: Request): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip')?.trim() || 'local';
+}
+
 export function hashVisitor(ip: string): string {
   const salt = process.env.TRY_IP_SALT?.trim() || 'unvibe-try';
   return createHash('sha256').update(`${salt}:${ip}`).digest('hex').slice(0, 32);

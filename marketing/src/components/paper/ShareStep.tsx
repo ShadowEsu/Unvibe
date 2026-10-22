@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import { track } from "@/lib/analytics";
-
-/**
- * The referral as it actually works (web/supabase/migrations/20261006120000, claim_referral):
- * a friend who joins with a new email gives you both a month of Pro features, up to five
- * friends. Pro unlocks Expert depth and project-aware answers; it does not raise the
- * explanation allowance, so the copy doesn't claim more explanations.
- */
-export const REFERRAL_OFFER =
-  "When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.";
+import { GIFT_CODE_HOME, GIFT_OFFER } from "@/lib/giftOffer";
 
 export function ShareStep({ code, surface }: { code: string; surface: string }) {
   const [copied, setCopied] = useState(false);
@@ -39,7 +31,7 @@ export function ShareStep({ code, surface }: { code: string; surface: string }) 
 
   return (
     <div className="share-step">
-      <p className="share-step__offer">{REFERRAL_OFFER}</p>
+      <p className="share-step__offer">Share Unvibe with this link. {GIFT_CODE_HOME} {GIFT_OFFER}</p>
       <code className="share-step__link">{link}</code>
       <div className="share-step__actions">
         <button type="button" onClick={() => void copy()}>{copied ? "Copied" : "Copy link"}</button>

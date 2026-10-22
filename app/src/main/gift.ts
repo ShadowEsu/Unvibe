@@ -1,16 +1,16 @@
-import { createHash, randomBytes } from 'node:crypto';
-
 export const GIFT_LIMIT = 5;
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const GIFT_CODE = /^[A-Za-z0-9_-]{16}$/;
 
-export function giftCodeFromEmail(email: string): string {
-  return createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 8);
-}
-
-export function randomGiftCode(bytes: Uint8Array = randomBytes(8)): string {
-  let out = '';
-  for (let i = 0; i < 8; i++) out += ALPHABET[(bytes[i] ?? 0) % ALPHABET.length];
-  return out;
+/** A friend's gift code from what they pasted: the bare code or the whole ?ref= link. '' when neither. */
+export function giftCodeFromInput(input: string): string {
+  const trimmed = input.trim();
+  if (GIFT_CODE.test(trimmed)) return trimmed;
+  try {
+    const ref = new URL(trimmed).searchParams.get('ref')?.trim() ?? '';
+    return GIFT_CODE.test(ref) ? ref : '';
+  } catch {
+    return '';
+  }
 }
 
 export function capGiftUsed(used: number): number {

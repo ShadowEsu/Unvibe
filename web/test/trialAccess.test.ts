@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { reserveTrialAction, trialInstallFromRequest, trialInstallKey, trialUsageOverview } from '../src/lib/trialAccess';
+import { reserveTrialAction, trialGlobalDayKey, trialGlobalMonthKey, trialInstallFromRequest, trialInstallKey, trialIpKey, trialUsageOverview } from '../src/lib/trialAccess';
+
+const IP = '203.0.113.5';
 
 const PREV = { ...process.env };
 
@@ -8,7 +10,7 @@ afterEach(() => {
   process.env.UNVIBE_TRIAL_TOKEN = PREV.UNVIBE_TRIAL_TOKEN;
   process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = PREV.UNVIBE_TRIAL_EXPLANATION_LIMIT;
   process.env.UNVIBE_TRIAL_FOLLOW_UP_LIMIT = PREV.UNVIBE_TRIAL_FOLLOW_UP_LIMIT;
-  process.env.UNVIBE_TRIAL_GLOBAL_LIMIT = PREV.UNVIBE_TRIAL_GLOBAL_LIMIT;
+  process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT = PREV.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT;
   process.env.SUPABASE_URL = PREV.SUPABASE_URL;
   process.env.SUPABASE_SERVICE_ROLE_KEY = PREV.SUPABASE_SERVICE_ROLE_KEY;
   const g = globalThis as unknown as { __unvibeTrialUsage?: Map<string, { used: number }>; __unvibeTrialInstalls?: Map<string, { startedAt: string }> };
@@ -43,13 +45,13 @@ test('trialInstallFromRequest rejects wrong token', () => {
 test('reserveTrialAction enforces per-install monthly limit', async () => {
   process.env.UNVIBE_TRIAL_TOKEN = 'trial-secret-value-abcdefghijklmnop';
   process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = '2';
-  process.env.UNVIBE_TRIAL_GLOBAL_LIMIT = '100';
+  process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT = '100';
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   const key = trialInstallKey(`limit-test-${Date.now()}`);
-  assert.equal(await reserveTrialAction(key, 'ai_explanation'), null);
-  assert.equal(await reserveTrialAction(key, 'ai_explanation'), null);
-  const denied = await reserveTrialAction(key, 'ai_explanation');
+  assert.equal((await reserveTrialAction(key, 'ai_explanation', IP)).denied, null);
+  assert.equal((await reserveTrialAction(key, 'ai_explanation', IP)).denied, null);
+  const { denied } = await reserveTrialAction(key, 'ai_explanation', IP);
   assert.ok(denied);
   assert.equal(denied.status, 429);
   const overview = await trialUsageOverview(key);
@@ -62,32 +64,35 @@ test('reserveTrialAction enforces per-install monthly limit', async () => {
 test('trial access expires 30 days after the first action', async () => {
   process.env.UNVIBE_TRIAL_TOKEN = 'trial-secret-value-abcdefghijklmnop';
   process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = '50';
-  process.env.UNVIBE_TRIAL_GLOBAL_LIMIT = '100';
+  process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT = '100';
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   const key = trialInstallKey(`expiry-test-${Date.now()}`);
   const startsAt = new Date('2026-09-01T00:00:00.000Z');
-  assert.equal(await reserveTrialAction(key, 'ai_explanation', startsAt), null);
-  const denied = await reserveTrialAction(key, 'ai_explanation', new Date('2026-10-02T00:00:00.000Z'));
+  assert.equal((await reserveTrialAction(key, 'ai_explanation', IP, startsAt)).denied, null);
+  const { denied } = await reserveTrialAction(key, 'ai_explanation', IP, new Date('2026-10-02T00:00:00.000Z'));
   assert.ok(denied);
   assert.equal(denied.status, 429);
 });
 
-test('with Supabase, reserveTrialAction uses trial_reserve for the install and the global counter', async () => {
+test('with Supabase, reserveTrialAction uses trial_reserve for the install, per-IP and global counters', async () => {
   process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = '2';
-  process.env.UNVIBE_TRIAL_GLOBAL_LIMIT = '100';
+  process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT = '100';
+  process.env.UNVIBE_TRIAL_GLOBAL_DAILY_LIMIT = '10';
+  process.env.UNVIBE_TRIAL_IP_DAILY_LIMIT = '5';
   process.env.SUPABASE_URL = 'https://trial.supabase.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test-key';
   const key = trialInstallKey('supabase-path-test');
+  const now = new Date();
   const rpcCalls: Array<{ p_install_key: string; p_kind: string; p_limit: number }> = [];
-  const results: Record<string, number> = { [key]: 1, __global__: -1 };
+  const results: Record<string, number> = { [key]: 1, [trialGlobalMonthKey(now)]: -1 };
   const original = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     if (url.pathname === '/rest/v1/rpc/trial_reserve') {
       const args = JSON.parse(String(init?.body));
       rpcCalls.push(args);
-      return Response.json(results[args.p_install_key]);
+      return Response.json(results[args.p_install_key] ?? 1);
     }
     if (url.pathname === '/rest/v1/trial_installs' && init?.method === 'POST') return new Response(null, { status: 201 });
     if (url.pathname === '/rest/v1/trial_installs') return Response.json([{ started_at: new Date().toISOString() }]);
@@ -95,21 +100,23 @@ test('with Supabase, reserveTrialAction uses trial_reserve for the install and t
     throw new Error(`unexpected request ${url}`);
   }) as typeof fetch;
   try {
-    const globalFull = await reserveTrialAction(key, 'ai_explanation');
+    const globalFull = (await reserveTrialAction(key, 'ai_explanation', IP, now)).denied;
     assert.equal(globalFull?.status, 429);
     assert.match((await globalFull!.json()).message, /temporarily full/);
     assert.deepEqual(rpcCalls, [
       { p_install_key: key, p_kind: 'ai_explanation', p_limit: 2 },
-      { p_install_key: '__global__', p_kind: 'ai_explanation', p_limit: 100 },
+      { p_install_key: trialIpKey(IP, now), p_kind: 'ai_explanation', p_limit: 5 },
+      { p_install_key: trialGlobalMonthKey(now), p_kind: 'ai_explanation', p_limit: 100 },
+      { p_install_key: trialGlobalDayKey(now), p_kind: 'ai_explanation', p_limit: 10 },
     ]);
 
     results[key] = -1;
-    const installFull = await reserveTrialAction(key, 'ai_explanation');
+    const installFull = (await reserveTrialAction(key, 'ai_explanation', IP, now)).denied;
     assert.equal(installFull?.status, 429);
     const body = await installFull!.json();
     assert.match(body.message, /includes 2 AI explanations/);
     assert.equal(body.usage.used, 2);
-    assert.equal(rpcCalls.length, 3);
+    assert.equal(rpcCalls.length, 5, 'an install over its own limit never touches the shared counters');
   } finally {
     globalThis.fetch = original;
     delete process.env.SUPABASE_URL;
