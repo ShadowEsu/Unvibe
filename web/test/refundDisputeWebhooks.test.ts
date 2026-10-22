@@ -38,15 +38,35 @@ async function proCustomer(interval: 'monthly' | 'lifetime' = 'monthly') {
   return { store, audits, userId, workspaceId: workspace.id, paymentIntent, subscriptionId, customer };
 }
 
-/** Stripe as the handlers see it: live subscription status, invoice payments, and cancels. */
-function fakeStripe(links: Record<string, string>, statuses: Record<string, Stripe.Subscription.Status> = {}) {
+/** The live subscription's current period start (seconds), as Stripe reports it on the item. */
+const CURRENT_PERIOD_START = 1_797_321_600;
+const MONTH = 30 * 86_400;
+
+/** What a PaymentIntent paid: a subscription invoice with its reason and the period its line covers. */
+type InvoiceLink = string | { subscription: string; billingReason: Stripe.Invoice.BillingReason; periodStart: number };
+
+function invoiceFor(link: InvoiceLink): Stripe.Invoice {
+  const { subscription, billingReason, periodStart } = typeof link === 'string'
+    ? { subscription: link, billingReason: 'subscription_cycle' as const, periodStart: CURRENT_PERIOD_START }
+    : link;
+  return {
+    id: `in_${randomUUID()}`,
+    billing_reason: billingReason,
+    parent: { subscription_details: { subscription } },
+    lines: { data: [{ period: { start: periodStart, end: periodStart + MONTH } }] },
+  } as unknown as Stripe.Invoice;
+}
+
+/** Stripe as the handlers see it: live subscription status and period, invoice payments, and cancels. */
+function fakeStripe(links: Record<string, InvoiceLink>, statuses: Record<string, Stripe.Subscription.Status> = {}) {
   const cancels: string[] = [];
   const deps: Required<StripeWebhookDependencies> = {
-    retrieveSubscription: async (id) => ({ id, status: statuses[id] ?? 'active' }) as unknown as Stripe.Subscription,
+    retrieveSubscription: async (id) => ({
+      id, status: statuses[id] ?? 'active',
+      items: { data: [{ current_period_start: CURRENT_PERIOD_START, current_period_end: CURRENT_PERIOD_START + MONTH }] },
+    }) as unknown as Stripe.Subscription,
     retrieveCheckoutSession: async () => { throw new Error('not used'); },
-    invoicesForPaymentIntent: async (paymentIntent) => (links[paymentIntent]
-      ? [{ id: `in_${randomUUID()}`, parent: { subscription_details: { subscription: links[paymentIntent] } } } as unknown as Stripe.Invoice]
-      : []),
+    invoicesForPaymentIntent: async (paymentIntent) => (links[paymentIntent] ? [invoiceFor(links[paymentIntent])] : []),
     cancelSubscription: async (id) => { cancels.push(id); statuses[id] = 'canceled'; },
   };
   return { deps, cancels };
@@ -87,11 +107,40 @@ test('a partial refund keeps Pro and is audited', async () => {
   assert.equal(c.audits.find((a) => a.action === 'refund.partial')?.metadata.amountRefunded, 400);
 });
 
-test('a refund with no invoice link falls back to the customer\'s one subscription', async () => {
+test('a refunded charge with no invoice link (customer fallback) is audited but never cancels', async () => {
   const c = await proCustomer();
   const stripe = fakeStripe({});
   await processStripeEvent(c.store, chargeRefunded(c.paymentIntent, c.customer, 1000, 1000), stripe.deps);
+  assert.deepEqual(stripe.cancels, []);
+  assert.equal((await c.store.overview(c.userId)).subscription.plan, 'pro');
+  const row = c.audits.find((a) => a.action === 'refund.full');
+  assert.equal(row?.workspaceId, c.workspaceId);
+  assert.equal(row?.metadata.revoked, false);
+});
+
+test('fully refunding a seat-proration invoice keeps the subscription', async () => {
+  const c = await proCustomer();
+  const stripe = fakeStripe({ [c.paymentIntent]: { subscription: c.subscriptionId, billingReason: 'subscription_update', periodStart: CURRENT_PERIOD_START + 10 * 86_400 } });
+  await processStripeEvent(c.store, chargeRefunded(c.paymentIntent, c.customer, 300, 300), stripe.deps);
+  assert.deepEqual(stripe.cancels, []);
+  assert.equal((await c.store.overview(c.userId)).subscription.plan, 'pro');
+  assert.equal(c.audits.find((a) => a.action === 'refund.full')?.metadata.revoked, false);
+});
+
+test('fully refunding last month\'s invoice keeps the current paid period', async () => {
+  const c = await proCustomer();
+  const stripe = fakeStripe({ [c.paymentIntent]: { subscription: c.subscriptionId, billingReason: 'subscription_cycle', periodStart: CURRENT_PERIOD_START - MONTH } });
+  await processStripeEvent(c.store, chargeRefunded(c.paymentIntent, c.customer, 1000, 1000), stripe.deps);
+  assert.deepEqual(stripe.cancels, []);
+  assert.equal((await c.store.overview(c.userId)).subscription.plan, 'pro');
+});
+
+test('fully refunding the first invoice of a subscription still in its first period cancels it', async () => {
+  const c = await proCustomer();
+  const stripe = fakeStripe({ [c.paymentIntent]: { subscription: c.subscriptionId, billingReason: 'subscription_create', periodStart: CURRENT_PERIOD_START } });
+  await processStripeEvent(c.store, chargeRefunded(c.paymentIntent, c.customer, 1000, 1000), stripe.deps);
   assert.deepEqual(stripe.cancels, [c.subscriptionId]);
+  assert.equal(c.audits.find((a) => a.action === 'refund.full')?.metadata.revoked, true);
 });
 
 test('a refund of a charge with no subscription (a one-off) is audited and does not fail', async () => {
@@ -159,9 +208,12 @@ test('the signed webhook links the charge through Invoice Payments and a replay 
   const cancels: string[] = [];
   stripe.invoicePayments.list = (async (params: Stripe.InvoicePaymentListParams) => {
     listed.push(params);
-    return { data: [{ invoice: { id: 'in_1', parent: { subscription_details: { subscription: subscriptionId } } } }] };
+    return { data: [{ invoice: invoiceFor(subscriptionId) }] };
   }) as unknown as typeof stripe.invoicePayments.list;
-  stripe.subscriptions.retrieve = (async (id: string) => ({ id, status: cancels.includes(id) ? 'canceled' : 'active' })) as unknown as typeof stripe.subscriptions.retrieve;
+  stripe.subscriptions.retrieve = (async (id: string) => ({
+    id, status: cancels.includes(id) ? 'canceled' : 'active',
+    items: { data: [{ current_period_start: CURRENT_PERIOD_START, current_period_end: CURRENT_PERIOD_START + MONTH }] },
+  })) as unknown as typeof stripe.subscriptions.retrieve;
   stripe.subscriptions.cancel = (async (id: string) => { cancels.push(id); return { id, status: 'canceled' }; }) as unknown as typeof stripe.subscriptions.cancel;
 
   const payload = JSON.stringify(chargeRefunded(paymentIntent, 'cus_x', 1000, 1000));

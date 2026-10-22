@@ -117,48 +117,75 @@ function chargeEventDependencies(deps: StripeWebhookDependencies): ChargeEventDe
   return { ...deps, invoicesForPaymentIntent, cancelSubscription };
 }
 
+/** How a payment was matched to a stored subscription. Only `lifetime` and `invoice` matches can end access. */
+type PaymentMatch =
+  | { via: 'lifetime'; subscription: SubscriptionRecord }
+  | { via: 'invoice'; subscription: SubscriptionRecord; invoice: Stripe.Invoice }
+  | { via: 'customer'; subscription: SubscriptionRecord }
+  | null;
+
 /**
  * The stored subscription a payment paid for: Lifetime grants are stored under their PaymentIntent
  * id; recurring payments link through Invoice Payments to the invoice's subscription; failing that,
- * the customer's subscription row (stripe_customer_id is unique). Null for a one-off payment.
+ * the customer's subscription row (stripe_customer_id is unique), which only attributes the audit
+ * row. Null for a one-off payment.
  */
 async function subscriptionForPayment(
   store: BillingStore,
   deps: ChargeEventDependencies,
   paymentIntent: string | Stripe.PaymentIntent | null,
   customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
-): Promise<SubscriptionRecord | null> {
+): Promise<PaymentMatch> {
   const paymentIntentId = paymentIntent ? providerId(paymentIntent) : null;
   if (paymentIntentId) {
     const lifetime = await store.subscriptionByProviderId(paymentIntentId);
-    if (lifetime?.interval === 'lifetime') return lifetime;
+    if (lifetime?.interval === 'lifetime') return { via: 'lifetime', subscription: lifetime };
     for (const invoice of await deps.invoicesForPaymentIntent(paymentIntentId)) {
       const subscriptionId = subscriptionIdFromInvoice(invoice);
-      if (subscriptionId) return store.subscriptionByProviderId(subscriptionId);
+      if (!subscriptionId) continue;
+      const subscription = await store.subscriptionByProviderId(subscriptionId);
+      return subscription ? { via: 'invoice', subscription, invoice } : null;
     }
   }
-  return customer ? store.subscriptionByCustomerId(providerId(customer)) : null;
+  const byCustomer = customer ? await store.subscriptionByCustomerId(providerId(customer)) : null;
+  return byCustomer ? { via: 'customer', subscription: byCustomer } : null;
 }
 
-/** Ends paid access now: Lifetime is revoked; a recurring subscription is canceled at Stripe unless it already ended. */
-async function revokeAccess(store: BillingStore, deps: ChargeEventDependencies, subscription: SubscriptionRecord): Promise<void> {
-  if (!subscription.stripeSubscriptionId) return;
-  if (subscription.interval !== 'lifetime') {
-    const live = await deps.retrieveSubscription(subscription.stripeSubscriptionId);
+const PERIOD_INVOICE_REASONS: ReadonlySet<Stripe.Invoice.BillingReason> = new Set(['subscription_create', 'subscription_cycle']);
+
+/** True when the invoice is the one that paid the live subscription's current period (not a proration or an older period). */
+function paysCurrentPeriod(invoice: Stripe.Invoice, live: Stripe.Subscription): boolean {
+  if (!invoice.billing_reason || !PERIOD_INVOICE_REASONS.has(invoice.billing_reason)) return false;
+  const currentStart = live.items.data[0]?.current_period_start;
+  return currentStart !== undefined && invoice.lines.data.some((line) => line.period.start === currentStart);
+}
+
+/**
+ * Ends paid access now: Lifetime is revoked; a recurring subscription is canceled at Stripe unless
+ * it already ended. With `currentPeriodOnly`, an invoice match must be the current period's invoice.
+ * A customer-fallback match never ends access. Returns whether access was ended.
+ */
+async function revokeAccess(store: BillingStore, deps: ChargeEventDependencies, match: PaymentMatch, currentPeriodOnly: boolean): Promise<boolean> {
+  if (!match || match.via === 'customer' || !match.subscription.stripeSubscriptionId) return false;
+  if (match.via === 'invoice') {
+    const live = await deps.retrieveSubscription(match.subscription.stripeSubscriptionId);
+    if (currentPeriodOnly && !paysCurrentPeriod(match.invoice, live)) return false;
     if (live.status !== 'canceled' && live.status !== 'incomplete_expired') await deps.cancelSubscription(live.id);
   }
   // Free at once; the customer.subscription.deleted that follows is then a no-op.
-  await store.markSubscriptionCanceled(subscription.stripeSubscriptionId);
+  await store.markSubscriptionCanceled(match.subscription.stripeSubscriptionId);
+  return true;
 }
 
 async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCreatedEvent | Stripe.ChargeDisputeClosedEvent, deps: StripeWebhookDependencies): Promise<void> {
   const charge = chargeEventDependencies(deps);
   const dispute = event.data.object;
   const disputeCharge = typeof dispute.charge === 'string' ? null : dispute.charge;
-  const subscription = await subscriptionForPayment(store, charge, dispute.payment_intent, disputeCharge?.customer ?? null);
+  const match = await subscriptionForPayment(store, charge, dispute.payment_intent, disputeCharge?.customer ?? null);
   const lost = event.type === 'charge.dispute.closed' && dispute.status === 'lost';
-  if (lost && subscription) await revokeAccess(store, charge, subscription);
-  await store.recordAudit(null, subscription?.workspaceId ?? null, event.type === 'charge.dispute.created' ? 'dispute.opened' : 'dispute.closed', {
+  // A lost dispute is a forced reversal of what that payment bought, whatever period it paid for.
+  const revoked = lost && (await revokeAccess(store, charge, match, false));
+  await store.recordAudit(null, match?.subscription.workspaceId ?? null, event.type === 'charge.dispute.created' ? 'dispute.opened' : 'dispute.closed', {
     eventId: event.id,
     disputeId: dispute.id,
     chargeId: typeof dispute.charge === 'string' ? dispute.charge : dispute.charge.id,
@@ -167,8 +194,9 @@ async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCre
     reason: dispute.reason,
     status: dispute.status,
     dueBy: dispute.evidence_details?.due_by ? new Date(dispute.evidence_details.due_by * 1000).toISOString() : null,
-    stripeSubscriptionId: subscription?.stripeSubscriptionId ?? null,
-    revoked: lost && Boolean(subscription),
+    stripeSubscriptionId: match?.subscription.stripeSubscriptionId ?? null,
+    matchedBy: match?.via ?? null,
+    revoked,
   });
 }
 
@@ -220,20 +248,24 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       return;
     }
     case 'charge.refunded': {
-      // A full refund ends paid access now; a partial refund is a goodwill credit and keeps it.
+      // A full refund of what pays for access now (the current period's invoice, or Lifetime) ends it.
+      // Refunds of prorations, older periods, or charges matched only by customer are audited only.
       const charge = event.data.object;
       const chargeDeps = chargeEventDependencies(deps);
       const full = charge.refunded || charge.amount_refunded >= charge.amount;
-      const subscription = await subscriptionForPayment(store, chargeDeps, charge.payment_intent, charge.customer);
-      if (full && subscription) await revokeAccess(store, chargeDeps, subscription);
-      await store.recordAudit(null, subscription?.workspaceId ?? null, full ? 'refund.full' : 'refund.partial', {
+      const match = await subscriptionForPayment(store, chargeDeps, charge.payment_intent, charge.customer);
+      const revoked = full && (await revokeAccess(store, chargeDeps, match, true));
+      await store.recordAudit(null, match?.subscription.workspaceId ?? null, full ? 'refund.full' : 'refund.partial', {
         eventId: event.id,
         chargeId: charge.id,
         amount: charge.amount,
         amountRefunded: charge.amount_refunded,
         currency: charge.currency,
-        stripeSubscriptionId: subscription?.stripeSubscriptionId ?? null,
-        interval: subscription?.interval ?? null,
+        stripeSubscriptionId: match?.subscription.stripeSubscriptionId ?? null,
+        interval: match?.subscription.interval ?? null,
+        invoiceBillingReason: match?.via === 'invoice' ? match.invoice.billing_reason : null,
+        matchedBy: match?.via ?? null,
+        revoked,
       });
       return;
     }

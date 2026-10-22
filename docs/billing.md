@@ -56,14 +56,20 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
   effective entitlements fall back to Free while saved content remains.
 - Cancellation at period end is displayed from Stripe state. A deleted subscription becomes
   canceled and paid entitlements fall back to Free.
-- A full refund (`charge.refunded`, whole amount) cancels the paid subscription at Stripe at once
-  and the account drops to Free; a full Lifetime refund revokes Lifetime. A partial refund keeps
-  access. The charge is linked to its subscription through Stripe Invoice Payments (API dahlia has
-  no `charge.invoice`), falling back to the customer's subscription row. Every refund is audited
-  (`refund.full` / `refund.partial`).
+- **A full refund of the current period's invoice ends access at once.** When `charge.refunded`
+  covers the whole charge and that charge paid the invoice for the subscription's current period
+  (`billing_reason` `subscription_create` or `subscription_cycle`, line period starting at the live
+  subscription's current period), the subscription is canceled at Stripe immediately and the
+  account drops to Free. A full Lifetime refund revokes Lifetime. Support: refunding this month
+  means "cancel now"; to refund but keep access, refund partially.
+- Everything else keeps access and is only audited: partial refunds, prorations
+  (`subscription_update`), invoices for an earlier period, and charges that can't be linked to an
+  invoice (matched only by customer). The charge is linked through Stripe Invoice Payments (API
+  dahlia has no `charge.invoice`). Every refund writes `refund.full` / `refund.partial` with
+  `revoked` and `matchedBy`.
 - A dispute does not change access while it is open (`dispute.opened` audit row with the evidence
   deadline; `/api/v1/admin/stats` reports `disputesOpen` and `disputeNextDueBy`). A lost dispute
-  cancels like a full refund; a won one keeps access.
+  on an invoice or Lifetime payment ends access, whatever period it paid for; a won one keeps it.
 - Teams invitations reserve purchased seats. An invitation is accepted only by the invited email.
   Seat reductions cannot go below two or below occupied plus unexpired pending seats.
 - Team owners manage billing and roles; admins manage invitations/members but not billing; members
