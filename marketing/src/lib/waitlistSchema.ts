@@ -5,38 +5,6 @@ import { z } from "zod";
  * stays identical on both sides.
  */
 
-export const tools = [
-  "cursor",
-  "vscode",
-  "claude-code",
-  "github",
-  "other",
-] as const;
-
-export const experiences = [
-  "just-starting",
-  "student",
-  "beginner-builder",
-  "intermediate",
-  "experienced",
-] as const;
-
-export const toolLabels: Record<(typeof tools)[number], string> = {
-  cursor: "Cursor",
-  vscode: "VS Code",
-  "claude-code": "Claude Code",
-  github: "GitHub",
-  other: "Other",
-};
-
-export const experienceLabels: Record<(typeof experiences)[number], string> = {
-  "just-starting": "Just starting",
-  student: "Student",
-  "beginner-builder": "Beginner builder",
-  intermediate: "Intermediate developer",
-  experienced: "Experienced developer",
-};
-
 export const waitlistSchema = z.object({
   // Joining only needs an email. Names stay optional for older clients.
   firstName: z.string().trim().max(80, "Keep it under 80 characters"),
@@ -56,12 +24,3 @@ export const waitlistSchema = z.object({
 });
 
 export type WaitlistInput = z.infer<typeof waitlistSchema>;
-
-export const waitlistDetailsSchema = z.object({
-  email: z.string().trim().email("Enter a valid email"),
-  tool: z.enum(tools).optional(),
-  experience: z.enum(experiences).optional(),
-  message: z.string().trim().max(500, "Keep it under 500 characters").optional(),
-});
-
-export type WaitlistDetailsInput = z.infer<typeof waitlistDetailsSchema>;

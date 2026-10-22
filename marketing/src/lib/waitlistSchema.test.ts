@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { waitlistDetailsSchema, waitlistSchema } from "./waitlistSchema";
+import { waitlistSchema } from "./waitlistSchema";
 
 describe("waitlistSchema", () => {
   it("accepts a complete valid payload", () => {
@@ -34,15 +34,5 @@ describe("waitlistSchema", () => {
       email: "a@b.com",
     });
     assert.equal(parsed.success, false);
-  });
-
-  it("accepts optional details after signup", () => {
-    const parsed = waitlistDetailsSchema.safeParse({
-      email: "ada@example.com",
-      tool: "cursor",
-      experience: "student",
-      message: "I want to understand React hooks",
-    });
-    assert.equal(parsed.success, true);
   });
 });

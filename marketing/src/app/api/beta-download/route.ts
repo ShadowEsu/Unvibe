@@ -5,6 +5,8 @@ import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/li
 import { scheduleSetupReminder } from "@/lib/sendBetaDownloadEmail";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
 import { recordWaitlistBetaEmail, saveWaitlistEntry } from "@/lib/waitlistStore";
+import { clientIp, rateLimitRejection, rejectCrossSitePost } from "@/lib/publicForm";
+import { consumeRateLimit, SIGNUP_EMAIL_LIMIT, type RateLimitRule } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,37 +21,26 @@ const schema = z.object({
   referredBy: z.string().trim().regex(/^([a-f0-9]{8}|[A-Za-z0-9_-]{16})?$/).optional().default(""),
 });
 
-const RATE_LIMIT = { windowMs: 60_000, max: 6 };
-const hits = new Map<string, { count: number; resetAt: number }>();
-
-function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
-}
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = hits.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    hits.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > RATE_LIMIT.max;
-}
+const IP_LIMIT: RateLimitRule = { name: "beta-download-ip", windowSeconds: 60, max: 6 };
+const TOO_MANY = "Too many download requests. Try again shortly.";
 
 function referralCode(email: string): string {
   return createHash("sha256").update(email).digest("hex").slice(0, 8).toUpperCase();
 }
 
 export async function POST(request: Request) {
-  if (rateLimited(clientIp(request))) {
-    return NextResponse.json({ error: "Too many download requests. Try again shortly." }, { status: 429 });
-  }
+  const crossSite = rejectCrossSitePost(request);
+  if (crossSite) return crossSite;
+  const ipLimited = rateLimitRejection(await consumeRateLimit(IP_LIMIT, clientIp(request)), TOO_MANY);
+  if (ipLimited) return ipLimited;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Enter a valid email." }, { status: 422 });
 
   const email = parsed.data.email.toLowerCase();
+  // Hidden founder metric rows live on the waitlist under this domain.
+  if (email.endsWith("@unvibe.internal")) return NextResponse.json({ error: "Enter a valid email." }, { status: 422 });
+  const emailLimited = rateLimitRejection(await consumeRateLimit(SIGNUP_EMAIL_LIMIT, email), TOO_MANY);
+  if (emailLimited) return emailLimited;
   const macDownloadUrl = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
     || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
     || fallbackMacDownload;
