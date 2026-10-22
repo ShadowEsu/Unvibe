@@ -1709,6 +1709,15 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   line-height: 1.55;
 }
 
+.paper-faq ol {
+  margin: 0.9rem 0 0;
+  padding-left: 1.4rem;
+  list-style: decimal;
+  color: var(--ink);
+  font-size: 1.12rem;
+  line-height: 1.55;
+}
+
 .paper-faq__caret {
   display: inline-block;
   width: 0.45ch;

@@ -40,7 +40,14 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Download and open Unvibe</strong>
                   <p>
-                    {`On Mac, move Unvibe.app to Applications. On Windows, run the portable .exe.`}
+                    On Mac, move Unvibe to Applications and open it. macOS blocks the first open: press <b>Done</b>,
+                    then go to System Settings → Privacy &amp; Security, press <b>Open Anyway</b>, confirm, and enter
+                    your Mac password.
+                  </p>
+                  <p>
+                    On Windows, keep the download if your browser warns, then run the portable .exe. If you see
+                    “Windows protected your PC”, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
+                    <a className="paper-text-link" href="/install-help">Show me how</a>
                   </p>
                 </div>
               </li>
@@ -83,10 +90,40 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
             <details>
+              <summary>macOS won’t open Unvibe the first time</summary>
+              <p>
+                Unvibe is not notarized by Apple yet, so macOS blocks the first open. Do this once:
+              </p>
+              <ol>
+                <li>Press <strong>Done</strong> on the warning.</li>
+                <li>Open System Settings, click Privacy &amp; Security, and scroll down to Security.</li>
+                <li>Press <strong>Open Anyway</strong>, then confirm when macOS asks again.</li>
+                <li>Enter your Mac password, then press <strong>OK</strong>.</li>
+              </ol>
+              <p>
+                The Open Anyway button stays for about an hour after you try to open Unvibe. If it’s gone, open Unvibe
+                again first. On macOS 14 or older, you can instead Control-click (right-click) Unvibe in Applications,
+                choose <strong>Open</strong>, then press <strong>Open</strong> again.
+              </p>
+            </details>
+            <details>
+              <summary>Your browser blocks the Windows download</summary>
+              <p>
+                In Edge, press <strong>…</strong> next to the download, then <strong>Keep</strong>, then
+                {" "}<strong>Show more</strong>, then <strong>Keep anyway</strong>. Chrome also lets you keep a file after it warns.
+              </p>
+            </details>
+            <details>
               <summary>Windows shows “Windows protected your PC”</summary>
               <p>
                 The Windows build is not code-signed yet, so SmartScreen warns about it. Click <strong>More info</strong>, then
                 {" "}<strong>Run anyway</strong>. Only do this for the file downloaded from unvibe.site or our GitHub releases.
+              </p>
+              <p>
+                No Run anyway button? Work and school PCs can remove it. On Windows 11, Smart App Control also blocks
+                unsigned apps like Unvibe, and it can’t make an exception for one app. Email{" "}
+                <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a>
+                {" "}and we’ll tell you when the signed build is out.
               </p>
             </details>
             <details>
@@ -117,7 +154,7 @@ export default function BetaDownloadsPage() {
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />
-              <p>Need help? <a className="paper-text-link" href="mailto:preston@unvibe.site?subject=Unvibe%20help">Email Preston</a></p>
+              <p>Need help? <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
         </Reveal>
