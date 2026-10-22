@@ -77,7 +77,7 @@ const CLOSED: PricingCopy = {
     { id: "pro", name: "Pro", badge: "Opens soon", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Pro opens soon. Your Free plan keeps working until then.", features: FEATURES.pro, cta: "Download free", href: "/beta", featured: true, primary: false },
     { id: "teams", name: "Teams", badge: "Opens soon", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Teams opens soon. Until then, founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
-  disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
+  disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
   termsNote: "Pro and Teams are not on sale yet. Until they open, nothing is billed and your Free plan keeps working.",
 };
 
