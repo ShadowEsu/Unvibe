@@ -14,11 +14,14 @@ import { GET as referralGET } from "../app/api/referrals/[code]/route";
 
 const SERVICE_KEY = "service-role-test-key";
 const SITE = "https://unvibe.site";
+const KEY_SECRET = ["rate", "limit", "key", "test"].join("-");
 
 type Row = Record<string, unknown> & { email: string; referral_code: string };
 
 const waitlistRows = new Map<string, Row>();
 const limiterHits = new Map<string, number>();
+/** Every bucket the routes asked the store to count, in order. */
+const limiterBuckets: string[] = [];
 let limiterFails = false;
 let server: Server;
 
@@ -43,6 +46,7 @@ before(async () => {
       const args = JSON.parse(body) as { p_bucket: string; p_window_seconds: number; p_max: number };
       const hits = (limiterHits.get(args.p_bucket) ?? 0) + 1;
       limiterHits.set(args.p_bucket, hits);
+      limiterBuckets.push(args.p_bucket);
       return json(response, 200, hits <= args.p_max);
     }
 
@@ -78,6 +82,7 @@ before(async () => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_KEY;
   delete process.env.RESEND_API_KEY;
   delete process.env.VERCEL_ENV;
+  process.env.RATE_LIMIT_KEY_SECRET = KEY_SECRET;
 });
 
 after(async () => {
@@ -234,5 +239,113 @@ describe("waitlist responses do not reveal membership", () => {
   it("refuses the hidden founder metric addresses on beta-download", async () => {
     const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: "growth-funnel@unvibe.internal" }));
     assert.equal(response.status, 422);
+  });
+});
+
+/** Runs a scripted post (curl can send any Origin) and returns the per-minute IP bucket it was counted in. */
+async function waitlistIpBucket(ip: string): Promise<string> {
+  limiterBuckets.length = 0;
+  await waitlistRoute.POST(post("/api/waitlist", {}, { ip }));
+  const bucket = limiterBuckets.find((name) => name.startsWith("waitlist-ip:"));
+  assert.ok(bucket, `no waitlist-ip bucket for ${ip}`);
+  return bucket;
+}
+
+async function withEnv<T>(values: Record<string, string | undefined>, run: () => Promise<T>): Promise<T> {
+  const env = process.env as Record<string, string | undefined>;
+  const previous = Object.fromEntries(Object.keys(values).map((name) => [name, env[name]]));
+  for (const [name, value] of Object.entries(values)) {
+    if (value === undefined) delete env[name];
+    else env[name] = value;
+  }
+  try {
+    return await run();
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete env[name];
+      else env[name] = value;
+    }
+  }
+}
+
+describe("scripted signups are capped per network, per day and overall", () => {
+  it("groups IPv6 by /64 and counts IPv4-mapped IPv6 as the IPv4", async () => {
+    const network = await waitlistIpBucket("2001:db8:1:2::1");
+    // Same /64, written with :: compression, full zero-padded form, mixed case, brackets and a zone id.
+    assert.equal(await waitlistIpBucket("2001:0db8:0001:0002:ffff:eeee:dddd:cccc"), network);
+    assert.equal(await waitlistIpBucket("2001:DB8:1:2:a::b"), network);
+    assert.equal(await waitlistIpBucket("[2001:db8:1:2::99]"), network);
+    assert.equal(await waitlistIpBucket("2001:db8:1:2::1%eth0"), network);
+    assert.equal(await waitlistIpBucket("2001:db8:1:2:0:0:0.0.0.1"), network, "a trailing dotted quad is two hextets of the interface id");
+    // Different /64s.
+    assert.notEqual(await waitlistIpBucket("2001:db8:1:3::1"), network);
+    assert.notEqual(await waitlistIpBucket("2001:db8::1"), network);
+    assert.notEqual(await waitlistIpBucket("2001:db8:1::2:1"), network, ":: placement changes which hextets form the /64");
+    // IPv4 is unchanged and the mapped forms equal it.
+    const v4 = await waitlistIpBucket("198.51.100.7");
+    assert.equal(await waitlistIpBucket("::ffff:198.51.100.7"), v4);
+    assert.equal(await waitlistIpBucket("::FFFF:c633:6407"), v4);
+    assert.equal(await waitlistIpBucket("0:0:0:0:0:ffff:198.51.100.7"), v4);
+    assert.notEqual(await waitlistIpBucket("198.51.100.8"), v4);
+    assert.notEqual(await waitlistIpBucket("::ffff:198.51.100.8"), v4);
+  });
+
+  it("rotating addresses inside one /64 shares the per-minute limit", async () => {
+    for (let call = 1; call <= 8; call += 1) {
+      const response = await waitlistRoute.POST(post("/api/waitlist", {}, { ip: `2001:db8:77:1::${call.toString(16)}` }));
+      assert.equal(response.status, 422, `call ${call}`);
+    }
+    const ninth = await waitlistRoute.POST(post("/api/waitlist", {}, { ip: "2001:db8:77:1:ffff::9" }));
+    assert.equal(ninth.status, 429);
+  });
+
+  it("caps one network per day across both forms (SIGNUP_IP_DAILY_LIMIT)", async () => {
+    await withEnv({ SIGNUP_IP_DAILY_LIMIT: "3" }, async () => {
+      const statuses = [
+        (await waitlistRoute.POST(post("/api/waitlist", {}, { ip: "2001:db8:88:1::1" }))).status,
+        (await betaDownloadRoute.POST(post("/api/beta-download", {}, { ip: "2001:db8:88:1::2" }))).status,
+        (await waitlistRoute.POST(post("/api/waitlist", {}, { ip: "2001:db8:88:1::3" }))).status,
+      ];
+      assert.deepEqual(statuses, [422, 422, 422]);
+      const fourth = await betaDownloadRoute.POST(post("/api/beta-download", {}, { ip: "2001:db8:88:1:abcd::4" }));
+      assert.equal(fourth.status, 429);
+    });
+  });
+
+  it("stops signup email for everyone at the daily ceiling with a plain 503 (SIGNUP_EMAIL_DAILY_CEILING)", async () => {
+    limiterHits.clear();
+    await withEnv({ SIGNUP_EMAIL_DAILY_CEILING: "2" }, async () => {
+      const first = await waitlistRoute.POST(post("/api/waitlist", { email: "ceiling-one@unvibe-mail.test" }));
+      const second = await waitlistRoute.POST(post("/api/waitlist", { email: "ceiling-two@unvibe-mail.test" }));
+      assert.deepEqual([first.status, second.status], [200, 200]);
+      const third = await waitlistRoute.POST(post("/api/waitlist", { email: "ceiling-three@unvibe-mail.test" }));
+      assert.equal(third.status, 503);
+      assert.match((await third.json() as { error: string }).error, /try again tomorrow/i);
+      const fourth = await betaDownloadRoute.POST(post("/api/beta-download", { email: "ceiling-four@unvibe-mail.test" }));
+      assert.equal(fourth.status, 503);
+    });
+  });
+
+  it("keys buckets with an HMAC of a server secret, not a plain sha256", async () => {
+    const ip = "198.51.100.42";
+    const bucket = await waitlistIpBucket(ip);
+    const plainSha = createHash("sha256").update(`waitlist-ip:${ip}`).digest("hex").slice(0, 32);
+    assert.ok(!bucket.includes(plainSha), "the old unsalted hash can be brute-forced from a dump");
+    assert.ok(!bucket.includes(ip));
+    const otherSecret = await withEnv({ RATE_LIMIT_KEY_SECRET: `${KEY_SECRET}-rotated` }, () => waitlistIpBucket(ip));
+    assert.notEqual(otherSecret, bucket, "the secret must be part of the key");
+  });
+
+  it("fails closed when deployed without RATE_LIMIT_KEY_SECRET", async () => {
+    await withEnv({ RATE_LIMIT_KEY_SECRET: undefined, NODE_ENV: "production" }, async () => {
+      const waitlist = await waitlistRoute.POST(post("/api/waitlist", {}));
+      assert.equal(waitlist.status, 503);
+      const download = await betaDownloadRoute.POST(post("/api/beta-download", {}));
+      assert.equal(download.status, 503);
+    });
+    await withEnv({ NODE_ENV: "production" }, async () => {
+      const withSecret = await waitlistRoute.POST(post("/api/waitlist", {}));
+      assert.equal(withSecret.status, 422);
+    });
   });
 });

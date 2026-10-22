@@ -5,8 +5,15 @@ import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/li
 import { scheduleSetupReminder } from "@/lib/sendBetaDownloadEmail";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
 import { recordWaitlistBetaEmail, saveWaitlistEntry } from "@/lib/waitlistStore";
-import { clientIp, rateLimitRejection, rejectCrossSitePost } from "@/lib/publicForm";
-import { consumeRateLimit, SIGNUP_EMAIL_LIMIT, type RateLimitRule } from "@/lib/rateLimit";
+import { clientNetwork, DAILY_LIMIT_MESSAGE, emailCeilingRejection, rateLimitRejection, rejectCrossSitePost } from "@/lib/publicForm";
+import {
+  consumeRateLimit,
+  GLOBAL_KEY,
+  SIGNUP_EMAIL_LIMIT,
+  signupEmailDailyCeiling,
+  signupIpDailyRule,
+  type RateLimitRule,
+} from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,8 +38,11 @@ function referralCode(email: string): string {
 export async function POST(request: Request) {
   const crossSite = rejectCrossSitePost(request);
   if (crossSite) return crossSite;
-  const ipLimited = rateLimitRejection(await consumeRateLimit(IP_LIMIT, clientIp(request)), TOO_MANY);
+  const network = clientNetwork(request);
+  const ipLimited = rateLimitRejection(await consumeRateLimit(IP_LIMIT, network), TOO_MANY);
   if (ipLimited) return ipLimited;
+  const ipDayLimited = rateLimitRejection(await consumeRateLimit(signupIpDailyRule(), network), DAILY_LIMIT_MESSAGE);
+  if (ipDayLimited) return ipDayLimited;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Enter a valid email." }, { status: 422 });
 
@@ -41,6 +51,8 @@ export async function POST(request: Request) {
   if (email.endsWith("@unvibe.internal")) return NextResponse.json({ error: "Enter a valid email." }, { status: 422 });
   const emailLimited = rateLimitRejection(await consumeRateLimit(SIGNUP_EMAIL_LIMIT, email), TOO_MANY);
   if (emailLimited) return emailLimited;
+  const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
+  if (ceiling) return ceiling;
   const macDownloadUrl = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
     || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
     || fallbackMacDownload;

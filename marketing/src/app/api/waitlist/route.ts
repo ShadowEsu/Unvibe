@@ -15,8 +15,15 @@ import { captureMixpanelServerEvent } from "@/lib/mixpanelServer";
 import { captureServerEvent } from "@/lib/posthogServer";
 import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
 import { recordGrowthFunnelEvent } from "@/lib/growthFunnelStore";
-import { clientIp, rateLimitRejection, rejectCrossSitePost } from "@/lib/publicForm";
-import { consumeRateLimit, SIGNUP_EMAIL_LIMIT, type RateLimitRule } from "@/lib/rateLimit";
+import { clientNetwork, DAILY_LIMIT_MESSAGE, emailCeilingRejection, rateLimitRejection, rejectCrossSitePost } from "@/lib/publicForm";
+import {
+  consumeRateLimit,
+  GLOBAL_KEY,
+  SIGNUP_EMAIL_LIMIT,
+  signupEmailDailyCeiling,
+  signupIpDailyRule,
+  type RateLimitRule,
+} from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,8 +38,11 @@ function referralCodeFor(email: string): string {
 export async function POST(req: Request) {
   const crossSite = rejectCrossSitePost(req);
   if (crossSite) return crossSite;
-  const ipLimited = rateLimitRejection(await consumeRateLimit(IP_LIMIT, clientIp(req)), TOO_MANY);
+  const network = clientNetwork(req);
+  const ipLimited = rateLimitRejection(await consumeRateLimit(IP_LIMIT, network), TOO_MANY);
   if (ipLimited) return ipLimited;
+  const ipDayLimited = rateLimitRejection(await consumeRateLimit(signupIpDailyRule(), network), DAILY_LIMIT_MESSAGE);
+  if (ipDayLimited) return ipDayLimited;
 
   const parsed = waitlistSchema.safeParse(withNameDefaults(await req.json().catch(() => null)));
   if (!parsed.success) {
@@ -48,6 +58,8 @@ export async function POST(req: Request) {
   }
   const emailLimited = rateLimitRejection(await consumeRateLimit(SIGNUP_EMAIL_LIMIT, email), TOO_MANY);
   if (emailLimited) return emailLimited;
+  const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
+  if (ceiling) return ceiling;
   const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
   // Stored as the friend's code, for attribution only (it grants nothing). A typed email is
