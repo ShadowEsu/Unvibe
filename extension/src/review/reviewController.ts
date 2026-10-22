@@ -3,7 +3,7 @@ import type { ReviewPanelProvider } from '../panel/reviewPanelProvider';
 import type { ReviewRequest, WebviewToHost } from '../panel/reviewTypes';
 import type { ReviewContext, ReviewRequestPayload } from '../protocol';
 import { buildContext, scanTargets } from '../context/contextBuilder';
-import { scanBlocks, hasBlocking, type SecretFinding } from '../security/secretFilter';
+import { scanBlocks, scanText, hasBlocking, type SecretFinding } from '../security/secretFilter';
 import { streamReview } from '../net/reviewClient';
 import { fetchComprehension } from '../net/comprehensionClient';
 import { toSegments, basename } from '../citations/citations';
@@ -89,6 +89,13 @@ export class ReviewController {
       return;
     }
     const backendUrl = this.backendUrl();
+    // A typed question has no preview step, so any finding stops it before anything is sent.
+    const questionFindings = question ? scanText(question, 'question') : [];
+    if (questionFindings.length > 0) {
+      this.log.appendLine(`[review] question blocked: ${questionFindings.map((f) => f.rule).join(', ')}`);
+      this.panel.showBlocked(questionFindings);
+      return;
+    }
     this.lastSend = { question, variant };
 
     // Record the review once, on the initial explanation (not follow-ups / re-explains).
