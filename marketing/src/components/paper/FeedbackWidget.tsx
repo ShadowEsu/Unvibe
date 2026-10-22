@@ -40,8 +40,9 @@ export function FeedbackWidget() {
     if (fromEmail.includes("@")) setEmail(fromEmail.slice(0, 254));
     if (/^[a-f0-9]{32}$/.test(token)) setClaim(token);
     setOpen(true);
-    track("feedback_opened", { surface: "email_link" });
+    // Drop the email and token from the address bar before anything (analytics included) reads it.
     window.history.replaceState(null, "", window.location.pathname);
+    track("feedback_opened", { surface: "email_link" });
   }, []);
 
   useEffect(() => {

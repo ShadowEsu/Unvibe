@@ -5,11 +5,20 @@
  * Mixpanel Pro startup credits). PostHog loads via posthog-js when
  * NEXT_PUBLIC_POSTHOG_KEY is set — named events, exception autocapture for
  * Error Tracking, and Surveys. We never send code contents, emails, or other
- * personal data. An anonymous id is kept in localStorage. Automated browsers and
- * visitors who opted out with ?notrack=1 load no SDK and send nothing (trackingOptOut.ts).
+ * personal data: replays mask all text and inputs, and emails, tokens and codes
+ * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
+ * An anonymous id is kept in localStorage. Automated browsers, visitors who
+ * opted out with ?notrack=1 (trackingOptOut.ts), and admin or capability pages
+ * load no SDK and send nothing.
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
+import {
+  POSTHOG_PRIVACY_CONFIG,
+  analyticsAllowedOnPath,
+  mixpanelPrivacyConfig,
+  sanitizeUrl,
+} from "@/lib/analyticsPrivacy";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export type { AnalyticsEvent };
@@ -118,7 +127,7 @@ function flushPosthog(): void {
 
 function sendPosthog(event: AnalyticsEvent, cleaned: Props): void {
   if (!POSTHOG_KEY || typeof window === "undefined") return;
-  const props = { ...cleaned, $current_url: window.location.href };
+  const props = { ...cleaned, $current_url: sanitizeUrl(window.location.href) };
   if (posthogClient) {
     posthogClient.capture(event, props);
     return;
@@ -138,7 +147,7 @@ function flushMixpanel(): void {
 
 function sendMixpanel(event: AnalyticsEvent, props: Props): void {
   if (typeof window === "undefined") return;
-  const withPath = { ...props, path: window.location.pathname };
+  const withPath = { ...props, path: sanitizeUrl(window.location.pathname) };
   if (mixpanelClient) {
     mixpanelClient.track(event, withPath);
     return;
@@ -189,9 +198,14 @@ function recordFunnelEvent(event: AnalyticsEvent): void {
   }).catch(() => undefined);
 }
 
+/** Nothing is sent on the server, for opted-out or automated browsers, or on admin and capability pages. */
+function analyticsOff(): boolean {
+  return typeof window === "undefined" || browserTrackingDisabled() || !analyticsAllowedOnPath(window.location.pathname);
+}
+
 /** Track an enumerated event on Mixpanel and PostHog when configured. */
 export function track(event: AnalyticsEvent, props?: Props): void {
-  if (typeof window === "undefined" || browserTrackingDisabled()) return;
+  if (analyticsOff()) return;
   const cleaned = cleanedProps(props);
   recordFunnelEvent(event);
   sendPosthog(event, cleaned);
@@ -203,7 +217,7 @@ export function captureClientException(
   error: unknown,
   props?: Props,
 ): void {
-  if (typeof window === "undefined" || browserTrackingDisabled()) return;
+  if (analyticsOff()) return;
   initAnalytics();
   const cleaned = cleanedProps(props);
   if (posthogClient) {
@@ -234,10 +248,7 @@ function startPosthog(): void {
         disable_surveys: false,
         enable_heatmaps: true,
         capture_dead_clicks: true,
-        session_recording: {
-          maskAllInputs: true,
-          maskTextSelector: "[data-ph-mask]",
-        },
+        ...POSTHOG_PRIVACY_CONFIG,
       });
       posthog.identify(anonId());
       posthogClient = posthog;
@@ -256,8 +267,7 @@ function startMixpanel(): void {
       const mixpanel = mod.default as MixpanelClient;
       // Mixpanel for Startups Pro credits: autocapture + session replay are included.
       mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
-        autocapture: true,
-        record_sessions_percent: 100,
+        ...mixpanelPrivacyConfig(window.location.href),
         persistence: "localStorage",
         track_pageview: true,
         ip: true,
@@ -273,7 +283,7 @@ function startMixpanel(): void {
 
 /** Load Mixpanel + PostHog browser SDKs when tokens are present. */
 export function initAnalytics(): void {
-  if (typeof window === "undefined" || browserTrackingDisabled()) return;
+  if (analyticsOff()) return;
   startPosthog();
   startMixpanel();
 }
