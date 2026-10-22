@@ -127,7 +127,9 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
     }
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      await syncStripeSubscription(store, event.data.object);
+      // Stripe does not deliver events in order. Sync the subscription as it is now, never the
+      // event's snapshot, so a late older event cannot roll back or resurrect a subscription.
+      await syncStripeSubscription(store, await deps.retrieveSubscription(event.data.object.id));
       return;
     case 'customer.subscription.deleted':
       {

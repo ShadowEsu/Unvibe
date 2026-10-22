@@ -21,7 +21,7 @@ interface MemoryBillingData {
   usage: Map<string, number>;
   invitations: Map<string, WorkspaceInvitation & { tokenHash: string }>;
   checkoutIntents: Map<string, CheckoutIntentRecord>;
-  webhooks: Map<string, 'processing' | 'completed' | 'failed'>;
+  webhooks: Map<string, { status: 'processing' | 'completed' | 'failed'; claimedAt: number }>;
   audits: Array<{ userId: string | null; workspaceId: string | null; action: string; metadata: Record<string, unknown>; at: string }>;
 }
 
@@ -32,6 +32,9 @@ function membershipKey(workspaceId: string, userId: string): string {
 function usageKey(workspaceId: string, kind: UsageKind, startsAt: string): string {
   return `${workspaceId}:${kind}:${startsAt}`;
 }
+
+/** A webhook claim is a lease; must match the 5 minutes in claim_billing_webhook (SQL). */
+const WEBHOOK_LEASE_MS = 5 * 60_000;
 
 function defaultSubscription(workspaceId: string): SubscriptionRecord {
   return {
@@ -276,15 +279,21 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async claimWebhook(eventId: string, _eventType: string): Promise<boolean> {
-    const status = this.data.webhooks.get(eventId);
-    if (status === 'processing' || status === 'completed') return false;
-    this.data.webhooks.set(eventId, 'processing');
+    const prior = this.data.webhooks.get(eventId);
+    const now = this.now().getTime();
+    const leaseExpired = prior?.status === 'processing' && now - prior.claimedAt > WEBHOOK_LEASE_MS;
+    if (prior && prior.status !== 'failed' && !leaseExpired) return false;
+    this.data.webhooks.set(eventId, { status: 'processing', claimedAt: now });
     return true;
   }
 
-  async completeWebhook(eventId: string): Promise<void> { this.data.webhooks.set(eventId, 'completed'); }
+  async completeWebhook(eventId: string): Promise<void> {
+    this.data.webhooks.set(eventId, { status: 'completed', claimedAt: this.data.webhooks.get(eventId)?.claimedAt ?? this.now().getTime() });
+  }
 
-  async failWebhook(eventId: string, _message: string): Promise<void> { this.data.webhooks.set(eventId, 'failed'); }
+  async failWebhook(eventId: string, _message: string): Promise<void> {
+    this.data.webhooks.set(eventId, { status: 'failed', claimedAt: this.data.webhooks.get(eventId)?.claimedAt ?? this.now().getTime() });
+  }
 
   async recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
     this.data.audits.push({ userId, workspaceId, action, metadata, at: this.now().toISOString() });
