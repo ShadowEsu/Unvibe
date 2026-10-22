@@ -276,13 +276,6 @@ export const milestones: Milestone[] = [
     figure: "app stills",
   },
   {
-    date: "20 AUG 2026",
-    category: "COMPANY",
-    title: "AWS for Startups",
-    summary: "Secured $5,000 in AWS Activate credits through AWS for Startups. Credits for Bedrock and related AWS infrastructure during private Mac beta. Not cash. Not a round.",
-    figure: "$5,000",
-  },
-  {
     date: "18 AUG 2026",
     category: "COMPANY",
     title: "Deepgram for Startups",
