@@ -109,7 +109,7 @@ export async function getPrivateStats(): Promise<PrivateStats> {
       checks: await count(client, "understanding_checks"),
     })) : null,
     client ? attempt("Referrals", async () => ({
-      claims: await count(client, "gift_claims"),
+      claims: await count(client, "gift_redemptions"),
       feedbackMonths: await count(client, "bonus_pro_grants"),
     })) : null,
     client ? attempt("Feedback", async () => {

@@ -1,4 +1,5 @@
 import { BETA_FEEDBACK_URL, BETA_INSTALL_COMMAND, BETA_INSTALL_VERSION, BETA_WINDOWS_INSTALL_COMMAND } from "../lib/betaOffer";
+import { GIFT_CODE_HOME, GIFT_OFFER } from "../lib/giftOffer";
 
 export { BETA_FEEDBACK_URL };
 export const BETA_CURL = BETA_INSTALL_COMMAND;
@@ -38,7 +39,9 @@ export function betaFeedbackText(): string {
   return `The free plan includes AI explanations every month. After you try it, fill the feedback form:
 ${BETA_FEEDBACK_URL}
 
-The form unlocks 1 week of Pro and your referral code. Waitlist gifts still add on. When a friend joins with your link using a new email, you each get a month of Pro: Expert depth and answers that use nearby files. Up to five friends.`;
+The form unlocks 1 week of Pro.
+
+${GIFT_CODE_HOME} ${GIFT_OFFER}`;
 }
 
 export function betaSignOffText(): string {

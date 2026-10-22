@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { capGiftUsed, giftCodeFromEmail, randomGiftCode } from '../src/main/gift';
+import { capGiftUsed, giftCodeFromInput } from '../src/main/gift';
 
-test('gift code from email matches the waitlist 8 character hash', () => {
-  const code = giftCodeFromEmail('Preston@unvibe.site');
-  assert.equal(code.length, 8);
-  assert.match(code, /^[a-f0-9]{8}$/);
-  assert.equal(code, giftCodeFromEmail('preston@unvibe.site'));
+test('gift code is read from a bare code or a shared link', () => {
+  assert.equal(giftCodeFromInput('  Ab3_x-9QzLmN0pR7  '), 'Ab3_x-9QzLmN0pR7');
+  assert.equal(giftCodeFromInput('https://unvibe.site/?ref=Ab3_x-9QzLmN0pR7'), 'Ab3_x-9QzLmN0pR7');
+  assert.equal(giftCodeFromInput('https://unvibe.site/?utm_source=x&ref=Ab3_x-9QzLmN0pR7'), 'Ab3_x-9QzLmN0pR7');
 });
 
-test('random gift code is 8 letters and numbers', () => {
-  const code = randomGiftCode(Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]));
-  assert.equal(code.length, 8);
-  assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/);
+test('old 8 character codes and junk are not gift codes', () => {
+  assert.equal(giftCodeFromInput('deadbeef'), '');
+  assert.equal(giftCodeFromInput('https://unvibe.site/?ref=deadbeef'), '');
+  assert.equal(giftCodeFromInput('not a link'), '');
+  assert.equal(giftCodeFromInput('Ab3_x-9QzLmN0pR7!'), '');
 });
 
 test('gift used is capped at five', () => {

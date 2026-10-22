@@ -302,24 +302,31 @@ export class MemoryBillingStore implements BillingStore {
     }
   }
 
-  async grantGiftMonth(userId: string, endsAt: string): Promise<{ applied: boolean }> {
+  /**
+   * Dev mirror of the SQL `add_pro_months`: complimentary Pro months that stack on a running
+   * gift month, end at most 12 months from now, and never touch a live Stripe subscription.
+   */
+  async addProMonths(userId: string, months: number): Promise<{ applied: boolean }> {
+    if (!Number.isInteger(months) || months <= 0) return { applied: false };
     const workspace = await this.ensurePersonalWorkspace(userId);
     const current = this.data.subscriptions.get(workspace.id) ?? defaultSubscription(workspace.id);
-    if (current.stripeSubscriptionId && (current.status === 'active' || current.status === 'trialing')) {
+    if (current.stripeSubscriptionId && current.status !== 'canceled' && current.status !== 'inactive') {
       return { applied: false };
     }
     const now = this.now();
-    const requestedEnd = new Date(endsAt);
-    const existingEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : now;
-    const later = requestedEnd > existingEnd ? requestedEnd : existingEnd;
+    const runningEnd = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : null;
+    const from = current.plan === 'pro' && current.status === 'trialing' && runningEnd && runningEnd > now ? runningEnd : now;
+    const cap = new Date(now);
+    cap.setUTCMonth(cap.getUTCMonth() + 12);
+    const stacked = new Date(from.getTime() + months * 30 * 24 * 60 * 60 * 1000);
     this.data.subscriptions.set(workspace.id, {
       ...current,
       plan: 'pro',
       interval: 'monthly',
       status: 'trialing',
       seats: 1,
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: later.toISOString(),
+      currentPeriodStart: from > now ? current.currentPeriodStart ?? now.toISOString() : now.toISOString(),
+      currentPeriodEnd: (stacked < cap ? stacked : cap).toISOString(),
     });
     return { applied: true };
   }
