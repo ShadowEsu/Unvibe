@@ -25,6 +25,16 @@ function providerId(value: string | { id: string } | null): string {
   return typeof value === 'string' ? value : value.id;
 }
 
+/**
+ * True when the subscription will not renew again. The Stripe customer portal (API 2026-06-24.dahlia)
+ * schedules a cancel by setting `cancel_at` to the period end and leaves `cancel_at_period_end` false,
+ * so both are read. A `cancel_at` after this period still renews (and charges) at least once more.
+ */
+function endsWithoutRenewing(subscription: Stripe.Subscription, currentPeriodEnd: number): boolean {
+  if (subscription.cancel_at_period_end) return true;
+  return typeof subscription.cancel_at === 'number' && subscription.cancel_at <= currentPeriodEnd;
+}
+
 export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, grace = false): Promise<void> {
   const metadata = requiredMetadata(subscription);
   const item = subscription.items.data[0];
@@ -51,7 +61,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     currentPeriodStart: new Date(item.current_period_start * 1_000).toISOString(),
     currentPeriodEnd: new Date(item.current_period_end * 1_000).toISOString(),
     gracePeriodEndsAt: shouldGrace ? graceEnds : undefined,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    cancelAtPeriodEnd: endsWithoutRenewing(subscription, item.current_period_end),
   });
 }
 
