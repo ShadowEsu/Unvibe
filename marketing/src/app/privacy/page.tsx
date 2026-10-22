@@ -96,7 +96,13 @@ export default function PrivacyPage() {
       <LegalSection heading="This website">
         <p>
           unvibe.site uses Mixpanel and PostHog to understand how visitors use the site,
-          including page views, clicks, and session replays with form inputs masked. We
+          including page views, clicks, and session replays. Replays hide all page text and
+          everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
+          codes) are removed from page addresses before they are sent. Admin pages and private
+          stats links start no analytics; if you open one from another page on the site, replay
+          recording stops and nothing from that page is sent. Automated browsers send no
+          analytics, and neither does a browser where you have opened any page with ?notrack=1
+          added to the address; ?notrack=0 turns analytics back on. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The

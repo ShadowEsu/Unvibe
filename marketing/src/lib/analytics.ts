@@ -9,27 +9,33 @@
  * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
  * An anonymous id is kept in localStorage. Automated browsers, visitors who
  * opted out with ?notrack=1 (trackingOptOut.ts), and admin or capability pages
- * load no SDK and send nothing.
+ * load no SDK and send nothing. Reaching an admin page by client navigation
+ * stops replay there (syncSessionRecording).
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
 import {
+  NO_PAUSED_REPLAYS,
   POSTHOG_PRIVACY_CONFIG,
   analyticsAllowedOnPath,
   mixpanelPrivacyConfig,
   sanitizeUrl,
+  syncReplayForPage,
+  type MixpanelReplay,
+  type PausedReplays,
+  type PosthogReplay,
 } from "@/lib/analyticsPrivacy";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export type { AnalyticsEvent };
 
 type Props = Record<string, string | number | boolean | undefined>;
-type MixpanelClient = {
+type MixpanelClient = MixpanelReplay & {
   init: (token: string, config: Record<string, unknown>) => void;
   identify: (id: string) => void;
   track: (event: string, props?: Record<string, unknown>) => void;
 };
-type PosthogClient = {
+type PosthogClient = PosthogReplay & {
   init: (token: string, config: Record<string, unknown>) => void;
   identify: (id: string) => void;
   capture: (event: string, props?: Record<string, unknown>) => void;
@@ -89,6 +95,8 @@ const mixpanelQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
 let posthogClient: PosthogClient | null = null;
 let posthogStart: Promise<void> | null = null;
 const posthogQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
+
+let pausedReplays: PausedReplays = NO_PAUSED_REPLAYS;
 
 function anonId(): string {
   if (typeof window === "undefined") return "server";
@@ -253,6 +261,7 @@ function startPosthog(): void {
       posthog.identify(anonId());
       posthogClient = posthog;
       flushPosthog();
+      syncSessionRecording();
     })
     .catch(() => {
       posthogStart = null;
@@ -275,6 +284,7 @@ function startMixpanel(): void {
       mixpanel.identify(anonId());
       mixpanelClient = mixpanel;
       flushMixpanel();
+      syncSessionRecording();
     })
     .catch(() => {
       mixpanelStart = null;
@@ -286,4 +296,17 @@ export function initAnalytics(): void {
   if (analyticsOff()) return;
   startPosthog();
   startMixpanel();
+}
+
+/**
+ * Stops session replay when a client navigation lands on an admin or capability page, and
+ * resumes it on leaving (rules in syncReplayForPage). Call after every navigation.
+ */
+export function syncSessionRecording(): void {
+  if (typeof window === "undefined") return;
+  pausedReplays = syncReplayForPage(
+    pausedReplays,
+    { href: window.location.href, trackingDisabled: browserTrackingDisabled() },
+    { posthog: posthogClient, mixpanel: mixpanelClient },
+  );
 }

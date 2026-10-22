@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { CaptureResult } from "posthog-js";
 import {
+  NO_PAUSED_REPLAYS,
   POSTHOG_PRIVACY_CONFIG,
   analyticsAllowedOnPath,
   maskReplayNetworkEntry,
@@ -9,6 +10,7 @@ import {
   mixpanelPrivacyConfig,
   posthogBeforeSend,
   sanitizeUrl,
+  syncReplayForPage,
 } from "./analyticsPrivacy";
 import { feedbackRewardUrl, signEmail } from "./rewardLink";
 import { unsubscribeUrl } from "./unsubscribe";
@@ -124,8 +126,20 @@ describe("analytics SDK hooks", () => {
         token: "project-token",
       },
     });
+    assert.ok(sent);
     assertClean(sent);
     assert.equal(sent.properties.token, "project-token", "Mixpanel's own project token property is untouched");
+  });
+
+  it("drops every SDK event (pageviews, autocapture, exceptions) sent from an admin or capability page", () => {
+    for (const url of ["https://unvibe.site/founder", "https://unvibe.site/waitlist-admin?tab=all", `https://unvibe.site/s/${STATS_KEY}`]) {
+      const posthogEvent: CaptureResult = { uuid: "u2", event: "$pageview", properties: { $current_url: url } };
+      assert.equal(posthogBeforeSend(posthogEvent), null, url);
+      assert.equal(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: url } }), null, url);
+    }
+    const publicEvent: CaptureResult = { uuid: "u3", event: "$pageview", properties: { $current_url: "https://unvibe.site/pricing" } };
+    assert.ok(posthogBeforeSend(publicEvent));
+    assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: "https://unvibe.site/pricing" } }));
   });
 
   it("PostHog replay keeps no URL secrets, headers or bodies", () => {
@@ -159,6 +173,7 @@ describe("analytics privacy config", () => {
     assert.equal(clean.record_sessions_percent, 100);
     assert.equal(mixpanelPrivacyConfig(feedbackRewardUrl(EMAIL)).record_sessions_percent, 0);
     assert.equal(mixpanelPrivacyConfig("https://unvibe.site/activate?user_code=ABCD1234").record_sessions_percent, 0);
+    assert.equal(mixpanelPrivacyConfig("https://unvibe.site/founder").record_sessions_percent, 0, "SDK finished loading after a client navigation to an admin page");
   });
 
   it("admin and capability pages load no analytics SDK", () => {
@@ -167,6 +182,88 @@ describe("analytics privacy config", () => {
     }
     for (const path of ["/", "/pricing", "/activate", "/app", "/waitlisted-not-a-page", "/support"]) {
       assert.equal(analyticsAllowedOnPath(path), true, path);
+    }
+  });
+});
+
+/** Fake SDK clients that log which replay controls were called. */
+function fakeSdks({ mixpanelRecording = true } = {}) {
+  const calls: string[] = [];
+  return {
+    calls,
+    sdk: {
+      posthog: {
+        stopSessionRecording: () => void calls.push("posthog.stop"),
+        startSessionRecording: () => void calls.push("posthog.start"),
+      },
+      mixpanel: {
+        stop_session_recording: () => void calls.push("mixpanel.stop"),
+        start_session_recording: () => void calls.push("mixpanel.start"),
+        get_session_recording_properties: () => (mixpanelRecording ? { $mp_replay_id: "replay-1" } : {}),
+      },
+    },
+  };
+}
+
+const tracked = { trackingDisabled: false };
+
+describe("session replay on client navigation", () => {
+  it("public to admin or capability page stops both recordings", () => {
+    for (const href of ["https://unvibe.site/founder", "https://unvibe.site/waitlist", `https://unvibe.site/s/${STATS_KEY}`]) {
+      const { calls, sdk } = fakeSdks();
+      const paused = syncReplayForPage(NO_PAUSED_REPLAYS, { href, ...tracked }, sdk);
+      assert.deepEqual(calls, ["posthog.stop", "mixpanel.stop"], href);
+      assert.deepEqual(paused, { posthog: true, mixpanel: true }, href);
+    }
+  });
+
+  it("private to private calls nothing again", () => {
+    const { calls, sdk } = fakeSdks();
+    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: "https://unvibe.site/waitlist-admin", ...tracked }, sdk);
+    assert.deepEqual(calls, []);
+    assert.deepEqual(paused, { posthog: true, mixpanel: true });
+  });
+
+  it("private to public resumes the recordings it stopped", () => {
+    const { calls, sdk } = fakeSdks();
+    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: "https://unvibe.site/pricing", ...tracked }, sdk);
+    assert.deepEqual(calls, ["posthog.start", "mixpanel.start"]);
+    assert.deepEqual(paused, NO_PAUSED_REPLAYS);
+  });
+
+  it("public to public calls nothing", () => {
+    const { calls, sdk } = fakeSdks();
+    for (const href of ["https://unvibe.site/", "https://unvibe.site/pricing#faq", "https://unvibe.site/activate"]) {
+      assert.deepEqual(syncReplayForPage(NO_PAUSED_REPLAYS, { href, ...tracked }, sdk), NO_PAUSED_REPLAYS, href);
+    }
+    assert.deepEqual(calls, []);
+  });
+
+  it("never resumes for automated or opted-out browsers", () => {
+    const { calls, sdk } = fakeSdks();
+    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: "https://unvibe.site/pricing", trackingDisabled: true }, sdk);
+    assert.deepEqual(calls, []);
+    assert.deepEqual(paused, { posthog: true, mixpanel: true });
+  });
+
+  it("does not resume Mixpanel while the URL carries a secret", () => {
+    const { calls, sdk } = fakeSdks();
+    const paused = syncReplayForPage({ posthog: true, mixpanel: true }, { href: feedbackRewardUrl(EMAIL), ...tracked }, sdk);
+    assert.deepEqual(calls, ["posthog.start"]);
+    assert.deepEqual(paused, { posthog: false, mixpanel: true });
+  });
+
+  it("never force-starts a Mixpanel replay that was not recording", () => {
+    const { calls, sdk } = fakeSdks({ mixpanelRecording: false });
+    const paused = syncReplayForPage(NO_PAUSED_REPLAYS, { href: "https://unvibe.site/founder", ...tracked }, sdk);
+    assert.deepEqual(syncReplayForPage(paused, { href: "https://unvibe.site/", ...tracked }, sdk), NO_PAUSED_REPLAYS);
+    assert.deepEqual(calls, ["posthog.stop", "posthog.start"]);
+  });
+
+  it("does nothing, and does not throw, before the SDKs have loaded", () => {
+    for (const href of ["https://unvibe.site/founder", "https://unvibe.site/"]) {
+      const paused = syncReplayForPage(NO_PAUSED_REPLAYS, { href, ...tracked }, { posthog: null, mixpanel: null });
+      assert.deepEqual(paused, NO_PAUSED_REPLAYS, href);
     }
   });
 });

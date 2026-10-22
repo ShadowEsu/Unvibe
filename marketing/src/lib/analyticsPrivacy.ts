@@ -10,6 +10,8 @@
  *   explanations of someone's code never reach a replay. New elements are covered by default.
  * - Autocapture: no element text and no element attributes.
  * - Admin and capability pages (`/founder`, `/waitlist`, `/waitlist-admin`, `/s/…`) load no SDK.
+ *   When a visitor reaches one by client navigation from a public page, both replays stop until
+ *   they leave it, and every SDK event recorded there is dropped before sending.
  */
 
 import type { BeforeSendFn, CaptureResult } from "posthog-js";
@@ -98,9 +100,26 @@ export function sanitizeProperties<T extends PropertyBag>(props: T): T {
   return out as T;
 }
 
+/** Path of a page URL (absolute or site path); "" when it cannot be parsed. */
+function pagePath(href: string): string {
+  try {
+    return new URL(href, "https://unvibe.site").pathname;
+  } catch {
+    return "";
+  }
+}
+
+/** True for an SDK event recorded on an admin or capability page. Both SDKs set `$current_url` on every event. */
+function sentFromPrivatePage(properties: PropertyBag | undefined): boolean {
+  const url = properties?.$current_url;
+  return typeof url === "string" && !analyticsAllowedOnPath(pagePath(url));
+}
+
 /** PostHog `before_send`: every event, pageview and person update. */
 export const posthogBeforeSend: BeforeSendFn = (event: CaptureResult | null) => {
   if (!event) return event;
+  // Pageviews, autocapture, heatmaps and exceptions after a client navigation into an admin page.
+  if (sentFromPrivatePage(event.properties)) return null;
   return {
     ...event,
     properties: sanitizeProperties(event.properties),
@@ -126,8 +145,9 @@ export function maskReplayNetworkEntry<T extends NetworkEntry>(entry: T): T {
   return { ...rest, name: sanitizeUrl(entry.name) } as T;
 }
 
-/** Mixpanel `before_send_events`: every tracked, autocaptured and pageview event. */
-export function mixpanelBeforeSend<T extends { properties: PropertyBag }>(payload: T): T {
+/** Mixpanel `before_send_events`: every tracked, autocaptured and pageview event. Null drops it. */
+export function mixpanelBeforeSend<T extends { properties: PropertyBag }>(payload: T): T | null {
+  if (sentFromPrivatePage(payload.properties)) return null;
   return { ...payload, properties: sanitizeProperties(payload.properties) };
 }
 
@@ -152,16 +172,80 @@ export const POSTHOG_PRIVACY_CONFIG = {
 } as const;
 
 /**
- * mixpanel-browser init options. Replay masks all text and inputs. Mixpanel replays take the
- * page URL straight from the address bar with no hook, so a page whose URL still carries a
- * secret is not recorded at all.
+ * Mixpanel replays take the page URL straight from the address bar with no hook, so a page
+ * whose URL still carries a secret is not recorded at all, and neither is an admin page (the
+ * SDK can finish loading after a client navigation into one).
  */
+function mixpanelMayRecord(href: string): boolean {
+  return analyticsAllowedOnPath(pagePath(href)) && sanitizeUrl(href) === href;
+}
+
+/** mixpanel-browser init options. Replay masks all text and inputs. */
 export function mixpanelPrivacyConfig(currentHref: string) {
   return {
     autocapture: { capture_text_content: false },
-    record_sessions_percent: sanitizeUrl(currentHref) === currentHref ? 100 : 0,
+    record_sessions_percent: mixpanelMayRecord(currentHref) ? 100 : 0,
     record_mask_all_text: true,
     record_mask_all_inputs: true,
     hooks: { before_send_events: mixpanelBeforeSend },
   };
+}
+
+/** posthog-js session replay controls. */
+export type PosthogReplay = {
+  stopSessionRecording(): void;
+  startSessionRecording(): void;
+};
+
+/** mixpanel-browser session replay controls. */
+export type MixpanelReplay = {
+  stop_session_recording(): void;
+  start_session_recording(): void;
+  get_session_recording_properties(): { $mp_replay_id?: string };
+};
+
+/** Replays that `syncReplayForPage` stopped, so only those are resumed. */
+export type PausedReplays = { readonly posthog: boolean; readonly mixpanel: boolean };
+
+export const NO_PAUSED_REPLAYS: PausedReplays = { posthog: false, mixpanel: false };
+
+/**
+ * Call on every client navigation. The SDKs decide on the first page only, so without this a
+ * visitor who opens a public page and then follows a link to an admin or capability page keeps
+ * being recorded there. Stops both replays on those pages and resumes them on leaving, but only
+ * the ones it stopped, never for automated or opted-out browsers, and never Mixpanel while the
+ * URL carries a secret.
+ *
+ * PostHog: stopping also keeps a recorder that is still loading from starting, and
+ * `startSessionRecording()` without overrides keeps the project's sampling and triggers.
+ * Mixpanel: `start_session_recording()` starts a replay unconditionally, so a Mixpanel replay is
+ * only stopped, and later resumed, when one is actually running.
+ */
+export function syncReplayForPage(
+  paused: PausedReplays,
+  page: { href: string; trackingDisabled: boolean },
+  sdk: { posthog: PosthogReplay | null; mixpanel: MixpanelReplay | null },
+): PausedReplays {
+  const publicPage = !page.trackingDisabled && analyticsAllowedOnPath(pagePath(page.href));
+  let { posthog, mixpanel } = paused;
+  if (sdk.posthog) {
+    if (!publicPage && !posthog) {
+      sdk.posthog.stopSessionRecording();
+      posthog = true;
+    } else if (publicPage && posthog) {
+      sdk.posthog.startSessionRecording();
+      posthog = false;
+    }
+  }
+  if (sdk.mixpanel) {
+    const record = publicPage && mixpanelMayRecord(page.href);
+    if (!record && !mixpanel && "$mp_replay_id" in sdk.mixpanel.get_session_recording_properties()) {
+      sdk.mixpanel.stop_session_recording();
+      mixpanel = true;
+    } else if (record && mixpanel) {
+      sdk.mixpanel.start_session_recording();
+      mixpanel = false;
+    }
+  }
+  return { posthog, mixpanel };
 }
