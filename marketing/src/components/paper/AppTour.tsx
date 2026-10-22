@@ -19,11 +19,24 @@ export function AppTour() {
           <i /><i /><i />
           <span>Unvibe {demo.version}</span>
         </div>
-        <AutoPlayVideo
-          src="/videos/unvibe-real-demo.mp4"
-          poster="/videos/unvibe-real-demo-poster.webp"
-          label="Screen recording of Unvibe: a code explanation streaming in, switching to Beginner depth, a follow-up question, then a Test me question"
-        />
+        <div className="vtour__media">
+          {/* The poster at the size it renders (a <video poster> can't pick one). It sits behind the video, which stays
+              transparent until playback paints a frame; the video itself loads only once it is on screen. */}
+          <img
+            className="vtour__poster"
+            src="/videos/unvibe-real-demo-poster.webp"
+            srcSet="/videos/unvibe-real-demo-poster-720.webp 720w, /videos/unvibe-real-demo-poster.webp 1280w"
+            sizes="(max-width: 1120px) calc(100vw - 2.5rem), 1080px"
+            width={1280}
+            height={800}
+            alt=""
+          />
+          <AutoPlayVideo
+            src="/videos/unvibe-real-demo.mp4"
+            preload="none"
+            label="Screen recording of Unvibe: a code explanation streaming in, switching to Beginner depth, a follow-up question, then a Test me question"
+          />
+        </div>
       </div>
       <p className="vtour__caption">
         Screen recording of Unvibe {demo.version} on a {demo.platform}. Every explanation was generated live; only the waits between steps are cut.

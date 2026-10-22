@@ -132,7 +132,9 @@ h1 em, h2 em, h3 em, .serif-em {
 .vtour__bar i:nth-child(2) { background: var(--v-sun); }
 .vtour__bar i:nth-child(3) { background: var(--v-lime); }
 .vtour__bar span { margin-left: 8px; font: 700 0.85rem var(--font-display); letter-spacing: -0.02em; }
-.vtour__window video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.vtour__media { position: relative; }
+.vtour__poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vtour__window video { position: relative; display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
 .vtour__caption { max-width: 40rem; margin: 0; color: #6b6760; text-align: center; font-size: 0.9rem; }
 
 @media (max-width: 720px) {

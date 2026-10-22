@@ -5,7 +5,7 @@
  *   node scripts/build-demo-media.mjs <MEDIA_DIR>
  *
  * Needs ffmpeg and cwebp on PATH. Writes:
- *   public/videos/unvibe-real-demo.mp4 (+ -poster.webp): onboarding, then the panel explaining
+ *   public/videos/unvibe-real-demo.mp4 (+ -poster.webp, -poster-720.webp): onboarding, then the panel explaining
  *     live, depth, follow-up and Test me at real speed. It ends there: the companion pages show
  *     the capture account's name. Waits between steps are cut where segments join; nothing
  *     inside a segment is sped up or edited.
@@ -59,6 +59,7 @@ const length = Object.values(segments).reduce((sum, [a, b]) => sum + (b - a), 0)
 
 const out = join(site, "public/videos/unvibe-real-demo.mp4");
 const poster = join(site, "public/videos/unvibe-real-demo-poster.webp");
+const posterPhone = join(site, "public/videos/unvibe-real-demo-poster-720.webp");
 const dusk = join(site, "public/hero/golden-gate-dusk.webp");
 const W = 1280;
 const H = 800;
@@ -88,6 +89,8 @@ const posterAt = segments.onboarding[1] + Math.min(4, segments.panel[1] / 3);
 const posterPng = join(mediaDir, "poster.png");
 execFileSync("ffmpeg", ["-v", "error", "-y", "-ss", posterAt.toFixed(2), "-i", out, "-frames:v", "1", posterPng]);
 execFileSync("cwebp", ["-quiet", "-q", "78", posterPng, "-o", poster]);
+// Phones render the window about 350 CSS px wide (700 device px); AppTour's srcset picks this one there.
+execFileSync("cwebp", ["-quiet", "-q", "78", "-resize", "720", "0", posterPng, "-o", posterPhone]);
 
 const realDir = join(site, "public/unvibe/real");
 mkdirSync(realDir, { recursive: true });
