@@ -560,7 +560,8 @@ p { font-size: 1.02rem; }
 .kit__card { margin: 0 0 1.2rem; padding: 1.4rem 1.5rem; border: 1.5px solid var(--v-ink); border-radius: 20px; background: #fff; scroll-margin-top: 6rem; }
 .kit__card h2 { margin: 0 0 0.7rem; font: 800 1.45rem var(--font-display); }
 .kit__card p { margin: 0 0 0.8rem; font-size: 1.04rem; line-height: 1.6; }
-.kit__card ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; font-size: 1.04rem; line-height: 1.55; }
+/* minmax(0, 1fr) + anywhere: a long URL bullet must wrap, not widen every bullet past the card at 320px. */
+.kit__card ul { margin: 0; padding-left: 1.2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; font-size: 1.04rem; line-height: 1.55; overflow-wrap: anywhere; }
 .kit__table { display: grid; margin-top: 1rem; border: 1.5px solid var(--v-ink); border-radius: 14px; overflow: hidden; font-size: 0.95rem; }
 .kit__row { display: grid; grid-template-columns: 1.3fr 0.7fr 2fr 0.8fr; gap: 0.8rem; padding: 0.6rem 0.9rem; border-top: 1px solid #e4ded1; }
 .kit__row--head { border-top: 0; background: var(--v-sun); font-weight: 800; }
