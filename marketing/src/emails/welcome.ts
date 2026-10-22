@@ -4,6 +4,7 @@
  */
 
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "../lib/giftOffer";
+import { FEEDBACK_BONUS_MIN_WORDS, FEEDBACK_MAX_WORDS } from "../lib/feedback";
 
 export interface WelcomeInput {
   email: string;
@@ -78,9 +79,9 @@ export function welcomeHtml(input: WelcomeInput): string {
 <p style="margin:0">${imageButton(l.site, l.download, input.downloadUrl ? "download" : "get")}</p>
 <p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">The first time you open it, your Mac or PC asks you to approve it once. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
 </td></tr>
-${card(`<h2 style="${h2}">Want Pro?</h2><p style="${p}">Deeper explanations, more projects and the full learning history. Your app account already starts with a free month of Pro.</p>${imageButton(l.site, l.pro, "pro")}`)}
+${card(`<h2 style="${h2}">Want Pro?</h2><p style="${p}">Expert depth, git diffs and nearby-file context. Your app account already starts with a free month of Pro.</p>${imageButton(l.site, l.pro, "pro")}`)}
 ${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this link to a friend so they can get Unvibe. ${GIFT_LINK_NOTE} ${GIFT_OFFER}</p><p style="margin:0;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>`, "#eef9c8")}
-${card(`<h2 style="${h2}">Tell us what you think, get another month</h2><p style="${p}">Give Unvibe some stars and a few honest words (up to 100). Do it from this link and we add <b>another free month of Pro</b> to this email. More deals are coming for people who help early.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
+${card(`<h2 style="${h2}">Tell us what you think, get another month</h2><p style="${p}">Give Unvibe some stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add <b>another free month of Pro</b> to this email. More deals are coming for people who help early.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
 <tr><td style="padding:6px 28px 28px">
 <p style="${p}">Thank you so much. Seriously. Reply to this email any time, it comes straight to me.</p>
 <p style="margin:0;font-size:16px;line-height:1.55;color:${INK}"><b>Preston</b><br><span style="color:#6b6b6b">Founder, Unvibe</span></p>
@@ -107,7 +108,7 @@ Send this link to a friend so they can get Unvibe. ${GIFT_LINK_NOTE}
 ${GIFT_OFFER}
 
 TELL US WHAT YOU THINK, GET ANOTHER MONTH
-Stars and a few honest words (up to 100). Do it from this link and we add another free month of Pro. More deals are coming for people who help early.
+Stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add another free month of Pro. More deals are coming for people who help early.
 ${input.feedbackUrl}
 
 Thank you so much. Reply any time, it comes straight to me.
