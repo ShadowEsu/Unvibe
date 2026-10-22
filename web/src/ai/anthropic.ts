@@ -1,4 +1,4 @@
-import type { Provider } from './provider';
+import type { Completion, Provider, TokenUsage } from './provider';
 
 /**
  * Anthropic provider via the Messages API with streaming. Uses plain fetch (no SDK dependency)
@@ -22,7 +22,7 @@ export class AnthropicProvider implements Provider {
     user: string,
     onToken: (text: string) => void,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<TokenUsage | undefined> {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -65,9 +65,11 @@ export class AnthropicProvider implements Provider {
         }
       }
     }
+    // Token usage is recorded for Gemini only (the beta provider).
+    return undefined;
   }
 
-  async complete(system: string, user: string, signal?: AbortSignal): Promise<string> {
+  async complete(system: string, user: string, signal?: AbortSignal): Promise<Completion> {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -87,10 +89,12 @@ export class AnthropicProvider implements Provider {
       throw new Error(`Anthropic API ${res.status}: ${await safeText(res)}`);
     }
     const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
-    return (data.content ?? [])
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text ?? '')
-      .join('');
+    return {
+      text: (data.content ?? [])
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text ?? '')
+        .join(''),
+    };
   }
 }
 

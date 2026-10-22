@@ -2,7 +2,7 @@
  * OpenRouter OpenAI-compatible provider. Company key stays server-side.
  * Free chat models only — see openrouterModels.ts.
  */
-import type { Provider } from './provider';
+import type { Completion, Provider, TokenUsage } from './provider';
 import { DEFAULT_OPENROUTER_MODEL, normalizeOpenRouterModel } from './openrouterModels';
 
 type OpenAiChunk = {
@@ -28,7 +28,7 @@ export class OpenRouterProvider implements Provider {
     user: string,
     onToken: (text: string) => void,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<TokenUsage | undefined> {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: this.headers(),
@@ -79,11 +79,13 @@ export class OpenRouterProvider implements Provider {
 
     if (emitted === 0) {
       const full = await this.complete(system, user, signal);
-      if (full) onToken(full);
+      if (full.text) onToken(full.text);
     }
+    // Token usage is recorded for Gemini only; OpenRouter free models report none we bill by.
+    return undefined;
   }
 
-  async complete(system: string, user: string, signal?: AbortSignal): Promise<string> {
+  async complete(system: string, user: string, signal?: AbortSignal): Promise<Completion> {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: this.headers(),
@@ -104,7 +106,7 @@ export class OpenRouterProvider implements Provider {
     const data = (await res.json()) as OpenAiChunk & {
       choices?: Array<{ message?: { content?: string | null } }>;
     };
-    return data.choices?.[0]?.message?.content ?? '';
+    return { text: data.choices?.[0]?.message?.content ?? '' };
   }
 
   private headers(): Record<string, string> {

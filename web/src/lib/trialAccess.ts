@@ -9,6 +9,10 @@
  * - everyone today: `__global_day__:YYYY-MM-DD`, UNVIBE_TRIAL_GLOBAL_DAILY_LIMIT (default 2,000).
  * Periods are UTC. If any counter cannot be reserved the request is refused (503), never allowed.
  *
+ * AI cost is measured by two more shared rows per UTC day and kind, `__tokens_in__:YYYY-MM-DD` and
+ * `__tokens_out__:YYYY-MM-DD`: provider-reported token totals for all trial requests, never per
+ * install and never text (`recordTrialTokens`).
+ *
  * Durable counters live in Supabase (trial_installs / trial_counters, atomic trial_reserve RPC).
  * Process memory is used only when Supabase is not configured (dev/tests).
  */
@@ -16,6 +20,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { isIPv6 } from 'node:net';
 import { serviceSupabase } from '@/lib/serviceSupabase';
 import type { UsageKind } from '@/billing/types';
+import type { TokenUsage } from '@/ai/provider';
 
 export type TrialKind = Extract<UsageKind, 'ai_explanation' | 'project_question'>;
 
@@ -244,6 +249,57 @@ async function releaseUnit(installKey: string, kind: TrialKind): Promise<void> {
     if (Array.isArray(data) && data.length > 0) return;
   }
   throw new Error('trial usage release failed: counter kept changing');
+}
+
+/** Compare-and-swap add of `amount` to one counter, creating it at zero first. */
+async function addToCounter(key: string, kind: TrialKind, amount: number): Promise<void> {
+  const db = serviceSupabase();
+  if (!db) {
+    const bucket = memoryBucket();
+    const memory = memoryKey(key, kind);
+    bucket.set(memory, { used: (bucket.get(memory)?.used ?? 0) + amount });
+    return;
+  }
+  const { error: createError } = await db
+    .from('trial_counters')
+    .upsert({ install_key: key, kind, used: 0 }, { onConflict: 'install_key,kind', ignoreDuplicates: true });
+  if (createError) throw new Error(`trial token counter create failed: ${createError.message}`);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const used = await readUsed(key, kind);
+    const { data, error } = await db
+      .from('trial_counters')
+      .update({ used: used + amount, updated_at: new Date().toISOString() })
+      .eq('install_key', key)
+      .eq('kind', kind)
+      .eq('used', used)
+      .select('used');
+    if (error) throw new Error(`trial token counter update failed: ${error.message}`);
+    if (Array.isArray(data) && data.length > 0) return;
+  }
+  throw new Error('trial token counter update failed: counter kept changing');
+}
+
+function trialTokenKeys(now: Date): { input: string; output: string } {
+  const day = now.toISOString().slice(0, 10);
+  return { input: `__tokens_in__:${day}`, output: `__tokens_out__:${day}` };
+}
+
+/** Best effort: add one trial request's token counts to today's totals for its kind. Never fails the request. */
+export async function recordTrialTokens(kind: TrialKind, usage: TokenUsage, now = new Date()): Promise<void> {
+  const keys = trialTokenKeys(now);
+  await Promise.all([
+    usage.inputTokens > 0 ? addToCounter(keys.input, kind, usage.inputTokens) : undefined,
+    usage.outputTokens > 0 ? addToCounter(keys.output, kind, usage.outputTokens) : undefined,
+  ]).catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+  });
+}
+
+/** Today's (UTC) trial token totals for one kind. */
+export async function trialDailyTokens(kind: TrialKind, now = new Date()): Promise<TokenUsage> {
+  const keys = trialTokenKeys(now);
+  const [inputTokens, outputTokens] = await Promise.all([readUsed(keys.input, kind), readUsed(keys.output, kind)]);
+  return { inputTokens, outputTokens };
 }
 
 export async function trialUsageLine(installKey: string, kind: TrialKind, now = new Date()): Promise<TrialUsageLine> {

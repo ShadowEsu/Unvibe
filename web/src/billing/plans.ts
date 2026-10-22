@@ -1,5 +1,8 @@
 import type { PlanId, SubscriptionStatus, UsageKind, WorkspaceRole } from './types';
 
+/** How long after its reservation a request's usage row can still receive token counts. */
+export const USAGE_TOKEN_WINDOW_MS = 15 * 60_000;
+
 /** Billing helpers mirror the limits and access rules in the Supabase migration. */
 const BILLING_LIMITS: Record<PlanId, Record<UsageKind, number>> = {
   free: { ai_explanation: 50, project_question: 10, indexed_project: 1, dictionary_item: 25, saved_item: 20 },
