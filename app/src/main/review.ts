@@ -28,7 +28,7 @@ import { knowledgeStore } from './knowledgeStore';
 import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string }
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
   | { type: 'status'; tabId: string; message: string }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
@@ -39,7 +39,9 @@ export type WidgetEvent =
   | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string }
   | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string }
   | { type: 'usage'; tabId: string; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
-  | { type: 'understood'; tabId: string };
+  | { type: 'understood'; tabId: string }
+  /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
+  | { type: 'quizError'; tabId: string; message: string };
 
 export interface ReviewSession {
   reviewId: string;
@@ -149,7 +151,7 @@ function persistUnderstoodSnapshot(session: ReviewSession): void {
 
 /** Mark the current review understood (Got it) and refresh the file memory baseline when safe. */
 export function markUnderstood(win: BrowserWindow, session: ReviewSession): void {
-  if (!session.recorded) recordReview(win, session);
+  if (!session.recorded) recordReview(win, session, false);
   try {
     store().setOutcome(session.reviewId, 'understood');
     persistUnderstoodSnapshot(session);
@@ -182,6 +184,8 @@ export function initWidget(
     preview: code ? code.slice(0, 600) : undefined,
     autoStart: Boolean(opts?.autoStart && code),
     mode: session.mode,
+    // The panel's depth row and every re-request it sends start from the session depth (the user's default).
+    level: session.level,
   });
 }
 
@@ -189,10 +193,15 @@ function appendExplanation(session: ReviewSession, text: string): void {
   session.explanationText = (session.explanationText ?? '') + text;
 }
 
-function recordReview(win: BrowserWindow, session: ReviewSession): boolean {
+/**
+ * Saves the finished run as the lesson. A follow-up answer is shown in the panel but never replaces
+ * the saved explanation of the code (its first run still records the lesson, so nothing is lost).
+ */
+function recordReview(win: BrowserWindow, session: ReviewSession, followUp: boolean): boolean {
   if (!session.code) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
+    if (followUp) return true;
     try {
       store().updateLesson(session.reviewId, {
         code: session.code,
@@ -368,7 +377,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           signal: abort.signal,
         });
         send(win, session, { type: 'done', model, mock: false });
-        if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
+        if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
         void refreshAppUsage().then((next) => {
           send(win, session, {
             type: 'usage',
@@ -440,7 +449,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         send(win, session, ev);
         if (ev.type === 'done') {
           completed = true;
-          if (recordReview(win, session)) pulseBar({ phase: 'ready', label: 'Ready' });
+          if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
             send(win, session, {
               type: 'usage',
@@ -494,7 +503,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
     });
     pulseBar({ phase: 'ready', label: 'Ready' });
   } catch {
-    send(win, session, { type: 'error', message: 'Could not build a question for this one. Try again.' });
+    send(win, session, { type: 'quizError', message: 'Could not write a question for this one. Your explanation is still here.' });
   }
 }
 
