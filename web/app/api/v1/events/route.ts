@@ -3,6 +3,7 @@ import { getBillingStore } from '@/billing/store';
 import { userFromRequest, unauthorized } from '@/lib/auth';
 import type { IncomingEvent } from '@/data/types';
 import { isIncomingEvent } from '@/data/eventValidation';
+import { EventOwnershipError } from '@/data/eventOwnership';
 
 export const runtime = 'nodejs';
 
@@ -32,6 +33,13 @@ export async function POST(req: Request): Promise<Response> {
     workspaceId = personal.id;
   }
 
-  await getStore().upsertEvents(userId, body.events, workspaceId);
+  try {
+    await getStore().upsertEvents(userId, body.events, workspaceId);
+  } catch (error) {
+    if (error instanceof EventOwnershipError) {
+      return Response.json({ error: 'event_conflict', message: error.message, eventIds: error.eventIds }, { status: 409 });
+    }
+    throw error;
+  }
   return Response.json({ ok: true, count: body.events.length, workspaceId });
 }

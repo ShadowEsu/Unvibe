@@ -198,14 +198,32 @@ export async function signOut(token: string): Promise<void> {
   await json<{ ok: boolean }>(res);
 }
 
-/** Best-effort event sync. Returns the ids the backend accepted (for outbox clearing). */
+/**
+ * Best-effort event sync. Returns the ids the backend accepted (for outbox clearing).
+ * A 409 names event ids that already belong to a different account; the server refuses the whole
+ * batch, so send the rest once more and clear the refused ids too. They stay in local history but
+ * can never sync to this account, and keeping them queued would fail every future sync.
+ */
 export async function pushEvents(token: string, events: LocalEvent[]): Promise<string[]> {
   if (events.length === 0) return [];
-  const res = await request(`${BACKEND}/api/v1/events`, {
+  const post = (batch: LocalEvent[]) => request(`${BACKEND}/api/v1/events`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ events: events.map(forSync) }),
+    body: JSON.stringify({ events: batch.map(forSync) }),
   });
+  const res = await post(events);
+  if (res.status === 409) {
+    const body: unknown = await res.json().catch(() => null);
+    const refused = new Set(
+      body && typeof body === 'object' && 'eventIds' in body && Array.isArray(body.eventIds)
+        ? body.eventIds.filter((id): id is string => typeof id === 'string')
+        : [],
+    );
+    const rest = events.filter((e) => !refused.has(e.id));
+    if (refused.size === 0 || rest.length === events.length) throw new Error('The service refused these learning records.');
+    if (rest.length > 0) await json<{ ok: boolean }>(await post(rest));
+    return events.map((e) => e.id);
+  }
   await json<{ ok: boolean }>(res);
   return events.map((e) => e.id);
 }
