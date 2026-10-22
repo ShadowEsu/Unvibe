@@ -228,6 +228,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.55rem 0.9rem;
   background: #161b22;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -235,6 +236,7 @@
 
 .resources-code-dots {
   display: flex;
+  flex-shrink: 0;
   gap: 0.35rem;
 }
 
@@ -245,13 +247,19 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* On narrow screens the filename gives way (ellipsis) so the language label stays inside the window. */
 .resources-code-filename {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: max(13px, 0.74rem);
   color: #abb2bf;
 }
 
 .resources-code-lang {
+  flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: max(13px, 0.68rem);
   color: #abb2bf;
