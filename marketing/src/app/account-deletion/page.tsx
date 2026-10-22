@@ -22,7 +22,7 @@ export default function AccountDeletionPage() {
     >
       <LegalSection heading="How to delete">
         <p>
-          In the app, go to <strong>Settings → Account → Delete my account</strong>. You
+          In the app, go to <strong>Settings → Account &amp; Plan → Delete my account</strong>. You
           will be asked to confirm, with a clear explanation of what will be removed.
         </p>
       </LegalSection>
@@ -53,9 +53,10 @@ export default function AccountDeletionPage() {
 
       <LegalSection heading="If you never made an account">
         <p>
-          Then all your data already lives only on your computer. Deleting it is as simple as
-          removing the app&apos;s data folder, which is also exposed in{" "}
-          <strong>Settings → Data</strong>.
+          Then your lessons and history live only on your computer. To remove them, delete
+          the app&apos;s data folder. Our server keeps only a random install ID with a few
+          dates and usage counts, never your code or prompts. Email us below if you want that
+          record removed too.
         </p>
       </LegalSection>
 

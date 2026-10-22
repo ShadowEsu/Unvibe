@@ -4,7 +4,7 @@ import { LegalLayout, LegalSection } from "@/components/LegalLayout";
 export const metadata: Metadata = {
   title: "Data controls",
   description:
-    "What data Unvibe keeps, where it lives, how long it is retained, and how to export or delete it.",
+    "What data Unvibe keeps, where it lives, how long it is retained, and how to get a copy or delete it.",
 };
 
 export default function DataControlsPage() {
@@ -57,13 +57,15 @@ export default function DataControlsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="Access, export, and deletion">
+      <LegalSection heading="Access, copies, and deletion">
         <p>
-          You can access and export your data, and you can{" "}
+          The app has no export button yet. For a copy of your data, email{" "}
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>. You can{" "}
           <a href="/account-deletion">delete your account</a> to remove it from your
-          device and our servers. If you never created an account, your data only ever
-          lived on your computer. Depending on where you live, you may have additional rights
-          under laws such as GDPR or CCPA.
+          device and our servers. If you never created an account, your lessons stay on
+          your computer, and our server keeps only a random install ID with a few dates and
+          usage counts, never your code or prompts. Depending on where you live, you may
+          have additional rights under laws such as GDPR or CCPA.
         </p>
       </LegalSection>
 
