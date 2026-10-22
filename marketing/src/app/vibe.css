@@ -118,12 +118,12 @@ h1 em, h2 em, h3 em, .serif-em {
 .vhero .paper-join:active, .paper-invite .paper-join:active { transform: translateY(3px); box-shadow: 0 0 0 var(--v-ink); }
 
 /* ── App tour ─────────────────────────────────────────────────────────────── */
-.vtour { display: grid; justify-items: center; gap: 1.4rem; padding: 1.5rem 1.25rem 5rem; }
+.vtour { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.4rem; padding: 1.5rem 1.25rem 5rem; }
 .vtour__head { text-align: center; }
 .vtour__eyebrow { margin: 0 0 0.3rem; font-family: var(--font-serif); font-style: italic; font-size: 1.4rem; color: #5b4bd6; }
 .vtour h2 { margin: 0; font-size: clamp(2rem, 4.4vw, 3.4rem); }
 .vtour__window {
-  width: min(1080px, 94vw); overflow: hidden; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #f5f2ea;
+  width: min(1080px, 100%); overflow: hidden; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #f5f2ea;
   box-shadow: 8px 8px 0 var(--v-ink);
 }
 .vtour__bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1.5px solid var(--v-ink); background: #fff; }
@@ -210,7 +210,7 @@ p { font-size: 1.02rem; }
 .vtour__window { background: var(--v-card); }
 
 /* The download box: big, loud, free. */
-.paper-beta { width: min(980px, 94vw) !important; max-width: none !important; padding: clamp(2rem, 4vw, 3.4rem) !important; margin-inline: auto; }
+.paper-beta { width: min(980px, 100%) !important; max-width: none !important; padding: clamp(2rem, 4vw, 3.4rem) !important; margin-inline: auto; }
 .paper-beta__title { font-family: var(--font-display) !important; font-size: clamp(2.2rem, 4.6vw, 3.6rem) !important; font-weight: 800 !important; letter-spacing: -0.045em !important; line-height: 1.02 !important; color: var(--v-ink) !important; }
 .paper-beta__os { gap: 0.9rem !important; }
 .paper-beta__os button { min-height: 4.2rem; padding: 0.8rem 1.6rem !important; border: 1.5px solid var(--v-ink) !important; border-radius: 16px !important; background: #fff !important; box-shadow: 0 3px 0 var(--v-ink); }
@@ -452,10 +452,6 @@ p { font-size: 1.02rem; }
 .invite__error { margin: 0; color: #fca5a5; }
 .invite__copy, .invite__result { min-width: 0; max-width: 100%; }
 .invite :is(input, button):focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
-@media (max-width: 520px) {
-  .invite__form { flex-direction: column; }
-  .invite__form input { width: 100%; flex: auto; }
-}
 
 /* ── Feedback ──────────────────────────────────────────────────────────────── */
 .fb-tab {

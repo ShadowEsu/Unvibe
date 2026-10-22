@@ -124,6 +124,13 @@ html[data-performance="lite"] .try__bob { animation: none; }
 .invite__fine { color: #d8d4cb; font-size: 0.92rem; }
 .invite__form { flex-wrap: wrap; }
 .invite__label { flex-basis: 100%; color: #fff; font: 700 0.95rem var(--font-sans); text-align: left; }
+/* Phones: label, field and button stack, each full width. A column that wraps puts the 100%-basis label in its
+   own column and pushes the field past the right edge (input right 369 at 320), so wrapping is off here. */
+@media (max-width: 520px) {
+  .invite__form { flex-direction: column; flex-wrap: nowrap; }
+  .invite__label { flex-basis: auto; }
+  .invite__form input, .invite__form button { flex: none; width: 100%; }
+}
 .invite__result code { max-width: 100%; }
 .invite__actions button { min-width: 2.75rem; }
 .dark .invite { border-color: #f2eef9; }
