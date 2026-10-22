@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
+import { CheckoutPendingError } from './checkoutPending';
 import type { TokenUsage } from '@/ai/provider';
 import type {
   BillingOverview,
@@ -259,6 +260,15 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {
+    // Mirrors the unique indexes on checkout_intents: one pending intent per workspace, and one
+    // pending Teams intent per owner. Stale intents are expired first, as in the Supabase store.
+    const cutoff = this.now().getTime() - CHECKOUT_INTENT_TTL_MS;
+    for (const other of this.data.checkoutIntents.values()) {
+      if (other.userId === input.userId && other.status === 'pending' && new Date(other.createdAt).getTime() <= cutoff) other.status = 'expired';
+    }
+    const clash = [...this.data.checkoutIntents.values()].some((other) => other.status === 'pending'
+      && (other.workspaceId === input.workspaceId || (input.plan === 'teams' && other.plan === 'teams' && other.userId === input.userId)));
+    if (clash) throw new CheckoutPendingError();
     const intent: CheckoutIntentRecord = { ...input, id: randomUUID(), status: 'pending', createdAt: this.now().toISOString() };
     this.data.checkoutIntents.set(intent.id, intent);
     return intent;
