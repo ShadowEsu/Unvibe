@@ -38,7 +38,7 @@ shasum -a 256 ~/Downloads/Unvibe-*.dmg
 Get-FileHash $HOME\\Downloads\\Unvibe-*.exe -Algorithm SHA256`}</code></pre>
         <p>The number it prints should match the line for that file in the checksum list.</p>
       </section>
-      <p className="fos-page__help">Still stuck? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20install%20help">preston@unvibe.site</a> with a screenshot and your Mac or Windows version. A real person answers.</p>
+      <p className="fos-page__help">Still stuck? Email <a href="mailto:hello@unvibe.site?subject=Unvibe%20install%20help">hello@unvibe.site</a> with a screenshot and your Mac or Windows version. A real person answers.</p>
     </article>
   );
 }
