@@ -30,8 +30,23 @@ export function guessLanguage(code: string): string {
   return detected ?? 'unknown';
 }
 
+/**
+ * C++ signals, checked before the other rules. Code written with `using namespace std`
+ * has no `std::` or `#include`, and `const vector<int>&` would otherwise match the
+ * JavaScript `const` rule. Each alternative is absent from JS, TS, Java, C# and Rust:
+ * keywords, lowercase STL containers used as types (TS/Java/C# write `Map<`, `List<`),
+ * access specifiers alone on a line, and `const T&` reference parameters.
+ */
+const cppPattern = new RegExp([
+  String.raw`^\s*#include\b|::\w+\(|std::`,
+  String.raw`\b(?:constexpr|nullptr|using\s+namespace)\b|\btemplate\s*<|\bcout\s*<<|\bcin\s*>>`,
+  String.raw`\b(?:vector|unordered_map|unordered_set|map|set|deque|unique_ptr|shared_ptr)<`,
+  String.raw`^\s*(?:public|private|protected)\s*:\s*$`,
+  String.raw`\bconst\s+[\w:]+(?:<[^<>;=]*>)?\s*&\s*\w`,
+].join('|'), 'm');
+
 function detectLanguageFromContent(code: string): string | null {
-  if (/^\s*#include\b|::\w+\(|std::/m.test(code)) return 'cpp';
+  if (cppPattern.test(code)) return 'cpp';
   if (/\bfn\s+\w+\s*\(|\blet\s+mut\b|::<|\bimpl\b/.test(code)) return 'rust';
   if (/\bdef\s+\w+\s*\(|\bimport\s+\w+$|\bself\b/m.test(code)) return 'python';
   if (/\bfunc\s+\w+\s*\(|\bpackage\s+\w+$/m.test(code)) return 'go';
