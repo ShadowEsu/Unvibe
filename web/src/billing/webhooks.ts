@@ -32,9 +32,13 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   if (item.price.id !== stripePriceId(metadata.plan, metadata.interval)) throw new Error('Stripe subscription price does not match the trusted plan configuration.');
   if (metadata.plan === 'pro' && (item.quantity ?? 1) !== 1) throw new Error('Pro subscriptions must have exactly one account seat.');
   if (metadata.plan === 'teams' && (item.quantity ?? 0) < 2) throw new Error('Teams subscriptions require at least two seats.');
-  const graceDays = Math.max(1, Math.min(30, Number(process.env.BILLING_GRACE_PERIOD_DAYS ?? 7) || 7));
-  const graceEnds = new Date(Date.now() + graceDays * 86_400_000).toISOString();
   const shouldGrace = grace || subscription.status === 'past_due';
+  const graceDays = Math.max(1, Math.min(30, Number(process.env.BILLING_GRACE_PERIOD_DAYS ?? 7) || 7));
+  // Stripe sends an event on every failed retry; the grace period runs from the first failure only.
+  const prior = shouldGrace ? await store.subscriptionByProviderId(subscription.id) : null;
+  const graceEnds = prior?.status === 'grace_period' && prior.gracePeriodEndsAt
+    ? prior.gracePeriodEndsAt
+    : new Date(Date.now() + graceDays * 86_400_000).toISOString();
   await store.syncSubscription({
     workspaceId: metadata.workspaceId,
     plan: metadata.plan,
