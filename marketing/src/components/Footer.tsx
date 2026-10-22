@@ -21,6 +21,7 @@ const company = [
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
+  ["Refunds", "/refund"],
   ["Contact", "mailto:support@unvibe.site"],
 ];
 
