@@ -17,7 +17,9 @@ export function limitOfferCopy(plan: string | undefined, usage: {
   if (plan === 'trial' || plan === 'local' || plan === 'free' || !plan) {
     return {
       title: 'Session paused',
-      body: 'Finish the survey for 1 week of Pro, free. Or upgrade on Plan for more explanations.',
+      // No reward and no upgrade promise: nothing grants Pro for the survey, and Plan itself says
+      // whether payments are open.
+      body: 'Tell us how Unvibe is working for you in a short survey.',
       primary: 'Open the survey',
       primaryKind: 'survey',
       showPlan: true,

@@ -277,27 +277,6 @@ export function MacBuildLinks({ intelMac, surface }: { intelMac: boolean; surfac
   );
 }
 
-export function BetaFeedback({ source }: { source: string }) {
-  return (
-    <div className="paper-beta-feedback">
-      <p className="paper-beta__offer">After you try the beta, submit your feedback for 1 free week of Pro.</p>
-      <a
-        className="paper-beta__survey"
-        href={BETA_FEEDBACK_URL}
-        target="_blank"
-        rel="noreferrer"
-        onClick={() => {
-          track("survey_opened", { source });
-          track("feedback_opened", { source });
-          recordBetaSiteEvent("survey");
-        }}
-      >
-        {BETA_FEEDBACK_URL}
-      </a>
-    </div>
-  );
-}
-
 /* ── Inline SVG icons ── */
 
 function AppleIcon() {

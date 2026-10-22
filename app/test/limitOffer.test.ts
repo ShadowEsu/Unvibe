@@ -7,7 +7,6 @@ const usage = { used: 30, limit: 30, resetsAt: '2026-09-01T00:00:00.000Z' };
 test('trial beta copy pauses the session for a survey', () => {
   const copy = limitOfferCopy('trial', usage);
   assert.equal(copy.title, 'Session paused');
-  assert.match(copy.body, /1 week of Pro/);
   assert.equal(copy.primaryKind, 'survey');
   assert.equal(copy.showPlan, true);
 });

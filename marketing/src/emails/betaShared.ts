@@ -36,10 +36,8 @@ macOS may warn that Unvibe is unsigned. Windows SmartScreen may say the same. Th
 }
 
 export function betaFeedbackText(): string {
-  return `The free plan includes AI explanations every month. After you try it, fill the feedback form:
+  return `The free plan includes AI explanations every month. After you try it, tell us how it went in the feedback form:
 ${BETA_FEEDBACK_URL}
-
-The form unlocks 1 week of Pro.
 
 ${GIFT_CODE_HOME} ${GIFT_OFFER}`;
 }
