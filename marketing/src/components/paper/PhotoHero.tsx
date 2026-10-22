@@ -167,7 +167,7 @@ export function PhotoHero() {
         {device === "phone" ? (
           <>
             <EmailMeLink />
-            <p className="vhero__trust">Free for Mac + Windows · No API key · Keys and tokens filtered on your computer</p>
+            <p className="vhero__fine">Free for Mac + Windows · No API key · Keys and tokens filtered on your computer</p>
             <TryInBrowser device={device} />
           </>
         ) : (

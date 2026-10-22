@@ -80,7 +80,8 @@ h1 em, h2 em, h3 em, .serif-em {
 .vhero h1 { max-width: 15ch; margin: 0; font-size: clamp(2.9rem, 7.4vw, 6.4rem); line-height: 0.98; color: var(--v-ink); }
 .vhero h1 em { display: inline-block; font-size: 1.04em; }
 .vhero__kicker { max-width: 40rem; margin: 0; color: #4d4a44; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.55; }
-.vhero__fine { margin: 0; color: #4d4a44; font-size: 0.86rem; }
+/* Info lines under the phone CTA are plain text: only the browser-trial link gets a pill shape. */
+.vhero .vhero__fine { max-width: 26rem; margin: 0; color: var(--v-ink); font-size: 0.94rem; font-weight: 600; line-height: 1.45; text-wrap: balance; }
 .vhero__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .vhero__cta { display: grid; justify-items: center; gap: 0.6rem; }
 .vhero__try { color: var(--v-ink); font-weight: 600; font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px; }
@@ -154,13 +155,12 @@ h1 em, h2 em, h3 em, .serif-em {
 .dark .vtour__bar span { color: #f2eef9; }
 .dark .vtour__eyebrow { color: #c4b5fd; }
 
-/* On the site's colour field: solid ink copy and a paper chip for the fine print. */
+/* On the site's colour field: solid ink copy; the browser-trial link keeps a paper chip. */
 .vhero__kicker { color: #1c1a17; font-weight: 500; }
-.vhero__fine { padding: 0.25rem 0.75rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: rgb(255 255 255 / 0.85); color: var(--v-ink); font-weight: 600; }
 .vtour__caption { color: #1c1a17; font-weight: 500; }
 .vhero__try { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.35rem 1rem; border-radius: 999px; background: rgb(255 255 255 / 0.9); color: var(--v-ink); }
 .paper-logo__word { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; }
-.dark .vhero__fine { background: #1f1729; color: #f2eef9; border-color: #f2eef9; }
+.dark .vhero__fine { color: #f2eef9; }
 .dark .vhero__try { background: #1f1729; color: #f2eef9; }
 .dark .vhero__kicker, .dark .vtour__caption { color: #e6e0f0; }
 
@@ -233,8 +233,6 @@ p { font-size: 1.02rem; }
 .vhero h1 { font-size: clamp(2.3rem, 10.5vw, 7rem); overflow-wrap: break-word; }
 .vhero__kicker { font-size: clamp(1.15rem, 1.8vw, 1.4rem) !important; max-width: 44rem; }
 .vhero .paper-join { min-height: 3.6rem; padding: 0 1.7rem !important; font-size: 1.12rem !important; border-radius: 14px !important; }
-.vhero__fine { font-size: 1rem; padding: 0.4rem 1rem; background: var(--v-lime); }
-.vhero__phone .vhero__fine { padding: 0.35rem 0.75rem; background: rgb(255 255 255 / 0.9); font-size: 0.85rem; color: var(--v-ink); }
 @media (max-width: 520px) {
   .vhero__copy { gap: 0.8rem; }
   .vhero__kicker { font-size: 1.05rem !important; }
