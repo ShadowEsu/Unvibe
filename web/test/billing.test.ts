@@ -144,14 +144,17 @@ test('public plan payloads never expose provider identifiers', async () => {
   assert.equal(JSON.parse(payload).hasBillingAccount, true);
 });
 
-test('stale checkout intents expire before another checkout starts', async () => {
+test('a checkout intent stays open until its Stripe session can no longer be paid, then expires', async () => {
   let now = new Date('2026-07-16T12:00:00.000Z');
   const store = new MemoryBillingStore(() => now);
   const userId = randomUUID();
   const workspace = await store.ensurePersonalWorkspace(userId);
   const intent = await store.createCheckoutIntent({ userId, workspaceId: workspace.id, plan: 'pro', interval: 'monthly', seats: 1 });
   assert.equal((await store.pendingCheckout(userId, workspace.id))?.id, intent.id);
-  now = new Date('2026-07-16T12:31:00.000Z');
+  // The session itself expires at 12:31 (CHECKOUT_SESSION_TTL_MS); the intent outlives it.
+  now = new Date('2026-07-16T12:31:59.000Z');
+  assert.equal((await store.pendingCheckout(userId, workspace.id))?.id, intent.id);
+  now = new Date('2026-07-16T12:32:00.000Z');
   assert.equal(await store.pendingCheckout(userId, workspace.id), null);
 });
 
