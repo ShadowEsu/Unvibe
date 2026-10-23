@@ -57,7 +57,6 @@ export function Footer() {
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
         </p>
       </div>
-      <div className="paper-footer__word" aria-hidden="true">unvibe</div>
     </footer>
   );
 }

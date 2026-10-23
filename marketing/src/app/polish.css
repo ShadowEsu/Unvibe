@@ -1470,22 +1470,6 @@ html[data-performance="lite"] .ambient__orb {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
-.paper-footer__word {
-  margin: 0 0 -0.18em;
-  font-family: var(--font-display);
-  font-size: clamp(6rem, 24vw, 22rem);
-  font-weight: 400;
-  letter-spacing: -0.05em;
-  line-height: 0.8;
-  text-align: center;
-  color: transparent;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0));
-  -webkit-background-clip: text;
-  background-clip: text;
-  user-select: none;
-  pointer-events: none;
-}
-
 /* ── Marquee and changelog details ── */
 
 .paper-marquee:hover .paper-marquee__track {
