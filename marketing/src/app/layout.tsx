@@ -143,7 +143,7 @@ export default function RootLayout({
       className={`${sans.variable} ${mono.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
-        {/* Before first paint: the `js` class scopes motion start states. */}
+        {/* Before first paint: the `js` class (motion start states) and the theme class (no light flash). */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
           type="application/ld+json"

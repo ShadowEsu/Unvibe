@@ -53,6 +53,72 @@
   --u-dur-exit: 150ms;
 }
 
+/* Dark: San Francisco after sunset. The same photo under a night veil; sheets and cards are night
+   surfaces; ink outlines and the sticker offset turn paper-coloured (the brand's dark sticker). */
+.dark {
+  --u-ink: #f2eef9;
+  --u-sheet: #17121f;
+  --u-card: #201a2b;
+  --u-raise: #2a2337;
+  --u-text: #f2eef9;
+  --u-text-2: #c9c2d6;
+  --u-line: rgb(242 238 249 / 0.14);
+  --u-line-strong: #f2eef9;
+  --u-accent: #d6f45a;
+  --u-on-accent: #141414;
+  --u-mark: rgb(214 244 90 / 0.3);
+  --u-accent-ink: #c4b5fd;
+  --u-focus: #c4b5fd;
+  --u-veil: rgb(23 18 31 / 0.84);
+  --u-hover: rgb(242 238 249 / 0.08);
+  --u-cta: #f2eef9;
+  --u-on-cta: #141414;
+  --u-cta-edge: #a59eb4;
+  --u-error: #fca5a5;
+  --u-lift-1: 0 1px 0 rgb(0 0 0 / 0.25), 0 18px 40px -22px rgb(0 0 0 / 0.85);
+
+  /* The sticker system's ink and card follow the theme; fills that must stay ink use --u-cta. */
+  --v-ink: #f2eef9;
+  --v-card: #201a2b;
+  --dusk-veil: linear-gradient(180deg, rgb(12 9 20 / 0.8) 0%, rgb(12 9 20 / 0.86) 50%, rgb(12 9 20 / 0.9) 100%);
+
+  /* The older paper tokens (globals.css :root) that globals' own .dark block leaves light. */
+  --ink-muted: #d9d2e6;
+  --ink-faint: #c9c2d6;
+  --hairline: rgb(242 238 249 / 0.18);
+  --paper-raised: rgb(242 238 249 / 0.06);
+  --brand: #c4b5fd;
+  --brand-deep: #ddd3ff;
+  --brand-soft: #2d2049;
+  --brand-mist: rgb(196 181 253 / 0.12);
+  --brand-wash: rgb(196 181 253 / 0.14);
+  --glass: rgb(23 18 31 / 0.4);
+  --glass-fill: rgb(23 18 31 / 0.5);
+  --glass-edge: rgb(242 238 249 / 0.16);
+  --glass-field: rgb(23 18 31 / 0.6);
+  --key-face: #2a2337;
+  --key-edge: #4a4060;
+  --key-shade: #0c0912;
+  --key-shine: rgb(255 255 255 / 0.08);
+  --key-inset: rgb(255 255 255 / 0.06);
+  --nav-menu-fill: rgb(23 18 31 / 0.94);
+  --nav-menu-edge: rgb(242 238 249 / 0.14);
+}
+
+/* Panels that show the product UI keep the app's light look in both themes. */
+.dark .try__panel { --v-ink: #141414; --u-text: #141414; --u-text-2: #3a3732; --u-line: rgb(20 20 20 / 0.14); --u-card: #ffffff; color: #141414; }
+
+/* Lime, sky, sun and lilac fills are light in both themes, so their text and outlines stay ink. */
+.dark :is(.stats-strip__item, .inv-stat--lime, .inv-stat--sky, .inv-stat--sun, .inv-stat--lilac, .inv-card span, .inv-pill, .inv-row--lead,
+  .resources-card__step, .paper-beta__os button.is-on, .try__go, .invite__form button, .invite__actions button, .fb-star.is-on, .fb-bonus,
+  .remind__row button, .pstats__tile[data-tone], .pstats__warn, .kit__btn--lime, .kit__row--head, .kit__file, .fos__card--fast, .paper-join--mac,
+  .paper-pricing .marketing-plan-card.featured) {
+  --v-ink: #141414; --u-text: #141414; --u-text-2: #2e2c27; --u-line: rgb(20 20 20 / 0.14); color: #141414;
+}
+
+/* globals.css paints the filled pricing button var(--purple) with white text; the dark --purple is light (2.4:1), so it keeps a deep purple. */
+.dark .pricing-button:not(.pricing-button--quiet) { background: #6d4ad6 !important; }
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

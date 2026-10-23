@@ -74,7 +74,7 @@
   display: inline-block;
   padding: 0.25rem 0.8rem;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.92);
+  background: var(--u-sheet);
 }
 
 .pricing-plans__intro > p:not(.paper-meta),
@@ -82,8 +82,8 @@
 .paper-pricing .pricing-disclosure {
   padding: 0.75rem 1rem;
   border-radius: 14px;
-  background: rgb(255 255 255 / 0.92);
-  color: #26241f;
+  background: var(--u-sheet);
+  color: var(--u-text);
 }
 
 .paper-pricing .pricing-disclosure {
@@ -131,12 +131,12 @@
 }
 
 .beta-page .paper-beta__os-meta {
-  color: #5c5a57;
+  color: var(--u-text-2);
 }
 
 .beta-page__trust-item {
   border: 1.5px solid var(--v-ink);
-  background: #fff;
+  background: var(--u-card);
   box-shadow: 3px 3px 0 var(--v-ink);
   color: var(--v-ink);
 }
@@ -153,7 +153,7 @@
 
 .paper-pricing .marketing-plan-card {
   --ink: var(--v-ink);
-  --ink-muted: #3b3b3b;
+  --ink-muted: var(--u-text-2);
   border: 1.5px solid var(--v-ink);
   border-radius: var(--v-radius);
   background: var(--v-card);
@@ -172,8 +172,8 @@
 
 .paper-pricing .marketing-plan-card:hover {
   border-color: var(--v-ink);
-  transform: translate(-3px, -3px);
-  box-shadow: 9px 9px 0 var(--v-ink);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--u-lift-2-hover);
 }
 
 .paper-pricing .marketing-plan-card .plan-badge {
@@ -188,7 +188,7 @@
 
 .pricing-plans .pricing-toggle {
   border: 1.5px solid var(--v-ink);
-  background: #fff;
+  background: var(--u-card);
   box-shadow: 3px 3px 0 var(--v-ink);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -200,11 +200,11 @@
 }
 
 .pricing-plans .pricing-toggle button.is-on {
-  color: #fff;
+  color: var(--u-on-cta);
 }
 
 .pricing-plans .pricing-toggle__thumb {
-  background: var(--v-ink);
+  background: var(--u-cta);
 }
 
 /* ── Releases ───────────────────────────────────────────────────────────── */
@@ -260,16 +260,16 @@
   min-height: 2.75rem;
   border: 1.5px solid var(--v-ink);
   border-radius: 14px;
-  background: #fff;
+  background: var(--u-card);
   color: var(--v-ink);
   font-weight: 750;
   box-shadow: 3px 3px 0 var(--v-ink);
 }
 
 .nf__btn--ink {
-  border-color: var(--v-ink);
-  background: var(--v-ink);
-  color: #fff;
+  border-color: var(--u-cta);
+  background: var(--u-cta);
+  color: var(--u-on-cta);
 }
 
 /* ── /app web workspace (dark by design) ────────────────────────────────── */
@@ -295,15 +295,15 @@
 }
 
 .admin-shell .admin-login {
-  border: 1.5px solid var(--v-ink);
+  border: 1.5px solid #141414;
   border-radius: var(--v-radius);
-  background: var(--v-card);
-  box-shadow: var(--v-shadow);
+  background: #fff;
+  box-shadow: 4px 4px 0 #141414;
   color: #141414;
 }
 
 .admin-shell .admin-login form button {
-  background: var(--v-ink);
+  background: #141414;
   color: #fff;
 }
 
@@ -311,7 +311,7 @@
 
 .activate-root .activate-card {
   --ink: var(--v-ink);
-  --ink-muted: #3b3b3b;
+  --ink-muted: var(--u-text-2);
   border: 1.5px solid var(--v-ink);
   border-radius: var(--v-radius);
   background: var(--v-card);
