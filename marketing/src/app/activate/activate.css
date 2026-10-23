@@ -143,7 +143,7 @@
 }
 
 .activate-field--code {
-  font-family: var(--font-mono-face), ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.18em;

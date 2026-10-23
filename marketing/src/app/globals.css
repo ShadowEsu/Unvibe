@@ -359,6 +359,16 @@
   Colors are stored as raw "R G B" triples so Tailwind can apply alpha values.
 */
 
+/* JetBrains Mono is fetched only after the page has loaded (layout.tsx), so it stays out of the first
+   paint. Until then mono text uses the system's own mono, scaled to JetBrains Mono's metrics (0.6 em
+   advance, 1.02 ascent, 0.30 descent, no line gap), so the swap moves nothing. */
+@font-face { font-family: "Unvibe Mono Menlo"; src: local("Menlo-Regular"), local("Menlo"); font-weight: 100 549; size-adjust: 99.67%; ascent-override: 102.34%; descent-override: 30.1%; line-gap-override: 0%; }
+@font-face { font-family: "Unvibe Mono Menlo"; src: local("Menlo-Bold"), local("Menlo Bold"); font-weight: 550 900; size-adjust: 99.67%; ascent-override: 102.34%; descent-override: 30.1%; line-gap-override: 0%; }
+@font-face { font-family: "Unvibe Mono Consolas"; src: local("Consolas"); font-weight: 100 549; size-adjust: 109.13%; ascent-override: 93.47%; descent-override: 27.49%; line-gap-override: 0%; }
+@font-face { font-family: "Unvibe Mono Consolas"; src: local("Consolas Bold"), local("Consolas-Bold"); font-weight: 550 900; size-adjust: 109.13%; ascent-override: 93.47%; descent-override: 27.49%; line-gap-override: 0%; }
+@font-face { font-family: "Unvibe Mono Courier"; src: local("Courier New"), local("CourierNewPSMT"); font-weight: 100 549; size-adjust: 100%; ascent-override: 102%; descent-override: 30%; line-gap-override: 0%; }
+@font-face { font-family: "Unvibe Mono Courier"; src: local("Courier New Bold"), local("CourierNewPS-BoldMT"); font-weight: 550 900; size-adjust: 100%; ascent-override: 102%; descent-override: 30%; line-gap-override: 0%; }
+
 :root {
   --paper: #f3eef8;
   --paper-raised: rgb(255 255 255 / 0.42);
@@ -455,7 +465,10 @@
 
   --font-display: var(--font-display-face), "Newsreader", Georgia, serif;
   --font-sans: var(--font-sans-face), Inter, system-ui, sans-serif;
-  --font-mono: var(--font-mono-face), "JetBrains Mono", ui-monospace, monospace;
+  /* --font-mono-face is set once JetBrains Mono is wanted (layout.tsx); before that the first entry falls
+     back to the metric-matched system faces above. */
+  --font-mono-fallback: "Unvibe Mono Menlo", "Unvibe Mono Consolas", "Unvibe Mono Courier";
+  --font-mono: var(--font-mono-face, var(--font-mono-fallback)), var(--font-mono-fallback), ui-monospace, monospace;
   --font-clean: var(--font-sans);
 
   --dur-micro: 150ms;
