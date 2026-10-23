@@ -233,3 +233,42 @@ test('the signed webhook links the charge through Invoice Payments and a replay 
   assert.deepEqual(await replay.json(), { received: true, duplicate: true });
   assert.deepEqual(cancels, [subscriptionId]);
 });
+
+test('on a locked production deployment a signed lost dispute is still processed and ends access', async () => {
+  const store = getBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const subscriptionId = `sub_${randomUUID()}`;
+  const paymentIntent = `pi_${randomUUID()}`;
+  await store.syncSubscription({
+    workspaceId: workspace.id, plan: 'pro', interval: 'monthly', status: 'active', seats: 1,
+    stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: subscriptionId, stripePriceId: 'price_pro_monthly', cancelAtPeriodEnd: false,
+  });
+  const stripe = getStripe();
+  const cancels: string[] = [];
+  stripe.invoicePayments.list = (async () => ({ data: [{ invoice: invoiceFor(subscriptionId) }] })) as unknown as typeof stripe.invoicePayments.list;
+  stripe.subscriptions.retrieve = (async (id: string) => ({
+    id, status: cancels.includes(id) ? 'canceled' : 'active',
+    items: { data: [{ current_period_start: CURRENT_PERIOD_START, current_period_end: CURRENT_PERIOD_START + MONTH }] },
+  })) as unknown as typeof stripe.subscriptions.retrieve;
+  stripe.subscriptions.cancel = (async (id: string) => { cancels.push(id); return { id, status: 'canceled' }; }) as unknown as typeof stripe.subscriptions.cancel;
+
+  // Production with a test key and BILLING_TEST_CHECKOUT_IN_PRODUCTION unset: payments are locked.
+  const env = process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = 'production';
+  delete process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION;
+  try {
+    const payload = JSON.stringify(dispute('charge.dispute.closed', paymentIntent, 'lost'));
+    const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
+      method: 'POST',
+      headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+      body: payload,
+    }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { received: true });
+  } finally {
+    if (env === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = env;
+  }
+  assert.deepEqual(cancels, [subscriptionId]);
+  assert.equal((await store.overview(workspace.ownerUserId)).subscription.plan, 'free');
+});
