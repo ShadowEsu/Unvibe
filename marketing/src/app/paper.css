@@ -1836,7 +1836,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 1;
-  stroke-dashoffset: 1;
   opacity: 0.55;
 }
 
@@ -1850,7 +1849,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-dasharray: 9 13;
-  opacity: 0;
+  opacity: 0.34;
 }
 
 .paper-map.is-drawn .paper-map__dash {
@@ -1877,6 +1876,14 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   position: absolute;
   display: grid;
   place-items: center;
+  transform: translate(-50%, -50%);
+}
+
+/* Start states wait for BuildMap to arm the map (JS on, motion allowed, map below the fold), so with
+   JS off the lane is drawn and every milestone shows. */
+.paper-map.is-armed .paper-map__lane { stroke-dashoffset: 1; }
+.paper-map.is-armed .paper-map__dash { opacity: 0; }
+.paper-map.is-armed .paper-map__node {
   opacity: 0;
   transform: translate(-50%, -50%) translateY(8px);
 }
