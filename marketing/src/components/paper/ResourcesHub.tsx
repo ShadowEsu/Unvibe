@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCopyToast } from "@/components/paper/CopyToast";
 import { DownloadRow } from "@/components/paper/DownloadLink";
+import { MotionInView } from "@/components/paper/MotionInView";
 import { track } from "@/lib/analytics";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
@@ -246,7 +247,7 @@ export function ResourcesHub() {
               </div>
 
               {/* Dynamic Explanation Output */}
-              <div className="resources-explanation-bubble">
+              <MotionInView className="resources-explanation-bubble">
                 <div className="resources-explanation-meta">
                   <span className="resources-explanation-indicator" />
                   <strong>Example, {currentDepth.name} depth:</strong>
@@ -259,7 +260,7 @@ export function ResourcesHub() {
                 <div className="resources-explanation-takeaway">
                   <strong>Takeaway:</strong> {currentDepth.keyTakeaway}
                 </div>
-              </div>
+              </MotionInView>
             </div>
           </div>
         </section>

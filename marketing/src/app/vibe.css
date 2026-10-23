@@ -793,6 +793,9 @@ p { font-size: 1.02rem; }
 @keyframes liquidC { to { transform: translate(-20%, -30%) scale(1.2); } }
 html[data-performance="lite"] .liquid__blob { animation: none; }
 
+/* Looping animations pause while their root is off-screen (data-in set by lib/motionInView). */
+[data-in="false"] :is(.vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow, .paper-partners__track, .liquid__blob, .paper-footer__dot, .resources-explanation-indicator) { animation-play-state: paused; }
+
 @media (prefers-reduced-motion: reduce) {
   .flexacc__item, .flexacc__body, .mnav__toggle span, .mnav__toggle span::before { transition: none; animation: none; }
   .liquid__blob { animation: none; }

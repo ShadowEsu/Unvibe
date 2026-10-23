@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { observeMotion } from "@/lib/motionInView";
 
 /**
  * Vibe, the Unvibe mascot: a flat sticker blob with an ink outline and two black eyes.
@@ -8,6 +9,8 @@ import { useEffect, useRef } from "react";
  */
 export function Vibe({ size = 96, className = "", follow = true }: { size?: number; className?: string; follow?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => (ref.current ? observeMotion(ref.current) : undefined), []);
 
   useEffect(() => {
     if (!follow) return;

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { ListingBadges } from "@/components/paper/ListingBadges";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
+import { observeMotion } from "@/lib/motionInView";
 
 const product = [
   ["Product", "/#product"],
@@ -27,6 +29,8 @@ const company = [
 
 export function Footer() {
   const pathname = usePathname();
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => (statusRef.current ? observeMotion(statusRef.current) : undefined), []);
 
   return (
     <footer className="paper-footer">
@@ -49,7 +53,7 @@ export function Footer() {
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
-        <p className="paper-footer__status">
+        <p className="paper-footer__status" ref={statusRef}>
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
         </p>
       </div>
