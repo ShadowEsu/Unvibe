@@ -48,9 +48,16 @@ const monoAfterLoad = `addEventListener("load",function(){var s=document.createE
   `:root{--font-mono-face:${mono.style.fontFamily}}`,
 )};document.head.appendChild(s)})`;
 
+// The same file declared at the five weights the Google setup had, so a heading set at 750 still matches
+// the 800 face (one variable file, one download).
 const display = localFont({
-  src: "./fonts/bricolage-latin-ui.woff2",
-  weight: "200 800",
+  src: [
+    { path: "./fonts/bricolage-latin-ui.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/bricolage-latin-ui.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/bricolage-latin-ui.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/bricolage-latin-ui.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/bricolage-latin-ui.woff2", weight: "800", style: "normal" },
+  ],
   variable: "--font-display-face",
   display: "swap",
   adjustFontFallback: "Arial",
