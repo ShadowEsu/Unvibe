@@ -52,11 +52,11 @@ required value is missing.
 | --- | --- |
 | `STRIPE_SECRET_KEY` | Server-only Stripe key. Use an `sk_test_...` key first; never expose it in client code. |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret from the exact deployed `/api/v1/billing/webhook` endpoint. |
-| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Price ID for Pro: **`$10/month`**. |
-| `STRIPE_PRICE_PRO_ANNUAL` | Stripe Price ID for Pro: **`$90/year`** (about `$7.50/month`, 25% savings). |
-| `STRIPE_PRICE_PRO_LIFETIME` | Stripe Price ID for Pro Lifetime: **`$80` one-time**. Optional for monthly/annual; required to enable Lifetime checkout. |
-| `STRIPE_PRICE_TEAMS_MONTHLY` | Optional. Only if Teams checkout is re-enabled (`$8/seat`). |
-| `STRIPE_PRICE_TEAMS_ANNUAL` | Optional. Only if Teams checkout is re-enabled. |
+| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Price ID for Pro: **`$9/month`**. |
+| `STRIPE_PRICE_PRO_ANNUAL` | Stripe Price ID for Pro: **`$81/year`** (about `$6.75/month`, 25% savings). |
+| `STRIPE_PRICE_PRO_LIFETIME` | Stripe Price ID for Pro Lifetime: **`$80` one-time**. Optional for monthly/annual; Lifetime checkout also needs `BILLING_LIFETIME_ENABLED=true`. |
+| `STRIPE_PRICE_TEAMS_MONTHLY` | Leave unset while Teams is sold by email. Setting both Teams prices opens Teams checkout (`$8/seat/month`). |
+| `STRIPE_PRICE_TEAMS_ANNUAL` | Leave unset while Teams is sold by email (`$72/seat/year`). |
 
 Do not enable live billing until you have completed a real test checkout,
 verified signed webhooks (including cancellation and failed payment), tested

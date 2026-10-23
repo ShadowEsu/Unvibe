@@ -10,8 +10,10 @@ does not activate production billing.
 usage reservations; the migration seeds it to the same initial values:
 
 - Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
-- Pro: $10/month or $90/year (about $7.50/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
-- Teams checkout is paused (`TEAMS_CHECKOUT_ENABLED = false` in `web/src/billing/plans.ts`). Product surfaces offer Free, Pro ($10/mo or $90/yr), and Pro Lifetime ($80 one-time). Teams interest is collected via company email + seat request (mailto) until Stripe Teams prices exist. Backend Teams plan math remains for any existing workspace support.
+- Pro: $9/month or $81/year (about $6.75/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
+- Pro Lifetime: $80 one-time (`PRO_LIFETIME_CENTS`), offered only while checkout is open, `STRIPE_PRICE_PRO_LIFETIME` is set and `BILLING_LIFETIME_ENABLED=true`.
+- Teams ($8/seat/month or $72/seat/year) is sold as a pilot by email: the site collects company email + seat request (mailto). Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
+- Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
 - Founding Teams collab (no Stripe required): create team workspace, invite seats, shared activity feed with authorship (`GET /api/v1/workspaces/:id/history`). Explanation/code bodies stay on-device. GitHub intelligence remains out of scope.
 - Founder env paste list: `docs/release/founder-paste-list.md`.
 
@@ -33,7 +35,7 @@ privileges are also restricted to `service_role`.
 
 ## Stripe test-mode setup
 
-1. Create two recurring Stripe Prices in test mode: Pro monthly ($10) and Pro annual ($90).
+1. Create two recurring Stripe Prices in test mode: Pro monthly ($9) and Pro annual ($81).
 2. Set the server-only values in `web/.env.example`: secret key, webhook secret, and both Pro
    price IDs. Set `PUBLIC_APP_URL` to the dashboard HTTPS origin outside local development.
 3. Register `POST /api/v1/billing/webhook` and subscribe to:
@@ -94,7 +96,7 @@ Then verify with test credentials:
 - Successful, failed, past-due/grace, renewed, cancel-at-period-end, deleted, and reactivated states.
 - Invitation acceptance with the right/wrong email; owner/admin/member permission boundaries.
 - User A cannot read or mutate User B workspaces using staging isolation scripts.
-- Published totals: $8/mo Pro, $72/yr Pro (25% annual savings). Legacy Teams seat math remains in tests.
+- Published totals: $9/mo Pro, $81/yr Pro (25% annual savings), $80 Pro Lifetime. Legacy Teams seat math remains in tests.
 
 ## Known launch boundary
 

@@ -14,8 +14,8 @@ Create products/prices in Stripe Dashboard (test mode first):
 
 | Product | Amount | Mode | Env var to paste |
 | --- | --- | --- | --- |
-| Pro monthly | **$10 / month** | recurring | `STRIPE_PRICE_PRO_MONTHLY` = `price_...` |
-| Pro annual | **$90 / year** | recurring | `STRIPE_PRICE_PRO_ANNUAL` = `price_...` |
+| Pro monthly | **$9 / month** | recurring | `STRIPE_PRICE_PRO_MONTHLY` = `price_...` |
+| Pro annual | **$81 / year** | recurring | `STRIPE_PRICE_PRO_ANNUAL` = `price_...` |
 | Pro Lifetime | **$80 once** | one-time | `STRIPE_PRICE_PRO_LIFETIME` = `price_...` |
 
 Also paste:
