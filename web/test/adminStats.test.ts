@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dailyActivation, isAdminStatsRequest, summarizeInstalls } from '../src/lib/adminStats';
+import { dailyActivation, isAdminStatsRequest, openDisputes, summarizeInstalls } from '../src/lib/adminStats';
 import { activationKind, FIRST_RUN_SAMPLE } from '../src/lib/activation';
 
 const SECRET = 'a'.repeat(32);
@@ -47,4 +47,17 @@ test('only the built-in first-run sample counts as the sample, whatever its line
   assert.equal(activationKind(FIRST_RUN_SAMPLE.replace(/\n/g, '\r\n') + '\n'), 'sample');
   assert.equal(activationKind(FIRST_RUN_SAMPLE.replace('wait);', 'wait * 2);')), 'code');
   assert.equal(activationKind(undefined), 'code');
+});
+
+test('open disputes are the opened ones not yet closed, with the nearest evidence deadline first', () => {
+  const rows = [
+    { action: 'dispute.opened', metadata: { disputeId: 'dp_won', dueBy: '2026-10-25T00:00:00.000Z' } },
+    { action: 'dispute.opened', metadata: { disputeId: 'dp_late', dueBy: '2026-11-02T00:00:00.000Z' } },
+    { action: 'dispute.opened', metadata: { disputeId: 'dp_soon', dueBy: '2026-10-28T00:00:00.000Z' } },
+    { action: 'dispute.closed', metadata: { disputeId: 'dp_won', status: 'won' } },
+    // Replayed audit rows for one dispute count once.
+    { action: 'dispute.opened', metadata: { disputeId: 'dp_soon', dueBy: '2026-10-28T00:00:00.000Z' } },
+  ];
+  assert.deepEqual(openDisputes(rows), { disputesOpen: 2, disputeNextDueBy: '2026-10-28T00:00:00.000Z' });
+  assert.deepEqual(openDisputes([]), { disputesOpen: 0, disputeNextDueBy: null });
 });

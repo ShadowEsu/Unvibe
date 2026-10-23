@@ -52,7 +52,7 @@ function render(text: string): string {
 
 /** Desktop gets the download buttons; a phone can't run the app, so it gets the email link. */
 function GetIt({ phone }: { phone: boolean }) {
-  if (!phone) return <DownloadRow />;
+  if (!phone) return <DownloadRow surface="try_it" />;
   return (
     <a className="try__phone" href="#email-link" onClick={() => track("email_link_cta_clicked", { surface: "try_it" })}>
       Email me the link

@@ -182,8 +182,8 @@ export class ReviewPanelProvider implements vscode.WebviewViewProvider {
 
     <!-- Secret block -->
     <section id="blocked" class="blocked" hidden>
-      <p class="blocked__title">Blocked — possible secret detected</p>
-      <p class="blocked__body">Nothing was sent. Remove the value or add the file to <code>.unvibeignore</code>, then try again.</p>
+      <p class="blocked__title">Blocked: possible secret detected</p>
+      <p class="blocked__body">Nothing was sent. Remove the value, then try again.</p>
       <ul class="findinglist" id="blockedList"></ul>
     </section>
 

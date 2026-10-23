@@ -10,8 +10,8 @@ import { track } from "@/lib/analytics";
 const guarantees = [
   {
     Icon: EyeOff,
-    title: "Secrets filtered on your Mac",
-    body: "API keys, tokens, and private keys are detected before anything is sent, and a hit blocks the request.",
+    title: "Secrets filtered on your computer",
+    body: "The code you send is checked for keys, tokens, and passwords first. A known credential blocks the request. A string that only looks random waits for your OK. Typed questions and Chat messages are not scanned yet.",
   },
   {
     Icon: ShieldCheck,
@@ -26,7 +26,7 @@ const guarantees = [
 ];
 
 const included = ["Your selected snippet", "The scope you approved", "Shallow project structure"];
-const blocked = [".env and .env.*", "*.pem · *.key · id_rsa", "node_modules / build output", "High-entropy secrets"];
+const blocked = ["API keys and tokens", "Private key blocks", "Database URLs with passwords", "High-entropy strings (ask first)"];
 
 export function Privacy() {
   return (
@@ -34,7 +34,7 @@ export function Privacy() {
       id="privacy"
       eyebrow="Privacy"
       title="Your code stays yours. By design, not by promise."
-      subtitle="Unvibe builds context locally and filters secrets before any request. The whole repository is never uploaded, and cloud analysis is consent-gated per repo."
+      subtitle="Unvibe builds context locally and filters secrets in your code before it is sent. The whole repository is never uploaded, and there is no file exclusion list yet."
       variant="editorial"
       surface="brand"
     >
@@ -125,9 +125,6 @@ export function Privacy() {
               </ul>
             </div>
           </div>
-          <p className="border-t border-line px-5 py-3 text-fluid-sm text-fg-muted">
-            Add your own rules with a <code className="font-mono text-primary">.unvibeignore</code> file.
-          </p>
         </motion.div>
       </div>
     </Section>

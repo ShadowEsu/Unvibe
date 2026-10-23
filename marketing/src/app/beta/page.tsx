@@ -26,7 +26,7 @@ export default function BetaDownloadsPage() {
 
       <section className="paper-section" id="install">
         <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" showFeedback />
+          <BetaInstall tone="page" surface="beta" showFeedback />
         </Reveal>
       </section>
 
@@ -40,7 +40,14 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Download and open Unvibe</strong>
                   <p>
-                    {`On Mac, move Unvibe.app to Applications. On Windows, run the portable .exe.`}
+                    On Mac, move Unvibe to Applications and open it. macOS blocks the first open: press <b>Done</b>,
+                    then go to System Settings → Privacy &amp; Security, scroll down to Security, press <b>Open Anyway</b>, confirm, and enter
+                    your Mac password.
+                  </p>
+                  <p>
+                    On Windows, keep the download if your browser warns, then run the portable .exe. If you see
+                    “Windows protected your PC”, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
+                    <a className="paper-text-link" href="/install-help">Show me how</a>
                   </p>
                 </div>
               </li>
@@ -83,10 +90,40 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
             <details>
+              <summary>macOS won’t open Unvibe the first time</summary>
+              <p>
+                Unvibe is not notarized by Apple yet, so macOS blocks the first open. Do this once:
+              </p>
+              <ol>
+                <li>Press <strong>Done</strong> on the warning.</li>
+                <li>Open System Settings, click Privacy &amp; Security, and scroll down to Security.</li>
+                <li>Press <strong>Open Anyway</strong>, then confirm when macOS asks again.</li>
+                <li>Enter your Mac password, then press <strong>OK</strong>.</li>
+              </ol>
+              <p>
+                The Open Anyway button stays for about an hour after you try to open Unvibe. If it’s gone, open Unvibe
+                again first. On macOS 14 or older, you can instead Control-click (right-click) Unvibe in Applications,
+                choose <strong>Open</strong>, then press <strong>Open</strong> again.
+              </p>
+            </details>
+            <details>
+              <summary>Your browser warns about the Windows download</summary>
+              <p>
+                In Edge, press <strong>…</strong> next to the download, then <strong>Keep</strong>, then
+                {" "}<strong>Show more</strong>, then <strong>Keep anyway</strong>. Chrome also lets you keep a file after it warns.
+              </p>
+            </details>
+            <details>
               <summary>Windows shows “Windows protected your PC”</summary>
               <p>
                 The Windows build is not code-signed yet, so SmartScreen warns about it. Click <strong>More info</strong>, then
                 {" "}<strong>Run anyway</strong>. Only do this for the file downloaded from unvibe.site or our GitHub releases.
+              </p>
+              <p>
+                No Run anyway button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it
+                blocks unsigned apps like Unvibe and can’t make an exception for one app. Email{" "}
+                <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a>
+                {" "}and we’ll help.
               </p>
             </details>
             <details>
@@ -99,9 +136,9 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
             <details>
-              <summary>You can use it without signing in</summary>
+              <summary>You can start without signing in</summary>
               <p>
-                Sign-in only syncs your history across devices. Skip it on the first screen and the free explanations still work.
+                Skip sign-in on the first screen and you get 50 free explanations in your first 30 days. Signing in gives you a free allowance every month, syncs your history across devices, and starts a new account with a free month of Pro.
               </p>
             </details>
           </div>
@@ -113,11 +150,11 @@ export default function BetaDownloadsPage() {
           <div className="beta-page__trust">
             <div className="beta-page__trust-item">
               <ShieldIcon />
-              <p>Keys and tokens are filtered on your device before anything is sent. Your repo is never uploaded.</p>
+              <p>Keys and tokens in your code are filtered on your device before it is sent. Your repo is never uploaded.</p>
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />
-              <p>Need help? <a className="paper-text-link" href="mailto:preston@unvibe.site?subject=Unvibe%20help">Email Preston</a></p>
+              <p>Need help? <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
         </Reveal>

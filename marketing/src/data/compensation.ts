@@ -46,13 +46,6 @@ export const compensationLines: CompensationLine[] = [
     state: "Secured",
   },
   {
-    name: "AWS for Startups",
-    amountUsd: 5_000,
-    detail: "AWS Activate credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
     name: "Linear Founder Value Pack",
     amountUsd: 4_500,
     detail: "Six months of Linear",
@@ -129,4 +122,9 @@ export function compensationCashUsd(): number {
 
 export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
+}
+
+/** Startup programs are the credit lines only. Founder capital and angel cash are not programs. */
+export function compensationProgramCount(): number {
+  return compensationLines.filter((line) => line.kind === "credits").length;
 }

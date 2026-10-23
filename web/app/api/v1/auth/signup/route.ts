@@ -1,18 +1,15 @@
 import { getStore } from '@/data/store';
 import { withSessionCookie } from '@/lib/auth';
+import { devEmailAuthDisabledResponse, devEmailAuthEnabled } from '@/lib/devEmailAuth';
 
 export const runtime = 'nodejs';
 
 /**
- * Create a new account with email. In dev MemoryStore this is passwordless;
- * in production the Store's signUp method enforces the account-not-exists check.
- * Sets a session cookie for the web dashboard on success.
+ * Create a new account with email (local development only, see devEmailAuthEnabled). Passwordless;
+ * the Store's signUp enforces the account-not-exists check. Sets a session cookie on success.
  */
 export async function POST(req: Request): Promise<Response> {
-  const enabled = process.env.NODE_ENV !== 'production' || process.env.UNCODE_ALLOW_DEV_EMAIL_AUTH === 'true';
-  if (!enabled) {
-    return Response.json({ error: 'Cloud sign-in is not configured for this build. Use local-only mode or configure verified authentication.' }, { status: 501 });
-  }
+  if (!devEmailAuthEnabled()) return devEmailAuthDisabledResponse();
   const body = (await req.json().catch(() => ({}))) as { email?: string };
   const email = (body.email ?? '').trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {

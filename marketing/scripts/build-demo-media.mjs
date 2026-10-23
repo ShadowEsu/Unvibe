@@ -5,9 +5,10 @@
  *   node scripts/build-demo-media.mjs <MEDIA_DIR>
  *
  * Needs ffmpeg and cwebp on PATH. Writes:
- *   public/videos/unvibe-real-demo.mp4 (+ -poster.webp): onboarding, the panel explaining live,
- *     depth, follow-up and Test me at real speed, then the companion pages. Waits between
- *     steps are cut where segments join; nothing inside a segment is sped up or edited.
+ *   public/videos/unvibe-real-demo.mp4 (+ -poster.webp, -poster-720.webp): onboarding, then the panel explaining
+ *     live, depth, follow-up and Test me at real speed. It ends there: the companion pages show
+ *     the capture account's name. Waits between steps are cut where segments join; nothing
+ *     inside a segment is sped up or edited.
  *   public/unvibe/real/*.webp: the screenshots the homepage walkthrough uses.
  *   src/data/demoMedia.json: version and length, so captions never drift from the recording.
  */
@@ -53,12 +54,12 @@ const panel = video("widget.html");
 const segments = {
   onboarding: [Math.max(0, mark(`app open ${timeline.version}`) - companion.opened + 0.5), mark("onboarding") - companion.opened + 0.8],
   panel: [0, mark("test me") - panel.opened + 0.5],
-  companion: [mark("test me") - companion.opened, mark("Momentum") - companion.opened + 0.4],
 };
 const length = Object.values(segments).reduce((sum, [a, b]) => sum + (b - a), 0);
 
 const out = join(site, "public/videos/unvibe-real-demo.mp4");
 const poster = join(site, "public/videos/unvibe-real-demo-poster.webp");
+const posterPhone = join(site, "public/videos/unvibe-real-demo-poster-720.webp");
 const dusk = join(site, "public/hero/golden-gate-dusk.webp");
 const W = 1280;
 const H = 800;
@@ -71,8 +72,7 @@ const filter = [
   `[2:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},gblur=sigma=18,eq=brightness=-0.06,loop=-1:1,${fmt}[bg]`,
   `[1:v]${trim(segments.panel)},crop=620:800:0:0,scale=-2:740,${fmt}[p]`,
   `[bg][p]overlay=(W-w)/2:(H-h)/2:shortest=1,${fmt}[b]`,
-  `[0:v]${trim(segments.companion)},scale=${W}:${H},${fmt}[c]`,
-  `[a][b][c]concat=n=3:v=1:a=0[v]`,
+  `[a][b]concat=n=2:v=1:a=0[v]`,
 ].join(";");
 
 mkdirSync(dirname(out), { recursive: true });
@@ -89,6 +89,8 @@ const posterAt = segments.onboarding[1] + Math.min(4, segments.panel[1] / 3);
 const posterPng = join(mediaDir, "poster.png");
 execFileSync("ffmpeg", ["-v", "error", "-y", "-ss", posterAt.toFixed(2), "-i", out, "-frames:v", "1", posterPng]);
 execFileSync("cwebp", ["-quiet", "-q", "78", posterPng, "-o", poster]);
+// Phones render the window about 350 CSS px wide (700 device px); AppTour's srcset picks this one there.
+execFileSync("cwebp", ["-quiet", "-q", "78", "-resize", "720", "0", posterPng, "-o", posterPhone]);
 
 const realDir = join(site, "public/unvibe/real");
 mkdirSync(realDir, { recursive: true });

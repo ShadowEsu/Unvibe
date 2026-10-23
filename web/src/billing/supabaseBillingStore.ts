@@ -7,13 +7,16 @@ import type {
   SubscriptionSyncInput,
   UsageKind,
   UsageReservation,
+  WebhookClaim,
   WorkspaceAccess,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
 } from './types';
-import { CHECKOUT_INTENT_TTL_MS, monthWindow } from './plans';
+import type { TokenUsage } from '@/ai/provider';
+import { CHECKOUT_INTENT_TTL_MS, monthWindow, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
+import { TEAM_WORKSPACE_LIMIT_MESSAGE, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
 
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Persistent billing returned an invalid record.');
@@ -154,8 +157,37 @@ export class SupabaseBillingStore implements BillingStore {
     throw new Error('Persistent billing release usage failed: counter kept changing.');
   }
 
+  /**
+   * Compare-and-set onto the newest uncounted row: the `is null` guard means a concurrent request
+   * that took the same row first makes this one move to the next uncounted row instead of overwriting.
+   */
+  async recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void> {
+    const since = new Date(Date.now() - USAGE_TOKEN_WINDOW_MS).toISOString();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { data, error } = await this.db.from('usage_events').select('id')
+        .eq('user_id', userId).eq('kind', kind).is('estimated_input_tokens', null).gte('created_at', since)
+        .order('id', { ascending: false }).limit(1).maybeSingle();
+      this.require(error, 'find usage row for token counts');
+      if (!data) return;
+      const { data: updated, error: updateError } = await this.db.from('usage_events')
+        // tokens_estimated defaults to false, so measured counts don't need the column: they keep
+        // working if this code ships before the migration.
+        .update({
+          estimated_input_tokens: usage.inputTokens,
+          estimated_output_tokens: usage.outputTokens,
+          ...(usage.estimated ? { tokens_estimated: true } : {}),
+        })
+        .eq('id', data.id).is('estimated_input_tokens', null)
+        .select('id');
+      this.require(updateError, 'record token counts');
+      if (Array.isArray(updated) && updated.length > 0) return;
+    }
+  }
+
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
     const { data, error } = await this.db.rpc('create_team_workspace', { p_user_id: userId, p_name: name.trim() });
+    // P0001: the function's own `raise exception` at the per-owner cap.
+    if (error?.code === 'P0001' && error.message === TEAM_WORKSPACE_LIMIT_MESSAGE) throw new TeamWorkspaceLimitError();
     this.require(error, 'create team workspace');
     const access = await this.getWorkspaceAccess(userId, String(data));
     if (!access) throw new Error('Persistent billing did not return the team workspace.');
@@ -301,16 +333,33 @@ export class SupabaseBillingStore implements BillingStore {
     return data ? this.mapSubscription(data as Record<string, unknown>) : null;
   }
 
+  async subscriptionByWorkspaceId(workspaceId: string): Promise<SubscriptionRecord | null> {
+    const { data, error } = await this.db.from('subscriptions').select('*').eq('workspace_id', workspaceId).maybeSingle();
+    this.require(error, 'find subscription by workspace');
+    return data ? this.mapSubscription(data as Record<string, unknown>) : null;
+  }
+
+  async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
+    const { data, error } = await this.db.from('subscriptions').select('*').eq('stripe_customer_id', stripeCustomerId).maybeSingle();
+    this.require(error, 'find subscription by customer');
+    return data ? this.mapSubscription(data as Record<string, unknown>) : null;
+  }
+
   async changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview> {
     const { error } = await this.db.rpc('change_workspace_seats', { p_user_id: userId, p_workspace_id: workspaceId, p_seats: seats });
     this.require(error, 'change seats');
     return this.overview(userId, workspaceId);
   }
 
-  async claimWebhook(eventId: string, eventType: string): Promise<boolean> {
+  async claimWebhook(eventId: string, eventType: string): Promise<WebhookClaim> {
     const { data, error } = await this.db.rpc('claim_billing_webhook', { p_event_id: eventId, p_event_type: eventType });
     this.require(error, 'claim webhook');
-    return Boolean(data);
+    if (data) return 'claimed';
+    // Not claimed: either already processed, or another delivery holds the lease (or just released
+    // it as failed, which a later retry re-claims).
+    const row = await this.db.from('billing_webhook_events').select('status').eq('stripe_event_id', eventId).maybeSingle();
+    this.require(row.error, 'read webhook claim');
+    return row.data?.status === 'completed' ? 'completed' : 'in_progress';
   }
 
   async completeWebhook(eventId: string): Promise<void> {

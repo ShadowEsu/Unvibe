@@ -19,7 +19,7 @@ export default function PrivacyPage() {
           <li>
             <strong>Code you choose to review.</strong> When you activate Unvibe on a
             selection, that snippet and the limited surrounding context you approve is
-            sent to generate an explanation. Before anything leaves your computer it is
+            sent to generate an explanation. Before that code leaves your computer it is
             scanned on-device for secrets, and detected credentials block or warn first.
           </li>
           <li>
@@ -47,16 +47,20 @@ export default function PrivacyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection heading="Secret filtering, before anything is sent">
+      <LegalSection heading="Secret filtering, before code is sent">
         <p>
-          Every remote request is scanned on your computer for known credential patterns:
-          API keys, tokens, private keys, plus high-entropy strings and{" "}
-          <code className="font-mono">KEY=</code> style assignments. A hit blocks the
-          request and shows you the file and line so you can redact it or add it to a{" "}
-          <code className="font-mono">.unvibeignore</code> file. Files like{" "}
-          <code className="font-mono">.env</code>, keys,{" "}
-          <code className="font-mono">node_modules</code>, and build output are excluded
-          by default, and <code className="font-mono">.gitignore</code> is honored.
+          The code you select, the nearby code Pro adds to it, and the git changes in a
+          Brief are scanned on your computer before they are sent: API keys, tokens, private
+          keys, database URLs with passwords, password-style{" "}
+          <code className="font-mono">KEY=</code> assignments, and high-entropy strings. A
+          known credential blocks the request and shows you the rule and line so you can
+          remove it. A string that only looks random is shown to you first, and nothing is
+          sent unless you choose Send anyway. In the current app (v0.1.43), the questions you
+          type, follow-ups, and Chat messages are not scanned yet, so keep keys out of them.
+          There is no file exclusion list: a file you select or open is sent once it passes
+          the scan. In a Brief, untracked files that{" "}
+          <code className="font-mono">.gitignore</code> covers are left out, because the app
+          asks git only for files it does not ignore.
         </p>
       </LegalSection>
 
@@ -96,7 +100,15 @@ export default function PrivacyPage() {
       <LegalSection heading="This website">
         <p>
           unvibe.site uses Mixpanel and PostHog to understand how visitors use the site,
-          including page views, clicks, and session replays with form inputs masked. We
+          including page views, clicks, and session replays. Both receive your IP address with
+          each event and use it to estimate a rough location. Replays hide all page text and
+          everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
+          codes) are removed from page addresses before they are sent. Admin pages and private
+          stats links start no analytics; if you open one from another page on the site, replay
+          recording stops, no analytics events from that page are sent, and the page&apos;s
+          content is left out of any replay. Automated browsers send no
+          analytics, and neither does a browser where you have opened any page with ?notrack=1
+          added to the address; ?notrack=0 turns analytics back on. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The

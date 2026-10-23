@@ -81,7 +81,6 @@ Set these on the marketing hosting project for `https://unvibe.site`.
 | `WAITLIST_FROM_EMAIL` | A verified sender, for example `Unvibe Waitlist <waitlist@unvibe.site>`. | Yes with Resend |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Optional analytics key. Leave blank for no analytics. | Optional |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Your approved PostHog host, if analytics is enabled. | Optional |
-| `NEXT_PUBLIC_DEMO_VIDEO_URL` | Optional HTTPS demo video URL. | Optional |
 
 After configuring these, submit one disposable waitlist entry on the deployed
 site and confirm all three outcomes: the entry is stored, it is visible to an

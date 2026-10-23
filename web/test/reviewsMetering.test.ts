@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { POST as review } from '../app/api/v1/reviews/route';
 import { POST as comprehension } from '../app/api/v1/comprehension/route';
+import { POST as createWorkspace } from '../app/api/v1/workspaces/route';
 import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
 import { monthWindow } from '../src/billing/plans';
@@ -19,6 +20,8 @@ process.env.UNVIBE_TRIAL_TOKEN = 'local-trial-token-abcdefghijklmnop';
 
 type Upstream = 'answer' | 'fail' | 'empty' | 'question' | 'not-json';
 let upstream: Upstream = 'answer';
+/** Runs while the AI call is in flight, between the reservation and any release. */
+let duringUpstream: (() => Promise<void>) | null = null;
 const QUESTION = { question: 'What does it return?', options: ['Its input', 'Nothing'], answerIndex: 0, rationale: 'identity', concept: 'functions', conceptLabel: 'Functions' };
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -26,6 +29,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
   // The provider forwards the caller's signal; a request the client already dropped aborts here.
   init?.signal?.throwIfAborted();
+  await duringUpstream?.();
   if (upstream === 'fail') return new Response('upstream unavailable', { status: 503 });
   const text = upstream === 'empty' ? '' : upstream === 'question' ? JSON.stringify(QUESTION) : upstream === 'not-json' ? 'Sorry, I cannot.' : 'This function returns its input.';
   const chunk = { candidates: [{ content: { parts: [{ text }] } }] };
@@ -201,4 +205,76 @@ test('Test me is charged when the person disconnects, not refunded', async () =>
   });
   await comprehension(dropped);
   assert.equal(await used(pro.userId, 'project_question'), 1);
+});
+
+/** A team workspace the signed-in person creates through the real route. */
+async function newTeamWorkspace(headers: Record<string, string>): Promise<string> {
+  const response = await createWorkspace(new Request('http://localhost/api/v1/workspaces', {
+    method: 'POST', headers, body: JSON.stringify({ name: 'Side project' }),
+  }));
+  assert.equal(response.status, 201);
+  const workspace = (await jsonRecord(response)).workspace;
+  assert.ok(workspace !== null && typeof workspace === 'object' && 'id' in workspace && typeof workspace.id === 'string');
+  return workspace.id;
+}
+
+test('a new free team workspace does not give a Free user a second allowance', async () => {
+  upstream = 'answer';
+  const free = await signedIn('free');
+  const limit = (await getBillingStore().overview(free.userId)).usage.find((line) => line.kind === 'ai_explanation')?.limit ?? 0;
+  for (let i = 0; i < limit; i += 1) assert.equal((await review(explainRequest(free.headers))).status, 200);
+  const teamId = await newTeamWorkspace(free.headers);
+  const viaTeam = await review(explainRequest({ ...free.headers, 'x-uncode-workspace-id': teamId }));
+  assert.equal(viaTeam.status, 429, 'naming a free team workspace must still spend the personal allowance');
+  assert.equal(await used(free.userId, 'ai_explanation'), limit);
+});
+
+test('a paid Teams workspace named in the request pays from the team allowance', async () => {
+  upstream = 'answer';
+  const owner = await signedIn('free');
+  const teamId = await newTeamWorkspace(owner.headers);
+  await getBillingStore().syncSubscription({
+    workspaceId: teamId, plan: 'teams', interval: 'monthly', status: 'active', seats: 2,
+    stripeCustomerId: `cus_team_${owner.userId}`, stripeSubscriptionId: `sub_team_${owner.userId}`, stripePriceId: 'price_teams_monthly',
+    cancelAtPeriodEnd: false,
+  });
+  assert.equal((await review(explainRequest({ ...owner.headers, 'x-uncode-workspace-id': teamId }))).status, 200);
+  const teamLine = (await getBillingStore().overview(owner.userId, teamId)).usage.find((line) => line.kind === 'ai_explanation');
+  assert.equal(teamLine?.used, 1, 'the Teams workspace is charged');
+  assert.equal(await used(owner.userId, 'ai_explanation'), 0, 'the personal allowance is untouched');
+});
+
+test('a unit released after Teams ended mid-request goes back to the Teams workspace it was charged to', async () => {
+  upstream = 'answer';
+  const owner = await signedIn('free');
+  assert.equal((await review(explainRequest(owner.headers))).status, 200);
+  const teamId = await newTeamWorkspace(owner.headers);
+  const teams = {
+    workspaceId: teamId, plan: 'teams' as const, interval: 'monthly' as const, status: 'active' as const, seats: 2,
+    stripeCustomerId: `cus_team_${owner.userId}`, stripeSubscriptionId: `sub_team_${owner.userId}`, stripePriceId: 'price_teams_monthly',
+    cancelAtPeriodEnd: false,
+  };
+  await getBillingStore().syncSubscription(teams);
+  // The Teams plan ends while the AI call runs, and the call then fails.
+  duringUpstream = () => getBillingStore().syncSubscription({ ...teams, status: 'canceled' });
+  upstream = 'fail';
+  try {
+    await (await review(explainRequest({ ...owner.headers, 'x-uncode-workspace-id': teamId }))).text();
+  } finally {
+    duringUpstream = null;
+    upstream = 'answer';
+  }
+  const teamLine = (await getBillingStore().overview(owner.userId, teamId)).usage.find((line) => line.kind === 'ai_explanation');
+  assert.equal(teamLine?.used, 0, 'the Teams workspace gets its unit back');
+  assert.equal(await used(owner.userId, 'ai_explanation'), 1, 'the personal allowance is not credited for a unit it never paid');
+});
+
+test('naming a workspace the person is not a member of is refused without spending anything', async () => {
+  upstream = 'answer';
+  const stranger = await signedIn('free');
+  const other = await signedIn('free');
+  const teamId = await newTeamWorkspace(other.headers);
+  const response = await review(explainRequest({ ...stranger.headers, 'x-uncode-workspace-id': teamId }));
+  assert.notEqual(response.status, 200);
+  assert.equal(await used(stranger.userId, 'ai_explanation'), 0);
 });

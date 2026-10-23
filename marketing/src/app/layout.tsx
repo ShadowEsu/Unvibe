@@ -25,10 +25,13 @@ const sans = Inter({
   display: "swap",
 });
 
+// Only the two faces the first phone viewport sets in (Inter body, Bricolage headings) are preloaded,
+// so they and the CSS don't share the opening bandwidth with faces the fold doesn't need yet.
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono-face",
   display: "swap",
+  preload: false,
 });
 
 const display = Bricolage_Grotesque({
@@ -38,12 +41,14 @@ const display = Bricolage_Grotesque({
   display: "swap",
 });
 
+// The italic accent is not one of the two preloaded fold faces; swap shows it as soon as it loads.
 const serif = Instrument_Serif({
   subsets: ["latin"],
   style: ["normal", "italic"],
   weight: "400",
   variable: "--font-serif-face",
   display: "swap",
+  preload: false,
 });
 
 const siteUrlRaw = process.env.NEXT_PUBLIC_SITE_URL?.trim();

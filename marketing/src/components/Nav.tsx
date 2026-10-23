@@ -51,7 +51,7 @@ export function Nav() {
           >
             <kbd>{"⌘"}K</kbd>
           </button>
-          <DownloadLink href="/beta" size="nav" className="mnav__cta" />
+          <DownloadLink href="/beta" surface="nav" size="nav" className="mnav__cta" />
           <button
             ref={toggle}
             type="button"
@@ -71,7 +71,7 @@ export function Nav() {
             <li key={link.href}><Link href={link.href} onClick={() => setOpen(false)}>{link.label}</Link></li>
           ))}
         </ul>
-        <DownloadLink href="/beta" size="nav" className="mnav__cta mnav__cta--menu" onClick={() => setOpen(false)} />
+        <DownloadLink href="/beta" surface="nav" size="nav" className="mnav__cta mnav__cta--menu" onClick={() => setOpen(false)} />
       </div>
     </header>
   );

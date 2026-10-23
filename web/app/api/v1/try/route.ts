@@ -70,7 +70,8 @@ export async function POST(req: Request): Promise<Response> {
   if (limited) return Response.json({ error: limited }, { status: 429, headers });
 
   try {
-    const text = await provider.complete(
+    // The website demo has its own caps and no account or install to attach counts to.
+    const { text } = await provider.complete(
       trySystemPrompt(checked.level),
       `Snippet to explain:\n\`\`\`\n${checked.code}\n\`\`\``,
       AbortSignal.timeout(25_000),

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BuildAction, BuildStatus } from "@/lib/buildStatus";
+import { founderHeaders } from "@/lib/founderToken";
 import { readResponseJson } from "@/lib/readResponseJson";
 
 type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
@@ -39,7 +40,7 @@ export function FounderConsole() {
     try {
       const response = await fetch("/api/build-status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: founderHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(action),
       });
       const payload = await readResponseJson<PublicStatus & { error?: string }>(response);

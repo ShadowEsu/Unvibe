@@ -15,9 +15,12 @@ import {
   teamsAnnualSavingsPercent,
   teamsCheckoutEnabled,
 } from '../src/billing/plans';
-import { processStripeEvent, syncStripeSubscription } from '../src/billing/webhooks';
+import { processStripeEvent, syncStripeSubscription, type StripeWebhookDependencies } from '../src/billing/webhooks';
 import { publicBillingOverview } from '../src/billing/presentation';
 import { stripePriceId } from '../src/billing/stripe';
+
+/** These syncs never replace another subscription, so nothing reaches Stripe. */
+const noStripe: StripeWebhookDependencies = { retrieveSubscription: async () => { throw new Error('unexpected Stripe call'); } };
 
 test('pricing math matches every published total', () => {
   assert.equal(priceFor('free', 'monthly', 1), 0);
@@ -121,12 +124,12 @@ test('pending invitations reserve paid seats and owners cannot reduce below occu
 test('webhook claims are idempotent but failed processing can retry', async () => {
   const store = new MemoryBillingStore();
   const eventId = `evt_${randomUUID()}`;
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), true);
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'claimed');
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'in_progress');
   await store.failWebhook(eventId, 'temporary database error');
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), true);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'claimed');
   await store.completeWebhook(eventId);
-  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), false);
+  assert.equal(await store.claimWebhook(eventId, 'checkout.session.completed'), 'completed');
 });
 
 test('public plan payloads never expose provider identifiers', async () => {
@@ -184,7 +187,7 @@ test('failed Stripe payments enter a bounded grace period', async () => {
     metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
     items: { data: [{ quantity: 1, price: { id: 'price_grace' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
   } as unknown as Stripe.Subscription;
-  await syncStripeSubscription(store, subscription);
+  await syncStripeSubscription(store, subscription, noStripe);
   const overview = await store.overview(userId);
   assert.equal(overview.subscription.status, 'grace_period');
   assert.ok(overview.subscription.gracePeriodEndsAt);
@@ -212,11 +215,44 @@ test('Stripe subscription sync validates trusted price and quantities', async ()
     metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
     items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
   } as unknown as Stripe.Subscription;
-  await syncStripeSubscription(store, subscription);
+  await syncStripeSubscription(store, subscription, noStripe);
   assert.equal((await store.overview(workspace.ownerUserId)).subscription.plan, 'pro');
 
   const tampered = { ...subscription, id: 'sub_bad', items: { data: [{ quantity: 2, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] } } as unknown as Stripe.Subscription;
-  await assert.rejects(syncStripeSubscription(store, tampered), /exactly one/i);
+  await assert.rejects(syncStripeSubscription(store, tampered, noStripe), /exactly one/i);
+});
+
+test('a cancel scheduled with cancel_at (how the Stripe portal cancels on dahlia) counts as ending at period end', async () => {
+  process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const periodEnd = 1_800_000_000;
+  const base = {
+    status: 'active', customer: 'cus_cancel_at', cancel_at_period_end: false,
+    metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
+    items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: periodEnd }] },
+  };
+  const cancelAtOf = async () => (await store.overview(workspace.ownerUserId)).subscription.cancelAtPeriodEnd;
+
+  // Portal cancel: cancel_at is the period end and cancel_at_period_end stays false.
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd } as unknown as Stripe.Subscription, noStripe);
+  assert.equal(await cancelAtOf(), true);
+
+  // A cancel date inside the current period also means no further renewal.
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd - 86_400 } as unknown as Stripe.Subscription, noStripe);
+  assert.equal(await cancelAtOf(), true);
+
+  // A cancel date after this period still renews (and charges) at least once more.
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd + 30 * 86_400 } as unknown as Stripe.Subscription, noStripe);
+  assert.equal(await cancelAtOf(), false);
+
+  // "Don't cancel" in the portal clears cancel_at.
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: null } as unknown as Stripe.Subscription, noStripe);
+  assert.equal(await cancelAtOf(), false);
+
+  // The legacy flag still works.
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: null, cancel_at_period_end: true } as unknown as Stripe.Subscription, noStripe);
+  assert.equal(await cancelAtOf(), true);
 });
 
 test('lifetime checkout grants permanent Pro', async () => {
@@ -250,6 +286,26 @@ test('lifetime checkout grants permanent Pro', async () => {
   assert.equal(overview.subscription.status, 'active');
   assert.equal(overview.subscription.currentPeriodEnd?.startsWith('2099'), true);
   assert.equal((await store.findCheckoutIntent('cs_lifetime'))?.status, 'completed');
+});
+
+test('a paid Lifetime session whose line items carry no price grants nothing', async () => {
+  process.env.STRIPE_PRICE_PRO_LIFETIME = 'price_pro_lifetime';
+  const userId = randomUUID();
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  const session = {
+    id: `cs_${randomUUID()}`, mode: 'payment', payment_status: 'paid', customer: 'cus_no_price', payment_intent: `pi_${randomUUID()}`,
+    metadata: { workspace_id: workspace.id, user_id: userId, plan: 'pro', interval: 'lifetime' },
+  } as unknown as Stripe.Checkout.Session;
+  const deps = {
+    retrieveSubscription: async (): Promise<Stripe.Subscription> => { throw new Error('unexpected subscription'); },
+    retrieveCheckoutSession: async () => session,
+  };
+  await assert.rejects(
+    processStripeEvent(store, { id: `evt_${randomUUID()}`, type: 'checkout.session.completed', data: { object: session } } as Stripe.Event, deps),
+    /lifetime price/i,
+  );
+  assert.equal((await store.overview(userId)).subscription.plan, 'free');
 });
 
 test('lifetime checkout does not grant Pro until an asynchronous payment succeeds', async () => {

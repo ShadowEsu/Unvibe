@@ -4,9 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
+import { DOWNLOADED_EVENT } from "@/lib/downloadTracking";
 import { GIFT_CODE, markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
-
-export const DOWNLOADED_EVENT = "unvibe:downloaded";
 
 const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 
@@ -92,7 +91,7 @@ export function ReminderToast() {
           ) : invited ? (
             <p><b>A friend invited you.</b> Want the download link and setup guide by email?</p>
           ) : (
-            <p><b>Downloading!</b> First time opening it? <a href="/install-help">See the one extra click</a>. Want the setup guide and a nudge tomorrow too?</p>
+            <p><b>Downloading!</b> First time opening it? <a href="/install-help">See how to approve it</a>. Want the setup guide and a nudge tomorrow too?</p>
           )}
           <div className="remind__row">
             <input type="email" required maxLength={240} autoComplete="email" placeholder="you@example.com" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />

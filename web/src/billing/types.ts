@@ -1,3 +1,5 @@
+import type { TokenUsage } from '@/ai/provider';
+
 export type PlanId = 'free' | 'pro' | 'teams';
 export type BillingInterval = 'monthly' | 'annual' | 'lifetime';
 export type WorkspaceType = 'personal' | 'team';
@@ -130,6 +132,8 @@ export interface SubscriptionSyncInput {
   cancelAtPeriodEnd: boolean;
 }
 
+export type WebhookClaim = 'claimed' | 'completed' | 'in_progress';
+
 export interface BillingStore {
   readonly kind: string;
   ensurePersonalWorkspace(userId: string): Promise<WorkspaceAccess>;
@@ -139,6 +143,14 @@ export interface BillingStore {
   reserveUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<UsageReservation>;
   /** Give back one unit reserved earlier this month when the metered action produced nothing. Never below zero. */
   releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void>;
+  /**
+   * Write provider token counts onto the usage row `reserveUsage` wrote for this request: the user's
+   * newest row of `kind` from the last 15 minutes that has no counts yet. Updates, never inserts.
+   * Counts only, no text. `usage.estimated` sets `tokens_estimated`, so measured and chars/4
+   * estimates stay separable. With two requests of the same kind in flight at once, the counts can
+   * land on the sibling row; per-user and per-kind totals stay exact. No matching row: nothing happens.
+   */
+  recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void>;
   createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess>;
   listMembers(userId: string, workspaceId: string): Promise<WorkspaceMember[]>;
   changeMemberRole(userId: string, workspaceId: string, memberUserId: string, role: Exclude<WorkspaceRole, 'owner'>): Promise<void>;
@@ -163,8 +175,16 @@ export interface BillingStore {
   syncSubscription(input: SubscriptionSyncInput): Promise<void>;
   markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void>;
   subscriptionByProviderId(stripeSubscriptionId: string): Promise<SubscriptionRecord | null>;
+  /** The subscription row stored for a workspace (one row per workspace), whatever its status. */
+  subscriptionByWorkspaceId(workspaceId: string): Promise<SubscriptionRecord | null>;
+  /** The subscription row for a Stripe customer (stripe_customer_id is unique per row). */
+  subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null>;
   changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview>;
-  claimWebhook(eventId: string, eventType: string): Promise<boolean>;
+  /**
+   * `claimed`: process the event now. `completed`: already processed. `in_progress`: another
+   * delivery holds an unexpired lease, so this one must be retried later.
+   */
+  claimWebhook(eventId: string, eventType: string): Promise<WebhookClaim>;
   completeWebhook(eventId: string): Promise<void>;
   failWebhook(eventId: string, message: string): Promise<void>;
   recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata?: Record<string, unknown>): Promise<void>;

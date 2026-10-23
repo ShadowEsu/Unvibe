@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
+import { InstallHelpViewed } from "@/components/paper/InstallHelpViewed";
 import { Vibe } from "@/components/paper/Vibe";
 import { BETA_INSTALL_SCRIPT_SOURCE_URL, BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 
@@ -11,12 +12,13 @@ export const metadata: Metadata = {
 export default function InstallHelpPage() {
   return (
     <article className="fos-page">
+      <InstallHelpViewed />
       <header className="fos-page__head">
         <Vibe size={96} />
         <div>
           <p className="pstats__eyebrow">Install help</p>
           <h1>Opening Unvibe <em>the first time.</em></h1>
-          <p className="fos-page__lead">Unvibe is free and brand new, so Apple and Microsoft have not verified it yet. That means one extra click the first time. Here is exactly what to press.</p>
+          <p className="fos-page__lead">Unvibe is free and brand new, so Apple and Microsoft have not verified it yet. The first time you open the download, a Mac asks you to approve it in System Settings and Windows shows a blue warning. Here is exactly what to press, or paste one line and skip both.</p>
         </div>
       </header>
       <h2 className="sr-only">First-open steps for Mac and Windows</h2>
@@ -36,7 +38,7 @@ shasum -a 256 ~/Downloads/Unvibe-*.dmg
 Get-FileHash $HOME\\Downloads\\Unvibe-*.exe -Algorithm SHA256`}</code></pre>
         <p>The number it prints should match the line for that file in the checksum list.</p>
       </section>
-      <p className="fos-page__help">Still stuck? Email <a href="mailto:preston@unvibe.site?subject=Unvibe%20install%20help">preston@unvibe.site</a> with a screenshot and your Mac or Windows version. A real person answers.</p>
+      <p className="fos-page__help">Still stuck? Email <a href="mailto:hello@unvibe.site?subject=Unvibe%20install%20help">hello@unvibe.site</a> with a screenshot and your Mac or Windows version.</p>
     </article>
   );
 }

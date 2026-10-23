@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { ArrowRight, FileText, Mail } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { InvestorBriefDemo } from "@/components/paper/InvestorBriefDemo";
-import { DeckViewer } from "@/components/paper/DeckViewer";
 import { Vibe } from "@/components/paper/Vibe";
 import {
   compensationCashUsd,
   compensationCreditsUsd,
   compensationLines,
+  compensationProgramCount,
   compensationTotalLabel,
   formatUsd,
 } from "@/data/compensation";
@@ -18,8 +18,6 @@ export const metadata: Metadata = {
   title: "Investors",
   description: "Unvibe on one page: the thesis, what shipped, every line of startup support, what is next, and how to reach the founder.",
 };
-
-const DECK_URL = "/investors/unvibe-pitch-deck.pdf";
 
 const pipeline = [
   ["YC", "Application in progress"],
@@ -45,7 +43,7 @@ export default function InvestorsPage() {
   const lead = sorted[0];
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   const company = milestones.filter((m) => m.category === "COMPANY" || m.category === "DISTRIBUTION").slice(0, 8);
-  const programs = compensationLines.length;
+  const programs = compensationProgramCount();
 
   return (
     <article className="inv">
@@ -58,9 +56,6 @@ export default function InvestorsPage() {
             changed, checks that it stuck, and keeps the knowledge fresh as the code moves.
           </p>
           <div className="inv-actions">
-            <a className="inv-btn inv-btn--ink" href="#deck">
-              <FileText size={17} /> See the pitch deck
-            </a>
             <a className="inv-btn" href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation">
               <Mail size={17} /> Talk to the founder
             </a>
@@ -87,12 +82,6 @@ export default function InvestorsPage() {
           <article className="inv-card"><span>02</span><h3>Product</h3><p>Select code, press Control+U (Ctrl+Alt+U on Windows). Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
           <article className="inv-card"><span>03</span><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
         </div>
-      </section>
-
-      <section className="inv-section" id="deck">
-        <p className="inv-eyebrow">The deck</p>
-        <h2>Fourteen slides, <em>right here.</em></h2>
-        <DeckViewer pdf={DECK_URL} />
       </section>
 
       <section className="inv-section">
@@ -158,15 +147,14 @@ export default function InvestorsPage() {
 
       <section className="inv-section inv-close">
         <h2>Let&apos;s <em>talk.</em></h2>
-        <p className="inv-lead">Deck, demo, numbers. Everything above is current as of {BETA_INSTALL_VERSION}.</p>
+        <p className="inv-lead">Demo and numbers. Everything above is current as of {BETA_INSTALL_VERSION}.</p>
         <div className="inv-actions inv-actions--center">
           <a className="inv-btn inv-btn--ink" href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation"><Mail size={17} /> preston@unvibe.site</a>
-          <a className="inv-btn" href={DECK_URL} target="_blank" rel="noopener noreferrer"><FileText size={17} /> Pitch deck</a>
         </div>
       </section>
 
       <section className="inv-section">
-        <BetaInstall tone="page" />
+        <BetaInstall tone="page" surface="investors" />
       </section>
     </article>
   );

@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { welcomeHtml, welcomeText, WELCOME_SUBJECT } from "../emails/welcome";
 import { feedbackRewardUrl, signEmail, verifyEmailSignature } from "./rewardLink";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "./giftOffer";
 
 const input = {
   email: "friend@example.com",
@@ -25,10 +26,11 @@ describe("welcome email", () => {
     assert.doesNotMatch(text + html + WELCOME_SUBJECT, /[—–]/);
   });
 
-  it("states the real gift rule in both parts, and no waitlist reward", () => {
-    const rule = /Your code is on the Share page in the Unvibe app\. When a friend signs in to the Unvibe app and enters your code, you each get a month of Pro: Expert depth and answers that use nearby files\. Up to five friends\./;
-    assert.match(welcomeHtml(input), rule);
-    assert.match(welcomeText(input).replace(/\n/g, " "), rule);
+  it("states the shared gift rule in both parts, and no waitlist reward", () => {
+    for (const part of [welcomeHtml(input), welcomeText(input)]) {
+      assert.ok(part.includes(GIFT_OFFER));
+      assert.ok(part.includes(GIFT_LINK_NOTE));
+    }
     assert.doesNotMatch(welcomeHtml(input) + welcomeText(input), /joins with your link/);
   });
 

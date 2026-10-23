@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit } from './plans';
+import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
+import { MAX_TEAM_WORKSPACES_PER_OWNER, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
+import type { TokenUsage } from '@/ai/provider';
 import type {
   BillingOverview,
   BillingStore,
@@ -9,11 +11,25 @@ import type {
   SubscriptionSyncInput,
   UsageKind,
   UsageReservation,
+  WebhookClaim,
   WorkspaceAccess,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
 } from './types';
+
+/** Mirrors a usage_events row (SQL table of the same name). */
+export interface MemoryUsageEvent {
+  id: number;
+  workspaceId: string;
+  userId: string;
+  kind: UsageKind;
+  estimatedInputTokens: number | null;
+  estimatedOutputTokens: number | null;
+  /** True when the counts are a chars/4 estimate rather than provider-reported (column tokens_estimated). */
+  tokensEstimated: boolean;
+  createdAt: number;
+}
 
 interface MemoryBillingData {
   workspaces: Map<string, Omit<WorkspaceAccess, 'role'>>;
@@ -24,6 +40,7 @@ interface MemoryBillingData {
   checkoutIntents: Map<string, CheckoutIntentRecord>;
   webhooks: Map<string, { status: 'processing' | 'completed' | 'failed'; claimedAt: number }>;
   audits: Array<{ userId: string | null; workspaceId: string | null; action: string; metadata: Record<string, unknown>; at: string }>;
+  usageEvents: MemoryUsageEvent[];
 }
 
 function membershipKey(workspaceId: string, userId: string): string {
@@ -65,6 +82,7 @@ export class MemoryBillingStore implements BillingStore {
       checkoutIntents: new Map(),
       webhooks: new Map(),
       audits: [],
+      usageEvents: [],
     };
     this.data = global.__uncodeBillingData;
   }
@@ -139,7 +157,27 @@ export class MemoryBillingStore implements BillingStore {
     const { startsAt } = monthWindow(this.now());
     const key = usageKey(overview.workspace.id, kind, startsAt);
     this.data.usage.set(key, line.used + 1);
+    const lastId = this.data.usageEvents.at(-1)?.id ?? 0;
+    this.data.usageEvents.push({
+      id: lastId + 1, workspaceId: overview.workspace.id, userId, kind,
+      estimatedInputTokens: null, estimatedOutputTokens: null, tokensEstimated: false, createdAt: this.now().getTime(),
+    });
     return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining - 1 } };
+  }
+
+  async recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void> {
+    const since = this.now().getTime() - USAGE_TOKEN_WINDOW_MS;
+    const row = [...this.data.usageEvents].reverse().find((event) => event.userId === userId && event.kind === kind
+      && event.estimatedInputTokens === null && event.createdAt >= since);
+    if (!row) return;
+    row.estimatedInputTokens = usage.inputTokens;
+    row.estimatedOutputTokens = usage.outputTokens;
+    row.tokensEstimated = usage.estimated === true;
+  }
+
+  /** This user's usage rows, oldest first (dev and tests; production reads usage_events in SQL). */
+  usageEvents(userId: string): MemoryUsageEvent[] {
+    return this.data.usageEvents.filter((event) => event.userId === userId).map((event) => ({ ...event }));
   }
 
   async releaseUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<void> {
@@ -150,6 +188,8 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess> {
+    const owned = [...this.data.workspaces.values()].filter((workspace) => workspace.type === 'team' && workspace.ownerUserId === userId).length;
+    if (owned >= MAX_TEAM_WORKSPACES_PER_OWNER) throw new TeamWorkspaceLimitError();
     const id = randomUUID();
     const workspace = { id, name: name.trim(), type: 'team' as const, ownerUserId: userId };
     this.data.workspaces.set(id, workspace);
@@ -280,6 +320,14 @@ export class MemoryBillingStore implements BillingStore {
     return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeSubscriptionId === stripeSubscriptionId) ?? null;
   }
 
+  async subscriptionByWorkspaceId(workspaceId: string): Promise<SubscriptionRecord | null> {
+    return this.data.subscriptions.get(workspaceId) ?? null;
+  }
+
+  async subscriptionByCustomerId(stripeCustomerId: string): Promise<SubscriptionRecord | null> {
+    return [...this.data.subscriptions.values()].find((subscription) => subscription.stripeCustomerId === stripeCustomerId) ?? null;
+  }
+
   async changeSeatQuantity(userId: string, workspaceId: string, seats: number): Promise<BillingOverview> {
     const overview = await this.overview(userId, workspaceId);
     if (!overview.canManageBilling) throw new Error('Only the workspace owner can change seats.');
@@ -288,13 +336,13 @@ export class MemoryBillingStore implements BillingStore {
     return this.overview(userId, workspaceId);
   }
 
-  async claimWebhook(eventId: string, _eventType: string): Promise<boolean> {
+  async claimWebhook(eventId: string, _eventType: string): Promise<WebhookClaim> {
     const prior = this.data.webhooks.get(eventId);
     const now = this.now().getTime();
-    const leaseExpired = prior?.status === 'processing' && now - prior.claimedAt > WEBHOOK_LEASE_MS;
-    if (prior && prior.status !== 'failed' && !leaseExpired) return false;
+    if (prior?.status === 'completed') return 'completed';
+    if (prior?.status === 'processing' && now - prior.claimedAt <= WEBHOOK_LEASE_MS) return 'in_progress';
     this.data.webhooks.set(eventId, { status: 'processing', claimedAt: now });
-    return true;
+    return 'claimed';
   }
 
   async completeWebhook(eventId: string): Promise<void> {
@@ -310,6 +358,8 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async deleteUserBilling(userId: string): Promise<void> {
+    // usage_events rows cascade with the user in SQL.
+    this.data.usageEvents = this.data.usageEvents.filter((event) => event.userId !== userId);
     for (const [key] of [...this.data.memberships]) if (key.endsWith(`:${userId}`)) this.data.memberships.delete(key);
     for (const [id, workspace] of [...this.data.workspaces]) {
       if (workspace.ownerUserId === userId) {

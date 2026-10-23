@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ListingBadges } from "@/components/paper/ListingBadges";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
+import { trackDownloadPageClick } from "@/lib/downloadTracking";
 
 const product = [
   ["Product", "/#product"],
@@ -57,12 +58,13 @@ export function Footer() {
   );
 }
 
-function FooterLinks({ heading, links }: { heading: string; links: readonly string[][] }) {
+/** The download page link counts as a download call to action. */
+export function FooterLinks({ heading, links }: { heading: string; links: readonly string[][] }) {
   return (
     <nav aria-label={heading} className="grid content-start gap-2">
       <strong className="mb-1 text-sm text-[color:var(--ink)]">{heading}</strong>
       {links.map(([label, href]) => (
-        <Link key={href} href={href!} className="text-sm hover:text-[color:var(--ink)]">{label}</Link>
+        <Link key={href} href={href!} className="text-sm hover:text-[color:var(--ink)]" onClick={href === "/beta" ? () => trackDownloadPageClick("footer") : undefined}>{label}</Link>
       ))}
     </nav>
   );

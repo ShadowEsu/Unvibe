@@ -7,9 +7,11 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
 
 - The Electron main process owns network requests; sandboxed renderers have no Node or network
   access.
-- The desktop sends the selected snippet only after the local secret scanner runs. Known keys,
-  tokens, private-key headers, and dangerous secret assignments hard-block transmission. Suspect
-  high-entropy values require an explicit confirmation.
+- The desktop sends the selected snippet, a follow-up question, or a Chat message only after the
+  local secret scanner (`app/src/core/secretFilter.ts`) runs. Known keys, tokens, private-key
+  headers, database URLs with passwords, and password-style assignments hard-block transmission.
+  Suspect high-entropy values in an explanation request require an explicit confirmation; Chat
+  and lesson questions have no confirmation step, so any finding stops the message.
 - Raw selected code is used for the model request but is not included in the learning event sent
   to the persistence API. Synced learning records contain metadata such as timestamp, local date,
   timezone, level, line count, language, source app, outcome, project, and concept.
@@ -37,11 +39,13 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   reviewed in migrations but not proven against a staging project in this run.
 - Provider retention and model-training promises depend on the selected provider contract and
   deployment settings; they must be verified before public legal copy makes those claims.
-- Desktop can send optional anonymous PostHog usage events from the main process when a
-  PostHog project key is configured (`app_opened`, `app_active`, `review_started`,
-  `review_completed`, `onboarding_completed`, `account_signed_in`). Metadata only — never
-  code, emails, prompts, or explanations. Users can disable this in Settings.
-  Incident-response alerting beyond PostHog is still not configured.
+- The desktop app sends no product analytics. Its build has no PostHog or other analytics
+  client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing, so there is no
+  usage toggle in Settings. The website's Mixpanel and PostHog tracking is described on
+  unvibe.site/privacy. Incident-response alerting is still not configured.
+- Without an account, each cloud explanation carries a random install ID
+  (`app/src/main/backend.ts` `aiAuthHeaders`) used to count free explanations and record a few
+  dates; see unvibe.site/privacy. Signed in, the app sends only the session token.
 
 ## Required before inviting external beta users
 

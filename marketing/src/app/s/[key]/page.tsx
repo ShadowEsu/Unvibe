@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPrivateStats, statsKeyMatches } from "@/lib/privateStats";
 import { FounderAnalytics } from "@/components/FounderAnalytics";
+import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
   const updated = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles", dateStyle: "medium", timeStyle: "short" });
 
   return (
-    <article className="pstats">
+    <article className={`pstats ${REPLAY_BLOCK_CLASS}`}>
       <header className="pstats__head">
         <p className="pstats__eyebrow">Private · only you have this link</p>
         <h1>Unvibe, <em>by the numbers.</em></h1>

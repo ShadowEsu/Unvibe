@@ -5,6 +5,7 @@ import { useCopyToast } from "@/components/paper/CopyToast";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { delight } from "@/lib/delight";
+import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import { SHORTCUTS, detectVisitorDevice } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
@@ -19,6 +20,8 @@ import {
 
 interface BetaInstallProps {
   tone?: "hero" | "page";
+  /** Which page this sits on, for `download_cta_clicked`. */
+  surface: Extract<DownloadSurface, "beta" | "home_install" | "investors">;
   showFeedback?: boolean;
   /** `null` hides the built-in title when the surrounding section already has a heading. */
   title?: string | null;
@@ -28,6 +31,7 @@ type InstallOs = "mac" | "windows";
 
 export function BetaInstall({
   tone = "hero",
+  surface,
   showFeedback = true,
   title = BETA_INSTALL_LABEL,
 }: BetaInstallProps) {
@@ -131,8 +135,8 @@ export function BetaInstall({
           rel="noreferrer"
           onClick={() => {
             track("release_download_clicked", { os, surface: tone });
+            trackDownloadClick(surface, os);
             delight();
-            window.dispatchEvent(new Event("unvibe:downloaded"));
             setClicked(true);
           }}
         >
@@ -144,20 +148,14 @@ export function BetaInstall({
       <div className="paper-beta__specs" aria-label="Download details">
         <span>{BETA_INSTALL_VERSION}</span>
         <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "~81 MB .exe" : "~112 MB .dmg"}</span>
+        <span>{os === "windows" ? "~88 MB .exe" : intelMac ? "~117 MB .dmg" : "~109 MB .dmg"}</span>
         <span aria-hidden="true">·</span>
         <span>No card</span>
         <span aria-hidden="true">·</span>
         <span>No API key</span>
       </div>
 
-      {os === "mac" && !phone ? (
-        <p className="paper-beta__update">
-          {intelMac
-            ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD}>M1 or newer instead</a></>
-            : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD}>Get the Intel build</a></>}
-        </p>
-      ) : null}
+      {os === "mac" && !phone ? <MacBuildLinks intelMac={intelMac} surface={surface} /> : null}
       {clicked ? (
         <div className="paper-beta__next" role="status">
           <p className="paper-beta__next-title">Downloading! Now open it the first time:</p>
@@ -165,7 +163,10 @@ export function BetaInstall({
         </div>
       ) : (
         <p className="paper-beta__update">
-          Unvibe is new, so the first open takes one extra click. <a href="/install-help">Show me how</a>
+          {os === "windows"
+            ? "Unvibe is not signed for Windows yet, so the first run shows a blue warning with Run anyway. "
+            : "Unvibe is not verified by Apple yet, so the first open takes a few extra steps in System Settings. "}
+          <a href="/install-help">Show me how</a>
         </p>
       )}
 
@@ -189,7 +190,7 @@ export function BetaInstall({
       <p className="paper-beta__update">
         <b>Updating?</b> From v0.1.30 on, Unvibe updates itself.{" "}
         {os === "windows"
-          ? "On an older version, quit it from the tray icon, then run the new installer."
+          ? "On an older version, quit it from the tray icon, then run the new .exe."
           : "On an older version, quit it from the menu bar, drag the new one into Applications and choose Replace."}
       </p>
 
@@ -256,7 +257,7 @@ export function BetaInstall({
               recordBetaSiteEvent("survey");
             }}
           >
-            {BETA_FEEDBACK_URL}
+            Tell us how the install went
           </a>
         </>
       ) : null}
@@ -264,24 +265,15 @@ export function BetaInstall({
   );
 }
 
-export function BetaFeedback({ source }: { source: string }) {
+/** The other Mac build: Apple silicon by default, so Intel Macs get their own link (and the reverse). */
+export function MacBuildLinks({ intelMac, surface }: { intelMac: boolean; surface: DownloadSurface }) {
+  const onClick = () => trackDownloadClick(surface, "mac");
   return (
-    <div className="paper-beta-feedback">
-      <p className="paper-beta__offer">After you try the beta, submit your feedback for 1 free week of Pro.</p>
-      <a
-        className="paper-beta__survey"
-        href={BETA_FEEDBACK_URL}
-        target="_blank"
-        rel="noreferrer"
-        onClick={() => {
-          track("survey_opened", { source });
-          track("feedback_opened", { source });
-          recordBetaSiteEvent("survey");
-        }}
-      >
-        {BETA_FEEDBACK_URL}
-      </a>
-    </div>
+    <p className="paper-beta__update">
+      {intelMac
+        ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={onClick}>M1 or newer instead</a></>
+        : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={onClick}>Get the Intel build</a></>}
+    </p>
   );
 }
 

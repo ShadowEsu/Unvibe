@@ -244,8 +244,10 @@ Project id `4054892` via Composio. `MIXPANEL_AGGREGATE_EVENTS` wants `event` as 
 *string* (`"event": "[\"beta_install_viewed\", ...]"`); `events` errors. `MIXPANEL_TOP_EVENT_PROPERTY_VALUES`
 is broken (`query_id`); break down with `MIXPANEL_QUERY_SEGMENTATION` and
 `"on": "properties[\"$os\"]"`. Key events: `$mp_web_page_view`, `beta_install_viewed`,
-`beta_install_copied`, `download_cta_clicked`, `release_download_clicked`, `try_explained`,
-`phone_link_sent`, `phone_try_clicked`. App side: Supabase `users` / `device_codes` row counts.
+`beta_install_copied`, `download_cta_viewed`, `download_cta_clicked` (break down by `surface`;
+list in `marketing/src/lib/downloadTracking.ts`), `install_help_viewed` (`from`),
+`release_download_clicked`, `try_explained`, `phone_link_sent`, `phone_try_clicked`. App side:
+Supabase `users` / `device_codes` row counts.
 
 ### Windows/Mac UI checks without a Windows machine
 Run the app with a throwaway profile and a debug port, then drive it over CDP:
@@ -291,7 +293,11 @@ real Windows behaviour needs the real device workflow.
 - **Billing:** `web/src/billing/*`. Checkout needs `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
   `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL` (+ `STRIPE_PRICE_PRO_LIFETIME`,
   `STRIPE_PRICE_TEAMS_MONTHLY`, `STRIPE_PRICE_TEAMS_ANNUAL`), `APP_URL` in production.
-  Webhook: `https://api.unvibe.site/api/v1/billing/webhook`.
+  Webhook: `https://api.unvibe.site/api/v1/billing/webhook`. Checkout stays locked in production
+  until `BILLING_LIVE_PAYMENTS_APPROVED=true` (live key) or `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`
+  (test key). Public `GET /api/v1/billing/status` returns `{ paymentsOpen }` from `checkoutOpen()`;
+  unvibe.site `/pricing` and `/terms` read it every 5 minutes and show "opens soon" copy whenever it
+  is false or unreachable, so opening payments on the API flips the site with no copy edit.
 
 ---
 

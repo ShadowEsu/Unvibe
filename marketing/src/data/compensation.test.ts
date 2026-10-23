@@ -4,6 +4,7 @@ import {
   compensationCashUsd,
   compensationCreditsUsd,
   compensationLines,
+  compensationProgramCount,
   compensationTotalLabel,
   compensationTotalUsd,
 } from "./compensation";
@@ -17,15 +18,25 @@ describe("compensation", () => {
     assert.equal(salesforce?.amountUsd, 13_500);
     assert.match(salesforce?.detail ?? "", /30 Starter Suite seats/i);
     const explicitSum = compensationLines.reduce((sum, line) => sum + line.amountUsd, 0);
-    assert.equal(explicitSum, 267_700);
+    assert.equal(explicitSum, 262_700);
     assert.equal(compensationTotalUsd(), compensationCreditsUsd() + compensationCashUsd());
-    assert.equal(compensationTotalUsd(), 267_700);
-    assert.equal(compensationCreditsUsd(), 266_900);
+    assert.equal(compensationTotalUsd(), 262_700);
+    assert.equal(compensationCreditsUsd(), 261_900);
     assert.equal(compensationCashUsd(), 800);
-    assert.equal(compensationTotalLabel(), "$267,700");
+    assert.equal(compensationTotalLabel(), "$262,700");
     const claude = compensationLines.find((line) => line.name === "Claude for Startups");
     assert.equal(claude?.amountUsd, 21_500);
     const deepgram = compensationLines.find((line) => line.name.startsWith("Deepgram"));
     assert.equal(deepgram?.amountUsd, 1_000);
+  });
+
+  it("never publishes AWS Activate credits (AWS Activate terms forbid disclosing them)", () => {
+    assert.equal(compensationLines.some((line) => /aws/i.test(`${line.name} ${line.detail}`)), false);
+  });
+
+  it("counts only credit lines as startup programs", () => {
+    const cashLines = compensationLines.filter((line) => line.kind === "cash").length;
+    assert.ok(cashLines > 0);
+    assert.equal(compensationProgramCount(), compensationLines.length - cashLines);
   });
 });

@@ -1,27 +1,23 @@
 import type { Metadata } from "next";
-import { PricingHeadline } from "@/components/paper/PricingHeadline";
 import { PricingPlans } from "@/components/redesign/PricingPlans";
-import { PRICING } from "@/lib/pricing";
+import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
+import { pricingCopy } from "@/lib/pricingCopy";
 
-export const metadata: Metadata = {
-  title: "Pricing",
-  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
-};
+/** Re-read the API's payments status at most every 5 minutes (PAYMENTS_STATUS_REVALIDATE_SECONDS). */
+export const revalidate = 300;
 
-export default function PricingPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: "Pricing", description: pricingCopy(await fetchPaymentsOpen()).description };
+}
+
+/** One heading, then the tier cards: the first viewport answers "how much" at 1440 and on a phone. */
+export default async function PricingPage() {
+  const paymentsOpen = await fetchPaymentsOpen();
   return (
     <article className="launch-subpage paper-pricing">
-      <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate.png" alt="" />
-        <div className="paper-hero__veil" />
-        <div className="paper-photo-band__copy">
-          <p className="paper-meta">Pricing</p>
-          <PricingHeadline />
-        </div>
-      </header>
-      <section className="paper-section">
+      <section className="paper-section" aria-labelledby="pricing-title">
         <div className="paper-wrap">
-          <PricingPlans />
+          <PricingPlans paymentsOpen={paymentsOpen} />
         </div>
       </section>
     </article>

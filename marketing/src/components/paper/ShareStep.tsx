@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { track } from "@/lib/analytics";
-import { GIFT_CODE_HOME, GIFT_OFFER } from "@/lib/giftOffer";
+import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
 export function ShareStep({ code, surface }: { code: string; surface: string }) {
   const [copied, setCopied] = useState(false);
@@ -31,7 +31,7 @@ export function ShareStep({ code, surface }: { code: string; surface: string }) 
 
   return (
     <div className="share-step">
-      <p className="share-step__offer">Share Unvibe with this link. {GIFT_CODE_HOME} {GIFT_OFFER}</p>
+      <p className="share-step__offer">Share Unvibe with this link. {GIFT_LINK_NOTE} {GIFT_OFFER}</p>
       <code className="share-step__link">{link}</code>
       <div className="share-step__actions">
         <button type="button" onClick={() => void copy()}>{copied ? "Copied" : "Copy link"}</button>
