@@ -76,14 +76,14 @@ function fakeStripe(links: Record<string, InvoiceLink>, statuses: Record<string,
 
 function chargeRefunded(paymentIntent: string, customer: string, amount: number, refunded: number): Stripe.Event {
   return {
-    id: `evt_${randomUUID()}`, type: 'charge.refunded',
+    id: `evt_${randomUUID()}`, type: 'charge.refunded', livemode: false,
     data: { object: { id: `ch_${randomUUID()}`, object: 'charge', amount, amount_refunded: refunded, refunded: refunded >= amount, currency: 'usd', payment_intent: paymentIntent, customer } },
   } as unknown as Stripe.Event;
 }
 
 function dispute(type: 'charge.dispute.created' | 'charge.dispute.closed', paymentIntent: string, status: Stripe.Dispute.Status, disputeId = `dp_${randomUUID()}`): Stripe.Event {
   return {
-    id: `evt_${randomUUID()}`, type,
+    id: `evt_${randomUUID()}`, type, livemode: false,
     data: { object: { id: disputeId, object: 'dispute', amount: 1000, currency: 'usd', reason: 'fraudulent', status, charge: `ch_${randomUUID()}`, payment_intent: paymentIntent, evidence_details: { due_by: 1_793_000_000 } } },
   } as unknown as Stripe.Event;
 }

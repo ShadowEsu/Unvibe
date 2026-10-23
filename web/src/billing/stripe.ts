@@ -49,6 +49,11 @@ export function paymentsLocked(): boolean {
   return process.env.BILLING_LIVE_PAYMENTS_APPROVED?.trim() !== 'true';
 }
 
+/** Whether the configured key is a live one. Only sk_test_/rk_test_ keys count as test mode. */
+export function stripeKeyIsLive(): boolean {
+  return !/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY?.trim() ?? '');
+}
+
 export const PAYMENTS_NOT_OPEN = {
   error: 'payments_not_open',
   message: 'Payments open soon. Your Free plan keeps working until then.',
