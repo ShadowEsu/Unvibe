@@ -74,12 +74,12 @@ h1 em, h2 em, h3 em, .serif-em {
 .vhero__vibe { position: relative; display: inline-flex; align-items: flex-end; gap: 0.6rem; }
 .vhero__bubble {
   position: absolute; left: calc(100% + 0.4rem); top: 0.2rem; white-space: nowrap;
-  padding: 0.45rem 0.85rem; border: 1.5px solid var(--v-ink); border-radius: 16px 16px 16px 4px; background: #fff;
+  padding: 0.45rem 0.85rem; border: 1.5px solid var(--v-ink); border-radius: 16px 16px 16px 4px; background: var(--u-card); color: var(--u-text);
   box-shadow: 3px 3px 0 var(--v-ink); font-family: var(--font-serif); font-style: italic; font-size: 1.15rem; line-height: 1.1;
 }
 .vhero h1 { max-width: 15ch; margin: 0; font-size: clamp(2.9rem, 7.4vw, 6.4rem); line-height: 0.98; color: var(--v-ink); }
 .vhero h1 em { display: inline-block; font-size: 1.04em; }
-.vhero__kicker { max-width: 40rem; margin: 0; color: #4d4a44; font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.55; }
+.vhero__kicker { max-width: 40rem; margin: 0; color: var(--u-text-2); font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.55; }
 /* Info lines under the phone CTA are plain text: only the browser-trial link gets a pill shape. */
 .vhero .vhero__fine { max-width: 26rem; margin: 0; color: var(--v-ink); font-size: 0.94rem; font-weight: 600; line-height: 1.45; text-wrap: balance; }
 .vhero__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -90,9 +90,9 @@ h1 em, h2 em, h3 em, .serif-em {
 .vhero__email { display: grid; gap: 0.55rem; width: 100%; }
 .vhero__email input {
   width: 100%; min-height: 3rem; padding: 0 1rem; border: 1.5px solid var(--v-ink); border-radius: 14px;
-  background: #fff; color: var(--v-ink); font: 500 1rem var(--font-sans);
+  background: var(--u-card); color: var(--v-ink); font: 500 1rem var(--font-sans);
 }
-.vhero__email input:focus-visible { outline: 3px solid #5b4bd6; outline-offset: 2px; }
+.vhero__email input:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 2px; }
 .vhero__email button.paper-join { width: 100%; justify-content: center; cursor: pointer; font: inherit; }
 .vhero__error { margin: 0; color: #9b1c1c; font-weight: 600; font-size: 0.92rem; }
 .share-step { display: grid; gap: 0.6rem; width: 100%; padding: 1rem; border: 1.5px solid var(--v-ink); border-radius: 16px; background: #fff; text-align: left; }
@@ -123,24 +123,34 @@ h1 em, h2 em, h3 em, .serif-em {
 .vtour__head { text-align: center; }
 .vtour__eyebrow { margin: 0 0 0.3rem; font-family: var(--font-serif); font-style: italic; font-size: 1.4rem; color: #5b4bd6; }
 .vtour h2 { margin: 0; font-size: clamp(2rem, 4.4vw, 3.4rem); }
+/* The one lift-2 object in the first view. The caption is the window's status bar. */
 .vtour__window {
-  width: min(1080px, 100%); overflow: hidden; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #f5f2ea;
-  box-shadow: 8px 8px 0 var(--v-ink);
+  width: min(1080px, 100%); overflow: hidden; border: 1.5px solid var(--u-line-strong); border-radius: 18px; background: var(--u-card);
+  box-shadow: var(--u-lift-2); transform-origin: 50% 0;
 }
-.vtour__bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1.5px solid var(--v-ink); background: #fff; }
-.vtour__bar i { width: 11px; height: 11px; border: 1.5px solid var(--v-ink); border-radius: 50%; background: var(--v-coral); }
-.vtour__bar i:nth-child(2) { background: var(--v-sun); }
-.vtour__bar i:nth-child(3) { background: var(--v-lime); }
+.vtour__bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--u-line); background: var(--u-card); color: var(--u-text); }
+.vtour__bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--u-line); }
 .vtour__bar span { margin-left: 8px; font: 700 0.85rem var(--font-display); letter-spacing: -0.02em; }
 .vtour__media { position: relative; }
 .vtour__poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .vtour__window video { position: relative; display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
-.vtour__caption { max-width: 40rem; margin: 0; color: #6b6760; text-align: center; font-size: 0.9rem; }
+.vtour__caption { margin: 0; padding: 0.7rem 1rem; border-top: 1px solid var(--u-line); background: var(--u-raise); color: var(--u-text-2); font-size: var(--u-step--1); text-align: center; }
+
+/* Press, then open: the kicker's shortcut key presses once, and the app window opens in answer.
+   Start states exist only with JS and motion allowed; without either the page is the final frame. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .vhero.is-ready .vhero__kicker kbd { animation: uKeyPress 280ms var(--u-ease) 900ms both; }
+  .js .vtour__window:not(.is-open) { transform: perspective(1200px) translateY(18px) rotateX(7deg) scale(0.97); }
+  .js .vtour__window { transition: transform 620ms var(--u-ease-out); }
+}
+@keyframes uKeyPress {
+  0%, 100% { transform: none; }
+  40% { transform: translateY(2px); box-shadow: 0 0 0 var(--v-ink); }
+}
 
 @media (max-width: 720px) {
   .vhero__bubble { left: 50%; top: auto; bottom: calc(100% + 0.4rem); transform: translateX(-50%); }
   .vhero.is-ready .vhero__bubble { animation: none; }
-  .vtour__window { box-shadow: 4px 4px 0 var(--v-ink); }
 }
 @media (prefers-reduced-motion: reduce) {
   .vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow { animation: none; }
@@ -148,23 +158,11 @@ h1 em, h2 em, h3 em, .serif-em {
   .vhero.is-ready .vhero__copy > *, .vhero.is-ready .vhero__bubble { animation: none; }
 }
 
-/* Dark site theme: ink becomes paper, stickers stay bright. */
-.dark .vhero, .dark .vhero h1, .dark .vtour h2 { color: #f2eef9; }
-.dark .vhero__kicker, .dark .vhero__fine, .dark .vtour__caption { color: #b9b2c6; }
-.dark .vhero__bubble { background: #1f1729; color: #f2eef9; border-color: #f2eef9; box-shadow: 3px 3px 0 #f2eef9; }
-.dark .vtour__window { border-color: #f2eef9; box-shadow: 8px 8px 0 #f2eef9; }
-.dark .vtour__bar { background: #1f1729; border-color: #f2eef9; }
-.dark .vtour__bar span { color: #f2eef9; }
-.dark .vtour__eyebrow { color: #c4b5fd; }
-
-/* On the site's colour field: solid ink copy; the browser-trial link keeps a paper chip. */
-.vhero__kicker { color: #1c1a17; font-weight: 500; }
-.vtour__caption { color: #1c1a17; font-weight: 500; }
-.vhero__try { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.35rem 1rem; border-radius: 999px; background: rgb(255 255 255 / 0.9); color: var(--v-ink); }
+/* On the site's colour field: solid text copy (ink in light, paper at night); the browser-trial link keeps a chip. */
+.vhero__kicker { color: var(--u-text); font-weight: 500; }
+.vhero__try { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.35rem 1rem; border-radius: 999px; background: var(--u-veil); color: var(--u-text); transition: background-color var(--u-dur-hover) var(--u-ease); }
+.vhero__try:hover { background: var(--u-sheet); }
 .paper-logo__word { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; }
-.dark .vhero__fine { color: #f2eef9; }
-.dark .vhero__try { background: #1f1729; color: #f2eef9; }
-.dark .vhero__kicker, .dark .vtour__caption { color: #e6e0f0; }
 
 
 /* ═════════════════════════════════════════════════════════════════════════════
@@ -246,10 +244,9 @@ p { font-size: 1.02rem; }
 /* Home sections are sheets on the field: the gap between two sheets is the frame of dusk around them. */
 .home-page > .paper-section { padding-block: clamp(1rem, 2.5vw, 2rem) !important; }
 .home-page .paper-center > .paper-meta,
-.vtour__eyebrow { padding: 0.25rem 0.8rem; border-radius: 999px; background: rgb(255 255 255 / 0.92); }
+.vtour__eyebrow { padding: 0.25rem 0.8rem; border-radius: 999px; background: var(--u-sheet); }
 .vtour__eyebrow { display: inline-block; }
-.vtour__caption { padding: 0.75rem 1rem; border-radius: 14px; background: rgb(255 255 255 / 0.92); }
-.vhero__email input::placeholder { color: #64616b; opacity: 1; }
+.vhero__email input::placeholder { color: var(--u-text-2); opacity: 1; }
 .vhero__error { padding: 0.6rem 0.8rem; border-radius: 10px; background: #fff; }
 @media (prefers-reduced-motion: reduce) {
   .home-page .paper-glass:hover { transform: none; }
