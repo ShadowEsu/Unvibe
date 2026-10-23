@@ -1,3 +1,4 @@
+import { errorSummary } from '@/billing/http';
 import { getBillingStore } from '@/billing/store';
 import { getStripe, paymentsLocked, stripeKeyIsLive } from '@/billing/stripe';
 import { processStripeEvent } from '@/billing/webhooks';
@@ -57,8 +58,7 @@ export async function POST(req: Request): Promise<Response> {
     await store.completeWebhook(event.id);
     return Response.json({ received: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await store.failWebhook(event.id, message);
+    await store.failWebhook(event.id, errorSummary(error));
     return Response.json({ error: 'processing_failed' }, { status: 500 });
   }
 }

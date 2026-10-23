@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import type Stripe from 'stripe';
+import { format } from 'node:util';
+import Stripe from 'stripe';
+import { billingError, errorSummary } from '../src/billing/http';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import {
   canManageBilling,
@@ -352,4 +354,25 @@ test('lifetime checkout does not grant Pro until an asynchronous payment succeed
   session.payment_status = 'paid';
   await processStripeEvent(store, { type: 'checkout.session.async_payment_succeeded', data: { object: session } } as Stripe.Event, deps);
   assert.equal((await store.overview(userId)).subscription.plan, 'pro');
+});
+
+test('a Stripe error is logged and stored as its type and code only, never its message', () => {
+  const error = new Stripe.errors.StripeInvalidRequestError({
+    message: 'No such customer: cus_PrivateCustomer123; price price_live_abc', type: 'invalid_request_error', code: 'resource_missing',
+  });
+  assert.equal(errorSummary(error), 'StripeInvalidRequestError invalid_request_error resource_missing');
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  try {
+    const response = billingError(error, 502);
+    assert.equal(response.status, 502);
+  } finally {
+    console.error = original;
+  }
+  assert.equal(logged.length, 1);
+  // As the console prints it (an Error argument prints its message and stack).
+  assert.doesNotMatch(format(...logged[0]), /cus_PrivateCustomer123|price_live_abc/);
+  // Our own errors keep their fixed text, so a failed webhook still says what broke.
+  assert.equal(errorSummary(new Error('Stripe subscription has no billable item.')), 'Error: Stripe subscription has no billable item.');
 });
