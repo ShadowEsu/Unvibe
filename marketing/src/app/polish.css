@@ -191,6 +191,9 @@
   transform: translateY(-1px);
 }
 
+.dark .paper-center > .paper-text-link { border-color: var(--u-line); background: var(--u-card); }
+.dark .paper-center > .paper-text-link:hover { background: var(--u-raise); }
+
 .paper-center > .paper-text-link:hover::after {
   transform: translateX(3px);
 }

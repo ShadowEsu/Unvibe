@@ -108,16 +108,34 @@
 /* Panels that show the product UI keep the app's light look in both themes. */
 .dark .try__panel { --v-ink: #141414; --u-text: #141414; --u-text-2: #3a3732; --u-line: rgb(20 20 20 / 0.14); --u-card: #ffffff; color: #141414; }
 
-/* Lime, sky, sun and lilac fills are light in both themes, so their text and outlines stay ink. */
+/* Lime, sky, sun and lilac fills are light in both themes, so their text, outlines and inner cards stay
+   light-theme. The about page and the two private admin views (/founder console, /waitlist) keep their own
+   light sheets in both themes (they are not part of this upgrade). */
 .dark :is(.stats-strip__item, .inv-stat--lime, .inv-stat--sky, .inv-stat--sun, .inv-stat--lilac, .inv-card span, .inv-pill, .inv-row--lead,
   .resources-card__step, .paper-beta__os button.is-on, .try__go, .invite__form button, .invite__actions button, .fb-star.is-on, .fb-bonus,
   .remind__row button, .pstats__tile[data-tone], .pstats__warn, .kit__btn--lime, .kit__row--head, .kit__file, .fos__card--fast, .paper-join--mac,
-  .paper-pricing .marketing-plan-card.featured) {
-  --v-ink: #141414; --u-text: #141414; --u-text-2: #2e2c27; --u-line: rgb(20 20 20 / 0.14); color: #141414;
+  .paper-pricing .marketing-plan-card.featured, .resources-arch-node--shield, .resources-arch-node--island, .founder-about, .founder-page, .admin-shell) {
+  --v-ink: #141414; --u-text: #141414; --u-text-2: #2e2c27; --u-line: rgb(20 20 20 / 0.14); --u-card: #ffffff; --v-card: #ffffff;
+  --u-accent-ink: #3c2fb8; --u-focus: #3c2fb8;
+  --ink: #12110f; --ink-muted: #12110f; --ink-faint: #1c1a16; --brand: #6f45d2; --brand-deep: #3d2080; --brand-soft: #e8dff8;
+  --brand-mist: rgb(111 69 210 / 0.12); --brand-wash: rgb(111 69 210 / 0.1); --purple: #1c1a16; --hairline: #d4cce0;
+  --paper-raised: rgb(255 255 255 / 0.42); --glass: rgb(255 255 255 / 0.14); --glass-fill: rgb(255 255 255 / 0.16);
+  --glass-edge: rgb(255 255 255 / 0.34); --glass-field: rgb(255 255 255 / 0.22);
+  --key-face: #ebe4f6; --key-edge: #c4b6dc; --key-shade: #9d86c4; --key-shine: rgb(255 255 255 / 0.72); --key-inset: rgb(255 255 255 / 0.9);
+  --bg: 246 243 236; --surface: 255 252 247; --surface-2: 246 243 236; --line: 217 211 198; --line-strong: 184 176 160;
+  --fg: 28 26 22; --fg-muted: 92 87 78; --fg-faint: 138 132 120;
+  color: #141414;
 }
+
+/* The founder console's headings sit straight on the page; give it the same light sheet the waitlist admin has. */
+.dark .founder-page { background: rgb(243 238 248 / 0.94); }
 
 /* globals.css paints the filled pricing button var(--purple) with white text; the dark --purple is light (2.4:1), so it keeps a deep purple. */
 .dark .pricing-button:not(.pricing-button--quiet) { background: #6d4ad6 !important; }
+
+/* The night colour under the photo: what shows before the photo loads or past an overscroll, and the
+   background axe resolves for text on the field (it can't see the photo pseudo-elements). */
+html.dark { background-color: #120d1a; }
 
 html {
   -webkit-font-smoothing: antialiased;
@@ -147,6 +165,21 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
   .u-sheet { padding: 22px 16px; border-radius: 22px; }
 }
 
+/* The investor and build pages read on sheets too: their ink sat straight on the photo field at 1.8 to
+   4.4:1 in light. /investors is one long sheet; /build gets one per section (its photo band keeps white
+   type on the photo). */
+.inv, .build-page .paper-section > .paper-wrap {
+  border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
+  background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
+}
+.inv { margin: 6.5rem auto 3rem; padding: clamp(28px, 5vw, 64px); }
+.inv-hero { min-height: 0; }
+.build-page .paper-section > .paper-wrap { padding: clamp(24px, 4.5vw, 56px); }
+.build-page .paper-section > .paper-wrap .paper-center > .paper-meta { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (max-width: 520px) {
+  .inv, .build-page .paper-section > .paper-wrap { width: calc(100% - 1.5rem); padding: 22px 16px; border-radius: 22px; }
+}
+
 /* Inside a sheet, nested stickers flatten to hairline rows: one surface, one primary object per view.
    (Install card, FAQ rows and the closing card carry vibe.css card rules marked !important.) */
 .u-sheet :is(.claude-startups, .paper-partners) { margin: 0; padding: clamp(20px, 3vw, 32px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
@@ -165,21 +198,6 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
 @media (min-width: 900px) {
   .u-split { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 3rem; align-items: start; }
   .u-split > .sec-head { position: sticky; top: 6rem; justify-items: start; margin: 0; text-align: left; }
-/* The investor and build pages read on sheets too: their ink sat straight on the photo field at 1.8 to
-   4.4:1 in light. /investors is one long sheet; /build gets one per section (its photo band keeps white
-   type on the photo). */
-.inv, .build-page .paper-section > .paper-wrap {
-  border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
-  background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
-}
-.inv { margin: 6.5rem auto 3rem; padding: clamp(28px, 5vw, 64px); }
-.inv-hero { min-height: 0; }
-.build-page .paper-section > .paper-wrap { padding: clamp(24px, 4.5vw, 56px); }
-.build-page .paper-section > .paper-wrap .paper-center > .paper-meta { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
-@media (max-width: 520px) {
-  .inv, .build-page .paper-section > .paper-wrap { width: calc(100% - 1.5rem); padding: 22px 16px; border-radius: 22px; }
-}
-
 }
 
 @media (prefers-reduced-motion: reduce) {

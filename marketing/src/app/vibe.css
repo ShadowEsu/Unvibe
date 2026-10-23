@@ -666,14 +666,14 @@ p { font-size: 1.02rem; }
   .founder-about__grid, .founder-about__track { grid-template-columns: 1fr; }
 }
 /* Install help: verify before running */
-.fos-page .verify { max-width: 760px; margin: 28px auto 0; padding: 24px 26px; border: 2px solid #141414; border-radius: 20px; background: #fff; box-shadow: 4px 4px 0 #141414; color: #141414; }
+.fos-page .verify { max-width: 760px; margin: 28px auto 0; padding: 24px 26px; border: 2px solid var(--v-ink); border-radius: 20px; background: var(--v-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); }
 .fos-page .verify h2 { margin: 0 0 8px; font: 800 24px/1.2 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.03em; }
-.fos-page .verify p, .fos-page .verify li { line-height: 1.6; color: #2e2e2e; }
+.fos-page .verify p, .fos-page .verify li { line-height: 1.6; color: var(--u-text-2); }
 .fos-page .verify ul { padding-left: 18px; }
-.fos-page .verify a { color: #141414; font-weight: 700; text-decoration: underline; text-decoration-color: #d6f45a; text-decoration-thickness: 3px; }
+.fos-page .verify a { color: var(--u-text); font-weight: 700; text-decoration: underline; text-decoration-color: #d6f45a; text-decoration-thickness: 3px; }
 .fos-page .verify pre { margin: 10px 0; padding: 12px 14px; border-radius: 12px; background: #141414; color: #f4f2ea; font: 13px/1.6 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }
-.fos-page .fos-page__help { max-width: 760px; margin: 18px auto 0; padding: 14px 18px; border: 2px solid #141414; border-radius: 14px; background: #fff; color: #2e2e2e !important; }
-.fos-page .fos-page__help a { color: #141414 !important; font-weight: 700; }
+.fos-page .fos-page__help { max-width: 760px; margin: 18px auto 0; padding: 14px 18px; border: 2px solid var(--v-ink); border-radius: 14px; background: var(--v-card); color: var(--u-text-2) !important; }
+.fos-page .fos-page__help a { color: var(--u-text) !important; font-weight: 700; }
 
 /* ── Top bar: a translucent paper sheet over the dusk, ink type, one ink call to action ── */
 .mnav {
