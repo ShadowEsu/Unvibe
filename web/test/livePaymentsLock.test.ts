@@ -66,6 +66,10 @@ test('a test-mode key is locked on the production deployment only', withBillingE
   assert.equal(paymentsLocked(), true, 'production with a test key');
   process.env.BILLING_LIVE_PAYMENTS_APPROVED = 'true';
   assert.equal(paymentsLocked(), true, 'live approval does not open a test key in production');
+  for (const value of [' true ', 'true\n', 'TRUE', 'yes']) {
+    process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION = value;
+    assert.equal(paymentsLocked(), true, `test-checkout flag ${JSON.stringify(value)} is not exact`);
+  }
   process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION = 'true';
   assert.equal(paymentsLocked(), false, 'explicit test-checkout-in-production flag');
   delete process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION;
