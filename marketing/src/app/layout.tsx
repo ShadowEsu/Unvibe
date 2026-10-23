@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import { Bricolage_Grotesque, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./paper.css";
 import "./polish.css";
@@ -20,15 +19,10 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 
-// Inter and Bricolage Grotesque paint the first screen, so they are self-hosted as trimmed variable
-// files (scripts/subset-fonts.py: Latin-1, punctuation and the features the CSS uses), 25% smaller than
-// Google's latin files. next/font still preloads them and builds a metric-matched Arial fallback.
-const sans = localFont({
-  src: "./fonts/inter-latin-ui.woff2",
-  weight: "100 900",
+const sans = Inter({
+  subsets: ["latin"],
   variable: "--font-sans-face",
   display: "swap",
-  adjustFontFallback: "Arial",
 });
 
 // Only the two faces the first phone viewport sets in (Inter body, Bricolage headings) are preloaded,
@@ -51,19 +45,11 @@ const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown
   `:root{--font-mono-face:${mono.style.fontFamily}}`,
 )};document.head.appendChild(s)}events.forEach(function(e){addEventListener(e,use,{passive:true})});addEventListener("load",function(){setTimeout(use,4000)})})()`;
 
-// The same file declared at the five weights the Google setup had, so a heading set at 750 still matches
-// the 800 face (one variable file, one download).
-const display = localFont({
-  src: [
-    { path: "./fonts/bricolage-latin-ui.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/bricolage-latin-ui.woff2", weight: "500", style: "normal" },
-    { path: "./fonts/bricolage-latin-ui.woff2", weight: "600", style: "normal" },
-    { path: "./fonts/bricolage-latin-ui.woff2", weight: "700", style: "normal" },
-    { path: "./fonts/bricolage-latin-ui.woff2", weight: "800", style: "normal" },
-  ],
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-display-face",
   display: "swap",
-  adjustFontFallback: "Arial",
 });
 
 // The italic accent is not one of the two preloaded fold faces; swap shows it as soon as it loads.
