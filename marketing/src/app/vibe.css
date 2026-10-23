@@ -785,17 +785,24 @@ p { font-size: 1.02rem; }
 @keyframes flexaccIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes flexaccShot { from { clip-path: inset(0 0 100% 0 round 14px); } to { clip-path: inset(0 round 14px); } }
 
-/* ── Scroll-synced list: underline the middle line; keep every line readable ── */
-.ssync { display: grid; gap: 0.5rem 2.5rem; width: min(1080px, 100%); margin-inline: auto; color: var(--v-ink); font: 800 clamp(2rem, 5vw, 4rem) / 1.1 var(--font-display); letter-spacing: -0.04em; }
-.ssync__prefix { margin: 0; letter-spacing: normal; }
-.ssync__list { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
-.ssync__list li { font-family: var(--font-serif); font-style: italic; font-weight: 500; }
-.ssync__list--live li { text-decoration: underline transparent; text-decoration-thickness: 0.06em; text-underline-offset: 0.12em; transition: text-decoration-color 260ms ease; }
-.ssync__list--live li.is-lit { text-decoration-color: currentColor; }
+/* ── "Select it, and Vibe explains": the line nearest the middle gets selected, like code before the shortcut ── */
+.ssync { display: grid; gap: 1.25rem 3rem; width: min(1080px, 100%); margin-inline: auto; color: var(--u-text); }
+.ssync__prefix { margin: 0; font: 750 var(--u-step-3) / 1.08 var(--font-display); letter-spacing: -0.035em; }
+.ssync__list { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; font: italic 500 clamp(2rem, 4.4vw, 3.4rem) / 1.14 var(--font-serif); letter-spacing: -0.01em; }
+.ssync__list li > span {
+  padding-inline: 0.08em; border-radius: 0.08em;
+  background: linear-gradient(var(--u-mark), var(--u-mark)) 0 0 / 0% 100% no-repeat;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.ssync__list--live li.is-lit > span { background-size: 100% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  .ssync__list--live li > span { transition: background-size var(--u-dur-exit) var(--u-ease); }
+  .ssync__list--live li.is-lit > span { transition: background-size 280ms var(--u-ease-out); }
+}
 @media (min-width: 900px) {
-  .ssync { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: start; }
-  .ssync__prefix { position: sticky; top: calc(50vh - 2.5rem); }
-  .ssync__list { padding-block: 30vh; gap: 1.2rem; }
+  .ssync { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: start; }
+  .ssync__prefix { position: sticky; top: calc(40vh - 2rem); }
+  .ssync__list { padding-block: 14vh; gap: 1rem; }
 }
 
 /* ── Liquid colour behind the closing card ───────────────────────────────── */

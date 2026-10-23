@@ -33,7 +33,7 @@ export default function HomePage() {
       <HowItWorks />
 
       <section className="paper-section" aria-label="What Unvibe can explain">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <ScrollSyncedList
             prefix="Select it, and Vibe explains"
             items={["a React hook.", "a SQL query.", "a regex.", "a shell script.", "the diff your agent just wrote."]}
