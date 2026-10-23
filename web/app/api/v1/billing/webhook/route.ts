@@ -10,7 +10,9 @@ export const maxDuration = 60;
 export async function POST(req: Request): Promise<Response> {
   const signature = req.headers.get('stripe-signature');
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  if (!signature || !secret) return Response.json({ error: 'webhook_not_configured' }, { status: 503 });
+  if (!secret) return Response.json({ error: 'webhook_not_configured' }, { status: 503 });
+  // A request without Stripe's signature header is a bad request, not a server problem.
+  if (!signature) return Response.json({ error: 'missing_signature' }, { status: 400 });
   const stripe = getStripe();
   let event;
   try {

@@ -23,6 +23,16 @@ function post(event: { id: string; type: string; data?: { object: Record<string,
   }));
 }
 
+test('a delivery without the stripe-signature header is a 400, not a 503', async () => {
+  const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id: `evt_${randomUUID()}`, object: 'event', type: 'customer.created' }),
+  }));
+  assert.equal(response.status, 400);
+  assert.equal((await response.json() as { error: string }).error, 'missing_signature');
+});
+
 test('a delivery that arrives while the first is still processing gets 409 so Stripe retries; a completed one is a 200 duplicate', async () => {
   const event = { id: `evt_${randomUUID()}`, type: 'customer.created' };
   const store = getBillingStore();
