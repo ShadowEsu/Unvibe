@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
-import { cn } from "@/lib/utils";
+// clsx, not cn(): these classes are BEM names, so tailwind-merge (27 KB, on every page's first load) has nothing to resolve.
+import { clsx } from "clsx";
 import { delight } from "@/lib/delight";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { detectVisitorDevice } from "@/lib/shortcuts";
@@ -67,7 +68,7 @@ export function DownloadLink({
         delight();
         onClick?.();
       }}
-      className={cn(
+      className={clsx(
         "paper-join",
         tone === "win" ? "paper-join--win" : "paper-join--mac",
         size === "nav" && "paper-join--nav",

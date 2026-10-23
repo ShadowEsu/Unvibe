@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
 import { armAudioUnlock, isAudioUnlocked, whenAudioUnlocked } from "@/lib/autoplayAudio";
 import { prefersLiteExperience } from "@/lib/performanceMode";
 
@@ -99,7 +98,7 @@ export function AutoPlayVideo({
   return (
     <video
       ref={videoRef}
-      className={cn(className)}
+      className={className}
       src={src}
       poster={poster}
       loop={loop}

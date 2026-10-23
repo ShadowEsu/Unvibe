@@ -1,4 +1,5 @@
-import { cn } from "@/lib/utils";
+// clsx, not cn(): the Nav ships this to the browser on every page, and tailwind-merge (27 KB) has no conflict to resolve here.
+import { clsx } from "clsx";
 import { Vibe } from "@/components/paper/Vibe";
 
 interface LogoProps {
@@ -14,7 +15,7 @@ export function Logo({
 }: LogoProps) {
   return (
     <span
-      className={cn("paper-logo inline-flex items-center gap-2.5", className)}
+      className={clsx("paper-logo inline-flex items-center gap-2.5", className)}
       role="img"
       aria-label={label}
     >
