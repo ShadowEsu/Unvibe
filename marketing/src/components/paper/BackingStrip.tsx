@@ -34,7 +34,7 @@ export function BackingStrip() {
         <div className="paper-partners">
           <p className="paper-meta">Also in the startup programs of</p>
           {/* Focusable so keyboard users can pause the scroll (hover and focus pause it; reduced motion and lite mode stop it). */}
-          <MotionInView className="paper-partners__viewport" tabIndex={0} role="region" aria-label="Startup program logos (focus to pause)">
+          <MotionInView eagerImages className="paper-partners__viewport" tabIndex={0} role="region" aria-label="Startup program logos (focus to pause)">
             <div className="paper-partners__track">
               {[0, 1].map((copy) => (
                 <div className="paper-partners__group" aria-hidden={copy === 1} key={copy}>
