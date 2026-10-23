@@ -43,7 +43,9 @@ export function AppTour() {
         <div className="vtour__media">
           {/* The poster at the size it renders (a <video poster> can't pick one). Until it loads, the video has no
               controls and no poster, so it stays transparent over it. Then the video takes the same, already cached
-              file as its poster and shows its controls. The video itself loads only once it is on screen. */}
+              file as its poster and shows its controls. The video itself loads only once it is on screen.
+              loading="lazy": on phones the headline, not the poster, is the largest paint, so the poster waits for
+              layout instead of sharing the first round trips with the stylesheets and fonts (still fetched at once when on screen). */}
           <img
             ref={posterRef}
             className="vtour__poster"
@@ -52,6 +54,7 @@ export function AppTour() {
             sizes="(max-width: 1120px) calc(100vw - 2.5rem), 1080px"
             width={1280}
             height={800}
+            loading="lazy"
             alt=""
           />
           <AutoPlayVideo
