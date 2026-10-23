@@ -106,6 +106,22 @@ test('while payments are locked, a cancellation is still applied', async () => {
   assert.equal((await store.subscriptionByWorkspaceId(workspace.id))?.status, 'canceled');
 });
 
+test('while payments are locked, a refund is still processed', async () => {
+  const stripe = getStripe();
+  stripe.invoicePayments.list = (async () => ({ data: [] })) as unknown as typeof stripe.invoicePayments.list;
+  const event = {
+    id: `evt_${randomUUID()}`, type: 'charge.refunded',
+    data: { object: { id: `ch_${randomUUID()}`, object: 'charge', amount: 1000, amount_refunded: 1000, refunded: true, currency: 'usd', payment_intent: `pi_${randomUUID()}`, customer: `cus_${randomUUID()}` } },
+  };
+  await onLockedProduction(async () => {
+    const response = await post(event);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { received: true });
+    // Processed, not dropped: the delivery was claimed and completed, so a replay is a duplicate.
+    assert.deepEqual(await (await post(event)).json(), { received: true, duplicate: true });
+  });
+});
+
 test('a live-mode event reaching a test-key deployment is acknowledged and never applied', async () => {
   const store = getBillingStore();
   const workspace = await store.ensurePersonalWorkspace(randomUUID());
