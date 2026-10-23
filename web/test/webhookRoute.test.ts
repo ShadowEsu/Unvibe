@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 import { POST as webhook } from '../app/api/v1/billing/webhook/route';
 import { getBillingStore } from '../src/billing/store';
 import { getStripe } from '../src/billing/stripe';
@@ -200,4 +200,26 @@ test('the signed webhook refunds the duplicate\'s latest paid invoice and cancel
     ['subscriptions.cancel', duplicateId, undefined, { idempotencyKey: `uncode-dup-cancel-${duplicateId}` }],
   ]);
   assert.equal((await store.subscriptionByWorkspaceId(workspace.id))?.stripeSubscriptionId, keptId);
+});
+
+test('a failed delivery stores only the Stripe error type and code as last_error, never Stripe\'s message', async () => {
+  const store = getBillingStore();
+  const stripe = getStripe();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  stripe.subscriptions.retrieve = (async () => {
+    throw new Stripe.errors.StripeInvalidRequestError({
+      message: `No such subscription for cus_PrivateCustomer123 on price_live_abc (workspace ${workspace.id})`, type: 'invalid_request_error', code: 'resource_missing',
+    });
+  }) as unknown as typeof stripe.subscriptions.retrieve;
+  const stored: string[] = [];
+  const failWebhook = store.failWebhook.bind(store);
+  store.failWebhook = async (eventId, message) => { stored.push(message); return failWebhook(eventId, message); };
+  try {
+    const response = await post({ id: `evt_${randomUUID()}`, type: 'customer.subscription.created', data: { object: { id: `sub_${randomUUID()}`, object: 'subscription' } } });
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), { error: 'processing_failed' });
+  } finally {
+    store.failWebhook = failWebhook;
+  }
+  assert.deepEqual(stored, ['StripeInvalidRequestError invalid_request_error resource_missing']);
 });
