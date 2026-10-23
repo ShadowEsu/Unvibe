@@ -42,7 +42,7 @@ export default function HomePage() {
       </section>
 
       <section className="paper-section" id="try-it" aria-labelledby="try-it-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <div className="sec-head">
             <p className="paper-meta">Try it here</p>
             <h2 id="try-it-title">Paste code. <em>Vibe explains it.</em></h2>

@@ -9,7 +9,7 @@
 .sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 
 /* ── Try it: editor on the left, Vibe panel on the right ── */
-.try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; border: 1.5px solid var(--v-ink); border-radius: 24px; box-shadow: 6px 6px 0 var(--v-ink); overflow: hidden; }
+.try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .try__editor { background: #151514; }
 .try__editor textarea { flex: 1; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); tab-size: 2; }
 .try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
@@ -18,7 +18,7 @@
 .try__foot .try__fine { margin: 0; color: #c9c5bc; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
-.try__panel { background: #fff; color: #141414; min-height: 26rem; }
+.try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }
 .try__head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; border-bottom: 1.5px solid #ece8de; }
 .try__head p { display: grid; margin: 0; line-height: 1.2; }
 .try__head b { font: 800 1.1rem var(--font-display); letter-spacing: -0.02em; }
@@ -51,8 +51,6 @@
 .try .paper-join--mac { background: var(--v-lime); color: #141414; }
 .try .paper-join--win { background: #141414; color: #fff; }
 .try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: 12px; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-display); text-decoration: none; box-shadow: 0 3px 0 #141414; }
-
-.dark .try__editor, .dark .try__panel { border-color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
 
 @media (max-width: 520px) {
   .try__editor textarea { min-height: 12rem; font-size: 0.88rem; }
