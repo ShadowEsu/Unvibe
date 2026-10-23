@@ -3645,16 +3645,16 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
 }
 
 .paper-beta--page .paper-beta__term-toggle {
-  color: var(--ink);
-  border-color: var(--hairline);
-  background: var(--paper-raised);
+  color: var(--u-text);
+  border-color: var(--u-line);
+  background: var(--u-raise);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 .paper-beta--page .paper-beta__term-toggle:hover {
-  background: rgb(255 255 255 / 0.7);
-  border-color: var(--ink-faint);
+  background: var(--u-card);
+  border-color: var(--u-line-strong);
 }
 
 .paper-beta__term-drawer {

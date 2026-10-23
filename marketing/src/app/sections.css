@@ -72,13 +72,6 @@ html[data-performance="lite"] .try__bob { animation: none; }
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
 .paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
-/* vibe.css paints these white without a dark rule, so keep their text ink in dark mode. */
-.dark .paper-beta--page .paper-beta__os button,
-.dark .paper-beta--page .paper-beta__step { color: #141414; }
-/* vibe.css forces `color: var(--v-ink) !important` on the title; re-point the variable instead of fighting it. */
-.dark .paper-beta__title { --v-ink: #f2eef9; }
-.dark .paper-beta__update { color: #d9d2e6; }
-.dark .paper-beta__update b, .dark .paper-beta__update a { color: #f2eef9; }
 
 /* ── Tester quotes ── */
 .quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: clamp(1.2rem, 3vw, 2rem); max-width: 1000px; margin-inline: auto; }

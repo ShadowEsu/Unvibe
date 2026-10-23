@@ -53,7 +53,7 @@ export default function HomePage() {
       </section>
 
       <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <div className="sec-head">
             <p className="paper-meta">Download</p>
             <h2 id="install-title">Free for <em>Mac and Windows.</em></h2>

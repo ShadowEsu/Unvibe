@@ -214,21 +214,21 @@ p { font-size: 1.02rem; }
 .paper-beta { width: min(980px, 100%) !important; max-width: none !important; padding: clamp(2rem, 4vw, 3.4rem) !important; margin-inline: auto; }
 .paper-beta__title { font-family: var(--font-display) !important; font-size: clamp(2.2rem, 4.6vw, 3.6rem) !important; font-weight: 800 !important; letter-spacing: -0.045em !important; line-height: 1.02 !important; color: var(--v-ink) !important; }
 .paper-beta__os { gap: 0.9rem !important; }
-.paper-beta__os button { min-height: 4.2rem; padding: 0.8rem 1.6rem !important; border: 1.5px solid var(--v-ink) !important; border-radius: 16px !important; background: #fff !important; box-shadow: 0 3px 0 var(--v-ink); }
-.paper-beta__os button.is-on { background: var(--v-lime) !important; }
+.paper-beta__os button { min-height: 4.2rem; padding: 0.8rem 1.6rem !important; border: 1.5px solid var(--v-ink) !important; border-radius: 16px !important; background: var(--u-card) !important; color: var(--u-text); box-shadow: 0 3px 0 var(--v-ink); }
+.paper-beta__os button.is-on { background: var(--v-lime) !important; color: #141414; }
 .paper-beta__os-name { font-size: 1.25rem !important; font-weight: 750 !important; }
 .paper-beta__os-meta { opacity: 1 !important; }
 .paper-beta__download-btn {
   min-height: 4.2rem !important; padding: 0 2.4rem !important; font-size: 1.3rem !important; font-weight: 750 !important;
-  border-radius: 16px !important; background: var(--v-ink) !important; color: #fff !important; border: 1.5px solid var(--v-ink) !important;
-  box-shadow: 0 5px 0 #000, 0 0 0 0 var(--v-lime) !important; transition: transform 160ms var(--v-press), box-shadow 160ms var(--v-press) !important;
+  border-radius: 16px !important; background: var(--u-cta) !important; color: var(--u-on-cta) !important; border: 1.5px solid var(--u-cta) !important;
+  box-shadow: 0 5px 0 var(--u-cta-edge), 0 0 0 0 var(--v-lime) !important; transition: transform 160ms var(--v-press), box-shadow 160ms var(--v-press) !important;
 }
-.paper-beta__download-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #000, 0 0 0 5px var(--v-lime) !important; }
-.paper-beta__download-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #000 !important; }
+.paper-beta__download-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--u-cta-edge), 0 0 0 5px var(--v-lime) !important; }
+.paper-beta__download-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--u-cta-edge) !important; }
 .paper-beta__blurb { font-size: 1.3rem !important; font-weight: 600 !important; color: var(--v-ink) !important; }
 .paper-beta__specs, .paper-beta__shell { font-size: 0.95rem !important; }
-.paper-beta__step { padding: 0.5rem 1rem !important; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff !important; font-size: 1rem !important; }
-.paper-beta__step-num { background: var(--v-ink) !important; color: #fff !important; }
+.paper-beta__step { padding: 0.5rem 1rem !important; border: 1.5px solid var(--v-ink); border-radius: 999px; background: var(--u-card) !important; color: var(--u-text); font-size: 1rem !important; }
+.paper-beta__step-num { background: var(--u-cta) !important; color: var(--u-on-cta) !important; }
 
 /* Hero: bigger, with a sticker that says free. */
 .vhero h1 { font-size: clamp(2.3rem, 10.5vw, 7rem); overflow-wrap: break-word; }
@@ -570,7 +570,7 @@ p { font-size: 1.02rem; }
 .kit__asset small { color: #6b6b6b; }
 @media (max-width: 640px) { .kit__head .vibe { display: none; } .kit__row { grid-template-columns: 1fr 1fr; } .kit__row span:nth-child(3) { grid-column: 1 / -1; } }
 
-.paper-beta__update { margin: 0.7rem 0 0; font-size: 0.92rem; line-height: 1.45; color: #4a4a4a; text-align: center; } .paper-beta__update b { color: var(--v-ink, #141414); }
+.paper-beta__update { margin: 0.7rem 0 0; font-size: 0.92rem; line-height: 1.45; color: var(--u-text-2); text-align: center; } .paper-beta__update b { color: var(--v-ink, #141414); }
 .paper-beta__update a { color: var(--v-ink, #141414); font-weight: 700; text-decoration: underline; }
 
 /* First open steps (/install-help and after download) */
