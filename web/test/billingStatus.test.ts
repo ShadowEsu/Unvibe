@@ -19,9 +19,10 @@ async function statusWith(values: Partial<Record<(typeof STRIPE_ENV)[number], st
   }
 }
 
-test('billing status is closed under a live key until payments are approved', async () => {
-  assert.deepEqual((await statusWith({ ...CONFIGURED, STRIPE_SECRET_KEY: 'sk_live_fake' })).body, { paymentsOpen: false });
-  assert.deepEqual((await statusWith({ ...CONFIGURED, STRIPE_SECRET_KEY: 'sk_live_fake', BILLING_LIVE_PAYMENTS_APPROVED: 'true' })).body, { paymentsOpen: true });
+test('billing status is closed under a live key until payments are approved on production', async () => {
+  assert.deepEqual((await statusWith({ ...CONFIGURED, STRIPE_SECRET_KEY: 'sk_live_fake', VERCEL_ENV: 'production' })).body, { paymentsOpen: false });
+  assert.deepEqual((await statusWith({ ...CONFIGURED, STRIPE_SECRET_KEY: 'sk_live_fake', VERCEL_ENV: 'production', BILLING_LIVE_PAYMENTS_APPROVED: 'true' })).body, { paymentsOpen: true });
+  assert.deepEqual((await statusWith({ ...CONFIGURED, STRIPE_SECRET_KEY: 'sk_live_fake', VERCEL_ENV: 'preview', BILLING_LIVE_PAYMENTS_APPROVED: 'true' })).body, { paymentsOpen: false });
 });
 
 test('billing status is closed for a test key on the production deployment only', async () => {
