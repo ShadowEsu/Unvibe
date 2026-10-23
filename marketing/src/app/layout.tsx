@@ -7,6 +7,7 @@ import "./vibe.css";
 import "./hero.css";
 import "./sections.css";
 import "./pages.css";
+import "./system.css";
 import { Providers } from "@/components/providers/Providers";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
@@ -18,6 +19,7 @@ import { ReminderToast } from "@/components/paper/ReminderToast";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
+import { BOOT_SCRIPT } from "@/lib/theme";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -141,6 +143,8 @@ export default function RootLayout({
       className={`${sans.variable} ${mono.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
+        {/* Before first paint: the `js` class scopes motion start states. */}
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}

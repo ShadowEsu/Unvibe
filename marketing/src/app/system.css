@@ -1,0 +1,106 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Surface and motion system (site upgrade, agents/unvibe/site-upgrade-spec-2026-10-22.md).
+   The dusk photo is the stage; reading happens on sheets. Three elevation steps, one accent,
+   one type and spacing scale, motion tokens from ui-review-rubric §5. Loads last.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces and text (light). */
+  --u-ink: #141414;
+  --u-sheet: #fffdf6;
+  --u-card: #ffffff;
+  --u-raise: #f5f2ea;
+  --u-text: #141414;
+  --u-text-2: #3a3732;
+  --u-line: rgb(20 20 20 / 0.14);
+  --u-line-strong: #141414;
+  --u-accent: #d6f45a;
+  --u-on-accent: #141414;
+  --u-mark: #d6f45a;
+  --u-accent-ink: #3c2fb8;
+  --u-focus: #3c2fb8;
+  --u-veil: rgb(255 253 246 / 0.84);
+  --u-hover: rgb(20 20 20 / 0.06);
+  --u-cta: #141414;
+  --u-on-cta: #ffffff;
+  --u-cta-edge: #000000;
+  --u-error: #b42318;
+
+  /* Elevation: 0 hairline only, 1 sheet, 2 the one primary object per view. */
+  --u-lift-1: 0 1px 0 rgb(20 20 20 / 0.04), 0 18px 40px -22px rgb(44 22 92 / 0.45);
+  --u-lift-2: 4px 4px 0 var(--u-ink);
+  --u-lift-2-hover: 6px 6px 0 var(--u-ink);
+  --u-radius-sheet: 28px;
+  --u-radius-card: 18px;
+
+  /* Type (1.25 ratio; html is 17-18 px) and spacing. 13 px is the floor for visible labels. */
+  --u-step-3: clamp(2rem, 3.2vw, 2.75rem);
+  --u-step-2: 1.5rem;
+  --u-step-1: 1.1875rem;
+  --u-step-0: 1.0625rem;
+  --u-step--1: 0.875rem;
+  --u-step--2: max(13px, 0.76rem);
+  --u-measure: 68ch;
+  --u-space-section: clamp(64px, 9vw, 128px);
+  --u-gap-sheet: clamp(24px, 4vw, 48px);
+
+  /* Motion. Hover/press 110-160 ms, enter 280-400 ms, exit 150 ms or less. */
+  --u-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --u-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --u-dur-press: 110ms;
+  --u-dur-hover: 160ms;
+  --u-dur-enter: 320ms;
+  --u-dur-exit: 150ms;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, .flexacc__title { text-wrap: balance; }
+p, li, figcaption, summary { text-wrap: pretty; }
+:is(time, .paper-beta__specs, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
+
+/* Links in running text: the underline thickens on hover. */
+main a:not([class]) {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-thickness var(--u-dur-hover) var(--u-ease);
+}
+main a:not([class]):hover { text-decoration-thickness: 2px; }
+
+/* ── Sheets: one paper surface per section; eyebrows and small copy read on it, never on the field ── */
+.u-sheet {
+  padding: clamp(24px, 4.5vw, 56px); border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
+  background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
+}
+.u-sheet .sec-head > .paper-meta, .u-sheet .hiw__head > .paper-meta { padding: 0; border-radius: 0; background: none; }
+.u-sheet .sec-head > .paper-lead { padding: 0; border-radius: 0; background: none; }
+@media (max-width: 520px) {
+  .paper-wrap.u-sheet { width: calc(100% - 1.5rem); }
+  .u-sheet { padding: 22px 16px; border-radius: 22px; }
+}
+
+/* Inside a sheet, nested stickers flatten to hairline rows: one surface, one primary object per view.
+   (Install card, FAQ rows and the closing card carry vibe.css card rules marked !important.) */
+.u-sheet :is(.claude-startups, .paper-partners) { margin: 0; padding: clamp(20px, 3vw, 32px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.u-sheet .paper-partners { margin-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--u-line); }
+.u-sheet .claude-startups { padding-top: 0; }
+.u-sheet .paper-beta { width: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
+.u-sheet .paper-faq { gap: 0; max-width: none; }
+.u-sheet .paper-faq details {
+  margin: 0; padding: 1.1rem 0.25rem !important; border: 0 !important; border-bottom: 1px solid var(--u-line) !important;
+  border-radius: 0 !important; background: none !important; box-shadow: none !important;
+}
+.u-sheet .paper-faq details:first-child { border-top: 1px solid var(--u-line) !important; }
+.u-sheet .paper-faq summary::after { border-color: var(--u-line); background: var(--u-card); color: var(--u-text); }
+
+/* Two-column sheet: the heading stays in view on the left while the content scrolls on the right. */
+@media (min-width: 900px) {
+  .u-split { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 3rem; align-items: start; }
+  .u-split > .sec-head { position: sticky; top: 6rem; justify-items: start; margin: 0; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main a:not([class]) { transition: none; }
+}

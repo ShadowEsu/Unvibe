@@ -4,9 +4,9 @@
 .sec-head { display: grid; justify-items: center; gap: 0.85rem; max-width: 46rem; margin: 0 auto clamp(2rem, 4vw, 3rem); text-align: center; }
 .sec-head > * { margin: 0; }
 .sec-head h2 { text-wrap: balance; }
-/* Paper-white chips keep the forced vibe.css text colours readable on the dusk photo in both themes. */
-.sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: rgb(255 255 255 / 0.92); }
-.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: rgb(255 255 255 / 0.92); text-wrap: pretty; }
+/* Paper chips keep eyebrows and leads readable where a head sits straight on the dusk photo (inside a sheet they flatten). */
+.sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: var(--u-sheet); }
+.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 
 /* ── Try it: editor on the left, Vibe panel on the right ── */
 .try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; border: 1.5px solid var(--v-ink); border-radius: 24px; box-shadow: 6px 6px 0 var(--v-ink); overflow: hidden; }
