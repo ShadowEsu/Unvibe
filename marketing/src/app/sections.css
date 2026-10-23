@@ -94,12 +94,8 @@ html[data-performance="lite"] .try__bob { animation: none; }
 .paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
 .paper-backing .paper-partners { max-width: 1000px; margin: 0 auto; }
 .claude-startups__tag { color: #141414; }
-.claude-startups__copy a { color: #141414; font-weight: 700; }
-.paper-partners__viewport:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; border-radius: 12px; }
-.dark .claude-startups { border-color: #f2eef9; background: #1f1729; box-shadow: 5px 5px 0 #f2eef9; }
-.dark .claude-startups__title { color: #f2eef9; }
-.dark .claude-startups__copy, .dark .claude-startups__copy a { color: #e6e0f0; }
-.dark .paper-partners { border-color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
+.claude-startups__copy a { color: var(--u-text); font-weight: 700; }
+.paper-partners__viewport:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 4px; border-radius: 12px; }
 
 /* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
 .paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }

@@ -21,7 +21,7 @@ const sponsors = [
 export function BackingStrip() {
   return (
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
-      <div className="paper-wrap">
+      <div className="paper-wrap u-sheet">
         <div className="sec-head">
           <p className="paper-meta">Behind Unvibe</p>
           <h2 id="backing-title">Supported by <em>startup programs.</em></h2>

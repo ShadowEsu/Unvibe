@@ -1107,25 +1107,34 @@ h2 {
   height: 4rem;
 }
 
+/* One ink tone for every logo (a row of ten brand colours is the loudest thing in the section);
+   a logo takes its own colour while hovered, which also pauses the marquee. */
 .paper-partners__logo {
   display: block;
   width: clamp(2.7rem, 4vw, 3.5rem);
   height: clamp(2.7rem, 4vw, 3.5rem);
   object-fit: contain;
   object-position: center;
-  filter: saturate(1.05) contrast(1.04);
+  filter: var(--logo-mono);
+  opacity: 0.72;
+  transition: filter var(--u-dur-hover) var(--u-ease), opacity var(--u-dur-hover) var(--u-ease);
+  --logo-mono: brightness(0);
 }
 
-.paper-partners__logo--mixpanel { filter: brightness(0) saturate(100%) invert(39%) sepia(92%) saturate(2520%) hue-rotate(238deg) brightness(101%) contrast(101%); }
-.paper-partners__logo--posthog { filter: brightness(0) saturate(100%) invert(80%) sepia(82%) saturate(1052%) hue-rotate(339deg) brightness(102%) contrast(96%); }
-.paper-partners__logo--salesforce { filter: brightness(0) saturate(100%) invert(47%) sepia(96%) saturate(1765%) hue-rotate(160deg) brightness(93%) contrast(101%); }
-.paper-partners__logo--gitlab { filter: brightness(0) saturate(100%) invert(50%) sepia(93%) saturate(2848%) hue-rotate(347deg) brightness(103%) contrast(98%); }
-.paper-partners__logo--aws { filter: brightness(0) saturate(100%) invert(71%) sepia(95%) saturate(2865%) hue-rotate(357deg) brightness(100%) contrast(104%); }
-.paper-partners__logo--linear { filter: brightness(0) saturate(100%) invert(39%) sepia(77%) saturate(1100%) hue-rotate(204deg) brightness(91%) contrast(92%); }
-.paper-partners__logo--google-cloud { filter: brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(2587%) hue-rotate(196deg) brightness(98%) contrast(96%); }
-.paper-partners__logo--openai { filter: brightness(0) saturate(100%) invert(49%) sepia(90%) saturate(551%) hue-rotate(118deg) brightness(86%) contrast(93%); }
-.paper-partners__logo--deepgram { filter: brightness(0) saturate(100%) invert(60%) sepia(72%) saturate(590%) hue-rotate(106deg) brightness(89%) contrast(89%); }
-.paper-partners__logo--mongodb { filter: brightness(0) saturate(100%) invert(58%) sepia(55%) saturate(717%) hue-rotate(76deg) brightness(89%) contrast(87%); }
+.dark .paper-partners__logo { --logo-mono: brightness(0) invert(1); }
+
+.paper-partners__item:hover .paper-partners__logo { filter: var(--logo-tint, none); opacity: 1; }
+
+.paper-partners__logo--mixpanel { --logo-tint: brightness(0) saturate(100%) invert(39%) sepia(92%) saturate(2520%) hue-rotate(238deg) brightness(101%) contrast(101%); }
+.paper-partners__logo--posthog { --logo-tint: brightness(0) saturate(100%) invert(80%) sepia(82%) saturate(1052%) hue-rotate(339deg) brightness(102%) contrast(96%); }
+.paper-partners__logo--salesforce { --logo-tint: brightness(0) saturate(100%) invert(47%) sepia(96%) saturate(1765%) hue-rotate(160deg) brightness(93%) contrast(101%); }
+.paper-partners__logo--gitlab { --logo-tint: brightness(0) saturate(100%) invert(50%) sepia(93%) saturate(2848%) hue-rotate(347deg) brightness(103%) contrast(98%); }
+.paper-partners__logo--aws { --logo-tint: brightness(0) saturate(100%) invert(71%) sepia(95%) saturate(2865%) hue-rotate(357deg) brightness(100%) contrast(104%); }
+.paper-partners__logo--linear { --logo-tint: brightness(0) saturate(100%) invert(39%) sepia(77%) saturate(1100%) hue-rotate(204deg) brightness(91%) contrast(92%); }
+.paper-partners__logo--google-cloud { --logo-tint: brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(2587%) hue-rotate(196deg) brightness(98%) contrast(96%); }
+.paper-partners__logo--openai { --logo-tint: brightness(0) saturate(100%) invert(49%) sepia(90%) saturate(551%) hue-rotate(118deg) brightness(86%) contrast(93%); }
+.paper-partners__logo--deepgram { --logo-tint: brightness(0) saturate(100%) invert(60%) sepia(72%) saturate(590%) hue-rotate(106deg) brightness(89%) contrast(89%); }
+.paper-partners__logo--mongodb { --logo-tint: brightness(0) saturate(100%) invert(58%) sepia(55%) saturate(717%) hue-rotate(76deg) brightness(89%) contrast(87%); }
 
 .paper-partners__viewport:hover .paper-partners__track,
 .paper-partners__viewport:focus-within .paper-partners__track {
