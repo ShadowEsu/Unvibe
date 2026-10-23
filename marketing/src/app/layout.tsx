@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "./paper.css";
 import "./polish.css";
@@ -19,10 +20,15 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 
-const sans = Inter({
-  subsets: ["latin"],
+// Inter and Bricolage Grotesque paint the first screen, so they are self-hosted as trimmed variable
+// files (scripts/subset-fonts.py: Latin-1, punctuation and the features the CSS uses), 25% smaller than
+// Google's latin files. next/font still preloads them and builds a metric-matched Arial fallback.
+const sans = localFont({
+  src: "./fonts/inter-latin-ui.woff2",
+  weight: "100 900",
   variable: "--font-sans-face",
   display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 // Only the two faces the first phone viewport sets in (Inter body, Bricolage headings) are preloaded,
@@ -42,11 +48,12 @@ const monoAfterLoad = `addEventListener("load",function(){var s=document.createE
   `:root{--font-mono-face:${mono.style.fontFamily}}`,
 )};document.head.appendChild(s)})`;
 
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+const display = localFont({
+  src: "./fonts/bricolage-latin-ui.woff2",
+  weight: "200 800",
   variable: "--font-display-face",
   display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 // The italic accent is not one of the two preloaded fold faces; swap shows it as soon as it loads.
