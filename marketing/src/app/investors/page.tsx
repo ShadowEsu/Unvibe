@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ArrowRight, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
-import { InvestorBriefDemo } from "@/components/paper/InvestorBriefDemo";
 import { Vibe } from "@/components/paper/Vibe";
 import {
   compensationCashUsd,
@@ -82,12 +81,6 @@ export default function InvestorsPage() {
           <article className="inv-card"><span>02</span><h3>Product</h3><p>Select code, press Control+U (Ctrl+Alt+U on Windows). Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
           <article className="inv-card"><span>03</span><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
         </div>
-      </section>
-
-      <section className="inv-section">
-        <p className="inv-eyebrow">See it</p>
-        <h2>The product, <em>in one pass.</em></h2>
-        <InvestorBriefDemo />
       </section>
 
       <section className="inv-section" id="support">

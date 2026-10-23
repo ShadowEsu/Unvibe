@@ -22,18 +22,9 @@ The header/footer `Logo` component redraws the mark inline as SVG with `currentC
 
 ## Product screenshots — `public/unvibe/`
 
-Each screen ships as `<name>-light.webp` and `<name>-dark.webp` (optimized for the web).
+`public/unvibe/real/*.webp` are the real app screenshots the homepage walkthrough uses; `scripts/build-demo-media.mjs` writes them from an `app/e2e/marketing-media.mjs` capture.
 
-| Base name | Screen | Source |
-|---|---|---|
-| `progress` | Progress | Approved mockup |
-| `projects` | Projects | Approved mockup |
-| `study` | Study | Approved mockup |
-| `notebook` | Notebook | Approved mockup |
-| `library` | Library | Approved mockup |
-| `settings` | Settings | Approved mockup |
-| `profile` | Profile | Approved mockup |
-| `help` | Help | Approved mockup |
+The July `<name>-light.webp` / `<name>-dark.webp` mockups (Progress, Projects, Study, Notebook, Library, Settings, Profile, Help) were removed on 2026-10-22: they showed the capture account's name, no page rendered them, and most of those screens no longer exist. `OpeningStrip` and `ProductGallery` still point at them but are not imported anywhere.
 
 ### Rendered as HTML (no image)
 

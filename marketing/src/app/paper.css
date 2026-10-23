@@ -1176,7 +1176,6 @@ h2 {
   font-size: 1.05rem;
 }
 
-.paper-video,
 .paper-frame {
   overflow: hidden;
   border: 1px solid var(--glass-edge);
@@ -1187,23 +1186,10 @@ h2 {
   box-shadow: var(--shadow-glass);
 }
 
-.paper-video video,
-.paper-video__embed,
 .paper-frame img {
   display: block;
   width: 100%;
   height: auto;
-}
-
-.paper-video--embed {
-  aspect-ratio: 16 / 9;
-  background: #0b0810;
-}
-
-.paper-video__embed {
-  width: 100%;
-  height: 100%;
-  border: 0;
 }
 
 .paper-caption {
@@ -1417,7 +1403,6 @@ html[data-performance="lite"] .paper-follow,
 html[data-performance="lite"] .paper-keys,
 html[data-performance="lite"] .paper-faq__caret { animation: none; will-change: auto; }
 html[data-performance="lite"] .paper-glass,
-html[data-performance="lite"] .paper-video,
 html[data-performance="lite"] .paper-frame,
 html[data-performance="lite"] .paper-footer,
 html[data-performance="lite"] .mnav,
@@ -1738,86 +1723,22 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   padding: 0.2rem 0 0;
 }
 
-.paper-invite__bloom {
-  position: absolute;
-  inset: 8% 6%;
-  border-radius: 50%;
-  background: var(--brand-mist);
-  filter: blur(28px);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.paper-invite.is-lit .paper-invite__bloom {
-  opacity: 1;
-  animation: paperInviteBloom 6.5s var(--ease-calm) infinite;
-}
-
-.paper-invite__ring {
-  position: absolute;
-  inset: -8%;
-  border: 1px solid var(--hairline);
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.paper-invite.is-lit .paper-invite__ring {
-  opacity: 0.7;
-  animation: paperInviteSpin 32s linear infinite;
-}
-
-.paper-invite__key {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 3.1rem;
-  height: 3.1rem;
-  border: 1px solid var(--key-edge);
-  border-radius: var(--radius-key);
-  background: linear-gradient(180deg, var(--key-shine), transparent 38%), var(--key-face);
-  box-shadow: var(--shadow-key);
-  color: var(--brand);
-  font-family: var(--font-mono);
-  font-size: 1.15rem;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.paper-invite.is-lit .paper-invite__key {
-  opacity: 1;
-}
-
-.paper-invite__key--cmd {
-  top: 0.2rem;
-  left: -0.6rem;
-}
-
-.paper-invite.is-lit .paper-invite__key--cmd {
-  animation: paperInviteFloat 4.8s var(--ease-calm) infinite;
-}
-
-.paper-invite__key--u {
-  right: -0.4rem;
-  bottom: 1.4rem;
-}
-
-.paper-invite.is-lit .paper-invite__key--u {
-  animation: paperInviteFloat 5.4s var(--ease-calm) 0.6s infinite;
-}
-
 .paper-invite__card {
   position: relative;
   z-index: 1;
   padding: 2.1rem 1.6rem 1.5rem;
   text-align: center;
-  transform: translate3d(0, 18px, 0);
-  opacity: 0;
 }
 
-.paper-invite.is-lit .paper-invite__card {
-  animation: paperInviteRise 1.2s var(--ease-emphatic) both;
+/* Visible by default: server HTML, no JS and reduced motion all show the card. InviteReveal arms
+   the entrance only for a card that starts below the fold, then lights it once it is in view. */
+.paper-invite.is-armed .paper-invite__card {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+}
+
+.paper-invite.is-armed.is-lit .paper-invite__card {
+  animation: paperInviteRise 450ms var(--ease-emphatic) both;
 }
 
 .paper-invite__card h2 {
@@ -1828,49 +1749,23 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   margin: 0.85rem auto 0;
 }
 
-.paper-invite__form {
-  margin-top: 1.6rem;
-  text-align: left;
-}
-
 @keyframes paperInviteRise {
   from {
     opacity: 0;
     transform: translate3d(0, 18px, 0);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0);
-    filter: blur(0);
   }
 }
 
-@keyframes paperInviteBloom {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
-  50% { transform: scale(1.08); opacity: 1; }
-}
-
-@keyframes paperInviteSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes paperInviteFloat {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -8px, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .paper-invite__bloom,
-  .paper-invite__ring,
-  .paper-invite__key,
-  .paper-invite.is-lit .paper-invite__card,
-  .paper-waitlist .waitlist-submit::after {
+/* Reduced motion, and print (a card armed but never scrolled to would otherwise print blank). */
+@media (prefers-reduced-motion: reduce), print {
+  .paper-invite.is-armed .paper-invite__card {
     animation: none;
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 
@@ -2091,13 +1986,11 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   font-size: 0.9rem;
 }
 
-.paper-frame,
-.paper-video {
+.paper-frame {
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 
-.paper-frame:hover,
-.paper-video:hover {
+.paper-frame:hover {
   transform: translateY(-3px);
 }
 
@@ -2318,11 +2211,6 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   border-color: var(--hairline);
 }
 
-.investor-brief {
-  border-color: var(--hairline);
-}
-
-.investor-brief__copy h2,
 .investor-money__total,
 .investor-money__mixpanel strong {
   color: var(--ink);
@@ -2332,10 +2220,6 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   max-width: 18ch;
   font-size: clamp(3rem, 8vw, 7.2rem);
   line-height: 0.94;
-}
-
-.investor-brief__copy p:last-child {
-  color: var(--ink-muted);
 }
 
 .investor-money__mixpanel > span,
