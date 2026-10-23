@@ -118,7 +118,6 @@ html[data-performance="lite"] .try__bob { animation: none; }
 }
 .invite__result code { max-width: 100%; }
 .invite__actions button { min-width: 2.75rem; }
-.dark .invite { border-color: #f2eef9; }
 
 /* ── Footer ── */
 .paper-footer nav { gap: 0; }

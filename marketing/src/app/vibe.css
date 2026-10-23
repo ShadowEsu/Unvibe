@@ -441,13 +441,14 @@ p { font-size: 1.02rem; }
 .why__cta { display: flex; justify-content: center; margin-top: 2.2rem; }
 
 /* ── Invite ────────────────────────────────────────────────────────────────── */
-.invite { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.4rem; justify-items: center; padding: clamp(1.3rem, 5vw, 3.4rem); border: 1.5px solid var(--v-ink); border-radius: 28px; background: var(--v-ink); color: #fff; box-shadow: 8px 8px 0 var(--v-lime); text-align: center; }
+/* An ink sheet in both themes (fixed colours, not --v-ink, which turns light in dark mode). The lime is on the button only. */
+.invite { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.4rem; justify-items: center; padding: clamp(1.3rem, 5vw, 3.4rem); border: 1px solid rgb(255 255 255 / 0.12); border-radius: var(--u-radius-sheet); background: #141414; color: #fff; box-shadow: var(--u-lift-1); text-align: center; }
 .invite h2 { color: #fff !important; }
 .invite h2 em { color: var(--v-lime); }
 .invite .paper-meta { color: var(--v-lime) !important; }
 .invite .paper-lead { color: #d8d4cb !important; max-width: 40rem; margin-inline: auto; }
 .invite__form { display: flex; gap: 0.6rem; width: min(560px, 100%); }
-.invite__form input { flex: 1; min-width: 0; min-height: 3.4rem; padding: 0 1.1rem; border: 1.5px solid #fff; border-radius: 14px; background: #fff; color: var(--v-ink); font-size: 1.05rem; }
+.invite__form input { flex: 1; min-width: 0; min-height: 3.4rem; padding: 0 1.1rem; border: 1.5px solid #fff; border-radius: 14px; background: #fff; color: #141414; font-size: 1.05rem; }
 .invite__form button, .invite__actions button { min-height: 3.4rem; padding: 0 1.4rem; border: 0; border-radius: 14px; background: var(--v-lime); color: var(--v-ink); font: 800 1.05rem var(--font-display); cursor: pointer; box-shadow: 0 4px 0 #6f8a12; white-space: nowrap; }
 .invite__form button:active, .invite__actions button:active { transform: translateY(3px); box-shadow: none; }
 .invite__result { display: grid; gap: 0.8rem; justify-items: center; }
@@ -809,25 +810,15 @@ p { font-size: 1.02rem; }
   .ssync__list { padding-block: 14vh; gap: 1rem; }
 }
 
-/* ── Liquid colour behind the closing card ───────────────────────────────── */
-.paper-invite--liquid { position: relative; isolation: isolate; width: min(52rem, 100%); padding: clamp(1.5rem, 5vw, 4rem); }
-.paper-invite--liquid .paper-invite__card { position: relative; z-index: 1; }
-.liquid { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: 36px; background: #2a1d3d; }
-.liquid__blob { position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; filter: blur(48px); opacity: 0.9; will-change: transform; }
-.liquid__blob--a { left: -12%; top: -20%; background: var(--v-coral); animation: liquidA 18s ease-in-out infinite alternate; }
-.liquid__blob--b { right: -15%; top: 10%; background: var(--v-lilac); animation: liquidB 22s ease-in-out infinite alternate; }
-.liquid__blob--c { left: 25%; bottom: -35%; background: var(--v-sun); animation: liquidC 26s ease-in-out infinite alternate; }
-@keyframes liquidA { to { transform: translate(30%, 25%) scale(1.15); } }
-@keyframes liquidB { to { transform: translate(-25%, 20%) scale(0.9); } }
-@keyframes liquidC { to { transform: translate(-20%, -30%) scale(1.2); } }
-html[data-performance="lite"] .liquid__blob { animation: none; }
+/* ── Closing card: one sheet, Vibe on top; no plate behind it ────────────── */
+.paper-invite { width: min(44rem, 100%); }
+.paper-invite__vibe { display: flex; justify-content: center; margin-bottom: 0.4rem; }
 
 /* Looping animations pause while their root is off-screen (data-in set by lib/motionInView). */
-[data-in="false"] :is(.vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow, .paper-partners__track, .liquid__blob, .paper-footer__dot, .resources-explanation-indicator) { animation-play-state: paused; }
+[data-in="false"] :is(.vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow, .paper-partners__track, .paper-footer__dot, .resources-explanation-indicator) { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   .flexacc__item, .flexacc__body, .flexacc__shot, .mnav__toggle span, .mnav__toggle span::before { transition: none; animation: none; }
   .flexacc__item:not(.is-open):hover { transform: none; }
-  .liquid__blob { animation: none; }
 }
 

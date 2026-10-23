@@ -1,6 +1,6 @@
 /**
- * One IntersectionObserver shared by every looping animation root (the Vibe mascot, the liquid
- * blobs, the partner marquee, small status dots). It sets data-in="true" | "false" on each root;
+ * One IntersectionObserver shared by every looping animation root (the Vibe mascot, the partner
+ * marquee, small status dots). It sets data-in="true" | "false" on each root;
  * CSS pauses the root's infinite animations while data-in is "false", so nothing loops off-screen.
  * Roots start without the attribute, so they animate until the first callback.
  */
