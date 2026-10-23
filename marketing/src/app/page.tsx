@@ -66,7 +66,7 @@ export default function HomePage() {
       <BackingStrip />
 
       <section className="paper-section" aria-labelledby="faq-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet u-split">
           <div className="sec-head">
             <p className="paper-meta">Questions</p>
             <h2 id="faq-title">Short <em>answers.</em></h2>
