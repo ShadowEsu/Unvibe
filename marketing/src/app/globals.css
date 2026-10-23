@@ -359,9 +359,10 @@
   Colors are stored as raw "R G B" triples so Tailwind can apply alpha values.
 */
 
-/* JetBrains Mono is fetched only after the page has loaded (layout.tsx), so it stays out of the first
-   paint. Until then mono text uses the system's own mono, scaled to JetBrains Mono's metrics (0.6 em
-   advance, 1.02 ascent, 0.30 descent, no line gap), so the swap moves nothing. */
+/* JetBrains Mono is fetched only on the first scroll, tap or key press, or 4 s after load (layout.tsx),
+   so it stays out of the first paint. Until then mono text uses the system's own mono, scaled to
+   JetBrains Mono's metrics (0.6 em advance, 1.02 ascent, 0.30 descent, no line gap), so the swap moves
+   nothing. */
 @font-face { font-family: "Unvibe Mono Menlo"; src: local("Menlo-Regular"), local("Menlo"); font-weight: 100 549; size-adjust: 99.67%; ascent-override: 102.34%; descent-override: 30.1%; line-gap-override: 0%; }
 @font-face { font-family: "Unvibe Mono Menlo"; src: local("Menlo-Bold"), local("Menlo Bold"); font-weight: 550 900; size-adjust: 99.67%; ascent-override: 102.34%; descent-override: 30.1%; line-gap-override: 0%; }
 @font-face { font-family: "Unvibe Mono Consolas"; src: local("Consolas"); font-weight: 100 549; size-adjust: 109.13%; ascent-override: 93.47%; descent-override: 27.49%; line-gap-override: 0%; }
