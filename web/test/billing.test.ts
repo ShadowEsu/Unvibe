@@ -222,6 +222,29 @@ test('Stripe subscription sync validates trusted price and quantities', async ()
   await assert.rejects(syncStripeSubscription(store, tampered, noStripe), /exactly one/i);
 });
 
+test('a live subscription event for a workspace with Pro Lifetime leaves Lifetime in place and is audited', async () => {
+  process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  // How grantLifetimeFromCheckout stores it: the one-time payment id stands in for a subscription id.
+  await store.syncSubscription({
+    workspaceId: workspace.id, plan: 'pro', interval: 'lifetime', status: 'active', seats: 1,
+    stripeCustomerId: 'cus_lifetime_kept', stripeSubscriptionId: 'pi_lifetime_kept', stripePriceId: 'price_pro_lifetime', cancelAtPeriodEnd: false,
+  });
+  const audits: string[] = [];
+  store.recordAudit = async (_userId, _workspaceId, action, metadata = {}) => { audits.push(`${action} ${String(metadata.stripeSubscriptionId)}`); };
+  const subscription = {
+    id: 'sub_over_lifetime', status: 'active', customer: 'cus_lifetime_kept', cancel_at_period_end: false, created: 1_797_000_000,
+    metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
+    items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
+  } as unknown as Stripe.Subscription;
+  await syncStripeSubscription(store, subscription, noStripe);
+  const overview = await store.overview(workspace.ownerUserId);
+  assert.equal(overview.subscription.interval, 'lifetime');
+  assert.equal(overview.subscription.status, 'active');
+  assert.deepEqual(audits, ['subscription.ignored_lifetime sub_over_lifetime']);
+});
+
 test('a cancel scheduled with cancel_at (how the Stripe portal cancels on dahlia) counts as ending at period end', async () => {
   process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
   const store = new MemoryBillingStore();
