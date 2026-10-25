@@ -400,7 +400,7 @@ function Widget() {
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
-  const offer = usage ? limitOfferCopy(usage.plan, usage) : null;
+  const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
   const [revealedText, setRevealedText] = useState('');
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
@@ -603,8 +603,8 @@ function Widget() {
     if (outOfExplanations) {
       setTabs((prev) => patchTab(prev, activeRef.current, {
         phase: 'error',
-        error: usage
-          ? limitOfferCopy(usage.plan, usage).body
+        error: offer
+          ? offer.body
           : 'You have reached your monthly explanation limit. Open Plan to upgrade.',
       }));
       return;

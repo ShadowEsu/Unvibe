@@ -745,6 +745,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
   }, []);
   const first = greetFirst(userName);
   const explainDisabled = !!usage && usage.remaining <= 0;
+  const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const startReview = () => window.unvibe.companionReview();
   const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 5);
   // Until the knowledge index has entries, show the latest saved lessons instead.
@@ -791,21 +792,21 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
           {chips.map((chip) => <span key={chip.many} className={`sticker sticker--${chip.tone}`}><b>{chip.n}</b> {chip.n === 1 ? chip.one : chip.many}</span>)}
         </div>
       ) : null}
-      {usage && usage.remaining <= 0 && (
+      {limitOffer && (
         <div className="limit-banner" role="status">
           <div>
-            <strong>{limitOfferCopy(usage.plan, usage).title}</strong>
-            <p>{limitOfferCopy(usage.plan, usage).body}</p>
+            <strong>{limitOffer.title}</strong>
+            <p>{limitOffer.body}</p>
           </div>
           <div className="limit-banner__actions">
-            {limitOfferCopy(usage.plan, usage).primaryKind === 'survey' ? (
+            {limitOffer.primaryKind === 'survey' ? (
               <button type="button" className="primary-btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
-                {limitOfferCopy(usage.plan, usage).primary}
+                {limitOffer.primary}
               </button>
             ) : (
-              <button type="button" className="primary-btn" onClick={onPlan}>{limitOfferCopy(usage.plan, usage).primary}</button>
+              <button type="button" className="primary-btn" onClick={onPlan}>{limitOffer.primary}</button>
             )}
-            {limitOfferCopy(usage.plan, usage).showPlan && limitOfferCopy(usage.plan, usage).primaryKind === 'survey' ? (
+            {limitOffer.showPlan && limitOffer.primaryKind === 'survey' ? (
               <button type="button" className="soft-btn" onClick={onPlan}>{proOpen ? 'Buy a subscription' : 'Pro opens soon'}</button>
             ) : null}
           </div>
