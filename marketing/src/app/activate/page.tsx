@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
 
@@ -31,6 +31,8 @@ export default function ActivatePage() {
   const [message, setMessage] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const emailField = useRef<HTMLInputElement>(null);
   const [authMessage, setAuthMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -174,6 +176,19 @@ export default function ActivatePage() {
     }
   }
 
+  /** The browser's own email check, shown inline: an empty or partial address never reaches Supabase. */
+  function submitMagicLink(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const field = emailField.current;
+    if (field && !field.checkValidity()) {
+      setEmailError(field.validity.valueMissing ? "Enter your email." : "Enter a full email address, like you@school.edu.");
+      field.focus();
+      return;
+    }
+    setEmailError("");
+    void sendMagicLink();
+  }
+
   return (
     <div className="activate-shell">
       <div className="activate-brand">Unvibe</div>
@@ -218,24 +233,37 @@ export default function ActivatePage() {
                 </button>
                 {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
                 <div className="activate-divider">or email a link</div>
-                <label className="activate-label" htmlFor="activate-email">Email</label>
-                <input
-                  id="activate-email"
-                  className="activate-field"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@school.edu"
-                />
-                <button
-                  className="activate-btn activate-btn--ghost"
-                  type="button"
-                  onClick={() => void sendMagicLink()}
-                  disabled={!configured || !email || authBusy}
-                >
-                  {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
-                </button>
+                <form noValidate onSubmit={submitMagicLink}>
+                  <label className="activate-label" htmlFor="activate-email">Email</label>
+                  <input
+                    ref={emailField}
+                    id="activate-email"
+                    className="activate-field"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setEmailError("");
+                    }}
+                    placeholder="you@school.edu"
+                    aria-invalid={Boolean(emailError)}
+                    aria-describedby={emailError ? "activate-email-error" : undefined}
+                  />
+                  {emailError && (
+                    <p className="activate-note activate-note--error activate-note--field" id="activate-email-error" role="alert">
+                      {emailError}
+                    </p>
+                  )}
+                  <button
+                    className="activate-btn activate-btn--ghost"
+                    type="submit"
+                    disabled={!configured || authBusy}
+                  >
+                    {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
+                  </button>
+                </form>
                 <div className="activate-divider">then</div>
               </div>
             )}

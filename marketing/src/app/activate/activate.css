@@ -211,6 +211,11 @@
   font-weight: 600;
 }
 
+/* Between the email field and its button. */
+.activate-note--field {
+  margin: -0.25rem 0 0.75rem;
+}
+
 .activate-success {
   padding: 0.4rem 0;
   text-align: center;
