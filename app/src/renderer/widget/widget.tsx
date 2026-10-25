@@ -387,6 +387,9 @@ function Widget() {
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
+  // While checkout is closed the panel says "Pro opens soon" instead of offering a purchase.
+  const [proOpen, setProOpen] = useState(false);
+  useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
@@ -796,7 +799,7 @@ function Widget() {
             </button>
             {offer.showPlan ? (
               <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
-                Buy a subscription
+                {proOpen ? 'Buy a subscription' : 'Pro opens soon'}
               </button>
             ) : null}
           </div>
@@ -906,11 +909,11 @@ function Widget() {
                     if (offer?.primaryKind === 'survey') void window.unvibe.openUrl(BETA_SURVEY_URL);
                     else window.unvibe.openPlan();
                   }}>
-                    {outOfExplanations && offer ? offer.primary : 'Upgrade to Pro'}
+                    {outOfExplanations && offer ? offer.primary : proOpen ? 'Upgrade to Pro' : 'Pro opens soon'}
                   </button>
                   {outOfExplanations && offer?.showPlan && offer.primaryKind === 'survey' ? (
                     <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
-                      Buy a subscription
+                      {proOpen ? 'Buy a subscription' : 'Pro opens soon'}
                     </button>
                   ) : (
                     <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>

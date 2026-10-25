@@ -23,8 +23,8 @@ const api = {
     ipcRenderer.on('bar:collapse', listener);
     return () => ipcRenderer.removeListener('bar:collapse', listener);
   },
-  onBarSettings: (cb: (settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; rotateIslandStats?: boolean; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => cb(settings);
+  onBarSettings: (cb: (settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => cb(settings);
     ipcRenderer.on('bar:settings', listener);
     return () => ipcRenderer.removeListener('bar:settings', listener);
   },
@@ -154,6 +154,8 @@ const api = {
 
   // plans + usage (network stays in the main process)
   billingOverview: () => ipcRenderer.invoke('billing:overview'),
+  /** Public: whether Pro checkout is open right now. */
+  billingStatus: (): Promise<{ paymentsOpen: boolean }> => ipcRenderer.invoke('billing:status'),
   usageGet: () => ipcRenderer.invoke('usage:get'),
   giftStatus: () => ipcRenderer.invoke('gift:status'),
   giftClaim: (codeOrLink: string) => ipcRenderer.invoke('gift:claim', codeOrLink) as Promise<{ ok: boolean; monthAdded?: boolean; error?: string }>,

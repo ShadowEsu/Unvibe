@@ -164,6 +164,21 @@ export async function claimGiftCode(token: string, code: string): Promise<{ mont
   return json(res);
 }
 
+/**
+ * Whether Pro checkout works right now (public GET /api/v1/billing/status, no sign-in, one boolean).
+ * Unknown (offline, older server) counts as closed, so the app never promises an upgrade it can't sell.
+ */
+export async function billingStatus(): Promise<{ paymentsOpen: boolean }> {
+  try {
+    const res = await request(`${BACKEND}/api/v1/billing/status`, { method: 'GET' });
+    if (!res.ok) return { paymentsOpen: false };
+    const body = (await res.json().catch(() => ({}))) as { paymentsOpen?: unknown };
+    return { paymentsOpen: body.paymentsOpen === true };
+  } catch {
+    return { paymentsOpen: false };
+  }
+}
+
 export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {
   const result = await json<{ url: string }>(await request(`${BACKEND}/api/v1/billing/checkout`, {
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(input),

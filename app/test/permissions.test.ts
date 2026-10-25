@@ -22,7 +22,7 @@ test('renderer permissions allow clipboard writes and audio only', () => {
 
 test('only https and mailto links open externally', () => {
   assert.equal(isSafeExternalUrl('https://unvibe.site/help'), true);
-  assert.equal(isSafeExternalUrl('mailto:support@unvibe.site'), true);
+  assert.equal(isSafeExternalUrl('mailto:hello@unvibe.site'), true);
   assert.equal(isSafeExternalUrl('http://insecure.example'), false);
   assert.equal(isSafeExternalUrl('file:///etc/passwd'), false);
   assert.equal(isSafeExternalUrl('javascript:alert(1)'), false);

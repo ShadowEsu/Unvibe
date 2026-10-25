@@ -81,8 +81,6 @@ export interface Settings {
   barHoverPreview: boolean;
   /** Intent delay before a pointer opens the Island (120–600ms). */
   barHoverDelayMs: number;
-  /** Cycle compact Island learning stats automatically. */
-  rotateIslandStats: boolean;
   /** Compact Island scale. Medium matches a Mac notch. */
   barSize: BarSize;
   /** Follow the display under the pointer when positioning the learning strip. */
@@ -147,7 +145,6 @@ const DEFAULTS: Settings = {
   barVisibility: 'always',
   barHoverPreview: true,
   barHoverDelayMs: 160,
-  rotateIslandStats: true,
   barSize: 'medium',
   followActiveDisplay: true,
   soundEffects: true,

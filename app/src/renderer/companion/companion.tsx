@@ -58,7 +58,6 @@ interface Settings {
   onboarded: boolean; shortcut: string; barPosition: string;
   barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
   barHoverDelayMs: number;
-  rotateIslandStats: boolean;
   barSize: 'small' | 'medium' | 'large';
   followActiveDisplay: boolean; soundEffects: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
@@ -732,6 +731,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
 }) {
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
+  const [proOpen, setProOpen] = useState(false);
   useEffect(() => {
     void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
       const next = result as { ok?: boolean; brief?: ChangeBrief };
@@ -741,6 +741,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
       const next = result as { ok?: boolean; items?: KnowledgeObject[] };
       if (next?.ok) setKnowledge(next.items ?? []);
     });
+    void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen));
   }, []);
   const first = greetFirst(userName);
   const explainDisabled = !!usage && usage.remaining <= 0;
@@ -763,11 +764,18 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
   const concepts = (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0);
+  // Design audit 2026-10-22 item 5: count what was done, hide zero counters, no streak chip.
+  const chips = [
+    { tone: 'sky', n: profile?.reviews ?? 0, one: 'explanation', many: 'explanations' },
+    { tone: 'lime', n: profile?.linesReviewed ?? 0, one: 'line explained', many: 'lines explained' },
+    { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
+    { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
+  ].filter((chip) => chip.n > 0);
   const streak = profile?.streak ?? 0;
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
   const note = explainDisabled ? 'out of explains this month, catch you soon'
     : brief ? 'you changed some code, want the story?'
-      : (profile?.understood ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
+      : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
         : streak > 1 ? `${streak} days in a row, nice!` : 'ready when you are';
   return (
     <div className="today">
@@ -778,12 +786,11 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
           <p className="hand-note">{note}</p>
         </div>
       </header>
-      <div className="stickers" aria-label="Learning overview">
-        <span className="sticker sticker--lime"><b>{profile?.linesUnderstood ?? 0}</b> lines understood</span>
-        <span className="sticker sticker--sky"><b>{profile?.understood ?? 0}</b> reviews</span>
-        <span className="sticker sticker--sun"><b>{streak}</b> day streak</span>
-        <span className="sticker sticker--lilac"><b>{concepts}</b> concepts</span>
-      </div>
+      {chips.length ? (
+        <div className="stickers" aria-label="Learning overview">
+          {chips.map((chip) => <span key={chip.many} className={`sticker sticker--${chip.tone}`}><b>{chip.n}</b> {chip.n === 1 ? chip.one : chip.many}</span>)}
+        </div>
+      ) : null}
       {usage && usage.remaining <= 0 && (
         <div className="limit-banner" role="status">
           <div>
@@ -799,7 +806,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
               <button type="button" className="primary-btn" onClick={onPlan}>{limitOfferCopy(usage.plan, usage).primary}</button>
             )}
             {limitOfferCopy(usage.plan, usage).showPlan && limitOfferCopy(usage.plan, usage).primaryKind === 'survey' ? (
-              <button type="button" className="soft-btn" onClick={onPlan}>Buy a subscription</button>
+              <button type="button" className="soft-btn" onClick={onPlan}>{proOpen ? 'Buy a subscription' : 'Pro opens soon'}</button>
             ) : null}
           </div>
         </div>
@@ -889,10 +896,10 @@ function Progress({ profile }: { profile: Profile | null }) {
       <div className="topline"><h1>Momentum</h1></div>
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
-        <article className="metric-card"><span className="v">{coverage ?? '—'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness ?? '—'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.reviews : '—'}</span><span className="l">Briefings completed</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '—'}</span><span className="l">Knowledge revisited</span><span className="note">{profile && profile.needsReview > 0 ? 'Marked to revisit' : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{freshness ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{profile ? profile.reviews : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
       </div>
       <div className="panel-card">
         <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
@@ -934,8 +941,11 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const [message, setMessage] = useState(compact ? '' : 'Loading plan…');
   const [busy, setBusy] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(true);
+  // Public checkout status (GET /api/v1/billing/status). Until it says open, Pro reads "opens soon".
+  const [proOpen, setProOpen] = useState(false);
 
   const load = async () => {
+    void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen));
     const usage = await window.unvibe.usageGet() as { ok: boolean; data?: AppUsageLine };
     if (usage.ok && usage.data) setLocalUsage(usage.data);
     if (!signedIn) {
@@ -1061,7 +1071,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
 
         {showUpgrade && upgradeIsPro && (
           <article className="plan-pick__card is-upgrade">
-            <span>Upgrade available</span>
+            <span>{proOpen ? 'Upgrade available' : 'Pro opens soon'}</span>
             {upgradeIsPro ? (
               <>
                 <h2>Pro {interval === 'annual' ? '$81/yr' : '$9/mo'}</h2>
@@ -1080,10 +1090,10 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
                   type="button"
                   className="primary-btn"
                   onClick={() => void checkout()}
-                  disabled={busy || (signedIn && !available)}
+                  disabled={busy || !proOpen || (signedIn && !available)}
                   aria-describedby="pro-renewal-terms"
                 >
-                  {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
+                  {!proOpen ? 'Pro opens soon' : signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
                 </button>
               </>
             ) : null}
@@ -1553,10 +1563,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
                   {([['small', 'Small'], ['medium', 'Notch'], ['large', 'Large']] as const).map(([size, label]) => <button key={size} type="button" className={settings.barSize === size ? 'on' : ''} onClick={() => void onSettings({ barSize: size })}>{label}</button>)}
                 </div>
               </div>
-              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Recommended: show it only while learning. Select code anywhere and press {prettyAccel(settings.shortcut)} whenever you want to start.</div></div><select className="sel-input" aria-label="Quiet Island visibility" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
+              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Always available keeps the Island at the edge of your screen between reviews. During reviews only hides it until you press {prettyAccel(settings.shortcut)}.</div></div><select className="sel-input" aria-label="Quiet Island visibility" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle label="Expand on hover" on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
-              <div className="setrow"><div><div className="sl">Rotate learning stats</div><div className="sd">Cycle through streak, lines understood, and completed reviews in the compact top Island.</div></div><Toggle label="Rotate learning stats" on={settings.rotateIslandStats} onClick={() => onSettings({ rotateIslandStats: !settings.rotateIslandStats })} /></div>
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle label="Follow active display" on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
                 <select className="sel-input" aria-label="Inactive widget" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
@@ -1600,16 +1609,16 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Privacy & Data' && (
             <>
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and Chat messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
-              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
+              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. On Pro, explanations also include parts of nearby files from the same project. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
               {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send anonymous setup progress</div><div className="sd">Tells Unvibe the date this install finished setup, allowed Accessibility, signed in, and saw or answered a setup question. Tied to a random install ID, never your code, files or email. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send anonymous setup progress" on={settings.shareSetupProgress !== false} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress === false })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
-              <div className="setrow"><div><div className="sl">Support</div><div className="sd">support@unvibe.site · preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</button></div>
+              <div className="setrow"><div><div className="sl">Support</div><div className="sd">hello@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:hello@unvibe.site')}>Email →</button></div>
             </>
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:preston@unvibe.site')}>Email →</button></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">hello@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:hello@unvibe.site')}>Email →</button></div></>}
         </div>
       </div>
     </div>

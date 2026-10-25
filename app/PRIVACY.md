@@ -11,10 +11,12 @@ Unvibe is a desktop application that helps you understand code. When you select 
 - Your chosen explanation depth
 - The programming language detected
 - Questions and Chat messages you type
+- On Pro, parts of nearby files from the same project, so an explanation can follow what the code calls
+- For Change Briefs and diff explanations, the git diff you chose
 
 ## What Unvibe does NOT do
 
-- Unvibe never sends your entire repository or project files
+- Unvibe never sends your entire repository, and sends project files only as described above
 - Unvibe never reads your screen or records your keystrokes outside of intentional selections
 - Unvibe never runs arbitrary code, executes commands, or modifies your files
 - Unvibe does not build its own model-training dataset from your code
@@ -49,4 +51,4 @@ You can delete your account and all associated data at any time from Settings â†
 
 ## Contact
 
-Questions about this policy: **support@unvibe.site** or **preston@unvibe.site**
+Questions about this policy: **hello@unvibe.site**

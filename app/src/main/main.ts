@@ -68,6 +68,7 @@ import {
   redeemDeviceAuth,
   accountInfo,
   billingOverview,
+  billingStatus,
   startBillingCheckout,
   startBillingPortal,
   giftProgress,
@@ -338,10 +339,12 @@ function accessibilityGranted(prompt = false): boolean {
 }
 
 /**
- * Builds without a stable signing identity get a new signature every release, and macOS then
- * treats the updated app as a stranger: the Accessibility switch still looks on but no longer
- * applies, so the shortcut cannot read a selection. After an update, if access was lost, clear
- * the stale entry and ask again once, with a clear note instead of a silent failure.
+ * Release builds are signed with the same certificate every time, so the designated requirement
+ * stays the same across updates (identical in v0.1.42 and v0.1.43, unsigned-install research
+ * 2026-10-22) and macOS should keep the Accessibility grant. Local ad-hoc builds still change
+ * identity, and macOS can then keep an entry that looks on but no longer applies. So, as a
+ * fallback: after an update, if access was lost, clear the stale entry and ask again once, with a
+ * clear note instead of a silent failure.
  */
 function repairAccessibilityAfterUpdate(): void {
   if (!isMac) return;
@@ -1244,13 +1247,12 @@ app.whenReady().then(() => {
     } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
-    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
         barSize: next.barSize,
         barHoverPreview: next.barHoverPreview,
         barHoverDelayMs: next.barHoverDelayMs,
-        rotateIslandStats: next.rotateIslandStats,
         soundEffects: next.soundEffects,
         soundVolume: next.soundVolume,
         soundStyle: next.soundStyle,
@@ -1314,14 +1316,14 @@ app.whenReady().then(() => {
       '',
       'Optional: attach a screenshot if it makes the issue easier to see.',
     ].join('\n'));
-    void shell.openExternal(`mailto:support@unvibe.site?subject=${subject}&body=${body}`);
+    void shell.openExternal(`mailto:hello@unvibe.site?subject=${subject}&body=${body}`);
     return { ok: true };
   });
 
   // --- permissions ---
   ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));
-  // Each new build has a new ad-hoc signature, so macOS can keep a stale Accessibility entry that
-  // looks switched on but no longer matches. Clear it for this app and ask again.
+  // macOS can keep a stale Accessibility entry that looks switched on but no longer matches this
+  // copy of Unvibe (for example after an ad-hoc local build). Clear it and ask again.
   ipcMain.handle('perms:resetAccessibility', async () => {
     if (!isMac) return { ok: true };
     await new Promise<void>((resolve) => execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => resolve()));
@@ -1376,6 +1378,14 @@ app.whenReady().then(() => {
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
+  // Plan card and panel copy: "Pro opens soon" while checkout is closed. The server caches 5 minutes too.
+  let billingStatusCache: { at: number; value: { paymentsOpen: boolean } } | null = null;
+  ipcMain.handle('billing:status', async () => {
+    if (billingStatusCache && Date.now() - billingStatusCache.at < 300_000) return billingStatusCache.value;
+    const value = await billingStatus();
+    billingStatusCache = { at: Date.now(), value };
+    return value;
+  });
   ipcMain.handle('billing:overview', async () => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in to view your plan and cloud usage.' };

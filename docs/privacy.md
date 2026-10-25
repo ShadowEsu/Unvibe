@@ -39,13 +39,22 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   reviewed in migrations but not proven against a staging project in this run.
 - Provider retention and model-training promises depend on the selected provider contract and
   deployment settings; they must be verified before public legal copy makes those claims.
-- The desktop app sends no product analytics. Its build has no PostHog or other analytics
-  client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing, so there is no
-  usage toggle in Settings. The website's Mixpanel and PostHog tracking is described on
-  unvibe.site/privacy. Incident-response alerting is still not configured.
-- Without an account, each cloud explanation carries a random install ID
-  (`app/src/main/backend.ts` `aiAuthHeaders`) used to count free explanations and record a few
-  dates; see unvibe.site/privacy. Signed in, the app sends only the session token.
+- The desktop app sends no product analytics. Its build has no PostHog, Mixpanel or other
+  analytics client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing. The
+  website's Mixpanel and PostHog tracking is described on unvibe.site/privacy. Incident-response
+  alerting is still not configured.
+- Without an account, each cloud explanation and the launch usage check carry a random install ID
+  (`app/src/main/backend.ts` `aiAuthHeaders`), the OS family (`mac`/`win`) and the app version.
+  The server stores, per hashed install ID: when the app first started, its OS family and starting
+  version (set once), explanation counts, and the first time it explained the setup sample, its
+  own code, and again on a later day in its first week (`return`). Signed in, the app sends only
+  the session token.
+- Sealed trial builds also send write-once setup progress to `POST /api/v1/trial/progress`
+  (`app/src/main/progress.ts`): setup finished, Accessibility asked and allowed (Mac), signed in
+  (UTC day only), level question answered, launch-at-login question shown and accepted. One
+  timestamp per step, no code, file names, email or IP. Settings, Privacy & Data, "Send anonymous
+  setup progress" turns these off; it does not cover the rows above, which come from requests the
+  app makes anyway. The public privacy page must describe this before a release that sends them.
 
 ## Required before inviting external beta users
 
