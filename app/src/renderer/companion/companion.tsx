@@ -72,6 +72,7 @@ interface Settings {
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
   sidebarWidth: number;
   sidebarHidden: boolean;
+  shareSetupProgress: boolean;
   features: {
     changeBrief: boolean;
     whyExists: boolean;
@@ -1408,7 +1409,7 @@ function IntegrationsPanel() {
 const SETTINGS_FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice, initialTab = 'General' }: {
-  info: { version: string }; account: Account; settings: Settings;
+  info: { version: string; sendsSetupProgress?: boolean }; account: Account; settings: Settings;
   onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void; onNotice: (message: string) => void;
   initialTab?: string;
 }) {
@@ -1575,6 +1576,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <>
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and Chat messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Only the exact, filtered snippet you review is sent — nothing else.</div></div></div>
+              {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send anonymous setup progress</div><div className="sd">Tells Unvibe the date this install finished setup, allowed Accessibility, signed in, and saw or answered a setup question. Tied to a random install ID, never your code, files or email. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send anonymous setup progress" on={settings.shareSetupProgress !== false} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress === false })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
               <div className="setrow"><div><div className="sl">Support</div><div className="sd">support@unvibe.site · preston@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</button></div>
@@ -1596,7 +1598,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
-  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: reviewKeyHint });
+  const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: reviewKeyHint, sendsSetupProgress: false });
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -1628,7 +1630,7 @@ function App() {
         window.unvibe.syncStatus() as Promise<SyncStatus>,
         window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
-        window.unvibe.appInfo() as Promise<{ version: string; user: string; shortcut: string }>,
+        window.unvibe.appInfo(),
       ]);
       setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
       setInfo(appInfo);

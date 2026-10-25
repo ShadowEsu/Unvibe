@@ -56,6 +56,7 @@ import { applyLoginItem, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
+import { reportProgress, syncProgress } from './progress';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
   signIn,
@@ -310,6 +311,7 @@ async function persistAccount(account: BackendAccount): Promise<void> {
   invalidateAppUsage();
   try {
     store().setAccount(account.userId, account.email, account.token);
+    reportProgress('signed_in');
   } catch (error) {
     try {
       await revokeSession(account.token);
@@ -321,9 +323,12 @@ async function persistAccount(account: BackendAccount): Promise<void> {
   }
 }
 
+/** True when macOS lets Unvibe read selections. The first true is reported as setup progress. */
 function accessibilityGranted(prompt = false): boolean {
   if (!isMac) return true;
-  return systemPreferences.isTrustedAccessibilityClient(prompt);
+  const granted = systemPreferences.isTrustedAccessibilityClient(prompt);
+  if (granted) reportProgress('accessibility');
+  return granted;
 }
 
 /**
@@ -558,7 +563,12 @@ app.whenReady().then(() => {
   // Open the backend connection and fetch usage early so the first explanation starts faster.
   setTimeout(() => {
     warmBackend();
-    void refreshAppUsage().catch(() => undefined);
+    // The usage check creates the server's install row, so setup progress goes after it.
+    void refreshAppUsage().catch(() => undefined).finally(() => void syncProgress({
+      onboarded: settings().all().onboarded,
+      accessibilityGranted: isMac && accessibilityGranted(false),
+      signedIn: Boolean(store().token()),
+    }));
   }, 1200);
   powerMonitor.on('resume', warmBackend);
   powerMonitor.on('unlock-screen', warmBackend);
@@ -905,6 +915,8 @@ app.whenReady().then(() => {
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
     version: app.getVersion(),
+    // Only sealed trial builds send setup progress, so only they show its setting.
+    sendsSetupProgress: trialBuildEnabled() && !fullProductBuildEnabled(),
     user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
   }));
@@ -1314,6 +1326,7 @@ app.whenReady().then(() => {
   ipcMain.on('onboarding:explainSample', () => void startReview({ sample: true }));
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
+    reportProgress('onboarded');
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });

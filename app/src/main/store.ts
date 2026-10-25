@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { LocalEvent, Outcome } from '../core/learning';
+import type { ProgressStep } from './progress';
 import { localDayKey } from '../core/learning';
 import { openToken, sealToken } from '../core/tokenVault';
 import { mergeRemoteEvents } from '../core/syncModel';
@@ -59,6 +60,8 @@ interface Data {
   deletedIds?: string[];
   /** Saved Ask Unvibe conversations. Local only — never synced to the backend. */
   chatThreads?: ChatThread[];
+  /** Setup-progress steps the server has acknowledged (progress.ts), so a step is sent once. */
+  progressSent?: Partial<Record<ProgressStep, true>>;
 }
 
 const CHAT_THREAD_CAP = 30;
@@ -336,6 +339,15 @@ class Store {
     this.data.installId = randomUUID().replace(/-/g, '');
     this.save();
     return this.data.installId;
+  }
+
+  progressSent(step: ProgressStep): boolean {
+    return this.data.progressSent?.[step] === true;
+  }
+
+  markProgressSent(step: ProgressStep): void {
+    this.data.progressSent = { ...this.data.progressSent, [step]: true };
+    this.save();
   }
 
   signOut(): void {

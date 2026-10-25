@@ -125,6 +125,11 @@ export interface Settings {
   features: FeatureFlags;
   /** ISO timestamp while Live mode is snoozed. */
   liveSnoozeUntil?: string;
+  /**
+   * Send anonymous setup progress (instrumentation spec 5 and 10): one date each for setup
+   * finished, Accessibility allowed, signed in and similar steps, tied to the random install ID.
+   */
+  shareSetupProgress: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -164,6 +169,7 @@ const DEFAULTS: Settings = {
   sidebarHidden: false,
   giftCode: '',
   features: DEFAULT_FEATURES,
+  shareSetupProgress: true,
 };
 
 class SettingsStore {
