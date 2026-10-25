@@ -1915,9 +1915,11 @@ html[data-performance="lite"] .paper-story__meter { display: none; }
   border-top: 1px solid var(--u-line);
 }
 
-/* The feedback pill sits in the bottom-left corner on desktop; the last row scrolls clear of it. */
+/* The feedback pill sits in the bottom-left corner on desktop (20px up, 40px tall): the last row scrolls
+   clear of it, and keyboard focus scrolls footer links above it instead of just into view under it. */
 @media (min-width: 768px) {
-  .paper-footer__legal { padding-bottom: 4.5rem !important; }
+  html { scroll-padding-bottom: 5rem; }
+  .paper-footer__legal { padding-bottom: 5rem !important; }
 }
 
 .paper-footer__star {
