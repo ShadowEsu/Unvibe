@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 
@@ -16,8 +17,10 @@ const links = [
 /**
  * One dark bar pinned to the top of every page. On phones the menu opens inside the bar
  * (no overlay sheet); Escape or any link closes it and focus returns to the toggle.
+ * /activate is a full-screen card over the page, so the bar is not rendered there.
  */
 export function Nav() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
 
@@ -31,6 +34,8 @@ export function Nav() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  if (pathname?.startsWith("/activate")) return null;
 
   return (
     <header className={open ? "mnav is-open" : "mnav"}>
