@@ -51,7 +51,7 @@ import {
   type ReviewSession,
   type RequestOpts,
 } from './review';
-import { store, type ChatThread } from './store';
+import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
@@ -304,6 +304,11 @@ async function startBuiltReview(
 
 onSyncStatus((status) => {
   if (companion && !companion.isDestroyed()) companion.webContents.send('sync:status', status);
+});
+
+// Lessons saved from the panel, sync or the Library show in a companion that stays open but unfocused.
+onLearningChanged(() => {
+  if (companion && !companion.isDestroyed()) companion.webContents.send('learning:changed');
 });
 
 async function persistAccount(account: BackendAccount): Promise<void> {

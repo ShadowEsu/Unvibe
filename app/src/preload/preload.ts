@@ -102,6 +102,12 @@ const api = {
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),
   onSyncStatus: (cb: (status: unknown) => void) => ipcRenderer.on('sync:status', (_e, status) => cb(status)),
+  /** A saved lesson, outcome, note, sync merge or removal changed what the companion lists. */
+  onLearningChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('learning:changed', listener);
+    return () => { ipcRenderer.removeListener('learning:changed', listener); };
+  },
 
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
