@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
 import type { ExplanationLevel } from '../core/protocol';
+import { LOGIN_LAUNCH_ARG } from '../core/loginItem';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
@@ -323,15 +324,26 @@ class SettingsStore {
   }
 }
 
+/**
+ * Where the OS login item points. Windows passes LOGIN_LAUNCH_ARG so a login launch starts quietly;
+ * reading the item back needs the same path and args.
+ */
+function loginItemTarget(): { path?: string; args?: string[] } {
+  if (!IS_WIN) return {};
+  // The portable build runs from a temp extraction; the login item must start the .exe itself.
+  const portable = process.env.PORTABLE_EXECUTABLE_FILE;
+  return portable ? { path: portable, args: [LOGIN_LAUNCH_ARG] } : { args: [LOGIN_LAUNCH_ARG] };
+}
+
 /** Registers (or removes) the OS login item. macOS and Windows only. */
 export function applyLoginItem(openAtLogin: boolean): void {
-  if (process.platform === 'darwin') {
-    app.setLoginItemSettings({ openAtLogin });
-  } else if (IS_WIN) {
-    // The portable build runs from a temp extraction; the login item must start the .exe itself.
-    const portable = process.env.PORTABLE_EXECUTABLE_FILE;
-    app.setLoginItemSettings(portable ? { openAtLogin, path: portable } : { openAtLogin });
-  }
+  if (process.platform !== 'darwin' && !IS_WIN) return;
+  app.setLoginItemSettings({ openAtLogin, ...loginItemTarget() });
+}
+
+/** The OS's own view of the login item, which may differ from the setting. */
+export function loginItemState(): Electron.LoginItemSettings {
+  return app.getLoginItemSettings(loginItemTarget());
 }
 
 let singleton: SettingsStore | null = null;

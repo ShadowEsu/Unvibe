@@ -61,6 +61,8 @@ interface Data {
   chatThreads?: ChatThread[];
   /** Setup-progress steps the server has acknowledged (progress.ts), so a step is sent once. */
   progressSent?: Partial<Record<ProgressStep, true>>;
+  /** The launch-at-login question was shown (either answer), so it is never asked again. */
+  loginPromptAsked?: true;
 }
 
 const CHAT_THREAD_CAP = 30;
@@ -320,6 +322,15 @@ class Store {
 
   markProgressSent(step: ProgressStep): void {
     this.data.progressSent = { ...this.data.progressSent, [step]: true };
+    this.save();
+  }
+
+  loginPromptAsked(): boolean {
+    return this.data.loginPromptAsked === true;
+  }
+
+  markLoginPromptAsked(): void {
+    this.data.loginPromptAsked = true;
     this.save();
   }
 
