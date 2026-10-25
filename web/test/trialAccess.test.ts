@@ -164,3 +164,37 @@ test('the first online launch stores platform and first version on insert only',
     globalThis.fetch = previousFetch;
   }
 });
+
+test('before the funnel migration, the first trial explanation still creates the install and starts its 30 days', async () => {
+  process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = '50';
+  process.env.SUPABASE_URL = 'https://premigration.supabase.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'local-service-key';
+  const previousFetch = globalThis.fetch;
+  let startedAt: string | null = null;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/rest/v1/rpc/trial_reserve') return Response.json(1);
+    if (url.pathname === '/rest/v1/trial_installs') {
+      if (init?.method !== 'POST') return Response.json(startedAt ? [{ started_at: startedAt }] : []);
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      if ('platform' in body || 'first_version' in body) {
+        return Response.json({ code: 'PGRST204', message: "Could not find the 'first_version' column of 'trial_installs' in the schema cache" }, { status: 400 });
+      }
+      startedAt ??= String(body.started_at);
+      return new Response(null, { status: 201 });
+    }
+    if (url.pathname === '/rest/v1/trial_counters') return Response.json([]);
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  }) as typeof fetch;
+  try {
+    const key = trialInstallKey('premigration-install-0001');
+    const meta = { platform: 'mac' as const, firstVersion: '0.1.44' };
+    const first = await reserveTrialAction(key, 'ai_explanation', IP, new Date('2026-10-01T00:00:00.000Z'), meta);
+    assert.equal(first.denied, null);
+    assert.equal(startedAt, '2026-10-01T00:00:00.000Z');
+    const later = await reserveTrialAction(key, 'ai_explanation', IP, new Date('2026-11-02T00:00:00.000Z'), meta);
+    assert.equal(later.denied?.status, 429, 'the trial clock started on the first launch');
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});

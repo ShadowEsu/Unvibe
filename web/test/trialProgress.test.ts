@@ -16,6 +16,7 @@ interface Upsert {
 let installs: Set<string>;
 let upserts: Upsert[];
 let rateLimitFull: boolean;
+let kindCheckRejects: boolean;
 let rateLimitCalls: number;
 
 beforeEach(() => {
@@ -25,6 +26,7 @@ beforeEach(() => {
   installs = new Set();
   upserts = [];
   rateLimitFull = false;
+  kindCheckRejects = false;
   rateLimitCalls = 0;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -41,6 +43,9 @@ beforeEach(() => {
     }
     if (url.pathname === '/rest/v1/trial_activation') {
       const headers = new Headers(init?.headers);
+      if (kindCheckRejects) {
+        return Response.json({ code: '23514', message: 'new row for relation "trial_activation" violates check constraint "trial_activation_kind_check"' }, { status: 400 });
+      }
       upserts.push({ body: JSON.parse(String(init?.body)) as Record<string, unknown>, prefer: headers.get('prefer') ?? '' });
       return new Response(null, { status: 201 });
     }
@@ -146,4 +151,14 @@ test('rate limited per network like the trial AI routes', async () => {
   assert.equal(response.status, 429);
   assert.equal(rateLimitCalls, 1);
   assert.equal(upserts.length, 0);
+});
+
+test('before the funnel migration allows the kind, 503 so the app retries, then stored once it is applied', async () => {
+  const id = 'progress-install-premigration';
+  installs.add(trialInstallKey(id));
+  kindCheckRejects = true;
+  assert.equal((await ping(id, { step: 'onboarded' })).status, 503);
+  kindCheckRejects = false;
+  assert.equal((await ping(id, { step: 'onboarded' })).status, 204);
+  assert.equal(upserts.length, 1);
 });

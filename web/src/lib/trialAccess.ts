@@ -202,13 +202,17 @@ async function readInstall(installKey: string, now = new Date(), meta: TrialInst
     }
     return record;
   }
-  const { error: writeError } = await db
-    .from('trial_installs')
-    .upsert(
-      { install_key: installKey, started_at: now.toISOString(), platform: meta.platform, first_version: meta.firstVersion },
-      { onConflict: 'install_key', ignoreDuplicates: true },
-    );
-  if (writeError) console.error('trial install record write failed', writeError.message);
+  const row = { install_key: installKey, started_at: now.toISOString() };
+  // Until 20261025120000_trial_funnel.sql is applied, platform and first_version do not exist and an
+  // insert naming them fails. The install row itself (the trial clock) must still be created.
+  const attempts = meta.platform !== null || meta.firstVersion !== null
+    ? [{ ...row, platform: meta.platform, first_version: meta.firstVersion }, row]
+    : [row];
+  for (const values of attempts) {
+    const { error: writeError } = await db.from('trial_installs').upsert(values, { onConflict: 'install_key', ignoreDuplicates: true });
+    if (!writeError) break;
+    console.error('trial install record write failed', writeError.message);
+  }
   const { data, error } = await db.from('trial_installs').select('started_at').eq('install_key', installKey).maybeSingle();
   if (error) console.error('trial install record read failed', error.message);
   const startedAt = typeof data?.started_at === 'string' ? data.started_at : now.toISOString();

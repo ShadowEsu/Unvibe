@@ -7,6 +7,10 @@
 -- The inline check from 20261018160000 gets Postgres's default name trial_activation_kind_check;
 -- confirm with \d public.trial_activation before applying.
 --
+-- The API may deploy before this is applied. Until then installs are created without platform and
+-- first_version, the `return` marker is skipped, and POST /api/v1/trial/progress answers 503 for
+-- the new kinds, so the app keeps them and retries on later launches.
+--
 -- Rollback (deletes the new marker rows first, or the old check cannot be restored):
 --   delete from public.trial_activation where kind not in ('sample', 'code');
 --   alter table public.trial_activation drop constraint if exists trial_activation_kind_check;

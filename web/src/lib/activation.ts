@@ -130,21 +130,24 @@ export async function recordActivation(
  * Store one app-reported progress marker. Only for an install that already has its trial_installs
  * row: a ping never creates an install or starts a trial clock, and random install IDs (the trial
  * token ships in the app) cannot leave orphan rows. `signed_in` keeps only the UTC day.
- * Returns 'no_install' when the row is missing (the app retries on its next launch), else 'done'
- * (written, already there, or a logged storage error). Never throws.
+ * Returns 'no_install' when the row is missing and 'unavailable' on a logged storage error (the
+ * app retries both on its next launch), else 'done' (written or already there). A storage error
+ * includes the new kinds' check failing before 20261025120000_trial_funnel.sql is applied, so no
+ * step is marked sent that was never stored. Never throws.
  */
-export async function recordProgress(installKey: string, kind: ProgressKind, now = new Date()): Promise<'done' | 'no_install'> {
+export async function recordProgress(installKey: string, kind: ProgressKind, now = new Date()): Promise<'done' | 'no_install' | 'unavailable'> {
   const db = serviceSupabase();
   const marker = `${kind}:${installKey}`;
   if (!db || written.has(marker)) return 'done';
   const { data, error } = await db.from('trial_installs').select('install_key').eq('install_key', installKey).maybeSingle();
   if (error) {
     console.error('progress install read failed', error.message);
-    return 'done';
+    return 'unavailable';
   }
   if (!data) return 'no_install';
   const at = new Date(now);
   if (kind === 'signed_in') at.setUTCHours(0, 0, 0, 0);
-  if (await writeMarker(db, installKey, kind, at)) written.add(marker);
+  if (!await writeMarker(db, installKey, kind, at)) return 'unavailable';
+  written.add(marker);
   return 'done';
 }
