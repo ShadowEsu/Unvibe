@@ -1466,6 +1466,11 @@ html[data-performance="lite"] .ambient__orb {
   font-size: 0.8rem;
 }
 
+/* The theme control needs JS (the boot script adds .js); without it the page is light and the control does nothing. */
+html:not(.js) .paper-footer__theme {
+  display: none;
+}
+
 .paper-footer__dot {
   width: 7px;
   height: 7px;
