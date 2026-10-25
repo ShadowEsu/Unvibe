@@ -142,7 +142,7 @@ async function windowsDetectAndCopy(): Promise<string | null> {
  * before opening Unvibe. It is still entirely on-device; this mode avoids relying on macOS
  * focus timing after the external application link has been handled.
  */
-export async function captureSelection(options: { preferClipboard?: boolean } = {}): Promise<CaptureResult> {
+export async function captureSelection(options: { preferClipboard?: boolean; fromApp?: string } = {}): Promise<CaptureResult> {
   if (options.preferClipboard) {
     const copied = clipboard.readText();
     return copied.trim().length > 0 ? { code: copied } : { code: null, error: 'empty' };
@@ -167,7 +167,10 @@ export async function captureSelection(options: { preferClipboard?: boolean } = 
       }
     } else {
       const front = await frontmostApp();
-      if (isSelfApp(front) && lastForeignApp) {
+      if (options.fromApp) {
+        // After the Accessibility grant: back to the app the shortcut was pressed in.
+        await activateApp(options.fromApp);
+      } else if (isSelfApp(front) && lastForeignApp) {
         await activateApp(lastForeignApp);
       } else if (!isSelfApp(front) && front) {
         lastForeignApp = front;

@@ -612,7 +612,7 @@
   & .ob2 .ob__integrations { max-height: 300px; overflow: auto; padding-right: 4px; }
   & .ob2 .ob__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 
-  /* First run: a real sample to explain, then the shortcut and its one permission */
+  /* First run: a real sample to explain, one level question, then your own code */
   & .ob2__try { display: grid; gap: 12px; justify-items: stretch; }
   & .obd__editor { position: relative; border: 1.5px solid var(--v-ink); border-radius: 14px; background: #151514; overflow: hidden; box-shadow: var(--hard-sm); text-align: left; }
   & .obd__bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid #2c2c29; }
@@ -626,6 +626,11 @@
   & .ob2__keys { display: flex; justify-content: center; gap: 8px; }
   & .ob2__keys .kbd-lg { display: grid; place-items: center; min-width: 52px; height: 52px; padding: 0 12px; border-radius: 12px; font: 700 22px var(--font-sans); }
   & .perm-steps { margin: 8px 0 0; font-size: 13.5px; color: var(--v-ink); }
+  & .ob2__level { display: grid; gap: 8px; justify-items: center; margin: 0; padding: 12px 14px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
+  & .ob2__level p { margin: 0; font-size: 14.5px; color: var(--v-ink); text-align: center; }
+  & .ob2__choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  & .ob2__task { margin: 0; font-size: 16px; font-weight: 650; color: var(--v-ink); text-align: center; }
+  & .ob2__alt { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
 
   & .ob__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
   & .ob__confetti i { position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border: 1.5px solid var(--v-ink); border-radius: 3px; background: var(--lime); animation: obConfetti 1.6s cubic-bezier(.2,.7,.4,1) forwards; animation-delay: calc(var(--i) * 18ms); }

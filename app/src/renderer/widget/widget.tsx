@@ -172,7 +172,10 @@ function ResizeGrips() {
   );
 }
 
-/** Calm fallback when ⌘U finds no selection — pick a source, never hard-error. */
+/**
+ * Calm fallback when ⌘U finds no selection: pick a source, never hard-error. On a Mac without
+ * Accessibility it is the one-button pre-permission screen instead (first-run spec, change 2).
+ */
 function EmptyPicker({
   shortcut,
   level,
@@ -186,12 +189,62 @@ function EmptyPicker({
   const [picking, setPicking] = useState(false);
   // On macOS the shortcut copies your selection through Accessibility. Without it the shortcut lands here.
   const [needsAccess, setNeedsAccess] = useState(false);
+  const [asked, setAsked] = useState(false);
+  const [grantNote, setGrantNote] = useState('');
   useEffect(() => {
-    void window.unvibe.accessibility().then((r) => {
+    let alive = true;
+    let missing = false;
+    const check = () => void window.unvibe.accessibility().then((r) => {
       const res = r as { granted?: boolean; platform?: string };
-      setNeedsAccess(res.platform === 'darwin' && res.granted === false);
+      const nowMissing = res.platform === 'darwin' && res.granted === false;
+      if (!alive) return;
+      setNeedsAccess(nowMissing);
+      // The grant just arrived: explain the selection already made, or say what to do in one line.
+      if (missing && !nowMissing) {
+        void window.unvibe.explainAfterGrant().then((result) => {
+          if (alive && !result.explained) setGrantNote(`Unvibe can read your selection now. Select the code again and press ${shortcut}.`);
+        });
+      }
+      missing = nowMissing;
     });
-  }, []);
+    check();
+    // Reflect a grant made in System Settings without a manual re-check.
+    const timer = window.setInterval(() => { if (missing) check(); }, 2000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [shortcut]);
+  const allowAccess = async () => {
+    setAsked(true);
+    await window.unvibe.promptAccessibility();
+    await window.unvibe.openAccessibility();
+  };
+
+  if (needsAccess) {
+    return (
+      <div className="state empty-picker">
+        <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
+        <div className="big">{shortcut} can’t read your selection yet.</div>
+        <div className="sub">Unvibe needs Accessibility to copy what you selected. macOS asks once, and Unvibe never reads your keystrokes or your screen.</div>
+        <div className="empty-actions">
+          <button className="btn" onClick={() => void allowAccess()}>Continue</button>
+        </div>
+        {asked ? (
+          <div className="access-note" role="status">
+            In the list that opened, switch <b>Unvibe</b> on. This panel then explains your selection.
+            <div><b>Switched it on and nothing happened?</b> macOS may hold an old Unvibe entry from a previous version. Press Fix it, switch Unvibe on again, restart Unvibe, then press {shortcut} again.</div>
+            <div className="empty-actions">
+              <button className="btn ghost" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
+              <button className="btn ghost" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+            </div>
+          </div>
+        ) : null}
+        <div className="empty-actions">
+          <button className="btn ghost" onClick={() => window.unvibe.useClipboard({ level })}>
+            Explain my clipboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const chooseFile = async () => {
     setHint('');
@@ -225,15 +278,7 @@ function EmptyPicker({
       <div className="sub">
         Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
       </div>
-      {needsAccess ? (
-        <div className="access-note" role="alert">
-          <b>{shortcut} can’t read your selection yet.</b> Unvibe needs Accessibility to copy what you selected. Turn Unvibe on, then restart it.
-          <div className="empty-actions">
-            <button className="btn" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
-            <button className="btn ghost" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
-          </div>
-        </div>
-      ) : null}
+      {grantNote ? <div className="access-note" role="status">{grantNote}</div> : null}
       <div className="empty-actions">
         <button className="btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
           Explain my clipboard

@@ -442,8 +442,9 @@ const SAMPLE_LINES = [
 
 /**
  * First run in three steps, built so the first real explanation lands within a minute:
- * 1 hello (name optional), 2 explain a sample for real (no permission needed),
- * 3 use the shortcut anywhere (the Mac Accessibility ask lives here, with its reason).
+ * 1 hello (name optional), 2 explain a sample for real (no permission needed), then one skippable
+ * level question, 3 try it on your own code (or the clipboard). The Mac Accessibility ask waits for
+ * the first shortcut press, where the review panel shows it with its reason (first-run spec, change 2).
  * Google sign-in and editor bridges are optional and stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
@@ -454,6 +455,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [saveError, setSaveError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
   const [explained, setExplained] = useState(false);
+  const [sampleDone, setSampleDone] = useState(false);
+  const [levelSaved, setLevelSaved] = useState('');
   const [signedIn, setSignedIn] = useState('');
   const steps = ['Hello', 'Try it', 'Anywhere'];
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
@@ -462,15 +465,14 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
+  useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
 
   const lines = [
     "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
     explained
       ? "That's me, explaining it in the panel. Real answer, not a demo."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    isWindows
-      ? `Now use it anywhere: select code in any app and press ${spoken}.`
-      : `Now use it anywhere: select code in any app and press ${spoken}. macOS asks one thing first.`,
+    `Now try it on code of your own. Select some in any app and press ${spoken}.`,
   ];
   const said = useVibeSays(lines[step] ?? '', soundEffects);
 
@@ -490,6 +492,12 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     window.unvibe.explainSample();
     setExplained(true);
     setBuddyMood('reading');
+  };
+  const answerLevel = async (answer: 'too_basic' | 'about_right' | 'too_advanced') => {
+    const result = await window.unvibe.answerLevel(answer);
+    if (!result.ok) return;
+    if (soundEffects) playTone('boop');
+    setLevelSaved(STUDY_LEVELS.find((item) => item.id === result.level)?.label ?? result.level);
   };
   const finish = async () => {
     if (saving) return;
@@ -578,6 +586,20 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <p className="ob__sub">{explained
                 ? `That's what ${spoken} does with any code you select. Read it, then press Next.`
                 : 'Uses one of your free explanations. No setup needed.'}</p>
+              {sampleDone ? (
+                <div className="ob2__level" role="group" aria-label="How was that explanation pitched?">
+                  {levelSaved ? <p role="status">Got it. The next ones start at {levelSaved}.</p> : (
+                    <>
+                      <p>Was that too basic, about right, or too advanced? I'll pitch the next ones there.</p>
+                      <div className="ob2__choices">
+                        <button type="button" className="act" onClick={() => void answerLevel('too_basic')}>Too basic</button>
+                        <button type="button" className="act" onClick={() => void answerLevel('about_right')}>About right</button>
+                        <button type="button" className="act" onClick={() => void answerLevel('too_advanced')}>Too advanced</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -586,8 +608,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <div className="ob2__keys" aria-label={`Shortcut ${keys}`}>
                 {(isWindows ? keys.split('+') : Array.from(keys)).map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
               </div>
-              <p className="ob__sub">Select code in Cursor, VS Code, Terminal or anywhere else, then press {spoken}.</p>
-              <PermRow />
+              <p className="ob2__task">Open a file you didn't write, select a few lines, press {keys}.</p>
+              <div className="ob2__alt">
+                <span className="ob__sub">Or copy some code first:</span>
+                <button type="button" className="act" onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
+              </div>
               <details className="ob2__more">
                 <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
                 <div className="ob__integrations"><IntegrationsPanel /></div>

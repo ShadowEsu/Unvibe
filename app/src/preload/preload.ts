@@ -116,6 +116,8 @@ const api = {
   openDictation: () => ipcRenderer.invoke('perms:openDictation'),
   resetAccessibility: () => ipcRenderer.invoke('perms:resetAccessibility'),
   restartApp: () => ipcRenderer.invoke('app:restart'),
+  /** After the Accessibility grant: explain the selection the shortcut could not read. */
+  explainAfterGrant: (): Promise<{ explained: boolean }> => ipcRenderer.invoke('perms:explainAfterGrant'),
 
   // privacy
   openPrivacy: () => ipcRenderer.invoke('app:openPrivacy'),
@@ -125,6 +127,15 @@ const api = {
   completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
   /** First run: explain a built-in sample for real, so the first explanation needs no permission. */
   explainSample: () => ipcRenderer.send('onboarding:explainSample'),
+  /** First run step 3: explain what is on the clipboard (no Accessibility needed). */
+  explainClipboard: () => ipcRenderer.send('onboarding:explainClipboard'),
+  answerLevel: (answer: 'too_basic' | 'about_right' | 'too_advanced'): Promise<{ ok: true; level: string } | { ok: false }> => ipcRenderer.invoke('onboarding:levelAnswer', answer),
+  /** The first-run sample answer finished; returns an unsubscribe. */
+  onSampleDone: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('onboarding:sampleDone', listener);
+    return () => { ipcRenderer.removeListener('onboarding:sampleDone', listener); };
+  },
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
 
   // account

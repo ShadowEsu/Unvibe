@@ -55,6 +55,7 @@ import { store, type ChatThread } from './store';
 import { applyLoginItem, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
+import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { reportProgress, syncProgress } from './progress';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
@@ -182,7 +183,7 @@ function makeSession(
   sourceApp: string | null,
   level: ExplanationLevel = settings().all().defaultExplanationLevel,
 ): ReviewSession {
-  return {
+  const session: ReviewSession = {
     reviewId: randomUUID(),
     tabId,
     code,
@@ -190,9 +191,14 @@ function makeSession(
     abort: null,
     recorded: false,
     level,
-    onRecorded: () => notify('Added to your learning history'),
+    onRecorded: () => {
+      notify('Added to your learning history');
+      // First run step 2 asks its one level question once the sample answer has finished.
+      if (session.code === FIRST_RUN_SAMPLE && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+    },
     onUnderstood: () => notify('Nice — concept understood'),
   };
+  return session;
 }
 
 function sessionFor(tabId = activeTabId): ReviewSession | undefined {
@@ -421,7 +427,13 @@ const FIRST_RUN_SAMPLE = [
   '}',
 ].join('\n');
 
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean } = {}): Promise<void> {
+/**
+ * The app a shortcut press came from while macOS had not allowed Accessibility yet. Once the grant
+ * shows up, the panel asks main to go back there and explain the selection already made.
+ */
+let pendingGrantApp: string | null = null;
+
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -456,7 +468,9 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
-  const capture = options.sample ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' } : await captureSelection(options);
+  const capture = options.sample
+    ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' }
+    : options.captured ?? await captureSelection(options);
   const code = capture.code;
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
@@ -465,6 +479,11 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
+  }
+  if (!code && isMac && !options.preferClipboard && !accessibilityGranted(false)) {
+    // The panel shows the one-button pre-permission screen (first-run spec, change 2).
+    reportProgress('accessibility_asked');
+    pendingGrantApp = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : null;
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
@@ -1316,6 +1335,20 @@ app.whenReady().then(() => {
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
     return { ok: true };
   });
+  /**
+   * The panel saw the grant arrive: go back to the app the shortcut was pressed in and explain the
+   * selection already made. `explained: false` when there is nothing to go back to or nothing was
+   * selected any more; the panel then says in one line what to do.
+   */
+  ipcMain.handle('perms:explainAfterGrant', async () => {
+    const fromApp = pendingGrantApp;
+    if (!fromApp || !accessibilityGranted(false)) return { explained: false };
+    pendingGrantApp = null;
+    const capture = await captureSelection({ fromApp });
+    if (!capture.code) return { explained: false };
+    await startReview({ captured: { code: capture.code, sourceApp: fromApp } });
+    return { explained: true };
+  });
   // Voice questions use macOS Dictation; this opens the Keyboard pane where it is switched on.
   ipcMain.handle('perms:openDictation', () => {
     if (isMac) void shell.openExternal('x-apple.systempreferences:com.apple.Keyboard-Settings.extension');
@@ -1324,6 +1357,16 @@ app.whenReady().then(() => {
 
   // --- onboarding ---
   ipcMain.on('onboarding:explainSample', () => void startReview({ sample: true }));
+  // Step 3's second option: works without Accessibility, on Mac and Windows.
+  ipcMain.on('onboarding:explainClipboard', () => void startReview({ preferClipboard: true }));
+  /** The one skippable level question after the sample (first-run spec, change 3). */
+  ipcMain.handle('onboarding:levelAnswer', (_e, answer: unknown) => {
+    if (!isLevelAnswer(answer)) return { ok: false as const };
+    const level = levelAfterAnswer(settings().all().defaultExplanationLevel, answer);
+    settings().set({ defaultExplanationLevel: level });
+    reportProgress('level_answered');
+    return { ok: true as const, level };
+  });
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     reportProgress('onboarded');
