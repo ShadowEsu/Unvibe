@@ -76,14 +76,14 @@ function fakeStripe(links: Record<string, InvoiceLink>, statuses: Record<string,
 
 function chargeRefunded(paymentIntent: string, customer: string, amount: number, refunded: number): Stripe.Event {
   return {
-    id: `evt_${randomUUID()}`, type: 'charge.refunded',
+    id: `evt_${randomUUID()}`, type: 'charge.refunded', livemode: false,
     data: { object: { id: `ch_${randomUUID()}`, object: 'charge', amount, amount_refunded: refunded, refunded: refunded >= amount, currency: 'usd', payment_intent: paymentIntent, customer } },
   } as unknown as Stripe.Event;
 }
 
 function dispute(type: 'charge.dispute.created' | 'charge.dispute.closed', paymentIntent: string, status: Stripe.Dispute.Status, disputeId = `dp_${randomUUID()}`): Stripe.Event {
   return {
-    id: `evt_${randomUUID()}`, type,
+    id: `evt_${randomUUID()}`, type, livemode: false,
     data: { object: { id: disputeId, object: 'dispute', amount: 1000, currency: 'usd', reason: 'fraudulent', status, charge: `ch_${randomUUID()}`, payment_intent: paymentIntent, evidence_details: { due_by: 1_793_000_000 } } },
   } as unknown as Stripe.Event;
 }
@@ -232,4 +232,43 @@ test('the signed webhook links the charge through Invoice Payments and a replay 
   const replay = await post();
   assert.deepEqual(await replay.json(), { received: true, duplicate: true });
   assert.deepEqual(cancels, [subscriptionId]);
+});
+
+test('on a locked production deployment a signed lost dispute is still processed and ends access', async () => {
+  const store = getBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const subscriptionId = `sub_${randomUUID()}`;
+  const paymentIntent = `pi_${randomUUID()}`;
+  await store.syncSubscription({
+    workspaceId: workspace.id, plan: 'pro', interval: 'monthly', status: 'active', seats: 1,
+    stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: subscriptionId, stripePriceId: 'price_pro_monthly', cancelAtPeriodEnd: false,
+  });
+  const stripe = getStripe();
+  const cancels: string[] = [];
+  stripe.invoicePayments.list = (async () => ({ data: [{ invoice: invoiceFor(subscriptionId) }] })) as unknown as typeof stripe.invoicePayments.list;
+  stripe.subscriptions.retrieve = (async (id: string) => ({
+    id, status: cancels.includes(id) ? 'canceled' : 'active',
+    items: { data: [{ current_period_start: CURRENT_PERIOD_START, current_period_end: CURRENT_PERIOD_START + MONTH }] },
+  })) as unknown as typeof stripe.subscriptions.retrieve;
+  stripe.subscriptions.cancel = (async (id: string) => { cancels.push(id); return { id, status: 'canceled' }; }) as unknown as typeof stripe.subscriptions.cancel;
+
+  // Production with a test key and BILLING_TEST_CHECKOUT_IN_PRODUCTION unset: payments are locked.
+  const env = process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = 'production';
+  delete process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION;
+  try {
+    const payload = JSON.stringify(dispute('charge.dispute.closed', paymentIntent, 'lost'));
+    const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
+      method: 'POST',
+      headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+      body: payload,
+    }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { received: true });
+  } finally {
+    if (env === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = env;
+  }
+  assert.deepEqual(cancels, [subscriptionId]);
+  assert.equal((await store.overview(workspace.ownerUserId)).subscription.plan, 'free');
 });
