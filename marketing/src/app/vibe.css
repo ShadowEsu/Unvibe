@@ -575,8 +575,10 @@ p { font-size: 1.02rem; }
 /* First open steps (/install-help and after download) */
 .fos { display: grid; gap: 1rem; color: var(--v-ink); text-align: left; }
 .fos__tabs { display: inline-flex; gap: 0.4rem; justify-self: start; padding: 0.3rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; }
-.fos__tabs button { padding: 0.45rem 1.1rem; border: 0; border-radius: 999px; background: none; font: 800 1rem var(--font-display); cursor: pointer; color: var(--v-ink); }
-.fos__tabs button.is-on { background: var(--v-ink); color: #fff; }
+.fos__tabs [role="tab"] { display: inline-block; padding: 0.45rem 1.1rem; border: 0; border-radius: 999px; background: none; font: 800 1rem var(--font-display); text-decoration: none; cursor: pointer; color: var(--v-ink); }
+.fos__tabs [role="tab"].is-on { background: var(--v-ink); color: #fff; }
+.fos__panel { display: grid; gap: 1rem; }
+.fos__panel[hidden] { display: none; }
 .fos__card { padding: 1.2rem 1.3rem; border: 1.5px solid var(--v-ink); border-radius: 18px; background: #fff; }
 .fos__card--fast { background: var(--v-lime); box-shadow: 4px 4px 0 var(--v-ink); }
 .fos__card h3 { margin: 0.2rem 0 0.4rem; font: 800 1.35rem var(--font-display); }

@@ -70,13 +70,14 @@ function installWindow({
   search = "",
   pathname = "/",
   webdriver = false,
+  userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/140.0",
   referrer = "",
   observer = true,
   storage = fakeStorage(),
-}: { search?: string; pathname?: string; webdriver?: boolean; referrer?: string; observer?: boolean; storage?: OptOutStorage } = {}): { href: string } {
+}: { search?: string; pathname?: string; webdriver?: boolean; userAgent?: string; referrer?: string; observer?: boolean; storage?: OptOutStorage } = {}): { href: string } {
   const location = { href: `https://unvibe.site${pathname}${search}`, host: "unvibe.site", pathname, search };
   Reflect.set(globalThis, "window", {
-    navigator: { webdriver },
+    navigator: { webdriver, userAgent, maxTouchPoints: 0 },
     location,
     localStorage: storage,
     document: { referrer },
@@ -258,10 +259,15 @@ describe("install_help_viewed", () => {
     assert.equal(installHelpSource("", "not a url", "unvibe.site"), "other");
   });
 
-  it("sends only the allowlisted value", () => {
+  it("sends only the allowlisted value and the tab the steps opened on", () => {
     installWindow({ pathname: "/install-help", referrer: "https://unvibe.site/beta?e=me%40example.com" });
     trackInstallHelpViewed();
-    assert.deepEqual(sent, [{ event: "install_help_viewed", properties: { from: "beta", path: "/install-help" } }]);
+    installWindow({ pathname: "/install-help", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0" });
+    trackInstallHelpViewed();
+    assert.deepEqual(sent, [
+      { event: "install_help_viewed", properties: { from: "beta", os_default: "mac", path: "/install-help" } },
+      { event: "install_help_viewed", properties: { from: "other", os_default: "windows", path: "/install-help" } },
+    ]);
   });
 });
 

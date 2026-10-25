@@ -19,3 +19,8 @@ export function detectVisitorDevice(userAgent: string, maxTouchPoints = 0): Visi
   if (/Windows/i.test(userAgent)) return "windows";
   return "mac";
 }
+
+/** Which install steps to open on: Windows on a Windows PC, Mac for everything else, phones included. */
+export function visitorInstallOs(userAgent: string, maxTouchPoints = 0): "mac" | "windows" {
+  return detectVisitorDevice(userAgent, maxTouchPoints) === "windows" ? "windows" : "mac";
+}
