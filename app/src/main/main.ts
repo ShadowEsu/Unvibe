@@ -193,10 +193,11 @@ function makeSession(
     abort: null,
     recorded: false,
     level,
+    isSample: () => session.code === FIRST_RUN_SAMPLE,
     onRecorded: () => {
       notify('Added to your learning history');
       // First run step 2 asks its one level question once the sample answer has finished.
-      if (session.code === FIRST_RUN_SAMPLE && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+      if (session.isSample?.() && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
     },
     onUnderstood: () => notify('Nice — concept understood'),
   };
@@ -598,7 +599,6 @@ app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
-  store().ensureDayActive();
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
@@ -686,7 +686,6 @@ app.whenReady().then(() => {
     ]).popup({ window: bar });
   });
   ipcMain.handle('bar:snapshot', async () => {
-    store().ensureDayActive();
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
     let quota = { used: 0, limit: 30, remaining: 30 };
@@ -943,10 +942,7 @@ app.whenReady().then(() => {
     user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
   }));
-  ipcMain.handle('learning:profile', () => {
-    store().ensureDayActive();
-    return computeProfile(store().events(), todayKey());
-  });
+  ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
