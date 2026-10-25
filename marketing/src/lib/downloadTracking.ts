@@ -10,10 +10,12 @@
  *   fire DOWNLOADED_EVENT, as they always have.
  *
  * `download_cta_viewed {surface: "hero", platform}`: once per page view, hero CTA half visible.
- * `install_help_viewed {from}`: once per /install-help view, from home | beta | pricing | installer | other.
+ * `install_help_viewed {from, os_default}`: once per /install-help view, from home | beta | pricing |
+ * installer | other; os_default (mac | windows) is the tab the first-open steps opened on.
  */
 
 import { track } from "@/lib/analytics";
+import { visitorInstallOs } from "@/lib/shortcuts";
 
 /** Window event after a download click; ReminderToast offers the setup email on it. */
 export const DOWNLOADED_EVENT = "unvibe:downloaded";
@@ -109,9 +111,12 @@ export function installHelpSource(search: string, referrer: string, host: string
   return SOURCE_BY_PATH.get(url.pathname.replace(/\/+$/, "") || "/") ?? "other";
 }
 
-/** `install_help_viewed {from}`; call once per /install-help page view. */
+/** `install_help_viewed {from, os_default}`; call once per /install-help page view. */
 export function trackInstallHelpViewed(): void {
   if (typeof window === "undefined") return;
-  const { search, host } = window.location;
-  track("install_help_viewed", { from: installHelpSource(search, window.document.referrer, host) });
+  const { location, navigator, document } = window;
+  track("install_help_viewed", {
+    from: installHelpSource(location.search, document.referrer, location.host),
+    os_default: visitorInstallOs(navigator.userAgent, navigator.maxTouchPoints),
+  });
 }
