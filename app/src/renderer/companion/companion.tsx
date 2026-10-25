@@ -8,7 +8,7 @@ import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
-import { giftStatusLine, paidStatusLine, resetLabel } from '../shared/planStatus';
+import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../shared/planStatus';
 import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
@@ -996,7 +996,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     setBusy(false);
   };
   const teamsTotal = interval === 'annual' ? seats * 72 : seats * 8;
-  const teamsCard = (
+  const teamsCard = proOpen ? (
     <article className="plan-pick__card plan-pick__card--teams">
       <span>For clubs, classes and small teams</span>
       <h2>Teams $8/seat{interval === 'annual' ? ' · $72/yr' : '/mo'}</h2>
@@ -1018,6 +1018,13 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
         <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(`https://unvibe.site/pricing#teams`)}>Request Teams seats</button>
       )}
     </article>
+  ) : (
+    <article className="plan-pick__card plan-pick__card--teams">
+      <span>Teams opens soon</span>
+      <h2>Teams</h2>
+      <p>One shared workspace, invites, and who reviewed what. 2 to 20 seats. Each person keeps their explanations on their own computer.</p>
+      <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(`https://unvibe.site/pricing#teams`)}>Request Teams seats</button>
+    </article>
   );
 
   const portal = async () => {
@@ -1038,6 +1045,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const meters = collectUsageMeters(overview, localUsage);
   const resetIso = meters[0]?.resetsAt ?? localUsage?.resetsAt;
   const unlimited = currentPlan === 'full';
+  const pro = proCard(proOpen, interval, localUsage);
 
   return (
     <section className={`plan-board${compact ? ' plan-board--compact' : ''}`} aria-label="Plan and usage">
@@ -1071,32 +1079,36 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
 
         {showUpgrade && upgradeIsPro && (
           <article className="plan-pick__card is-upgrade">
-            <span>{proOpen ? 'Upgrade available' : 'Pro opens soon'}</span>
-            {upgradeIsPro ? (
+            <span>{pro.open ? 'Upgrade available' : 'Pro opens soon'}</span>
+            {pro.open ? (
               <>
-                <h2>Pro {interval === 'annual' ? '$81/yr' : '$9/mo'}</h2>
+                <h2>Pro {pro.price}</h2>
                 <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
                 <div className="plan-toggle" aria-label="Billing interval">
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
                   <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
                 </div>
                 <p className="plan-pick__terms" id="pro-renewal-terms">
-                  {interval === 'annual'
-                    ? 'Pro renews at $81 per year until canceled.'
-                    : 'Pro renews at $9 per month until canceled.'}
+                  {pro.terms}
                   {' '}Review today’s total and any promotion in Stripe Checkout. Manage or cancel later from this page.
                 </p>
                 <button
                   type="button"
                   className="primary-btn"
                   onClick={() => void checkout()}
-                  disabled={busy || !proOpen || (signedIn && !available)}
+                  disabled={busy || (signedIn && !available)}
                   aria-describedby="pro-renewal-terms"
                 >
-                  {!proOpen ? 'Pro opens soon' : signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
+                  {signedIn ? 'Upgrade to Pro' : 'Sign in to upgrade'}
                 </button>
               </>
-            ) : null}
+            ) : (
+              <>
+                <h2>Pro</h2>
+                <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
+                <p>{pro.line}</p>
+              </>
+            )}
           </article>
         )}
         {currentPlan !== 'teams' && !compact ? teamsCard : null}
@@ -1104,11 +1116,11 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
 
       {!signedIn && (
         <div className="plan-board__signin">
-          <p>Sign in to sync this {deviceName} with your cloud plan and Stripe billing.</p>
+          <p>Sign in to sync this {deviceName} with your cloud plan{proOpen ? ' and Stripe billing' : ''}.</p>
           <SignInForm onDone={onSignedIn ?? (() => undefined)} />
         </div>
       )}
-      {signedIn && !available && upgradeIsPro && <div className="plan-message quiet">{paymentsOpen ? 'Checkout is disabled until billing is configured on the server.' : 'Payments open soon. Your Free plan keeps working until then.'}</div>}
+      {proOpen && signedIn && !available && upgradeIsPro && <div className="plan-message quiet">{paymentsOpen ? 'Checkout is disabled until billing is configured on the server.' : 'Payments open soon. Your Free plan keeps working until then.'}</div>}
 
       <div className="plan-usage-block">
         <h3>Usage this month</h3>

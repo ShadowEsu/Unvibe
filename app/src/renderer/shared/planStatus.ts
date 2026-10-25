@@ -52,3 +52,53 @@ export function giftStatusLine(currentPeriodEnd: string | undefined, now = Date.
   }
   return `Pro from a gift until ${shortDate(currentPeriodEnd)}. Then you move to Free, and nothing is charged.`;
 }
+
+/** One usage line, as the app's usage check returns it. */
+export interface AllowanceLine {
+  plan?: string;
+  limit: number;
+  remaining: number;
+  resetsAt: string;
+}
+
+/**
+ * When a used-up allowance comes back: `resetsAt` as a date in the user's locale, never a
+ * countdown. Null for the public-beta trial, whose `resetsAt` is the end of its 30 days (it never
+ * refills), and for an unusable date.
+ */
+export function refillDate(plan: string | undefined, resetsAt: string): string | null {
+  const at = new Date(resetsAt);
+  if (plan === 'trial' || Number.isNaN(at.getTime())) return null;
+  return at.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+}
+
+/** While Pro is closed: Pro isn't open yet, and the Free plan keeps working with its real allowance. */
+export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): string {
+  if (!usage || usage.limit <= 0) return "Pro isn't open yet. Your Free plan keeps working.";
+  const left = `${usage.remaining} of ${usage.limit} explanations left`;
+  const refill = refillDate(usage.plan, usage.resetsAt);
+  if (refill) return `Pro isn't open yet. Your Free plan keeps working: ${left}, refilling on ${refill}.`;
+  const end = new Date(usage.resetsAt).getTime();
+  if (usage.plan === 'trial' && end > now) {
+    return `Pro isn't open yet. Your Free plan keeps working: ${left} until ${shortDate(usage.resetsAt)}.`;
+  }
+  if (usage.plan === 'trial' && !Number.isNaN(end)) {
+    return `Pro isn't open yet. The free explanations on this computer ended on ${shortDate(usage.resetsAt)}. Sign in to keep going on the Free plan, which refills every month.`;
+  }
+  return `Pro isn't open yet. Your Free plan keeps working: ${left}.`;
+}
+
+/**
+ * The Pro card on Plan. Open: the price and Stripe renewal terms for `interval`. Closed (checkout
+ * not open, or its status unknown): no price, interval or checkout, only `freePlanLine`.
+ */
+export type ProCard =
+  | { open: true; price: string; terms: string }
+  | { open: false; line: string };
+
+export function proCard(proOpen: boolean, interval: 'monthly' | 'annual', usage: AllowanceLine | null, now = Date.now()): ProCard {
+  if (!proOpen) return { open: false, line: freePlanLine(usage, now) };
+  return interval === 'annual'
+    ? { open: true, price: '$81/yr', terms: 'Pro renews at $81 per year until canceled.' }
+    : { open: true, price: '$9/mo', terms: 'Pro renews at $9 per month until canceled.' };
+}

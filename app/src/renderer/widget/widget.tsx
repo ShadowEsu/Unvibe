@@ -7,6 +7,7 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { UsageRings } from '../shared/usageRings';
@@ -903,6 +904,7 @@ function Widget() {
                 {outOfExplanations && offer ? offer.title : proGate ? 'Pro feature' : "Couldn't explain that"}
               </div>
               <div className="sub">{active.error}</div>
+              {proGate && !outOfExplanations && !proOpen ? <div className="sub">{freePlanLine(usage)}</div> : null}
               {outOfExplanations || proGate ? (
                 <>
                   <button className="btn" onClick={() => {
