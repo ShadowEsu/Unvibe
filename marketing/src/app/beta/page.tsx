@@ -26,7 +26,8 @@ export default function BetaDownloadsPage() {
 
       <section className="paper-section" id="install">
         <Reveal className="paper-wrap paper-center">
-          <BetaInstall tone="page" surface="beta" showFeedback />
+          {/* The band above already says "Free for Mac and Windows"; dropping the repeat keeps the download button on the first screen. */}
+          <BetaInstall tone="page" surface="beta" title={null} showFeedback />
         </Reveal>
       </section>
 

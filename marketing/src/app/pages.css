@@ -125,6 +125,21 @@
 
 /* ── Beta ───────────────────────────────────────────────────────────────── */
 
+/* The header's "Download free" lands here, so the download button sits on the first screen at
+   1440x900, 1280x720 and 390x844: the photo band hugs its copy and the install card follows closely. */
+.beta-page .paper-photo-band--short {
+  min-height: 0;
+}
+
+.beta-page .paper-photo-band__copy {
+  padding: 5.5rem 1.25rem 1.75rem;
+}
+
+/* Beats vibe.css `.paper-section { padding-block … !important }`. */
+.beta-page > #install {
+  padding-top: clamp(1.25rem, 3vw, 2rem) !important;
+}
+
 /* Beats vibe.css `.paper-section h2 { font-size … !important }` inside the steps card. */
 .beta-page .beta-page__steps h2 {
   font-size: clamp(1.7rem, 3.2vw, 2.3rem) !important;
