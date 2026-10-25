@@ -67,6 +67,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => query.removeEventListener("change", sync);
   }, [preference]);
 
+  // A choice made in another open tab: follow it (removed means follow the system again).
+  useEffect(() => {
+    const follow = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY && event.key !== null) return;
+      const next = storedPreference();
+      const theme = next === "system" ? systemTheme() : next;
+      applyClass(theme);
+      setPreferenceState(next);
+      setResolved(theme);
+    };
+    window.addEventListener("storage", follow);
+    return () => window.removeEventListener("storage", follow);
+  }, []);
+
   const setPreference = useCallback((next: ThemePreference) => {
     try {
       if (next === "system") window.localStorage.removeItem(THEME_STORAGE_KEY);
