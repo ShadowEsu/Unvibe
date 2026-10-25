@@ -112,6 +112,32 @@
   line-height: 1.55;
 }
 
+/* First visit without a code: the download leads, the sign-in steps wait behind a disclosure. */
+.activate-later {
+  margin-top: 1.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+/* Stays a list item so the open/closed triangle shows. */
+.activate-later > summary {
+  padding: 0.75rem 0;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.activate-later > summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.activate-later__body {
+  margin-top: 0.8rem;
+}
+
 .activate-label {
   display: block;
   margin: 0 0 0.45rem;

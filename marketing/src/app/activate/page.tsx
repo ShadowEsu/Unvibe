@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
+import { GetUnvibe } from "@/components/paper/GetUnvibe";
+import { clearDeviceCode, opensForSignIn, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
 
 function sessionStore(): Storage | null {
   try {
@@ -24,9 +25,14 @@ function publicSupabase(): { url: string; key: string } | null {
   return url && key ? { url, key } : null;
 }
 
-export default function ActivatePage() {
+/**
+ * Reading `searchParams` renders the right first view on the server: the sign-in steps when the app
+ * (or a sign-in redirect) opened the page, the download first for a visitor without the app.
+ */
+export default function ActivatePage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   const [code, setCode] = useState("");
   const [codeFromLink, setCodeFromLink] = useState(false);
+  const [firstVisit, setFirstVisit] = useState(() => !opensForSignIn(searchParams));
   const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -38,10 +44,12 @@ export default function ActivatePage() {
   const [bootstrapping, setBootstrapping] = useState(true);
   const config = publicSupabase();
   const configured = Boolean(config);
+  const supabaseUrl = config?.url;
+  const supabaseKey = config?.key;
 
   const client = useMemo((): SupabaseClient | null => {
-    if (!config) return null;
-    return createClient(config.url, config.key, {
+    if (!supabaseUrl || !supabaseKey) return null;
+    return createClient(supabaseUrl, supabaseKey, {
       auth: {
         flowType: "pkce",
         detectSessionInUrl: true,
@@ -49,12 +57,14 @@ export default function ActivatePage() {
         autoRefreshToken: true,
       },
     });
-  }, [config?.url, config?.key]);
+  }, [supabaseUrl, supabaseKey]);
 
   useEffect(() => {
     const pending = pendingDeviceCode(window.location.search, sessionStore());
     setCode(pending.code);
     setCodeFromLink(pending.fromLink);
+    // A code saved before a sign-in redirect means this visitor is mid sign-in, not new.
+    if (pending.code) setFirstVisit(false);
     if (pending.cleanSearch !== null) {
       window.history.replaceState({}, "", `${window.location.pathname}${pending.cleanSearch}${window.location.hash}`);
     }
@@ -189,6 +199,103 @@ export default function ActivatePage() {
     void sendMagicLink();
   }
 
+  const signInSteps = (
+    <>
+      {codeFromLink && (
+        <section className="activate-check" aria-labelledby="activate-check-title">
+          <h2 className="activate-check__title" id="activate-check-title">
+            <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" focusable="false">
+              <path d="M8 1.5 15 14.5H1z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M8 6v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="8" cy="12.2" r="0.9" fill="currentColor" />
+            </svg>
+            Check before you approve
+          </h2>
+          <ul>
+            <li>Approving signs in an Unvibe app with your account.</li>
+            <li>Only approve if the code below matches the code your Unvibe app is showing right now.</li>
+            <li>If someone else sent you this link, stop here. Approving would let them use your account.</li>
+          </ul>
+        </section>
+      )}
+      {!accessToken && (
+        <div>
+          <button
+            className="activate-btn activate-btn--google"
+            type="button"
+            onClick={() => void signInWithGoogle()}
+            disabled={!configured || authBusy || bootstrapping}
+          >
+            {authBusy ? "Opening Google…" : "Continue with Google"}
+          </button>
+          {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
+          <div className="activate-divider">or email a link</div>
+          <form noValidate onSubmit={submitMagicLink}>
+            <label className="activate-label" htmlFor="activate-email">Email</label>
+            <input
+              ref={emailField}
+              id="activate-email"
+              className="activate-field"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setEmailError("");
+              }}
+              placeholder="you@school.edu"
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError ? "activate-email-error" : undefined}
+            />
+            {emailError && (
+              <p className="activate-note activate-note--error activate-note--field" id="activate-email-error" role="alert">
+                {emailError}
+              </p>
+            )}
+            <button
+              className="activate-btn activate-btn--ghost"
+              type="submit"
+              disabled={!configured || authBusy}
+            >
+              {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
+            </button>
+          </form>
+          <div className="activate-divider">then</div>
+        </div>
+      )}
+      <div>
+        <label className="activate-label" htmlFor="activate-code">Device code</label>
+        <input
+          id="activate-code"
+          className="activate-field activate-field--code"
+          value={code}
+          onChange={(event) => setCode(event.target.value.toUpperCase())}
+          placeholder="XXXXXXXX"
+          autoCapitalize="characters"
+          spellCheck={false}
+        />
+        <button
+          className="activate-btn"
+          type="button"
+          onClick={() => void approve()}
+          disabled={status === "working" || code.length < 4 || !accessToken || bootstrapping}
+        >
+          {status === "working" ? "Approving…" : "Approve sign-in"}
+        </button>
+        {status === "error" && <p className="activate-note activate-note--error" role="alert">{message}</p>}
+        {!accessToken && (
+          <p className="activate-note">
+            {configured
+              ? "Sign in above, then approve."
+              : message || "Sign-in is not configured for this environment yet."}
+          </p>
+        )}
+        {accessToken && <p className="activate-note">Signed in. Check the code matches your app, then approve.</p>}
+      </div>
+    </>
+  );
+
   return (
     <div className="activate-shell">
       <div className="activate-brand">Unvibe</div>
@@ -198,104 +305,26 @@ export default function ActivatePage() {
             <h1>You are connected</h1>
             <p>Return to the Unvibe desktop app. It will finish signing in on its own.</p>
           </div>
+        ) : firstVisit ? (
+          <>
+            <h1 className="activate-title">Download Unvibe first</h1>
+            <p className="activate-sub">
+              Unvibe runs on your Mac or PC, and you can start without an account. Signing in starts in the
+              app, which gives you a code.
+            </p>
+            <GetUnvibe surface="activate" />
+            <details className="activate-later">
+              <summary>Already have the app? Enter its code</summary>
+              <div className="activate-later__body">{signInSteps}</div>
+            </details>
+          </>
         ) : (
           <>
             <h1 className="activate-title">Sign in the Unvibe app on your computer</h1>
             <p className="activate-sub">
               Sign in here, check the code, then go back to the app.
             </p>
-            {codeFromLink && (
-              <section className="activate-check" aria-labelledby="activate-check-title">
-                <h2 className="activate-check__title" id="activate-check-title">
-                  <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" focusable="false">
-                    <path d="M8 1.5 15 14.5H1z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                    <path d="M8 6v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    <circle cx="8" cy="12.2" r="0.9" fill="currentColor" />
-                  </svg>
-                  Check before you approve
-                </h2>
-                <ul>
-                  <li>Approving signs in an Unvibe app with your account.</li>
-                  <li>Only approve if the code below matches the code your Unvibe app is showing right now.</li>
-                  <li>If someone else sent you this link, stop here. Approving would let them use your account.</li>
-                </ul>
-              </section>
-            )}
-            {!accessToken && (
-              <div>
-                <button
-                  className="activate-btn activate-btn--google"
-                  type="button"
-                  onClick={() => void signInWithGoogle()}
-                  disabled={!configured || authBusy || bootstrapping}
-                >
-                  {authBusy ? "Opening Google…" : "Continue with Google"}
-                </button>
-                {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
-                <div className="activate-divider">or email a link</div>
-                <form noValidate onSubmit={submitMagicLink}>
-                  <label className="activate-label" htmlFor="activate-email">Email</label>
-                  <input
-                    ref={emailField}
-                    id="activate-email"
-                    className="activate-field"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value);
-                      setEmailError("");
-                    }}
-                    placeholder="you@school.edu"
-                    aria-invalid={Boolean(emailError)}
-                    aria-describedby={emailError ? "activate-email-error" : undefined}
-                  />
-                  {emailError && (
-                    <p className="activate-note activate-note--error activate-note--field" id="activate-email-error" role="alert">
-                      {emailError}
-                    </p>
-                  )}
-                  <button
-                    className="activate-btn activate-btn--ghost"
-                    type="submit"
-                    disabled={!configured || authBusy}
-                  >
-                    {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
-                  </button>
-                </form>
-                <div className="activate-divider">then</div>
-              </div>
-            )}
-            <div>
-              <label className="activate-label" htmlFor="activate-code">Device code</label>
-              <input
-                id="activate-code"
-                className="activate-field activate-field--code"
-                value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
-                placeholder="XXXXXXXX"
-                autoCapitalize="characters"
-                spellCheck={false}
-              />
-              <button
-                className="activate-btn"
-                type="button"
-                onClick={() => void approve()}
-                disabled={status === "working" || code.length < 4 || !accessToken || bootstrapping}
-              >
-                {status === "working" ? "Approving…" : "Approve sign-in"}
-              </button>
-              {status === "error" && <p className="activate-note activate-note--error" role="alert">{message}</p>}
-              {!accessToken && (
-                <p className="activate-note">
-                  {configured
-                    ? "Sign in above, then approve."
-                    : message || "Sign-in is not configured for this environment yet."}
-                </p>
-              )}
-              {accessToken && <p className="activate-note">Signed in. Check the code matches your app, then approve.</p>}
-            </div>
+            {signInSteps}
           </>
         )}
       </div>
