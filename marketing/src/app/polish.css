@@ -698,6 +698,12 @@ html[data-performance="lite"] .paper-hero > img {
     font-weight: 600;
     text-decoration: none;
   }
+
+  /* Keyboard focus scrolls into view above the bar, not under it: the bar measures 3.8rem
+     (64 px at 390 and 320) and sits 0.75rem up, so this leaves about 0.75rem of air. */
+  html:has(.mobile-dl) {
+    scroll-padding-bottom: calc(3.8rem + 1.5rem + env(safe-area-inset-bottom));
+  }
 }
 @media (max-width: 360px) {
   .mobile-dl > span { display: none; }
