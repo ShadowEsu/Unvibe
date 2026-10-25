@@ -127,6 +127,10 @@
   color: #141414;
 }
 
+/* These light buttons sit straight on the dark page, so their focus ring (drawn outside the fill) keeps the
+   dark theme's ring colour (the .dark --u-focus), not the island's ink. */
+.dark :is(.mnav .paper-join--mac, .vhero .paper-join--mac, .kit__btn--lime):focus-visible { outline-color: #c4b5fd; }
+
 /* The founder console's headings sit straight on the page; give it the same light sheet the waitlist admin has. */
 .dark .founder-page { background: rgb(243 238 248 / 0.94); }
 
