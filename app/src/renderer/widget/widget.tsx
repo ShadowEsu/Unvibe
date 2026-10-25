@@ -15,7 +15,9 @@ import '../shared/tokens.css';
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
 interface Quiz {
-  phase: 'loading' | 'answering' | 'grading' | 'graded';
+  phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
+  /** Why a question could not be written (phase 'failed'). */
+  error?: string;
   question?: string;
   options?: string[];
   conceptLabel?: string;
@@ -432,6 +434,7 @@ function Widget() {
               error: '',
               mock: false,
               phase: ev.hasCode ? 'ready' : 'empty',
+              level: ev.level,
             });
           }
           case 'understood':
@@ -458,6 +461,8 @@ function Widget() {
               phase: 'error',
               quiz: tab.quiz && tab.quiz.phase !== 'graded' ? null : tab.quiz,
             });
+          case 'quizError':
+            return patchTab(prev, tabId, { quiz: { phase: 'failed', error: ev.message } });
           // understood: no UI reset — Got it collapses separately
           case 'cancelled':
             return patchTab(prev, tabId, { text: '', quiz: null, phase: 'ready' });
@@ -902,7 +907,30 @@ function Widget() {
                     <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
                   </div>
                 )}
-                {active.quiz.phase !== 'loading' && (
+                {active.quiz.phase === 'failed' && (
+                  <div className="quiz" role="alert">
+                    <div className="quiz__kicker">Test me</div>
+                    <div className="quiz__why">{active.quiz.error}</div>
+                    <div className="quiz__actions">
+                      <button
+                        className="btn"
+                        onClick={() => {
+                          setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
+                          window.unvibe.testMe();
+                        }}
+                      >
+                        Try again
+                      </button>
+                      <button
+                        className="btn ghost"
+                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                      >
+                        Hide
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {active.quiz.phase !== 'loading' && active.quiz.phase !== 'failed' && (
                   <div className="quiz">
                     <div className="quiz__kicker">Test me</div>
                     {active.quiz.conceptLabel && (
