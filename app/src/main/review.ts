@@ -431,8 +431,9 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       send(win, session, {
         type: 'error',
         message: failure.message,
-        code: failure.planLimit ? 'plan_limit_reached' : undefined,
-        upgradePath: body.upgradePath ?? (failure.planLimit ? '/plan' : undefined),
+        // 402 pro_required opens the Pro upgrade panel; only a used-up allowance is plan_limit_reached.
+        code: failure.proRequired ? 'pro_required' : failure.planLimit ? 'plan_limit_reached' : undefined,
+        upgradePath: body.upgradePath ?? (failure.planLimit || failure.proRequired ? '/plan' : undefined),
       });
       return;
     }

@@ -56,6 +56,7 @@ import { applyLoginItem, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
+import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { reportProgress, syncProgress } from './progress';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
@@ -1480,13 +1481,23 @@ app.whenReady().then(() => {
   ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }) => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in before starting checkout.' };
-    try { const url = await startBillingCheckout(token, input); await shell.openExternal(url); return { ok: true }; }
+    try {
+      const url = await startBillingCheckout(token, input);
+      if (!isBillingUrl(url)) return { ok: false, error: 'Checkout returned a link Unvibe does not open. Try again from unvibe.site.' };
+      await shell.openExternal(url);
+      return { ok: true };
+    }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Checkout could not start.' }; }
   });
   ipcMain.handle('billing:portal', async (_e, workspaceId: string) => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in before managing billing.' };
-    try { const url = await startBillingPortal(token, workspaceId); await shell.openExternal(url); return { ok: true }; }
+    try {
+      const url = await startBillingPortal(token, workspaceId);
+      if (!isBillingUrl(url)) return { ok: false, error: 'Billing returned a link Unvibe does not open. Try again from unvibe.site.' };
+      await shell.openExternal(url);
+      return { ok: true };
+    }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Billing could not open.' }; }
   });
   ipcMain.handle('account:signIn', async (_e, email: string) => {
