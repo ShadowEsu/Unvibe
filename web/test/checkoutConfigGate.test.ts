@@ -106,3 +106,17 @@ test('a missing APP_URL in production fails before an intent is created, so the 
   });
   assert.equal(stripeCalls, 1);
 });
+
+test('an inactive or canceled row that keeps its old Stripe id lets checkout start; a live one still refuses', async () => {
+  for (const [status, expected] of [['inactive', 201], ['canceled', 201], ['active', 409], ['past_due', 409]] as const) {
+    const me = await buyer();
+    const workspace = await getBillingStore().ensurePersonalWorkspace(me.userId);
+    await getBillingStore().syncSubscription({
+      workspaceId: workspace.id, plan: 'pro', interval: 'monthly', status, seats: 1,
+      stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: `sub_${randomUUID()}`, stripePriceId: 'price_pro_monthly', cancelAtPeriodEnd: false,
+    });
+    await withEnv([], {}, async () => {
+      assert.equal((await startPro(me.token, 'monthly')).status, expected, status);
+    });
+  }
+});

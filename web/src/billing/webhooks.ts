@@ -101,6 +101,15 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   if (metadata.plan === 'pro' && (item.quantity ?? 1) !== 1) throw new Error('Pro subscriptions must have exactly one account seat.');
   if (metadata.plan === 'teams' && (item.quantity ?? 0) < 2) throw new Error('Teams subscriptions require at least two seats.');
   const stored = await store.subscriptionByWorkspaceId(metadata.workspaceId);
+  // Lifetime is paid once and never ends here: a subscription event for the same workspace (say one
+  // started from the portal or a stale checkout) is recorded for a person to sort out, never applied.
+  if (stored?.interval === 'lifetime' && stored.status === 'active') {
+    await store.recordAudit(null, metadata.workspaceId, 'subscription.ignored_lifetime', {
+      stripeSubscriptionId: subscription.id,
+      status: subscription.status,
+    });
+    return;
+  }
   const storedId = stored?.stripeSubscriptionId;
   const replacesOther = stored !== null && storedId !== undefined && storedId !== subscription.id;
   const incomingLive = subscription.status === 'active' || subscription.status === 'trialing' || subscription.status === 'past_due';

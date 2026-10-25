@@ -32,15 +32,23 @@ const post = (token: string, body: unknown) => new Request('https://example.test
   method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body),
 });
 
-test('a live or restricted-live Stripe key alone keeps payments locked', withBillingEnv({}, () => {
+test('a live or restricted-live Stripe key opens only on production with the exact approval', withBillingEnv({}, () => {
   for (const key of ['sk_live_fake', 'rk_live_fake']) {
     process.env.STRIPE_SECRET_KEY = key;
+    process.env.VERCEL_ENV = 'production';
     delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
     assert.equal(paymentsLocked(), true, key);
-    process.env.BILLING_LIVE_PAYMENTS_APPROVED = 'yes';
-    assert.equal(paymentsLocked(), true, `${key} with a non-exact approval value`);
+    for (const value of ['yes', ' true ', 'true\n', 'TRUE']) {
+      process.env.BILLING_LIVE_PAYMENTS_APPROVED = value;
+      assert.equal(paymentsLocked(), true, `${key} with approval ${JSON.stringify(value)}`);
+    }
     process.env.BILLING_LIVE_PAYMENTS_APPROVED = 'true';
-    assert.equal(paymentsLocked(), false, `${key} after explicit approval`);
+    assert.equal(paymentsLocked(), false, `${key} on production after explicit approval`);
+    for (const env of ['preview', 'development', undefined]) {
+      if (env === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = env;
+      assert.equal(paymentsLocked(), true, `${key} approved but off production (${env ?? 'local'})`);
+    }
   }
   for (const key of ['sk_test_fake', 'rk_test_fake']) {
     process.env.STRIPE_SECRET_KEY = key;
@@ -58,6 +66,10 @@ test('a test-mode key is locked on the production deployment only', withBillingE
   assert.equal(paymentsLocked(), true, 'production with a test key');
   process.env.BILLING_LIVE_PAYMENTS_APPROVED = 'true';
   assert.equal(paymentsLocked(), true, 'live approval does not open a test key in production');
+  for (const value of [' true ', 'true\n', 'TRUE', 'yes']) {
+    process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION = value;
+    assert.equal(paymentsLocked(), true, `test-checkout flag ${JSON.stringify(value)} is not exact`);
+  }
   process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION = 'true';
   assert.equal(paymentsLocked(), false, 'explicit test-checkout-in-production flag');
   delete process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION;
