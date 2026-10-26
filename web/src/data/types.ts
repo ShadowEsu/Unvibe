@@ -122,12 +122,15 @@ export interface Store {
   /** The profile name from the sign-in provider (Google), stored in users.settings. */
   rememberName(userId: string, name: string): Promise<void>;
   userIdForEmail(email: string): Promise<string | null>;
-  /** Whether a users row other than `userId` holds `email` now. Read errors throw. */
-  emailHeldByAnotherAccount(userId: string, email: string): Promise<boolean>;
 
   // Account deletion (App Store requirement). State lives in account_deletions; DELETE
   // /api/v1/account runs the steps.
   accountDeletion(userId: string): Promise<AccountDeletion | null>;
+  /**
+   * Whether another account, created after this deletion started, holds `email` (account_deletion_address_reused).
+   * An older users row with the same address does not count. Read errors throw.
+   */
+  addressReusedSinceDeletion(userId: string, email: string): Promise<boolean>;
   /** The deletion that the token with this sha256 hex asked for, whatever its state. */
   accountDeletionForToken(tokenHash: string): Promise<AccountDeletion | null>;
   /**

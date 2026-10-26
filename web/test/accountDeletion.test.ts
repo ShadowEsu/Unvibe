@@ -4,6 +4,7 @@ import { mock, test } from 'node:test';
 import { DELETE as deleteAccount, GET as accountInfo } from '../app/api/v1/account/route';
 import { getBillingStore } from '../src/billing/store';
 import { getStore } from '../src/data/store';
+import type { Account } from '../src/data/types';
 import { accountDeletionServices } from '../src/lib/accountDeletionServices';
 
 // DELETE /api/v1/account with the memory stores, a fake Supabase Auth admin API and a fake Blob
@@ -240,8 +241,14 @@ test('an address signed up again before the Blob step finishes keeps its beta-do
   const me = await person();
   failOnce = 'blob';
   assert.equal((await remove(me.token)).status, 503);
-  // The account rows are erased; the person signs up again with the same address (a new id).
-  const again = await store.signIn(me.email);
+  // The account rows are erased; a minute later the person signs up again with the same address (a new id).
+  mock.timers.enable({ apis: ['Date'], now: Date.now() + 60_000 });
+  let again: Account;
+  try {
+    again = await store.signIn(me.email);
+  } finally {
+    mock.timers.reset();
+  }
   assert.notEqual(again.userId, me.userId);
   betaRecords.set(me.email, 1);
   assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
@@ -250,6 +257,17 @@ test('an address signed up again before the Blob step finishes keeps its beta-do
   assert.equal(deletion?.state, 'done');
   assert.equal(deletion.betaDownloads, 'email_reused');
   assert.equal(await store.userForToken(again.token), again.userId, 'the new account is signed in');
+});
+
+test('an older account with the same address does not stop the beta-download cleanup', async () => {
+  const me = await person();
+  // users.email is not unique: a second, older row with the same address (made through device approval).
+  const device = await store.createDeviceCode('http://localhost');
+  const olderId = randomUUID();
+  assert.ok(await store.approveDeviceCode(device.userCode, olderId, me.email));
+  assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
+  await assertGone(me);
+  assert.equal((await store.accountInfo(olderId)).email, me.email, 'the older row itself is not touched');
 });
 
 test('an identity Supabase Auth no longer has (user_not_found) counts as deleted', async () => {

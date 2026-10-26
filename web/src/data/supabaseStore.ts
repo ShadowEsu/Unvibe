@@ -154,10 +154,12 @@ export class SupabaseStore implements Store {
     return typeof data?.id === 'string' ? data.id : null;
   }
 
-  async emailHeldByAnotherAccount(userId: string, email: string): Promise<boolean> {
-    const { data, error } = await this.db.from('users').select('id').eq('email', email.trim().toLowerCase()).neq('id', userId).limit(1);
+  /** The same rule as erase_account_data, in SQL, so both compare addresses the same way. */
+  async addressReusedSinceDeletion(userId: string, email: string): Promise<boolean> {
+    const { data, error } = await this.db.rpc('account_deletion_address_reused', { p_user_id: userId, p_email: email });
     if (error) throw new Error(`Could not check the address: ${error.message}`);
-    return (data ?? []).length > 0;
+    if (typeof data !== 'boolean') throw new Error('Could not check the address: no answer.');
+    return data;
   }
 
   /**

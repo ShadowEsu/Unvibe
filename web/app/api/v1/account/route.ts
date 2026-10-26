@@ -178,7 +178,7 @@ export async function DELETE(req: Request): Promise<Response> {
   // stale-row follow-up.
   if (deletion.step !== 'beta_downloads') {
     try {
-      const outcome = deletion.email && (await store.emailHeldByAnotherAccount(userId, deletion.email))
+      const outcome = deletion.email && (await store.addressReusedSinceDeletion(userId, deletion.email))
         ? 'email_reused'
         : await services.betaDownloads.deleteForEmail(deletion.email);
       await store.recordAccountDeletionStep(userId, 'beta_downloads', outcome);

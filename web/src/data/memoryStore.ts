@@ -35,7 +35,7 @@ interface MemoryData {
   events: EventRecord[];
   tokens: Map<string, TokenRecord>;
   devices: Map<string, PendingDevice>;
-  users: Map<string, { email?: string }>;
+  users: Map<string, { email?: string; createdAt: number }>;
   deletions: Map<string, MemoryDeletion>;
 }
 
@@ -91,7 +91,7 @@ export class MemoryStore implements Store {
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
-    this.data.users.set(userId, { email });
+    this.data.users.set(userId, { email, createdAt: this.data.users.get(userId)?.createdAt ?? this.now() });
     this.data.tokens.set(token, { userId, createdAt: this.now() });
     return token;
   }
@@ -126,7 +126,7 @@ export class MemoryStore implements Store {
     if (userId && this.data.deletions.has(userId)) throw new Error('account_deleted');
     if (!userId) {
       userId = randomUUID();
-      this.data.users.set(userId, { email: normalized });
+      this.data.users.set(userId, { email: normalized, createdAt: this.now() });
     }
     const token = randomUUID();
     this.data.tokens.set(token, { userId, createdAt: this.now() });
@@ -138,7 +138,7 @@ export class MemoryStore implements Store {
     const existing = [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0];
     if (existing) return null;
     const userId = randomUUID();
-    this.data.users.set(userId, { email: normalized });
+    this.data.users.set(userId, { email: normalized, createdAt: this.now() });
     const token = randomUUID();
     this.data.tokens.set(token, { userId, createdAt: this.now() });
     return { token, userId, email: normalized };
@@ -171,7 +171,7 @@ export class MemoryStore implements Store {
     new MemoryBillingStore().refuseTeamWithMembers(userId);
     let deletion = this.data.deletions.get(userId);
     if (!deletion) {
-      deletion = { userId, state: 'started', step: 'started', startedAt: new Date().toISOString(), tokenHashes: new Set() };
+      deletion = { userId, state: 'started', step: 'started', startedAt: new Date(this.now()).toISOString(), tokenHashes: new Set() };
       this.data.deletions.set(userId, deletion);
     }
     if (deletion.state === 'started') {
@@ -224,9 +224,12 @@ export class MemoryStore implements Store {
     return [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0] ?? null;
   }
 
-  async emailHeldByAnotherAccount(userId: string, email: string): Promise<boolean> {
+  /** Mirrors account_deletion_address_reused: only a users row created after the deletion started counts. */
+  async addressReusedSinceDeletion(userId: string, email: string): Promise<boolean> {
+    const startedAt = this.data.deletions.get(userId)?.startedAt;
+    if (!startedAt) return false;
     const normalized = email.trim().toLowerCase();
-    return [...this.data.users.entries()].some(([id, u]) => id !== userId && u.email === normalized);
+    return [...this.data.users.entries()].some(([id, u]) => id !== userId && u.email?.trim().toLowerCase() === normalized && u.createdAt > Date.parse(startedAt));
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {

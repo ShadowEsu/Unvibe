@@ -13,16 +13,19 @@
 --     refused by the membership trigger.
 --   * erase_account_data: the public side in one transaction. Repeats the Teams refusal. Then
 --     deletes or anonymises the email-keyed rows (waitlist, gift claims and redemptions, feedback
---     bonus grants, site feedback, invitations to the address), unless another account holds the
---     address now; keeps promo redemptions without the account or the email; revokes the pending
---     invitations the account sent in other teams; deletes owned workspaces and memberships, then
---     the users row. tokens, device codes, events and the rest go with users by their on delete
---     cascade, so until this commits the app token still works for a retry.
+--     bonus grants, site feedback, invitations to the address), unless another account took the
+--     address after the deletion started; keeps promo redemptions without the account or the
+--     email; revokes the pending invitations the account sent in other teams; deletes owned
+--     workspaces and memberships, then the users row. tokens, device codes, events and the rest
+--     go with users by their on delete cascade, so until this commits the app token still works
+--     for a retry.
 --   * users_refuse_deleted_account: no users row can be created (insert or upsert) for an id with
 --     a deletion row, so a session that outlives the deletion cannot re-create the account.
 --   * workspace_members_refuse_deleted_account: nobody joins a workspace owned by an account
 --     being deleted, and an account being deleted joins nothing.
 --   * stale_account_deletions: how many deletions are still started after an hour (alerting).
+--   * account_deletion_address_reused: whether another account took the address after the
+--     deletion started; erase and the Blob step then leave that address's rows alone.
 --
 -- RLS is on with no policies; public, anon and authenticated have no table or function rights.
 -- Only the service role (the API) reads the table and calls the functions, by explicit grants.
@@ -36,6 +39,7 @@
 --   drop function if exists public.erase_account_data(uuid);
 --   drop function if exists public.begin_account_deletion(uuid, text, text);
 --   drop function if exists public.stale_account_deletions(interval);
+--   drop function if exists public.account_deletion_address_reused(uuid, text);
 --   drop table if exists public.account_deletions;
 --   commit;
 
@@ -114,6 +118,25 @@ $$;
 revoke all on function public.stale_account_deletions(interval) from public, anon, authenticated;
 grant execute on function public.stale_account_deletions(interval) to service_role;
 
+-- Whether p_email belongs to another account created after this deletion started (the person
+-- signed up again once the Auth identity was gone). users.email is not unique (0001_init.sql), so
+-- an older row with the same address does not count: it cannot stop the leaver's cleanup. Address
+-- comparison is lower(trim()) on both sides, as everywhere in this migration.
+create or replace function public.account_deletion_address_reused(p_user_id uuid, p_email text)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.account_deletions d join public.users u on lower(trim(u.email)) = lower(trim(p_email))
+    where d.user_id = p_user_id and u.id <> p_user_id and u.created_at > d.started_at
+  );
+$$;
+revoke all on function public.account_deletion_address_reused(uuid, text) from public, anon, authenticated;
+grant execute on function public.account_deletion_address_reused(uuid, text) to service_role;
+
 create or replace function public.erase_account_data(p_user_id uuid)
 returns void
 language plpgsql
@@ -128,10 +151,9 @@ begin
   if not found then raise exception 'account deletion was not started'; end if;
   v_emails := v_emails || coalesce((select array_agg(lower(trim(u.email))) from public.users u
     where u.id = p_user_id and coalesce(trim(u.email), '') <> ''), '{}');
-  -- An address another account holds now (signed up again after the Auth identity went) is that
-  -- account's: its email-keyed rows stay. This account's id-keyed rows still go below.
-  v_emails := array(select distinct e from unnest(v_emails) e where not exists (
-    select 1 from public.users u where u.id <> p_user_id and lower(trim(u.email)) = e));
+  -- An address another account took after this deletion started (signed up again once the Auth
+  -- identity went) is that account's: its email-keyed rows stay. This account's id-keyed rows go below.
+  v_emails := array(select distinct e from unnest(v_emails) e where not public.account_deletion_address_reused(p_user_id, e));
 
   -- Teams owners, again inside this transaction (begin_account_deletion already refused, and the
   -- membership trigger refuses joins since): another member would lose their data with the workspace.
