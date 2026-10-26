@@ -13,7 +13,7 @@ export interface AuthIdentities {
 }
 
 export interface BetaDownloadRecords {
-  /** Deletes every record for the email. 'not_configured' when this deployment has no Blob credentials. Throws on any failure. */
+  /** Deletes every record for the email. 'no_email' without an address; 'not_configured' when this deployment has no Blob credentials. Throws on any failure. */
   deleteForEmail(email: string | undefined): Promise<BetaDownloadCleanup>;
 }
 
@@ -56,11 +56,12 @@ function decryptRecord(payload: string, secret: string): unknown {
 export function vercelBlobBetaDownloads(env: NodeJS.ProcessEnv = process.env, fetcher: typeof fetch = fetch): BetaDownloadRecords {
   return {
     async deleteForEmail(email) {
+      // No address captured: nothing was looked up, and the row must not claim the records are gone.
+      const target = email?.trim().toLowerCase();
+      if (!target) return 'no_email';
       const token = env.BLOB_READ_WRITE_TOKEN?.trim();
       const secret = env.WAITLIST_ADMIN_TOKEN?.trim();
       if (!token || !secret) return 'not_configured';
-      const target = email?.trim().toLowerCase();
-      if (!target) return 'deleted';
       // Same headers as the @vercel/blob SDK: the store id is the fourth part of a read-write token.
       const headers = { authorization: `Bearer ${token}`, 'x-api-version': '12', 'x-vercel-blob-store-id': token.split('_')[3] ?? '' };
       const matches: string[] = [];

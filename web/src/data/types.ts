@@ -82,8 +82,11 @@ export interface Account {
   email: string;
 }
 
-/** deleted: the Blob beta-download records for the email are gone (or there were none). */
-export type BetaDownloadCleanup = 'deleted' | 'not_configured';
+/**
+ * deleted: the Blob beta-download records for the email are gone (or there were none). no_email:
+ * no address was captured, so nothing was looked up.
+ */
+export type BetaDownloadCleanup = 'deleted' | 'not_configured' | 'no_email';
 /**
  * What account_deletions.beta_downloads records: the cleanup's answer; failed (the step threw);
  * or email_reused (another account holds the address now, so its records are that account's).

@@ -150,3 +150,12 @@ test('beta-download records: no credentials is not_configured (and no request); 
   // A record that does not decrypt might be this person's: stop rather than report it deleted.
   await assert.rejects(vercelBlobBetaDownloads(BLOB_ENV, fakeBlob(record, { secret: `other-${randomUUID()}` }).fetcher).deleteForEmail('leaving@account.test'));
 });
+
+test('beta-download records: without an address the outcome is no_email, not deleted, and nothing is read', async () => {
+  const none = fakeFetch(() => { throw new Error('no request expected'); });
+  for (const email of [undefined, '', '   ']) {
+    assert.equal(await vercelBlobBetaDownloads(BLOB_ENV, none.fetcher).deleteForEmail(email), 'no_email');
+    assert.equal(await vercelBlobBetaDownloads({} as NodeJS.ProcessEnv, none.fetcher).deleteForEmail(email), 'no_email');
+  }
+  assert.equal(none.seen.length, 0);
+});

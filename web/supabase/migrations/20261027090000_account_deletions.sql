@@ -49,11 +49,12 @@ create table if not exists public.account_deletions (
   step text not null default 'started' check (step in ('started', 'auth_identity', 'app_data', 'beta_downloads', 'done')),
   email text,
   token_hashes text[] not null default '{}',
-  -- deleted: the Blob records for the email were removed (or there were none). not_configured:
-  -- this deployment has no Blob credentials, so the records were not looked up. email_reused:
-  -- another account holds the address now, so the records are that account's and stay. failed: the
-  -- last attempt threw; the row stays started, with the email, until a retry or a follow-up cleans up.
-  beta_downloads text check (beta_downloads in ('deleted', 'not_configured', 'email_reused', 'failed')),
+  -- deleted: the Blob records for the email were removed (or there were none). no_email: no
+  -- address was captured, so nothing was looked up. not_configured: this deployment has no Blob
+  -- credentials, so the records were not looked up. email_reused: another account holds the
+  -- address now, so the records are that account's and stay. failed: the last attempt threw; the
+  -- row stays started, with the email, until a retry or a follow-up cleans up.
+  beta_downloads text check (beta_downloads in ('deleted', 'no_email', 'not_configured', 'email_reused', 'failed')),
   started_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   done_at timestamptz,
