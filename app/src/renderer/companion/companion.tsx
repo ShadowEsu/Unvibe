@@ -1238,7 +1238,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
         }}>Sign out</button></div>
       <div className="setrow setrow--stack">
         <div className="sl sl--danger">Delete account</div>
-        <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this {deviceName} and on our servers. This cannot be undone.</div>
+        <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review, concept and streak) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
             <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
