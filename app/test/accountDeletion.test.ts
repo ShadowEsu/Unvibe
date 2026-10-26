@@ -17,7 +17,7 @@ import { knowledgeStore } from '../src/main/knowledgeStore';
 import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
 import { flush } from '../src/main/sync';
-import { askChat, askStudyAssistant } from '../src/main/studyQuiz';
+import { answerQuizCard, askChat, askStudyAssistant, startQuizCard } from '../src/main/studyQuiz';
 import { invalidateAppUsage } from '../src/main/usage';
 import type { LocalEvent } from '../src/core/learning';
 
@@ -511,6 +511,37 @@ test('a study answer that arrives after a wipe uses no allowance and writes noth
     assert.equal(store().studyAskUsage().used, 0, 'no daily study count written into the wiped store');
   } finally {
     provider.restore();
+  }
+});
+
+test('a quiz question that arrives after a wipe uses no allowance and opens no card', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  const original = globalThis.fetch;
+  let questionAsked!: () => void;
+  const asked = new Promise<void>((resolve) => { questionAsked = resolve; });
+  let answerQuestion!: () => void;
+  const answered = new Promise<void>((resolve) => { answerQuestion = resolve; });
+  // The question service replies late, after the wipe, as if it ignored the abort.
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (!url.includes('/api/v1/comprehension')) throw new TypeError('fetch failed');
+    questionAsked();
+    await answered;
+    return Response.json({ question: 'What does it add?', options: ['a and b', 'c', 'd', 'e'], answerIndex: 0, concept: 'addition', conceptLabel: 'Addition', rationale: 'It adds a and b.' });
+  }) as typeof fetch;
+  try {
+    const starting = startQuizCard('lesson-1');
+    await asked;
+    store().wipeEverything();
+    answerQuestion();
+    const result = await starting;
+    assert.equal(result.ok, false);
+    assert.match(result.ok ? '' : result.error, /erased while this was running/);
+    assert.equal(store().quizUsage().used, 0, 'no daily quiz count written into the wiped store');
+    assert.deepEqual(answerQuizCard('lesson-1', 0), { ok: false, error: 'Start a quiz card first.' }, 'no quiz card left open');
+  } finally {
+    answerQuestion();
+    globalThis.fetch = original;
   }
 });
 
