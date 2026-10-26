@@ -128,7 +128,7 @@ export function FounderConsole() {
             inputMode="numeric"
             value={hoursInput}
             onChange={(event) => setHoursInput(event.target.value)}
-            aria-label="Founder hours"
+            aria-label="Build hours"
           />
         </label>
         <label>
@@ -137,7 +137,7 @@ export function FounderConsole() {
             inputMode="numeric"
             value={minutesInput}
             onChange={(event) => setMinutesInput(event.target.value)}
-            aria-label="Founder minutes"
+            aria-label="Build minutes"
           />
         </label>
         <button type="submit" disabled={busy || !status}>Save time</button>
