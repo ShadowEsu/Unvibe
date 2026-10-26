@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { selectProvider } from '@/ai';
+import type { Provider } from '@/ai';
+import { GeminiProvider } from '@/ai/gemini';
+import { MockProvider } from '@/ai/mock';
 import {
   TRY_ALLOWED_ORIGINS,
   TRY_GLOBAL_PER_DAY,
@@ -21,6 +23,17 @@ function cors(req: Request): Record<string, string> {
     'Access-Control-Allow-Headers': 'Content-Type',
     'Cache-Control': 'no-store',
   };
+}
+
+/**
+ * The site says pasted code goes to Unvibe and Google Gemini, so Try it never uses the env-order
+ * fallback in `selectProvider`: Gemini only, or the labelled mock outside production when
+ * ENABLE_MOCK_AI is on. No Gemini key means no provider (503), never another one.
+ */
+function tryProvider(): Provider | null {
+  if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_MOCK_AI === 'true') return new MockProvider();
+  const gemini = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+  return gemini ? new GeminiProvider(gemini) : null;
 }
 
 const memory = new Map<string, number[]>();
@@ -62,9 +75,9 @@ export async function POST(req: Request): Promise<Response> {
   const checked = validateTry(await req.json().catch(() => null));
   if (!checked.ok) return Response.json({ error: checked.error }, { status: 400, headers });
 
-  const provider = selectProvider();
+  const provider = tryProvider();
   // Never pass off mock output as a real explanation.
-  if (provider.mock) return Response.json({ error: 'The live demo is resting right now. Download Unvibe to try it on your code.' }, { status: 503, headers });
+  if (!provider || provider.mock) return Response.json({ error: 'The live demo is resting right now. Download Unvibe to try it on your code.' }, { status: 503, headers });
 
   const limited = await overLimit(hashVisitor(clientIp(req))).catch(() => null);
   if (limited) return Response.json({ error: limited }, { status: 429, headers });
