@@ -105,6 +105,9 @@ public class CapDiag {
   [DllImport("user32.dll")] public static extern bool GetLayeredWindowAttributes(IntPtr h, out uint key, out byte alpha, out uint flags);
   [DllImport("user32.dll")] public static extern bool GetWindowDisplayAffinity(IntPtr h, out uint a);
   [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr h, int a, out int v, int s);
+  [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr h);
+  [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr h, IntPtr dc);
+  [DllImport("gdi32.dll")] public static extern bool BitBlt(IntPtr d, int x, int y, int w, int h, IntPtr s, int sx, int sy, uint rop);
 }
 "@
 function Describe($id, $h) {
@@ -135,7 +138,14 @@ foreach ($op in @('i', 'ii')) {
   try {
     $bmp = New-Object System.Drawing.Bitmap $b.Width,$b.Height; $g = [System.Drawing.Graphics]::FromImage($bmp)
     if ($op -eq 'i') { $g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size) }
-    else { $g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size,([System.Drawing.CopyPixelOperation]::SourceCopy -bor [System.Drawing.CopyPixelOperation]::CaptureBlt)) }
+    else {
+      # .NET Framework's CopyFromScreen rejects SourceCopy|CaptureBlt as an enum value, so make the
+      # same BitBlt call it makes, with SRCCOPY | CAPTUREBLT (0x40CC0020).
+      $hdc = $g.GetHdc(); $sdc = [CapDiag]::GetDC([IntPtr]::Zero)
+      $ok = [CapDiag]::BitBlt($hdc, 0, 0, $b.Width, $b.Height, $sdc, $b.Left, $b.Top, 0x40CC0020)
+      [void][CapDiag]::ReleaseDC([IntPtr]::Zero, $sdc); $g.ReleaseHdc($hdc)
+      if (-not $ok) { throw "BitBlt with CAPTUREBLT failed" }
+    }
     $bmp.Save($file); $g.Dispose(); $bmp.Dispose(); "saved $file"
   } catch { "error $file $($_.Exception.Message)" }
 }
@@ -229,7 +239,11 @@ async function diag(label, pwPage) {
   diagMs += Date.now() - started;
 }
 
-/** Windows only, after the final shot: does a forced repaint, then a reset of the layered style, refresh what the OS shows? */
+/**
+ * Windows only, after the final shot. exp1: forced repaint. exp2: reset WS_EX_LAYERED (drops the
+ * SetLayeredWindowAttributes state). exp3: real setOpacity(0.72), then scroll the panel. exp4: reset
+ * again, dim with CSS opacity instead of setOpacity, then scroll. exp5: CSS opacity back to 1, scroll.
+ */
 async function repaintExperiment() {
   if (os !== 'windows') return;
   try {
@@ -237,13 +251,45 @@ async function repaintExperiment() {
     const target = (await windowList('final-exp0', panel)).find((w) => w.playwright);
     if (!target) { dlog('[final-exp] no review panel window'); return; }
     const invalidate = () => app.evaluate(({ BrowserWindow }, id) => { BrowserWindow.fromId(id)?.webContents.invalidate(); }, target.id);
+    const relayer = (label) => runDiagScript(label, ['-mode', 'relayer', '-hwnds', `${target.id}:${target.hwnd}`]);
+    const scroll = async (dy) => { await panel.mouse.move(300, 330); await panel.mouse.wheel(0, dy); };
     await invalidate();
     await sleep(1500);
     await captureSet('final-exp1-invalidate', panel);
-    runDiagScript('final-exp2-relayer', ['-mode', 'relayer', '-hwnds', `${target.id}:${target.hwnd}`]);
+    relayer('final-exp2-relayer');
     await invalidate();
     await sleep(1500);
     await captureSet('final-exp2-relayer', panel);
+
+    await app.evaluate(({ BrowserWindow }, id) => { BrowserWindow.fromId(id)?.setOpacity(0.72); }, target.id);
+    await sleep(500);
+    await scroll(-400);
+    await sleep(1500);
+    await captureSet('final-exp3-setopacity-then-scroll', panel);
+
+    relayer('final-exp4-css-dim');
+    await app.evaluate(({ BrowserWindow }, id) => {
+      const w = BrowserWindow.fromId(id);
+      if (!w) return;
+      // What the app would do instead of win.setOpacity: dim the page, not the layered window.
+      w.setOpacity = (value) => {
+        const previous = w.__dimKey;
+        w.__dimKey = null;
+        if (previous) void w.webContents.removeInsertedCSS(previous);
+        if (value < 1) void w.webContents.insertCSS(`html { opacity: ${value} !important; }`).then((key) => { w.__dimKey = key; });
+      };
+      w.setOpacity(0.72);
+    }, target.id);
+    await sleep(500);
+    await scroll(-3000);
+    await sleep(1500);
+    await captureSet('final-exp4-css-dim', panel);
+
+    await app.evaluate(({ BrowserWindow }, id) => { BrowserWindow.fromId(id)?.setOpacity(1); }, target.id);
+    await sleep(500);
+    await scroll(500);
+    await sleep(1500);
+    await captureSet('final-exp5-css-solid', panel);
   } catch (e) { dlog(`[final-exp] error: ${firstLine(e)}`); }
 }
 
