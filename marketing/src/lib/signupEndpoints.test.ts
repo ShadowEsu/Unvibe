@@ -1,11 +1,12 @@
 import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import * as waitlistRoute from "../app/api/waitlist/route";
 import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
+import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
 
 /**
  * Public signup endpoints against a fake Supabase (PostgREST) project, so the real supabase-js
@@ -148,6 +149,55 @@ describe("waitlist and beta-download reject cross-site posts", () => {
       assert.equal(site.status, 422);
     } finally {
       delete process.env.VERCEL_ENV;
+    }
+  });
+});
+
+describe("beta-download hands out the pinned release", () => {
+  it("returns this release's Mac build even when the old override variables are set", async () => {
+    // Production still has both names set from months ago; they must not decide what people get.
+    process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL = "https://example.com/old-beta.dmg";
+    process.env.NEXT_PUBLIC_INVESTOR_DMG_URL = "https://example.com/old-investor.dmg";
+    try {
+      const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: "pinned-build@example.com" }));
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { downloadUrl?: string };
+      assert.equal(body.downloadUrl, BETA_MAC_DOWNLOAD_URL);
+    } finally {
+      delete process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL;
+      delete process.env.NEXT_PUBLIC_INVESTOR_DMG_URL;
+    }
+  });
+
+  it("emails this release's Mac build under a send key that names the release", async () => {
+    process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL = "https://example.com/old-beta.dmg";
+    process.env.NEXT_PUBLIC_INVESTOR_DMG_URL = "https://example.com/old-investor.dmg";
+    process.env.RESEND_API_KEY = "resend-test-key";
+    // Capture what would go to Resend; everything else (the fake Supabase) goes through as usual.
+    const emails: { key: string | null; html: string; text: string }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url !== "https://api.resend.com/emails") return realFetch(input, init);
+      const body = JSON.parse(String(init?.body)) as { html: string; text: string };
+      emails.push({ key: new Headers(init?.headers).get("idempotency-key"), html: body.html, text: body.text });
+      return Response.json({ id: `email-${emails.length}` });
+    }) as typeof fetch;
+    try {
+      // A fresh address each run: the local download store (.data) remembers who was already emailed.
+      const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `pinned-email-${randomUUID()}@example.com` }));
+      assert.equal(response.status, 200);
+      const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
+      assert.ok(welcome, "the welcome email was sent");
+      assert.ok(welcome.html.includes(BETA_MAC_DOWNLOAD_URL), "the HTML email links the pinned build");
+      assert.ok(welcome.text.includes(BETA_MAC_DOWNLOAD_URL), "the text email links the pinned build");
+      assert.ok(!`${welcome.html}${welcome.text}`.includes("example.com/old-"), "no override URL in the email");
+      assert.ok(welcome.key?.startsWith(`unvibe-welcome-${BETA_INSTALL_TAG.replace(/^v/, "")}-`), `send key names the release: ${welcome.key}`);
+    } finally {
+      globalThis.fetch = realFetch;
+      delete process.env.RESEND_API_KEY;
+      delete process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL;
+      delete process.env.NEXT_PUBLIC_INVESTOR_DMG_URL;
     }
   });
 });

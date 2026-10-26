@@ -50,8 +50,8 @@ observation wins**. Then fix this file.
 - Product name: the code still says "Uncode" in places (codename history). Public name is
   **Unvibe**. Bundle ID `com.unvibe.app`.
 
-Founder: **Preston Susanto** (preston@unvibe.site, public founder page https://unvibe.site/about).
-He writes short and plain; write to him the same way (no dashes in the middle of sentences, no
+Contact: preston@unvibe.site (the public contact address). About page: https://unvibe.site/about.
+The owner writes short and plain; write the same way (no dashes in the middle of sentences, no
 jargon walls, lead with the answer).
 
 ### Where it is going (the bigger picture)
@@ -149,8 +149,8 @@ loop/       LEDGER.md: an older marketing-loop log (Sep)
 
 ## 3. Rules that always apply
 
-1. **Commits are authored as Preston only:**
-   `git -c user.name="Preston Susanto" -c user.email="prestonjaysusanto@gmail.com" commit ...`
+1. **Commits are authored as the owner only:**
+   `git -c user.name="<owner name>" -c user.email="<owner email>" commit ...` (the values are in the owner's private handoff notes, not in this public repo).
    No co-author lines, no session trailers, never show an AI as a collaborator on GitHub.
 2. No pull requests or GitHub comments unless Preston asks. Work on the branch, fast-forward `main`.
 3. Every app version change gets an entry at the top of `marketing/src/data/milestones.ts`.

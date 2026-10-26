@@ -656,7 +656,7 @@
 
 .resources-filters {
   border: 1.5px solid var(--v-ink);
-  background: #fff;
+  background: var(--u-card);
   box-shadow: 3px 3px 0 var(--v-ink);
 }
 
@@ -674,26 +674,26 @@
 
 .resources-filter-pill.is-active,
 .resources-depth-tab.is-active {
-  border-color: var(--v-ink);
-  background: var(--v-ink);
-  color: #fff;
+  border-color: var(--u-cta);
+  background: var(--u-cta);
+  color: var(--u-on-cta);
   box-shadow: none;
 }
 
 .resources-depth-tabs {
-  border-bottom-color: #e4ded1;
+  border-bottom-color: var(--u-line);
 }
 
 .resources-depth-tab {
   border: 1.5px solid var(--v-ink);
   border-radius: 999px;
-  background: #fff;
+  background: var(--u-card);
 }
 
 .resources-depth-tab:hover {
   border-color: var(--v-ink);
   background: var(--v-lime);
-  color: var(--v-ink);
+  color: #141414;
 }
 
 .resources-explanation-bubble,
@@ -701,8 +701,8 @@
 .resources-swatch {
   border: 1.5px solid var(--v-ink);
   border-radius: 16px;
-  background: #fff;
-  color: var(--v-ink);
+  background: var(--u-card);
+  color: var(--u-text);
 }
 
 .resources-arch-node--shield {

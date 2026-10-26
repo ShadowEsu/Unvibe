@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { ListingBadges } from "@/components/paper/ListingBadges";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
+import { observeMotion } from "@/lib/motionInView";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const product = [
   ["Product", "/#product"],
+  ["Explain code", "/explain"],
   ["Download", "/beta"],
   ["Pricing", "/pricing"],
   ["Change log", "/releases"],
@@ -17,7 +21,7 @@ const product = [
 ];
 
 const company = [
-  ["Founder", "/about"],
+  ["About", "/about"],
   ["Building Unvibe", "/build"],
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],
@@ -27,6 +31,8 @@ const company = [
 
 export function Footer() {
   const pathname = usePathname();
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => (statusRef.current ? observeMotion(statusRef.current) : undefined), []);
 
   // /activate is a full-screen card over the page; a footer under it would only add hidden Tab stops.
   if (pathname?.startsWith("/activate")) return null;
@@ -52,11 +58,11 @@ export function Footer() {
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
-        <p className="paper-footer__status">
+        <p className="paper-footer__status" ref={statusRef}>
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
         </p>
+        <ThemeToggle className="paper-footer__theme" />
       </div>
-      <div className="paper-footer__word" aria-hidden="true">unvibe</div>
     </footer>
   );
 }

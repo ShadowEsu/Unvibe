@@ -74,7 +74,7 @@ export function BuildLive() {
         </div>
       </div>
       <p className="paper-live__updated">
-        {live ? "The founder clock is on." : "The founder clock is off."}
+        {live ? "The build clock is on." : "The build clock is off."}
       </p>
     </div>
   );

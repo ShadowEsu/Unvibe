@@ -6,7 +6,7 @@ import { track } from "@/lib/analytics";
 import { storedRef } from "@/lib/referral";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
-/** Get a personal link to share Unvibe. Gift months come from the app's gift code (next app release), never from the link. */
+/** Get a personal link to share Unvibe. Gift months come from the app's gift code (app 0.1.44 and later), never from the link. */
 export function InviteFriend() {
   const [email, setEmail] = useState("");
   const [link, setLink] = useState("");

@@ -5,11 +5,36 @@ import demo from "@/data/demoMedia.json";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { DotGrid } from "@/components/paper/DotGrid";
 
+/** When the kicker's shortcut key has finished its press (vibe.css `uKeyPress`: 900 ms delay + ~110 ms down). */
+const KEY_PRESSED_AT = 1010;
+
 /** The real app, recorded in one session, directly under the hero promise. */
 export function AppTour() {
   const posterRef = useRef<HTMLImageElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
   // undefined until the poster image settles; then its chosen file (or null if it failed).
   const [poster, setPoster] = useState<string | null>();
+  const [open, setOpen] = useState(false);
+
+  // The window opens once a quarter of it is on screen, but never before the hero's key press lands.
+  useEffect(() => {
+    const node = windowRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setOpen(true);
+      return;
+    }
+    let timer = 0;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      timer = window.setTimeout(() => setOpen(true), Math.max(0, KEY_PRESSED_AT - performance.now()));
+    }, { threshold: 0.25 });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const img = posterRef.current;
@@ -35,7 +60,7 @@ export function AppTour() {
           Watch Unvibe <em>in action.</em>
         </h2>
       </div>
-      <div className="vtour__window">
+      <div ref={windowRef} className={open ? "vtour__window is-open" : "vtour__window"}>
         <div className="vtour__bar" aria-hidden="true">
           <i /><i /><i />
           <span>Unvibe {demo.version}</span>
@@ -65,10 +90,10 @@ export function AppTour() {
             label="Screen recording of Unvibe: a code explanation streaming in, switching to Beginner depth, a follow-up question, then a Test me question"
           />
         </div>
+        <p className="vtour__caption">
+          Screen recording of Unvibe {demo.version} on a {demo.platform}. Every explanation was generated live; only the waits between steps are cut.
+        </p>
       </div>
-      <p className="vtour__caption">
-        Screen recording of Unvibe {demo.version} on a {demo.platform}. Every explanation was generated live; only the waits between steps are cut.
-      </p>
     </section>
   );
 }

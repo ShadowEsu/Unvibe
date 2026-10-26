@@ -1,11 +1,21 @@
-export const BETA_INSTALL_TAG = "v0.1.43";
-export const BETA_INSTALL_ASSET = "Unvibe-0.1.43-mac-arm64.dmg";
-export const BETA_WINDOWS_ASSET = "Unvibe-0.1.43-win-x64-portable.exe";
+export const BETA_INSTALL_TAG = "v0.1.44";
+export const BETA_INSTALL_ASSET = "Unvibe-0.1.44-mac-arm64.dmg";
+export const BETA_WINDOWS_ASSET = "Unvibe-0.1.44-win-x64-portable.exe";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 export const BETA_INSTALL_HELP_URL = "https://unvibe.site/install-help";
 /** Where both install scripts live, so people can read them before running them. */
 export const BETA_INSTALL_SCRIPT_SOURCE_URL =
   "https://github.com/ShadowEsu/Unvibe/blob/main/marketing/src/lib/betaInstallScript.ts";
+
+/**
+ * The Mac app's own designated requirement: its bundle id and the release signing certificate
+ * ("Unvibe Self Signed", self-signed rather than an Apple Developer ID, valid to 2036-10-13; the Apple
+ * silicon and Intel builds both carry it). install.sh accepts only an app that meets it, so a copy
+ * re-signed by anyone else (ad-hoc included) is refused. With a Developer ID this becomes
+ * `anchor apple generic and certificate leaf[subject.OU] = "<TeamID>"`.
+ */
+export const BETA_MAC_SIGNING_REQUIREMENT =
+  'identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"';
 
 /** Private beta installer. Curl download so macOS never quarantines the app. */
 export function betaInstallScript(): string {
@@ -74,9 +84,10 @@ device="$(printf '%s\\n' "$attachOut" | awk '/^\\/dev\\/disk/ { print $1; exit }
 if [ ! -d "$mountPoint/Unvibe.app" ]; then
   stop "The disk image did not contain Unvibe.app. Nothing was installed."
 fi
-# The release is signed. If the signature does not verify, stop rather than re-sign it here:
-# a local re-sign changes the app's identity and macOS drops its Accessibility permission.
-if ! codesign --verify --deep --strict "$mountPoint/Unvibe.app" >/dev/null 2>&1; then
+# The release is self-signed ("Unvibe Self Signed", not an Apple Developer ID), and only an app signed
+# with that certificate passes: a copy re-signed by anyone else fails. If the check fails, stop rather
+# than re-sign it here: a local re-sign changes the app's identity and macOS drops its Accessibility permission.
+if ! codesign --verify --deep --strict -R='${BETA_MAC_SIGNING_REQUIREMENT}' "$mountPoint/Unvibe.app" >/dev/null 2>&1; then
   stop "The downloaded app failed its signature check. Nothing was installed, and any Unvibe you already have is unchanged."
 fi
 
@@ -126,7 +137,7 @@ try {
 \$destDir = Join-Path \$env:LOCALAPPDATA "Unvibe"
 \$dest = Join-Path \$destDir "Unvibe.exe"
 \$track = "${BETA_INSTALL_TRACK_URL}"
-\$ua = "UnvibeBetaInstaller/0.1.43"
+\$ua = "UnvibeBetaInstaller/0.1.44"
 
 if (\$env:OS -notlike "*Windows*") {
   Write-Error "This installer is for Windows. On a Mac run: curl -fsSL https://unvibe.site/install.sh | bash"

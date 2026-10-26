@@ -2,8 +2,8 @@
  * Safe, idempotent beta invite sender.
  *
  * npm run send:beta-invites
- * npm run send:beta-invites -- --to mirzett
- * npm run send:beta-invites -- --send --to mirzett
+ * npm run send:beta-invites -- --to <part of an email or name>
+ * npm run send:beta-invites -- --send --to <part of an email or name>
  */
 import { loadEnvConfig } from "@next/env";
 import { BETA_INVITE_SUBJECT, betaInviteHtml, betaInviteText } from "../src/emails/betaInvite";

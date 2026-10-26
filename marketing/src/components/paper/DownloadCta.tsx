@@ -1,6 +1,6 @@
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { InviteReveal } from "@/components/paper/InviteReveal";
-import { LiquidBackground } from "@/components/paper/LiquidBackground";
+import { Vibe } from "@/components/paper/Vibe";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
@@ -8,8 +8,8 @@ import { SHORTCUTS } from "@/lib/shortcuts";
 export function DownloadCta() {
   return (
     <InviteReveal>
-      <LiquidBackground />
       <div className="paper-invite__card paper-glass">
+        <div className="paper-invite__vibe" aria-hidden="true"><Vibe size={64} /></div>
         <p className="paper-meta">Free during the beta</p>
         <h2>Download <em>Unvibe.</em></h2>
         <p className="paper-lead">

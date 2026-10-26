@@ -32,7 +32,7 @@ export function InviteReveal({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div ref={rootRef} className="paper-invite paper-invite--liquid">
+    <div ref={rootRef} className="paper-invite">
       {children}
     </div>
   );

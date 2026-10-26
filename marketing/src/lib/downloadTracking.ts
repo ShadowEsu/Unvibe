@@ -5,7 +5,9 @@
  * `download_cta_clicked {surface, platform}`, platform mac | windows | other:
  * - Downloads the installer: hero, hero_other_os, palette, beta, home_install, investors,
  *   home_cta, try_it (after a failed try), try_it_answer (under a finished try-it answer),
- *   activate (the /activate first-visit download), redeem (after a promo code on /redeem).
+ *   activate (the /activate first-visit download), redeem (after a promo code on /redeem), and on
+ *   the /explain pages: explain (the page's download section), explain_answer and explain_try
+ *   (their Try it box, as try_it_answer and try_it).
  * - Opens the download page (/beta) instead: nav, mobile_bar, pricing, footer, releases, build,
  *   resources. Of these, only the DownloadLink buttons (nav, releases, build, resources) also
  *   fire DOWNLOADED_EVENT, as they always have.
@@ -36,6 +38,9 @@ export type DownloadSurface =
   | "try_it"
   | "try_it_answer"
   | "activate"
+  | "explain"
+  | "explain_answer"
+  | "explain_try"
   | "pricing"
   | "footer"
   | "releases"

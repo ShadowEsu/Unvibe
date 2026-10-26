@@ -1,0 +1,532 @@
+/**
+ * The /explain/<id> pages: one per language with a written, checked sample and notes.
+ *
+ * Every sample here was run or compiled before it went on the site, and every note describes that
+ * exact sample. A language is listed only when its page says something the others don't; Google
+ * treats near-identical pages made for search as spam, and they don't help a learner either.
+ * Text in `backticks` renders as code.
+ */
+
+import { languages, type Language } from "@/lib/languages";
+
+export interface ConceptNote {
+  /** One of the language's `concepts` in languages.ts. */
+  concept: string;
+  text: string;
+}
+
+export interface ExplainPage {
+  /** The language's id in languages.ts, and the URL segment. */
+  id: string;
+  /** File name in the Try it editor's title bar. */
+  fileName: string;
+  /** The line under the page's heading. */
+  lead: string;
+  /** Meta description. */
+  description: string;
+  /** What the sample is, for the /explain index. */
+  sampleSummary: string;
+  /** Preloaded in Try it: realistic, correct, 8 to 25 lines, under the 1,500 character limit. */
+  sample: string;
+  /** Which of the language's concepts the sample shows, and where. */
+  shows: ConceptNote[];
+  notes: string[];
+  watchOut: string;
+}
+
+export const explainPages: ExplainPage[] = [
+  {
+    id: "python",
+    fileName: "sales_report.py",
+    lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
+    description:
+      "Paste Python code and get a plain English explanation online, free. The sample walks through a decorator, a generator and a dict comprehension.",
+    sampleSummary: "A timing decorator, a generator that reads a CSV file and a dict comprehension.",
+    sample: `import time
+from functools import wraps
+
+def timed(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        print(f"{func.__name__} took {time.perf_counter() - start:.3f}s")
+        return result
+    return wrapper
+
+def read_rows(path):
+    with open(path) as f:
+        for line in f:
+            yield line.rstrip("\\n").split(",")
+
+@timed
+def total_by_city(path):
+    totals = {}
+    for city, amount in read_rows(path):
+        totals[city] = totals.get(city, 0) + float(amount)
+    return {city: round(total, 2) for city, total in sorted(totals.items())}`,
+    shows: [
+      {
+        concept: "decorators",
+        text: "`@timed` above `total_by_city` is shorthand for `total_by_city = timed(total_by_city)`. Every call now goes through `wrapper`, which runs the real function, prints how long it took and returns its result.",
+      },
+      {
+        concept: "generators",
+        text: "`read_rows` uses `yield`, so it hands back one row at a time instead of building a list. A large file never has to fit in memory at once.",
+      },
+      {
+        concept: "comprehensions",
+        text: "The last line is a dict comprehension: it builds a new dictionary from `totals`, in city order, with each total rounded to 2 decimal places.",
+      },
+    ],
+    notes: [
+      "`@wraps(func)` copies the original name and docstring onto `wrapper`. Without it, `total_by_city.__name__` would be `\"wrapper\"`, which makes logs and tracebacks harder to read.",
+      "`for city, amount in read_rows(path)` unpacks each row into exactly two values. A row with more or fewer commas raises `ValueError`.",
+      "`totals.get(city, 0)` returns 0 the first time a city appears. `collections.defaultdict(float)` does the same job without the `.get`.",
+      "`round(total, 2)` only changes what is returned. The running totals are plain floats, so use `decimal.Decimal` when the amounts are money that must add up exactly.",
+    ],
+    watchOut:
+      "A header row such as `city,amount` crashes the function, because `float(\"amount\")` raises `ValueError`. Skip it with `next(f)` before the loop, or read the file with the `csv` module.",
+  },
+  {
+    id: "javascript",
+    fileName: "profiles.js",
+    lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
+    description:
+      "Get any JavaScript snippet explained in plain English online, free. The sample loads several users at once with fetch and Promise.allSettled.",
+    sampleSummary: "Loading several users at once with fetch and Promise.allSettled.",
+    sample: `async function loadProfiles(ids) {
+  const results = await Promise.allSettled(
+    ids.map((id) =>
+      fetch(\`/api/users/\${id}\`).then((res) => {
+        if (!res.ok) throw new Error(\`User \${id}: HTTP \${res.status}\`);
+        return res.json();
+      })
+    )
+  );
+
+  const profiles = [];
+  const failed = [];
+  results.forEach((result, i) => {
+    if (result.status === "fulfilled") profiles.push(result.value);
+    else failed.push({ id: ids[i], reason: result.reason.message });
+  });
+  return { profiles, failed };
+}
+
+console.log("before");
+loadProfiles([1, 2, 3]).then(({ profiles, failed }) => {
+  console.log(\`\${profiles.length} loaded, \${failed.length} failed\`);
+});
+console.log("after");`,
+    shows: [
+      {
+        concept: "promises",
+        text: "`fetch` returns a promise for each id, and `Promise.allSettled` waits until every one has either resolved or rejected. It never rejects itself, so one failed user doesn't lose the others.",
+      },
+      {
+        concept: "event loop",
+        text: "The script prints `before`, then `after`, and only then the count. `await` pauses `loadProfiles` and hands control back, so the last `console.log` runs while the requests are still in flight.",
+      },
+      {
+        concept: "closures",
+        text: "The arrow function inside `ids.map` closes over its own `id`, so each error message names the right user even though the requests can finish in any order.",
+      },
+    ],
+    notes: [
+      "All the requests start at once, because `map` calls `fetch` for every id before anything is awaited. To send them one at a time, `await` each one inside a `for...of` loop.",
+      "`fetch` only rejects when the request itself fails, such as a network error. A 404 or a 500 still resolves, which is why the code checks `res.ok` and throws.",
+      "With `Promise.all` instead, the first failure would reject the whole call and the profiles that did load would be lost.",
+      "`results` keeps the same order as `ids`, which is why `ids[i]` finds the id of a failed request.",
+    ],
+    watchOut:
+      "A relative URL like `/api/users/1` only works in a web page. In Node.js, `fetch` needs a full URL, so every request here would fail with `Failed to parse URL` and end up in `failed`.",
+  },
+  {
+    id: "typescript",
+    fileName: "users.ts",
+    lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
+    description:
+      "Paste TypeScript and see what the code and its types mean, free online. The sample loads a user with a generic Result type, narrowing and async/await.",
+    sampleSummary: "A generic Result type that a fetch helper returns instead of throwing.",
+    sample: `type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+
+interface User {
+  id: number;
+  name: string;
+  email?: string;
+}
+
+export async function getJson<T>(url: string): Promise<Result<T>> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return { ok: false, error: \`HTTP \${res.status}\` };
+    return { ok: true, value: (await res.json()) as T };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function userLabel(id: number): Promise<string> {
+  const result = await getJson<User>(\`https://example.com/users/\${id}\`);
+  if (!result.ok) return \`Unknown user (\${result.error})\`;
+  const { name, email } = result.value;
+  return email ? \`\${name} <\${email}>\` : name;
+}`,
+    shows: [
+      {
+        concept: "generics",
+        text: "`Result<T>` and `getJson<T>` work for any shape of data. `getJson<User>` fills in `T` as `User`, so `result.value` is typed as a `User`.",
+      },
+      {
+        concept: "type narrowing",
+        text: "`Result` is a union of two object types told apart by `ok`. After `if (!result.ok) return ...`, TypeScript knows only the `{ ok: true; value: T }` case is left, so reading `result.value` compiles.",
+      },
+      {
+        concept: "async/await",
+        text: "Both functions are `async`, so they return a `Promise`. `await` waits for the response, and then for its body, before the next line runs.",
+      },
+      {
+        concept: "modules",
+        text: "`export` makes the two functions importable from other files. `Result` and `User` are not exported, so they stay private to this file.",
+      },
+    ],
+    notes: [
+      "`as T` is a promise to the compiler, not a check. If the server sends a different shape, nothing fails until a later line uses a missing field. Validate data that comes from outside your code.",
+      "`email?: string` means the field may be missing, so its type is `string | undefined`. The ternary in `userLabel` handles both cases.",
+      "With `strict` on, a `catch` variable has the type `unknown`, so the code checks `err instanceof Error` before reading `err.message`.",
+    ],
+    watchOut:
+      "`getJson` never throws: every failure becomes `{ ok: false }`. A caller that reads `.value` without checking `ok` first gets a compile error, which is the point of the pattern.",
+  },
+  {
+    id: "sql",
+    fileName: "report.sql",
+    lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
+    description:
+      "Paste a SQL query and read what it returns, explained in plain English, free. The sample ranks customers by spend with a LEFT JOIN, GROUP BY and RANK().",
+    sampleSummary: "Ranking customers by this year's spend with a LEFT JOIN, GROUP BY and RANK().",
+    sample: `SELECT
+  c.name,
+  COUNT(o.id) AS orders,
+  COALESCE(SUM(o.total), 0) AS spent,
+  RANK() OVER (ORDER BY COALESCE(SUM(o.total), 0) DESC) AS spend_rank
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.id
+  AND o.created_at >= '2026-01-01'
+GROUP BY c.id, c.name
+ORDER BY spend_rank, c.name;`,
+    shows: [
+      {
+        concept: "joins",
+        text: "`LEFT JOIN` keeps every customer, including one with no matching orders. For that customer the order columns come back as `NULL`.",
+      },
+      {
+        concept: "aggregation",
+        text: "`GROUP BY` folds each customer's orders into one row. `COUNT(o.id)` counts only real orders, so a customer with none gets 0, where `COUNT(*)` would give 1.",
+      },
+      {
+        concept: "window functions",
+        text: "`RANK() OVER (...)` runs after the grouping and numbers the rows by spend without merging them. Ties share a rank and the next rank is skipped: two customers at 1 are followed by 3.",
+      },
+    ],
+    notes: [
+      "The date filter sits in the `ON` clause on purpose. Moved to `WHERE`, it would drop every customer without an order this year, and the `LEFT JOIN` would behave like an inner join.",
+      "`COALESCE(SUM(o.total), 0)` turns the `NULL` sum of a customer with no orders into 0, both in the output and in the ranking.",
+      "Use `DENSE_RANK()` to number ties 1, 1, 2 instead of 1, 1, 3.",
+      "On a large `orders` table, an index on `orders (customer_id, created_at)` lets the database find each customer's recent orders without reading the whole table.",
+    ],
+    watchOut:
+      "Comparing `created_at` with `'2026-01-01'` works when dates are stored as a date type or as ISO text like `2026-03-01`. Text in another format, such as `03/01/2026`, compares character by character and gives wrong results.",
+  },
+  {
+    id: "bash",
+    fileName: "top-errors.sh",
+    lead: "Paste a shell script or a one-liner and Vibe explains what it does before you run it.",
+    description:
+      "Find out what a shell script does before you run it: paste it here, free. The sample finds the most common errors in a folder of logs with one pipeline.",
+    sampleSummary: "A script that finds the 10 most common errors in a folder of logs.",
+    sample: `#!/usr/bin/env bash
+set -euo pipefail
+
+log_dir="\${1:-/var/log/myapp}"
+report="errors-$(date +%F).txt"
+
+if [[ ! -d "$log_dir" ]]; then
+  echo "No such directory: $log_dir" >&2
+  exit 1
+fi
+
+grep -h "ERROR" "$log_dir"/*.log \\
+  | cut -d' ' -f3- \\
+  | sort \\
+  | uniq -c \\
+  | sort -rn \\
+  | head -n 10 > "$report"
+
+echo "Top errors written to $report"`,
+    shows: [
+      {
+        concept: "pipes",
+        text: "Each `|` sends one command's output into the next: `grep` keeps the error lines, `cut` drops the date and time, `sort | uniq -c` counts repeats, `sort -rn` puts the biggest count first and `head` keeps 10.",
+      },
+      {
+        concept: "redirection",
+        text: "`> \"$report\"` writes the result to a file instead of the screen. `>&2` sends the error message to standard error, so it still shows when the normal output is redirected.",
+      },
+      {
+        concept: "variables",
+        text: "`${1:-/var/log/myapp}` uses the first argument, or that folder when none is given. `$(date +%F)` runs `date` and puts its output, such as `2026-10-25`, into the file name.",
+      },
+      {
+        concept: "exit codes",
+        text: "`exit 1` tells whatever ran the script that it failed. `set -e` stops at the first failing command, `-u` treats unset variables as errors and `-o pipefail` makes a pipeline fail when any part of it fails.",
+      },
+    ],
+    notes: [
+      "The quotes in `\"$log_dir\"` keep a folder name with spaces as one argument. `*.log` stays outside the quotes so the shell can expand it into file names.",
+      "`cut -d' ' -f3-` assumes every line starts with a date and a time separated by spaces. Logs in another format need a different field number.",
+      "If the folder has no `.log` files, the pattern stays as the literal text `*.log`, `grep` can't open it and the script stops with exit code 2.",
+    ],
+    watchOut:
+      "If no line contains `ERROR`, `grep` exits with 1, `pipefail` fails the pipeline and `set -e` ends the script before the last `echo`, leaving an empty report. Add `|| true` after the pipeline if no errors is a normal result.",
+  },
+  {
+    id: "c",
+    fileName: "players.c",
+    lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
+    description:
+      "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
+    sampleSummary: "An array of structs allocated with calloc, filled in, used and freed.",
+    sample: `#include <stdio.h>
+#include <stdlib.h>
+typedef struct {
+    char name[16];
+    int score;
+} Player;
+
+Player *make_players(size_t count) {
+    Player *players = calloc(count, sizeof *players);
+    if (players == NULL) return NULL;
+    for (size_t i = 0; i < count; i++) {
+        snprintf(players[i].name, sizeof players[i].name, "player%zu", i + 1);
+        players[i].score = 0;
+    }
+    return players;
+}
+
+int main(void) {
+    Player *team = make_players(3);
+    if (team == NULL) return 1;
+    team[1].score += 10;
+    printf("%s has %d points\\n", team[1].name, team[1].score);
+    free(team);
+    return 0;
+}`,
+    shows: [
+      {
+        concept: "structs",
+        text: "`typedef struct { ... } Player;` defines a record with a 16-byte name and an `int` score, and lets you write `Player` instead of a full `struct` type.",
+      },
+      {
+        concept: "manual memory",
+        text: "`calloc` reserves room for `count` players on the heap, and `free(team)` gives it back. Nothing frees it for you.",
+      },
+      {
+        concept: "pointers",
+        text: "`make_players` returns a `Player *`, the address of the first player. `team[1]` is the second player, the same as `*(team + 1)`.",
+      },
+      {
+        concept: "the stack",
+        text: "`team` and `players` are local variables on the stack, but the players they point to live on the heap. That is why the players still exist after `make_players` returns.",
+      },
+    ],
+    notes: [
+      "`sizeof *players` asks for the size of whatever `players` points to, so the line stays correct if its type changes.",
+      "`calloc` returns `NULL` when it can't allocate, including when `count` times the size of a player is too big for a `size_t`. Both functions check for that before touching the memory.",
+      "`snprintf` with `sizeof players[i].name` never writes past the 16-byte array. A longer name is cut short instead of overflowing into `score`.",
+    ],
+    watchOut:
+      "After `free(team)`, `team` still holds the old address. Using it again, or calling `free` on it twice, is undefined behavior. Setting `team = NULL` right after freeing makes that mistake easier to catch.",
+  },
+  {
+    id: "cpp",
+    fileName: "documents.cpp",
+    lead: "Paste modern C++ and Vibe explains the templates, smart pointers and object lifetimes in it.",
+    description:
+      "Get C++ explained in plain English online, free. The sample shows a function template, RAII with a destructor and moving a unique_ptr.",
+    sampleSummary: "A function template, a class with a destructor and a unique_ptr that changes owner.",
+    sample: `#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+template <typename T>
+T largest(const std::vector<T>& items) {
+    T best = items.at(0);
+    for (const T& item : items)
+        if (item > best) best = item;
+    return best;
+}
+
+struct Document {
+    std::string title;
+    explicit Document(std::string t) : title(std::move(t)) {}
+    ~Document() { std::cout << "closing " << title << '\\n'; }
+};
+
+int main() {
+    std::vector<std::unique_ptr<Document>> open;
+    open.push_back(std::make_unique<Document>("notes.txt"));
+    std::unique_ptr<Document> current = std::move(open.front());
+    std::cout << largest(std::vector<int>{3, 9, 4}) << '\\n';
+    std::cout << std::boolalpha << (open.front() == nullptr) << ' ' << current->title << '\\n';
+}`,
+    shows: [
+      {
+        concept: "templates",
+        text: "`largest` is written once for any `T` that can be copied and compared with `>`. `largest(std::vector<int>{3, 9, 4})` makes the compiler generate an `int` version, which returns 9.",
+      },
+      {
+        concept: "RAII",
+        text: "`Document` prints `closing` in its destructor. The destructor runs on its own when the `unique_ptr` that owns the document is destroyed at the end of `main`, so cleanup can't be forgotten.",
+      },
+      {
+        concept: "move semantics",
+        text: "`std::move(open.front())` hands ownership to `current`. The pointer left in the vector is now null, so the last line prints `true notes.txt`.",
+      },
+      {
+        concept: "pointers",
+        text: "`std::unique_ptr` is a pointer that owns its object: one owner at a time, deleted automatically, and it can be moved but not copied.",
+      },
+    ],
+    notes: [
+      "`items.at(0)` throws `std::out_of_range` on an empty vector, where `items[0]` would be undefined behavior.",
+      "`explicit` stops a plain `std::string` from turning into a `Document` by accident, for example when passed to a function that takes a `Document`.",
+      "The vector still holds one element after the move. It is an empty `unique_ptr`, and dereferencing it is undefined behavior.",
+    ],
+    watchOut:
+      "`closing notes.txt` prints once, after everything else. The document is destroyed exactly once, by whichever `unique_ptr` owns it when `main` ends, here `current`.",
+  },
+  {
+    id: "swift",
+    fileName: "Todos.swift",
+    lead: "Paste Swift from an app or a playground and Vibe explains what it does, optionals included.",
+    description:
+      "Paste Swift and get a plain English explanation, free online. The sample filters a to-do list with a protocol, an optional due date and closures.",
+    sampleSummary: "A to-do list with a protocol, an optional due date, closures and a key path.",
+    sample: `protocol Describable {
+    var summary: String { get }
+}
+
+struct Todo: Describable {
+    let title: String
+    let due: String?
+    let minutes: Int
+    var summary: String {
+        let when = due.map { ", due \\($0)" } ?? ""
+        return "\\(title) (\\(minutes) min)\\(when)"
+    }
+}
+
+let todos = [
+    Todo(title: "Write report", due: "Friday", minutes: 90),
+    Todo(title: "Water plants", due: nil, minutes: 5),
+    Todo(title: "Plan trip", due: nil, minutes: 45),
+]
+
+let quick = todos.filter { $0.minutes <= 30 }.map(\\.title)
+if let undated = todos.first(where: { $0.due == nil }) {
+    print(undated.summary)
+}
+print(quick)`,
+    shows: [
+      {
+        concept: "optionals",
+        text: "`due: String?` holds either a string or `nil`. `due.map { ... }` runs the closure only when there is a value, and `?? \"\"` supplies the fallback when there isn't.",
+      },
+      {
+        concept: "protocols",
+        text: "`Describable` requires a readable `summary`. `Todo` meets it with a computed property, so any code that takes a `Describable` can use a `Todo`.",
+      },
+      {
+        concept: "closures",
+        text: "`{ $0.minutes <= 30 }` is a closure, and `$0` is its first argument. `map(\\.title)` passes a key path, a shorthand for `{ $0.title }`.",
+      },
+    ],
+    notes: [
+      "Structs get a memberwise initializer for free. That is where `Todo(title:due:minutes:)` comes from.",
+      "`if let undated = ...` unwraps the optional that `first(where:)` returns, so the body only runs when an undated to-do exists. Here it prints `Water plants (5 min)`.",
+      "`quick` is `[\"Water plants\"]`, the only to-do that takes 30 minutes or less.",
+    ],
+    watchOut:
+      "`first(where:)` stops at the first match. `Plan trip` has no due date either but is never printed. Use `filter` to get all of them.",
+  },
+  {
+    id: "ruby",
+    fileName: "member.rb",
+    lead: "Paste Ruby and Vibe explains the blocks, symbols and mixins that keep it so short.",
+    description:
+      "Paste Ruby and get blocks, symbols and mixins explained in plain English, free. The sample mixes modules into a class and sorts members with the <=> operator.",
+    sampleSummary: "A class that mixes in a module and Comparable, then sorts and filters with blocks.",
+    sample: `module Greeting
+  def greet
+    "Hi, I'm #{name}"
+  end
+end
+
+class Member
+  include Greeting
+  include Comparable
+  attr_reader :name, :points
+
+  def initialize(name, points)
+    @name = name
+    @points = points
+  end
+
+  def <=>(other)
+    points <=> other.points
+  end
+end
+
+members = [Member.new("Ana", 40), Member.new("Ben", 75), Member.new("Cy", 12)]
+puts members.max.greet
+puts members.select { |m| m.points > 20 }.map(&:name).join(", ")
+puts members.sort.map(&:name).inspect`,
+    shows: [
+      {
+        concept: "mixins",
+        text: "`include Greeting` adds `greet` to every `Member`. `include Comparable` adds comparison methods such as `<`, `>`, `==` and `between?`, all built on the `<=>` method the class defines.",
+      },
+      {
+        concept: "blocks",
+        text: "`{ |m| m.points > 20 }` is a block passed to `select`, which keeps the members the block returns true for.",
+      },
+      {
+        concept: "symbols",
+        text: "`:name` and `:points` are symbols. `map(&:name)` turns the symbol into a block that calls `name` on each member.",
+      },
+      {
+        concept: "metaprogramming",
+        text: "`attr_reader :name, :points` writes the two reader methods for you when the class is defined, so `points` works without a `def points`.",
+      },
+    ],
+    notes: [
+      "`<=>` returns -1, 0 or 1. `max` and `sort` only need that method, so the script prints `Hi, I'm Ben`, then `Ana, Ben`, then `[\"Cy\", \"Ana\", \"Ben\"]`.",
+      "`greet` calls `name` without `self.`, because a method from a module runs on the object it was mixed into.",
+    ],
+    watchOut:
+      "`Comparable` also defines `==` from `<=>`, so two different members with the same points count as equal: `Member.new(\"Al\", 5) == Member.new(\"Bo\", 5)` is `true`.",
+  },
+];
+
+/** The languages.ts entry behind a page. */
+export function explainLanguage(page: ExplainPage): Language {
+  const language = languages.find((entry) => entry.id === page.id);
+  if (!language) throw new Error(`No language "${page.id}" in languages.ts`);
+  return language;
+}
+
+/** Every /explain URL path, index first. */
+export const EXPLAIN_PATHS: readonly string[] = ["/explain", ...explainPages.map((page) => `/explain/${page.id}`)];

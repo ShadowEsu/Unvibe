@@ -2,81 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-.founder-clock {
-  position: relative;
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  gap: 9px;
-  margin-left: 4px;
-  padding: 5px 10px 5px 6px;
-  border: 1px solid rgba(183, 155, 255, .20);
-  border-radius: 999px;
-  background: rgba(26, 17, 39, .72);
-  color: #f5effd;
-  box-shadow: inset 0 1px rgba(255,255,255,.04);
-}
-.founder-clock__dial {
-  position: relative;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: conic-gradient(from 10deg, #b38cff, #618ef0 46%, #e6844a 74%, #b38cff);
-  animation: founder-dial 9s linear infinite;
-}
-.founder-clock__dial::after { content: ""; position: absolute; inset: 3px; border-radius: inherit; background: #130d1e; }
-.founder-clock__dial i { position: absolute; z-index: 1; inset: 7px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; }
-.founder-clock__dial i::before { content: ""; position: absolute; width: 1px; height: 5px; left: 50%; top: 3px; background: #d9c8ff; transform-origin: 50% 7px; animation: founder-hand 4s steps(12) infinite; }
-.founder-clock__dial i::after { content: ""; position: absolute; width: 3px; height: 3px; left: calc(50% - 1px); top: calc(50% - 1px); border-radius: 50%; background: #fff; }
-.founder-clock__copy { display: grid; gap: 1px; }
-.founder-clock__copy b { font: 650 .66rem var(--font-mono); letter-spacing: .015em; font-variant-numeric: tabular-nums; }
-.founder-clock__copy small { color: #786c83; font: 600 .51rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.founder-clock--live { border-color: rgba(169,130,255,.48); box-shadow: 0 0 24px rgba(113,68,224,.22), inset 0 1px rgba(255,255,255,.05); }
-.founder-clock--live .founder-clock__dial { animation-duration: 2.6s; }
-.founder-clock--live .founder-clock__copy small { color: #b99cff; }
-.founder-clock--compact { width: fit-content; margin: 0 0 12px; }
-.founder-clock--prominent {
-  width: 100%;
-  min-height: 132px;
-  justify-content: center;
-  gap: 18px;
-  margin: 0;
-  padding: 22px 28px;
-  border-color: rgb(var(--primary) / .28);
-  border-radius: 22px;
-  background: rgb(var(--surface));
-  color: rgb(var(--fg));
-  box-shadow: none;
-}
-.founder-clock--prominent .founder-clock__dial { width: 58px; height: 58px; }
-.founder-clock--prominent .founder-clock__dial::after { inset: 5px; }
-.founder-clock--prominent .founder-clock__dial i { inset: 14px; }
-.founder-clock--prominent .founder-clock__dial i::before { height: 9px; top: 4px; transform-origin: 50% 13px; }
-.founder-clock--prominent .founder-clock__copy { gap: 5px; }
-.founder-clock--prominent .founder-clock__copy b { font-size: clamp(1.7rem, 4vw, 2.75rem); letter-spacing: -.035em; }
-.founder-clock--prominent .founder-clock__copy small { color: rgb(var(--fg-faint)); font-size: .62rem; }
-.founder-clock--breakdown {
-  display: grid;
-  width: 100%;
-  gap: .65rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-.founder-clock__breakdown { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; }
-.founder-clock__breakdown > span { display: grid; gap: .15rem; }
-.founder-clock__breakdown b { color: #f7f2fa; font: 560 1.2rem var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
-.founder-clock__breakdown small,
-.founder-clock__label { color: #766a7d; font: 600 .48rem var(--font-mono); letter-spacing: .075em; text-transform: uppercase; }
-.founder-clock__label { color: #ad98b7; }
-.founder-clock--breakdown.founder-clock--live .founder-clock__label { color: #b99cff; }
-@keyframes founder-dial { to { transform: rotate(360deg); } }
-@keyframes founder-hand { to { transform: rotate(360deg); } }
-
 .product-loop {
   position: relative;
   overflow: hidden;
@@ -271,8 +196,6 @@
   .tool-orbit__track,
   .tool-orbit__node > div,
   .discovery-marquee__track,
-  .founder-clock__dial,
-  .founder-clock__dial i::before,
   .waitlist-minimal .waitlist-submit::after,
   .waitlist-minimal .hero-waitlist-card::before {
     animation: none !important;
@@ -913,8 +836,6 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 @keyframes app-marquee-scroll { to { transform: translateX(-50%); } }
 
 @media (max-width: 520px) {
-  .founder-clock--prominent { min-height: 112px; justify-content: flex-start; padding: 18px; }
-  .founder-clock--prominent .founder-clock__dial { width: 48px; height: 48px; }
   .app-marquee__item { min-width: 166px; }
 }
 
@@ -994,10 +915,13 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .product-story__visual { min-height: 270px; margin: 12px; }
 }
 
-/* Public site is paper. Keep html.dark harmless if a leftover class appears. */
-html,
-html.dark {
+/* Light by default; html.dark (set before paint from the stored choice or the system) is the night theme. */
+html {
   color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 html body,

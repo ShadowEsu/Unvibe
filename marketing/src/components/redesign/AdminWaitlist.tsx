@@ -225,7 +225,7 @@ export function AdminWaitlist() {
         <section className="admin-content">
           <div className="admin-heading">
             <div>
-              <p className="pixel-label">FOUNDER VIEW</p>
+              <p className="pixel-label">ADMIN VIEW</p>
               <h1>Waitlist</h1>
               <p>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : ""}</p>
             </div>

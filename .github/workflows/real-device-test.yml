@@ -42,9 +42,15 @@ jobs:
       - name: Pick the version
         id: ver
         shell: bash
+        # Dispatch inputs reach shells only through env, never pasted into a script, and are checked here.
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUILD_RUN: ${{ inputs.build_run }}
         run: |
-          v="${{ inputs.version }}"
+          if [ -n "$INPUT_BUILD_RUN" ] && ! [[ "$INPUT_BUILD_RUN" =~ ^[0-9]+$ ]]; then echo "build_run must be a run id (digits only)"; exit 1; fi
+          v="$INPUT_VERSION"
           if [ -z "$v" ]; then v=$(curl -fsSL https://unvibe.site/install.sh | sed -n 's/^TAG=".*:-v\([0-9.]*\)}"$/\1/p' | head -1); fi
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "version must look like 0.1.44"; exit 1; fi
           echo "Testing Unvibe $v"
           echo "v=$v" >> "$GITHUB_OUTPUT"
 
@@ -68,10 +74,13 @@ jobs:
       - name: Install Unvibe (Mac)
         if: matrix.label == 'mac'
         shell: bash
+        env:
+          V: ${{ steps.ver.outputs.v }}
+          BUILD_RUN: ${{ inputs.build_run }}
         run: |
-          v="${{ steps.ver.outputs.v }}"
+          v="$V"
           arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
-          if [ -n "${{ inputs.build_run }}" ]; then
+          if [ -n "$BUILD_RUN" ]; then
             cp "$(ls "$RUNNER_TEMP"/build/*-mac-$arch.dmg | head -1)" "$RUNNER_TEMP/Unvibe.dmg"
           else
             curl -fL -o "$RUNNER_TEMP/Unvibe.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-mac-$arch.dmg"
@@ -95,10 +104,13 @@ jobs:
       - name: Install Unvibe (Windows)
         if: matrix.label == 'windows'
         shell: pwsh
+        env:
+          V: ${{ steps.ver.outputs.v }}
+          BUILD_RUN: ${{ inputs.build_run }}
         run: |
-          $v = "${{ steps.ver.outputs.v }}"
+          $v = $env:V
           $setup = "$env:RUNNER_TEMP\Unvibe-setup.exe"
-          if ("${{ inputs.build_run }}") {
+          if ($env:BUILD_RUN) {
             Copy-Item (Get-ChildItem "$env:RUNNER_TEMP\build" -Filter '*-win-x64-setup.exe' | Select-Object -First 1).FullName $setup
           } else {
             Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-setup.exe" -OutFile $setup
@@ -128,7 +140,7 @@ jobs:
           SHOTS_DIR: ${{ runner.temp }}/shots
           UNVIBE_OS: ${{ matrix.label }}
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
-          UNVIBE_ADMIN_STATS_TOKEN: ${{ secrets.UNVIBE_ADMIN_STATS_TOKEN }}
+          UNVIBE_E2E_PROFILE: ${{ runner.temp }}/walkthrough-profile
         run: |
           cp app/e2e/real-device.mjs "$RUNNER_TEMP/pw/real-device.mjs"
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
@@ -138,11 +150,14 @@ jobs:
       - name: Open the portable exe the website serves (Windows)
         if: always() && matrix.label == 'windows' && steps.ver.outputs.v != ''
         shell: pwsh
+        env:
+          V: ${{ steps.ver.outputs.v }}
+          BUILD_RUN: ${{ inputs.build_run }}
         run: |
-          $v = "${{ steps.ver.outputs.v }}"
+          $v = $env:V
           $exe = "$env:RUNNER_TEMP\portable\Unvibe.exe"
           New-Item -ItemType Directory -Force (Split-Path $exe), "$env:RUNNER_TEMP\shots" | Out-Null
-          if ("${{ inputs.build_run }}") {
+          if ($env:BUILD_RUN) {
             Copy-Item (Get-ChildItem "$env:RUNNER_TEMP\build" -Filter '*-win-x64-portable.exe' | Select-Object -First 1).FullName $exe
           } else {
             Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$v/Unvibe-$v-win-x64-portable.exe" -OutFile $exe
@@ -172,6 +187,30 @@ jobs:
           $bmp.Save("$env:RUNNER_TEMP\shots\portable-first-launch.png")
           "PASS  Portable exe opens and stays open"
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+
+      # Leave this run's installs out of founder stats: the walkthrough's profile on both systems and,
+      # on Windows, the portable exe's. Only this step has the admin token, and Unvibe is stopped
+      # first, so the app under test never runs with it. Runs even after a failed check.
+      - name: Flag this run's installs as QA
+        if: always()
+        shell: pwsh
+        env:
+          UNVIBE_ADMIN_STATS_TOKEN: ${{ secrets.UNVIBE_ADMIN_STATS_TOKEN }}
+        run: |
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $env:UNVIBE_ADMIN_STATS_TOKEN) { 'QA install flag: skipped, no token'; exit 0 }
+          foreach ($name in 'walkthrough-profile', 'portable-profile') {
+            $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
+            if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
+            try {
+              $installId = (Get-Content $store -Raw | ConvertFrom-Json -AsHashtable)['installId']
+              if (-not $installId) { "QA install flag ($name): skipped, no installId in the store"; continue }
+              $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+                -Headers @{ authorization = "Bearer $env:UNVIBE_ADMIN_STATS_TOKEN" } -ContentType 'application/json' `
+                -Body (@{ installId = $installId } | ConvertTo-Json -Compress)
+              "QA install flag ($name): $($r.StatusCode)"
+            } catch { "QA install flag ($name) failed: $($_.Exception.Message)" }
+          }
 
       - name: Upload screenshots
         if: always()

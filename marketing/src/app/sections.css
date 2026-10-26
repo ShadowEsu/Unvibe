@@ -4,12 +4,12 @@
 .sec-head { display: grid; justify-items: center; gap: 0.85rem; max-width: 46rem; margin: 0 auto clamp(2rem, 4vw, 3rem); text-align: center; }
 .sec-head > * { margin: 0; }
 .sec-head h2 { text-wrap: balance; }
-/* Paper-white chips keep the forced vibe.css text colours readable on the dusk photo in both themes. */
-.sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: rgb(255 255 255 / 0.92); }
-.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: rgb(255 255 255 / 0.92); text-wrap: pretty; }
+/* Paper chips keep eyebrows and leads readable where a head sits straight on the dusk photo (inside a sheet they flatten). */
+.sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: var(--u-sheet); }
+.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 
 /* ── Try it: editor on the left, Vibe panel on the right ── */
-.try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; border: 1.5px solid var(--v-ink); border-radius: 24px; box-shadow: 6px 6px 0 var(--v-ink); overflow: hidden; }
+.try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .try__editor { background: #151514; }
 .try__editor textarea { flex: 1; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); tab-size: 2; }
 .try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
@@ -18,7 +18,7 @@
 .try__foot .try__fine { margin: 0; color: #c9c5bc; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
-.try__panel { background: #fff; color: #141414; min-height: 26rem; }
+.try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }
 .try__head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; border-bottom: 1.5px solid #ece8de; }
 .try__head p { display: grid; margin: 0; line-height: 1.2; }
 .try__head b { font: 800 1.1rem var(--font-display); letter-spacing: -0.02em; }
@@ -56,8 +56,6 @@
 .try .paper-join--win { background: #141414; color: #fff; }
 .try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: 12px; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-display); text-decoration: none; box-shadow: 0 3px 0 #141414; }
 
-.dark .try__editor, .dark .try__panel { border-color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
-
 @media (max-width: 520px) {
   .try__editor textarea { min-height: 12rem; font-size: 0.88rem; }
   .try__panel { min-height: 22rem; }
@@ -78,32 +76,19 @@ html[data-performance="lite"] .try__bob { animation: none; }
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
 .paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
-/* vibe.css paints these white without a dark rule, so keep their text ink in dark mode. */
-.dark .paper-beta--page .paper-beta__os button,
-.dark .paper-beta--page .paper-beta__step { color: #141414; }
-/* vibe.css forces `color: var(--v-ink) !important` on the title; re-point the variable instead of fighting it. */
-.dark .paper-beta__title { --v-ink: #f2eef9; }
-.dark .paper-beta__update { color: #d9d2e6; }
-.dark .paper-beta__update b, .dark .paper-beta__update a { color: #f2eef9; }
 
 /* ── Startup programs ── */
 .paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
 .paper-backing .paper-partners { max-width: 1000px; margin: 0 auto; }
 .claude-startups__tag { color: #141414; }
-.claude-startups__copy a { color: #141414; font-weight: 700; }
-.paper-partners__viewport:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; border-radius: 12px; }
-.dark .claude-startups { border-color: #f2eef9; background: #1f1729; box-shadow: 5px 5px 0 #f2eef9; }
-.dark .claude-startups__title { color: #f2eef9; }
-.dark .claude-startups__copy, .dark .claude-startups__copy a { color: #e6e0f0; }
-.dark .paper-partners { border-color: #f2eef9; box-shadow: 6px 6px 0 #f2eef9; }
+.claude-startups__copy a { color: var(--u-text); font-weight: 700; }
+.paper-partners__viewport:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 4px; border-radius: 12px; }
 
 /* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
 .paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }
 .paper-faq details { padding: 1.1rem 1.3rem; }
 .paper-faq summary { display: flex; align-items: center; min-height: 2.75rem; font-size: clamp(1.2rem, 2.4vw, 1.6rem); text-shadow: none; }
-.paper-faq summary:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; }
-.dark .paper-faq p { color: #e6e0f0; }
-.dark .paper-faq summary:focus-visible { outline-color: #c4b5fd; }
+.paper-faq summary:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 4px; }
 
 /* ── Invite ── */
 .invite__copy { display: grid; justify-items: center; gap: 0.7rem; text-align: center; }
@@ -120,7 +105,6 @@ html[data-performance="lite"] .try__bob { animation: none; }
 }
 .invite__result code { max-width: 100%; }
 .invite__actions button { min-width: 2.75rem; }
-.dark .invite { border-color: #f2eef9; }
 
 /* ── Footer ── */
 .paper-footer nav { gap: 0; }
@@ -138,15 +122,21 @@ html[data-performance="lite"] .try__bob { animation: none; }
 a.paper-alt-link { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 1rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414; font: 700 0.95rem var(--font-sans); line-height: 1.2; text-decoration: none; box-shadow: 0 2px 0 #141414; }
 a.paper-alt-link:hover { background: #f4f1ea; }
 a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
-.dark a.paper-alt-link { color: #141414; }
+/* Dark: the theme's night sticker (night card, paper-coloured outline and offset), so the pill stays secondary next to
+   the light primary button. Inside a Try it answer the panel re-scopes these tokens to light, so the pill stays white. */
+.dark a.paper-alt-link { border-color: var(--v-ink); background: var(--u-card); color: var(--u-text); box-shadow: 0 2px 0 var(--v-ink); }
+.dark a.paper-alt-link:hover { background: var(--u-raise); }
+.dark .try__panel a.paper-alt-link:hover { background: #f4f1ea; }
 .dark a.paper-alt-link:focus-visible { outline-color: #c4b5fd; }
+.dark .try__panel a.paper-alt-link:focus-visible { outline-color: #3c2fb8; }
 /* "Older Intel Mac?" and its pill on one centred row that wraps on narrow screens. */
 .paper-beta__builds { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem 0.6rem; }
 /* The home hero's other-system download ("Get it for Windows" on a Mac) gets the same 32 px+ pill. Styled
    here, not in hero.css or PhotoHero.tsx, so the hero's own files stay untouched. */
 .vhero__trust a { display: inline-flex; align-items: center; min-height: 2rem; margin-block: 0.15rem; padding: 0 0.8rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font-weight: 700; text-decoration: none; box-shadow: 0 2px 0 var(--v-ink); }
 .vhero__trust a:hover { background: #f4f1ea; }
-.dark .vhero__trust a { border-color: #f2eef9; background: #f2eef9; color: #141414; box-shadow: none; }
+.dark .vhero__trust a { background: var(--v-card); }
+.dark .vhero__trust a:hover { background: var(--u-raise); }
 
 /* ── Demo video: its native controls are several Tab stops inside the video. Each one shows the same ring,
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */

@@ -55,8 +55,10 @@ export default function PrivacyPage() {
           <code className="font-mono">KEY=</code> assignments, and high-entropy strings. A
           known credential blocks the request and shows you the rule and line so you can
           remove it. A string that only looks random is shown to you first, and nothing is
-          sent unless you choose Send anyway. In the current app (v0.1.43), the questions you
-          type, follow-ups, and Chat messages are not scanned yet, so keep keys out of them.
+          sent unless you choose Send anyway. From version 0.1.44, follow-up questions, lesson
+          questions and Chat messages are scanned too, and a Chat message or lesson question with
+          any finding is not sent. Version 0.1.43 and older do not scan what you type, so keep keys
+          out of it there.
           There is no file exclusion list: a file you select or open is sent once it passes
           the scan. In a Brief, untracked files that{" "}
           <code className="font-mono">.gitignore</code> covers are left out, because the app
@@ -112,6 +114,14 @@ export default function PrivacyPage() {
           off Send anonymous setup progress. That switch does not cover the install ID, dates and
           counts in the paragraph above, which come with requests the app makes anyway.
         </p>
+        <p>
+          If you redeem a promo code at <a href="/redeem">/redeem</a>, we keep a redemption record: a
+          fingerprint of the code (not the code itself), your account and its email, the months of Pro
+          it added, and the dates (when you redeemed it, your Pro end date before and after, and when
+          the code was switched off, if it was). We keep it while your account exists. If you delete
+          your account, the record stays so the code still counts as used, but the link to your
+          account and the email are removed.
+        </p>
       </LegalSection>
 
       <LegalSection heading="This website">
@@ -130,13 +140,22 @@ export default function PrivacyPage() {
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
           install scripts send one anonymous &apos;installed&apos; count to unvibe.site when
-          they finish, with no code or personal data.
+          they finish, with no code or personal data. If you use the Try it box on the site,
+          the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
+          then to Google Gemini to write the explanation. To limit how often the box can be used,
+          Unvibe keeps a keyed hash of your IP address (it can&apos;t be turned back into the
+          address without a secret only our server has) and the time of each request, not the code.
         </p>
       </LegalSection>
 
       <LegalSection heading="Services we rely on">
         <ul className="list-disc space-y-2 pl-5">
-          <li><strong>Google Gemini</strong> generates explanations from the filtered snippet.</li>
+          <li>
+            <strong>Google Gemini</strong> generates explanations. In the app, it gets the snippet you
+            approve after it is filtered on your computer. In the website&apos;s Try it box, it gets
+            the code you paste after Unvibe&apos;s server checks it and refuses common key formats;
+            nothing is filtered in your browser.
+          </li>
           <li><strong>Vercel</strong> hosts the website and API.</li>
           <li><strong>Supabase</strong> stores accounts and synced learning records.</li>
           <li>

@@ -10,24 +10,27 @@
 .vhero__kicker { max-width: 44rem; font-size: 1.1rem; line-height: 1.45; text-wrap: balance; }
 .vhero__kicker kbd {
   display: inline-block; padding: 0.05em 0.45em; border: 1.5px solid var(--v-ink); border-radius: 8px;
-  background: #fff; box-shadow: 0 2px 0 var(--v-ink); color: var(--v-ink);
+  background: var(--u-card); box-shadow: 0 2px 0 var(--v-ink); color: var(--v-ink);
   font: 600 0.88em/1.3 var(--font-mono); white-space: nowrap;
 }
 
 .vhero__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem 1rem; max-width: 100%; }
 .vhero__actions .paper-join { max-width: 100%; text-align: center; line-height: 1.2; }
 
+/* Plain words on a paper chip, not a bordered box: it supports the button, it doesn't compete with it. */
 .vhero__trust {
-  max-width: 100%; margin: 0; padding: 0.35rem 0.9rem; border: 1.5px solid var(--v-ink); border-radius: 14px;
-  background: rgb(255 255 255 / 0.9); color: var(--v-ink); font-size: 0.9rem; font-weight: 600; line-height: 1.5; text-wrap: balance;
+  max-width: 100%; margin: 0; padding: 0.4rem 0.95rem; border-radius: 14px;
+  background: var(--u-sheet); color: var(--u-text); font-size: 0.9rem; font-weight: 550; line-height: 1.5; text-wrap: balance;
 }
 .vhero__trust a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.vhero a:focus-visible { outline: 3px solid #5b4bd6; outline-offset: 3px; }
+.vhero a:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 3px; }
 .vtour h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
 
 /* Tablets keep the speech bubble above Vibe (vibe.css), so they need the old headroom under the nav. */
 @media (max-width: 720px) {
   .home-page .vhero { padding-top: 7rem; }
+  /* On phones the kicker lands on the bluest part of the field (ink 3.0:1 at 390), so it reads on paper like the trust line. */
+  .vhero__kicker { padding: 0.5rem 0.9rem; border-radius: 14px; background: var(--u-sheet); }
 }
 
 @media (max-width: 520px) {
@@ -41,12 +44,4 @@
   .home-page .vhero { padding-inline: 1rem; }
 }
 
-/* Dark theme: the dusk photo stays, with an ink veil so the light type keeps AA contrast. */
-.dark .vhero::before {
-  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(180deg, rgb(16 10 25 / 0.8) 0%, rgb(16 10 25 / 0.7) 85%, rgb(16 10 25 / 0) 100%);
-}
-.dark .vhero__kicker kbd { background: #1f1729; border-color: #f2eef9; box-shadow: 0 2px 0 #f2eef9; color: #f2eef9; }
-.dark .vhero__trust { background: #1f1729; border-color: #f2eef9; color: #f2eef9; }
-.dark .vhero a:focus-visible { outline-color: #c4b5fd; }
-.dark .vhero__phone > p:first-child { color: #f2eef9; }
+/* Dark theme: the night veil on the whole field (system.css) gives the light type AA contrast; tokens do the rest. */

@@ -3,7 +3,6 @@ import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
-import { OUTREACH_SUBJECTS, outreachText } from "@/emails/outreach";
 
 /**
  * The Unvibe resource kit: everything an AI agent (or a person) needs to talk about Unvibe
@@ -79,11 +78,10 @@ export function kitSections(): KitSection[] {
         "Five explanation depths: New, Beginner, Intermediate and Advanced are free. Expert is Pro.",
         "Test me: one quick question to check you understood. Lessons are saved to a library.",
         "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
-        "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent. Typed questions and Chat are not scanned yet. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
+        "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, partner perks worth about $21.5K to $23K).",
-        "Founder: Preston Susanto, student founder in California. Contact preston@unvibe.site.",
       ],
     },
     {
@@ -95,9 +93,9 @@ export function kitSections(): KitSection[] {
         "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Pro ranks the diff so you know where to look first.",
         "Working developers: own the code in your repo, even the parts you did not type.",
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
-        "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. Typed questions and Chat are not scanned yet, so say so if asked.",
+        "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. From app 0.1.44, typed questions and Chat are filtered too; older versions don't filter them, so say so if asked.",
         "Objection: \"Is it really free?\" Answer: yes. Pro adds Expert depth, git diffs and nearby-file context, and your first month of Pro is free anyway.",
-        `Call to action: ${SITE} (download), or try it in the browser on the homepage with no install.`,
+        `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Google Gemini) with no install.`,
       ],
     },
     {
@@ -130,7 +128,7 @@ export function kitSections(): KitSection[] {
       id: "brand",
       title: "Brand identity",
       bullets: [
-        "Voice: Preston, first person, warm, direct, short. A real person, not a company.",
+        "Voice: warm, direct, short and plain, in first person plural (we).",
         "Mascot: Vibe, a lilac blob with an ink outline. One short line in a speech bubble at most.",
         "Colours: paper #f6f1e7, ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe), sky #9fd8ff, sun #ffd84d. Flat colour, ink outlines, small offset shadows. No gradients or glow.",
         "Type: bold grotesque headings (Bricolage Grotesque), one italic serif accent phrase (Instrument Serif Italic), Inter for body.",
@@ -146,17 +144,11 @@ export function kitSections(): KitSection[] {
         `Windows direct download: ${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
         `Pricing: ${SITE}/pricing`,
         `Investors: ${SITE}/investors`,
-        `Founder page: ${SITE}/about`,
+        `About: ${SITE}/about`,
         `Changelog: ${SITE}/releases`,
-        `Gift link format, from the next app update: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in). The app people have today shows an 8 character invite link code instead, which counts who joined and grants no Pro.`,
-        "Founder email: preston@unvibe.site",
+        `Gift link format, from app 0.1.44: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in). App 0.1.43 and older show an 8 character invite link code instead, which counts who joined and grants no Pro.`,
+        "Email: preston@unvibe.site",
       ],
-    },
-    {
-      id: "outreach",
-      title: "Outreach email template",
-      intro: `Subjects to rotate: ${OUTREACH_SUBJECTS.join(" | ")}. Replace the bracketed parts. The personal line must be true. Banner: ${SITE}/email/outreach-banner.png`,
-      code: outreachText({ firstName: "[First name]", personalLine: "[One true, specific sentence about them: their repo, post, club or course.]" }),
     },
   ];
 }
