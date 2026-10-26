@@ -14,9 +14,12 @@ let inserted: unknown[] = [];
 /**
  * `count`: counts answer 500; `missing`: no table (PostgREST answers a head request 404, no body);
  * `day-missing`: only the unfiltered (daily) count answers 404 with no body, so it has no count while the per-IP count is fine;
- * `insert`: inserts answer 500.
+ * `insert`: inserts answer 500; `insert-bodyless`: inserts answer 201 with no body; `insert-404`: inserts answer 404 with
+ * no body (read as 204 with no error); `insert-empty`: inserts answer 201 with an empty array.
  */
-let fault: 'count' | 'missing' | 'day-missing' | 'insert' | null = null;
+let fault: 'count' | 'missing' | 'day-missing' | 'insert' | 'insert-bodyless' | 'insert-404' | 'insert-empty' | null = null;
+/** Replaces one head count's content-range total, which postgrest-js reads with parseInt. */
+let badCount: { query: 'ip' | 'day'; total: string } | null = null;
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
@@ -41,11 +44,17 @@ async function store(url: URL, init?: RequestInit): Promise<Response> {
   const method = init?.method ?? 'GET';
   if (method === 'POST') {
     if (fault === 'insert') return Response.json({ code: 'XX000', message: 'insert failed' }, { status: 500 });
+    if (fault === 'insert-bodyless') return new Response(null, { status: 201 });
+    if (fault === 'insert-404') return new Response(null, { status: 404 });
+    if (fault === 'insert-empty') return Response.json([], { status: 201 });
     const body: unknown = JSON.parse(String(init?.body));
     inserted.push(body);
     const ipHash = body && typeof body === 'object' && 'ip_hash' in body ? String(body.ip_hash) : '';
     rows.push({ ip_hash: ipHash, created_at: new Date().toISOString() });
-    return new Response(null, { status: 201 });
+    // `.select('id').single()` asks for the new row as one object.
+    const row = { id: rows.length };
+    const single = new Headers(init?.headers).get('accept')?.includes('application/vnd.pgrst.object+json');
+    return Response.json(single ? row : [row], { status: 201 });
   }
   if (fault === 'count') return Response.json({ code: 'XX000', message: 'count failed' }, { status: 500 });
   if (fault === 'missing') return new Response(null, { status: 404 });
@@ -53,7 +62,8 @@ async function store(url: URL, init?: RequestInit): Promise<Response> {
   const ip = url.searchParams.get('ip_hash')?.replace(/^eq\./, '');
   const since = url.searchParams.get('created_at')?.replace(/^gte\./, '') ?? '';
   const count = rows.filter((row) => (!ip || row.ip_hash === ip) && row.created_at >= since).length;
-  return new Response(null, { status: 200, headers: { 'content-range': `*/${count}` } });
+  const total = badCount && badCount.query === (ip ? 'ip' : 'day') ? badCount.total : String(count);
+  return new Response(null, { status: 200, headers: { 'content-range': `*/${total}` } });
 }
 
 function setEnv(vars: Record<string, string | undefined>): void {
@@ -103,6 +113,7 @@ beforeEach(() => {
   rows = [];
   inserted = [];
   fault = null;
+  badCount = null;
   delete (globalThis as { __unvibeTryMemory?: unknown }).__unvibeTryMemory;
 });
 
@@ -198,6 +209,27 @@ test('a store insert error answers 503 with zero model calls', async () => {
   fault = 'insert';
   assert.equal((await POST(tryRequest())).status, 503);
   assert.equal(calls.gemini, 0);
+});
+
+test('an insert that returns no row (bodyless 201, bodyless 404, empty array) answers 503 with zero model calls', async () => {
+  production();
+  for (const insertFault of ['insert-bodyless', 'insert-404', 'insert-empty'] as const) {
+    fault = insertFault;
+    assert.equal((await POST(tryRequest())).status, 503, insertFault);
+  }
+  assert.equal(calls.gemini, 0);
+});
+
+test('a NaN or negative count, per-IP or daily, answers 503 with zero model calls', async () => {
+  production();
+  for (const query of ['ip', 'day'] as const) {
+    for (const total of ['NaN', '-1']) {
+      badCount = { query, total };
+      assert.equal((await POST(tryRequest())).status, 503, `${query} count ${total}`);
+    }
+  }
+  assert.equal(calls.gemini, 0);
+  assert.equal(inserted.length, 0);
 });
 
 test('a limiter that throws (malformed SUPABASE_URL) answers 503 with zero model calls', async () => {
