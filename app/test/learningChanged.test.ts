@@ -46,10 +46,8 @@ test('every change the companion lists (saved, checked, edited, synced in, remov
   assert.equal(notifications(() => s.setOutcome('a', 'understood')), 1, 'Understand / Test me result');
   assert.equal(notifications(() => s.updateLesson('a', { note: 'remember the map' })), 1, 'note or re-run body');
   assert.equal(notifications(() => s.mergeRemote([lesson('from-other-mac')])), 1, 'a lesson synced from another device');
-  assert.equal(notifications(() => s.ensureDayActive()), 0, 'today is already active from the lessons above');
   assert.equal(notifications(() => s.forgetEvent('a')), 1, 'a removed lesson');
   assert.equal(notifications(() => s.wipeEverything()), 1, 'Delete all local data');
-  assert.equal(notifications(() => s.ensureDayActive()), 1, 'the streak day after a wipe');
 });
 
 test('upload bookkeeping and missing lessons do not refresh the companion', () => {

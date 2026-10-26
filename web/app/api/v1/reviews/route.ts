@@ -4,7 +4,7 @@ import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { proRequired, recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
-import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
 import { clientIp } from '@/lib/tryDemo';
 import { recordActivation } from '@/lib/activation';
@@ -44,6 +44,7 @@ export async function POST(req: Request): Promise<Response> {
   // Token counts (no text) go onto the reserved usage row, or the trial's daily totals.
   let release: (() => Promise<void>) | null = null;
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
+  let trialStartedAt: string | undefined;
   if (!provider.mock && userId) {
     const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
     const reserved = await reserveMeteredAction(userId, kind, req, { proOnly });
@@ -52,9 +53,10 @@ export async function POST(req: Request): Promise<Response> {
     recordTokens = (usage) => recordMeteredTokens(userId, kind, usage);
   } else if (!provider.mock && trialInstall) {
     if (proOnly) return proRequired();
-    const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req));
+    const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req), new Date(), trialInstallMeta(req));
     if (trial.denied) return trial.denied;
     release = trial.release;
+    trialStartedAt = trial.startedAt;
     recordTokens = (usage) => recordTrialTokens('ai_explanation', usage);
   }
 
@@ -81,7 +83,7 @@ export async function POST(req: Request): Promise<Response> {
         send({ type: 'done', model: provider.name, mock: provider.mock });
         if (usage) await recordTokens?.(usage);
         if (produced && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
-          await recordActivation(trialInstall, payload.context.code).catch((error) => {
+          await recordActivation(trialInstall, payload.context.code, { startedAt: trialStartedAt }).catch((error) => {
             console.error('activation marker write failed', error);
           });
         }

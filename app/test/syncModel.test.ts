@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mergeRemoteEvents, retryDelayMs } from '../src/core/syncModel';
-import type { LocalEvent } from '../src/core/learning';
+import { computeProfile, type LocalEvent } from '../src/core/learning';
 
 function event(id: string, outcome: LocalEvent['outcome'] = 'reviewed'): LocalEvent {
   return { id, ts: `2026-07-${id === 'a' ? '10' : '11'}T10:00:00Z`, scope: 'selection', level: 'intermediate', outcome, lines: 4 };
@@ -38,4 +38,9 @@ test('remote merge does not introduce a personal note from the cloud', () => {
   const remote: LocalEvent = { ...event('a', 'understood'), note: 'unexpected remote note' };
   const result = mergeRemoteEvents([event('a', 'reviewed')], [], [remote]);
   assert.equal(result.events[0]!.note, undefined);
+});
+
+test('the first-run sample stays out of the streak after the cloud copy comes back', () => {
+  const result = mergeRemoteEvents([{ ...event('b'), sample: true }], [], [event('b', 'understood')]);
+  assert.equal(computeProfile(result.events, '2026-07-11').streak, 0);
 });

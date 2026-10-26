@@ -19,6 +19,8 @@ const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
 
 /** When set, the question service answers with this HTTP status instead of a question. */
 let quizStatus: number | null = null;
+/** When set, the explanation service refuses with this response instead of explaining. */
+let reviewRefusal: { status: number; body: Record<string, unknown> } | null = null;
 
 /** A backend that explains code, answers questions differently, and writes one quiz question. */
 net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -26,6 +28,7 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
   const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as ReviewRequestPayload) : ({} as ReviewRequestPayload);
   received.push({ path: url.pathname, body });
   if (url.pathname === '/api/v1/reviews') {
+    if (reviewRefusal) return Response.json(reviewRefusal.body, { status: reviewRefusal.status });
     const text = body.question
       ? `ANSWER to "${body.question}"`
       : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
@@ -120,4 +123,20 @@ test('a Test me failure stays in the quiz and leaves the finished explanation on
   assert.deepEqual(after.filter((ev) => ev.type === 'error'), []);
   assert.equal(after.filter((ev) => ev.type === 'quizError').length, 1);
   assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION at intermediate/);
+});
+
+test('a server 402 pro_required opens the Pro upgrade panel, not the plan limit', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  reviewRefusal = { status: 402, body: { error: 'pro_required', message: 'Git diff explanations, change briefs and since last understood compares are included with Unvibe Pro.', upgradePath: '/plan' } };
+  try {
+    await runReview(win, s, { level: 'intermediate' });
+  } finally {
+    reviewRefusal = null;
+  }
+  const errors = events.filter((ev) => ev.type === 'error');
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.code, 'pro_required');
+  assert.equal(errors[0]?.upgradePath, '/plan');
+  assert.match(String(errors[0]?.message), /included with Unvibe Pro/);
 });

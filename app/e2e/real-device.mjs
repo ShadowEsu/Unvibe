@@ -118,6 +118,17 @@ const companion = await windowWith(app, 'companion.html', 60000);
 if (!companion) { log(false, 'App opens'); writeFileSync(path.join(out, 'report.txt'), report.join('\n')); process.exit(1); }
 await companion.waitForLoadState('domcontentloaded');
 log(true, 'App opens', `version ${await app.evaluate(({ app }) => app.getVersion())}`);
+// The launch-at-login question is a native dialog this walkthrough can't click. Answer No for it
+// (and any other native message box) and keep each message, so the run can check that the
+// question came exactly once, after the first explanation of the user's own code.
+await app.evaluate(({ dialog }) => {
+  globalThis.__unvibeMessageBoxes = [];
+  dialog.showMessageBox = async (...args) => {
+    const options = args.find((arg) => arg && typeof arg === 'object' && 'message' in arg) ?? {};
+    globalThis.__unvibeMessageBoxes.push(String(options.message ?? ''));
+    return { response: 1, checkboxChecked: false };
+  };
+});
 if (os === 'windows') {
   const registered = await app.evaluate(({ app }) =>
     app.setAsDefaultProtocolClient('unvibe', process.execPath, [`--user-data-dir=${app.getPath('userData')}`]));
@@ -148,7 +159,7 @@ writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
 try {
   await clickText(companion, 'Next');
   await companion.locator('.ob2__count').filter({ hasText: '3 / 3' }).waitFor({ timeout: 8000 });
-  await companion.locator('.perm-block').waitFor({ timeout: 8000 });
+  await companion.locator('.ob2__task').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
   await clickText(companion, 'Start using Unvibe');
   await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
@@ -345,6 +356,11 @@ try {
   const r = await waitForExplanation('global-shortcut-explanation', globalSample);
   log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
 } catch (e) { log(false, 'Global shortcut in another app', e.message.split('\n')[0]); }
+
+const messageBoxes = await app.evaluate(() => globalThis.__unvibeMessageBoxes ?? []);
+const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
+log(loginAsks === 1, 'Launch-at-login question asked once, after the first own-code explanation', `${loginAsks} time(s)`);
+for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
 
 await sleep(1000);
 desktopShot('final');
