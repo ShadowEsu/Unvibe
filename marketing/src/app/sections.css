@@ -136,3 +136,10 @@ a.paper-alt-link:hover { background: #f4f1ea; }
 a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
 .dark a.paper-alt-link { color: #141414; }
 .dark a.paper-alt-link:focus-visible { outline-color: #c4b5fd; }
+/* "Older Intel Mac?" and its pill on one centred row that wraps on narrow screens. */
+.paper-beta__builds { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem 0.6rem; }
+/* The home hero's other-system download ("Get it for Windows" on a Mac) gets the same 32 px+ pill. Styled
+   here, not in hero.css or PhotoHero.tsx, so the hero's own files stay untouched. */
+.vhero__trust a { display: inline-flex; align-items: center; min-height: 2rem; margin-block: 0.15rem; padding: 0 0.8rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font-weight: 700; text-decoration: none; box-shadow: 0 2px 0 var(--v-ink); }
+.vhero__trust a:hover { background: #f4f1ea; }
+.dark .vhero__trust a { border-color: #f2eef9; background: #f2eef9; color: #141414; box-shadow: none; }

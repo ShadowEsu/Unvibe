@@ -269,10 +269,10 @@ export function BetaInstall({
 export function MacBuildLinks({ intelMac, surface }: { intelMac: boolean; surface: DownloadSurface }) {
   const onClick = () => trackDownloadClick(surface, "mac");
   return (
-    <p className="paper-beta__update">
+    <p className="paper-beta__update paper-beta__builds">
       {intelMac
-        ? <>Downloading the Intel build. <a href={BETA_MAC_DIRECT_DOWNLOAD} onClick={onClick}>M1 or newer instead</a></>
-        : <>Older Intel Mac? <a href={BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={onClick}>Get the Intel build</a></>}
+        ? <>Downloading the Intel build. <a className="paper-alt-link" href={BETA_MAC_DIRECT_DOWNLOAD} onClick={onClick}>M1 or newer instead</a></>
+        : <>Older Intel Mac? <a className="paper-alt-link" href={BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={onClick}>Get the Intel build</a></>}
     </p>
   );
 }
