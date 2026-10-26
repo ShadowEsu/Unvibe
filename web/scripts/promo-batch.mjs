@@ -144,6 +144,11 @@ export function insertSql({ batch, label, months, cap, redeemBy, hashes, generat
   ].join('\n');
 }
 
+/** Another user who can write the folder could swap the CSV or the SQL, or plant files beside them. */
+function assertPrivateFolder(folder) {
+  if (existsSync(folder) && (statSync(folder).mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
+}
+
 function generate(batch, countText, options) {
   if (!BATCH_RE.test(batch ?? '')) fail('batch must be lower case letters, digits, - or _ (up to 48)');
   const count = Number(countText);
@@ -164,8 +169,11 @@ function generate(batch, countText, options) {
   const codes = new Set();
   while (codes.size < count) codes.add(newCode());
   const rows = [...codes].map((code) => ({ code: format(code), givenTo: '', givenAt: '' }));
-  mkdirSync(dirname(csvPath), { recursive: true, mode: 0o700 });
-  mkdirSync(dirname(sqlPath), { recursive: true, mode: 0o700 });
+  // Both folders are checked before anything is written: the SQL is what later runs on production.
+  for (const folder of new Set([dirname(csvPath), dirname(sqlPath)])) {
+    mkdirSync(folder, { recursive: true, mode: 0o700 });
+    assertPrivateFolder(folder);
+  }
   writeCsv(csvPath, rows, 'wx');
   const sql = insertSql({ batch, label, months, cap, redeemBy, hashes: [...codes].map(hashOf), generatedAt: new Date().toISOString() });
   writeFileSync(sqlPath, sql, { mode: 0o600, flag: 'wx' });
@@ -210,9 +218,7 @@ function take(batch, who, options) {
   const recipient = safeCell(who ?? '');
   if (!recipient) fail('say who the code is for, e.g. take calhacks13 "Ada L. (ada@school.edu)"');
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
-  // Another user who can write the folder could swap the CSV or plant files beside it.
-  const folder = dirname(csvPath);
-  if (existsSync(folder) && (statSync(folder).mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
+  assertPrivateFolder(dirname(csvPath));
   const code = withLock(`${csvPath}.lock`, () => {
     const rows = readCodes(csvPath);
     const next = rows.find((row) => !row.givenTo);

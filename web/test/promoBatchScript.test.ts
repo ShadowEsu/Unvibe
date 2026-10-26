@@ -116,13 +116,31 @@ test('take: two senders at once get different codes, each marked with who and wh
 });
 
 test('take: refuses a promo folder other users can write, and hands nothing out', async () => {
-  const open = join(dir, 'shared-folder');
-  mkdirSync(open);
-  chmodSync(open, 0o777);
-  const csv = join(open, 'open.csv');
-  await script(['generate', 'opens', '2', '--csv', csv, '--sql', join(open, 'open.sql')]);
-  await assert.rejects(script(['take', 'opens', 'Ada', '--csv', csv]), /can be written by other users/);
-  assert.ok(!readFileSync(csv, 'utf8').includes('Ada'), 'no code was handed out');
+  // 0o770 and 0o707: the group bit alone and the world bit alone are each enough to refuse.
+  for (const mode of [0o777, 0o770, 0o707]) {
+    const name = `opens${mode.toString(8)}`;
+    const folder = join(dir, `shared-${mode.toString(8)}`);
+    const csv = join(folder, 'open.csv');
+    await script(['generate', name, '2', '--csv', csv, '--sql', join(folder, 'open.sql')]);
+    chmodSync(folder, mode);
+    await assert.rejects(script(['take', name, 'Ada', '--csv', csv]), /can be written by other users/, `mode ${mode.toString(8)}`);
+    assert.ok(!readFileSync(csv, 'utf8').includes('Ada'), `no code was handed out (mode ${mode.toString(8)})`);
+  }
+});
+
+test('generate: refuses a CSV or SQL folder other users can write, and writes nothing', async () => {
+  for (const mode of [0o770, 0o707]) {
+    const shared = join(dir, `gen-shared-${mode.toString(8)}`);
+    mkdirSync(shared);
+    chmodSync(shared, mode);
+    const csv = join(shared, 'codes.csv');
+    const sql = join(shared, 'insert.sql');
+    await assert.rejects(script(['generate', 'shared', '2', '--csv', csv, '--sql', sql]), /can be written by other users/, `both in a ${mode.toString(8)} folder`);
+    // A shared SQL folder alone is enough, and the CSV in the private folder isn't written either.
+    const privateCsv = join(dir, `gen-private-${mode.toString(8)}.csv`);
+    await assert.rejects(script(['generate', 'shared', '2', '--csv', privateCsv, '--sql', sql]), /can be written by other users/, `SQL in a ${mode.toString(8)} folder`);
+    for (const path of [csv, sql, privateCsv]) assert.throws(() => statSync(path), `${path} was not written`);
+  }
 });
 
 test('list and revoke go through the admin API with the token from the environment', async () => {

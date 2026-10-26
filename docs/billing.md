@@ -96,6 +96,8 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
 - No minting over the API. `web/scripts/promo-batch.mjs generate <batch> <count>` writes the codes to
   a private CSV (mode 600, `~/.config/unvibe-promo/unvibe-promo-<batch>.csv`) and a hash-only SQL
   insert that is run once by hand. `take <batch> <who>` hands out the next code under a file lock.
+  Both refuse a folder that other users can write (group or world), so nobody else can swap the
+  codes or the SQL before it runs; `chmod 700` the folder to go on.
 - `GET /api/v1/admin/promo` lists batches and redemptions; `POST` with `revoke_code` or
   `revoke_batch` switches codes off (`UNVIBE_ADMIN_STATS_TOKEN`; the script's `list` and `revoke`
   use it). Revoking a redeemed code takes back only the promo time not used yet: at most what that
