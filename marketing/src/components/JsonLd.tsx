@@ -1,4 +1,5 @@
 import { faqItems } from "@/data/faq";
+import { jsonLdScript } from "@/lib/jsonLd";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://unvibe.site";
 
@@ -20,7 +21,7 @@ export function FaqJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdScript(data) }}
     />
   );
 }

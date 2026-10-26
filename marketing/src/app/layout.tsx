@@ -20,6 +20,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { BOOT_SCRIPT } from "@/lib/theme";
+import { jsonLdScript } from "@/lib/jsonLd";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -158,11 +159,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(softwareJsonLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd) }}
         />
       </head>
       <body>
