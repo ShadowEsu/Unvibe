@@ -4,8 +4,9 @@
 -- trial_activation gains more write-once markers. Each is one row (install_key, kind, at): a
 -- timestamp only, never code, file names, email or IP.
 --
--- The inline check from 20261018160000 gets Postgres's default name trial_activation_kind_check;
--- confirm with \d public.trial_activation before applying.
+-- The inline check from 20261018160000 gets Postgres's default name trial_activation_kind_check.
+-- The guard below checks that name (the same thing \d public.trial_activation shows) and stops
+-- the whole transaction if it differs, so a run can never end half-applied (Security INFO 1).
 --
 -- The API may deploy before this is applied. Until then installs are created without platform and
 -- first_version, the `return` marker is skipped, and POST /api/v1/trial/progress answers 503 for
@@ -16,6 +17,21 @@
 --   alter table public.trial_activation drop constraint if exists trial_activation_kind_check;
 --   alter table public.trial_activation add constraint trial_activation_kind_check check (kind in ('sample', 'code'));
 --   alter table public.trial_installs drop column if exists first_version, drop column if exists platform;
+
+begin;
+
+do $$
+begin
+  if (select count(*) from pg_constraint
+      where conrelid = 'public.trial_activation'::regclass and contype = 'c'
+        and pg_get_constraintdef(oid) like '%kind%') <> 1
+     or not exists (select 1 from pg_constraint
+      where conrelid = 'public.trial_activation'::regclass and contype = 'c'
+        and conname = 'trial_activation_kind_check') then
+    raise exception 'expected exactly one kind check on public.trial_activation, named trial_activation_kind_check';
+  end if;
+end
+$$;
 
 alter table public.trial_installs
   add column if not exists platform text check (platform in ('mac', 'win')),
@@ -28,6 +44,8 @@ alter table public.trial_activation add constraint trial_activation_kind_check
     'onboarded', 'accessibility', 'signed_in', 'return',
     'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted'
   ));
+
+commit;
 
 -- Retention (spec section 10): the app-reported kinds and `return` are deleted after 180 days by a
 -- monthly manual run until a cron exists:
