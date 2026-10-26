@@ -1,6 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type {
   Account,
+  AccountDeletion,
+  BetaDownloadOutcome,
   DeviceCode,
   EventRecord,
   IncomingEvent,
@@ -10,6 +12,7 @@ import type {
 } from './types';
 import { computeProfile, computeProjects } from './progress';
 import { EventOwnershipError } from './eventOwnership';
+import { MemoryBillingStore } from '@/billing/memoryBillingStore';
 
 interface PendingDevice {
   userCode: string;
@@ -24,11 +27,22 @@ interface TokenRecord {
   createdAt: number;
 }
 
+/** account_deletions as stored: plus the token hashes and updated_at, which never leave the store. */
+interface MemoryDeletion extends AccountDeletion {
+  tokenHashes: Set<string>;
+  updatedAt: number;
+}
+
 interface MemoryData {
   events: EventRecord[];
   tokens: Map<string, TokenRecord>;
   devices: Map<string, PendingDevice>;
-  users: Map<string, { email?: string }>;
+  users: Map<string, { email?: string; createdAt: number }>;
+  deletions: Map<string, MemoryDeletion>;
+}
+
+function publicDeletion({ tokenHashes: _tokenHashes, updatedAt: _updatedAt, ...deletion }: MemoryDeletion): AccountDeletion {
+  return deletion;
 }
 
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -52,9 +66,11 @@ export class MemoryStore implements Store {
         tokens: new Map(),
         devices: new Map(),
         users: new Map(),
+        deletions: new Map(),
       };
     }
     if (!g.__uncodeData.users) g.__uncodeData.users = new Map();
+    g.__uncodeData.deletions ??= new Map();
     this.data = g.__uncodeData;
   }
 
@@ -66,6 +82,8 @@ export class MemoryStore implements Store {
   }
 
   async approveDeviceCode(userCode: string, userId: string, email?: string): Promise<string | null> {
+    // Mirrors users_refuse_deleted_account: no session (and no users row) for an account being deleted.
+    if (this.data.deletions.has(userId)) throw new Error('account_deleted');
     const entry = [...this.data.devices.values()].find((d) => d.userCode === userCode.toUpperCase());
     if (!entry) return null;
     if (this.now() - entry.createdAt > DEVICE_TTL_MS) return null;
@@ -75,7 +93,7 @@ export class MemoryStore implements Store {
     const token = randomUUID();
     entry.userId = userId;
     entry.token = token;
-    this.data.users.set(userId, { email });
+    this.data.users.set(userId, { email, createdAt: this.data.users.get(userId)?.createdAt ?? this.now() });
     this.data.tokens.set(token, { userId, createdAt: this.now() });
     return token;
   }
@@ -107,9 +125,10 @@ export class MemoryStore implements Store {
   async signIn(email: string): Promise<Account> {
     const normalized = email.trim().toLowerCase();
     let userId = [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0];
+    if (userId && this.data.deletions.has(userId)) throw new Error('account_deleted');
     if (!userId) {
       userId = randomUUID();
-      this.data.users.set(userId, { email: normalized });
+      this.data.users.set(userId, { email: normalized, createdAt: this.now() });
     }
     const token = randomUUID();
     this.data.tokens.set(token, { userId, createdAt: this.now() });
@@ -121,7 +140,7 @@ export class MemoryStore implements Store {
     const existing = [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0];
     if (existing) return null;
     const userId = randomUUID();
-    this.data.users.set(userId, { email: normalized });
+    this.data.users.set(userId, { email: normalized, createdAt: this.now() });
     const token = randomUUID();
     this.data.tokens.set(token, { userId, createdAt: this.now() });
     return { token, userId, email: normalized };
@@ -137,24 +156,102 @@ export class MemoryStore implements Store {
     this.names.set(userId, name);
   }
 
-  async deleteAccount(userId: string): Promise<void> {
-    this.data.events = this.data.events.filter((e) => e.userId !== userId);
-    for (const [token, record] of [...this.data.tokens.entries()]) {
-      if (record.userId === userId) {
-        this.data.tokens.delete(token);
-      }
+  async accountDeletion(userId: string): Promise<AccountDeletion | null> {
+    const found = this.data.deletions.get(userId);
+    return found ? publicDeletion(found) : null;
+  }
+
+  async accountDeletionForToken(tokenHash: string): Promise<AccountDeletion | null> {
+    const found = [...this.data.deletions.values()].find((deletion) => deletion.tokenHashes.has(tokenHash));
+    return found ? publicDeletion(found) : null;
+  }
+
+  async beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion> {
+    // Mirrors begin_account_deletion: only a sha256 hex token hash is ever stored, never the token.
+    if (!/^[0-9a-f]{64}$/.test(tokenHash)) throw new Error('token hash must be sha256 hex');
+    // Mirrors begin_account_deletion: a Teams owner with members is refused before anything is recorded.
+    new MemoryBillingStore().refuseTeamWithMembers(userId);
+    let deletion = this.data.deletions.get(userId);
+    if (!deletion) {
+      deletion = { userId, state: 'started', step: 'started', startedAt: new Date(this.now()).toISOString(), updatedAt: this.now(), tokenHashes: new Set() };
+      this.data.deletions.set(userId, deletion);
     }
+    if (deletion.state === 'started') {
+      // Mirrors begin_account_deletion: without an email from the caller, the users row's is captured.
+      const normalized = email?.trim().toLowerCase() || this.data.users.get(userId)?.email?.trim().toLowerCase();
+      if (!deletion.email && normalized) deletion.email = normalized;
+      deletion.tokenHashes.add(tokenHash);
+      deletion.updatedAt = this.now();
+    }
+    return publicDeletion(deletion);
+  }
+
+  async recordAccountDeletionStep(userId: string, step: 'auth_identity' | 'app_data' | 'beta_downloads', betaDownloads?: BetaDownloadOutcome): Promise<void> {
+    const deletion = this.data.deletions.get(userId);
+    if (deletion?.state !== 'started') return;
+    deletion.step = step;
+    if (betaDownloads) deletion.betaDownloads = betaDownloads;
+    deletion.updatedAt = this.now();
+  }
+
+  /** Mirrors erase_account_data: the Teams check comes before anything is deleted; tokens go with the user. */
+  async eraseAccount(userId: string): Promise<void> {
+    const deletion = this.data.deletions.get(userId);
+    if (deletion?.state !== 'started') throw new Error('account deletion was not started');
+    await new MemoryBillingStore().deleteUserBilling(userId);
+    this.data.events = this.data.events.filter((e) => e.userId !== userId);
     for (const [dc, dev] of [...this.data.devices.entries()]) {
       if (dev.userId === userId) {
         this.data.devices.delete(dc);
       }
     }
+    this.names.delete(userId);
     this.data.users.delete(userId);
+    for (const [token, record] of [...this.data.tokens.entries()]) {
+      if (record.userId === userId) {
+        this.data.tokens.delete(token);
+      }
+    }
+    deletion.step = 'app_data';
+    deletion.updatedAt = this.now();
+  }
+
+  async finishAccountDeletion(userId: string): Promise<void> {
+    const deletion = this.data.deletions.get(userId);
+    if (deletion?.state !== 'started') return;
+    deletion.state = 'done';
+    deletion.step = 'done';
+    delete deletion.email;
+    deletion.updatedAt = this.now();
+  }
+
+  async staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]> {
+    return this.staleDeletions(olderThanMs)
+      .sort((a, b) => a.updatedAt - b.updatedAt)
+      .slice(0, limit)
+      .map(publicDeletion);
+  }
+
+  async staleAccountDeletionCount(olderThanMs: number): Promise<number> {
+    return this.staleDeletions(olderThanMs).length;
+  }
+
+  private staleDeletions(olderThanMs: number): MemoryDeletion[] {
+    const cutoff = this.now() - olderThanMs;
+    return [...this.data.deletions.values()].filter((d) => d.state === 'started' && Date.parse(d.startedAt) < cutoff);
   }
 
   async userIdForEmail(email: string): Promise<string | null> {
     const normalized = email.trim().toLowerCase();
     return [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0] ?? null;
+  }
+
+  /** Mirrors account_deletion_address_reused: only a users row created after the deletion started counts. */
+  async addressReusedSinceDeletion(userId: string, email: string): Promise<boolean> {
+    const startedAt = this.data.deletions.get(userId)?.startedAt;
+    if (!startedAt) return false;
+    const normalized = email.trim().toLowerCase();
+    return [...this.data.users.entries()].some(([id, u]) => id !== userId && u.email?.trim().toLowerCase() === normalized && u.createdAt > Date.parse(startedAt));
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {

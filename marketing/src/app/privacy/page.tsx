@@ -96,8 +96,9 @@ export default function PrivacyPage() {
           encrypted in transit. Backend at-rest and backup settings must be verified for
           the selected staging/production infrastructure. You can access and delete your
           data. See <a href="/data-controls">data controls</a> and{" "}
-          <a href="/account-deletion">account deletion</a>. We use no advertising
-          trackers.
+          <a href="/account-deletion">account deletion</a>. Deletion runs at once; if we cannot
+          check for beta-download records at the time, any we find, and the email address kept to
+          find them, are removed within 30 days. We use no advertising trackers.
         </p>
         <p>
           Without an account, the app sends a random install ID with each cloud explanation and with

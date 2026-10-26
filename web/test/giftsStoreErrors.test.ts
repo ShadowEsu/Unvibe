@@ -17,6 +17,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const accept = new Headers(init?.headers).get('accept') ?? '';
   const row = (value: Record<string, unknown>) => Response.json(accept.includes('vnd.pgrst.object') ? value : [value]);
   if (url.pathname === '/rest/v1/tokens') return row({ user_id: USER_ID });
+  if (url.pathname === '/rest/v1/account_deletions') return Response.json([]);
   if (url.pathname === '/rest/v1/users') return row({ email: 'giver@gift.test', settings: {} });
   if (url.pathname.startsWith('/rest/v1/gift_') || url.pathname === '/rest/v1/rpc/claim_gift') {
     return Response.json({ code: '42501', message: STORE_DETAIL, hint: 'Grant usage to service_role.', details: null }, { status: 403 });

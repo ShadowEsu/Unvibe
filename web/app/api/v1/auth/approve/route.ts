@@ -1,5 +1,6 @@
 import { getStore } from '@/data/store';
 import { createClient } from '@supabase/supabase-js';
+import { accountDeleted } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -16,8 +17,10 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'sign in with Supabase before approving this device' }, { status: 401 });
   }
   const auth = createClient(url, serviceRole, { auth: { persistSession: false } });
+  // getUser asks Supabase Auth on every call, so an access token whose user was deleted is refused here.
   const { data, error } = await auth.auth.getUser(accessToken);
   if (error || !data.user) return Response.json({ error: 'your sign-in session is invalid or expired' }, { status: 401 });
+  if (await getStore().accountDeletion(data.user.id)) return accountDeleted();
   const token = await getStore().approveDeviceCode(body.userCode, data.user.id, data.user.email);
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });

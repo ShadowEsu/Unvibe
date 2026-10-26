@@ -138,6 +138,8 @@ export interface BillingStore {
   readonly kind: string;
   ensurePersonalWorkspace(userId: string): Promise<WorkspaceAccess>;
   listWorkspaces(userId: string): Promise<WorkspaceAccess[]>;
+  /** The workspaces this user is a member of, without creating the personal one (account deletion must not provision). */
+  existingWorkspaces(userId: string): Promise<WorkspaceAccess[]>;
   getWorkspaceAccess(userId: string, workspaceId: string): Promise<WorkspaceAccess | null>;
   overview(userId: string, workspaceId?: string): Promise<BillingOverview>;
   reserveUsage(userId: string, kind: UsageKind, workspaceId?: string): Promise<UsageReservation>;
@@ -188,5 +190,4 @@ export interface BillingStore {
   completeWebhook(eventId: string): Promise<void>;
   failWebhook(eventId: string, message: string): Promise<void>;
   recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata?: Record<string, unknown>): Promise<void>;
-  deleteUserBilling(userId: string): Promise<void>;
 }

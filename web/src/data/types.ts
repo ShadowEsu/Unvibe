@@ -82,6 +82,28 @@ export interface Account {
   email: string;
 }
 
+/**
+ * deleted: the Blob beta-download records for the email are gone (or there were none). no_email:
+ * no address was captured, so nothing was looked up.
+ */
+export type BetaDownloadCleanup = 'deleted' | 'not_configured' | 'no_email';
+/**
+ * What account_deletions.beta_downloads records: the cleanup's answer; failed (the step threw);
+ * or email_reused (another account holds the address now, so its records are that account's).
+ */
+export type BetaDownloadOutcome = BetaDownloadCleanup | 'failed' | 'email_reused';
+
+export interface AccountDeletion {
+  userId: string;
+  state: 'started' | 'done';
+  /** The last step that finished, in order: started, auth_identity, app_data, beta_downloads, done. */
+  step: 'started' | 'auth_identity' | 'app_data' | 'beta_downloads' | 'done';
+  /** Captured when the deletion started; cleared once it is done. */
+  email?: string;
+  betaDownloads?: BetaDownloadOutcome;
+  startedAt: string;
+}
+
 /** Backend persistence + auth. Two implementations: MemoryStore (dev) and SupabaseStore (prod). */
 export interface Store {
   readonly kind: string;
@@ -100,7 +122,40 @@ export interface Store {
   /** The profile name from the sign-in provider (Google), stored in users.settings. */
   rememberName(userId: string, name: string): Promise<void>;
   userIdForEmail(email: string): Promise<string | null>;
-  deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
+
+  // Account deletion (App Store requirement). State lives in account_deletions; DELETE
+  // /api/v1/account runs the steps, and the daily sweep finishes the ones left started.
+  accountDeletion(userId: string): Promise<AccountDeletion | null>;
+  /**
+   * Whether another account, created after this deletion started, holds `email` (account_deletion_address_reused).
+   * An older users row with the same address does not count. Read errors throw.
+   */
+  addressReusedSinceDeletion(userId: string, email: string): Promise<boolean>;
+  /** The deletion that the token with this sha256 hex asked for, whatever its state. */
+  accountDeletionForToken(tokenHash: string): Promise<AccountDeletion | null>;
+  /**
+   * Records started with the email and the token hash, or adds the hash to a started deletion. A done
+   * one comes back unchanged. Throws TeamHasMembersError, recording nothing, while the account owns a
+   * team workspace with other members.
+   */
+  beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion>;
+  /** Records a finished step; for the Blob step also its outcome ('failed' keeps step app_data). */
+  recordAccountDeletionStep(userId: string, step: 'auth_identity' | 'app_data' | 'beta_downloads', betaDownloads?: BetaDownloadOutcome): Promise<void>;
+  /**
+   * The public side in one transaction: email-keyed rows, billing and workspaces, then the user row
+   * (tokens go with it). Throws TeamHasMembersError, and deletes nothing, when the account owns a
+   * team workspace with other members.
+   */
+  eraseAccount(userId: string): Promise<void>;
+  /** Marks the deletion done and forgets the captured email. */
+  finishAccountDeletion(userId: string): Promise<void>;
+  /**
+   * Started deletions that began more than `olderThanMs` ago, least recently updated first, at most
+   * `limit` (the daily sweep). Read errors throw.
+   */
+  staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]>;
+  /** How many started deletions began more than `olderThanMs` ago (stale_account_deletions). Read errors throw. */
+  staleAccountDeletionCount(olderThanMs: number): Promise<number>;
 
   // Data
   upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void>;

@@ -2,6 +2,8 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   Account,
+  AccountDeletion,
+  BetaDownloadOutcome,
   DeviceCode,
   EventRecord,
   IncomingEvent,
@@ -11,6 +13,20 @@ import type {
 } from './types';
 import { computeProfile, computeProjects } from './progress';
 import { EventOwnershipError } from './eventOwnership';
+import { TeamHasMembersError } from './teamHasMembers';
+
+const DELETION_COLUMNS = 'user_id, state, step, email, beta_downloads, started_at';
+
+function deletionFromRow(row: Record<string, unknown>): AccountDeletion {
+  return {
+    userId: String(row.user_id),
+    state: row.state === 'done' ? 'done' : 'started',
+    step: row.step as AccountDeletion['step'],
+    ...(typeof row.email === 'string' && row.email ? { email: row.email } : {}),
+    ...(typeof row.beta_downloads === 'string' ? { betaDownloads: row.beta_downloads as BetaDownloadOutcome } : {}),
+    startedAt: String(row.started_at),
+  };
+}
 
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
@@ -140,17 +156,79 @@ export class SupabaseStore implements Store {
     return typeof data?.id === 'string' ? data.id : null;
   }
 
-  async deleteAccount(userId: string): Promise<void> {
-    // Order matters if FKs are enforced: children before the user row. Stop at the first failure
-    // so the caller never reports a deletion that did not happen.
-    const steps: Array<[table: string, column: string]> = [
-      ['events', 'user_id'], ['usage_counters', 'user_id'], ['tokens', 'user_id'],
-      ['device_codes', 'user_id'], ['consent_log', 'user_id'], ['users', 'id'],
-    ];
-    for (const [table, column] of steps) {
-      const { error } = await this.db.from(table).delete().eq(column, userId);
-      if (error) throw new Error(`Could not delete ${table}: ${error.message}`);
-    }
+  /** The same rule as erase_account_data, in SQL, so both compare addresses the same way. */
+  async addressReusedSinceDeletion(userId: string, email: string): Promise<boolean> {
+    const { data, error } = await this.db.rpc('account_deletion_address_reused', { p_user_id: userId, p_email: email });
+    if (error) throw new Error(`Could not check the address: ${error.message}`);
+    if (typeof data !== 'boolean') throw new Error('Could not check the address: no answer.');
+    return data;
+  }
+
+  /**
+   * Before the account_deletions migration is applied nothing can have started a deletion (starting
+   * one needs the table), so a missing table reads as "no deletion", and every other error throws.
+   */
+  private async deletionWhere(column: 'user_id' | 'token_hashes', value: string): Promise<AccountDeletion | null> {
+    const query = this.db.from('account_deletions').select(DELETION_COLUMNS);
+    const { data, error } = await (column === 'user_id' ? query.eq('user_id', value) : query.contains('token_hashes', [value])).maybeSingle();
+    if (error?.code === 'PGRST205' || error?.code === '42P01') return null;
+    if (error) throw new Error(`Could not read account deletion: ${error.message}`);
+    return data ? deletionFromRow(data as Record<string, unknown>) : null;
+  }
+
+  accountDeletion(userId: string): Promise<AccountDeletion | null> {
+    return this.deletionWhere('user_id', userId);
+  }
+
+  accountDeletionForToken(tokenHash: string): Promise<AccountDeletion | null> {
+    return this.deletionWhere('token_hashes', tokenHash);
+  }
+
+  async beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion> {
+    const { data, error } = await this.db.rpc('begin_account_deletion', { p_user_id: userId, p_email: email ?? null, p_token_hash: tokenHash });
+    if (error?.code === 'P0001' && error.message === 'team_has_members') throw new TeamHasMembersError();
+    if (error) throw new Error(`Could not start account deletion: ${error.message}`);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== 'object') throw new Error('Could not start account deletion: no row returned.');
+    return deletionFromRow({ ...(row as Record<string, unknown>), user_id: userId });
+  }
+
+  async recordAccountDeletionStep(userId: string, step: 'auth_identity' | 'app_data' | 'beta_downloads', betaDownloads?: BetaDownloadOutcome): Promise<void> {
+    const { error } = await this.db.from('account_deletions')
+      .update({ step, ...(betaDownloads ? { beta_downloads: betaDownloads } : {}), updated_at: new Date().toISOString() })
+      .eq('user_id', userId).eq('state', 'started');
+    if (error) throw new Error(`Could not record account deletion step: ${error.message}`);
+  }
+
+  async eraseAccount(userId: string): Promise<void> {
+    // One transaction (erase_account_data). tokens go with users by on delete cascade, so a failure
+    // anywhere before the commit leaves the app token working for the retry.
+    const { error } = await this.db.rpc('erase_account_data', { p_user_id: userId });
+    if (error?.code === 'P0001' && error.message === 'team_has_members') throw new TeamHasMembersError();
+    if (error) throw new Error(`Could not delete account data: ${error.message}`);
+  }
+
+  async finishAccountDeletion(userId: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await this.db.from('account_deletions')
+      .update({ state: 'done', step: 'done', email: null, done_at: now, updated_at: now })
+      .eq('user_id', userId).eq('state', 'started');
+    if (error) throw new Error(`Could not finish account deletion: ${error.message}`);
+  }
+
+  async staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]> {
+    const { data, error } = await this.db.from('account_deletions').select(DELETION_COLUMNS)
+      .eq('state', 'started').lt('started_at', new Date(Date.now() - olderThanMs).toISOString())
+      .order('updated_at', { ascending: true }).limit(limit);
+    if (error) throw new Error(`Could not list stale account deletions: ${error.message}`);
+    return (data ?? []).map((row) => deletionFromRow(row as Record<string, unknown>));
+  }
+
+  async staleAccountDeletionCount(olderThanMs: number): Promise<number> {
+    const { data, error } = await this.db.rpc('stale_account_deletions', { p_older_than: `${Math.floor(olderThanMs / 1000)} seconds` });
+    if (error) throw new Error(`Could not count stale account deletions: ${error.message}`);
+    if (typeof data !== 'number') throw new Error('Could not count stale account deletions: no answer.');
+    return data;
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
