@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function ExplainIndexPage() {
   return (
-    <article className="explain-page paper-wrap">
+    <article className="explain-page">
       <header className="explain-head">
         <h1>Explain code in plain English</h1>
         <p>Paste up to 60 lines, pick a depth and Vibe tells you what the code does. Free, no account.</p>

@@ -2,10 +2,13 @@
    The heading and the notes sit on reading cards built from the site's card tokens (--v-card, --v-ink,
    --v-shadow, --v-radius), so they follow the site theme. The Try it box keeps its own styles. */
 
+/* As wide as the Try it box (min(1120px, 100%)), so the cards line up with it. */
 .explain-page {
   --explain-muted: color-mix(in srgb, var(--v-ink) 78%, var(--v-card));
   display: grid;
   gap: clamp(1.25rem, 3vw, 2rem);
+  width: min(70rem, calc(100% - 2.5rem));
+  margin-inline: auto;
   padding-block: clamp(5.25rem, 9vw, 7rem) 6rem;
 }
 
@@ -47,8 +50,10 @@
   font-size: 0.95rem;
 }
 
+/* Text links only: the download buttons in .explain-get keep their own look. */
 .explain-crumb a,
-.explain-card a {
+.explain-langs a,
+.explain-more a {
   color: var(--v-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -108,6 +113,7 @@
   gap: 0.6rem;
   margin: 0;
   padding-left: 1.2rem;
+  list-style: disc;
 }
 
 .explain-card .explain-watch {

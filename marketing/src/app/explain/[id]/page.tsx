@@ -39,7 +39,7 @@ export default function ExplainLanguagePage({ params }: Params) {
   const others = explainPages.filter(({ id }) => id !== page.id);
 
   return (
-    <article className="explain-page paper-wrap">
+    <article className="explain-page">
       <header className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}
