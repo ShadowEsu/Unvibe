@@ -98,9 +98,10 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
   insert that is run once by hand. `take <batch> <who>` hands out the next code under a file lock.
 - `GET /api/v1/admin/promo` lists batches and redemptions; `POST` with `revoke_code` or
   `revoke_batch` switches codes off (`UNVIBE_ADMIN_STATS_TOKEN`; the script's `list` and `revoke`
-  use it). Revoking a redeemed code takes back exactly the Pro time that redemption added (stored as
-  `granted`, after the 12-month ceiling; never below now), unless the account now pays through
-  Stripe; other Pro time stays. Revoking a batch stops new redemptions and leaves granted months
+  use it). Revoking a redeemed code takes back only the promo time not used yet: at most what that
+  redemption added (stored as `granted`, after the 12-month ceiling), only the part still ahead of
+  now, and never on a live Stripe subscription. Used-up promo days and later Pro time (gift, welcome
+  months) stay. Revoking a batch stops new redemptions and leaves granted months
   alone. Deleting an account keeps its redemption row (no user link, no email), so the code stays
   used and counts against the cap.
 
