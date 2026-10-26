@@ -5,8 +5,8 @@
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { errorSummary } from '@/billing/http';
-import type { Store } from '@/data/types';
-import { runRemainingDeletionSteps } from '@/lib/accountDeletionSteps';
+import type { AccountDeletion, Store } from '@/data/types';
+import { accountErased, billingPreflight, runRemainingDeletionSteps, type BillingPreflight, type DeletionRun } from '@/lib/accountDeletionSteps';
 
 /** A deletion still started an hour after it began is retried here. */
 export const SWEEP_STALE_AFTER_MS = 60 * 60_000;
@@ -46,6 +46,8 @@ export interface SweepCounts {
   cleanupPending: number;
   /** An earlier step (Auth identity, account data, record done) failed. */
   failed: number;
+  /** Not erased: a subscription can still charge, or the billing state could not be read. Left started. */
+  skipped: number;
   /** Started rows older than an hour: after this run, or before it when the budget stopped it. */
   stale: number;
   /** Started rows older than 7 days: after this run, or before it when the budget stopped it. */
@@ -65,6 +67,20 @@ async function within<T>(work: Promise<T>, ms: number): Promise<T | 'out_of_time
   }
 }
 
+type SweepRun = DeletionRun | { result: 'skipped'; preflight: Exclude<BillingPreflight, { result: 'clear' }> };
+
+/**
+ * One row. Before its account data is erased, the same Stripe preflight as DELETE: a workspace
+ * Stripe may still charge (or whose billing cannot be read) is never erased here. Never throws.
+ */
+async function retryDeletion(store: Store, deletion: AccountDeletion): Promise<SweepRun> {
+  if (!accountErased(deletion)) {
+    const preflight = await billingPreflight(deletion.userId);
+    if (preflight.result !== 'clear') return { result: 'skipped', preflight };
+  }
+  return runRemainingDeletionSteps(store, deletion);
+}
+
 /**
  * Counts the stale and overdue rows, retries the stale deletions until the time budget runs out, then
  * counts again, and logs one ACCOUNT_DELETION_SWEEP counts line on every run (plus
@@ -81,10 +97,11 @@ export async function sweepAccountDeletions(store: Store, budgetMs: number = SWE
   let done = 0;
   let cleanupPending = 0;
   let failed = 0;
+  let skipped = 0;
   let stoppedOnBudget = false;
   for (const deletion of rows) {
     const left = deadline - Date.now();
-    const run = left > 0 ? await within(runRemainingDeletionSteps(store, deletion), left) : 'out_of_time';
+    const run = left > 0 ? await within(retryDeletion(store, deletion), left) : 'out_of_time';
     if (run === 'out_of_time') {
       stoppedOnBudget = true;
       break;
@@ -95,6 +112,15 @@ export async function sweepAccountDeletions(store: Store, budgetMs: number = SWE
     } else if (run.result === 'cleanup_failed') {
       cleanupPending += 1;
       console.error('account deletion sweep: beta-download records failed', errorSummary(run.error));
+    } else if (run.result === 'skipped') {
+      // Left started: the next run checks again, and the overdue alert and the 30-day path still see it.
+      skipped += 1;
+      const { preflight } = run;
+      if (preflight.result === 'still_charges') {
+        console.error('account deletion sweep: skipped, a subscription can still charge');
+      } else {
+        console.error(`account deletion sweep: skipped, ${preflight.result === 'check_failed' ? 'subscription check' : preflight.step} failed`, errorSummary(preflight.error));
+      }
     } else {
       failed += 1;
       console.error(`account deletion sweep: ${run.step} failed`, errorSummary(run.error));
@@ -104,7 +130,7 @@ export async function sweepAccountDeletions(store: Store, budgetMs: number = SWE
     stale = await store.staleAccountDeletionCount(SWEEP_STALE_AFTER_MS);
     overdue = await store.staleAccountDeletionCount(SWEEP_OVERDUE_AFTER_MS);
   }
-  const counts = { found: rows.length, checked, done, cleanupPending, failed, stale, overdue, stoppedOnBudget };
+  const counts = { found: rows.length, checked, done, cleanupPending, failed, skipped, stale, overdue, stoppedOnBudget };
   console.log('account deletion sweep: counts', JSON.stringify({ code: 'ACCOUNT_DELETION_SWEEP', ...counts }));
   if (overdue > 0) {
     console.error('account deletion sweep: deletions overdue', JSON.stringify({ code: 'ACCOUNT_DELETION_OVERDUE', ...counts }));

@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mock, test } from 'node:test';
+import Stripe from 'stripe';
 import { DELETE as deleteAccount } from '../app/api/v1/account/route';
 import { GET as sweepRoute } from '../app/api/v1/internal/account-deletions/sweep/route';
+import { getBillingStore } from '../src/billing/store';
+import { getStripe } from '../src/billing/stripe';
 import { getStore } from '../src/data/store';
 import { accountDeletionServices } from '../src/lib/accountDeletionServices';
 import { SWEEP_LIMIT, sweepAccountDeletions, type SweepCounts } from '../src/lib/accountDeletionSweep';
@@ -22,6 +25,24 @@ services.auth = {
     return identities.delete(userId) ? 'deleted' : 'not_found';
   },
 };
+
+/** Live Stripe subscriptions by id; the cached client's retrieve is replaced so nothing leaves the machine. */
+const live = new Map<string, Stripe.Subscription | Error>();
+const subscriptionsApi = getStripe().subscriptions;
+subscriptionsApi.retrieve = (async (id: string) => {
+  const found = live.get(id);
+  if (!found) throw new Error(`unknown subscription ${id}`);
+  if (found instanceof Error) throw found;
+  return found;
+}) as unknown as typeof subscriptionsApi.retrieve;
+
+function liveSubscription(id: string, fields: Partial<Pick<Stripe.Subscription, 'status' | 'cancel_at_period_end'>>): Stripe.Subscription {
+  return {
+    id, status: 'active', cancel_at_period_end: false, cancel_at: null,
+    items: { data: [{ current_period_end: 1_800_000_000 }] },
+    ...fields,
+  } as unknown as Stripe.Subscription;
+}
 
 /**
  * Blob beta-download records by email; reading fails for the emails in brokenBlob, and waits while
@@ -102,7 +123,7 @@ function countsLine(lines: string[]): Record<string, unknown> {
   const found = lines.filter((line) => line.startsWith('account deletion sweep: counts {"code":"ACCOUNT_DELETION_SWEEP",'));
   assert.equal(found.length, 1, lines.join('\n'));
   const payload = JSON.parse(found[0].slice(found[0].indexOf('{'))) as Record<string, unknown>;
-  assert.deepEqual(Object.keys(payload), ['code', 'found', 'checked', 'done', 'cleanupPending', 'failed', 'stale', 'overdue', 'stoppedOnBudget']);
+  assert.deepEqual(Object.keys(payload), ['code', 'found', 'checked', 'done', 'cleanupPending', 'failed', 'skipped', 'stale', 'overdue', 'stoppedOnBudget']);
   return payload;
 }
 
@@ -111,8 +132,8 @@ test('with nothing to retry, the sweep still logs its counts line', async () => 
   let answer: Record<string, unknown> = {};
   const logged = await capturingLogs(async () => { answer = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, unknown>; });
   const counts = countsLine(logged);
-  assert.deepEqual(counts, { code: 'ACCOUNT_DELETION_SWEEP', found: 0, checked: 0, done: 0, cleanupPending: 0, failed: 0, stale: 0, overdue: 0, stoppedOnBudget: false });
-  assert.deepEqual(answer, { ok: true, found: 0, checked: 0, done: 0, cleanupPending: 0, failed: 0, stale: 0, overdue: 0, stoppedOnBudget: false });
+  assert.deepEqual(counts, { code: 'ACCOUNT_DELETION_SWEEP', found: 0, checked: 0, done: 0, cleanupPending: 0, failed: 0, skipped: 0, stale: 0, overdue: 0, stoppedOnBudget: false });
+  assert.deepEqual(answer, { ok: true, found: 0, checked: 0, done: 0, cleanupPending: 0, failed: 0, skipped: 0, stale: 0, overdue: 0, stoppedOnBudget: false });
 });
 
 test('without CRON_SECRET (or with a short one) the sweep refuses every call: fail closed', async () => {
@@ -186,6 +207,89 @@ test('a row left after an Auth failure is finished too: identity, account rows, 
   assert.equal((await store.accountDeletion(me.userId))?.state, 'done');
 });
 
+/**
+ * A person with a personal workspace whose deletion, 2 hours ago, stopped at the Auth step: the
+ * account data is not erased. With `subscribed`, a Pro subscription set to cancel at period end
+ * (so DELETE's preflight let it through) is stored and live at Stripe.
+ */
+async function stoppedBeforeErase(subscribed: boolean) {
+  const me = await store.signIn(`sweep-billing-${randomUUID()}@account.test`);
+  identities.add(me.userId);
+  const workspace = await getBillingStore().ensurePersonalWorkspace(me.userId);
+  const subscriptionId = `sub_${randomUUID()}`;
+  if (subscribed) {
+    await getBillingStore().syncSubscription({
+      workspaceId: workspace.id, plan: 'pro', interval: 'monthly', status: 'active', seats: 1,
+      stripeCustomerId: `cus_${randomUUID()}`, stripePriceId: 'price_test_sweep', cancelAtPeriodEnd: true, stripeSubscriptionId: subscriptionId,
+    });
+    live.set(subscriptionId, liveSubscription(subscriptionId, { cancel_at_period_end: true }));
+  }
+  await agoBy(2 * 3_600_000, async () => {
+    authDown = true;
+    try {
+      assert.equal((await remove(me.token)).status, 503);
+    } finally {
+      authDown = false;
+    }
+  });
+  assert.equal((await store.accountDeletion(me.userId))?.step, 'started');
+  return { ...me, subscriptionId };
+}
+
+/** Nothing of the account was touched: identity, token, workspace, and a started row with its email. */
+async function untouched(me: { userId: string; token: string; email: string }) {
+  assert.equal(identities.has(me.userId), true, 'the sign-in identity is kept');
+  assert.equal(await store.userForToken(me.token), me.userId, 'the account data is not erased');
+  assert.equal((await getBillingStore().existingWorkspaces(me.userId)).length, 1, 'the workspace is kept');
+  const deletion = await store.accountDeletion(me.userId);
+  assert.equal(deletion?.state, 'started');
+  assert.equal(deletion.step, 'started');
+  assert.equal(deletion.email, me.email);
+}
+
+test('before the erase, a row whose subscription can charge again is skipped and counted, not erased', async () => {
+  process.env.CRON_SECRET = SECRET;
+  const me = await stoppedBeforeErase(true);
+  // "Don't cancel" in the portal after the deletion stopped: Stripe will charge again.
+  live.set(me.subscriptionId, liveSubscription(me.subscriptionId, { cancel_at_period_end: false }));
+  let counts: Record<string, unknown> = {};
+  const logged = await capturingLogs(async () => { counts = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, unknown>; });
+  assert.equal(counts.skipped, 1, JSON.stringify(counts));
+  assert.equal(countsLine(logged).skipped, 1);
+  assert.ok(logged.includes('account deletion sweep: skipped, a subscription can still charge'), logged.join('\n'));
+  await untouched(me);
+  // Once it is canceled, the next run finishes the deletion.
+  live.set(me.subscriptionId, liveSubscription(me.subscriptionId, { status: 'canceled' }));
+  await sweep(`Bearer ${SECRET}`);
+  assert.equal((await store.accountDeletion(me.userId))?.state, 'done');
+  assert.deepEqual(await getBillingStore().existingWorkspaces(me.userId), []);
+});
+
+test('before the erase, a row whose billing cannot be read is skipped and counted, not erased', async () => {
+  process.env.CRON_SECRET = SECRET;
+  const me = await stoppedBeforeErase(true);
+  live.set(me.subscriptionId, new Stripe.errors.StripeConnectionError({ message: 'An error occurred with our connection to Stripe.' }));
+  let counts: Record<string, unknown> = {};
+  const logged = await capturingLogs(async () => { counts = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, unknown>; });
+  assert.equal(counts.skipped, 1, JSON.stringify(counts));
+  assert.ok(logged.some((line) => line.startsWith('account deletion sweep: skipped, subscription check failed')), logged.join('\n'));
+  await untouched(me);
+  live.set(me.subscriptionId, liveSubscription(me.subscriptionId, { cancel_at_period_end: true }));
+  await sweep(`Bearer ${SECRET}`);
+  assert.equal((await store.accountDeletion(me.userId))?.state, 'done');
+});
+
+test('before the erase, a row with a workspace and no subscription goes ahead', async () => {
+  process.env.CRON_SECRET = SECRET;
+  const me = await stoppedBeforeErase(false);
+  const counts = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, unknown>;
+  assert.equal(counts.skipped, 0, JSON.stringify(counts));
+  assert.equal(identities.has(me.userId), false);
+  assert.equal(await store.userForToken(me.token), null);
+  assert.deepEqual(await getBillingStore().existingWorkspaces(me.userId), []);
+  assert.equal((await store.accountDeletion(me.userId))?.state, 'done');
+});
+
 test('a row whose Blob step still fails stays started, recorded failed, with the email kept for the cleanup', async () => {
   process.env.CRON_SECRET = SECRET;
   const stuck = await leftForTheSweep(2 * 3_600_000);
@@ -218,7 +322,7 @@ test('a row still started after 7 days logs ACCOUNT_DELETION_OVERDUE with counts
   const lines = logged.filter((line) => line.includes('ACCOUNT_DELETION_OVERDUE'));
   assert.equal(lines.length, 1, logged.join('\n'));
   const payload = JSON.parse(lines[0].slice(lines[0].indexOf('{'))) as Record<string, unknown>;
-  assert.deepEqual(Object.keys(payload).sort(), ['checked', 'cleanupPending', 'code', 'done', 'failed', 'found', 'overdue', 'stale', 'stoppedOnBudget']);
+  assert.deepEqual(Object.keys(payload).sort(), ['checked', 'cleanupPending', 'code', 'done', 'failed', 'found', 'overdue', 'skipped', 'stale', 'stoppedOnBudget']);
   assert.ok(Object.entries(payload).every(([key, value]) => key === 'code' || typeof value === (key === 'stoppedOnBudget' ? 'boolean' : 'number')));
   assert.equal(countsLine(logged).overdue, counts.overdue);
   for (const line of logged) {

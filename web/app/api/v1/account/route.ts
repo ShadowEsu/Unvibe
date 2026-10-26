@@ -1,35 +1,13 @@
-import Stripe from 'stripe';
 import { getStore } from '@/data/store';
 import type { AccountDeletion } from '@/data/types';
 import { TeamHasMembersError } from '@/data/teamHasMembers';
 import { bearerToken, sessionTokenHash, sessionUser, userFromRequest, unauthorized } from '@/lib/auth';
-import { runRemainingDeletionSteps } from '@/lib/accountDeletionSteps';
+import { billingPreflight, runRemainingDeletionSteps } from '@/lib/accountDeletionSteps';
 import { getBillingStore } from '@/billing/store';
 import { errorSummary } from '@/billing/http';
-import { getStripe } from '@/billing/stripe';
-import type { BillingOverview, SubscriptionRecord, WorkspaceAccess, WorkspaceMember } from '@/billing/types';
-import { liveSubscriptionStillCharges } from '@/billing/webhooks';
+import type { WorkspaceMember } from '@/billing/types';
 
 export const runtime = 'nodejs';
-
-/**
- * Whether Stripe can still charge this subscription. Lifetime is a one-time payment, and a canceled
- * subscription stays canceled. Anything else is decided on the live Stripe subscription, not the
- * stored row: a portal change ("Don't cancel", or a new cancel) can be seconds ahead of its webhook.
- * A subscription Stripe does not have (resource_missing) cannot charge. Any other error throws.
- */
-async function stillCharges(subscription: SubscriptionRecord): Promise<boolean> {
-  const id = subscription.stripeSubscriptionId;
-  if (!id || subscription.status === 'canceled') return false;
-  if (subscription.interval === 'lifetime') return false;
-  try {
-    return liveSubscriptionStillCharges(await getStripe().subscriptions.retrieve(id));
-  } catch (error) {
-    if (!(error instanceof Stripe.errors.StripeInvalidRequestError) || error.code !== 'resource_missing') throw error;
-    console.warn('account delete: stored subscription not found at Stripe; treated as not charging', id);
-    return false;
-  }
-}
 
 /** Who am I — used by the app to show the signed-in identity. */
 export async function GET(req: Request): Promise<Response> {
@@ -97,34 +75,19 @@ export async function DELETE(req: Request): Promise<Response> {
     return unavailable('session lookup', error, NOT_STARTED);
   }
 
-  // 1. Stripe preflight, over the workspaces that exist (none is created here).
+  // 1. Stripe preflight, over the workspaces that exist (none is created here); the sweep runs it too.
+  const preflight = await billingPreflight(userId);
+  if (preflight.result === 'lookup_failed') return unavailable(preflight.step, preflight.error, notDone);
+  if (preflight.result === 'check_failed') {
+    // Unknown billing state: never delete an account Stripe might keep charging.
+    console.error('account delete: subscription check failed', errorSummary(preflight.error));
+    return Response.json({ error: 'billing_unavailable', message: `We could not check your subscription. ${notDone}` }, { status: 503 });
+  }
+  if (preflight.result === 'still_charges') {
+    return Response.json({ error: 'active_subscription', message: 'Cancel the active subscription in Manage billing before deleting this account.' }, { status: 409 });
+  }
+  const { workspaces } = preflight;
   const billing = getBillingStore();
-  let workspaces: WorkspaceAccess[];
-  try {
-    workspaces = await billing.existingWorkspaces(userId);
-  } catch (error) {
-    return unavailable('workspace lookup', error, notDone);
-  }
-  for (const workspace of workspaces) {
-    let overview: BillingOverview;
-    try {
-      overview = await billing.overview(userId, workspace.id);
-    } catch (error) {
-      return unavailable('billing overview', error, notDone);
-    }
-    if (!overview.canManageBilling) continue;
-    let charges: boolean;
-    try {
-      charges = await stillCharges(overview.subscription);
-    } catch (error) {
-      // Unknown billing state: never delete an account Stripe might keep charging.
-      console.error('account delete: subscription check failed', errorSummary(error));
-      return Response.json({ error: 'billing_unavailable', message: `We could not check your subscription. ${notDone}` }, { status: 503 });
-    }
-    if (charges) {
-      return Response.json({ error: 'active_subscription', message: 'Cancel the active subscription in Manage billing before deleting this account.' }, { status: 409 });
-    }
-  }
 
   // 2. Teams rule: an owned team with other members would take their data with it.
   for (const workspace of workspaces) {
