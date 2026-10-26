@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { MAC_SIGNING_REQUIREMENT, macUpdateScript, verifyDownload } from '../src/main/updater';
+import { MAC_SIGNING_REQUIREMENT, macUpdateScript, prepareUpdate, verifyDownload } from '../src/main/updater';
 
 /**
  * The release's designated requirement, written out on purpose instead of imported. It must equal
@@ -178,5 +178,76 @@ test('a Windows download is checked against the release\'s Windows checksum file
     }
   } finally {
     dl.cleanup();
+  }
+});
+
+/** A release that serves `installer` as the asset, and `sums(sha of installer)` as its checksum file. */
+function fakeRelease(installer: string, sums: (sha: string) => string) {
+  const urls: string[] = [];
+  const sha = createHash('sha256').update(installer).digest('hex');
+  const fetchImpl = async (url: string): Promise<Response> => {
+    urls.push(url);
+    return new Response(/\/SHA256SUMS-[a-z]+\.txt$/.test(url) ? sums(sha) : installer);
+  };
+  return { urls, fetchImpl };
+}
+
+test('a macOS update that fails its checksum writes no helper and deletes its download folder', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
+  const asset = 'Unvibe-0.1.45-mac-arm64.dmg';
+  const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/${asset}` };
+  const opts = { platform: 'darwin' as const, pid: 4242, macTarget: '/Applications/Unvibe.app', workRoot: root };
+  try {
+    const bad = fakeRelease('a tampered disk image', () => `${'f'.repeat(64)}  ${asset}\n`);
+    const refused = await prepareUpdate(info, { ...opts, fetchImpl: bad.fetchImpl });
+    assert.ok(!refused.ok, 'a download that fails its checksum is refused');
+    assert.match(refused.error, /does not match its published checksum/);
+    assert.deepEqual(readdirSync(root), [], 'no update.sh is written and the download folder is deleted');
+
+    const good = fakeRelease('the real disk image', (sha) => `${sha}  ${asset}\n`);
+    const ready = await prepareUpdate(info, { ...opts, fetchImpl: good.fetchImpl });
+    assert.ok(ready.ok && ready.script, 'a download that matches gets a helper');
+    assert.deepEqual(good.urls, [`${RELEASE}/${asset}`, `${RELEASE}/SHA256SUMS-mac.txt`]);
+    const script = readFileSync(ready.script, 'utf8');
+    assert.ok(script.includes(`2>/dev/null)" = '0.1.45' ]`) && !script.includes(`'0.1.44'`), 'the helper is bound to the release being installed, not the running version');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a portable update that fails its checksum deletes only the download beside the .exe', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
+  const exe = path.join(root, 'Unvibe.exe');
+  writeFileSync(exe, 'OLD EXE');
+  const asset = 'Unvibe-0.1.45-win-x64-portable.exe';
+  const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/${asset}` };
+  try {
+    const bad = fakeRelease('a tampered exe', () => `${'e'.repeat(64)}  ${asset}\n`);
+    const refused = await prepareUpdate(info, { platform: 'win32', fetchImpl: bad.fetchImpl, pid: 4242, portable: exe });
+    assert.ok(!refused.ok, 'a download that fails its checksum is refused');
+    assert.match(refused.error, /does not match its published checksum/);
+    assert.deepEqual(readdirSync(root), ['Unvibe.exe'], 'only the .download is deleted, never the folder the .exe is in');
+    assert.equal(readFileSync(exe, 'utf8'), 'OLD EXE', 'the running .exe is untouched');
+
+    const good = fakeRelease('the real exe', (sha) => `${sha}  ${asset}\n`);
+    const ready = await prepareUpdate(info, { platform: 'win32', fetchImpl: good.fetchImpl, pid: 4242, portable: exe });
+    assert.ok(ready.ok && ready.file === `${exe}.download` && !ready.script, 'a portable download that matches is kept beside the .exe');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a download that cannot be checked is refused and deleted', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
+  // A malformed escape in the asset name makes the check itself throw (decodeURIComponent).
+  const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/Unvibe-%E0%A4%A.dmg` };
+  try {
+    const release = fakeRelease('a disk image', (sha) => `${sha}  Unvibe-0.1.45-mac-arm64.dmg\n`);
+    const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, workRoot: root });
+    assert.ok(!refused.ok, 'a check that throws is a refusal');
+    assert.match(refused.error, /Could not check the download/);
+    assert.deepEqual(readdirSync(root), [], 'the download folder is deleted');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

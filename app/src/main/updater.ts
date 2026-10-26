@@ -192,6 +192,62 @@ function launchDetached(command: string, args: string[]): Promise<{ ok: boolean;
   });
 }
 
+/**
+ * Downloads the installer for `info`, checks it against the release's published checksum and, on
+ * macOS, writes the helper (`update.sh`) that swaps the app after Unvibe quits. The check runs in
+ * this process, before any helper exists: a download that fails it (or can't be checked) is
+ * deleted, and the installed app is never touched. The portable build has no installer: it
+ * downloads beside the running .exe (`portable`), and only that download is ever deleted there.
+ */
+export async function prepareUpdate(
+  info: UpdateInfo,
+  opts: { platform: NodeJS.Platform; fetchImpl: Fetch; pid: number; portable?: string; macTarget?: string; workRoot?: string; onProgress?: (pct: number) => void },
+): Promise<{ ok: true; file: string; script?: string } | { ok: false; error: string }> {
+  const { platform, fetchImpl, pid, portable, macTarget = '/Applications/Unvibe.app', workRoot = tmpdir(), onProgress } = opts;
+  if (!info.available || !info.url || !info.latest) return { ok: false, error: 'You already have the newest Unvibe.' };
+  if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
+
+  const assetName = path.basename(new URL(info.url).pathname);
+  const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(workRoot, 'unvibe-update-'));
+  const file = portable ? `${portable}.download` : path.join(dir, assetName);
+  const discard = () => rm(portable ? file : dir, { recursive: true, force: true }).catch(() => undefined);
+  try {
+    const res = await fetchImpl(info.url, { redirect: 'follow', signal: AbortSignal.timeout(10 * 60_000) });
+    if (!res.ok || !res.body) {
+      await discard();
+      return { ok: false, error: `Download failed (${res.status}).` };
+    }
+    const total = Number(res.headers.get('content-length') ?? 0);
+    let received = 0;
+    const body = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
+    body.on('data', (chunk: Buffer) => {
+      received += chunk.length;
+      if (total && onProgress) onProgress(Math.min(99, Math.round((received / total) * 100)));
+    });
+    await pipeline(body, createWriteStream(file));
+  } catch (error) {
+    // The portable folder may be read-only (e.g. a protected drive); say so instead of crashing.
+    await discard();
+    return { ok: false, error: `Download failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
+
+  let problem: string | null;
+  try {
+    problem = await verifyDownload(file, info.url, platform, fetchImpl);
+  } catch (error) {
+    problem = `Could not check the download (${error instanceof Error ? error.message : String(error)}). The update was not installed, and your Unvibe is unchanged.`;
+  }
+  if (problem) {
+    await discard();
+    return { ok: false, error: problem };
+  }
+
+  if (platform !== 'darwin') return { ok: true, file };
+  const script = path.join(dir, 'update.sh');
+  await writeFile(script, macUpdateScript({ pid, file, dir, mount: path.join(dir, 'mnt'), target: macTarget, version: info.latest }), { mode: 0o700 });
+  return { ok: true, file, script };
+}
+
 /** Downloads the installer, then hands off to a detached helper and quits. */
 let installing = false;
 
@@ -208,49 +264,23 @@ export async function installUpdate(onProgress?: (pct: number) => void): Promise
 
 async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boolean; error?: string }> {
   const info = await checkForUpdate(true);
-  if (!info.available || !info.url || !info.latest) return { ok: false, error: 'You already have the newest Unvibe.' };
-  if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
-
+  // The portable build swaps the downloaded .exe into the same path, so pinned shortcuts and
+  // double-clicks start the new version.
   const portable = portableExecutable();
-  const assetName = path.basename(new URL(info.url).pathname);
-  // The portable build has no installer: download beside the running .exe, then swap it into
-  // the same path so pinned shortcuts and double-clicks start the new version.
-  const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(tmpdir(), 'unvibe-update-'));
-  const target = portable ?? path.join(dir, assetName);
-  const file = portable ? `${portable}.download` : target;
-  const res = await networkFetch(info.url, { redirect: 'follow', signal: AbortSignal.timeout(10 * 60_000) });
-  if (!res.ok || !res.body) return { ok: false, error: `Download failed (${res.status}).` };
-  const total = Number(res.headers.get('content-length') ?? 0);
-  let received = 0;
-  const body = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
-  body.on('data', (chunk: Buffer) => {
-    received += chunk.length;
-    if (total && onProgress) onProgress(Math.min(99, Math.round((received / total) * 100)));
+  const bundle = macBundlePath();
+  const prepared = await prepareUpdate(info, {
+    platform: process.platform,
+    fetchImpl: networkFetch,
+    pid: process.pid,
+    portable,
+    macTarget: bundle.endsWith('.app') && !bundle.startsWith('/Volumes/') ? bundle : '/Applications/Unvibe.app',
+    onProgress,
   });
-  try {
-    await pipeline(body, createWriteStream(file));
-  } catch (error) {
-    if (!portable) throw error;
-    // The portable folder may be read-only (e.g. a protected drive); say so instead of crashing.
-    await rm(file, { force: true }).catch(() => undefined);
-    return { ok: false, error: `Download failed: ${error instanceof Error ? error.message : String(error)}` };
-  }
+  if (!prepared.ok) return { ok: false, error: prepared.error };
+  const { file } = prepared;
 
-  // Checked in this process, before any helper exists: a download that doesn't match the release's
-  // published checksum is deleted, and the installed app is never touched.
-  const problem = await verifyDownload(file, info.url, process.platform);
-  if (problem) {
-    // The portable download sits beside the user's .exe: delete only the download there.
-    await rm(portable ? file : dir, { recursive: true, force: true }).catch(() => undefined);
-    return { ok: false, error: problem };
-  }
-
-  if (process.platform === 'darwin') {
-    const bundle = macBundlePath();
-    const target = bundle.endsWith('.app') && !bundle.startsWith('/Volumes/') ? bundle : '/Applications/Unvibe.app';
-    const script = path.join(dir, 'update.sh');
-    await writeFile(script, macUpdateScript({ pid: process.pid, file, dir, mount: path.join(dir, 'mnt'), target, version: info.latest }), { mode: 0o700 });
-    spawn('/bin/bash', [script], { detached: true, stdio: 'ignore' }).unref();
+  if (process.platform === 'darwin' && prepared.script) {
+    spawn('/bin/bash', [prepared.script], { detached: true, stdio: 'ignore' }).unref();
   } else if (process.platform === 'win32') {
     let launched: { ok: boolean; error?: string };
     if (portable) {
