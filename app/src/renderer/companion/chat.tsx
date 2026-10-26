@@ -271,6 +271,8 @@ export function Chat({
     const result = await window.unvibe.chatAsk({
       messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
       question,
+      // Main refuses a conversation that started before a wipe, before anything is sent.
+      wipeGeneration: threadGenRef.current ?? undefined,
     }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number };
     window.clearTimeout(thinkTimer);
     setBusy(false);

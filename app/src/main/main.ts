@@ -1015,7 +1015,8 @@ app.whenReady().then(() => {
     startQuizCard(input.eventId, input.mode),
   );
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
-  ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+  // wipeGeneration: the conversation's stamp; askChat refuses a conversation from before a wipe.
+  ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string; wipeGeneration?: number }) =>
     askChat(input));
   // wipeGeneration lets the panel stamp a conversation, so a save from before a wipe is dropped.
   ipcMain.handle('chat:threads', () => ({ ok: true, threads: store().chatThreads(), wipeGeneration: store().wipeGeneration() }));

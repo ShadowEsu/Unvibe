@@ -694,3 +694,32 @@ test('a Chat reply whose usage refresh outlives a wipe is not ok, and its conver
     globalThis.fetch = original;
   }
 });
+
+test('Chat refuses a conversation stamped before a wipe before any network call, and a current stamp still answers', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  const stamp = store().wipeGeneration();
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    calls += 1;
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A reply.' }] } }] })}\n\n`);
+    }
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    store().wipeEverything();
+    const stale = await askChat({ question: 'What did that erased code do?', messages: [{ role: 'user', content: 'const erased = 1;' }], wipeGeneration: stamp });
+    assert.deepEqual(stale, { ok: false, error: 'The learning on this computer was erased while this was running, so nothing was saved.' });
+    assert.equal(calls, 0, 'no usage check and no provider request');
+    assert.deepEqual(store().events(), [], 'no Chat lesson recorded');
+    const current = await askChat({ question: 'What does map do?', wipeGeneration: store().wipeGeneration() });
+    assert.equal(current.ok, true);
+    assert.ok(calls > 0);
+    assert.equal(store().events().length, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
