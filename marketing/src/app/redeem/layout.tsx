@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 import "./redeem.css";
 
 export const metadata: Metadata = {
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** The page holds a sign-in session: its content is left out of any replay (see REPLAY_BLOCK_CLASS). */
 export default function RedeemLayout({ children }: { children: React.ReactNode }) {
-  return <div className="redeem-root">{children}</div>;
+  return <div className={`redeem-root ${REPLAY_BLOCK_CLASS}`}>{children}</div>;
 }
