@@ -40,7 +40,7 @@ export const explainPages: ExplainPage[] = [
     fileName: "sales_report.py",
     lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
     description:
-      "Paste Python code and get a plain English explanation in your browser, free. The sample walks through a decorator, a generator and a dict comprehension.",
+      "Paste Python code and get a plain English explanation online, free. The sample walks through a decorator, a generator and a dict comprehension.",
     sampleSummary: "A timing decorator, a generator that reads a CSV file and a dict comprehension.",
     sample: `import time
 from functools import wraps
@@ -93,7 +93,7 @@ def total_by_city(path):
     fileName: "profiles.js",
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
     description:
-      "Get any JavaScript snippet explained in plain English in your browser, free. The sample loads several users at once with fetch and Promise.allSettled.",
+      "Get any JavaScript snippet explained in plain English online, free. The sample loads several users at once with fetch and Promise.allSettled.",
     sampleSummary: "Loading several users at once with fetch and Promise.allSettled.",
     sample: `async function loadProfiles(ids) {
   const results = await Promise.allSettled(
@@ -147,7 +147,7 @@ console.log("after");`,
     fileName: "users.ts",
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
     description:
-      "Paste TypeScript and see what the code and its types mean, free in your browser. The sample loads a user with a generic Result type, narrowing and async/await.",
+      "Paste TypeScript and see what the code and its types mean, free online. The sample loads a user with a generic Result type, narrowing and async/await.",
     sampleSummary: "A generic Result type that a fetch helper returns instead of throwing.",
     sample: `type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -297,8 +297,8 @@ echo "Top errors written to $report"`,
     fileName: "players.c",
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
-      "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with malloc and frees it.",
-    sampleSummary: "An array of structs allocated with malloc, filled in, used and freed.",
+      "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
+    sampleSummary: "An array of structs allocated with calloc, filled in, used and freed.",
     sample: `#include <stdio.h>
 #include <stdlib.h>
 typedef struct {
@@ -307,7 +307,7 @@ typedef struct {
 } Player;
 
 Player *make_players(size_t count) {
-    Player *players = malloc(count * sizeof *players);
+    Player *players = calloc(count, sizeof *players);
     if (players == NULL) return NULL;
     for (size_t i = 0; i < count; i++) {
         snprintf(players[i].name, sizeof players[i].name, "player%zu", i + 1);
@@ -331,7 +331,7 @@ int main(void) {
       },
       {
         concept: "manual memory",
-        text: "`malloc` reserves room for `count` players on the heap, and `free(team)` gives it back. Nothing frees it for you.",
+        text: "`calloc` reserves room for `count` players on the heap, and `free(team)` gives it back. Nothing frees it for you.",
       },
       {
         concept: "pointers",
@@ -344,7 +344,7 @@ int main(void) {
     ],
     notes: [
       "`sizeof *players` asks for the size of whatever `players` points to, so the line stays correct if its type changes.",
-      "`malloc` returns `NULL` when it can't allocate. Both functions check for that before touching the memory.",
+      "`calloc` returns `NULL` when it can't allocate, including when `count` times the size of a player is too big for a `size_t`. Both functions check for that before touching the memory.",
       "`snprintf` with `sizeof players[i].name` never writes past the 16-byte array. A longer name is cut short instead of overflowing into `score`.",
     ],
     watchOut:
@@ -355,7 +355,7 @@ int main(void) {
     fileName: "documents.cpp",
     lead: "Paste modern C++ and Vibe explains the templates, smart pointers and object lifetimes in it.",
     description:
-      "Get C++ explained in plain English in your browser, free. The sample shows a function template, RAII with a destructor and moving a unique_ptr.",
+      "Get C++ explained in plain English online, free. The sample shows a function template, RAII with a destructor and moving a unique_ptr.",
     sampleSummary: "A function template, a class with a destructor and a unique_ptr that changes owner.",
     sample: `#include <iostream>
 #include <memory>
@@ -413,7 +413,7 @@ int main() {
     fileName: "Todos.swift",
     lead: "Paste Swift from an app or a playground and Vibe explains what it does, optionals included.",
     description:
-      "Paste Swift and get a plain English explanation, free in your browser. The sample filters a to-do list with a protocol, an optional due date and closures.",
+      "Paste Swift and get a plain English explanation, free online. The sample filters a to-do list with a protocol, an optional due date and closures.",
     sampleSummary: "A to-do list with a protocol, an optional due date, closures and a key path.",
     sample: `protocol Describable {
     var summary: String { get }

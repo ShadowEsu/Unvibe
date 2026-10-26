@@ -194,7 +194,10 @@ export function TryIt({
           <button type="button" className="try__go" disabled={state === "thinking" || !code.trim()} onClick={() => void explain()}>
             {state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
           </button>
-          <p className="try__fine" id="try-fine">Up to 60 lines. Keys and passwords are blocked.</p>
+          <p className="try__fine" id="try-fine">
+            Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Google Gemini to write the
+            explanation. Don&apos;t paste keys or passwords. Common key formats are refused.
+          </p>
         </div>
       </div>
 

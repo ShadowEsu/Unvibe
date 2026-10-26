@@ -8,7 +8,7 @@ import "./explain.css";
 
 const title = "Explain code in plain English, free";
 const description =
-  "Paste up to 60 lines of code and Vibe explains what it does in plain English, at the depth you pick. Free in your browser, no account.";
+  "Paste a snippet of code and Vibe explains what it does in plain English, at the depth you pick. Free online, no account.";
 
 const image = "/unvibe-social-preview-v6.png";
 
@@ -25,7 +25,7 @@ export default function ExplainIndexPage() {
     <article className={`explain-page ${explainMono.variable}`}>
       <header className="explain-head">
         <h1>Explain code in plain English</h1>
-        <p>Paste up to 60 lines, pick a depth and Vibe tells you what the code does. Free, no account.</p>
+        <p>Paste a snippet, pick a depth and Vibe tells you what the code does. Free, no account.</p>
       </header>
 
       <section aria-label="Try it">
