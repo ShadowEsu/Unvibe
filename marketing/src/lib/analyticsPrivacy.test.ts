@@ -223,6 +223,13 @@ describe("analytics privacy config", () => {
     assert.equal(POSTHOG_PRIVACY_CONFIG.request_batching, false);
   });
 
+  it("PostHog masks the secret parameters itself, in the stored landing URL its /flags request sends past before_send", () => {
+    assert.equal(POSTHOG_PRIVACY_CONFIG.mask_personal_data_properties, true);
+    for (const name of ["e", "t", "ref", "code", "user_code", "promo", "token", "email"]) {
+      assert.ok(POSTHOG_PRIVACY_CONFIG.custom_personal_data_properties.includes(name), name);
+    }
+  });
+
   it("Mixpanel sends each event when it is tracked, so no stored batch skips before_send_events", () => {
     assert.equal(mixpanelPrivacyConfig().batch_requests, false);
   });

@@ -217,10 +217,17 @@ export const REPLAY_BLOCK_CLASS = "ph-no-capture";
  * no way to empty it, so after an opt-out or a client navigation into an admin or sign-in page
  * it still sent events and replay frames captured just before (seen in a real browser). Unbatched,
  * each event leaves when it is captured, so only a failed send that PostHog retries can go out later.
+ *
+ * `mask_personal_data_properties` with our secret parameters: PostHog stores the first landing
+ * URL as `$initial_current_url` and sends it in the `/flags` request body, which no hook sees.
+ * With these set, PostHog masks those parameters itself wherever it reads the address (that
+ * stored URL, event URLs, heatmap keys). It also masks ad click ids (gclid, fbclid and others).
  */
 export const POSTHOG_PRIVACY_CONFIG = {
   mask_all_text: true,
   mask_all_element_attributes: true,
+  mask_personal_data_properties: true,
+  custom_personal_data_properties: Object.keys(SECRET_PARAMS),
   request_batching: false,
   before_send: posthogBeforeSend,
   session_recording: {
