@@ -120,6 +120,12 @@ async function request(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
+/** A service `message` shown to the person as plain text: trimmed and cut to 300 characters, '' when absent. */
+function serviceMessage(body: unknown): string {
+  const message = body && typeof body === 'object' && 'message' in body ? body.message : undefined;
+  return typeof message === 'string' ? message.trim().slice(0, 300) : '';
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
@@ -238,17 +244,23 @@ export async function signUp(email: string): Promise<Account> {
 
 export type AccountDeletionStatus = 'deleted' | 'already_deleted';
 
+/** A confirmed deletion, with the service's note for the person when it sent one (e.g. cleanup still pending). */
+export interface AccountDeletion {
+  status: AccountDeletionStatus;
+  message?: string;
+}
+
 const UNEXPECTED_DELETE_ANSWER = 'The service gave an answer Unvibe did not expect, so nothing was removed from this computer. Try again in a minute.';
 
 /**
  * DELETE /api/v1/account. Resolves only when the service answers 200 that the account is gone:
  * `deleted`, or `already_deleted` when an earlier request finished but its answer was lost. Older
- * services answer `{ ok: true }` without a status, which also means deleted. Anything else throws a
- * message for the person and the caller keeps every local file: a 409 refusal carries the service's
- * reason, a 503 or a network failure means retry. Redirects are refused, so only the configured
- * service can confirm a deletion.
+ * services answer `{ ok: true }` without a status, which also means deleted. A `message` on that
+ * answer is passed on to show the person. Anything else throws a message for the person and the
+ * caller keeps every local file: a 409 refusal carries the service's reason, a 503 or a network
+ * failure means retry. Redirects are refused, so only the configured service can confirm a deletion.
  */
-export async function deleteAccount(token: string): Promise<AccountDeletionStatus> {
+export async function deleteAccount(token: string): Promise<AccountDeletion> {
   let res: Response;
   try {
     res = await request(`${BACKEND}/api/v1/account`, {
@@ -261,18 +273,19 @@ export async function deleteAccount(token: string): Promise<AccountDeletionStatu
     throw new Error('Unvibe could not reach the service. Nothing was deleted on this computer. Try again in a minute.');
   }
   if (res.status === 409 || res.status === 503) {
-    const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
-    // Shown as is in Settings, so keep it to a few sentences.
-    const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 300) : '';
+    const message = serviceMessage(await res.json().catch(() => null));
     if (message) throw new Error(message);
     throw new Error(res.status === 409 ? 'The service refused to delete this account. Nothing was deleted.' : 'Nothing was deleted. Try again in a minute.');
   }
   if (!res.ok) await json(res); // throws the usual message for 401, other 4xx and 5xx
   if (res.status !== 200) throw new Error(UNEXPECTED_DELETE_ANSWER);
   const body = (await res.json().catch(() => null)) as { ok?: unknown; status?: unknown } | null;
-  if (body?.ok === true && (body.status === undefined || body.status === 'deleted')) return 'deleted';
-  if (body?.ok === true && body.status === 'already_deleted') return 'already_deleted';
-  throw new Error(UNEXPECTED_DELETE_ANSWER);
+  let status: AccountDeletionStatus;
+  if (body?.ok === true && (body.status === undefined || body.status === 'deleted')) status = 'deleted';
+  else if (body?.ok === true && body.status === 'already_deleted') status = 'already_deleted';
+  else throw new Error(UNEXPECTED_DELETE_ANSWER);
+  const message = serviceMessage(body);
+  return message ? { status, message } : { status };
 }
 
 export async function signOut(token: string): Promise<void> {

@@ -165,6 +165,36 @@ test('an older service\'s 200 { ok: true } without a status counts as deleted', 
   assertClearedAndPreferencesKept();
 });
 
+const PENDING_NOTE = 'Your account and app data are deleted. We could not check for beta-download records just now; any we find, and the email address kept to find them, will be removed within 30 days.';
+
+test('200 deleted with a message passes the message on to show, and still clears everything', async () => {
+  const result = await deleteWith({ status: 200, body: { ok: true, status: 'deleted', message: PENDING_NOTE } });
+  assert.deepEqual(result, { ok: true, status: 'deleted', message: PENDING_NOTE });
+  assertClearedAndPreferencesKept();
+});
+
+test('200 already_deleted with a message passes it on too', async () => {
+  const result = await deleteWith({ status: 200, body: { ok: true, status: 'already_deleted', message: `  ${PENDING_NOTE}  ` } });
+  assert.deepEqual(result, { ok: true, status: 'already_deleted', message: PENDING_NOTE });
+  assertClearedAndPreferencesKept();
+});
+
+test('a success message is cut to 300 characters; an empty or non-string one is left out', async () => {
+  const long = await deleteWith({ status: 200, body: { ok: true, status: 'deleted', message: 'y'.repeat(1_000) } });
+  assert.deepEqual(long, { ok: true, status: 'deleted', message: 'y'.repeat(300) });
+  const blank = await deleteWith({ status: 200, body: { ok: true, status: 'deleted', message: '   ' } });
+  assert.deepEqual(blank, { ok: true, status: 'deleted' });
+  const notText = await deleteWith({ status: 200, body: { ok: true, status: 'deleted', message: { html: '<b>x</b>' } } });
+  assert.deepEqual(notText, { ok: true, status: 'deleted' });
+  assertClearedAndPreferencesKept();
+});
+
+test('a message does not make another status count as deleted', async () => {
+  const result = await deleteWith({ status: 200, body: { ok: true, status: 'cleanup_pending', message: PENDING_NOTE } });
+  assert.equal(result.ok, false);
+  assertNothingCleared();
+});
+
 test('409 active_subscription shows the service\'s message and clears nothing', async () => {
   const message = 'Cancel the active subscription in Manage billing before deleting this account.';
   const result = await deleteWith({ status: 409, body: { error: 'active_subscription', message } });

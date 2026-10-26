@@ -5,14 +5,15 @@
  */
 import { session } from 'electron';
 import { clearAiKey, hasAiKey } from './aiKey';
-import { deleteAccount, type AccountDeletionStatus } from './backend';
+import { deleteAccount, type AccountDeletion, type AccountDeletionStatus } from './backend';
 import { knowledgeStore } from './knowledgeStore';
 import { settings } from './settings';
 import { store } from './store';
 import { cancelSync } from './sync';
 
+/** `message`: the service's note for the person on a confirmed deletion, already cut to 300 characters. */
 export type AccountDeletionResult =
-  | { ok: true; status: AccountDeletionStatus | 'erased_locally' }
+  | { ok: true; status: AccountDeletionStatus | 'erased_locally'; message?: string }
   | { ok: false; error: string };
 
 function reason(err: unknown, fallback: string): string {
@@ -67,9 +68,9 @@ export async function deleteAccountAndLocalData(stopReviews: () => void): Promis
   // exists on the server. Never erase anything here as if it were deleted.
   const token = store().token();
   if (!token) return { ok: false, error: UNREADABLE_SIGN_IN };
-  let status: AccountDeletionStatus;
+  let deletion: AccountDeletion;
   try {
-    status = await deleteAccount(token);
+    deletion = await deleteAccount(token);
   } catch (err) {
     return { ok: false, error: reason(err, 'Delete failed.') };
   }
@@ -84,5 +85,5 @@ export async function deleteAccountAndLocalData(stopReviews: () => void): Promis
       error: `Your account was deleted, but some data on this computer could not be removed. ${reason(err, '')} Try again to finish.`.replace(/\s+/g, ' ').trim(),
     };
   }
-  return { ok: true, status };
+  return { ok: true, ...deletion };
 }
