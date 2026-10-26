@@ -4,6 +4,7 @@ import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
 import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
+import { chatAskRequest } from './chatRequest';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -268,10 +269,9 @@ export function Chat({
     const thinkTimer = window.setTimeout(() => setBuddyMood('thinking'), 900);
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question, ts: new Date().toISOString() }];
     setMessages(nextMessages);
-    const result = await window.unvibe.chatAsk({
-      messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
-      question,
-    }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number };
+    const result = await window.unvibe.chatAsk(chatAskRequest(nextMessages.slice(0, -1), question, threadGenRef.current)) as {
+      ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number;
+    };
     window.clearTimeout(thinkTimer);
     setBusy(false);
     if (result.remaining !== undefined) setLeft(result.remaining);

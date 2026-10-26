@@ -336,14 +336,21 @@ export function answerQuizCard(eventId: string, choice: number):
   };
 }
 
+/**
+ * `wipeGeneration`: the open conversation's stamp (store().wipeGeneration() when it started). A
+ * conversation from before a wipe is refused before anything is sent, so its erased turns are not
+ * used as AI context and its reply is not recorded. Without a stamp, asking works as before.
+ */
 export async function askChat(input: {
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   question: string;
+  wipeGeneration?: number;
 }): Promise<ChatResult> {
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Type a message first.' };
   if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };
   if (scanTypedText(question, input.messages).length > 0) return { ok: false, error: SECRET_IN_MESSAGE, code: 'secret' };
+  if (input.wipeGeneration !== undefined && input.wipeGeneration !== store().wipeGeneration()) return { ok: false, error: WIPED_MEANWHILE };
 
   // Tracked before the first await: a wipe during the usage check must stop this reply too.
   const request = trackRequest();

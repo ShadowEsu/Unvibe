@@ -88,7 +88,7 @@ const api = {
   quizStatus: () => ipcRenderer.invoke('quiz:status'),
   quizStart: (input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) => ipcRenderer.invoke('quiz:start', input),
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
-  chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+  chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string; wipeGeneration?: number }) =>
     ipcRenderer.invoke('chat:ask', input),
   chatThreads: () => ipcRenderer.invoke('chat:threads'),
   saveChatThread: (thread: {

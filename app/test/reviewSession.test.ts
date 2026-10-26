@@ -251,6 +251,7 @@ test('streamed token, done and error events reach the panel with only their chec
     { type: 'error', message: { html: '<b>x</b>' }, code: 'pro_required', upgradePath: 'https://elsewhere.test', ...extras },
     { type: 'done', model: 'service-model', mock: 'yes', ...extras },
     { type: 'done', model: { name: 'x' }, mock: true, ...extras },
+    { type: 'done', model: 'm'.repeat(500), mock: false, ...extras },
   ];
   try {
     await runReview(win, session('intermediate'), { level: 'intermediate' });
@@ -263,6 +264,7 @@ test('streamed token, done and error events reach the panel with only their chec
     { type: 'error', message: 'The explanation service could not complete that request. Please try again.', tabId: '1' },
     { type: 'done', model: 'service-model', mock: false, tabId: '1' },
     { type: 'done', model: undefined, mock: true, tabId: '1' },
+    { type: 'done', model: 'm'.repeat(80), mock: false, tabId: '1' },
   ]);
   for (const ev of streamed) {
     const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'tabId', 'type'];
