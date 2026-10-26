@@ -111,7 +111,7 @@ export const faqItems: FaqItem[] = [
     id: "free",
     question: "Is Free actually usable?",
     answer:
-      "Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library, within a usage allowance. No card and no API key.",
+      "Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library, within a usage allowance. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. No card and no API key.",
     category: "pricing",
   },
   {
