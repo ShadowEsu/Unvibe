@@ -69,6 +69,184 @@ function desktopShot(label) {
   } catch (e) { log(false, `Desktop screenshot ${label}`, e.message.split('\n')[0]); }
 }
 
+// --- Windows capture diagnostics (investigation branch ci/win-capture-check only) ---------------
+// The Windows desktop shots showed a stale review panel while Playwright's panel shots were fresh.
+// At each capture point this compares several capture paths and logs every BrowserWindow, into
+// SHOTS_DIR/diag/. Diagnostics never change PASS/FAIL: errors go to diag/diag.log only.
+const diagDir = path.join(out, 'diag');
+const diagLines = [];
+let diagMs = 0; // kept out of the timed first-run measurement
+let diagScriptPath = null;
+function dlog(line) {
+  diagLines.push(line);
+  console.log(`DIAG  ${line}`);
+  try { mkdirSync(diagDir, { recursive: true }); writeFileSync(path.join(diagDir, 'diag.log'), `${diagLines.join('\n')}\n`); } catch {}
+}
+const firstLine = (e) => String(e?.message ?? e).split('\n')[0];
+
+// mode capture: (i) CopyFromScreen as desktopShot does it, (ii) with CaptureBlt, (iii) PrintWindow
+// with PW_RENDERFULLCONTENT per window, plus each window's extended style and layered attributes.
+// mode relayer: clear and re-set WS_EX_LAYERED, which drops any SetLayeredWindowAttributes state.
+function diagScript() {
+  if (diagScriptPath) return diagScriptPath;
+  diagScriptPath = path.join(tmpdir(), 'unvibe-capture-diag.ps1');
+  writeFileSync(diagScriptPath, String.raw`param([string]$mode, [string]$prefix, [string]$hwnds)
+$ErrorActionPreference = 'Continue'
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+Add-Type @"
+using System; using System.Runtime.InteropServices;
+public class CapDiag {
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint f);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] public static extern IntPtr GetWindowLongPtr(IntPtr h, int i);
+  [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")] public static extern IntPtr SetWindowLongPtr(IntPtr h, int i, IntPtr v);
+  [DllImport("user32.dll")] public static extern bool GetLayeredWindowAttributes(IntPtr h, out uint key, out byte alpha, out uint flags);
+  [DllImport("user32.dll")] public static extern bool GetWindowDisplayAffinity(IntPtr h, out uint a);
+  [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr h, int a, out int v, int s);
+}
+"@
+function Describe($id, $h) {
+  $ex = [CapDiag]::GetWindowLongPtr($h, -20).ToInt64()
+  $k = [uint32]0; $a = [byte]0; $f = [uint32]0
+  $lwa = [CapDiag]::GetLayeredWindowAttributes($h, [ref]$k, [ref]$a, [ref]$f)
+  $cl = [int]0; [void][CapDiag]::DwmGetWindowAttribute($h, 14, [ref]$cl, 4)
+  $af = [uint32]0; [void][CapDiag]::GetWindowDisplayAffinity($h, [ref]$af)
+  $r = New-Object CapDiag+RECT; [void][CapDiag]::GetWindowRect($h, [ref]$r)
+  "win$id hwnd=$h visible=$([CapDiag]::IsWindowVisible($h)) exstyle=0x$('{0:X}' -f $ex) layered=$(($ex -band 0x80000) -ne 0) noredirectionbitmap=$(($ex -band 0x200000) -ne 0) getlayeredattrs=$lwa alpha=$a flags=0x$('{0:X}' -f $f) cloaked=$cl affinity=$af rect=$($r.L),$($r.T),$($r.R),$($r.B)"
+}
+$targets = @($hwnds -split ',' | Where-Object { $_ -match ':' } | ForEach-Object { $p = $_ -split ':'; [pscustomobject]@{ id = $p[0]; h = [IntPtr][Int64]$p[1] } })
+if ($mode -eq 'relayer') {
+  foreach ($t in $targets) {
+    Describe $t.id $t.h
+    $ex = [CapDiag]::GetWindowLongPtr($t.h, -20).ToInt64()
+    [void][CapDiag]::SetWindowLongPtr($t.h, -20, [IntPtr]($ex -band (-bnot [Int64]0x80000)))
+    Start-Sleep -Milliseconds 100
+    [void][CapDiag]::SetWindowLongPtr($t.h, -20, [IntPtr]($ex -bor 0x80000))
+    Start-Sleep -Milliseconds 100
+    Describe $t.id $t.h
+  }
+  exit 0
+}
+$b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+foreach ($op in @('i', 'ii')) {
+  $file = if ($op -eq 'i') { "$prefix-i-copyfromscreen.png" } else { "$prefix-ii-copyfromscreen-captureblt.png" }
+  try {
+    $bmp = New-Object System.Drawing.Bitmap $b.Width,$b.Height; $g = [System.Drawing.Graphics]::FromImage($bmp)
+    if ($op -eq 'i') { $g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size) }
+    else { $g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size,([System.Drawing.CopyPixelOperation]::SourceCopy -bor [System.Drawing.CopyPixelOperation]::CaptureBlt)) }
+    $bmp.Save($file); $g.Dispose(); $bmp.Dispose(); "saved $file"
+  } catch { "error $file $($_.Exception.Message)" }
+}
+foreach ($t in $targets) {
+  try {
+    Describe $t.id $t.h
+    $r = New-Object CapDiag+RECT; [void][CapDiag]::GetWindowRect($t.h, [ref]$r)
+    $w = $r.R - $r.L; $hh = $r.B - $r.T
+    if ($w -le 0 -or $hh -le 0) { "win$($t.id) has no area"; continue }
+    $bmp = New-Object System.Drawing.Bitmap $w,$hh; $g = [System.Drawing.Graphics]::FromImage($bmp); $hdc = $g.GetHdc()
+    $ok = [CapDiag]::PrintWindow($t.h, $hdc, 2)
+    $g.ReleaseHdc($hdc); $g.Dispose()
+    $file = "$prefix-iii-printwindow-win$($t.id).png"; $bmp.Save($file); $bmp.Dispose()
+    "printwindow win$($t.id) ok=$ok saved $file"
+  } catch { "error printwindow win$($t.id) $($_.Exception.Message)" }
+}
+`);
+  return diagScriptPath;
+}
+
+function runDiagScript(label, args) {
+  try {
+    const text = execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', diagScript(), ...args], { encoding: 'utf8' });
+    for (const line of text.split(/\r?\n/).filter(Boolean)) dlog(`[${label}] ${line}`);
+  } catch (e) { dlog(`[${label}] powershell error: ${firstLine(e)}`); }
+}
+
+async function windowList(label, pwPage) {
+  let pwId = null;
+  if (pwPage) {
+    try { pwId = await (await app.browserWindow(pwPage)).evaluate((w) => w.id); }
+    catch (e) { dlog(`[${label}] playwright window id error: ${firstLine(e)}`); }
+  }
+  const list = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => {
+    const h = w.getNativeWindowHandle();
+    return {
+      id: w.id, url: w.webContents.getURL().split('/').pop(), title: w.getTitle(), visible: w.isVisible(),
+      minimized: w.isMinimized(), focused: w.isFocused(), bounds: w.getBounds(), opacity: w.getOpacity(),
+      alwaysOnTop: w.isAlwaysOnTop(), hwnd: (h.length >= 8 ? h.readBigUInt64LE(0) : BigInt(h.readUInt32LE(0))).toString(),
+    };
+  }));
+  const marked = list.map((w) => ({ ...w, playwright: w.id === pwId }));
+  for (const w of marked) dlog(`[${label}] window ${JSON.stringify(w)}`);
+  return marked;
+}
+
+async function captureSet(label, pwPage) {
+  const prefix = path.join(diagDir, label);
+  let windows = [];
+  try { windows = await windowList(label, pwPage); } catch (e) { dlog(`[${label}] window list error: ${firstLine(e)}`); }
+  runDiagScript(label, ['-mode', 'capture', '-prefix', prefix, '-hwnds', windows.filter((w) => w.visible).map((w) => `${w.id}:${w.hwnd}`).join(',') || 'none']);
+  try {
+    const shots = await app.evaluate(async ({ desktopCapturer, screen }) => {
+      const displays = screen.getAllDisplays();
+      const width = Math.max(...displays.map((d) => Math.round(d.size.width * d.scaleFactor)));
+      const height = Math.max(...displays.map((d) => Math.round(d.size.height * d.scaleFactor)));
+      const started = Date.now();
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width, height } });
+      return { ms: Date.now() - started, requested: { width, height }, sources: sources.map((s) => ({ id: s.id, name: s.name, size: s.thumbnail.getSize(), png: s.thumbnail.toPNG().toString('base64') })) };
+    });
+    dlog(`[${label}] desktopCapturer ${shots.ms}ms requested ${JSON.stringify(shots.requested)}`);
+    shots.sources.forEach((s, i) => {
+      const file = `${prefix}-iv-desktopcapturer-${i}.png`;
+      writeFileSync(file, Buffer.from(s.png, 'base64'));
+      dlog(`[${label}] desktopCapturer ${s.id} "${s.name}" ${s.size.width}x${s.size.height} saved ${file}`);
+    });
+  } catch (e) { dlog(`[${label}] desktopCapturer error: ${firstLine(e)}`); }
+  if (pwPage) {
+    try { await pwPage.screenshot({ path: `${prefix}-playwright-panel.png` }); dlog(`[${label}] saved ${prefix}-playwright-panel.png`); }
+    catch (e) { dlog(`[${label}] playwright panel shot error: ${firstLine(e)}`); }
+  }
+  return windows;
+}
+
+/** Windows only: the capture set now and again 3 s later. */
+async function diag(label, pwPage) {
+  if (os !== 'windows') return;
+  const started = Date.now();
+  try {
+    mkdirSync(diagDir, { recursive: true });
+    if (!diagLines.length) {
+      try {
+        const info = await app.evaluate(async ({ app }) => ({ versions: { electron: process.versions.electron, chrome: process.versions.chrome }, gpuFeatureStatus: app.getGPUFeatureStatus(), gpuInfo: await app.getGPUInfo('basic').catch((e) => String(e)) }));
+        dlog(`environment ${JSON.stringify(info)}`);
+      } catch (e) { dlog(`environment error: ${firstLine(e)}`); }
+    }
+    await captureSet(label, pwPage);
+    await sleep(3000);
+    await captureSet(`${label}-3s`, pwPage);
+  } catch (e) { dlog(`[${label}] diag error: ${firstLine(e)}`); }
+  diagMs += Date.now() - started;
+}
+
+/** Windows only, after the final shot: does a forced repaint, then a reset of the layered style, refresh what the OS shows? */
+async function repaintExperiment() {
+  if (os !== 'windows') return;
+  try {
+    const panel = app.windows().find((w) => w.url().includes('widget.html'));
+    const target = (await windowList('final-exp0', panel)).find((w) => w.playwright);
+    if (!target) { dlog('[final-exp] no review panel window'); return; }
+    const invalidate = () => app.evaluate(({ BrowserWindow }, id) => { BrowserWindow.fromId(id)?.webContents.invalidate(); }, target.id);
+    await invalidate();
+    await sleep(1500);
+    await captureSet('final-exp1-invalidate', panel);
+    runDiagScript('final-exp2-relayer', ['-mode', 'relayer', '-hwnds', `${target.id}:${target.hwnd}`]);
+    await invalidate();
+    await sleep(1500);
+    await captureSet('final-exp2-relayer', panel);
+  } catch (e) { dlog(`[final-exp] error: ${firstLine(e)}`); }
+}
+
 async function windowWith(app, part, timeout = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -158,7 +336,7 @@ try {
 } catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
 const first = await waitForExplanation('first-run-explanation', FIRST_RUN_SAMPLE);
-const seconds = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
+const seconds = Math.round((Date.now() - launchedAt - a11yMs - diagMs) / 100) / 10;
 log(first.ok, 'First-run sample explains code', first.why);
 log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
 writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
@@ -294,10 +472,12 @@ async function waitForExplanation(label, expectedCode) {
     assert.ok(text.length > 80, 'a completed review must contain an explanation beyond the code preview');
     await shot(panel, label);
     desktopShot(label);
+    await diag(label, panel);
     return { ok: true, why: text.slice(0, 120).replace(/\s+/g, ' ') };
   } catch (error) {
     await shot(panel, `${label}-failed`);
     desktopShot(`${label}-failed`);
+    await diag(`${label}-failed`, panel);
     return { ok: false, why: error.message.split('\n')[0] };
   }
 }
@@ -371,6 +551,8 @@ for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.
 
 await sleep(1000);
 desktopShot('final');
+await diag('final', app.windows().find((w) => w.url().includes('widget.html')));
+await repaintExperiment();
 log(runtimeErrors.length === 0, 'No console or uncaught errors in Unvibe windows', runtimeErrors.length ? `${runtimeErrors.length} found` : '');
 for (const line of runtimeErrors) report.push(`      ${line}`);
 writeFileSync(path.join(out, 'main-process.log'), mainLog.join(''));
