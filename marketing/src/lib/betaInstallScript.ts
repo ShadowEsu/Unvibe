@@ -90,9 +90,10 @@ fi
 # with that certificate passes: a copy re-signed by anyone else fails. If the check fails, stop rather
 # than re-sign it here: a local re-sign changes the app's identity and macOS drops its Accessibility permission.
 if ! codesign --verify --deep --strict -R='${BETA_MAC_SIGNING_REQUIREMENT}' "$mountPoint/Unvibe.app" >/dev/null 2>&1; then
-  # Who signed the copy that failed, so support can tell a certificate change from tampering.
+  # Who signed the copy that failed, so support can tell a certificate change from tampering. The names
+  # come from that copy's own certificate, so only printable characters go to the terminal.
   echo "Signature on the downloaded app (for support):" >&2
-  codesign -dvv "$mountPoint/Unvibe.app" 2>&1 | grep Authority >&2 || true
+  codesign -dvv "$mountPoint/Unvibe.app" 2>&1 | grep '^Authority=' | LC_ALL=C tr -cd '[:print:]\\n' | head -n 3 >&2 || true
   stop "The downloaded app failed its signature check. Nothing was installed, and any Unvibe you already have is unchanged."
 fi
 

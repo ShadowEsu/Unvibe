@@ -55,9 +55,15 @@ exit 0`,
 fi
 exit 0`,
   // A verify passes only with the exact pinned requirement as one argument (and FIXTURE_CODESIGN_EXIT 0), so
-  // a script that gates on a plain --verify can't pass. -dvv answers like codesign's own display.
+  // a script that gates on a plain --verify can't pass. -dvv answers like codesign's own display, with an
+  // ESC sequence and a C1 byte in the first signer name (a self-signer picks that name freely) and four signer lines.
   codesign: `if [ "$1" = "-dvv" ]; then
-  echo "Authority=Fixture Signer" >&2
+  echo "Identifier=com.unvibe.app" >&2
+  printf 'Authority=Fixture \\033[2KSigner\\302\\233\\n' >&2
+  echo "Authority=Fixture CA" >&2
+  echo "Authority=Fixture Root" >&2
+  echo "Authority=Fourth Signer" >&2
+  echo "TeamIdentifier=not set" >&2
   exit 0
 fi
 pinned=1
@@ -188,7 +194,10 @@ describe("Mac install script, run with bash against stubs", () => {
     assertOnePinnedVerify(r);
     assert.notEqual(r.status, 0, r.output);
     assert.match(r.output, /failed its signature check/);
-    assert.match(r.output, /Authority=Fixture Signer/, "prints who signed the failed copy, for support");
+    // The signer lines, with every non-printable byte removed and at most three of them.
+    assert.ok(!/[\x00-\x09\x0b-\x1f\x7f-\x9f\ufffd]/.test(r.output), `no control bytes reach the terminal: ${JSON.stringify(r.output)}`);
+    assert.match(r.output, /^Authority=Fixture \[2KSigner\nAuthority=Fixture CA\nAuthority=Fixture Root\n/m, "prints who signed the failed copy, for support");
+    assert.doesNotMatch(r.output, /Fourth Signer|Identifier=|TeamIdentifier=/, "only the first three Authority lines");
     assert.ok(r.output.includes(HELP_URL), r.output);
     assertNothingInstalled(r);
   });
@@ -234,6 +243,11 @@ describe("Mac install script text", () => {
   it("puts the pinned requirement in single quotes it can't break out of", () => {
     assert.ok(!BETA_MAC_SIGNING_REQUIREMENT.includes("'"), BETA_MAC_SIGNING_REQUIREMENT);
     assert.ok(script.includes(`-R='${BETA_MAC_SIGNING_REQUIREMENT}'`));
+  });
+
+  it("prints at most three signer lines of the failed copy, printable characters only", () => {
+    const line = `  codesign -dvv "$mountPoint/Unvibe.app" 2>&1 | grep '^Authority=' | LC_ALL=C tr -cd '[:print:]\\n' | head -n 3 >&2 || true`;
+    assert.ok(script.split("\n").includes(line), "the Authority print line is exactly the sanitised one");
   });
 
   it("checks the signature before it removes the installed app or copies the new one", () => {
