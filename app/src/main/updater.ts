@@ -25,8 +25,9 @@ const ASSET_HOST = /^https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/downloa
 /**
  * The signature a macOS update must carry: the release's self-signed certificate ("Unvibe Self
  * Signed") and bundle id. A copy re-signed by anyone else fails. Same value as
- * BETA_MAC_SIGNING_REQUIREMENT in marketing/src/lib/betaInstallScript.ts (install.sh); both tests
- * pin the literal, so the two can't drift apart unnoticed.
+ * BETA_MAC_SIGNING_REQUIREMENT in marketing/src/lib/betaInstallScript.ts (install.sh) and as the
+ * release build's check in scripts/afterPackHook.cjs; the tests pin the literal, so the copies
+ * can't drift apart unnoticed.
  */
 export const MAC_SIGNING_REQUIREMENT =
   'identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"';

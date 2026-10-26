@@ -80,8 +80,16 @@ jobs:
         env:
           MAC_SELF_SIGN_P12: ${{ secrets.MAC_SELF_SIGN_P12 }}
           MAC_SELF_SIGN_PASSWORD: ${{ secrets.MAC_SELF_SIGN_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
         run: |
+          # With MAC_CSC_LINK set, electron-builder re-signs the app with that Developer ID, a
+          # different certificate. The app's updater and install.sh refuse such a build, so Mac
+          # updates would stop until the next release.
+          if [ "$PUBLISH" = "true" ] && [ -n "$MAC_CSC_LINK" ]; then
+            echo "MAC_CSC_LINK is set, so this Mac build would be signed with a Developer ID instead of the certificate the app's updater and install.sh pin. They would refuse it, so this release is not published. Remove the MAC_CSC_LINK secret to publish."
+            exit 1
+          fi
           if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
             if [ "$PUBLISH" = "true" ]; then
               echo "No stable signing identity configured. The app's updater and install.sh refuse builds not signed with it, so this release is not published."
@@ -126,8 +134,8 @@ jobs:
           # Publish as a visible pre-release instead of a hidden draft, so site download links work.
           EP_DRAFT: "false"
           EP_PRE_RELEASE: "true"
-          # Optional: set these repo secrets to code-sign and notarize the macOS build.
-          # Without them the app is ad-hoc signed by scripts/afterPackHook.cjs so Apple silicon opens it.
+          # A Developer ID certificate. A Mac release with it set stops in "Prepare stable Mac
+          # signing identity": the app's updater and install.sh only accept the pinned certificate.
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
         shell: bash

@@ -36,6 +36,47 @@ test('the release workflow checks the same pin as the app: the certificate befor
   assert.ok(leaf && workflow.includes(`if [ "$leaf" != "${leaf}" ]; then`), 'the signing certificate is checked against the pinned leaf before packaging');
 });
 
+test('a Mac release with a Developer ID configured stops before packaging', () => {
+  const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
+  const prepare = workflow.slice(workflow.indexOf('- name: Prepare stable Mac signing identity'), workflow.indexOf('- name: Build app bundle'));
+  assert.ok(prepare.includes('MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}'), 'the step sees whether a Developer ID is configured');
+  assert.match(prepare, /if \[ "\$PUBLISH" = "true" \] && \[ -n "\$MAC_CSC_LINK" \]; then\n\s+echo "[^"\n]+"\n\s+exit 1\n/, 'publishing with MAC_CSC_LINK set exits 1');
+});
+
+test('the packaging hook checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-afterpack-test-'));
+  const bin = path.join(root, 'bin');
+  const log = path.join(root, 'codesign.log');
+  mkdirSync(bin);
+  writeFileSync(path.join(bin, 'codesign'), `#!/bin/bash\nprintf '%s\\n' "$*" >> '${log}'\n`);
+  chmodSync(path.join(bin, 'codesign'), 0o755);
+  // dist-test/ sits in app/, beside scripts/.
+  const afterPack = require(path.resolve(__dirname, '..', 'scripts', 'afterPackHook.cjs')) as (context: unknown) => Promise<void>;
+  const context = { electronPlatformName: 'darwin', appOutDir: root, packager: { appInfo: { productFilename: 'Unvibe' }, projectDir: root } };
+  const app = path.join(root, 'Unvibe.app');
+  const names = ['PATH', 'UNVIBE_SIGN_IDENTITY', 'UNVIBE_SIGN_KEYCHAIN', 'CSC_LINK', 'CSC_NAME'] as const;
+  const saved = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    for (const name of names) delete process.env[name];
+    process.env.PATH = `${bin}:${saved.PATH}`;
+    process.env.UNVIBE_SIGN_IDENTITY = 'Unvibe Self Signed';
+    await afterPack(context);
+    delete process.env.UNVIBE_SIGN_IDENTITY;
+    await afterPack(context);
+    const verifies = readFileSync(log, 'utf8').trim().split('\n').filter((call) => call.startsWith('--verify'));
+    assert.deepEqual(verifies, [
+      `--verify --deep --strict --verbose=2 -R=${PINNED_REQUIREMENT} ${app}`,
+      `--verify --deep --strict --verbose=2 ${app}`,
+    ], 'the stable identity is checked against the pin; an ad-hoc build is checked without it');
+  } finally {
+    for (const name of names) {
+      if (saved[name] === undefined) delete process.env[name];
+      else process.env[name] = saved[name];
+    }
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('the macOS helper only installs the version the update is for, checked after the signature and before the installed app is touched', () => {
   const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
   const verify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/w/mnt/Unvibe.app'`);
