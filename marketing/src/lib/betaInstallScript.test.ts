@@ -7,13 +7,17 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   BETA_INSTALL_ASSET,
-  BETA_MAC_SIGNING_REQUIREMENT,
   BETA_WINDOWS_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
 } from "./betaInstallScript";
 
 const HELP_URL = "https://unvibe.site/install-help";
+/**
+ * The release's designated requirement, written out on purpose instead of imported: if the script's
+ * pin is ever weakened (say, to an identifier-only or CN-only check), this test must fail, not follow it.
+ */
+const PINNED_REQUIREMENT = 'identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"';
 
 /**
  * Every external command the Mac script could use to change the machine is replaced by a stub
@@ -140,7 +144,7 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.match(r.output, /Checksum verified\./);
     assert.ok(r.calls.some((c) => c.startsWith("hdiutil attach")), "a matching checksum continues to mount");
     // Only the release's own signature passes: a plain --verify also accepts an ad-hoc re-signed copy.
-    assert.ok(r.calls.some((c) => c.startsWith("codesign --verify") && c.includes(`-R=${BETA_MAC_SIGNING_REQUIREMENT}`)), r.calls.join(" | "));
+    assert.ok(r.calls.some((c) => c.startsWith("codesign --verify") && c.includes(`-R=${PINNED_REQUIREMENT}`)), r.calls.join(" | "));
     assert.notEqual(r.status, 0, r.output);
     assert.match(r.output, /signature/i);
     assert.ok(r.output.includes(HELP_URL), r.output);
