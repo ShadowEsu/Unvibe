@@ -285,6 +285,14 @@ class SettingsStore {
     this.data = next;
   }
 
+  /** Erase everything while signed out: forget the project folder. Throws when the file can't be saved. */
+  forgetProjectRoot(): void {
+    const next: Settings = { ...this.data };
+    delete next.lastProjectRoot;
+    this.write(next);
+    this.data = next;
+  }
+
   set(patch: Partial<Settings>): Settings {
     const nextProvider = patch.aiProvider !== undefined
       ? normalizeLocalAiProvider(patch.aiProvider)

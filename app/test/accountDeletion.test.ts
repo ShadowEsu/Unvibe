@@ -357,6 +357,22 @@ test('with no account at all, Erase everything clears the learning without askin
   assert.deepEqual(knowledgeStore().teachBacks(), []);
 });
 
+test('signed out, Erase everything also clears renderer storage, the HTTP cache and the project folder', async () => {
+  signedInWithData();
+  store().signOut();
+  const result = await deleteAccountAndLocalData(stopReviews);
+  assert.deepEqual(result, { ok: true, status: 'erased_locally' });
+  assert.deepEqual(sessionCalls, [
+    { call: 'clearStorageData', options: { storages: ['localstorage', 'indexdb', 'websql', 'filesystem', 'cookies', 'cachestorage', 'serviceworkers'] } },
+    { call: 'clearCache' },
+  ]);
+  assert.equal(settings().all().lastProjectRoot, undefined);
+  const onDisk = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Record<string, unknown>;
+  assert.equal('lastProjectRoot' in onDisk, false);
+  assert.deepEqual(store().events(), []);
+  assert.deepEqual(knowledgeStore().teachBacks(), []);
+});
+
 /**
  * Answers the sync routes and DELETE. GET /history (the pull) waits for `release`; with `honourAbort`
  * it ends when its request is aborted, the way a real network request does.

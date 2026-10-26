@@ -32,19 +32,27 @@ const RENDERER_STORAGES: NonNullable<Electron.ClearStorageDataOptions['storages'
 ];
 
 /**
+ * Renderer web storage and the HTTP cache (responses fetched with the session), then the knowledge
+ * and learning stores together, with no await between them so a late write can't land in between.
+ * Shared by account deletion and the signed-out Erase everything.
+ */
+async function clearLocalLearning(): Promise<void> {
+  await session.defaultSession.clearStorageData({ storages: RENDERER_STORAGES });
+  await session.defaultSession.clearCache();
+  knowledgeStore().wipe();
+  store().wipeEverything();
+}
+
+/**
  * Removes what belongs to the deleted account on this computer: the saved API key, the name, email,
- * gift code and project folder in settings, the knowledge store, renderer web storage and the HTTP
- * cache (responses fetched with the session), and last the learning store with the session token.
- * The token goes last so a failure earlier leaves a session that can retry the deletion.
+ * gift code and project folder in settings, then the local learning (above), last the learning store
+ * with the session token. The token goes last so a failure earlier leaves a session that can retry.
  */
 async function clearAccountData(): Promise<void> {
   clearAiKey();
   if (hasAiKey()) throw new Error('The API key saved in Unvibe could not be removed.');
   settings().forgetPerson();
-  await session.defaultSession.clearStorageData({ storages: RENDERER_STORAGES });
-  await session.defaultSession.clearCache();
-  knowledgeStore().wipe();
-  store().wipeEverything();
+  await clearLocalLearning();
 }
 
 export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${process.platform === 'win32' ? 'PC' : 'Mac'}. Sign in again, then delete.`;
@@ -56,12 +64,13 @@ export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${proc
  */
 export async function deleteAccountAndLocalData(stopReviews: () => void): Promise<AccountDeletionResult> {
   if (!store().account()) {
-    // Signed out: no account to delete. Erase the learning on this computer, as before.
+    // Signed out: no account to delete. Erase the learning on this computer, the project folder and
+    // the renderer storage and cache the signed-in erase clears too.
     try {
       stopReviews();
       abortChatAndStudy();
-      store().wipeEverything();
-      knowledgeStore().wipe();
+      settings().forgetProjectRoot();
+      await clearLocalLearning();
     } catch (err) {
       return { ok: false, error: reason(err, 'Learning on this computer could not be erased.') };
     }
