@@ -9,9 +9,10 @@
  * - Replays: all page text and every input is masked, so names, emails on admin pages and model
  *   explanations of someone's code never reach a replay. New elements are covered by default.
  * - Autocapture: no element text and no element attributes.
- * - Admin and capability pages (`/founder`, `/waitlist`, `/waitlist-admin`, `/s/…`) load no SDK.
- *   When a visitor reaches one by client navigation from a public page, both replays stop until
- *   they leave it, and every SDK event recorded there is dropped before sending.
+ * - Admin and capability pages (`/founder`, `/waitlist`, `/waitlist-admin`, `/s/…`) and the pages
+ *   that hold a sign-in session (`/activate`, `/redeem`) load no SDK. When a visitor reaches one
+ *   by client navigation from a public page, both SDKs' capture and replays stop until they leave
+ *   it, and every SDK event recorded there is dropped before sending.
  * - Opt-out (`?notrack=1`, trackingOptOut.ts): both hooks check it again on every event, so an
  *   opt-out after the SDKs started drops what they would send next, and `syncCaptureForPage`
  *   turns both SDKs' own capture off, which also stops their replays.
@@ -45,8 +46,8 @@ const SECRET_PARAMS: Record<string, true> = {
 /** Property names that hold a URL or part of one (PostHog `$current_url`, Mixpanel `current_url_search`, …). */
 const URL_PROPERTY = /(url|referrer|href|pathname|path|search)$/i;
 
-/** Pages that render private data or whose URL is a secret. No analytics SDK starts on them. */
-const PRIVATE_PATH = /^\/(founder|waitlist|waitlist-admin|s)(\/|$)/;
+/** Pages that render private data, whose URL is a secret, or that hold a sign-in session. No analytics SDK starts on them. */
+const PRIVATE_PATH = /^\/(founder|waitlist|waitlist-admin|s|activate|redeem)(\/|$)/;
 
 function cleanSearch(search: string): string {
   if (!search || search === "?") return search;
@@ -157,7 +158,7 @@ export function mixpanelBeforeSend<T extends { properties: PropertyBag }>(payloa
   return { ...payload, properties: sanitizeProperties(payload.properties) };
 }
 
-/** False on admin and capability pages, where no analytics SDK may start. */
+/** False on admin, capability and sign-in pages, where no analytics SDK may start. */
 export function analyticsAllowedOnPath(pathname: string): boolean {
   return !PRIVATE_PATH.test(pathname);
 }
@@ -172,10 +173,16 @@ export const REPLAY_BLOCK_CLASS = "ph-no-capture";
 /**
  * posthog-js init options (besides the host and project defaults). `maskTextSelector: "*"`
  * masks the text of every element, present or future; inputs are masked too.
+ *
+ * `request_batching: false`: PostHog's batch queue sends what it holds up to 3 s later and has
+ * no way to empty it, so after an opt-out or a client navigation into an admin or sign-in page
+ * it still sent events and replay frames captured just before (seen in a real browser). Unbatched,
+ * each event leaves when it is captured, so only a failed send that PostHog retries can go out later.
  */
 export const POSTHOG_PRIVACY_CONFIG = {
   mask_all_text: true,
   mask_all_element_attributes: true,
+  request_batching: false,
   before_send: posthogBeforeSend,
   session_recording: {
     maskAllInputs: true,
@@ -231,9 +238,9 @@ export type LoadedSdks<P, M> = { readonly posthog: P | null; readonly mixpanel: 
 
 /**
  * Initialises the SDKs that finished loading, if the page they finished on is a public page in a
- * tracked browser. A load that finishes after an opt-out or a client navigation into an admin or
- * capability page initialises nothing, and the SDK waits (it is returned) for a later call.
- * Returns the SDKs still waiting.
+ * tracked browser. A load that finishes after an opt-out or a client navigation into an admin,
+ * capability or sign-in page initialises nothing, and the SDK waits (it is returned) for a later
+ * call. Returns the SDKs still waiting.
  */
 export function initLoadedSdks<P, M>(
   page: { href: string; trackingDisabled: boolean },
@@ -275,17 +282,18 @@ export type MixpanelTracking = {
 
 /**
  * Call on every client navigation (including one that only changes the query) and after each SDK
- * initialises, before `syncReplayForPage`. After an opt-out it turns both SDKs' own capture off:
- * nothing is captured, sent or recorded, and a replay buffer flushed by the stop that follows is
- * dropped. When tracking is allowed again it turns capture back on, sending no opt-in event, so
- * the replay start that follows is not refused. The SDKs keep their opt-out in this browser, so it
- * is also turned back on when a later visit loads them where tracking is allowed.
+ * initialises, before `syncReplayForPage`. After an opt-out, and on an admin, capability or
+ * sign-in page, it turns both SDKs' own capture off: nothing is captured, sent or recorded, and a
+ * replay buffer flushed by the stop that follows is dropped. On a public page in a tracked browser
+ * it turns capture back on, sending no opt-in event, so the replay start that follows is not
+ * refused. The SDKs keep their opt-out in this browser, so it is also turned back on when a later
+ * visit loads them where tracking is allowed.
  */
 export function syncCaptureForPage(
   page: { href: string; trackingDisabled: boolean },
   sdk: { posthog: PosthogCapture | null; mixpanel: MixpanelTracking | null },
 ): void {
-  const allowed = !page.trackingDisabled;
+  const allowed = trackedPublicPage(page);
   if (sdk.posthog) {
     const off = sdk.posthog.has_opted_out_capturing();
     if (!allowed && !off) sdk.posthog.opt_out_capturing();

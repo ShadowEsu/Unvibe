@@ -8,11 +8,12 @@
  * personal data: replays mask all text and inputs, and emails, tokens and codes
  * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
  * An anonymous id is kept in localStorage. Automated browsers, visitors who
- * opted out with ?notrack=1 (trackingOptOut.ts), and admin or capability pages
- * load no SDK and send nothing. An SDK that finishes loading after an opt-out
- * or a client navigation into an admin page waits uninitialised. An opt-out
- * after the SDKs started, or a client navigation into an admin page, turns
- * their capture and replay off there (syncSessionRecording).
+ * opted out with ?notrack=1 (trackingOptOut.ts), and admin, capability and
+ * sign-in pages (/activate, /redeem) load no SDK and send nothing. An SDK that
+ * finishes loading after an opt-out or a client navigation into one of those
+ * pages waits uninitialised. An opt-out after the SDKs started, or a client
+ * navigation into one of those pages, turns their capture and replay off
+ * there (syncSessionRecording).
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
