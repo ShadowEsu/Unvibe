@@ -472,7 +472,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           // The service's error text reaches the panel only as a capped string.
           send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
         } else if (ev.type === 'done') {
-          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model : undefined, mock: ev.mock === true });
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true });
           completed = true;
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
