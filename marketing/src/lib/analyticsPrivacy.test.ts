@@ -223,11 +223,17 @@ describe("analytics privacy config", () => {
     assert.equal(POSTHOG_PRIVACY_CONFIG.request_batching, false);
   });
 
-  it("PostHog masks the secret parameters itself, in the stored landing URL its /flags request sends past before_send", () => {
+  it("PostHog masks every secret parameter itself, in the stored landing URL and event URLs it builds", () => {
     assert.equal(POSTHOG_PRIVACY_CONFIG.mask_personal_data_properties, true);
-    for (const name of ["e", "t", "ref", "code", "user_code", "promo", "token", "email"]) {
-      assert.ok(POSTHOG_PRIVACY_CONFIG.custom_personal_data_properties.includes(name), name);
+    // The full list sanitizeUrl redacts (SECRET_PARAMS), not a sample.
+    const secret = [
+      "e", "email", "t", "token", "ref", "code", "promo", "user_code", "device", "device_code",
+      "key", "sig", "signature", "access_token", "refresh_token", "id_token", "state",
+    ];
+    for (const name of secret) {
+      assert.equal(new URL(sanitizeUrl(`https://unvibe.site/?${name}=x1`)).searchParams.get(name), "redacted", `${name} is secret`);
     }
+    assert.deepEqual([...POSTHOG_PRIVACY_CONFIG.custom_personal_data_properties].sort(), [...secret].sort());
   });
 
   it("Mixpanel sends each event when it is tracked, so no stored batch skips before_send_events", () => {
