@@ -67,6 +67,8 @@ export interface ReviewSession {
   isSample?: () => boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
+  /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
+  wipeGeneration?: number;
 }
 
 export interface RequestOpts {
@@ -198,9 +200,11 @@ function appendExplanation(session: ReviewSession, text: string): void {
 /**
  * Saves the finished run as the lesson. A follow-up answer is shown in the panel but never replaces
  * the saved explanation of the code (its first run still records the lesson, so nothing is lost).
+ * A run that started before the store was wiped (account deletion, Erase everything) saves nothing.
  */
 function recordReview(win: BrowserWindow, session: ReviewSession, followUp: boolean): boolean {
   if (!session.code) return false;
+  if (session.wipeGeneration !== undefined && session.wipeGeneration !== store().wipeGeneration()) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
     if (followUp) return true;
@@ -284,6 +288,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   session.level = opts.level;
   session.explanationText = '';
   session.islandStreaming = false;
+  session.wipeGeneration = store().wipeGeneration();
   pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 
   const usageEarly = await cachedAppUsage();

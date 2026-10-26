@@ -23,6 +23,8 @@ let quizStatus: number | null = null;
 let reviewRefusal: { status: number; body: Record<string, unknown> } | null = null;
 /** When set, the explanation service streams these events instead of explaining. */
 let reviewEvents: object[] | null = null;
+/** When set, runs just before the explanation service answers (the request is already out). */
+let beforeReviewAnswer: (() => void) | null = null;
 
 /** A backend that explains code, answers questions differently, and writes one quiz question. */
 net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -30,6 +32,7 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
   const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as ReviewRequestPayload) : ({} as ReviewRequestPayload);
   received.push({ path: url.pathname, body });
   if (url.pathname === '/api/v1/reviews') {
+    beforeReviewAnswer?.();
     if (reviewRefusal) return Response.json(reviewRefusal.body, { status: reviewRefusal.status });
     const text = body.question
       ? `ANSWER to "${body.question}"`
@@ -166,4 +169,21 @@ test('the service\'s error text reaches the panel only as a capped string, strea
       `refused ${JSON.stringify(message)}`,
     );
   }
+});
+
+test('a review that started before a wipe saves no lesson when its answer arrives, and the next run does', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  // The wipe (account deletion or Erase everything) lands while the request is out; this panel was not closed.
+  beforeReviewAnswer = () => store().wipeEverything();
+  try {
+    await runReview(win, s, { level: 'intermediate' });
+  } finally {
+    beforeReviewAnswer = null;
+  }
+  assert.ok(events.some((ev) => ev.type === 'done'), 'the answer still arrived');
+  assert.equal(lesson(s.reviewId), undefined, 'no lesson written into the wiped store');
+  assert.deepEqual(store().events(), []);
+  await runReview(win, s, { level: 'intermediate' });
+  assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION at intermediate/, 'a run started after the wipe is saved');
 });
