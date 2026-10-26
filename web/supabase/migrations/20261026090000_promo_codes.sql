@@ -335,5 +335,7 @@ begin
   return true;
 end;
 $$;
+-- Already revoked by 20261006120000; repeated here so this file alone leaves it callable only by the service role.
+revoke all on function public.add_pro_months(uuid, integer) from public, anon, authenticated;
 
 commit;
