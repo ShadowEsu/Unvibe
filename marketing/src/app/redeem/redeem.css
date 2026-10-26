@@ -1,62 +1,29 @@
-/* /redeem: promo codes. Same frame as /activate (a focused card over the blurred page photo). */
+/*
+ * /redeem: promo codes. One card in the normal page flow, so the site header and footer stay
+ * usable around it. Text is 13 px or more.
+ */
 
 .redeem-root {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  overflow: auto;
-  background: transparent;
   color: var(--ink);
 }
 
-.redeem-root::before {
-  content: "";
-  position: fixed;
-  inset: -18%;
-  z-index: 0;
-  background: var(--page-photo) 62% 40% / cover no-repeat;
-  transform: scale(1.22);
-  filter: blur(36px) saturate(1.55) contrast(1.08) brightness(1.05);
-  pointer-events: none;
-}
-
-.redeem-root::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: var(--dusk-veil);
-  pointer-events: none;
-}
-
 .redeem-shell {
-  position: relative;
-  z-index: 1;
-  min-height: 100%;
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 3rem 1.25rem 2rem;
-}
-
-.redeem-brand {
-  margin-bottom: 1.4rem;
-  font-size: 1.2rem;
-  font-weight: 750;
-  letter-spacing: -0.04em;
+  min-height: 70vh;
+  padding: clamp(6.5rem, 12vw, 8.5rem) 1.25rem 4rem;
 }
 
 .redeem-card {
   box-sizing: border-box;
   width: min(100%, 32rem);
+  height: fit-content;
   padding: 2rem;
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-card);
   background: var(--paper-raised);
   box-shadow: var(--shadow-key);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .redeem-title {
@@ -79,7 +46,7 @@
   display: block;
   margin: 0 0 0.45rem;
   color: var(--ink-muted);
-  font-size: 0.8rem;
+  font-size: max(13px, 0.8125rem);
   font-weight: 700;
 }
 
@@ -102,17 +69,17 @@
 
 .redeem-field--code {
   margin-bottom: 0.4rem;
-  font-family: var(--font-mono-face), ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-align: center;
 }
 
 .redeem-hint {
   margin: 0 0 0.9rem;
   color: var(--ink-muted);
-  font-size: 0.8rem;
+  font-size: max(13px, 0.8125rem);
   line-height: 1.45;
 }
 
@@ -155,9 +122,9 @@
   gap: 0.7rem;
   margin: 1.2rem 0;
   color: var(--ink-muted);
-  font-size: 0.7rem;
+  font-size: max(13px, 0.8125rem);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -177,6 +144,7 @@
 }
 
 .redeem-link {
+  min-height: 1.5rem;
   padding: 0;
   border: 0;
   color: var(--ink);
@@ -191,8 +159,12 @@
 .redeem-note {
   margin: 0.8rem 0 0;
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: max(13px, 0.85rem);
   line-height: 1.45;
+}
+
+.redeem-note--field {
+  margin: -0.35rem 0 0.75rem;
 }
 
 .redeem-note--error,
@@ -238,10 +210,6 @@
   overflow-wrap: anywhere;
 }
 
-.redeem-next .paper-join-row {
-  flex-wrap: wrap;
-}
-
 .redeem-next .paper-join {
   max-width: 100%;
 }
@@ -249,12 +217,5 @@
 @media (max-width: 420px) {
   .redeem-card {
     padding: 1.4rem 1.1rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .redeem-root * {
-    animation: none !important;
-    transition: none !important;
   }
 }

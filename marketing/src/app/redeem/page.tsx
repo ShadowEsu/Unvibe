@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { DownloadRow } from "@/components/paper/DownloadLink";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import {
   clearPromoCode,
   formatCodeInput,
@@ -12,7 +12,6 @@ import {
   savePromoCode,
   type RedeemOutcome,
 } from "@/lib/promoRedeem";
-import { publicSupabase, siteAuthClient } from "@/lib/siteAuth";
 
 function sessionStore(): Storage | null {
   try {
@@ -27,23 +26,48 @@ function redeemOrigin(): string {
   return `${window.location.origin}/redeem`;
 }
 
+/** The same Supabase project and keys /activate signs in with. */
+function publicSupabase(): { url: string; key: string } | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  return url && key ? { url, key } : null;
+}
+
+/**
+ * Promo codes for Pro months. Sign-in is /activate's: Google or an email link, PKCE, with the
+ * site's public Supabase keys. The access token goes to /api/redeem with the code; the API checks
+ * it and decides everything.
+ */
 export default function RedeemPage() {
   const [code, setCode] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const emailField = useRef<HTMLInputElement>(null);
   const [authMessage, setAuthMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [working, setWorking] = useState(false);
   const [outcome, setOutcome] = useState<RedeemOutcome | null>(null);
-  // The public config is inlined at build time, so the client is created once.
+  const config = publicSupabase();
+  const configured = Boolean(config);
+  const supabaseUrl = config?.url;
+  const supabaseKey = config?.key;
+
   const client = useMemo((): SupabaseClient | null => {
-    const config = publicSupabase();
-    // ?code= is ours to read: a promo code from a link, or the sign-in code after the redirect.
-    return config ? siteAuthClient(config, false) : null;
-  }, []);
-  const configured = client !== null;
+    if (!supabaseUrl || !supabaseKey) return null;
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        flowType: "pkce",
+        // ?code= is this page's to read: a promo code from a link, or the sign-in code after the redirect.
+        detectSessionInUrl: false,
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
+  }, [supabaseUrl, supabaseKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +174,19 @@ export default function RedeemPage() {
     }
   }
 
+  /** The browser's own email check, shown inline: an empty or partial address never reaches Supabase. */
+  function submitMagicLink(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const field = emailField.current;
+    if (field && !field.checkValidity()) {
+      setEmailError(field.validity.valueMissing ? "Enter your email." : "Enter a full email address, like you@school.edu.");
+      field.focus();
+      return;
+    }
+    setEmailError("");
+    void sendMagicLink();
+  }
+
   async function signOut() {
     if (!client) return;
     await client.auth.signOut().catch(() => undefined);
@@ -160,7 +197,6 @@ export default function RedeemPage() {
 
   return (
     <div className="redeem-shell">
-      <div className="redeem-brand">Unvibe</div>
       <div className="redeem-card">
         <h1 className="redeem-title">Redeem a promo code</h1>
         <p className="redeem-sub">
@@ -168,7 +204,7 @@ export default function RedeemPage() {
         </p>
 
         {!accessToken && (
-          <div className="redeem-signin">
+          <div>
             <button
               className="redeem-btn redeem-btn--quiet"
               type="button"
@@ -179,24 +215,33 @@ export default function RedeemPage() {
             </button>
             {authMessage && <p className="redeem-note redeem-note--error" role="alert">{authMessage}</p>}
             <div className="redeem-divider">or email a link</div>
-            <label className="redeem-label" htmlFor="redeem-email">Email</label>
-            <input
-              id="redeem-email"
-              className="redeem-field"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@school.edu"
-            />
-            <button
-              className="redeem-btn redeem-btn--quiet"
-              type="button"
-              onClick={() => void sendMagicLink()}
-              disabled={!configured || !email || authBusy}
-            >
-              {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
-            </button>
+            <form noValidate onSubmit={submitMagicLink}>
+              <label className="redeem-label" htmlFor="redeem-email">Email</label>
+              <input
+                ref={emailField}
+                id="redeem-email"
+                className="redeem-field"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setEmailError("");
+                }}
+                placeholder="you@school.edu"
+                aria-invalid={Boolean(emailError)}
+                aria-describedby={emailError ? "redeem-email-error" : undefined}
+              />
+              {emailError && (
+                <p className="redeem-note redeem-note--error redeem-note--field" id="redeem-email-error" role="alert">
+                  {emailError}
+                </p>
+              )}
+              <button className="redeem-btn redeem-btn--quiet" type="submit" disabled={!configured || authBusy}>
+                {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
+              </button>
+            </form>
             <div className="redeem-divider">then</div>
           </div>
         )}
@@ -208,28 +253,30 @@ export default function RedeemPage() {
           </p>
         )}
 
-        <label className="redeem-label" htmlFor="redeem-code">Promo code</label>
-        <input
-          id="redeem-code"
-          className="redeem-field redeem-field--code"
-          value={code}
-          onChange={(event) => setCode(formatCodeInput(event.target.value))}
-          placeholder="XXXX-XXXX-XXXX-XXXX"
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck={false}
-          inputMode="text"
-          aria-describedby="redeem-code-hint"
-        />
-        <p className="redeem-hint" id="redeem-code-hint">16 letters and numbers. Dashes and spaces are optional.</p>
-        <button
-          className="redeem-btn"
-          type="button"
-          onClick={() => void redeem()}
-          disabled={working || !codeReady || !accessToken || bootstrapping}
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!working && codeReady && accessToken && !bootstrapping) void redeem();
+          }}
         >
-          {working ? "Redeeming…" : "Redeem code"}
-        </button>
+          <label className="redeem-label" htmlFor="redeem-code">Promo code</label>
+          <input
+            id="redeem-code"
+            className="redeem-field redeem-field--code"
+            value={code}
+            onChange={(event) => setCode(formatCodeInput(event.target.value))}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="redeem-code-hint"
+          />
+          <p className="redeem-hint" id="redeem-code-hint">16 letters and numbers. Dashes and spaces are optional.</p>
+          <button className="redeem-btn" type="submit" disabled={working || !codeReady || !accessToken || bootstrapping}>
+            {working ? "Redeeming…" : "Redeem code"}
+          </button>
+        </form>
         {!accessToken && (
           <p className="redeem-note">
             {configured ? "Sign in above, then redeem." : "Sign-in is not configured for this environment yet."}
@@ -253,7 +300,7 @@ export default function RedeemPage() {
                 ? <>In the app, sign in as <strong>{accountEmail}</strong>. The Plan page there shows the Pro end date.</>
                 : <>In the app, sign in with the account you used here. The Plan page there shows the Pro end date.</>}
             </p>
-            <DownloadRow surface="redeem" />
+            <GetUnvibe surface="redeem" />
           </section>
         )}
       </div>
