@@ -79,7 +79,7 @@ describe("feedback POST: what is stored and what goes to analytics", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  it("stores a hash of the IP with the feedback, and sends the analytics event under a random ID per send", async () => {
+  it("stores no IP or IP hash with the feedback, and sends the analytics event under a random ID per send", async () => {
     const ip = "198.51.100.23";
     for (const rating of [4, 5]) {
       const response = await POST(
@@ -93,7 +93,11 @@ describe("feedback POST: what is stored and what goes to analytics", () => {
     }
 
     assert.equal(rows.length, 2, "both sends are stored");
-    for (const row of rows) assert.equal(row.ip_hash, hashIp(ip), "the stored row keeps the IP hash");
+    for (const row of rows) {
+      assert.ok(row.ip_hash === undefined || row.ip_hash === null, `the stored row has no ip_hash: ${JSON.stringify(row)}`);
+      const stored = JSON.stringify(row);
+      assert.ok(!stored.includes(ip) && !stored.includes(hashIp(ip)), `the stored row carries neither the IP nor its hash: ${stored}`);
+    }
 
     const sent = events.filter((e) => e.body.event === "feedback_submitted");
     assert.equal(sent.length, 2, "one feedback_submitted event per send");
@@ -102,5 +106,23 @@ describe("feedback POST: what is stored and what goes to analytics", () => {
     for (const id of ids) assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/, "the analytics ID is a random UUID");
     assert.notEqual(ids[0], ids[1], "two sends from one IP get different analytics IDs");
     assert.deepEqual(sent.map((e) => e.body.properties), [{ source: "app", rating: 4 }, { source: "app", rating: 5 }], "only the rating and where it came from");
+  });
+
+  it("still refuses a sixth send from one IP within ten minutes, from memory, without storing it", async () => {
+    const ip = "198.51.100.77";
+    const before = rows.length;
+    const statuses: number[] = [];
+    for (let send = 1; send <= 6; send += 1) {
+      const response = await POST(
+        new Request("https://unvibe.site/feedback", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-forwarded-for": ip },
+          body: JSON.stringify({ rating: 3 }),
+        }),
+      );
+      statuses.push(response.status);
+    }
+    assert.deepEqual(statuses, [200, 200, 200, 200, 200, 429], "five sends pass, the sixth is limited");
+    assert.equal(rows.length - before, 5, "the limited send is not stored");
   });
 });

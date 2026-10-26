@@ -37,11 +37,11 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Feedback you send:</strong> your star rating and message, where it
-            came from (the site or the app, with the page or app version), your email
-            only if you add it, and a hash of your IP address. The same hash is used to
-            limit repeated sends. Each send is also counted as one PostHog event that
-            carries only the star rating and where it came from, under a random ID that
-            is new each time.
+            came from (the site or the app, with the page or app version), and your email
+            only if you add it. Your IP address is used only in the server&apos;s memory, to
+            stop repeated sends, and is not stored with your feedback. Each send is also
+            counted as one PostHog event that carries only the star rating and where it
+            came from, under a random ID that is new each time.
           </li>
         </ul>
       </LegalSection>

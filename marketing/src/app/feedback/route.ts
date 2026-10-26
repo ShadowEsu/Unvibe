@@ -42,6 +42,7 @@ export async function POST(request: Request) {
   const noStore = { "Cache-Control": "no-store" };
   const length = Number(request.headers.get("content-length") ?? "0");
   if (length > 8_000) return Response.json({ error: "Too long." }, { status: 413, headers: noStore });
+  // The IP is used only here, in this instance's memory, to stop repeated sends. It is not stored or sent.
   const ipHash = hashIp(clientIp(request));
   if (limited(ipHash)) return Response.json({ error: "Thanks! Give it a few minutes before sending more." }, { status: 429, headers: noStore });
 
@@ -62,13 +63,12 @@ export async function POST(request: Request) {
     source: input.source,
     page: input.page ? cleanText(input.page).slice(0, 200) : null,
     app_version: input.appVersion ? cleanText(input.appVersion).slice(0, 40) : null,
-    ip_hash: ipHash,
   });
   if (error) {
     console.error("feedback insert failed", error.message);
     return Response.json({ error: "Could not save that. Try again in a moment." }, { status: 500, headers: noStore });
   }
-  // A fresh random ID per send, so the analytics event can't be joined to the stored IP hash or to other sends.
+  // A fresh random ID per send, so the analytics event can't be joined to the sender or to other sends.
   await captureServerEvent("feedback_submitted", randomUUID(), { rating: input.rating, source: input.source }).catch(() => undefined);
 
   // From the welcome email: a signed link plus a real message earns one more month of Pro.
