@@ -482,3 +482,23 @@ test('a sweep starts a row only with at least 15 seconds left', async () => {
     }
   }
 });
+
+for (const lookup of ['existingWorkspaces', 'overview'] as const) {
+  test(`a failed ${lookup} read skips the sweep row without erasing anything`, async () => {
+    const me = await stoppedBeforeErase(true);
+    const row = await store.accountDeletion(me.userId);
+    assert.ok(row);
+    const isolated = Object.create(store) as typeof store;
+    isolated.staleAccountDeletions = async () => [row];
+    const failure = mock.method(getBillingStore(), lookup, async () => { throw new Error('lookup unavailable'); });
+    try {
+      const counts = await sweepAccountDeletions(isolated);
+      assert.equal(counts.skipped, 1);
+      assert.equal(counts.done, 0);
+      assert.equal(counts.failed, 0);
+    } finally {
+      failure.mock.restore();
+    }
+    await untouched(me);
+  });
+}
