@@ -51,9 +51,13 @@ async function store(url: URL, init?: RequestInit): Promise<Response> {
     inserted.push(body);
     const ipHash = body && typeof body === 'object' && 'ip_hash' in body ? String(body.ip_hash) : '';
     rows.push({ ip_hash: ipHash, created_at: new Date().toISOString() });
-    // `.select('id').single()` asks for the new row as one object.
+    // Like PostgREST: an insert answers with the new row only when the client sends
+    // `Prefer: return=representation` (postgrest-js adds it for `.select()`); otherwise 201 with no
+    // body. `.single()` asks for that row as one object.
+    const headers = new Headers(init?.headers);
+    if (!(headers.get('prefer') ?? '').includes('return=representation')) return new Response(null, { status: 201 });
     const row = { id: rows.length };
-    const single = new Headers(init?.headers).get('accept')?.includes('application/vnd.pgrst.object+json');
+    const single = headers.get('accept')?.includes('application/vnd.pgrst.object+json');
     return Response.json(single ? row : [row], { status: 201 });
   }
   if (fault === 'count') return Response.json({ code: 'XX000', message: 'count failed' }, { status: 500 });
