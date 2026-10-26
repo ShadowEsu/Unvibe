@@ -165,6 +165,8 @@ export class MemoryStore implements Store {
   }
 
   async beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion> {
+    // Mirrors begin_account_deletion: only a sha256 hex token hash is ever stored, never the token.
+    if (!/^[0-9a-f]{64}$/.test(tokenHash)) throw new Error('token hash must be sha256 hex');
     // Mirrors begin_account_deletion: a Teams owner with members is refused before anything is recorded.
     new MemoryBillingStore().refuseTeamWithMembers(userId);
     let deletion = this.data.deletions.get(userId);
