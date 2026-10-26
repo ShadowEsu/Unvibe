@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { initWidget, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 
 /** Every request body the backend received, by path. */
@@ -21,6 +21,10 @@ const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
 let quizStatus: number | null = null;
 /** When set, the explanation service refuses with this response instead of explaining. */
 let reviewRefusal: { status: number; body: Record<string, unknown> } | null = null;
+/** When set, the explanation service streams these events instead of explaining. */
+let reviewEvents: object[] | null = null;
+/** When set, runs just before the explanation service answers (the request is already out). */
+let beforeReviewAnswer: (() => void) | null = null;
 
 /** A backend that explains code, answers questions differently, and writes one quiz question. */
 net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -28,11 +32,12 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
   const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as ReviewRequestPayload) : ({} as ReviewRequestPayload);
   received.push({ path: url.pathname, body });
   if (url.pathname === '/api/v1/reviews') {
+    beforeReviewAnswer?.();
     if (reviewRefusal) return Response.json(reviewRefusal.body, { status: reviewRefusal.status });
     const text = body.question
       ? `ANSWER to "${body.question}"`
       : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
-    const events = [{ type: 'token', text }, { type: 'done', model: 'test', mock: false }];
+    const events = reviewEvents ?? [{ type: 'token', text }, { type: 'done', model: 'test', mock: false }];
     return new Response(events.map((ev) => `data: ${JSON.stringify(ev)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } });
   }
   if (url.pathname === '/api/v1/comprehension') {
@@ -139,4 +144,65 @@ test('a server 402 pro_required opens the Pro upgrade panel, not the plan limit'
   assert.equal(errors[0]?.code, 'pro_required');
   assert.equal(errors[0]?.upgradePath, '/plan');
   assert.match(String(errors[0]?.message), /included with Unvibe Pro/);
+});
+
+test('the service\'s error text reaches the panel only as a capped string, streamed or refused', async () => {
+  const hostile: unknown[] = [{ html: '<img src=x onerror=alert(1)>' }, ['a'], 42, '   '];
+  const firstError = async (setup: () => void): Promise<unknown> => {
+    const { win, events } = panel();
+    setup();
+    try {
+      await runReview(win, session('intermediate'), { level: 'intermediate' });
+    } finally {
+      reviewEvents = null;
+      reviewRefusal = null;
+    }
+    return events.find((ev) => ev.type === 'error')?.message;
+  };
+  assert.equal(await firstError(() => { reviewEvents = [{ type: 'error', message: ` ${'r'.repeat(1_000)} ` }]; }), 'r'.repeat(300));
+  assert.equal(await firstError(() => { reviewRefusal = { status: 413, body: { error: 'too_long', message: 'q'.repeat(1_000) } }; }), 'q'.repeat(300));
+  for (const message of hostile) {
+    assert.equal(await firstError(() => { reviewEvents = [{ type: 'error', message }]; }), 'The explanation service could not complete that request. Please try again.', `streamed ${JSON.stringify(message)}`);
+    assert.equal(
+      await firstError(() => { reviewRefusal = { status: 429, body: { error: 'plan_limit_reached', message } }; }),
+      'You have used this plan\'s explanations for now. Open Plan & usage to see when they reset or to upgrade.',
+      `refused ${JSON.stringify(message)}`,
+    );
+  }
+});
+
+test('a review that started before a wipe saves no lesson when its answer arrives, and the next run does', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  // The wipe (account deletion or Erase everything) lands while the request is out; this panel was not closed.
+  beforeReviewAnswer = () => store().wipeEverything();
+  try {
+    await runReview(win, s, { level: 'intermediate' });
+  } finally {
+    beforeReviewAnswer = null;
+  }
+  assert.ok(events.some((ev) => ev.type === 'done'), 'the answer still arrived');
+  assert.equal(lesson(s.reviewId), undefined, 'no lesson written into the wiped store');
+  assert.deepEqual(store().events(), []);
+  await runReview(win, s, { level: 'intermediate' });
+  assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION at intermediate/, 'a run started after the wipe is saved');
+});
+
+test('"Got it" on a panel that outlived a wipe saves no file snapshot; after a new run it does', async () => {
+  const { win, events } = panel();
+  const file = `wipe-${Math.random().toString(36).slice(2)}.js`;
+  const s: ReviewSession = { ...session('intermediate'), file, snapshotText: 'function debounce(fn, wait) {}' };
+  await runReview(win, s, { level: 'intermediate' });
+  assert.ok(lesson(s.reviewId), 'the run was saved before the wipe');
+  // The wipe lands while this panel is still open, then the person presses Got it.
+  store().wipeEverything();
+  markUnderstood(win, s);
+  assert.equal(store().fileSnapshot(file), undefined, 'no snapshot written into the wiped store');
+  assert.deepEqual(store().events(), []);
+  assert.ok(!events.some((ev) => ev.type === 'understood'));
+  // A run started after the wipe is new learning: Got it saves it and its snapshot.
+  await runReview(win, s, { level: 'intermediate' });
+  markUnderstood(win, s);
+  assert.ok(store().fileSnapshot(file), 'a run started after the wipe saves its snapshot');
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood');
 });

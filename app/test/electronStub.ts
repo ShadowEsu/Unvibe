@@ -51,3 +51,17 @@ export const shell = {
     throw new Error('Opening external links is disabled in tests.');
   },
 };
+
+/** Records what was cleared from the default session (renderer storage, HTTP cache). */
+export const sessionCalls: Array<{ call: 'clearStorageData' | 'clearCache'; options?: Electron.ClearStorageDataOptions }> = [];
+
+export const session = {
+  defaultSession: {
+    clearStorageData: async (options?: Electron.ClearStorageDataOptions): Promise<void> => {
+      sessionCalls.push({ call: 'clearStorageData', options });
+    },
+    clearCache: async (): Promise<void> => {
+      sessionCalls.push({ call: 'clearCache' });
+    },
+  },
+};

@@ -66,7 +66,6 @@ import {
   signIn,
   signUp,
   signOut as revokeSession,
-  deleteAccount,
   startDeviceAuth,
   redeemDeviceAuth,
   accountInfo,
@@ -104,6 +103,7 @@ import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
+import { deleteAccountAndLocalData } from './accountDeletion';
 import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
@@ -1641,25 +1641,13 @@ app.whenReady().then(() => {
     return { ok: true, warning };
   });
   ipcMain.handle('account:delete', async () => {
-    const token = store().token();
-    try {
-      if (token) await deleteAccount(token);
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Delete failed.' };
-    }
-    try {
-      store().wipeEverything();
-      knowledgeStore().wipe();
-    } catch (err) {
-      return {
-        ok: false,
-        error: `The remote account was deleted, but local cleanup failed. ${err instanceof Error ? err.message : ''}`.trim(),
-      };
-    }
-    const panel = currentWidget();
-    if (panel && !panel.isDestroyed()) panel.close();
-    clearPanelSessions();
-    return { ok: true };
+    const result = await deleteAccountAndLocalData(() => {
+      const panel = currentWidget();
+      if (panel && !panel.isDestroyed()) panel.close();
+      clearPanelSessions();
+    });
+    if (result.ok) invalidateAppUsage();
+    return result;
   });
 });
 
