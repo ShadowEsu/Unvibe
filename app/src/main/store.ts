@@ -119,11 +119,11 @@ class Store {
     }
   }
 
-  private save(): void {
+  private save(data: Data = this.data): void {
     try {
       mkdirSync(path.dirname(this.file), { recursive: true });
       const temporary = `${this.file}.tmp`;
-      writeFileSync(temporary, JSON.stringify(this.data), { mode: 0o600 });
+      writeFileSync(temporary, JSON.stringify(data), { mode: 0o600 });
       renameSync(temporary, this.file);
     } catch (error) {
       throw new Error('Unvibe could not save learning data on this Mac. Check disk space and file permissions, then try again.', { cause: error });
@@ -366,8 +366,10 @@ class Store {
   }
 
   wipeEverything(): void {
-    this.data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
-    this.save();
+    // Save first: when the file can't be written, memory keeps matching what is on disk.
+    const empty: Data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
+    this.save(empty);
+    this.data = empty;
     learningChanged();
   }
 

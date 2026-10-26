@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { app, safeStorage } from './electronStub';
@@ -22,6 +22,15 @@ import { clearReviewChecklists, reviewChecklistKey } from '../src/core/reviewChe
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
 const SETTINGS_FILE = path.join(userData, 'unvibe-settings.json');
+const STORE_FILE = path.join(userData, 'unvibe-store.json');
+const KNOWLEDGE_FILE = path.join(userData, 'unvibe-knowledge.json');
+
+/** Puts a non-empty directory where `file` goes, so writing it fails the way a full or locked disk does. */
+function blockFile(file: string): void {
+  rmSync(file, { recursive: true, force: true });
+  mkdirSync(file);
+  writeFileSync(path.join(file, 'blocker'), 'x');
+}
 
 /** The service's answer to DELETE /api/v1/account, or a thrown network failure. */
 type Answer = { status: number; body: unknown } | 'network-down';
@@ -185,6 +194,20 @@ test('a 200 with an unknown status is not treated as deleted', async () => {
   const result = await deleteWith({ status: 200, body: { ok: true, status: 'queued' } });
   assert.equal(result.ok, false);
   assertNothingCleared();
+});
+
+test('a clear that can\'t be saved throws and leaves memory matching what is on disk', () => {
+  signedInWithData();
+  const files = [STORE_FILE, KNOWLEDGE_FILE, SETTINGS_FILE];
+  for (const file of files) blockFile(file);
+  try {
+    assert.throws(() => store().wipeEverything());
+    assert.throws(() => knowledgeStore().wipe());
+    assert.throws(() => settings().forgetPerson());
+    assertNothingCleared();
+  } finally {
+    for (const file of files) rmSync(file, { recursive: true, force: true });
+  }
 });
 
 test('an account whose sign-in can\'t be decrypted sends no request, clears nothing and says to sign in again', async () => {

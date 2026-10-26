@@ -267,9 +267,9 @@ class SettingsStore {
     }
   }
 
-  private write(): void {
+  private write(data: Settings = this.data): void {
     mkdirSync(path.dirname(this.file), { recursive: true });
-    writeFileSync(this.file, JSON.stringify(this.data), { mode: 0o600 });
+    writeFileSync(this.file, JSON.stringify(data), { mode: 0o600 });
   }
 
   /**
@@ -278,9 +278,11 @@ class SettingsStore {
    * so deletion never reports these as gone while they are still on disk.
    */
   forgetPerson(): void {
-    this.data = { ...this.data, displayName: '', profileEmail: '', giftCode: '', useOwnAi: false };
-    delete this.data.lastProjectRoot;
-    this.write();
+    // Save first: when the file can't be written, memory keeps matching what is on disk.
+    const next: Settings = { ...this.data, displayName: '', profileEmail: '', giftCode: '', useOwnAi: false };
+    delete next.lastProjectRoot;
+    this.write(next);
+    this.data = next;
   }
 
   set(patch: Partial<Settings>): Settings {
