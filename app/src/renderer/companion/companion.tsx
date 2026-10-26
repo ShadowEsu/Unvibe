@@ -939,7 +939,8 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const [seats, setSeats] = useState(3);
   const [teamName, setTeamName] = useState('');
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
-  const [message, setMessage] = useState(compact ? '' : 'Loading plan…');
+  // Signed out there is no cloud plan to load, so nothing says "Loading plan…" (only the local usage line fills in).
+  const [message, setMessage] = useState(compact || !signedIn ? '' : 'Loading plan…');
   const [busy, setBusy] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(true);
   // Public checkout status (GET /api/v1/billing/status). Until it says open, Pro reads "opens soon".
@@ -947,14 +948,14 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
 
   const load = async () => {
     void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen));
-    const usage = await window.unvibe.usageGet() as { ok: boolean; data?: AppUsageLine };
-    if (usage.ok && usage.data) setLocalUsage(usage.data);
     if (!signedIn) {
       setOverview(null);
       setAvailable(false);
       setMessage('');
-      return;
     }
+    const usage = await window.unvibe.usageGet() as { ok: boolean; data?: AppUsageLine };
+    if (usage.ok && usage.data) setLocalUsage(usage.data);
+    if (!signedIn) return;
     const result = await window.unvibe.billingOverview() as { ok: boolean; data?: { overview: BillingOverview; checkoutAvailable: boolean; teamsAvailable?: boolean; paymentsOpen?: boolean }; error?: string };
     if (!result.ok || !result.data) {
       setOverview(null);
