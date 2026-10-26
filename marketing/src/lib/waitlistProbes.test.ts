@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { isProbeWaitlistEmail } from "./waitlistProbes";
 
 describe("isProbeWaitlistEmail", () => {
-  it("keeps real founder waitlist emails", () => {
-    assert.equal(isProbeWaitlistEmail("mirzett23@gmail.com", "Mirzett Evans"), false);
+  it("keeps ordinary waitlist signups", () => {
+    assert.equal(isProbeWaitlistEmail("alex.chen@mail.test", "Alex Chen"), false);
   });
 
   it("drops probes, examples, and the install sentinel", () => {
