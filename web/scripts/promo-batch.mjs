@@ -4,9 +4,9 @@
 //   node scripts/promo-batch.mjs generate <batch> <count> [--csv path] [--sql path]
 //                                         [--months 3] [--cap 300] [--redeem-by "2026-11-30 23:59:59 America/Los_Angeles"] [--label text]
 //       Writes the codes to a private CSV (mode 600; columns code, given_to, given_at; default
-//       ~/.config/preston-secrets/unvibe-promo-<batch>.csv) and a hash-only SQL insert (the batch
+//       ~/.config/unvibe-promo/unvibe-promo-<batch>.csv) and a hash-only SQL insert (the batch
 //       row plus sha256("unvibe-promo:" + code) per code; default next to the CSV). Never
-//       overwrites either file. The SQL is run once, by hand, with Preston's yes.
+//       overwrites either file. The SQL is run once, by hand, with the owner's yes.
 //   node scripts/promo-batch.mjs take <batch> <who> [--csv path]
 //       Marks the next unused code as given to <who> (with the time) and prints it. A lock file
 //       next to the CSV makes sure two senders never get the same code.
@@ -57,7 +57,7 @@ function fail(message) {
 }
 
 function defaultCsv(batch) {
-  return join(homedir(), '.config', 'preston-secrets', `unvibe-promo-${batch}.csv`);
+  return join(homedir(), '.config', 'unvibe-promo', `unvibe-promo-${batch}.csv`);
 }
 
 function parseArgs(argv) {
@@ -132,7 +132,7 @@ function sqlString(value) {
 export function insertSql({ batch, label, months, cap, redeemBy, hashes, generatedAt }) {
   return [
     `-- Promo batch ${batch}: ${hashes.length} code hashes, sha256("unvibe-promo:" + code) in hex. No codes.`,
-    `-- Generated ${generatedAt} by web/scripts/promo-batch.mjs. Run once, with Preston's yes. Running it`,
+    `-- Generated ${generatedAt} by web/scripts/promo-batch.mjs. Run once, with the owner's yes. Running it`,
     '-- again fails on the existing batch row and changes nothing.',
     'begin;',
     'insert into public.promo_batches (id, label, months, redeem_by, max_redemptions)',

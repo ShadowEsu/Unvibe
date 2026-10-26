@@ -94,7 +94,7 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
   404 `invalid` (unknown or revoked, same answer), 409 `used`/`one_per_account`/`has_paid_plan`, 410
   `expired`/`cap_reached`, 429, 503.
 - No minting over the API. `web/scripts/promo-batch.mjs generate <batch> <count>` writes the codes to
-  a private CSV (mode 600, `~/.config/preston-secrets/unvibe-promo-<batch>.csv`) and a hash-only SQL
+  a private CSV (mode 600, `~/.config/unvibe-promo/unvibe-promo-<batch>.csv`) and a hash-only SQL
   insert that is run once by hand. `take <batch> <who>` hands out the next code under a file lock.
 - `GET /api/v1/admin/promo` lists batches and redemptions; `POST` with `revoke_code` or
   `revoke_batch` switches codes off (`UNVIBE_ADMIN_STATS_TOKEN`; the script's `list` and `revoke`

@@ -89,12 +89,12 @@ test('generate: refuses to overwrite and to make bad batches', async () => {
   await assert.rejects(script(['generate', 'ok', '0', '--csv', join(dir, 'y.csv')]), /count must be/);
 });
 
-test('generate: default CSV path is ~/.config/preston-secrets/unvibe-promo-<batch>.csv', async () => {
+test('generate: default CSV path is ~/.config/unvibe-promo/unvibe-promo-<batch>.csv', async () => {
   const { stdout } = await script(['generate', 'defaults', '2']);
-  const csv = join(dir, '.config', 'preston-secrets', 'unvibe-promo-defaults.csv');
+  const csv = join(dir, '.config', 'unvibe-promo', 'unvibe-promo-defaults.csv');
   assert.ok(stdout.includes(csv));
   assert.equal(statSync(csv).mode & 0o777, 0o600);
-  assert.ok(stdout.includes(join(dir, '.config', 'preston-secrets', 'unvibe-promo-defaults-insert.sql')));
+  assert.ok(stdout.includes(join(dir, '.config', 'unvibe-promo', 'unvibe-promo-defaults-insert.sql')));
 });
 
 test('take: two senders at once get different codes, each marked with who and when', async () => {
