@@ -1,8 +1,8 @@
 import { app } from 'electron';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { constants, createReadStream, createWriteStream } from 'node:fs';
+import { access, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -246,6 +246,17 @@ export async function prepareUpdate(
   // A downloaded app that was opened without being moved runs from a read-only copy (App
   // Translocation), so the helper could never replace it and the update would silently do nothing.
   if (platform === 'darwin' && macTarget.includes('/AppTranslocation/')) return { ok: false, error: 'Move Unvibe to your Applications folder first, then update.' };
+  // The helper moves the installed app aside and the new one in, which needs write access to the
+  // folder they sit in. A standard user can't change /Applications, so say so up front instead of
+  // downloading, failing the swap and reopening the old app every time.
+  if (platform === 'darwin') {
+    const folder = path.dirname(macTarget);
+    try {
+      await access(folder, constants.W_OK);
+    } catch {
+      return { ok: false, error: `Updating Unvibe needs an administrator: this account can't change ${folder}. Ask an admin to install Unvibe ${info.latest}.` };
+    }
+  }
 
   const assetName = path.basename(new URL(assetUrl).pathname);
   const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(workRoot, 'unvibe-update-'));

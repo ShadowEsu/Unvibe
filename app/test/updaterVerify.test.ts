@@ -374,7 +374,7 @@ test('a macOS update that fails its checksum writes no helper and deletes its do
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
   const asset = 'Unvibe-0.1.45-mac-arm64.dmg';
   const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/${asset}` };
-  const opts = { platform: 'darwin' as const, pid: 4242, macTarget: '/Applications/Unvibe.app', workRoot: root };
+  const opts = { platform: 'darwin' as const, pid: 4242, macTarget: path.join(tmpdir(), 'Unvibe.app'), workRoot: root };
   try {
     const bad = fakeRelease('a tampered disk image', () => `${'f'.repeat(64)}  ${asset}\n`);
     const refused = await prepareUpdate(info, { ...opts, fetchImpl: bad.fetchImpl });
@@ -421,7 +421,7 @@ test('a download that cannot be checked is refused and deleted', async () => {
   const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/Unvibe-%E0%A4%A.dmg` };
   try {
     const release = fakeRelease('a disk image', (sha) => `${sha}  Unvibe-0.1.45-mac-arm64.dmg\n`);
-    const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, workRoot: root });
+    const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, macTarget: path.join(tmpdir(), 'Unvibe.app'), workRoot: root });
     assert.ok(!refused.ok, 'a check that throws is a refusal');
     assert.match(refused.error, /Could not check the download/);
     assert.deepEqual(readdirSync(root), [], 'the download folder is deleted');
@@ -442,6 +442,32 @@ test('an app running from App Translocation is told to move to Applications, bef
     assert.deepEqual(release.urls, [], 'nothing is downloaded');
     assert.deepEqual(readdirSync(root), [], 'no download folder is created');
   } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a user who cannot change the app\'s folder is told an admin is needed, before anything is downloaded', { skip: process.platform === 'win32' || process.getuid?.() === 0 }, async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
+  const apps = path.join(root, 'Applications');
+  const work = path.join(root, 'work');
+  mkdirSync(apps);
+  mkdirSync(work);
+  chmodSync(apps, 0o555);
+  const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/Unvibe-0.1.45-mac-arm64.dmg` };
+  try {
+    const release = fakeRelease('the real disk image', (sha) => `${sha}  Unvibe-0.1.45-mac-arm64.dmg\n`);
+    const opts = { platform: 'darwin' as const, fetchImpl: release.fetchImpl, pid: 4242, macTarget: path.join(apps, 'Unvibe.app'), workRoot: work };
+    const refused = await prepareUpdate(info, opts);
+    assert.ok(!refused.ok, 'a folder this account cannot write to is refused');
+    assert.equal(refused.error, `Updating Unvibe needs an administrator: this account can't change ${apps}. Ask an admin to install Unvibe 0.1.45.`);
+    assert.deepEqual(release.urls, [], 'nothing is downloaded');
+    assert.deepEqual(readdirSync(work), [], 'no download folder is created');
+
+    chmodSync(apps, 0o755);
+    const ready = await prepareUpdate(info, opts);
+    assert.ok(ready.ok && ready.script, 'once the folder can be changed, the update goes ahead');
+  } finally {
+    chmodSync(apps, 0o755);
     rmSync(root, { recursive: true, force: true });
   }
 });
