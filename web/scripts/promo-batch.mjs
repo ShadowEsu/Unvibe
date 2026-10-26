@@ -7,8 +7,8 @@
 //       ~/.config/unvibe-promo/unvibe-promo-<batch>.csv) and a hash-only SQL insert (the batch
 //       row plus sha256("unvibe-promo:" + code) per code; default next to the CSV). Never
 //       overwrites either file. The SQL is run once, by hand, with the owner's yes. Prints the SQL's
-//       sha256, which the owner records somewhere off this Mac. A label with control characters is
-//       refused.
+//       sha256, which the owner records somewhere off this Mac. A label with control characters,
+//       including invisible ones such as zero-width spaces and text-direction marks, is refused.
 //   node scripts/promo-batch.mjs take <batch> <who> [--csv path]
 //       Marks the next unused code as given to <who> (with the time) and prints it. A lock file
 //       next to the CSV makes sure two senders never get the same code.
@@ -36,7 +36,7 @@ const BATCH_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const HEADER = 'code,given_to,given_at';
 const DEFAULTS = { months: 3, cap: 300, redeemBy: '2026-11-30 23:59:59 America/Los_Angeles' };
 const REDEEM_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})? [A-Za-z_]+\/[A-Za-z_]+$/;
-const CONTROL_RE = /[\u0000-\u001f\u007f]/;
+const CONTROL_RE = /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
 const SHA_RE = /^[0-9a-f]{64}$/;
 const LABELS = { calhacks13: 'Cal Hacks 13.0' };
 const LOCK_WAIT_MS = 10_000;
@@ -181,6 +181,22 @@ function assertPrivateFolder(folder) {
   }
 }
 
+/**
+ * verify reads the CSV and the SQL by path, and `psql -f` later reads the SQL the same way. Each must
+ * be a regular file of yours, with no other hard link and no group or world write. A symlink or a
+ * second link could point at a file someone else can change between verify and the run.
+ */
+function assertPrivateFile(path, kind) {
+  const own = lstatSync(path, { throwIfNoEntry: false });
+  if (!own) fail(`no ${kind} at ${path}`);
+  if (own.isSymbolicLink()) fail(`${path} is a symlink; pass the real file path instead`);
+  if (!own.isFile()) fail(`${path} is not a regular file`);
+  const uid = typeof process.getuid === 'function' ? process.getuid() : undefined;
+  if (uid !== undefined && own.uid !== uid) fail(`${path} belongs to another user; do not run it`);
+  if (own.nlink !== 1) fail(`${path} has ${own.nlink} hard links; do not run it`);
+  if ((own.mode & 0o022) !== 0) fail(`${path} can be written by other users; run chmod 600 on it first`);
+}
+
 function generate(batch, countText, options) {
   if (!BATCH_RE.test(batch ?? '')) fail('batch must be lower case letters, digits, - or _ (up to 48)');
   const count = Number(countText);
@@ -194,7 +210,7 @@ function generate(batch, countText, options) {
     fail('--redeem-by must look like "2026-11-30 23:59:59 America/Los_Angeles"');
   }
   const fullLabel = options.label ?? LABELS[batch] ?? batch;
-  if (CONTROL_RE.test(fullLabel)) fail('--label must not contain control characters such as tabs or line breaks');
+  if (CONTROL_RE.test(fullLabel)) fail('--label must not contain control characters such as tabs, line breaks, zero-width spaces or text-direction marks');
   const label = fullLabel.slice(0, 120);
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
@@ -301,7 +317,8 @@ function verify(batch, options) {
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
   for (const folder of new Set([dirname(csvPath), dirname(sqlPath)])) assertPrivateFolder(folder);
-  if (!existsSync(sqlPath)) fail(`no SQL at ${sqlPath}`);
+  assertPrivateFile(sqlPath, 'SQL');
+  assertPrivateFile(csvPath, 'CSV');
   const bytes = readFileSync(sqlPath);
   const actual = sha256Hex(bytes);
   if (actual !== expected) {

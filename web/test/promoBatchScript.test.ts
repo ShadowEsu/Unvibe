@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -203,8 +203,38 @@ test('verify: refuses an SQL that no longer matches the private CSV', async () =
   await assert.rejects(verify('toomany', many.csv, many.sql), /gives 24 months/, 'months outside 1 to 12');
 });
 
+test('verify: refuses an SQL or CSV that is a symlink, has a second hard link, is a folder or can be written by others', async () => {
+  const verify = (batch: string, csv: string, sql: string) => script(['verify', batch, '--expect-sha', shaOf(sql), '--csv', csv, '--sql', sql]);
+  const fresh = async (name: string) => {
+    const csv = join(dir, `${name}.csv`);
+    const sql = join(dir, `${name}.sql`);
+    await script(['generate', name, '2', '--csv', csv, '--sql', sql]);
+    return { csv, sql };
+  };
+  const linked = await fresh('filelink');
+  const real = join(dir, 'filelink-real.sql');
+  renameSync(linked.sql, real);
+  symlinkSync(real, linked.sql);
+  await assert.rejects(verify('filelink', linked.csv, linked.sql), /filelink\.sql is a symlink; pass the real file path instead/, 'a symlinked SQL');
+  const hard = await fresh('hardlink');
+  linkSync(hard.sql, join(dir, 'hardlink-second.sql'));
+  await assert.rejects(verify('hardlink', hard.csv, hard.sql), /hardlink\.sql has 2 hard links; do not run it/, 'an SQL with a second hard link');
+  const folder = await fresh('notafile');
+  rmSync(folder.sql);
+  mkdirSync(folder.sql);
+  await assert.rejects(script(['verify', 'notafile', '--expect-sha', '0'.repeat(64), '--csv', folder.csv, '--sql', folder.sql]), /notafile\.sql is not a regular file/, 'a folder at the SQL path');
+  const open = await fresh('groupwrite');
+  chmodSync(open.sql, 0o664);
+  await assert.rejects(verify('groupwrite', open.csv, open.sql), /groupwrite\.sql can be written by other users; run chmod 600 on it first/, 'a group-writable SQL');
+  const openCsv = await fresh('csvwrite');
+  chmodSync(openCsv.csv, 0o646);
+  await assert.rejects(verify('csvwrite', openCsv.csv, openCsv.sql), /csvwrite\.csv can be written by other users/, 'a world-writable CSV');
+  chmodSync(openCsv.csv, 0o600);
+  await verify('csvwrite', openCsv.csv, openCsv.sql);
+});
+
 test('generate and verify refuse a label with control characters', async () => {
-  for (const char of ['\t', '\n', '\u001b', '\u007f']) {
+  for (const char of ['\t', '\n', '\u001b', '\u007f', '\u0085', '\u202e', '\u200b', '\u2066', '\ufeff']) {
     const csv = join(dir, 'ctl.csv');
     const sql = join(dir, 'ctl.sql');
     await assert.rejects(script(['generate', 'ctl', '2', '--label', `Cal${char}Hacks`, '--csv', csv, '--sql', sql]), /--label must not contain control characters/, `generate, U+${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
@@ -214,7 +244,7 @@ test('generate and verify refuse a label with control characters', async () => {
   const sql = join(dir, 'ctlsql.sql');
   await script(['generate', 'ctlsql', '2', '--label', 'Cal Hacks', '--csv', csv, '--sql', sql]);
   const text = readFileSync(sql, 'utf8');
-  for (const char of ['\t', '\u001b', '\u007f']) {
+  for (const char of ['\t', '\u001b', '\u007f', '\u0085', '\u202e', '\u200b', '\u2066', '\ufeff']) {
     // The edited SQL is checked against its own sha256 and rebuilds byte for byte with that label.
     writeFileSync(sql, text.replace("'Cal Hacks'", `'Cal${char}Hacks'`));
     await assert.rejects(script(['verify', 'ctlsql', '--expect-sha', shaOf(sql), '--csv', csv, '--sql', sql]), /has a control character in its label; do not run it/, `verify, U+${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
