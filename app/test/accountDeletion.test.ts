@@ -31,22 +31,23 @@ function blockFile(file: string): void {
   writeFileSync(path.join(file, 'blocker'), 'x');
 }
 
-/** The service's answer to DELETE /api/v1/account, or a thrown network failure. */
-type Answer = { status: number; body: unknown } | 'network-down';
+/** The service's answer to DELETE /api/v1/account (JSON or plain text), or a thrown network failure. */
+type Answer = { status: number; body: unknown } | { status: number; text: string } | 'network-down';
 
-function serviceAnswers(answer: Answer): { deletes: () => number; restore: () => void } {
+function serviceAnswers(answer: Answer): { deletes: () => number; redirects: () => unknown[]; restore: () => void } {
   const original = globalThis.fetch;
-  let deletes = 0;
+  const redirects: unknown[] = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     assert.match(url, /\/api\/v1\/account$/);
     assert.equal(init?.method, 'DELETE');
     assert.equal((init?.headers as Record<string, string>).authorization, 'Bearer session-token');
-    deletes += 1;
+    redirects.push(init?.redirect);
     if (answer === 'network-down') throw new TypeError('fetch failed');
+    if ('text' in answer) return new Response(answer.text, { status: answer.status, headers: { 'content-type': 'text/html' } });
     return Response.json(answer.body, { status: answer.status });
   }) as typeof fetch;
-  return { deletes: () => deletes, restore: () => { globalThis.fetch = original; } };
+  return { deletes: () => redirects.length, redirects: () => redirects, restore: () => { globalThis.fetch = original; } };
 }
 
 /** The main process closes the review panel here; these tests have none. */
@@ -139,6 +140,7 @@ async function deleteWith(answer: Answer) {
   try {
     const result = await deleteAccountAndLocalData(stopReviews);
     assert.equal(service.deletes(), 1);
+    assert.deepEqual(service.redirects(), ['error'], 'a redirect is refused, so only the configured service can answer');
     return result;
   } finally {
     service.restore();
@@ -200,6 +202,18 @@ test('a network failure says nothing was deleted and clears nothing', async () =
 test('a 200 with an unknown status is not treated as deleted', async () => {
   const result = await deleteWith({ status: 200, body: { ok: true, status: 'queued' } });
   assert.equal(result.ok, false);
+  assertNothingCleared();
+});
+
+test('only a 200 counts: a 202 with a deleted status clears nothing', async () => {
+  const result = await deleteWith({ status: 202, body: { ok: true, status: 'deleted' } });
+  assert.equal(result.ok, false);
+  assertNothingCleared();
+});
+
+test('a long refusal message is cut to 300 characters', async () => {
+  const result = await deleteWith({ status: 409, body: { error: 'team_has_members', message: 'x'.repeat(1_000) } });
+  assert.deepEqual(result, { ok: false, error: 'x'.repeat(300) });
   assertNothingCleared();
 });
 
