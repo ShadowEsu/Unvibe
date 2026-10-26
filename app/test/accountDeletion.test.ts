@@ -394,6 +394,28 @@ test('signed out, a project folder picked while renderer storage is clearing is 
   assert.equal('lastProjectRoot' in onDisk, false);
 });
 
+test('signed in, a project folder picked while local learning is clearing is still forgotten', async () => {
+  signedInWithData();
+  const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
+  const clearStorage = session.defaultSession.clearStorageData;
+  const picked = mock.method(session.defaultSession, 'clearStorageData', async (options?: Electron.ClearStorageDataOptions) => {
+    // A folder pick lands after forgetPerson, while the erase is awaiting this clear.
+    settings().set({ lastProjectRoot: path.join(userData, 'picked-during-delete') });
+    await clearStorage(options);
+  });
+  try {
+    const result = await deleteAccountAndLocalData(stopReviews);
+    assert.deepEqual(result, { ok: true, status: 'deleted' });
+    assert.equal(picked.mock.callCount(), 1);
+  } finally {
+    picked.mock.restore();
+    service.restore();
+  }
+  assert.equal(settings().all().lastProjectRoot, undefined);
+  const onDisk = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Record<string, unknown>;
+  assert.equal('lastProjectRoot' in onDisk, false);
+});
+
 /**
  * Answers the sync routes and DELETE. GET /history (the pull) waits for `release`; with `honourAbort`
  * it ends when its request is aborted, the way a real network request does.

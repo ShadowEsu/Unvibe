@@ -53,6 +53,8 @@ async function clearAccountData(): Promise<void> {
   if (hasAiKey()) throw new Error('The API key saved in Unvibe could not be removed.');
   settings().forgetPerson();
   await clearLocalLearning();
+  // Again after the awaits, so a folder picked while they ran can't be saved back.
+  settings().forgetProjectRoot();
 }
 
 export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${process.platform === 'win32' ? 'PC' : 'Mac'}. Sign in again, then delete.`;
