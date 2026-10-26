@@ -218,7 +218,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
     <section className="founder-analytics" aria-busy={loading}>
       <header className="founder-analytics__header">
         <div>
-          <span className="founder-analytics__eyebrow">Founder analytics</span>
+          <span className="founder-analytics__eyebrow">Analytics</span>
           <Title className="founder-analytics__title">Unvibe, by the numbers.</Title>
           <p>Joined people stay on the roster. Form starts, copies, and drop-off come from PostHog so unfinished traffic is not invented as accounts.</p>
         </div>
