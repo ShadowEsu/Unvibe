@@ -11,8 +11,12 @@ type Row = { ip_hash: string; created_at: string };
 const calls = { gemini: 0, openrouter: 0, anthropic: 0 };
 let rows: Row[] = [];
 let inserted: unknown[] = [];
-/** `count`: counts answer 500; `missing`: no table (PostgREST answers a head request 404, no body); `insert`: inserts answer 500. */
-let fault: 'count' | 'missing' | 'insert' | null = null;
+/**
+ * `count`: counts answer 500; `missing`: no table (PostgREST answers a head request 404, no body);
+ * `day-missing`: only the unfiltered (daily) count answers 404 with no body, so it has no count while the per-IP count is fine;
+ * `insert`: inserts answer 500.
+ */
+let fault: 'count' | 'missing' | 'day-missing' | 'insert' | null = null;
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
@@ -45,6 +49,7 @@ async function store(url: URL, init?: RequestInit): Promise<Response> {
   }
   if (fault === 'count') return Response.json({ code: 'XX000', message: 'count failed' }, { status: 500 });
   if (fault === 'missing') return new Response(null, { status: 404 });
+  if (fault === 'day-missing' && !url.searchParams.has('ip_hash')) return new Response(null, { status: 404 });
   const ip = url.searchParams.get('ip_hash')?.replace(/^eq\./, '');
   const since = url.searchParams.get('created_at')?.replace(/^gte\./, '') ?? '';
   const count = rows.filter((row) => (!ip || row.ip_hash === ip) && row.created_at >= since).length;
@@ -178,6 +183,14 @@ test('a missing try_requests table (head count with no count) answers 503 with z
   fault = 'missing';
   assert.equal((await POST(tryRequest())).status, 503);
   assert.equal(calls.gemini, 0);
+});
+
+test('only the daily count failing (per-IP count fine) answers 503 with zero model calls', async () => {
+  production();
+  fault = 'day-missing';
+  assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(calls.gemini, 0);
+  assert.equal(inserted.length, 0);
 });
 
 test('a store insert error answers 503 with zero model calls', async () => {
