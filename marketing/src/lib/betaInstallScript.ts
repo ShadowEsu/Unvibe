@@ -27,6 +27,7 @@ export function betaInstallScript(): string {
 set -euo pipefail
 
 TAG="\${UNVIBE_BETA_TAG:-${BETA_INSTALL_TAG}}"
+VERSION="\${TAG#v}"
 ASSET="\${UNVIBE_BETA_ASSET:-${BETA_INSTALL_ASSET}}"
 URL="https://github.com/ShadowEsu/Unvibe/releases/download/\${TAG}/\${ASSET}"
 DEST="/Applications/Unvibe.app"
@@ -95,6 +96,13 @@ if ! codesign --verify --deep --strict -R='${BETA_MAC_SIGNING_REQUIREMENT}' "$mo
   echo "Signature on the downloaded app (for support):" >&2
   codesign -dvv "$mountPoint/Unvibe.app" 2>&1 | grep '^Authority=' | LC_ALL=C tr -cd '[:print:]\\n' | head -n 3 >&2 || true
   stop "The downloaded app failed its signature check. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+
+# The pin says who signed the app, not which release it is. Only the version this script installs goes on,
+# so an older signed build can't be installed in its place.
+appVersion="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$mountPoint/Unvibe.app/Contents/Info.plist" 2>/dev/null || true)"
+if [ "$appVersion" != "$VERSION" ]; then
+  stop "The downloaded app is not version $VERSION. Nothing was installed, and any Unvibe you already have is unchanged."
 fi
 
 # Copy next to the installed app first and swap only once the copy is complete, so a failed copy (a full

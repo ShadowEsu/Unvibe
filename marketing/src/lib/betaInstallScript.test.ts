@@ -7,13 +7,17 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   BETA_INSTALL_ASSET,
+  BETA_INSTALL_TAG,
   BETA_MAC_SIGNING_REQUIREMENT,
   BETA_WINDOWS_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
 } from "./betaInstallScript";
+import { BETA_INSTALL_VERSION } from "./betaOffer";
 
 const HELP_URL = "https://unvibe.site/install-help";
+/** The version install.sh installs by default: its tag without the "v". */
+const INSTALLED_VERSION = BETA_INSTALL_TAG.replace(/^v/, "");
 /**
  * The release's designated requirement, written out on purpose instead of imported: if the script's
  * pin is ever weakened (say, to an identifier-only or CN-only check), this test must fail, not follow it.
@@ -42,6 +46,7 @@ case "$url" in
 esac
 exit 0`,
   // FIXTURE_APP_LINK=1 mounts a disk image whose Unvibe.app is a symlink to a folder (Security F5).
+  // Otherwise Unvibe.app's Info.plist holds FIXTURE_APP_VERSION (no Info.plist when that is empty).
   hdiutil: `if [ "$1" = "attach" ]; then
   mp=""; prev=""
   for a in "$@"; do [ "$prev" = "-mountpoint" ] && mp="$a"; prev="$a"; done
@@ -49,11 +54,16 @@ exit 0`,
     mkdir -p "$mp/elsewhere.app"
     ln -s "$mp/elsewhere.app" "$mp/Unvibe.app"
   else
-    mkdir -p "$mp/Unvibe.app"
+    mkdir -p "$mp/Unvibe.app/Contents"
+    if [ -n "$FIXTURE_APP_VERSION" ]; then printf '%s' "$FIXTURE_APP_VERSION" > "$mp/Unvibe.app/Contents/Info.plist"; fi
   fi
   echo "/dev/disk99	Apple_HFS	$mp"
 fi
 exit 0`,
+  // Answers only the one query install.sh makes, with the version the hdiutil stub wrote; like the real
+  // tool, a missing file or key prints an error on stdout and exits 1.
+  PlistBuddy: `[ "$1" = "-c" ] && [ "$2" = "Print :CFBundleShortVersionString" ] || exit 1
+cat "$3" 2>/dev/null || { echo 'Print: Entry, ":CFBundleShortVersionString", Does Not Exist'; exit 1; }`,
   // A verify passes only with the exact pinned requirement as one argument (and FIXTURE_CODESIGN_EXIT 0), so
   // a script that gates on a plain --verify can't pass. -dvv answers like codesign's own display, with an
   // ESC sequence and a C1 byte in the first signer name (a self-signer picks that name freely) and four signer lines.
@@ -102,7 +112,8 @@ describe("Mac install script, run with bash against stubs", () => {
       writeFileSync(file, `#!/bin/bash\n{ printf '%s' "${name}"; for a in "$@"; do printf '\\x1f%s' "$a"; done; printf '\\n'; } >> "$STUB_LOG"\n${body}\n`);
       chmodSync(file, 0o755);
     }
-    writeFileSync(path.join(dir, "install.sh"), betaInstallScript());
+    // install.sh calls PlistBuddy by its absolute path (the text test pins it); the copy under test calls the stub.
+    writeFileSync(path.join(dir, "install.sh"), betaInstallScript().replaceAll("/usr/libexec/PlistBuddy", "PlistBuddy"));
     dmg = path.join(dir, "fixture.dmg");
     writeFileSync(dmg, "not really a disk image");
     dmgSha = createHash("sha256").update(readFileSync(dmg)).digest("hex");
@@ -110,8 +121,11 @@ describe("Mac install script, run with bash against stubs", () => {
 
   after(() => rmSync(dir, { recursive: true, force: true }));
 
-  /** Fixture knobs: the pinned verify's exit code, a symlinked Unvibe.app, and ditto's exit code. */
-  function run(sums: string | null, fixture: { codesignExit?: number; appLink?: boolean; dittoExit?: number } = {}): Run {
+  /** Fixture knobs: the pinned verify's exit code, a symlinked Unvibe.app, ditto's exit code and the app's version. */
+  function run(
+    sums: string | null,
+    fixture: { codesignExit?: number; appLink?: boolean; dittoExit?: number; appVersion?: string } = {},
+  ): Run {
     const log = path.join(dir, `calls-${Math.random().toString(36).slice(2)}.log`);
     const sumsFile = path.join(dir, "SHA256SUMS-mac.txt");
     rmSync(sumsFile, { force: true });
@@ -130,6 +144,7 @@ describe("Mac install script, run with bash against stubs", () => {
         FIXTURE_PIN: PINNED_REQUIREMENT,
         FIXTURE_APP_LINK: fixture.appLink ? "1" : "0",
         FIXTURE_DITTO_EXIT: String(fixture.dittoExit ?? 0),
+        FIXTURE_APP_VERSION: fixture.appVersion ?? INSTALLED_VERSION,
       },
     });
     const calls = readFileSync(log, "utf8").split("\n").filter(Boolean).map((line) => line.split("\x1f"));
@@ -223,6 +238,11 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.ok(removedAt > copiedAt, `the installed app is removed only after the new copy is complete: ${show(r.calls)}`);
     assert.deepEqual(dittos[0], ["ditto", app, STAGED], "ditto copies exactly the checked app next to the installed one");
     assert.ok(copiedAt > checkedAt, "the copy starts after codesign");
+    const versionReads = named(r.calls, "PlistBuddy");
+    assert.deepEqual(versionReads, [["PlistBuddy", "-c", "Print :CFBundleShortVersionString", `${app}/Contents/Info.plist`]], "reads the mounted app's version");
+    const versionAt = r.calls.indexOf(versionReads[0]);
+    const firstRemoveAt = r.calls.findIndex((c) => c[0] === "rm" && touchesApplications(c));
+    assert.ok(versionAt > checkedAt && versionAt < firstRemoveAt, "the version is read after codesign and before anything in /Applications is removed");
     assert.deepEqual(
       named(r.calls, "rm").filter(touchesApplications),
       [["rm", "-rf", STAGED], ["rm", "-rf", DEST]],
@@ -232,6 +252,17 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.deepEqual(moves, [["mv", STAGED, DEST]], "the complete copy is moved into place");
     assert.ok(r.calls.indexOf(moves[0]) > removedAt, "mv runs after the old app is removed");
     assert.deepEqual(named(r.calls, "open"), [["open", DEST]], "opens the installed app");
+  });
+
+  it("stops after the signature check, before anything is removed, when the app is not the version it installs", () => {
+    for (const appVersion of ["0.1.43", `${INSTALLED_VERSION}0`, ""]) {
+      const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { appVersion });
+      assert.notEqual(r.status, 0, `version ${JSON.stringify(appVersion)} must stop: ${r.output}`);
+      assert.ok(r.output.includes(`The downloaded app is not version ${INSTALLED_VERSION}. Nothing was installed`), r.output);
+      assert.ok(r.output.includes(HELP_URL), r.output);
+      assertOnePinnedVerify(r);
+      assertNothingInstalled(r);
+    }
   });
 
   it("keeps the installed app and stops when the copy fails", () => {
@@ -282,6 +313,17 @@ describe("Mac install script text", () => {
     assert.ok(script.split("\n").includes(line), "the Authority print line is exactly the sanitised one");
   });
 
+  it("requires the mounted app's version to be the one it installs, the version the site shows", () => {
+    assert.equal(BETA_INSTALL_VERSION, BETA_INSTALL_TAG, "the site's version is the tag install.sh installs");
+    const lines = script.split("\n");
+    assert.ok(lines.includes(`VERSION="\${TAG#v}"`), "VERSION is the tag without its v");
+    assert.ok(
+      lines.includes(`appVersion="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$mountPoint/Unvibe.app/Contents/Info.plist" 2>/dev/null || true)"`),
+      "reads CFBundleShortVersionString from the mounted app",
+    );
+    assert.ok(lines.includes(`if [ "$appVersion" != "$VERSION" ]; then`), "stops unless it is exactly VERSION");
+  });
+
   it("checks the signature, then copies next to the installed app, and only then removes it and moves the copy in", () => {
     const at = (text: string) => {
       const index = script.indexOf(text);
@@ -289,11 +331,13 @@ describe("Mac install script text", () => {
       return index;
     };
     const verifyAt = at("codesign --verify");
+    const versionAt = at(`if [ "$appVersion" != "$VERSION" ]; then`);
     const clearAt = at(`rm -rf "$DEST.new"\nif ! ditto`);
     const copyAt = at(`if ! ditto "$mountPoint/Unvibe.app" "$DEST.new"; then`);
     const quitAt = at("osascript -e");
     const swapAt = at(`if ! { rm -rf "$DEST" && mv "$DEST.new" "$DEST"; }; then`);
-    assert.ok(verifyAt < clearAt, "codesign comes before anything in /Applications is removed");
+    assert.ok(verifyAt < versionAt, "the version is checked after the signature");
+    assert.ok(versionAt < clearAt, "the version is checked before anything in /Applications is removed");
     assert.ok(clearAt < copyAt, "a leftover copy is cleared before copying");
     assert.ok(copyAt < quitAt, "the copy is complete before the running app is closed");
     assert.ok(quitAt < swapAt, "the installed app is removed only for the swap, after the copy");
