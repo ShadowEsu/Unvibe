@@ -97,10 +97,15 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
   a private CSV (mode 600, `~/.config/unvibe-promo/unvibe-promo-<batch>.csv`) and a hash-only SQL
   insert that is run once by hand. `take <batch> <who>` hands out the next code under a file lock.
   Both refuse to write into a folder that isn't yours, that other users can write (group or world),
-  or that sits under a folder they can change. Right before the SQL runs on production,
-  `verify <batch>` checks that it is exactly the insert for the codes in the CSV and prints the batch
-  settings and the SQL's sha256, which must match the one `generate` printed
-  (`shasum -a 256 <sql>` shows it too).
+  or that sits under a folder they can change. They also refuse a folder path that is itself a
+  symlink; pass the real folder path instead. `generate` refuses a `--label` with control characters
+  (tabs, line breaks and the like). It prints the SQL's sha256: record it somewhere off this Mac, for
+  example in a note on your phone, because anyone who could change the SQL here could change a copy
+  kept next to it. Right before the SQL runs on production, run
+  `verify <batch> --expect-sha <sha256>` with the sha256 you recorded. It refuses to go on without
+  it, and refuses the SQL (do not run it) if the file's sha256 is different. Then it checks that the
+  SQL is exactly the insert for the codes in the CSV, refuses a label with control characters, and
+  prints the batch settings.
 - `GET /api/v1/admin/promo` lists batches and redemptions; `POST` with `revoke_code` or
   `revoke_batch` switches codes off (`UNVIBE_ADMIN_STATS_TOKEN`; the script's `list` and `revoke`
   use it). Revoking a redeemed code takes back only the promo time not used yet: at most what that

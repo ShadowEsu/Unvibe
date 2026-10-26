@@ -7,14 +7,16 @@
 //       ~/.config/unvibe-promo/unvibe-promo-<batch>.csv) and a hash-only SQL insert (the batch
 //       row plus sha256("unvibe-promo:" + code) per code; default next to the CSV). Never
 //       overwrites either file. The SQL is run once, by hand, with the owner's yes. Prints the SQL's
-//       sha256.
+//       sha256, which the owner records somewhere off this Mac. A label with control characters is
+//       refused.
 //   node scripts/promo-batch.mjs take <batch> <who> [--csv path]
 //       Marks the next unused code as given to <who> (with the time) and prints it. A lock file
 //       next to the CSV makes sure two senders never get the same code.
-//   node scripts/promo-batch.mjs verify <batch> [--csv path] [--sql path]
-//       Run right before the SQL goes to production: checks that it is exactly the insert generate
-//       writes for the codes in the CSV (nothing added, removed or swapped), and prints the batch
-//       settings and the SQL's sha256 to compare with what generate printed.
+//   node scripts/promo-batch.mjs verify <batch> --expect-sha <sha256> [--csv path] [--sql path]
+//       Run right before the SQL goes to production: refuses unless the SQL's sha256 is the one
+//       generate printed (recorded off this Mac), then checks that the SQL is exactly the insert
+//       generate writes for the codes in the CSV (nothing added, removed or swapped) and prints the
+//       batch settings.
 //   node scripts/promo-batch.mjs list
 //   node scripts/promo-batch.mjs revoke <code>
 //       Call the API's admin endpoint: UNVIBE_APP_BACKEND_URL (e.g. https://api.unvibe.site) and
@@ -34,6 +36,8 @@ const BATCH_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const HEADER = 'code,given_to,given_at';
 const DEFAULTS = { months: 3, cap: 300, redeemBy: '2026-11-30 23:59:59 America/Los_Angeles' };
 const REDEEM_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})? [A-Za-z_]+\/[A-Za-z_]+$/;
+const CONTROL_RE = /[\u0000-\u001f\u007f]/;
+const SHA_RE = /^[0-9a-f]{64}$/;
 const LABELS = { calhacks13: 'Cal Hacks 13.0' };
 const LOCK_WAIT_MS = 10_000;
 
@@ -152,15 +156,16 @@ export function insertSql({ batch, label, months, cap, redeemBy, hashes, generat
 
 /**
  * Another user who can change the folder, or any folder above it, could swap the CSV or the SQL or
- * plant files beside them. The folder must be yours and not group- or world-writable. Every folder
- * above it, both as written and as reached through symlinks, must belong to you or root and must not
- * be group- or world-writable unless it has the sticky bit (like /tmp, where others can't rename or
- * delete what is yours).
+ * plant files beside them. The folder must be a real folder (not a symlink), yours, and not group-
+ * or world-writable. Every folder above it, both as written and as reached through symlinks, must
+ * belong to you or root and must not be group- or world-writable unless it has the sticky bit (like
+ * /tmp, where others can't rename or delete what is yours).
  */
 function assertPrivateFolder(folder) {
-  if (!existsSync(folder)) return;
+  const own = lstatSync(folder, { throwIfNoEntry: false });
+  if (!own) return;
+  if (own.isSymbolicLink()) fail(`${folder} is a symlink; pass the real folder path instead`);
   const uid = typeof process.getuid === 'function' ? process.getuid() : undefined;
-  const own = statSync(folder);
   if (!own.isDirectory()) fail(`${folder} is not a folder`);
   if (uid !== undefined && own.uid !== uid) fail(`${folder} belongs to another user; use a folder of your own`);
   if ((own.mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
@@ -188,7 +193,9 @@ function generate(batch, countText, options) {
   if (!REDEEM_RE.test(redeemBy)) {
     fail('--redeem-by must look like "2026-11-30 23:59:59 America/Los_Angeles"');
   }
-  const label = (options.label ?? LABELS[batch] ?? batch).slice(0, 120);
+  const fullLabel = options.label ?? LABELS[batch] ?? batch;
+  if (CONTROL_RE.test(fullLabel)) fail('--label must not contain control characters such as tabs or line breaks');
+  const label = fullLabel.slice(0, 120);
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
   for (const path of [csvPath, sqlPath]) if (existsSync(path)) fail(`${path} already exists; nothing written`);
@@ -207,9 +214,11 @@ function generate(batch, countText, options) {
   console.log(`${count} codes for ${batch} (${months} months, cap ${cap}, redeem by ${redeemBy})`);
   console.log(`codes (private, mode 600): ${csvPath}`);
   console.log(`hash-only SQL: ${sqlPath}`);
-  console.log(`SQL sha256: ${sha256Hex(sql)}`);
+  const sha = sha256Hex(sql);
+  console.log(`SQL sha256: ${sha}`);
+  console.log('record this sha256 somewhere off this Mac (a note on your phone, for example); verify needs it');
   const paths = `${options.csv ? ` --csv ${JSON.stringify(csvPath)}` : ''}${options.sql ? ` --sql ${JSON.stringify(sqlPath)}` : ''}`;
-  console.log(`right before running it on production: node scripts/promo-batch.mjs verify ${batch}${paths}`);
+  console.log(`right before running it on production: node scripts/promo-batch.mjs verify ${batch} --expect-sha ${sha}${paths}`);
 }
 
 // ------------------------------------------------------------------------------ take
@@ -270,22 +279,33 @@ const GENERATED_RE = /^-- Generated (\S+) by web\/scripts\/promo-batch\.mjs\./;
 const BATCH_ROW_RE = /^ {2}values \('((?:[^']|'')*)', '((?:[^']|'')*)', (\d+), timestamptz '((?:[^']|'')*)', (\d+)\);$/;
 const unquote = (value) => value.replace(/''/g, "'");
 
-function sha256Hex(text) {
-  return createHash('sha256').update(text).digest('hex');
+function sha256Hex(data) {
+  return createHash('sha256').update(data).digest('hex');
 }
 
 /**
- * The SQL must be exactly what generate writes for the codes in the private CSV: rebuilt here from
+ * Nothing in the SQL is trusted until its sha256 matches the one generate printed, which the owner
+ * recorded off this Mac: anyone who could edit the SQL here could edit a sha stored beside it. Then
+ * the SQL must be exactly what generate writes for the codes in the private CSV: rebuilt here from
  * the CSV and compared byte for byte, so an added statement, a swapped hash or a dropped code all
- * fail. The batch settings come from the SQL itself, so they are printed for the owner to confirm.
+ * fail. The batch settings are printed for the owner to confirm.
  */
 function verify(batch, options) {
   if (!BATCH_RE.test(batch ?? '')) fail('batch must be lower case letters, digits, - or _');
+  const expected = options['expect-sha'];
+  if (!SHA_RE.test(expected ?? '')) {
+    fail('verify needs --expect-sha <sha256>: the 64 lowercase hex characters generate printed, as you recorded them off this Mac');
+  }
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
   for (const folder of new Set([dirname(csvPath), dirname(sqlPath)])) assertPrivateFolder(folder);
   if (!existsSync(sqlPath)) fail(`no SQL at ${sqlPath}`);
-  const sql = readFileSync(sqlPath, 'utf8');
+  const bytes = readFileSync(sqlPath);
+  const actual = sha256Hex(bytes);
+  if (actual !== expected) {
+    fail(`${sqlPath} has sha256 ${actual}, not the ${expected} you recorded; it changed after generate, do not run it`);
+  }
+  const sql = bytes.toString('utf8');
   const lines = sql.split('\n');
   const generatedAt = GENERATED_RE.exec(lines[1] ?? '')?.[1];
   const row = BATCH_ROW_RE.exec(lines[5] ?? '');
@@ -299,18 +319,20 @@ function verify(batch, options) {
     if (!code) fail(`${csvPath} has a row that is not a promo code`);
     return hashOf(code);
   });
-  const want = insertSql({ batch, label: unquote(label), months, cap, redeemBy: unquote(redeemBy), hashes, generatedAt }).split('\n');
-  if (want.join('\n') !== sql) {
+  const want = insertSql({ batch, label: unquote(label), months, cap, redeemBy: unquote(redeemBy), hashes, generatedAt });
+  if (!Buffer.from(want, 'utf8').equals(bytes)) {
+    const wantLines = want.split('\n');
     let at = 0;
-    while (at < want.length && at < lines.length && want[at] === lines[at]) at += 1;
+    while (at < wantLines.length && at < lines.length && wantLines[at] === lines[at]) at += 1;
     fail(`${sqlPath} does not match the codes in ${csvPath} (first difference on line ${at + 1}); do not run it`);
   }
+  if (CONTROL_RE.test(unquote(label))) fail(`${sqlPath} has a control character in its label; do not run it`);
   if (months < 1 || months > 12) fail(`${sqlPath} gives ${months} months; generate allows 1 to 12`);
   if (cap < 1) fail(`${sqlPath} has a cap of ${cap}`);
   if (!REDEEM_RE.test(unquote(redeemBy))) fail(`${sqlPath} has an unexpected redeem-by date`);
-  console.log(`OK: ${sqlPath} is exactly the insert for the ${hashes.length} codes in ${csvPath}.`);
+  console.log(`OK: ${sqlPath} has the sha256 you recorded and is exactly the insert for the ${hashes.length} codes in ${csvPath}.`);
   console.log(`batch ${batch} (${unquote(label)}): ${months} months, cap ${cap}, redeem by ${unquote(redeemBy)}`);
-  console.log(`SQL sha256: ${sha256Hex(sql)}`);
+  console.log(`SQL sha256: ${actual}`);
 }
 
 // ------------------------------------------------------------------------------ admin API
@@ -370,7 +392,7 @@ async function main() {
   if (command === 'list') return list();
   if (command === 'revoke') return revoke(positional[0]);
   if (command === 'verify') return verify(positional[0], options);
-  fail('usage: generate <batch> <count> [--csv path] [--sql path] | take <batch> <who> [--csv path] | verify <batch> [--csv path] [--sql path] | list | revoke <code>');
+  fail('usage: generate <batch> <count> [--csv path] [--sql path] | take <batch> <who> [--csv path] | verify <batch> --expect-sha <sha256> [--csv path] [--sql path] | list | revoke <code>');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
