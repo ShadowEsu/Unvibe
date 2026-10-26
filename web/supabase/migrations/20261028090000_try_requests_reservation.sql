@@ -14,6 +14,13 @@
 --     select/insert/sequence grants are restated so the function (security invoker) works on a
 --     project whose default privileges don't reach service_role; production already has them.
 --   * The function is callable by service_role only.
+--   * Early refusal: the function first runs both counts without the lock and returns hour_cap or
+--     day_cap if either cap is already reached. A capped visitor, or anyone once the day is capped,
+--     never takes the lock, so a flood of refused requests doesn't queue on it while holding
+--     connections from PostgREST's pool. Only calls that may insert (at most the day cap's worth a
+--     day, plus a burst's losers) take the lock and recount under it.
+--   * lock_timeout = 1s: a call that would wait more than a second for the lock fails with 55P03,
+--     and the route answers 503, instead of holding a pooled connection behind a stuck holder.
 --
 -- Order: apply this migration first (after a backup), then deploy the API. Today's production code
 -- keeps working once this is applied: it counts and inserts with the service role, whose rights are
@@ -43,6 +50,7 @@ returns text
 language plpgsql
 security invoker
 set search_path = public, pg_temp
+set lock_timeout = '1s'
 as $$
 declare
   v_mine bigint;
@@ -66,9 +74,31 @@ begin
       using errcode = '25000';
   end if;
 
-  -- One lock for every Try request: the daily cap is global, so all reservations queue here. Held
-  -- until the transaction ends, i.e. after this call's insert commits. The key is a fixed constant
-  -- ('try_resv' as 8 ASCII bytes) outside the int4 range of the hashtext() keys other functions use.
+  -- Early refusal, without the lock. Within one call now() is fixed (it's the transaction's start
+  -- time) and rows are only ever added, so a count can't drop between here and the locked recount: a
+  -- cap reached here is still reached under the lock. (A purge of day-old rows could at most refuse a
+  -- request a moment early; it can never admit one.) Refusing here keeps capped visitors, and
+  -- everyone once the day is capped, off the lock. A count under the cap proves nothing (others may
+  -- be inserting), so those calls go on to the lock and the recount below, which is unchanged.
+  select count(*) into v_mine
+  from public.try_requests
+  where ip_hash = p_ip_hash and created_at >= now() - interval '1 hour';
+  if v_mine >= p_ip_cap then
+    return 'hour_cap';
+  end if;
+  select count(*) into v_all
+  from public.try_requests
+  where created_at >= now() - interval '1 day';
+  if v_all >= p_day_cap then
+    return 'day_cap';
+  end if;
+
+  -- One lock for every reservation that may insert: the daily cap is global, so they all queue here.
+  -- Held until the transaction ends, i.e. after this call's insert commits; lock_timeout (above)
+  -- bounds the wait at 1 s. The key is a fixed int8 constant ('try_resv' as 8 ASCII bytes). The
+  -- schema's other advisory keys are int4 hashtext() values (the gift functions), which it can't
+  -- equal, and int8 hashtextextended() values (team workspaces, 20261022133000); a collision with
+  -- one of those is about 2^-64 likely and would only make one call wait for the other.
   perform pg_advisory_xact_lock(8390902506592760694);
 
   -- This visitor's requests in the last hour (try_requests_ip_time_idx).
