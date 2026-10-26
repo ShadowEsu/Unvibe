@@ -823,6 +823,47 @@ static class Batches
     watchOut:
       "`LongBatches` returns a query, not a list, and the query runs again every time you loop over it. Add a `delta` batch of 30 minutes to the source list after calling it and the same result now gives `alpha, beta, delta`, while a `ToList()` taken before still holds `alpha, beta`.",
   },
+  {
+    id: "kotlin",
+    fileName: "Parcel.kt",
+    lead: "Paste Kotlin and Vibe explains where null can turn up, what a data class writes for you and where an extension function comes from.",
+    description:
+      "Paste Kotlin code and get a plain English explanation, free online. The sample labels parcels with a data class, two extension functions and safe calls.",
+    sampleSummary: "A data class for parcels with an optional note, two extension functions and a function that labels a list of parcels.",
+    sample: `data class Parcel(val code: String, val grams: Int, val note: String? = null)
+
+fun Parcel.label(): String {
+    val text = note?.trim() ?: "no note"
+    return "$code: $grams g ($text)"
+}
+
+fun Parcel.withExtra(extra: Int): Parcel = copy(grams = grams + extra)
+
+fun packingLabels(parcels: List<Parcel>): List<String> {
+    return parcels.map { it.label() }
+}`,
+    shows: [
+      {
+        concept: "null safety",
+        text: "`note` is a `String?`, so it may be null, and it is unless you pass one. `note?.trim()` calls `trim` only when there is a note, and `?: \"no note\"` fills in when there isn't. Write `note.trim()` and the compiler stops: only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type `String?`.",
+      },
+      {
+        concept: "extensions",
+        text: "`fun Parcel.label()` and `fun Parcel.withExtra()` add functions to `Parcel` from outside the class, so `packingLabels` can call `it.label()` as if it were a method. Inside them, `code`, `grams`, `note` and `copy` belong to the parcel they were called on.",
+      },
+      {
+        concept: "data classes",
+        text: "`data class` writes `equals`, `copy` and destructuring for the three properties. `withExtra(25)` returns a 525 g copy and leaves the 500 g original as it was, `original == original.copy()` is `true`, and `val (code, grams, note) = original` gives `BOX`, `500` and `null`.",
+      },
+    ],
+    notes: [
+      "`packingLabels` turns a 500 g `BOX` without a note and a 100 g `BAG` with the note `\"  fragile  \"` into `BOX: 500 g (no note)` and `BAG: 100 g (fragile)`.",
+      "`withExtra` changes only `grams`: the copy keeps the original's `code` and `note`, and the two parcels are not equal.",
+      "An empty list of parcels gives an empty list of labels.",
+    ],
+    watchOut:
+      "`?:` only steps in for `null`. A note of three spaces trims to an empty string, which isn't null, so `Parcel(\"ENV\", 20, \"   \")` gets the label `ENV: 20 g ()`. `note?.trim()?.ifBlank { null } ?: \"no note\"` gives `no note` for it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
