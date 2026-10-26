@@ -578,3 +578,32 @@ describe("sign-in pages (/activate, /redeem)", () => {
     assert.deepEqual(replay.calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop"], "replays stay stopped");
   });
 });
+
+describe("a tab on a private page while another tab opts back in", () => {
+  const realWindow: unknown = Reflect.get(globalThis, "window");
+
+  afterEach(() => {
+    Reflect.set(globalThis, "window", realWindow);
+  });
+
+  it("both hooks drop every event while this tab shows /activate or /redeem, even one stamped with a public URL", () => {
+    for (const pathname of ["/activate", "/redeem"]) {
+      // Tracking allowed in shared storage (no opt-out stored), this tab on a sign-in page.
+      Reflect.set(globalThis, "window", {
+        navigator: { webdriver: false },
+        location: { href: `https://unvibe.site${pathname}`, pathname, search: "" },
+        localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+      });
+      const posthogEvent: CaptureResult = { uuid: "u9", event: "$pageleave", properties: { $current_url: PUBLIC } };
+      assert.equal(posthogBeforeSend(posthogEvent), null, `PostHog event sent while on ${pathname}`);
+      assert.equal(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: PUBLIC } }), null, `Mixpanel event sent while on ${pathname}`);
+    }
+    Reflect.set(globalThis, "window", {
+      navigator: { webdriver: false },
+      location: { href: PUBLIC, pathname: "/pricing", search: "" },
+      localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+    });
+    assert.ok(posthogBeforeSend({ uuid: "u10", event: "$pageview", properties: { $current_url: PUBLIC } }), "public page sends");
+    assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: PUBLIC } }), "public page sends");
+  });
+});

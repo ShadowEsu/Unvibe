@@ -121,6 +121,15 @@ function sentFromPrivatePage(properties: PropertyBag | undefined): boolean {
 }
 
 /**
+ * True while this tab shows an admin, capability or sign-in page. The SDKs' opt-in lives in
+ * storage shared by every tab, so a tab on a public page can turn capture back on for a tab that
+ * sits on `/activate`; this check, made when each event is sent, keeps that tab silent.
+ */
+function onPrivatePageNow(): boolean {
+  return typeof window !== "undefined" && !analyticsAllowedOnPath(window.location?.pathname ?? "/");
+}
+
+/**
  * PostHog heatmaps buffer clicks and mouse moves under the raw page URL whatever the capture
  * state, and flush them every few seconds as one `$$heatmap` event from whatever page is open
  * then. So a flush from a public page can carry the last moments on an admin or sign-in page,
@@ -143,6 +152,8 @@ function cleanHeatmapData(data: unknown): Record<string, unknown[]> | null {
 /** PostHog `before_send`: every event, pageview, person update, heatmap flush and replay snapshot. */
 export const posthogBeforeSend: BeforeSendFn = (event: CaptureResult | null) => {
   if (!event) return event;
+  // This tab is on a private page, whatever another tab did to the shared opt-in.
+  if (onPrivatePageNow()) return null;
   // An opt-out after the SDK started.
   if (browserTrackingDisabled()) return null;
   // Pageviews, autocapture, heatmaps and exceptions after a client navigation into an admin page.
@@ -180,7 +191,7 @@ export function maskReplayNetworkEntry<T extends NetworkEntry>(entry: T): T {
 
 /** Mixpanel `before_send_events`: every tracked, autocaptured and pageview event (not replays). Null drops it. */
 export function mixpanelBeforeSend<T extends { properties: PropertyBag }>(payload: T): T | null {
-  if (browserTrackingDisabled() || sentFromPrivatePage(payload.properties)) return null;
+  if (onPrivatePageNow() || browserTrackingDisabled() || sentFromPrivatePage(payload.properties)) return null;
   return { ...payload, properties: sanitizeProperties(payload.properties) };
 }
 
