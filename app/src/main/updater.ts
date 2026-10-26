@@ -218,6 +218,9 @@ export async function prepareUpdate(
   const { platform, fetchImpl, pid, portable, macTarget = '/Applications/Unvibe.app', workRoot = tmpdir(), onProgress } = opts;
   if (!info.available || !info.url || !info.latest) return { ok: false, error: 'You already have the newest Unvibe.' };
   if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
+  // A downloaded app that was opened without being moved runs from a read-only copy (App
+  // Translocation), so the helper could never replace it and the update would silently do nothing.
+  if (platform === 'darwin' && macTarget.includes('/AppTranslocation/')) return { ok: false, error: 'Move Unvibe to your Applications folder first, then update.' };
 
   const assetName = path.basename(new URL(info.url).pathname);
   const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(workRoot, 'unvibe-update-'));
