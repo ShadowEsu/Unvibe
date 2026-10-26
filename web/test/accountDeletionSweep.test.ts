@@ -13,7 +13,7 @@ import { SWEEP_LIMIT, SWEEP_TIME_BUDGET_MS, sweepAccountDeletions, type SweepCou
 // The daily sweep with the memory store, a fake Supabase Auth admin API and a fake Blob store.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-process.env.STRIPE_SECRET_KEY = 'sk_test_local_only_never_sent';
+process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 const SECRET = `cron-${randomUUID()}`;
 
 const identities = new Set<string>();
