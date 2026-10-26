@@ -49,8 +49,8 @@ const PAGES: readonly FlexAccordionItem[] = [
     id: "library",
     label: "Library",
     title: "Library",
-    body: "Saved explanations, their source and whether the code has changed since. Shown: Unvibe 0.1.43 with sample lessons, from the product screenshot collection.",
-    image: { src: "/press/app/03-library.jpg", width: 2000, height: 1281, alt: "Unvibe 0.1.43 Library with sample lessons and Current or Review freshness labels" },
+    body: "Saved explanations remember the code they explained. Refresh one in Briefs to see if it changed. Shown: Unvibe 0.1.43 with sample lessons, from the product screenshot collection.",
+    image: { src: "/press/app/03-library.jpg", width: 2000, height: 1281, alt: "Unvibe 0.1.43 Library with sample lessons and Current or Review labels" },
   },
   {
     id: "briefs",

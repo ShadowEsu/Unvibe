@@ -31,7 +31,7 @@ currently intended to be `https://api.unvibe.site`).
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same publishable/anon key, only if the browser activation screen is deployed. | As applicable |
 | `UNCODE_ALLOW_DEV_EMAIL_AUTH` | Keep `false` in production. | Yes |
 | `LOG_LEVEL` | `info` (do not use debug logging for user code). | Yes |
-| `BILLING_GRACE_PERIOD_DAYS` | A founder-approved number, currently `7`. | If billing is enabled |
+| `BILLING_GRACE_PERIOD_DAYS` | An owner-approved number, currently `7`. | If billing is enabled |
 
 Before pointing any user at this backend:
 
@@ -76,7 +76,7 @@ Set these on the marketing hosting project for `https://unvibe.site`.
 | `NEXT_PUBLIC_SITE_URL` | `https://unvibe.site` | Yes |
 | `BLOB_READ_WRITE_TOKEN` | A dedicated Vercel Blob store token for durable encrypted waitlist records. | Yes for waitlist |
 | `WAITLIST_ADMIN_TOKEN` | A long, random server-only secret. It also encrypts stored waitlist records; store it safely before using it. | Yes for waitlist |
-| `WAITLIST_NOTIFY_EMAIL` | Your monitored founder/support inbox. | Yes for notifications |
+| `WAITLIST_NOTIFY_EMAIL` | Your monitored support inbox. | Yes for notifications |
 | `RESEND_API_KEY` | Server-only Resend key. | Strongly recommended |
 | `WAITLIST_FROM_EMAIL` | A verified sender, for example `Unvibe Waitlist <waitlist@unvibe.site>`. | Yes with Resend |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Optional analytics key. Leave blank for no analytics. | Optional |

@@ -1,6 +1,6 @@
 # Real AI provider test
 
-Credential owner: founder. Cost owner: founder. This checklist is deliberately not automated because it can make paid requests.
+Credential owner: business owner. Cost owner: business owner. This checklist is deliberately not automated because it can make paid requests.
 
 1. First complete the mock-provider staging gate and confirm no source or secret appears in logs.
 2. Create a restricted staging provider key with a small spend limit; add it only to staging.
@@ -12,4 +12,4 @@ Credential owner: founder. Cost owner: founder. This checklist is deliberately n
 8. Record latency to first token, total latency, request count, estimated cost, provider request IDs, and screenshots with source redacted.
 9. Remove or rotate the key after the test window.
 
-Pass requires accurate project-grounded output with file/line citations, no secret transmission, honest error states, and founder acceptance of measured cost. This does not approve the provider's legal terms.
+Pass requires accurate project-grounded output with file/line citations, no secret transmission, honest error states, and business owner acceptance of measured cost. This does not approve the provider's legal terms.

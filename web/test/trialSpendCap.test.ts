@@ -4,14 +4,22 @@ import { POST as review } from '../app/api/v1/reviews/route';
 import { POST as comprehension } from '../app/api/v1/comprehension/route';
 import {
   reserveTrialAction,
+  reserveTrialProgressPing,
   trialCounterUsed,
   trialGlobalDayKey,
   trialGlobalMonthKey,
   trialInstallKey,
-  trialIpKey,
+  trialIpKey as trialIpKeyOrNull,
   trialUsageLine,
 } from '../src/lib/trialAccess';
 import { clientIp } from '../src/lib/tryDemo';
+
+/** The per-IP key where one exists (a server secret, or the per-process key outside production). */
+function trialIpKey(ip: string, now: Date): string {
+  const key = trialIpKeyOrNull(ip, now);
+  assert.ok(key, 'trialIpKey returned no key');
+  return key;
+}
 
 // Real route handlers and the in-memory trial counters; only the AI and PostgREST HTTP boundaries are local.
 const BASE_ENV = { ...process.env };
@@ -101,10 +109,32 @@ test('the per-IP key is a salted daily hash, never the raw address', () => {
   const day = new Date('2026-10-22T08:00:00.000Z');
   const key = trialIpKey('203.0.113.7', day);
   assert.match(key, /^__ip__:2026-10-22:[0-9a-f]{32}$/);
-  assert.doesNotMatch(key, /203/);
+  // The whole address, not a digit run: hex hashes contain runs like "203" by chance.
+  assert.ok(!key.includes('203.0.113.7'), 'the raw address is not in the key');
   assert.equal(trialIpKey('203.0.113.7', new Date('2026-10-22T23:59:59.000Z')), key);
   assert.notEqual(trialIpKey('203.0.113.8', day), key);
   assert.notEqual(trialIpKey('203.0.113.7', new Date('2026-10-23T00:00:00.000Z')).split(':')[2], key.split(':')[2]);
+});
+
+test('production without TRY_IP_SALT or the service-role key refuses trial requests instead of using a known key', async () => {
+  // beforeEach removed SUPABASE_SERVICE_ROLE_KEY; the counters stay in memory either way.
+  delete process.env.TRY_IP_SALT;
+  Object.assign(process.env, { NODE_ENV: 'production' });
+  const now = new Date('2026-11-14T08:00:00.000Z');
+  const install = trialInstallKey('no-ip-secret-install');
+  assert.equal(trialIpKeyOrNull('203.0.113.60', now), null);
+
+  const refused = await reserveTrialAction(install, 'ai_explanation', '203.0.113.60', now);
+  assert.equal(refused.denied?.status, 503);
+  assert.equal((await refused.denied?.json())?.error, 'trial_unavailable');
+  assert.equal((await trialUsageLine(install, 'ai_explanation', now)).used, 0, 'the install unit was not taken');
+  assert.equal(await trialCounterUsed(trialGlobalDayKey(now)), 0, 'no shared counter was taken');
+  assert.equal(await reserveTrialProgressPing('203.0.113.60', now), 'unavailable');
+
+  // The same request goes through in production once a server secret exists.
+  process.env.TRY_IP_SALT = 'server-only-salt-for-this-test';
+  assert.equal((await reserveTrialAction(install, 'ai_explanation', '203.0.113.60', now)).denied, null);
+  assert.equal(await trialCounterUsed(trialIpKey('203.0.113.60', now)), 1);
 });
 
 test('IPv6 addresses are grouped by /64; IPv4-mapped IPv6 counts as the IPv4', () => {

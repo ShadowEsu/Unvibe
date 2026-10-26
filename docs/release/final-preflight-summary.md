@@ -6,6 +6,6 @@ Prepared locally: atomic/idempotent device approval, one-time redemption, expiry
 
 Credential-free validation: `npm run verify:beta` passed 22/22 checks, including desktop/backend/extension/marketing builds and tests, exact dependency-advisory checks, local API deletion/token replay, and a fresh unsigned arm64 DMG/checksum/package inspection. Reports are in ignored `.release/` output and should be archived with the release evidence.
 
-External blockers: isolated staging resources and migrations; destructive two-user/deletion pass; real paid-provider test; two physical/isolated-device test; clean-machine package QA; Apple signing/notarization; runtime performance/accessibility matrices; approved contacts/branding; legal review; founder risk decisions on Next.js 14 and Electron/build-tool advisories. Billing remains disabled.
+External blockers: isolated staging resources and migrations; destructive two-user/deletion pass; real paid-provider test; two physical/isolated-device test; clean-machine package QA; Apple signing/notarization; runtime performance/accessibility matrices; approved contacts/branding; legal review; owner risk decisions on Next.js 14 and Electron/build-tool advisories. Billing remains disabled.
 
 Release rule: no external distribution until every blocking checklist item has evidence. A successful build or deployment alone is not a release.

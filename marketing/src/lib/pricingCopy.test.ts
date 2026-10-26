@@ -57,6 +57,17 @@ describe("pricing copy in both states", () => {
       assert.ok(copy.plans.find((plan) => plan.id === "pro")?.features.includes("More explanations each month than Free"));
     });
   }
+
+  it("lists Briefs and Why does this exist? as Free; Pro adds only the AI explanation of diffs and Briefs", () => {
+    const plans = pricingCopy(false).plans;
+    const free = plans.find((plan) => plan.id === "free")?.features ?? [];
+    const pro = plans.find((plan) => plan.id === "pro")?.features ?? [];
+    assert.ok(free.includes("Briefs of your Git changes, made on your computer"));
+    assert.ok(free.includes("“Why does this exist?” from your Git history"));
+    assert.ok(pro.includes("AI explanations of Git diffs and change Briefs"));
+    for (const feature of pro) if (/brief|diff/i.test(feature)) assert.match(feature, /^AI explanations of /, feature);
+    for (const paymentsOpen of [false, true]) assert.match(pricingCopy(paymentsOpen).description, /adds Expert depth, AI explanations of Git diffs and nearby-file context\./);
+  });
 });
 
 describe("pricing copy once payments open", () => {
@@ -65,7 +76,7 @@ describe("pricing copy once payments open", () => {
   it("keeps today's wording", () => {
     assert.equal(`${open.heading.lead}${open.heading.emphasis}${open.heading.tail}`, "Start free. Upgrade when it earns a place in your day.");
     assert.equal(open.heading.emphasis, "earns a place");
-    assert.equal(open.description, `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`);
+    assert.equal(open.description, `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`);
     assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
