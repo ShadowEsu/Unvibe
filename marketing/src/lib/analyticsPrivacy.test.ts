@@ -72,6 +72,12 @@ describe("analytics URL sanitizer", () => {
     }
   });
 
+  it("strips a promo code from a /redeem link", () => {
+    const clean = sanitizeUrl("https://unvibe.site/redeem?promo=ABCD-EFGH-JKMN-PQRS&utm_source=calhacks");
+    assertClean(clean);
+    assert.equal(clean, "https://unvibe.site/redeem?promo=redacted&utm_source=calhacks");
+  });
+
   it("strips invite and gift codes but keeps campaign tags", () => {
     const clean = sanitizeUrl(`https://unvibe.site/?utm_source=x&ref=${GIFT_CODE}`);
     assertClean(clean);

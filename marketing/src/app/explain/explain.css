@@ -1,0 +1,185 @@
+/* /explain pages only: loaded by these routes, so no other page downloads it.
+   The heading and the notes sit on reading cards built from the site's card tokens (--v-card, --v-ink,
+   --v-shadow, --v-radius), so they follow the site theme. The Try it box keeps its own styles. */
+
+/* Exactly as wide as the Try it box (min(1120px, 100%)), so every card shares its width and left edge.
+   --font-mono uses the face from mono.ts, loaded with the page, in the same stack globals.css builds. */
+.explain-page {
+  --explain-muted: color-mix(in srgb, var(--v-ink) 78%, var(--v-card));
+  --font-mono: var(--explain-mono-face), var(--font-mono-fallback), ui-monospace, monospace;
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  width: min(1120px, calc(100% - 2.5rem));
+  margin-inline: auto;
+  padding-block: clamp(5.25rem, 9vw, 7rem) 6rem;
+}
+
+.explain-head,
+.explain-card {
+  min-width: 0;
+  padding: clamp(1.1rem, 3vw, 2rem);
+  border: 1.5px solid var(--v-ink);
+  border-radius: var(--v-radius);
+  background: var(--v-card);
+  box-shadow: var(--v-shadow);
+  color: var(--v-ink);
+}
+
+.explain-head {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.explain-head h1 {
+  margin: 0;
+  color: var(--v-ink);
+  font: 700 clamp(2rem, 4.4vw, 3.1rem) / 1.05 var(--font-display);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.explain-head p {
+  max-width: 46rem;
+  margin: 0;
+  color: var(--explain-muted);
+  font-size: 1.08rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.explain-crumb {
+  color: var(--explain-muted);
+  font-size: 0.95rem;
+}
+
+/* Text links only: the download buttons in .explain-get keep their own look. */
+.explain-crumb a,
+.explain-langs a,
+.explain-more a {
+  color: var(--v-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.explain-card h2 {
+  margin: 0 0 0.9rem;
+  color: var(--v-ink);
+  font: 700 clamp(1.4rem, 2.6vw, 1.85rem) / 1.15 var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.explain-card h2:not(:first-child) {
+  margin-top: 2rem;
+}
+
+.explain-card p,
+.explain-card li,
+.explain-card dd {
+  max-width: 48rem;
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.explain-card p {
+  margin: 0 0 1rem;
+}
+
+.explain-card code {
+  padding: 0.05em 0.35em;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--v-ink) 8%, var(--v-card));
+  font: 0.92em var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.explain-shows {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+}
+
+.explain-shows dt {
+  font-weight: 700;
+}
+
+.explain-shows dt::first-letter {
+  text-transform: uppercase;
+}
+
+.explain-shows dd {
+  margin: 0.2rem 0 0;
+}
+
+.explain-notes {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.explain-card .explain-watch {
+  margin: 1.6rem 0 0;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid var(--v-ink);
+  border-radius: 0 12px 12px 0;
+  background: color-mix(in srgb, var(--v-ink) 5%, var(--v-card));
+}
+
+.explain-langs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.explain-langs li {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 1.1rem;
+  border: 1.5px solid var(--v-ink);
+  border-radius: 16px;
+}
+
+.explain-langs a {
+  font: 700 1.15rem / 1.3 var(--font-display);
+}
+
+.explain-card .explain-langs span {
+  color: var(--explain-muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.explain-get .get-unvibe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.2rem;
+}
+
+.explain-more ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.explain-more a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1.5px solid var(--v-ink);
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.explain-more a:hover {
+  background: color-mix(in srgb, var(--v-ink) 6%, var(--v-card));
+}

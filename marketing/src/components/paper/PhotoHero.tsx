@@ -91,7 +91,7 @@ function EmailMeLink() {
 function TryInBrowser({ device }: { device: VisitorDevice }) {
   return (
     <a className="vhero__try" href="#try-it" onClick={() => track("hero_try_clicked", { device })}>
-      Or try it in your browser first
+      Or try it online first
     </a>
   );
 }

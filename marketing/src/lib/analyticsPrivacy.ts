@@ -3,7 +3,8 @@
  *
  * - URLs: email links carry the reader's email and a signed token (`/?feedback=1&e=…&t=…`,
  *   `/api/unsubscribe?e=…&t=…`), invite and gift links carry a code (`?ref=`), device sign-in
- *   carries the device code (`/activate?user_code=…`) and the OAuth code (`?code=`), and
+ *   carries the device code (`/activate?user_code=…`) and the OAuth code (`?code=`), a promo link
+ *   carries its code (`/redeem?promo=…`), and
  *   `/s/<key>` is itself a capability. These values are replaced with "redacted" in every URL
  *   property PostHog or Mixpanel sends, and in the URLs inside PostHog replays.
  * - Replays: all page text and every input is masked, so names, emails on admin pages and model
@@ -31,6 +32,7 @@ const SECRET_PARAMS: Record<string, true> = {
   token: true,
   ref: true,
   code: true,
+  promo: true,
   user_code: true,
   device: true,
   device_code: true,
