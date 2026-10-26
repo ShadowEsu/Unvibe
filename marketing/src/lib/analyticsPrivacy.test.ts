@@ -207,6 +207,10 @@ describe("analytics privacy config", () => {
     assert.equal(POSTHOG_PRIVACY_CONFIG.request_batching, false);
   });
 
+  it("Mixpanel sends each event when it is tracked, so no stored batch skips before_send_events", () => {
+    assert.equal(mixpanelPrivacyConfig().batch_requests, false);
+  });
+
   it("Mixpanel never starts a replay on its own, and holds a new replay's first frames back", () => {
     const config = mixpanelPrivacyConfig();
     assert.equal(config.record_sessions_percent, 0);

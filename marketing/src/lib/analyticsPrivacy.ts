@@ -240,9 +240,15 @@ export const MIXPANEL_REPLAY_MIN_MS = 3000;
 /**
  * mixpanel-browser init options. Replay masks all text and inputs. The SDK never starts a replay
  * on its own (`record_sessions_percent: 0`): `syncReplayForPage` starts and stops it per page.
+ *
+ * `batch_requests: false`: batched events are stored in localStorage before the hook runs, and
+ * events left from a closed tab are sent on a later load without `before_send_events`, so with
+ * their URLs unsanitized. Unbatched, every event passes the hook when it is tracked. With
+ * batching off the SDK never reads a queue stored by an earlier visit, so none is sent.
  */
 export function mixpanelPrivacyConfig() {
   return {
+    batch_requests: false,
     autocapture: { capture_text_content: false },
     record_sessions_percent: 0,
     record_min_ms: MIXPANEL_REPLAY_MIN_MS,
