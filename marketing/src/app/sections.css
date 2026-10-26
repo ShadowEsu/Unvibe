@@ -43,6 +43,10 @@
 .try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; box-shadow: 0 3px 0 var(--v-ink); }
 .try__retry:focus-visible, .try__phone:focus-visible, .try .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 .try__after p { margin: 0 0 0.9rem; }
+/* Right after the answer: the measured time, then this visitor's download (or the emailed link on a phone). */
+.try__after p.try__took { margin-bottom: 0.7rem; color: #141414; font: 800 1.1rem/1.35 var(--font-display); }
+.try__after .get-unvibe { margin-bottom: 1rem; }
+.try__after p.try__again { margin: 0; color: #4a4740; font-size: 0.95rem; }
 
 /* Download buttons inside the always-light panel: fixed ink colours so they read in both themes. */
 .try .paper-join-row { justify-content: flex-start; }
