@@ -99,7 +99,7 @@ import {
   isProPlan,
   resolveRepoRoot,
 } from './contextBuilder';
-import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, startQuizCard, studyAskStatus } from './studyQuiz';
+import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
@@ -1017,11 +1017,9 @@ app.whenReady().then(() => {
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
   ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
     askChat(input));
-  ipcMain.handle('chat:threads', () => ({ ok: true, threads: store().chatThreads() }));
-  ipcMain.handle('chat:saveThread', (_e, thread: ChatThread) => {
-    store().saveChatThread(thread);
-    return { ok: true };
-  });
+  // wipeGeneration lets the panel stamp a conversation, so a save from before a wipe is dropped.
+  ipcMain.handle('chat:threads', () => ({ ok: true, threads: store().chatThreads(), wipeGeneration: store().wipeGeneration() }));
+  ipcMain.handle('chat:saveThread', (_e, thread: ChatThread, wipeGeneration: number) => saveChatThread(thread, wipeGeneration));
   ipcMain.handle('chat:deleteThread', (_e, id: string) => {
     store().deleteChatThread(id);
     return { ok: true };
