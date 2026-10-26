@@ -118,6 +118,8 @@ interface MemoryRedemption {
   userId: string;
   email: string | null;
   months: number;
+  /** What the grant added to the Pro end date, after the 12-month ceiling (SQL `granted`). */
+  grantedMs: number;
   periodEndAfter: string;
   redeemedAt: string;
   revokedAt: string | null;
@@ -184,11 +186,15 @@ const memoryBackend: PromoBackend = {
       if (rows.some((row) => row.userId === userId)) return none('one_per_account');
       if (rows.filter((row) => !row.revokedAt).length >= batch.maxRedemptions) return none('cap_reached');
       const billing = new MemoryBillingStore();
+      const before = (await billing.overview(userId)).subscription;
+      const now = Date.now();
+      const runningEnd = before.currentPeriodEnd ? new Date(before.currentPeriodEnd).getTime() : 0;
+      const from = before.plan === 'pro' && before.status === 'trialing' && runningEnd > now ? runningEnd : now;
       if (!(await billing.addProMonths(userId, batch.months)).applied) return none('has_paid_plan');
-      const proUntil = (await billing.overview(userId)).subscription.currentPeriodEnd ?? new Date().toISOString();
+      const proUntil = (await billing.overview(userId)).subscription.currentPeriodEnd ?? new Date(now).toISOString();
       data.redemptions.set(codeHash, {
         codeHash, batchId: batch.id, userId, email: (await getStore().accountInfo(userId)).email ?? null, months: batch.months,
-        periodEndAfter: proUntil, redeemedAt: new Date().toISOString(), revokedAt: null,
+        grantedMs: Math.max(0, new Date(proUntil).getTime() - from), periodEndAfter: proUntil, redeemedAt: new Date().toISOString(), revokedAt: null,
       });
       return { status: 'redeemed', months: batch.months, proUntil };
     });
@@ -227,7 +233,7 @@ const memoryBackend: PromoBackend = {
       code.revokedAt ??= new Date().toISOString();
       const redemption = data.redemptions.get(codeHash);
       if (!redemption || redemption.revokedAt) return { status, monthsTakenBack: false, proUntil: null };
-      const taken = await new MemoryBillingStore().takeBackProMonths(redemption.userId, redemption.months);
+      const taken = await new MemoryBillingStore().takeBackProTime(redemption.userId, redemption.grantedMs);
       if (taken.paidUntouched) return { status, monthsTakenBack: false, proUntil: null };
       redemption.revokedAt = new Date().toISOString();
       return { status, monthsTakenBack: true, proUntil: taken.proUntil };

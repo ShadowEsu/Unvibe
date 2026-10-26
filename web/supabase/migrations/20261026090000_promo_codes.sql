@@ -6,14 +6,18 @@
 --   * promo_codes: sha256("unvibe-promo:" + normalised code) in hex. The code itself is never
 --     stored. Rows are created by a one-off, hash-only insert generated locally, never by the API.
 --   * promo_redemptions: one row per redeemed code (the code hash is the primary key, so a code is
---     used once) and at most one per account per batch (unique batch_id, user_id).
+--     used once) and at most one per account per batch (unique batch_id, user_id). `granted` is the
+--     Pro time this redemption actually added (after the 12-month ceiling), so a revoke takes back
+--     exactly that. Deleting the account keeps the row (the code stays used and still counts
+--     against the cap) but drops the user link and the email.
 --   * redeem_promo_code: the grant goes through add_pro_months, the path gifts, the welcome month
 --     and the feedback month use: 30-day months, stacked on running complimentary Pro, at most 12
 --     months ahead, and never on a live Stripe subscription. When add_pro_months returns false
 --     nothing is written and the code stays usable (status has_paid_plan).
 --   * revoke_promo_code: switches a code off. If it was redeemed and the account has no live Stripe
---     subscription, the months come back off the end date and the redemption is marked revoked.
---     A paid subscription is never touched.
+--     subscription, the end date moves back by the stored `granted` (never before now), and the
+--     redemption is marked revoked, so a second revoke changes nothing. Other Pro time (welcome,
+--     gift months) stays. A paid subscription is never touched.
 --
 -- Locking: every redemption and revocation in a batch first takes that batch's row lock
 -- (select ... for update), so the cap, one-per-account and used checks always see every committed
@@ -29,6 +33,7 @@
 --   drop function if exists public.revoke_promo_code(text);
 --   drop function if exists public.redeem_promo_code(uuid, text);
 --   drop table if exists public.promo_redemptions;
+--   drop function if exists public.promo_redemption_forget_user();
 --   drop table if exists public.promo_codes;
 --   drop table if exists public.promo_batches;
 --   commit;
@@ -57,9 +62,12 @@ create index if not exists promo_codes_batch_idx on public.promo_codes (batch_id
 create table if not exists public.promo_redemptions (
   code_hash text primary key,
   batch_id text not null references public.promo_batches(id),
-  user_id uuid not null references public.users(id) on delete cascade,
+  -- Null once the account is deleted: the code stays used and keeps counting against the cap.
+  user_id uuid references public.users(id) on delete set null,
   email text,
   months integer not null check (months between 1 and 12),
+  -- What this redemption added to the Pro end date (after the 12-month ceiling); revoke takes back exactly this.
+  granted interval not null check (granted >= interval '0'),
   period_end_before timestamptz,
   period_end_after timestamptz not null,
   redeemed_at timestamptz not null default now(),
@@ -69,6 +77,23 @@ create table if not exists public.promo_redemptions (
   unique (batch_id, user_id)
 );
 create index if not exists promo_redemptions_user_idx on public.promo_redemptions (user_id);
+
+-- When the account is deleted (user_id set to null by the foreign key), its email goes too.
+create or replace function public.promo_redemption_forget_user()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.user_id is null then new.email := null; end if;
+  return new;
+end;
+$$;
+revoke all on function public.promo_redemption_forget_user() from public, anon, authenticated;
+drop trigger if exists promo_redemptions_forget_user on public.promo_redemptions;
+create trigger promo_redemptions_forget_user
+  before update of user_id on public.promo_redemptions
+  for each row execute function public.promo_redemption_forget_user();
 
 alter table public.promo_batches enable row level security;
 alter table public.promo_codes enable row level security;
@@ -92,7 +117,9 @@ declare
   v_prior public.promo_redemptions%rowtype;
   v_email text;
   v_workspace_id uuid;
+  v_sub public.subscriptions%rowtype;
   v_before timestamptz;
+  v_from timestamptz;
   v_after timestamptz;
   v_live integer;
 begin
@@ -162,8 +189,14 @@ begin
   -- The subscription row lock, taken before the end date is read and before add_pro_months reads
   -- it again, so a concurrent grant cannot interleave and lose months.
   v_workspace_id := public.ensure_personal_workspace(p_user_id);
-  select s.current_period_end into v_before
+  select s.* into strict v_sub
     from public.subscriptions s where s.workspace_id = v_workspace_id for update;
+  v_before := v_sub.current_period_end;
+  -- Where add_pro_months starts counting (same rule, same now() in this transaction).
+  v_from := case
+    when v_sub.plan = 'pro' and v_sub.status = 'trialing' and v_sub.current_period_end > now() then v_sub.current_period_end
+    else now()
+  end;
 
   if not public.add_pro_months(p_user_id, v_batch.months) then
     -- A live Stripe subscription: nothing is written, the code stays usable.
@@ -172,8 +205,9 @@ begin
   end if;
 
   select s.current_period_end into v_after from public.subscriptions s where s.workspace_id = v_workspace_id;
-  insert into public.promo_redemptions (code_hash, batch_id, user_id, email, months, period_end_before, period_end_after)
-    values (p_code_hash, v_batch.id, p_user_id, nullif(v_email, ''), v_batch.months, v_before, v_after);
+  insert into public.promo_redemptions (code_hash, batch_id, user_id, email, months, granted, period_end_before, period_end_after)
+    values (p_code_hash, v_batch.id, p_user_id, nullif(v_email, ''), v_batch.months,
+            greatest(v_after - v_from, interval '0'), v_before, v_after);
 
   return query select 'redeemed'::text, v_batch.months, v_after;
 end;
@@ -234,7 +268,7 @@ begin
 
   v_end := v_sub.current_period_end;
   if v_sub.plan = 'pro' and v_sub.status = 'trialing' and v_sub.current_period_end > now() then
-    v_end := greatest(now(), v_sub.current_period_end - make_interval(days => 30 * v_redemption.months));
+    v_end := greatest(now(), v_sub.current_period_end - v_redemption.granted);
     update public.subscriptions s
       set current_period_end = v_end, updated_at = now()
       where s.workspace_id = v_sub.workspace_id;

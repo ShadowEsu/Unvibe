@@ -402,10 +402,10 @@ export class MemoryBillingStore implements BillingStore {
 
   /**
    * Dev mirror of the take-back in the SQL `revoke_promo_code`: ends running complimentary Pro
-   * 30 days per month earlier (never before now). A live Stripe subscription is never touched
-   * (`paidUntouched`). `proUntil` is the end date after the change.
+   * `grantedMs` earlier (what the redemption recorded it added; never before now). A live Stripe
+   * subscription is never touched (`paidUntouched`). `proUntil` is the end date after the change.
    */
-  async takeBackProMonths(userId: string, months: number): Promise<{ paidUntouched: boolean; proUntil: string | null }> {
+  async takeBackProTime(userId: string, grantedMs: number): Promise<{ paidUntouched: boolean; proUntil: string | null }> {
     const workspace = [...this.data.workspaces.values()].find((item) => item.type === 'personal' && item.ownerUserId === userId);
     const current = workspace ? this.data.subscriptions.get(workspace.id) : undefined;
     if (!workspace || !current) return { paidUntouched: false, proUntil: null };
@@ -417,7 +417,7 @@ export class MemoryBillingStore implements BillingStore {
     if (current.plan !== 'pro' || current.status !== 'trialing' || !end || end <= now) {
       return { paidUntouched: false, proUntil: current.currentPeriodEnd ?? null };
     }
-    const earlier = new Date(end.getTime() - months * 30 * 24 * 60 * 60 * 1000);
+    const earlier = new Date(end.getTime() - grantedMs);
     const proUntil = (earlier > now ? earlier : now).toISOString();
     this.data.subscriptions.set(workspace.id, { ...current, currentPeriodEnd: proUntil });
     return { paidUntouched: false, proUntil };

@@ -352,3 +352,19 @@ test('admin revoke_batch: every code of the batch answers invalid; repeat and un
   assert.equal((await admin('POST', { action: 'revoke_batch', batchId: 'Bad Id!' })).status, 400);
   assert.equal((await admin('POST', { action: 'create_batch', batchId: 'x' })).status, 400, 'there is no create');
 });
+
+test('admin revoke_code at the 12-month ceiling takes back only what the capped grant added', async () => {
+  resetStores();
+  const [code] = batch('calhacks13', 1);
+  const p = await person('ceiling');
+  await new MemoryBillingStore().addProMonths(p.userId, 11);
+  const before = (await plan(p.userId)).end ?? 0;
+  const redeemed = await redeem({ accessToken: p.token, code });
+  const added = new Date(redeemed.body.proUntil ?? 0).getTime() - before;
+  assert.ok(added > 30 * DAY_MS && added < 40 * DAY_MS, `the ceiling capped the grant at about 35 days (${added / DAY_MS})`);
+  const body = await (await admin('POST', { action: 'revoke_code', code })).json() as { monthsTakenBack: boolean };
+  assert.equal(body.monthsTakenBack, true);
+  assert.ok(near((await plan(p.userId)).end, before, 1_000), 'the earlier 11 months stay');
+  await admin('POST', { action: 'revoke_code', code });
+  assert.ok(near((await plan(p.userId)).end, before, 1_000), 'a second revoke changes nothing');
+});
