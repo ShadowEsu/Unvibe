@@ -15,7 +15,7 @@ usage reservations; the migration seeds it to the same initial values:
 - Teams ($8/seat/month or $72/seat/year) is sold as a pilot by email: the site collects company email + seat request (mailto). Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
 - Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
 - Founding Teams collab (no Stripe required): create team workspace, invite seats, shared activity feed with authorship (`GET /api/v1/workspaces/:id/history`). Explanation/code bodies stay on-device. GitHub intelligence remains out of scope.
-- Founder env paste list: `docs/release/founder-paste-list.md`.
+- Owner env paste list: `docs/release/owner-paste-list.md`.
 
 The server always chooses a trusted Stripe price ID. Browser-supplied amounts, price IDs,
 customer IDs, subscription IDs, and entitlements are ignored. The database also rejects Pro on
@@ -46,7 +46,7 @@ privileges are also restricted to `service_role`.
 4. Keep the Customer Portal configured for payment-method updates and cancellation. Do not enable
    customer-controlled quantities unless its minimums can match the server rules.
 5. Exercise the staging matrix below with Stripe test clocks/cards. Production keys and live-mode
-   Prices require a separate founder release decision.
+   Prices require a separate owner release decision.
 
 Checkout redirects do not grant access. The webhook is authoritative; the success-page refresh
 waits for the completed checkout intent and paid entitlement written by the signed webhook.
