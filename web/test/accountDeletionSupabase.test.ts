@@ -47,6 +47,16 @@ test('SupabaseStore.beginAccountDeletion maps the Teams refusal (nothing recorde
   await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).beginAccountDeletion(USER_ID, undefined, hash), /Could not start account deletion: canceling statement/);
 });
 
+test('SupabaseStore.emailHeldByAnotherAccount asks for another id with the address and reports read errors', async () => {
+  const held = fakeFetch(() => Response.json([{ id: randomUUID() }]));
+  assert.equal(await new SupabaseStore(URL_BASE, 'key', held.fetcher).emailHeldByAnotherAccount(USER_ID, ' Again@Account.test'), true);
+  const query = decodeURIComponent(held.seen[0].path);
+  assert.ok(query.startsWith('/rest/v1/users?') && query.includes('email=eq.again@account.test') && query.includes(`id=neq.${USER_ID}`), query);
+  assert.equal(await new SupabaseStore(URL_BASE, 'key', fakeFetch(() => Response.json([])).fetcher).emailHeldByAnotherAccount(USER_ID, 'again@account.test'), false);
+  const failed = fakeFetch(() => Response.json({ code: '57014', message: 'canceling statement due to statement timeout' }, { status: 500 }));
+  await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).emailHeldByAnotherAccount(USER_ID, 'again@account.test'), /Could not check the address/);
+});
+
 test('SupabaseStore deletion state: begin, lookup by token hash, done', async () => {
   const hash = createHash('sha256').update('app-token').digest('hex');
   const STARTED = '2026-10-27T09:00:00+00:00';

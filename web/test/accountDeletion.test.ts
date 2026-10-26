@@ -233,6 +233,22 @@ test('a deletion resumed more than an hour after it started logs ACCOUNT_DELETIO
   await assertGone(me);
 });
 
+test('an address signed up again before the Blob step finishes keeps its beta-download records', async () => {
+  const me = await person();
+  failOnce = 'blob';
+  assert.equal((await remove(me.token)).status, 503);
+  // The account rows are erased; the person signs up again with the same address (a new id).
+  const again = await store.signIn(me.email);
+  assert.notEqual(again.userId, me.userId);
+  betaRecords.set(me.email, 1);
+  assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
+  assert.equal(betaRecords.get(me.email), 1, "the new account's records stay");
+  const deletion = await store.accountDeletion(me.userId);
+  assert.equal(deletion?.state, 'done');
+  assert.equal(deletion.betaDownloads, 'email_reused');
+  assert.equal(await store.userForToken(again.token), again.userId, 'the new account is signed in');
+});
+
 test('an identity Supabase Auth no longer has (user_not_found) counts as deleted', async () => {
   const me = await person();
   identities.delete(me.userId);

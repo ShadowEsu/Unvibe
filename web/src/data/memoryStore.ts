@@ -224,6 +224,11 @@ export class MemoryStore implements Store {
     return [...this.data.users.entries()].find(([, u]) => u.email === normalized)?.[0] ?? null;
   }
 
+  async emailHeldByAnotherAccount(userId: string, email: string): Promise<boolean> {
+    const normalized = email.trim().toLowerCase();
+    return [...this.data.users.entries()].some(([id, u]) => id !== userId && u.email === normalized);
+  }
+
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
     const ids = new Set(events.map((e) => e.id));
     const foreign = this.data.events.filter((x) => ids.has(x.id) && x.userId !== userId).map((x) => x.id);

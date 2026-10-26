@@ -84,8 +84,11 @@ export interface Account {
 
 /** deleted: the Blob beta-download records for the email are gone (or there were none). */
 export type BetaDownloadCleanup = 'deleted' | 'not_configured';
-/** What account_deletions.beta_downloads records: the cleanup's answer, or failed (the step threw). */
-export type BetaDownloadOutcome = BetaDownloadCleanup | 'failed';
+/**
+ * What account_deletions.beta_downloads records: the cleanup's answer; failed (the step threw);
+ * or email_reused (another account holds the address now, so its records are that account's).
+ */
+export type BetaDownloadOutcome = BetaDownloadCleanup | 'failed' | 'email_reused';
 
 export interface AccountDeletion {
   userId: string;
@@ -116,6 +119,8 @@ export interface Store {
   /** The profile name from the sign-in provider (Google), stored in users.settings. */
   rememberName(userId: string, name: string): Promise<void>;
   userIdForEmail(email: string): Promise<string | null>;
+  /** Whether a users row other than `userId` holds `email` now. Read errors throw. */
+  emailHeldByAnotherAccount(userId: string, email: string): Promise<boolean>;
 
   // Account deletion (App Store requirement). State lives in account_deletions; DELETE
   // /api/v1/account runs the steps.

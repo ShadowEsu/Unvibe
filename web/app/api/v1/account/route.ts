@@ -169,13 +169,17 @@ export async function DELETE(req: Request): Promise<Response> {
       return unavailable('account data', error, NOT_FINISHED);
     }
   }
-  // 6. The site's beta-download records for the email captured at the start. The account is gone
+  // 6. The site's beta-download records for the email captured at the start, unless another account
+  // holds that address now (signed up again): then they are that account's. The account is gone
   // by now, so a record that cannot be read or deleted holds up only this cleanup: one retry gets
   // a 503, a second failure answers deleted and leaves the row started, with the email, for the
   // stale-row follow-up.
   if (deletion.step !== 'beta_downloads') {
     try {
-      await store.recordAccountDeletionStep(userId, 'beta_downloads', await services.betaDownloads.deleteForEmail(deletion.email));
+      const outcome = deletion.email && (await store.emailHeldByAnotherAccount(userId, deletion.email))
+        ? 'email_reused'
+        : await services.betaDownloads.deleteForEmail(deletion.email);
+      await store.recordAccountDeletionStep(userId, 'beta_downloads', outcome);
     } catch (error) {
       const failedBefore = deletion.betaDownloads === 'failed';
       await store.recordAccountDeletionStep(userId, 'app_data', 'failed').catch(() => undefined);

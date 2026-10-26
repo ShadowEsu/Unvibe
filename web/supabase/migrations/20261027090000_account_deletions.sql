@@ -50,9 +50,10 @@ create table if not exists public.account_deletions (
   email text,
   token_hashes text[] not null default '{}',
   -- deleted: the Blob records for the email were removed (or there were none). not_configured:
-  -- this deployment has no Blob credentials, so the records were not looked up. failed: the last
-  -- attempt threw; the row stays started, with the email, until a retry or a follow-up cleans up.
-  beta_downloads text check (beta_downloads in ('deleted', 'not_configured', 'failed')),
+  -- this deployment has no Blob credentials, so the records were not looked up. email_reused:
+  -- another account holds the address now, so the records are that account's and stay. failed: the
+  -- last attempt threw; the row stays started, with the email, until a retry or a follow-up cleans up.
+  beta_downloads text check (beta_downloads in ('deleted', 'not_configured', 'email_reused', 'failed')),
   started_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   done_at timestamptz,
@@ -126,6 +127,10 @@ begin
   if not found then raise exception 'account deletion was not started'; end if;
   v_emails := v_emails || coalesce((select array_agg(lower(trim(u.email))) from public.users u
     where u.id = p_user_id and coalesce(trim(u.email), '') <> ''), '{}');
+  -- An address another account holds now (signed up again after the Auth identity went) is that
+  -- account's: its email-keyed rows stay. This account's id-keyed rows still go below.
+  v_emails := array(select distinct e from unnest(v_emails) e where not exists (
+    select 1 from public.users u where u.id <> p_user_id and lower(trim(u.email)) = e));
 
   -- Teams owners, again inside this transaction (begin_account_deletion already refused, and the
   -- membership trigger refuses joins since): another member would lose their data with the workspace.

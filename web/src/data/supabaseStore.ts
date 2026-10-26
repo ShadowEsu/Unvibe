@@ -154,6 +154,12 @@ export class SupabaseStore implements Store {
     return typeof data?.id === 'string' ? data.id : null;
   }
 
+  async emailHeldByAnotherAccount(userId: string, email: string): Promise<boolean> {
+    const { data, error } = await this.db.from('users').select('id').eq('email', email.trim().toLowerCase()).neq('id', userId).limit(1);
+    if (error) throw new Error(`Could not check the address: ${error.message}`);
+    return (data ?? []).length > 0;
+  }
+
   /**
    * Before the account_deletions migration is applied nothing can have started a deletion (starting
    * one needs the table), so a missing table reads as "no deletion", and every other error throws.
