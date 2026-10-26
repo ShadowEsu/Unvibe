@@ -248,6 +248,17 @@ test('a long refusal message is cut to 300 characters', async () => {
   assertNothingCleared();
 });
 
+test('402 and 429 messages are cut to 300 characters too, and a missing one gets the plan text', async () => {
+  for (const status of [402, 429]) {
+    const long = await deleteWith({ status, body: { error: 'plan_limit_reached', message: 'z'.repeat(1_000) } });
+    assert.deepEqual(long, { ok: false, error: 'z'.repeat(300) }, `${status} message capped`);
+    assertNothingCleared();
+    const bare = await deleteWith({ status, body: {} });
+    assert.deepEqual(bare, { ok: false, error: 'Your plan limit has been reached. Open Plan & usage to review options.' });
+    assertNothingCleared();
+  }
+});
+
 const NOT_DELETED: Array<[string, Answer]> = [
   ['401 (the service no longer knows the session)', { status: 401, body: { error: 'unauthorized' } }],
   ['500 with { ok: true }', { status: 500, body: { ok: true } }],
