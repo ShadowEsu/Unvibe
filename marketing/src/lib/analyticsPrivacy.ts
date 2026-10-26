@@ -273,15 +273,23 @@ export type LoadedSdks<P, M> = { readonly posthog: P | null; readonly mixpanel: 
  * tracked browser. A load that finishes after an opt-out or a client navigation into an admin,
  * capability or sign-in page initialises nothing, and the SDK waits (it is returned) for a later
  * call. Returns the SDKs still waiting.
+ *
+ * After init it runs `syncCapture` (syncCaptureForPage), and only then `flush` (the events
+ * tracked while the SDKs loaded). The SDKs keep an opt-out from a tab that was closed on a private
+ * page; flushed before it is lifted, those events would be dropped.
  */
 export function initLoadedSdks<P, M>(
   page: { href: string; trackingDisabled: boolean },
   loaded: LoadedSdks<P, M>,
-  init: { posthog(sdk: P): void; mixpanel(sdk: M): void },
+  init: { posthog(sdk: P): void; mixpanel(sdk: M): void; syncCapture(): void; flush(): void },
 ): LoadedSdks<P, M> {
   if (!trackedPublicPage(page)) return loaded;
   if (loaded.posthog) init.posthog(loaded.posthog);
   if (loaded.mixpanel) init.mixpanel(loaded.mixpanel);
+  if (loaded.posthog || loaded.mixpanel) {
+    init.syncCapture();
+    init.flush();
+  }
   return { posthog: null, mixpanel: null };
 }
 

@@ -288,7 +288,6 @@ function initPosthog(posthog: PosthogClient): void {
   });
   posthog.identify(anonId());
   posthogClient = posthog;
-  flushPosthog();
 }
 
 function startMixpanel(): void {
@@ -315,7 +314,6 @@ function initMixpanel(mixpanel: MixpanelClient): void {
   });
   mixpanel.identify(anonId());
   mixpanelClient = mixpanel;
-  flushMixpanel();
 }
 
 /** Load Mixpanel + PostHog browser SDKs when tokens are present. */
@@ -335,12 +333,21 @@ export function initAnalytics(): void {
 export function syncSessionRecording(): void {
   if (typeof window === "undefined") return;
   const page = { href: window.location.href, trackingDisabled: browserTrackingDisabled() };
+  const syncCapture = () => syncCaptureForPage(page, { posthog: posthogClient, mixpanel: mixpanelClient });
   ({ posthog: posthogLoaded, mixpanel: mixpanelLoaded } = initLoadedSdks(
     page,
     { posthog: posthogLoaded, mixpanel: mixpanelLoaded },
-    { posthog: initPosthog, mixpanel: initMixpanel },
+    {
+      posthog: initPosthog,
+      mixpanel: initMixpanel,
+      syncCapture,
+      flush: () => {
+        flushPosthog();
+        flushMixpanel();
+      },
+    },
   ));
-  syncCaptureForPage(page, { posthog: posthogClient, mixpanel: mixpanelClient });
+  syncCapture();
   replayState = syncReplayForPage(
     replayState,
     { ...page, mixpanelSampled: mixpanelReplaySampled },

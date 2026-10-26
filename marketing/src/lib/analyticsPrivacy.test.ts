@@ -34,6 +34,16 @@ function assertClean(value: unknown): void {
   }
 }
 
+/** `initLoadedSdks` callbacks that log each step in `calls`. */
+function loggingInit(calls: string[]) {
+  return {
+    posthog: (sdk: string) => void calls.push(`init ${sdk}`),
+    mixpanel: (sdk: string) => void calls.push(`init ${sdk}`),
+    syncCapture: () => void calls.push("syncCapture"),
+    flush: () => void calls.push("flush"),
+  };
+}
+
 describe("analytics URL sanitizer", () => {
   it("strips the email and signed token from the welcome email's feedback link", () => {
     const link = feedbackRewardUrl(EMAIL);
@@ -233,10 +243,18 @@ describe("analytics privacy config", () => {
       { href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false },
     ]) {
       const calls: string[] = [];
-      const init = { posthog: (sdk: string) => void calls.push(sdk), mixpanel: (sdk: string) => void calls.push(sdk) };
-      assert.deepEqual(initLoadedSdks(page, loaded, init), loaded, `load that finishes on ${page.href} keeps waiting`);
+      assert.deepEqual(initLoadedSdks(page, loaded, loggingInit(calls)), loaded, `load that finishes on ${page.href} keeps waiting`);
       assert.deepEqual(calls, [], page.href);
     }
+  });
+
+  it("after init, capture is synced for the page before the events queued while loading are flushed", () => {
+    const calls: string[] = [];
+    initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, { posthog: "posthog", mixpanel: "mixpanel" }, loggingInit(calls));
+    assert.deepEqual(calls, ["init posthog", "init mixpanel", "syncCapture", "flush"]);
+    const none: string[] = [];
+    initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, { posthog: null, mixpanel: null }, loggingInit(none));
+    assert.deepEqual(none, [], "nothing loaded: nothing to sync or flush");
   });
 
   it("admin and capability pages load no analytics SDK", () => {
@@ -461,11 +479,11 @@ describe("an opt-out after the SDKs started", () => {
   it("an SDK that finishes loading after the opt-out is not initialised", () => {
     const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
     const calls: string[] = [];
-    const init = { posthog: (sdk: string) => void calls.push(sdk), mixpanel: (sdk: string) => void calls.push(sdk) };
+    const init = loggingInit(calls);
     assert.deepEqual(initLoadedSdks({ href: PUBLIC, trackingDisabled: true }, loaded, init), loaded, "still waiting after the opt-out");
     assert.deepEqual(calls, [], "no SDK initialised after the opt-out");
     assert.deepEqual(initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, loaded, init), { posthog: null, mixpanel: null });
-    assert.deepEqual(calls, ["posthog", "mixpanel"], "both initialise once tracking is allowed");
+    assert.deepEqual(calls.slice(0, 2), ["init posthog", "init mixpanel"], "both initialise once tracking is allowed");
   });
 
   it("turns off both SDKs' capture and stops both replays", () => {
@@ -518,8 +536,7 @@ describe("sign-in pages (/activate, /redeem)", () => {
     const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
     for (const href of SIGN_IN_URLS) {
       const calls: string[] = [];
-      const init = { posthog: (sdk: string) => void calls.push(sdk), mixpanel: (sdk: string) => void calls.push(sdk) };
-      assert.deepEqual(initLoadedSdks({ href, trackingDisabled: false }, loaded, init), loaded, href);
+      assert.deepEqual(initLoadedSdks({ href, trackingDisabled: false }, loaded, loggingInit(calls)), loaded, href);
       assert.deepEqual(calls, [], href);
     }
   });
