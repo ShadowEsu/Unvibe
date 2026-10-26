@@ -54,7 +54,6 @@ export const listingLinks = [
   { name: "Product Hunt", href: "https://www.producthunt.com/products/unvibe?launch=unvibe" },
   { name: "LaunchKiwi", href: "https://launchkiwi.com/p/unvibe" },
   { name: "DevRove", href: "https://devrove.com/tools/unvibe-site" },
-  { name: "DEV Community", href: "https://dev.to/preston_jaysusanto_22498/how-to-review-ai-generated-code-without-losing-ownership-of-your-project-ndl" },
   { name: "AI Tool Discovery", href: "https://www.aitooldiscovery.com/tools/aih_unvibe" },
   { name: "VibeRank", href: "https://viberank.dev/apps/Unvibe" },
   { name: "SideProjectors", href: "https://www.sideprojectors.com/project/86739/unvibe" },

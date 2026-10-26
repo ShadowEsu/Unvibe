@@ -3,7 +3,6 @@ import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
-import { OUTREACH_SUBJECTS, outreachText } from "@/emails/outreach";
 
 /**
  * The Unvibe resource kit: everything an AI agent (or a person) needs to talk about Unvibe
@@ -150,12 +149,6 @@ export function kitSections(): KitSection[] {
         `Gift link format, from app 0.1.44: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in). App 0.1.43 and older show an 8 character invite link code instead, which counts who joined and grants no Pro.`,
         "Email: preston@unvibe.site",
       ],
-    },
-    {
-      id: "outreach",
-      title: "Outreach email template",
-      intro: `Subjects to rotate: ${OUTREACH_SUBJECTS.join(" | ")}. Replace the bracketed parts. The personal line must be true. Banner: ${SITE}/email/outreach-banner.png`,
-      code: outreachText({ firstName: "[First name]", personalLine: "[One true, specific sentence about them: their repo, post, club or course.]" }),
     },
   ];
 }
