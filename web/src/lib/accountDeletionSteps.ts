@@ -21,7 +21,7 @@ async function stillCharges(subscription: SubscriptionRecord): Promise<boolean> 
     return liveSubscriptionStillCharges(await getStripe().subscriptions.retrieve(id));
   } catch (error) {
     if (!(error instanceof Stripe.errors.StripeInvalidRequestError) || error.code !== 'resource_missing') throw error;
-    console.warn('account delete: stored subscription not found at Stripe; treated as not charging', id);
+    console.warn('account delete: stored subscription not found at Stripe; treated as not charging');
     return false;
   }
 }

@@ -502,3 +502,21 @@ for (const lookup of ['existingWorkspaces', 'overview'] as const) {
     await untouched(me);
   });
 }
+
+test('a missing Stripe subscription logs a fixed warning without its id', async () => {
+  const me = await stoppedBeforeErase(true);
+  live.set(me.subscriptionId, new Stripe.errors.StripeInvalidRequestError({ message: 'missing', code: 'resource_missing' }));
+  const lines: unknown[][] = [];
+  const warning = mock.method(console, 'warn', (...args: unknown[]) => { lines.push(args); });
+  const isolated = Object.create(store) as typeof store;
+  const row = await store.accountDeletion(me.userId);
+  assert.ok(row);
+  isolated.staleAccountDeletions = async () => [row];
+  try {
+    const counts = await sweepAccountDeletions(isolated);
+    assert.equal(counts.done, 1);
+    assert.deepEqual(lines, [['account delete: stored subscription not found at Stripe; treated as not charging']]);
+  } finally {
+    warning.mock.restore();
+  }
+});
