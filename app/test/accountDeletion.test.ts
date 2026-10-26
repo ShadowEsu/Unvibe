@@ -16,6 +16,8 @@ import { hasAiKey, writeAiKey } from '../src/main/aiKey';
 import { knowledgeStore } from '../src/main/knowledgeStore';
 import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
+import { flush } from '../src/main/sync';
+import type { LocalEvent } from '../src/core/learning';
 import { clearReviewChecklists, reviewChecklistKey } from '../src/core/reviewChecklist';
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
@@ -39,13 +41,12 @@ function serviceAnswers(answer: Answer): { deletes: () => number; restore: () =>
   return { deletes: () => deletes, restore: () => { globalThis.fetch = original; } };
 }
 
-/** A signed-in computer with learning, knowledge, a saved API key and personal settings. Starts clean. */
-function signedInWithData(): void {
-  store().wipeEverything();
-  knowledgeStore().wipe();
-  store().setAccount('user-1', 'person@example.com', 'session-token');
-  store().recordReview({
-    id: 'lesson-1',
+/** The main process closes the review panel here; these tests have none. */
+const stopReviews = (): void => undefined;
+
+function lesson(id: string): LocalEvent {
+  return {
+    id,
     ts: new Date().toISOString(),
     eventType: 'explanation_completed',
     localDate: new Date().toISOString().slice(0, 10),
@@ -56,7 +57,15 @@ function signedInWithData(): void {
     lines: 1,
     code: 'const total = a + b;',
     explanation: 'Adds two numbers.',
-  });
+  };
+}
+
+/** A signed-in computer with learning, knowledge, a saved API key and personal settings. Starts clean. */
+function signedInWithData(): void {
+  store().wipeEverything();
+  knowledgeStore().wipe();
+  store().setAccount('user-1', 'person@example.com', 'session-token');
+  store().recordReview(lesson('lesson-1'));
   knowledgeStore().recordTeachBack({
     concept: 'addition', question: 'What does it add?', answer: 'a and b', evidence: 'THIN', checks: [], codeVersion: 'v1',
   });
@@ -112,7 +121,7 @@ async function deleteWith(answer: Answer) {
   signedInWithData();
   const service = serviceAnswers(answer);
   try {
-    const result = await deleteAccountAndLocalData();
+    const result = await deleteAccountAndLocalData(stopReviews);
     assert.equal(service.deletes(), 1);
     return result;
   } finally {
@@ -187,7 +196,7 @@ test('an account whose sign-in can\'t be decrypted sends no request, clears noth
   try {
     assert.equal(store().token(), null);
     assert.ok(store().account(), 'the account is still shown, so the panel offers Delete');
-    result = await deleteAccountAndLocalData();
+    result = await deleteAccountAndLocalData(stopReviews);
   } finally {
     safeStorage.decryptString = decrypt;
     service.restore();
@@ -203,7 +212,7 @@ test('with no account at all, Erase everything clears the learning without askin
   const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
   let result;
   try {
-    result = await deleteAccountAndLocalData();
+    result = await deleteAccountAndLocalData(stopReviews);
   } finally {
     service.restore();
   }
@@ -211,6 +220,69 @@ test('with no account at all, Erase everything clears the learning without askin
   assert.deepEqual(result, { ok: true, status: 'erased_locally' });
   assert.deepEqual(store().events(), []);
   assert.deepEqual(knowledgeStore().teachBacks(), []);
+});
+
+/**
+ * Answers the sync routes and DELETE. GET /history (the pull) waits for `release`; with `honourAbort`
+ * it ends when its request is aborted, the way a real network request does.
+ */
+function syncService(honourAbort: boolean) {
+  const original = globalThis.fetch;
+  let pullSignal: AbortSignal | undefined;
+  let pullStarted!: () => void;
+  const started = new Promise<void>((resolve) => { pullStarted = resolve; });
+  let release!: (events: LocalEvent[]) => void;
+  const answer = new Promise<LocalEvent[]>((resolve) => { release = resolve; });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (init?.method === 'DELETE') return Response.json({ ok: true, status: 'deleted' });
+    if (url.includes('/api/v1/events')) return Response.json({ ok: true });
+    assert.match(url, /\/api\/v1\/history/);
+    pullSignal = init?.signal ?? undefined;
+    pullStarted();
+    const aborted = new Promise<never>((_, reject) => {
+      if (honourAbort) pullSignal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    });
+    return Response.json({ events: await Promise.race([answer, aborted]) });
+  }) as typeof fetch;
+  return { started, release, pullSignal: () => pullSignal, restore: () => { release([]); globalThis.fetch = original; } };
+}
+
+// Each sync test ends its own sync in `finally`, so a failure can't leave it running into the next test.
+test('deletion stops reviews and a running sync, and waits for the sync, before clearing anything', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  const service = syncService(true);
+  const syncing = flush();
+  try {
+    await service.started;
+    let eventsWhenReviewsStopped = -1;
+    const result = await deleteAccountAndLocalData(() => { eventsWhenReviewsStopped = store().events().length; });
+    assert.equal(service.pullSignal()?.aborted, true, 'the running sync was aborted');
+    service.release([lesson('lesson-from-server')]);
+    await syncing;
+    assert.deepEqual(result, { ok: true, status: 'deleted' });
+    assert.equal(eventsWhenReviewsStopped, 1, 'reviews are stopped before anything is cleared');
+    assertClearedAndPreferencesKept();
+  } finally {
+    service.restore();
+    await syncing;
+  }
+});
+
+test('a sync answer that arrives after the session ended is not saved', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  const service = syncService(false);
+  const syncing = flush();
+  try {
+    await service.started;
+    store().wipeEverything(); // the session ends while the pull is still out
+    service.release([lesson('lesson-from-server')]);
+    await syncing;
+    assert.deepEqual(store().events(), []);
+  } finally {
+    service.restore();
+    await syncing;
+  }
 });
 
 test('after-agent review checklists are removed and other renderer keys stay', () => {

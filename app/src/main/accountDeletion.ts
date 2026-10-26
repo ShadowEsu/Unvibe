@@ -8,6 +8,7 @@ import { deleteAccount, type AccountDeletionStatus } from './backend';
 import { knowledgeStore } from './knowledgeStore';
 import { settings } from './settings';
 import { store } from './store';
+import { cancelSync } from './sync';
 
 export type AccountDeletionResult =
   | { ok: true; status: AccountDeletionStatus | 'erased_locally' }
@@ -32,10 +33,15 @@ function clearAccountData(): void {
 
 export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${process.platform === 'win32' ? 'PC' : 'Mac'}. Sign in again, then delete.`;
 
-export async function deleteAccountAndLocalData(): Promise<AccountDeletionResult> {
+/**
+ * `stopReviews` ends every review in progress (the main process owns the panel and its sessions);
+ * it runs before anything is cleared, so a review finishing late can't save a lesson back.
+ */
+export async function deleteAccountAndLocalData(stopReviews: () => void): Promise<AccountDeletionResult> {
   if (!store().account()) {
     // Signed out: no account to delete. Erase the learning on this computer, as before.
     try {
+      stopReviews();
       store().wipeEverything();
       knowledgeStore().wipe();
     } catch (err) {
@@ -54,6 +60,9 @@ export async function deleteAccountAndLocalData(): Promise<AccountDeletionResult
     return { ok: false, error: reason(err, 'Delete failed.') };
   }
   try {
+    // A review or sync still running could otherwise write the deleted account's data back.
+    stopReviews();
+    await cancelSync();
     clearAccountData();
   } catch (err) {
     return {

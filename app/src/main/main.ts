@@ -1642,14 +1642,15 @@ app.whenReady().then(() => {
     return { ok: true, warning };
   });
   ipcMain.handle('account:delete', async () => {
-    const result = await deleteAccountAndLocalData();
+    const result = await deleteAccountAndLocalData(() => {
+      const panel = currentWidget();
+      if (panel && !panel.isDestroyed()) panel.close();
+      clearPanelSessions();
+    });
     if (!result.ok) return result;
     invalidateAppUsage();
     // Responses fetched with the session (account, plan, gifts) may sit in the HTTP cache.
     await session.defaultSession.clearCache().catch(() => undefined);
-    const panel = currentWidget();
-    if (panel && !panel.isDestroyed()) panel.close();
-    clearPanelSessions();
     return result;
   });
 });
