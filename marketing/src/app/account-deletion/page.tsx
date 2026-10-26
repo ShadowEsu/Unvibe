@@ -89,7 +89,7 @@ export default function AccountDeletionPage() {
             data and the beta-download records.
           </li>
           <li>
-            If a step fails, the app tells you and you can try again. A daily check also finishes
+            If a step fails, the app tells you and you can try again. A daily check also retries
             any deletion still unfinished an hour after it started.
           </li>
           <li>
