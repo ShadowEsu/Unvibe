@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, shell } from 'electron';
+import { BrowserWindow, screen, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize } from './settings';
 import { isSafeExternalUrl } from '../core/permissions';
@@ -272,6 +272,51 @@ export function applyWidgetResize(
   return { x, y, width, height };
 }
 
+/** The review panel parts setPanelOpacity touches (a structural type so tests can pass a fake). */
+export type DimmablePanel = Pick<BrowserWindow, 'isDestroyed' | 'setOpacity'> & {
+  webContents: Pick<WebContents, 'isDestroyed' | 'insertCSS' | 'removeInsertedCSS'>;
+};
+
+/** Settings allow 0.35–1 for a dimmed panel; anything else is clamped before it reaches the page. */
+const MIN_PANEL_OPACITY = 0.35;
+const panelDim = new WeakMap<object, { queue: Promise<void>; key: string | null }>();
+
+/**
+ * Sets how see-through the review panel is.
+ *
+ * On Windows the panel is a transparent window. Without a usable GPU (software compositing), Chromium
+ * draws each new frame of a transparent window with UpdateLayeredWindow. BrowserWindow.setOpacity
+ * calls SetLayeredWindowAttributes, and after that Windows refuses every UpdateLayeredWindow call:
+ * the panel stays frozen on screen with the old review while the page keeps updating underneath
+ * (Electron issue #32555; real-device runs 40266232417 and 40266929130). Even setOpacity(1) does it.
+ * So on Windows the window's own opacity is never touched; the page dims itself with a stylesheet.
+ * Stylesheet changes run strictly one after another, so the last call wins: a quick blur then
+ * focus ends undimmed. Other platforms keep win.setOpacity exactly as before.
+ */
+export function setPanelOpacity(win: DimmablePanel, opacity: number, platform: NodeJS.Platform = process.platform): Promise<void> {
+  if (win.isDestroyed()) return Promise.resolve();
+  if (platform !== 'win32') {
+    win.setOpacity(opacity);
+    return Promise.resolve();
+  }
+  const value = Number.isFinite(opacity) ? Math.min(1, Math.max(MIN_PANEL_OPACITY, opacity)) : 1;
+  const contents = win.webContents;
+  const state = panelDim.get(contents) ?? { queue: Promise.resolve(), key: null };
+  panelDim.set(contents, state);
+  state.queue = state.queue
+    .then(async () => {
+      if (contents.isDestroyed()) return;
+      if (state.key) {
+        const key = state.key;
+        state.key = null;
+        await contents.removeInsertedCSS(key);
+      }
+      if (value < 1 && !contents.isDestroyed()) state.key = await contents.insertCSS(`html { opacity: ${value} !important; }`);
+    })
+    .catch((error: unknown) => console.warn('[unvibe] review panel opacity not applied', error));
+  return state.queue;
+}
+
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
@@ -309,15 +354,15 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   win.on('blur', () => {
     if (win.isDestroyed()) return;
     if (limitPauseActive) {
-      win.setOpacity(1);
+      void setPanelOpacity(win, 1);
       return;
     }
     const behavior = settings().all().inactiveBehavior;
-    if (behavior === 'dim') win.setOpacity(settings().all().widgetOpacityInactive);
+    if (behavior === 'dim') void setPanelOpacity(win, settings().all().widgetOpacityInactive);
   });
   win.on('focus', () => {
     if (win.isDestroyed()) return;
-    win.setOpacity(1);
+    void setPanelOpacity(win, 1);
   });
 
   lockNavigation(win);
@@ -356,7 +401,7 @@ export function raiseLimitPause(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-  win.setOpacity(1);
+  void setPanelOpacity(win, 1);
   if (win.isMinimized()) win.restore();
   win.show();
   win.moveTop();
