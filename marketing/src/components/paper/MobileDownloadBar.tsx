@@ -34,8 +34,9 @@ export function MobileDownloadBar() {
 
   if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist")) return null;
 
+  // An <aside>, so the bar sits in a landmark once it shows (axe `region`, seen at 390 with the try-it answer open).
   return (
-    <div className={visible ? "mobile-dl is-in" : "mobile-dl"} aria-hidden={!visible}>
+    <aside className={visible ? "mobile-dl is-in" : "mobile-dl"} aria-label="Get Unvibe" aria-hidden={!visible}>
       <span>{phone ? "Free for your Mac or PC" : "Free for Mac and Windows"}</span>
       {phone ? (
         <a href="/#email-link" tabIndex={visible ? 0 : -1} onClick={() => track("email_link_cta_clicked", { surface: "mobile_bar" })}>
@@ -46,6 +47,6 @@ export function MobileDownloadBar() {
           Download
         </a>
       )}
-    </div>
+    </aside>
   );
 }
