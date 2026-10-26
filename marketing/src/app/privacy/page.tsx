@@ -151,8 +151,9 @@ export default function PrivacyPage() {
           they finish, with no code or personal data. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Google Gemini to write the explanation. To limit how often the box can be used,
-          Unvibe keeps a keyed hash of your IP address (it can&apos;t be turned back into the
-          address without a secret only our server has) and the time of each request, not the code.
+          Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
+          26 October 2026 that hash is keyed with a secret only our server has, so it can&apos;t be
+          turned back into the address; requests from before then kept a plain hash, which is weaker.
         </p>
       </LegalSection>
 
