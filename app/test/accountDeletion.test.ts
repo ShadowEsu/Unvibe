@@ -17,7 +17,7 @@ import { knowledgeStore } from '../src/main/knowledgeStore';
 import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
 import { flush } from '../src/main/sync';
-import { answerQuizCard, askChat, askStudyAssistant, startQuizCard } from '../src/main/studyQuiz';
+import { abortChatAndStudy, answerQuizCard, askChat, askStudyAssistant, startQuizCard } from '../src/main/studyQuiz';
 import { invalidateAppUsage } from '../src/main/usage';
 import type { LocalEvent } from '../src/core/learning';
 
@@ -586,5 +586,40 @@ test('knowledge and learning are wiped together after renderer cleanup with no a
   } finally {
     watched.mock.restore();
     service.restore();
+  }
+});
+
+test('Chat cancelled during its usage check says cancelled and starts no provider request', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  const original = globalThis.fetch;
+  let usageAsked!: () => void;
+  const asked = new Promise<void>((resolve) => { usageAsked = resolve; });
+  let answerUsage!: () => void;
+  const answered = new Promise<void>((resolve) => { answerUsage = resolve; });
+  let providerCalls = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/api/v1/billing/overview')) {
+      usageAsked();
+      await answered;
+      throw new TypeError('fetch failed');
+    }
+    providerCalls += 1;
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    const chatting = askChat({ question: 'What does map do?' });
+    await asked;
+    abortChatAndStudy();
+    answerUsage();
+    const result = await chatting;
+    assert.equal(result.ok, false);
+    assert.equal(result.ok ? '' : result.error, 'The request was cancelled.');
+    assert.equal(providerCalls, 0);
+    assert.equal(store().events().length, 1, 'no cancelled Chat lesson was saved');
+  } finally {
+    answerUsage();
+    globalThis.fetch = original;
   }
 });

@@ -346,6 +346,7 @@ export async function askChat(input: {
   try {
     const usage = await cachedAppUsage();
     remaining = usage.remaining;
+    if (request.signal.aborted) return { ok: false, error: 'The request was cancelled.', remaining };
     const localKey = readAiKey();
     if (usage.remaining <= 0 && !localKey) {
       return { ok: false, error: 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.', remaining: 0 };
