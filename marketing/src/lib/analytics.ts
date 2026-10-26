@@ -269,9 +269,10 @@ function startPosthog(): void {
     });
 }
 
-function initPosthog(posthog: PosthogClient): void {
-  if (!POSTHOG_KEY) return;
-  posthog.init(POSTHOG_KEY, {
+/** Exported for tests (the token argument too), which check the config `posthog.init` receives. */
+export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
+  if (!token) return;
+  posthog.init(token, {
     api_host: POSTHOG_HOST,
     defaults: "2026-05-30",
     persistence: "localStorage",

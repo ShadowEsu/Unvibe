@@ -218,10 +218,15 @@ export const REPLAY_BLOCK_CLASS = "ph-no-capture";
  * it still sent events and replay frames captured just before (seen in a real browser). Unbatched,
  * each event leaves when it is captured, so only a failed send that PostHog retries can go out later.
  *
- * `mask_personal_data_properties` with our secret parameters: PostHog stores the first landing
- * URL as `$initial_current_url` and sends it in the `/flags` request body, which no hook sees.
- * With these set, PostHog masks those parameters itself wherever it reads the address (that
- * stored URL, event URLs, heatmap keys). It also masks ad click ids (gclid, fbclid and others).
+ * `mask_personal_data_properties` with our secret parameters: PostHog masks them itself wherever
+ * it reads the address (the stored first landing URL, event URLs, heatmap keys). It also masks ad
+ * click ids (gclid, fbclid and others).
+ *
+ * `advanced_disable_feature_flags: true`: no `/flags` request at all. Its body carries the stored
+ * first landing URL and referrer (`$initial_current_url`, `$initial_referrer`) with no hook, and a
+ * browser that first landed under an older deploy keeps an unmasked copy. The site uses no
+ * feature flags. Not `advanced_disable_flags`, which also skips PostHog's remote config, and so
+ * session replay (seen in a real browser: no `/s/` request).
  */
 export const POSTHOG_PRIVACY_CONFIG = {
   mask_all_text: true,
@@ -229,6 +234,7 @@ export const POSTHOG_PRIVACY_CONFIG = {
   mask_personal_data_properties: true,
   custom_personal_data_properties: Object.keys(SECRET_PARAMS),
   request_batching: false,
+  advanced_disable_feature_flags: true,
   before_send: posthogBeforeSend,
   session_recording: {
     maskAllInputs: true,
