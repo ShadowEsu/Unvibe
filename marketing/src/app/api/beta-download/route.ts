@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
+import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "@/lib/betaInstallScript";
 import { scheduleSetupReminder } from "@/lib/sendBetaDownloadEmail";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
 import { recordWaitlistBetaEmail, saveWaitlistEntry } from "@/lib/waitlistStore";
@@ -18,8 +19,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const release = "0.1.44";
-const fallbackMacDownload = "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.44/Unvibe-0.1.44-mac-arm64.dmg";
+// The emailed link is the same pinned build the site's buttons and install scripts serve: no env
+// override, so a stale variable can't send an older build logged as this release.
+const release = BETA_INSTALL_TAG.replace(/^v/, "");
 const schema = z.object({
   firstName: z.string().trim().max(80).optional().default(""),
   email: z.string().trim().email().max(240),
@@ -53,14 +55,11 @@ export async function POST(request: Request) {
   if (emailLimited) return emailLimited;
   const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
   if (ceiling) return ceiling;
-  const macDownloadUrl = process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL?.trim()
-    || process.env.NEXT_PUBLIC_INVESTOR_DMG_URL?.trim()
-    || fallbackMacDownload;
   const existing = await findBetaDownload(email, release).catch(() => null);
   const code = existing?.referralCode || referralCode(email);
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
-    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: macDownloadUrl, setupTipFollows: true });
+    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, setupTipFollows: true });
   if (!existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {
@@ -94,7 +93,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    downloadUrl: macDownloadUrl,
+    downloadUrl: BETA_MAC_DOWNLOAD_URL,
     emailSent: delivery.sent,
     referralCode: code,
     emailNotice: delivery.sent ? "Download and feedback links sent to your inbox." : "Your download is ready. Email delivery is temporarily unavailable.",

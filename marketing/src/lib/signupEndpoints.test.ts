@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import * as waitlistRoute from "../app/api/waitlist/route";
 import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
+import { BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
 
 /**
  * Public signup endpoints against a fake Supabase (PostgREST) project, so the real supabase-js
@@ -148,6 +149,23 @@ describe("waitlist and beta-download reject cross-site posts", () => {
       assert.equal(site.status, 422);
     } finally {
       delete process.env.VERCEL_ENV;
+    }
+  });
+});
+
+describe("beta-download hands out the pinned release", () => {
+  it("returns this release's Mac build even when the old override variables are set", async () => {
+    // Production still has both names set from months ago; they must not decide what people get.
+    process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL = "https://example.com/old-beta.dmg";
+    process.env.NEXT_PUBLIC_INVESTOR_DMG_URL = "https://example.com/old-investor.dmg";
+    try {
+      const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: "pinned-build@example.com" }));
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { downloadUrl?: string };
+      assert.equal(body.downloadUrl, BETA_MAC_DOWNLOAD_URL);
+    } finally {
+      delete process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL;
+      delete process.env.NEXT_PUBLIC_INVESTOR_DMG_URL;
     }
   });
 });
