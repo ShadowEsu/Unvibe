@@ -45,12 +45,13 @@ export type BuildAction =
 export const INITIAL_HOURS = 162.56;
 export const INITIAL_SECONDS = Math.round(INITIAL_HOURS * 3600);
 const INITIAL_UPDATED_AT = "2026-07-29T12:00:00.000Z";
-const PERTH_TZ = "Australia/Perth";
+/** The build clock's day boundary: the same Pacific calendar day the site's other day keys use (siteStatsStore.dayKey). */
+const BUILD_DAY_TZ = "America/Los_Angeles";
 const MAX_HEARTBEAT_SECONDS = 90;
 
 export function buildDayKey(now = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: PERTH_TZ,
+    timeZone: BUILD_DAY_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
