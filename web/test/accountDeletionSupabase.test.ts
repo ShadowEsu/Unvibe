@@ -85,7 +85,7 @@ function encryptRecord(value: unknown, secret: string): string {
   return JSON.stringify({ version: 1, iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), ciphertext: ciphertext.toString('base64') });
 }
 
-const BLOB_ENV = { BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_store123_secretpart', WAITLIST_ADMIN_TOKEN: 'site-secret-for-tests' } as unknown as NodeJS.ProcessEnv;
+const BLOB_ENV = { BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_store123_notarealtoken', WAITLIST_ADMIN_TOKEN: 'site-secret-for-tests' } as unknown as NodeJS.ProcessEnv;
 
 function fakeBlob(records: Record<string, unknown>, options: { secret?: string; failList?: boolean; failDelete?: boolean } = {}) {
   const urls = Object.keys(records).map((name) => `https://store123.private.blob.vercel-storage.com/beta-downloads/item/${name}.enc`);

@@ -84,7 +84,7 @@ test('supabase: a token Supabase Auth rejects is 401 and nothing else is called'
 });
 
 test('supabase: while the account is being deleted, redeem answers 410 and never upserts the user', async () => {
-  const fake = fakeSupabase({ status: 'redeemed', months: 3, pro_until: null }, { user_id: USER_ID, state: 'started', step: 'auth_identity', email: 'hacker@school.edu' });
+  const fake = fakeSupabase({ status: 'redeemed', months: 3, pro_until: null }, { user_id: USER_ID, state: 'started', step: 'auth_identity', email: 'leaving@account.test' });
   try {
     const res = await redeem({ accessToken: GOOD_TOKEN, code: 'ABCD-EFGH-JKMN-PQRS' });
     assert.equal(res.status, 410);
