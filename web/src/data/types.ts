@@ -82,6 +82,17 @@ export interface Account {
   email: string;
 }
 
+/** deleted: the Blob beta-download records for the email are gone (or there were none). */
+export type BetaDownloadCleanup = 'deleted' | 'not_configured';
+
+export interface AccountDeletion {
+  userId: string;
+  state: 'started' | 'done';
+  step: 'started' | 'beta_downloads' | 'auth_identity' | 'app_data' | 'done';
+  /** Captured when the deletion started; cleared once it is done. */
+  email?: string;
+}
+
 /** Backend persistence + auth. Two implementations: MemoryStore (dev) and SupabaseStore (prod). */
 export interface Store {
   readonly kind: string;
@@ -100,7 +111,23 @@ export interface Store {
   /** The profile name from the sign-in provider (Google), stored in users.settings. */
   rememberName(userId: string, name: string): Promise<void>;
   userIdForEmail(email: string): Promise<string | null>;
-  deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
+
+  // Account deletion (App Store requirement). State lives in account_deletions; DELETE
+  // /api/v1/account runs the steps.
+  accountDeletion(userId: string): Promise<AccountDeletion | null>;
+  /** The deletion that the token with this sha256 hex asked for, whatever its state. */
+  accountDeletionForToken(tokenHash: string): Promise<AccountDeletion | null>;
+  /** Records started with the email and the token hash, or adds the hash to a started deletion. A done one comes back unchanged. */
+  beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion>;
+  recordAccountDeletionStep(userId: string, step: 'beta_downloads' | 'auth_identity', betaDownloads?: BetaDownloadCleanup): Promise<void>;
+  /**
+   * The public side in one transaction: email-keyed rows, billing and workspaces, then the user row
+   * (tokens go with it). Throws TeamHasMembersError, and deletes nothing, when the account owns a
+   * team workspace with other members.
+   */
+  eraseAccount(userId: string): Promise<void>;
+  /** Marks the deletion done and forgets the captured email. */
+  finishAccountDeletion(userId: string): Promise<void>;
 
   // Data
   upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void>;

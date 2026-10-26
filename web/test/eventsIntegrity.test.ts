@@ -15,18 +15,13 @@ type Row = Record<string, unknown> & { id: string; user_id: string; ts: string }
  * the 1,000-row response cap Supabase projects apply by default. Everything above it is the real
  * supabase-js client and SupabaseStore.
  */
-function fakeEventsTable(rows: Row[], options: { failWrites?: boolean; failReads?: boolean; failDeletes?: boolean } = {}) {
+function fakeEventsTable(rows: Row[], options: { failWrites?: boolean; failReads?: boolean } = {}) {
   const writes: string[] = [];
   const reads = { requests: 0, rowsServed: 0 };
   const fetcher: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? 'GET';
     const table = url.pathname.replace('/rest/v1/', '');
-    if (method === 'DELETE') {
-      if (options.failDeletes) return Response.json({ message: 'delete failed' }, { status: 500 });
-      writes.push(`DELETE ${table}`);
-      return new Response(null, { status: 204 });
-    }
     assert.equal(table, 'events', `unexpected table ${table}`);
     if (method === 'POST') {
       if (options.failWrites) return Response.json({ message: 'column "local_date" does not exist' }, { status: 400 });
@@ -142,12 +137,6 @@ test('a failed history read is an error, not an empty learning record', async ()
   const store = new SupabaseStore('https://events.supabase.test', 'service-key', fetcher);
   await assert.rejects(store.profile(randomUUID()), /statement timeout/);
   await assert.rejects(store.historyPage(randomUUID(), 10), /statement timeout/);
-});
-
-test('account deletion reports a database failure instead of claiming success', async () => {
-  const { fetcher } = fakeEventsTable([], { failDeletes: true });
-  const store = new SupabaseStore('https://events.supabase.test', 'service-key', fetcher);
-  await assert.rejects(store.deleteAccount(randomUUID()), /delete failed/);
 });
 
 test('POST /events answers 409 for another account\'s event id and leaves that account\'s history intact', async () => {

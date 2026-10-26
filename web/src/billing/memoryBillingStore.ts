@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
 import { MAX_TEAM_WORKSPACES_PER_OWNER, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
+import { TeamHasMembersError } from '@/data/teamHasMembers';
 import type { TokenUsage } from '@/ai/provider';
 import type {
   BillingOverview,
@@ -100,6 +101,10 @@ export class MemoryBillingStore implements BillingStore {
 
   async listWorkspaces(userId: string): Promise<WorkspaceAccess[]> {
     await this.ensurePersonalWorkspace(userId);
+    return this.existingWorkspaces(userId);
+  }
+
+  async existingWorkspaces(userId: string): Promise<WorkspaceAccess[]> {
     return [...this.data.workspaces.values()].flatMap((workspace) => {
       const role = this.data.memberships.get(membershipKey(workspace.id, userId));
       return role ? [{ ...workspace, role }] : [];
@@ -357,7 +362,16 @@ export class MemoryBillingStore implements BillingStore {
     this.data.audits.push({ userId, workspaceId, action, metadata, at: this.now().toISOString() });
   }
 
+  /**
+   * Memory side of erase_account_data (called by MemoryStore.eraseAccount). Refuses before deleting
+   * anything while a team workspace this user owns has other members.
+   */
   async deleteUserBilling(userId: string): Promise<void> {
+    const ownedTeams = [...this.data.workspaces.values()].filter((workspace) => workspace.type !== 'personal' && workspace.ownerUserId === userId);
+    for (const [key] of this.data.memberships) {
+      const [workspaceId, memberUserId] = key.split(':');
+      if (memberUserId !== userId && ownedTeams.some((team) => team.id === workspaceId)) throw new TeamHasMembersError();
+    }
     // usage_events rows cascade with the user in SQL.
     this.data.usageEvents = this.data.usageEvents.filter((event) => event.userId !== userId);
     for (const [key] of [...this.data.memberships]) if (key.endsWith(`:${userId}`)) this.data.memberships.delete(key);
