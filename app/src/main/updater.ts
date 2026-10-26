@@ -139,38 +139,49 @@ function shellQuote(value: string): string {
 
 /**
  * The helper that swaps the app after Unvibe quits. The mounted app must pass the pinned signature
- * check before the installed app is touched. If it doesn't, the installed app stays as it is and is
- * reopened, and the script exits 1 like its other failures. It never re-signs: a re-signed copy
+ * check before anything is copied. It is then copied beside the installed app (`<target>.new`), and
+ * that copy must pass the same checks before it replaces the installed app, so nothing changes
+ * between the check and the swap. On any failure the installed app stays as it is, the copy is
+ * removed, the old app is reopened, and the script exits 1. It never re-signs: a re-signed copy
  * would run with a different identity, and macOS drops the Accessibility permission for it.
  * Quarantine is cleared only on a copy that passed. Unvibe.app in the image must be a real folder,
  * not a symlink: a link to a validly signed bundle elsewhere (even the installed app itself) would
- * pass codesign and then be deleted and copied over. The signed app must also be the version this
- * update is for (`version`, the release tag): an older build carries the same signature, so without
- * this a release could roll users back to an updater without these checks. Info.plist is sealed by
- * the signature, so once codesign passes its version can be trusted.
+ * pass codesign and then be copied in. The signed app must also be the version this update is for
+ * (`version`, the release tag): an older build carries the same signature, so without this a
+ * release could roll users back to an updater without these checks. Info.plist is sealed by the
+ * signature, so once codesign passes its version can be trusted.
  */
 export function macUpdateScript(opts: { pid: number; file: string; dir: string; mount: string; target: string; version: string }): string {
   const { pid, file, dir, mount, target, version } = opts;
   const mounted = shellQuote(`${mount}/Unvibe.app`);
-  const plist = shellQuote(`${mount}/Unvibe.app/Contents/Info.plist`);
-  const versionCheck = `[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ${plist} 2>/dev/null)" = ${shellQuote(version)} ]`;
+  const staged = shellQuote(`${target}.new`);
+  const installed = shellQuote(target);
+  const pin = shellQuote(MAC_SIGNING_REQUIREMENT);
+  const wanted = shellQuote(version);
+  const readVersion = `/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString'`;
   return [
     '#!/bin/bash',
     `while kill -0 ${pid} 2>/dev/null; do sleep 0.3; done`,
-    `mkdir -p ${shellQuote(mount)}`,
-    `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || { open ${shellQuote(target)}; exit 1; }`,
-    `if [ -d ${mounted} ] && [ ! -L ${mounted} ] && codesign --verify --deep --strict -R=${shellQuote(MAC_SIGNING_REQUIREMENT)} ${mounted} >/dev/null 2>&1 && ${versionCheck}; then`,
-    `  rm -rf ${shellQuote(target)}`,
-    `  ditto ${mounted} ${shellQuote(target)}`,
-    `  xattr -cr ${shellQuote(target)} 2>/dev/null`,
-    'else',
+    'refuse() {',
+    `  rm -rf ${staged}`,
     `  hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
-    `  open ${shellQuote(target)}`,
+    `  open ${installed}`,
     `  rm -rf ${shellQuote(dir)}`,
     '  exit 1',
-    'fi',
+    '}',
+    `mkdir -p ${shellQuote(mount)}`,
+    `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || refuse`,
+    `[ -d ${mounted} ] && [ ! -L ${mounted} ] || refuse`,
+    `codesign --verify --deep --strict -R=${pin} ${mounted} >/dev/null 2>&1 || refuse`,
+    `[ "$(${readVersion} ${shellQuote(`${mount}/Unvibe.app/Contents/Info.plist`)} 2>/dev/null)" = ${wanted} ] || refuse`,
+    `rm -rf ${staged}`,
+    `ditto ${mounted} ${staged} || refuse`,
+    `codesign --verify --deep --strict -R=${pin} ${staged} >/dev/null 2>&1 || refuse`,
+    `[ "$(${readVersion} ${shellQuote(`${target}.new/Contents/Info.plist`)} 2>/dev/null)" = ${wanted} ] || refuse`,
+    `xattr -cr ${staged} 2>/dev/null`,
+    `rm -rf ${installed} && mv ${staged} ${installed} || refuse`,
     `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
-    `open ${shellQuote(target)}`,
+    `open ${installed}`,
     `rm -rf ${shellQuote(dir)}`,
     '',
   ].join('\n');
