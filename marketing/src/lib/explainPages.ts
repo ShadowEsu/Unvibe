@@ -731,6 +731,57 @@ func parseCounts(raw []string) ([]int, error) {
     watchOut:
       "The buffer in `make(chan error, len(raw))` is what makes the early `return` safe. With `make(chan error)`, the goroutines that haven't sent yet wait for a receiver that never comes: after a call with `[\"x\", \"y\", \"z\", \"4\"]`, 2 of them were still stuck 200 ms later, and nothing reports it.",
   },
+  {
+    id: "rust",
+    fileName: "stock.rs",
+    lead: "Paste Rust and Vibe explains what each borrow allows, what a lifetime ties together and why the compiler accepts or rejects it.",
+    description:
+      "Paste Rust code and get a plain English explanation, free online. The sample picks and reserves stock with a trait, a lifetime and shared and mutable borrows.",
+    sampleSummary: "A trait for stock that can be sold, a function that borrows the first available item and one that reserves it.",
+    sample: `pub struct Stock {
+    pub sku: String,
+    pub quantity: u32,
+}
+
+pub trait Available {
+    fn available(&self) -> bool;
+}
+
+impl Available for Stock {
+    fn available(&self) -> bool { self.quantity > 0 }
+}
+
+pub fn first_available<'a, T: Available>(items: &'a [T]) -> Option<&'a T> {
+    items.iter().find(|item| item.available())
+}
+
+pub fn reserve(stock: &mut Stock) -> bool {
+    if stock.quantity == 0 { return false; }
+    stock.quantity -= 1;
+    true
+}`,
+    shows: [
+      {
+        concept: "traits",
+        text: "`Available` names one method, and `impl Available for Stock` gives `Stock` that method. `first_available` takes a slice of any type `T` that implements the trait; here that is `Stock`, and an item with a quantity of 0 doesn't count as available.",
+      },
+      {
+        concept: "lifetimes",
+        text: "`'a` ties the result to the slice: the `&'a T` that comes back points at the item inside `items` itself, not at a copy. Rust would infer the same lifetimes here: a version without `'a` compiles too, because only one reference goes in.",
+      },
+      {
+        concept: "borrowing",
+        text: "`first_available` takes `&[T]`, a shared borrow, and `reserve` takes `&mut Stock`, a mutable one. While the item `first_available(&items)` returned is still in use, `reserve(&mut items[0])` doesn't compile: rustc stops with error `E0502`, cannot borrow `items` as mutable because it is also borrowed as immutable.",
+      },
+    ],
+    notes: [
+      "With an empty item first, then `box` (quantity 2) and `bag` (quantity 1), `first_available` skips the empty one and returns `box`.",
+      "`reserve` returns `true` twice for `box`, then `false`, and the quantity stays at 0. The next `first_available` call returns `bag`.",
+      "`find` gives `None` for an empty slice or when nothing is available, so the caller has to handle the `Option` before it can read `sku`.",
+    ],
+    watchOut:
+      "The `if stock.quantity == 0` check matters because `quantity` is a `u32`, which can't go below 0. Without it, `stock.quantity -= 1` on 0 panics with `attempt to subtract with overflow` in a debug build, and in a build with `-O`, where overflow checks are off by default, it quietly wraps to `4294967295`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
