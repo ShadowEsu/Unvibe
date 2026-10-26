@@ -519,6 +519,59 @@ puts members.sort.map(&:name).inspect`,
     watchOut:
       "`Comparable` also defines `==` from `<=>`, so two different members with the same points count as equal: `Member.new(\"Al\", 5) == Member.new(\"Bo\", 5)` is `true`.",
   },
+  {
+    id: "java",
+    fileName: "Reports.java",
+    lead: "Paste Java, from a record to a stream pipeline, and Vibe explains what each step does and which types it works with.",
+    description:
+      "Paste Java code and get a plain English explanation, free online. The sample totals paid orders with a record, a stream and Collectors.groupingBy.",
+    sampleSummary: "A record for orders, a stream that totals paid orders per customer and a generic method that finds the top one.",
+    sample: `import java.util.*;
+import java.util.stream.Collectors;
+
+record Order(String customer, String status, int cents) {
+    Order {
+        if (cents < 0) throw new IllegalArgumentException("negative total: " + cents);
+    }
+}
+
+class Reports {
+    static Map<String, Integer> paidByCustomer(List<Order> orders) {
+        return orders.stream()
+                .filter(o -> o.status().equals("PAID"))
+                .collect(Collectors.groupingBy(Order::customer, TreeMap::new,
+                        Collectors.summingInt(Order::cents)));
+    }
+
+    static <K, V extends Comparable<V>> Optional<K> topKey(Map<K, V> map) {
+        return map.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
+    }
+}`,
+    shows: [
+      {
+        concept: "classes",
+        text: "`record Order(...)` declares a class from its three fields. Java writes the constructor, the accessors `customer()`, `status()` and `cents()`, and `equals`, `hashCode` and `toString`. The block inside is a compact constructor: it runs on every `new Order(...)` and throws `IllegalArgumentException` for a negative total.",
+      },
+      {
+        concept: "streams",
+        text: "`paidByCustomer` reads the list as a stream. `filter` keeps the paid orders, then `Collectors.groupingBy` puts them in a `TreeMap` keyed by customer and adds up their `cents` with `summingInt`. Paid orders of 1250 and 2750 for Ana and 3000 for Ben give `{Ana=4000, Ben=3000}`.",
+      },
+      {
+        concept: "generics",
+        text: "`topKey` works for any map whose values can be compared. The bound `V extends Comparable<V>` is what lets `Map.Entry.comparingByValue()` compile: with a plain `V`, javac rejects the method with an `incompatible types` error.",
+      },
+    ],
+    notes: [
+      "A customer with no paid orders is left out of the result, not listed with 0. A customer whose only order is `PENDING` never reaches `groupingBy`.",
+      "`TreeMap::new` keeps the customers in name order. Without it, `groupingBy` returns a `HashMap`, which makes no promise about order.",
+      "`topKey` returns an `Optional` because an empty map has no top key: it gives `Optional.empty`, never `null`. On a tie, `max` keeps the entry it met first, which in a `TreeMap` is the name that sorts first.",
+      "`o.status().equals(\"PAID\")` throws `NullPointerException` on an order whose status is `null`. Written as `\"PAID\".equals(o.status())`, it skips that order instead.",
+    ],
+    watchOut:
+      "`summingInt` adds in an `int`, so a customer's total silently wraps around once it passes 2,147,483,647 cents, about 21.5 million dollars. Two paid orders of 2,000,000,000 cents add up to `-294967296`. Use `summingLong` for totals that can grow that large.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
