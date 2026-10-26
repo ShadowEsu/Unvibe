@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   BETA_INSTALL_ASSET,
+  BETA_MAC_SIGNING_REQUIREMENT,
   BETA_WINDOWS_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
@@ -138,7 +139,8 @@ describe("Mac install script, run with bash against stubs", () => {
     const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 1);
     assert.match(r.output, /Checksum verified\./);
     assert.ok(r.calls.some((c) => c.startsWith("hdiutil attach")), "a matching checksum continues to mount");
-    assert.ok(r.calls.some((c) => c.startsWith("codesign --verify")), r.calls.join(" | "));
+    // Only the release's own signature passes: a plain --verify also accepts an ad-hoc re-signed copy.
+    assert.ok(r.calls.some((c) => c.startsWith("codesign --verify") && c.includes(`-R=${BETA_MAC_SIGNING_REQUIREMENT}`)), r.calls.join(" | "));
     assert.notEqual(r.status, 0, r.output);
     assert.match(r.output, /signature/i);
     assert.ok(r.output.includes(HELP_URL), r.output);
