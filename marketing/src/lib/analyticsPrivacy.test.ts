@@ -1,20 +1,22 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import type { CaptureResult } from "posthog-js";
 import {
   INITIAL_REPLAY_STATE,
   POSTHOG_PRIVACY_CONFIG,
   REPLAY_BLOCK_CLASS,
   analyticsAllowedOnPath,
+  initLoadedSdks,
   maskReplayNetworkEntry,
   mixpanelBeforeSend,
-  mixpanelMayInit,
   mixpanelPrivacyConfig,
   posthogBeforeSend,
   sanitizeUrl,
+  syncCaptureForPage,
   syncReplayForPage,
 } from "./analyticsPrivacy";
 import { feedbackRewardUrl, signEmail } from "./rewardLink";
+import { NOTRACK_STORAGE_KEY } from "./trackingOptOut";
 import { unsubscribeUrl } from "./unsubscribe";
 
 process.env.REWARD_LINK_SECRET = "analytics-privacy-test-secret";
@@ -30,6 +32,16 @@ function assertClean(value: unknown): void {
   for (const secret of [EMAIL, encodeURIComponent(EMAIL), TOKEN, GIFT_CODE, STATS_KEY, "ABCD1234", "pkce-code-0123456789abcdef", "abc.def.ghi"]) {
     assert.ok(!text.includes(secret), `${text} still contains ${secret}`);
   }
+}
+
+/** `initLoadedSdks` callbacks that log each step in `calls`. */
+function loggingInit(calls: string[]) {
+  return {
+    posthog: (sdk: string) => void calls.push(`init ${sdk}`),
+    mixpanel: (sdk: string) => void calls.push(`init ${sdk}`),
+    syncCapture: () => void calls.push("syncCapture"),
+    flush: () => void calls.push("flush"),
+  };
 }
 
 describe("analytics URL sanitizer", () => {
@@ -150,6 +162,40 @@ describe("analytics SDK hooks", () => {
     assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: "https://unvibe.site/pricing" } }));
   });
 
+  it("a PostHog heatmap flush from a public page keeps only public-page keys, sanitized", () => {
+    // Security's PoC event: the buffer still holds the last moments on /activate and /redeem.
+    const heatmap: CaptureResult = {
+      uuid: "u7",
+      event: "$$heatmap",
+      properties: {
+        $current_url: "https://unvibe.site/",
+        $heatmap_data: {
+          "https://unvibe.site/activate?code=WXYZ-1234": [{ x: 10, y: 20, type: "click" }],
+          "https://unvibe.site/redeem?code=ABCD-EFGH-JKLM-NPQR": [{ x: 5, y: 6, type: "click" }],
+          "https://unvibe.site/?ref=REFCODE123": [{ x: 1, y: 2, type: "mousemove" }],
+          "https://unvibe.site/?ref=OTHERCODE9": [{ x: 3, y: 4, type: "click" }],
+        },
+      },
+    };
+    const sent = posthogBeforeSend(heatmap);
+    assert.ok(sent, "public-page points still go out");
+    assert.deepEqual(sent.properties.$heatmap_data, {
+      "https://unvibe.site/?ref=redacted": [{ x: 1, y: 2, type: "mousemove" }, { x: 3, y: 4, type: "click" }],
+    });
+    for (const secret of ["activate", "redeem", "code=", "REFCODE123", "OTHERCODE9"]) {
+      assert.ok(!JSON.stringify(sent).includes(secret), `heatmap still contains ${secret}`);
+    }
+    const privateOnly: CaptureResult = {
+      uuid: "u8",
+      event: "$$heatmap",
+      properties: {
+        $current_url: "https://unvibe.site/",
+        $heatmap_data: { "https://unvibe.site/activate?user_code=ABCD1234": [{ x: 1, y: 1, type: "click" }] },
+      },
+    };
+    assert.equal(posthogBeforeSend(privateOnly), null, "a flush with only private-page points is dropped");
+  });
+
   it("PostHog replay keeps no URL secrets, headers or bodies", () => {
     const entry = maskReplayNetworkEntry({
       name: `https://unvibe.site/api/unsubscribe?e=${encodeURIComponent(EMAIL)}&t=${TOKEN}`,
@@ -173,6 +219,27 @@ describe("analytics privacy config", () => {
     assert.equal(POSTHOG_PRIVACY_CONFIG.mask_all_element_attributes, true);
   });
 
+  it("PostHog sends each event when it is captured, so nothing held back goes out after an opt-out or a private page", () => {
+    assert.equal(POSTHOG_PRIVACY_CONFIG.request_batching, false);
+  });
+
+  it("PostHog masks every secret parameter itself, in the stored landing URL and event URLs it builds", () => {
+    assert.equal(POSTHOG_PRIVACY_CONFIG.mask_personal_data_properties, true);
+    // The full list sanitizeUrl redacts (SECRET_PARAMS), not a sample.
+    const secret = [
+      "e", "email", "t", "token", "ref", "code", "promo", "user_code", "device", "device_code",
+      "key", "sig", "signature", "access_token", "refresh_token", "id_token", "state",
+    ];
+    for (const name of secret) {
+      assert.equal(new URL(sanitizeUrl(`https://unvibe.site/?${name}=x1`)).searchParams.get(name), "redacted", `${name} is secret`);
+    }
+    assert.deepEqual([...POSTHOG_PRIVACY_CONFIG.custom_personal_data_properties].sort(), [...secret].sort());
+  });
+
+  it("Mixpanel sends each event when it is tracked, so no stored batch skips before_send_events", () => {
+    assert.equal(mixpanelPrivacyConfig().batch_requests, false);
+  });
+
   it("Mixpanel never starts a replay on its own, and holds a new replay's first frames back", () => {
     const config = mixpanelPrivacyConfig();
     assert.equal(config.record_sessions_percent, 0);
@@ -188,18 +255,32 @@ describe("analytics privacy config", () => {
     assert.ok(mixpanelPrivacyConfig().record_block_class.test("mp-block"), "Mixpanel's own default class still blocks");
   });
 
-  it("Mixpanel starts only on a public page, for a tracked browser", () => {
-    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/pricing", trackingDisabled: false }), true);
-    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/founder", trackingDisabled: false }), false, "in-flight load that lands on an admin page");
-    assert.equal(mixpanelMayInit({ href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false }), false);
-    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/pricing", trackingDisabled: true }), false);
+  it("a loaded SDK initialises only on a public page, for a tracked browser, and waits otherwise", () => {
+    const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
+    for (const page of [
+      { href: "https://unvibe.site/founder", trackingDisabled: false },
+      { href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false },
+    ]) {
+      const calls: string[] = [];
+      assert.deepEqual(initLoadedSdks(page, loaded, loggingInit(calls)), loaded, `load that finishes on ${page.href} keeps waiting`);
+      assert.deepEqual(calls, [], page.href);
+    }
+  });
+
+  it("after init, capture is synced for the page before the events queued while loading are flushed", () => {
+    const calls: string[] = [];
+    initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, { posthog: "posthog", mixpanel: "mixpanel" }, loggingInit(calls));
+    assert.deepEqual(calls, ["init posthog", "init mixpanel", "syncCapture", "flush"]);
+    const none: string[] = [];
+    initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, { posthog: null, mixpanel: null }, loggingInit(none));
+    assert.deepEqual(none, [], "nothing loaded: nothing to sync or flush");
   });
 
   it("admin and capability pages load no analytics SDK", () => {
     for (const path of ["/founder", "/waitlist", "/waitlist-admin", `/s/${STATS_KEY}`]) {
       assert.equal(analyticsAllowedOnPath(path), false, path);
     }
-    for (const path of ["/", "/pricing", "/activate", "/app", "/waitlisted-not-a-page", "/support"]) {
+    for (const path of ["/", "/pricing", "/activated-not-a-page", "/redeemed-not-a-page", "/app", "/waitlisted-not-a-page", "/support"]) {
       assert.equal(analyticsAllowedOnPath(path), true, path);
     }
   });
@@ -333,7 +414,7 @@ describe("session replay on client navigation", () => {
     syncReplayForPage({ ...INITIAL_REPLAY_STATE, posthogPaused: true }, { href: feedbackRewardUrl(EMAIL), ...tracked }, sdk);
     assert.deepEqual(calls, ["posthog.start"]);
     const running = fakeSdks({ recording: true });
-    syncReplayForPage({ ...INITIAL_REPLAY_STATE, mixpanelStarted: true }, { href: "https://unvibe.site/activate?user_code=ABCD1234", ...tracked }, running.sdk);
+    syncReplayForPage({ ...INITIAL_REPLAY_STATE, mixpanelStarted: true }, { href: `https://unvibe.site/?ref=${GIFT_CODE}`, ...tracked }, running.sdk);
     assert.deepEqual(running.calls, ["mixpanel.stop"]);
   });
 
@@ -342,5 +423,206 @@ describe("session replay on client navigation", () => {
       const state = syncReplayForPage(INITIAL_REPLAY_STATE, { href, ...tracked }, { posthog: null, mixpanel: null });
       assert.deepEqual(state, INITIAL_REPLAY_STATE, href);
     }
+  });
+});
+
+/** Fake SDK clients that log which capture controls were called, and keep the opt-out like the real ones. */
+function fakeCapture({ posthogOff = false, mixpanelOff = false } = {}) {
+  const calls: string[] = [];
+  return {
+    calls,
+    sdk: {
+      posthog: {
+        has_opted_out_capturing: () => posthogOff,
+        opt_out_capturing: () => {
+          calls.push("posthog.opt_out");
+          posthogOff = true;
+        },
+        opt_in_capturing: (options: { captureEventName: false }) => {
+          calls.push(`posthog.opt_in ${JSON.stringify(options)}`);
+          posthogOff = false;
+        },
+      },
+      mixpanel: {
+        has_opted_out_tracking: () => mixpanelOff,
+        opt_out_tracking: (options: { delete_user: false }) => {
+          calls.push(`mixpanel.opt_out ${JSON.stringify(options)}`);
+          mixpanelOff = true;
+        },
+        opt_in_tracking: (options: { track: () => void }) => {
+          calls.push(`mixpanel.opt_in track:${typeof options.track}`);
+          mixpanelOff = false;
+        },
+      },
+    },
+  };
+}
+
+describe("an opt-out after the SDKs started", () => {
+  const realWindow: unknown = Reflect.get(globalThis, "window");
+
+  /** The browser state `browserTrackingDisabled` reads, on the given query, as after a client navigation. */
+  function installWindow(search: string, storage: Map<string, string>) {
+    Reflect.set(globalThis, "window", {
+      navigator: { webdriver: false },
+      location: { href: `${PUBLIC}${search}`, pathname: "/pricing", search },
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => void storage.set(key, value),
+        removeItem: (key: string) => void storage.delete(key),
+      },
+    });
+  }
+
+  afterEach(() => {
+    Reflect.set(globalThis, "window", realWindow);
+  });
+
+  it("both hooks drop the next event, including replay snapshots and events on later pages", () => {
+    const storage = new Map<string, string>();
+    const posthogEvent = (): CaptureResult => ({ uuid: "u4", event: "$pageview", properties: { $current_url: PUBLIC } });
+    const mixpanelEvent = () => ({ event: "$mp_click", properties: { $current_url: PUBLIC } });
+    installWindow("", storage);
+    assert.ok(posthogBeforeSend(posthogEvent()), "PostHog sends before the opt-out");
+    assert.ok(mixpanelBeforeSend(mixpanelEvent()), "Mixpanel sends before the opt-out");
+    installWindow("?notrack=1", storage);
+    assert.equal(posthogBeforeSend(posthogEvent()), null, "PostHog event after ?notrack=1");
+    assert.equal(mixpanelBeforeSend(mixpanelEvent()), null, "Mixpanel event after ?notrack=1");
+    installWindow("", storage);
+    assert.equal(storage.get(NOTRACK_STORAGE_KEY), "1");
+    const snapshot: CaptureResult = { uuid: "u5", event: "$snapshot", properties: { $snapshot_data: [] } };
+    assert.equal(posthogBeforeSend(snapshot), null, "PostHog replay snapshot on a later page");
+    assert.equal(mixpanelBeforeSend(mixpanelEvent()), null, "Mixpanel event on a later page");
+  });
+
+  it("an SDK that finishes loading after the opt-out is not initialised", () => {
+    const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
+    const calls: string[] = [];
+    const init = loggingInit(calls);
+    assert.deepEqual(initLoadedSdks({ href: PUBLIC, trackingDisabled: true }, loaded, init), loaded, "still waiting after the opt-out");
+    assert.deepEqual(calls, [], "no SDK initialised after the opt-out");
+    assert.deepEqual(initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, loaded, init), { posthog: null, mixpanel: null });
+    assert.deepEqual(calls.slice(0, 2), ["init posthog", "init mixpanel"], "both initialise once tracking is allowed");
+  });
+
+  it("turns off both SDKs' capture and stops both replays", () => {
+    const capture = fakeCapture();
+    const replay = fakeSdks();
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: false }, capture.sdk);
+    const started = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, replay.sdk);
+    assert.deepEqual(capture.calls, [], "a tracked page changes nothing");
+    const optedOut = { href: `${PUBLIC}?notrack=1`, trackingDisabled: true };
+    syncCaptureForPage(optedOut, capture.sdk);
+    assert.deepEqual(capture.calls, ["posthog.opt_out", 'mixpanel.opt_out {"delete_user":false}'], "capture turned off");
+    syncReplayForPage(started, { ...optedOut, mixpanelSampled: true }, replay.sdk);
+    assert.deepEqual(replay.calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop"], "both replays stopped");
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: true }, capture.sdk);
+    assert.equal(capture.calls.length, 2, "already off: nothing called again");
+  });
+
+  it("?notrack=0, or a later visit, turns capture back on and sends no opt-in event", () => {
+    const capture = fakeCapture({ posthogOff: true, mixpanelOff: true });
+    syncCaptureForPage({ href: `${PUBLIC}?notrack=0`, trackingDisabled: false }, capture.sdk);
+    assert.deepEqual(capture.calls, ['posthog.opt_in {"captureEventName":false}', "mixpanel.opt_in track:function"]);
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: false }, capture.sdk);
+    assert.equal(capture.calls.length, 2, "already on: nothing called again");
+  });
+
+  it("does nothing, and does not throw, before the SDKs have initialised", () => {
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: true }, { posthog: null, mixpanel: null });
+  });
+});
+
+const ACTIVATE = "https://unvibe.site/activate?user_code=ABCD1234";
+const REDEEM = "https://unvibe.site/redeem?code=PROMO2026";
+/** The two pages that hold a sign-in session, with sub-paths and queries. */
+const SIGN_IN_URLS = [
+  "https://unvibe.site/activate",
+  ACTIVATE,
+  "https://unvibe.site/activate/done#ok",
+  "https://unvibe.site/redeem",
+  REDEEM,
+  "https://unvibe.site/redeem/confirm?x=1",
+];
+
+describe("sign-in pages (/activate, /redeem)", () => {
+  it("load no analytics SDK, on a fresh load or when a load finishes there", () => {
+    assert.equal(analyticsAllowedOnPath("/activate"), false, "/activate starts no SDK");
+    assert.equal(analyticsAllowedOnPath("/redeem"), false, "/redeem starts no SDK");
+    for (const path of ["/activate/", "/activate/done", "/redeem/", "/redeem/confirm"]) {
+      assert.equal(analyticsAllowedOnPath(path), false, path);
+    }
+    const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
+    for (const href of SIGN_IN_URLS) {
+      const calls: string[] = [];
+      assert.deepEqual(initLoadedSdks({ href, trackingDisabled: false }, loaded, loggingInit(calls)), loaded, href);
+      assert.deepEqual(calls, [], href);
+    }
+  });
+
+  it("both hooks drop every SDK event recorded on either page", () => {
+    for (const url of SIGN_IN_URLS) {
+      const posthogEvent: CaptureResult = { uuid: "u6", event: "$autocapture", properties: { $current_url: url } };
+      assert.equal(posthogBeforeSend(posthogEvent), null, url);
+      assert.equal(mixpanelBeforeSend({ event: "$mp_page_view", properties: { $current_url: url } }), null, url);
+    }
+  });
+
+  it("a client navigation into either page stops capture and both replays, and back out resumes them", () => {
+    for (const href of [ACTIVATE, REDEEM]) {
+      const capture = fakeCapture();
+      const replay = fakeSdks();
+      let state = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, replay.sdk);
+      syncCaptureForPage({ href, trackingDisabled: false }, capture.sdk);
+      state = syncReplayForPage(state, { href, ...tracked }, replay.sdk);
+      assert.deepEqual(capture.calls, ["posthog.opt_out", 'mixpanel.opt_out {"delete_user":false}'], `${href}: capture off`);
+      assert.deepEqual(replay.calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop"], `${href}: replays stopped`);
+      syncCaptureForPage({ href: PUBLIC, trackingDisabled: false }, capture.sdk);
+      syncReplayForPage(state, { href: PUBLIC, ...tracked }, replay.sdk);
+      assert.deepEqual(capture.calls.slice(2), ['posthog.opt_in {"captureEventName":false}', "mixpanel.opt_in track:function"], `${href}: capture back on`);
+      assert.deepEqual(replay.calls.slice(3), ["posthog.start", "mixpanel.start"], `${href}: replays resumed`);
+    }
+  });
+
+  it("leaving either page resumes nothing for a browser that opted out there", () => {
+    const capture = fakeCapture();
+    const replay = fakeSdks();
+    let state = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, replay.sdk);
+    syncCaptureForPage({ href: ACTIVATE, trackingDisabled: false }, capture.sdk);
+    state = syncReplayForPage(state, { href: ACTIVATE, ...tracked }, replay.sdk);
+    const optedOut = { href: `${PUBLIC}?notrack=1`, trackingDisabled: true };
+    syncCaptureForPage(optedOut, capture.sdk);
+    syncReplayForPage(state, { ...optedOut, mixpanelSampled: true }, replay.sdk);
+    assert.deepEqual(capture.calls, ["posthog.opt_out", 'mixpanel.opt_out {"delete_user":false}'], "capture stays off");
+    assert.deepEqual(replay.calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop"], "replays stay stopped");
+  });
+});
+
+describe("a tab on a private page while another tab opts back in", () => {
+  const realWindow: unknown = Reflect.get(globalThis, "window");
+
+  afterEach(() => {
+    Reflect.set(globalThis, "window", realWindow);
+  });
+
+  it("both hooks drop every event while this tab shows /activate or /redeem, even one stamped with a public URL", () => {
+    for (const pathname of ["/activate", "/redeem"]) {
+      // Tracking allowed in shared storage (no opt-out stored), this tab on a sign-in page.
+      Reflect.set(globalThis, "window", {
+        navigator: { webdriver: false },
+        location: { href: `https://unvibe.site${pathname}`, pathname, search: "" },
+        localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+      });
+      const posthogEvent: CaptureResult = { uuid: "u9", event: "$pageleave", properties: { $current_url: PUBLIC } };
+      assert.equal(posthogBeforeSend(posthogEvent), null, `PostHog event sent while on ${pathname}`);
+      assert.equal(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: PUBLIC } }), null, `Mixpanel event sent while on ${pathname}`);
+    }
+    Reflect.set(globalThis, "window", {
+      navigator: { webdriver: false },
+      location: { href: PUBLIC, pathname: "/pricing", search: "" },
+      localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+    });
+    assert.ok(posthogBeforeSend({ uuid: "u10", event: "$pageview", properties: { $current_url: PUBLIC } }), "public page sends");
+    assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: PUBLIC } }), "public page sends");
   });
 });

@@ -22,4 +22,4 @@ For every checked item attach evidence, owner, date, commit SHA, and environment
 - [ ] Release notes, limitations, onboarding, feedback, support, logging, and rollback material published.
 - [ ] Monitoring owner and rollback decision-maker are available during the release window.
 
-Any open item remains a blocker unless the founder signs a written, time-bounded risk acceptance. Security, privacy, cross-user access, deletion, data-loss, and signing failures cannot be waived for external distribution.
+Any open item remains a blocker unless the business owner signs a written, time-bounded risk acceptance. Security, privacy, cross-user access, deletion, data-loss, and signing failures cannot be waived for external distribution.

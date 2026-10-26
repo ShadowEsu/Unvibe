@@ -27,6 +27,14 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   deletion removes server records and sessions, then clears local learning and closes widgets.
 - `.env`, private keys, build output, dependencies, and common credential files are excluded from
   version control. The committed secret-filter tests contain fake key patterns only.
+- Feedback (`marketing/src/app/feedback/route.ts`) stores the rating, the message (control
+  characters stripped), the source, an optional email, page and app version. It stores no IP and
+  no IP hash (`site_feedback.ip_hash` is nullable and is no longer written; rows written before
+  this change still hold one until someone clears the column). The rate limit (5
+  sends per 10 minutes) keys an in-memory map in each server instance on a SHA-256 of the client
+  IP (`hashIp`); that key is never stored or sent, and it lasts until the instance restarts or the
+  map passes 5,000 keys. The `feedback_submitted` PostHog event carries only the rating and source,
+  under a random UUID per send.
 
 ## Not implemented or not verified
 

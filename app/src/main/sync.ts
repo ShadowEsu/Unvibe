@@ -62,6 +62,9 @@ async function runSync(): Promise<void> {
     const pending = store().pending();
     if (pending.length > 0) {
       const accepted = await pushEvents(token, pending);
+      // The session can end (sign-out, account deletion) while a request is out. Its answer must
+      // never be written into what is on this computer afterwards.
+      if (store().token() !== token) throw new Error('Sync cancelled.');
       store().markSynced(accepted);
     }
     const remote = await pullEvents(token, (loaded) => {
@@ -72,6 +75,7 @@ async function runSync(): Promise<void> {
         message: `Restoring ${loaded} learning records…`,
       });
     }, syncAbort.signal);
+    if (store().token() !== token) throw new Error('Sync cancelled.');
     store().mergeRemote(remote);
     retryAttempt = 0;
     clearRetry();
@@ -103,6 +107,13 @@ export async function retrySync(): Promise<void> {
   retryAttempt = 0;
   clearRetry();
   await flush();
+}
+
+/** Stops a sync in progress and waits for it to end, so nothing it fetched is saved after this returns. */
+export async function cancelSync(): Promise<void> {
+  clearRetry();
+  syncAbort?.abort();
+  await inFlight;
 }
 
 export function stopSync(): void {

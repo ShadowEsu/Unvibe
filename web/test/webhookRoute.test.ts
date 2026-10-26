@@ -10,7 +10,7 @@ import { getStripe } from '../src/billing/stripe';
 // on the cached client, so no request leaves the machine.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-process.env.STRIPE_SECRET_KEY = 'sk_test_local_only_never_sent';
+process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 

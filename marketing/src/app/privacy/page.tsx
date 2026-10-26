@@ -35,6 +35,14 @@ export default function PrivacyPage() {
             <strong>Account data:</strong> your email for sign-in and an
             authentication token.
           </li>
+          <li>
+            <strong>Feedback you send:</strong> your star rating and message, where it
+            came from (the site or the app, with the page or app version), and your email
+            only if you add it. Your IP address is used only in the server&apos;s memory, to
+            stop repeated sends, and is not stored with your feedback. Each send is also
+            counted as one PostHog event that carries only the star rating and where it
+            came from, under a random ID that is new each time.
+          </li>
         </ul>
       </LegalSection>
 
@@ -143,8 +151,9 @@ export default function PrivacyPage() {
           they finish, with no code or personal data. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Google Gemini to write the explanation. To limit how often the box can be used,
-          Unvibe keeps a keyed hash of your IP address (it can&apos;t be turned back into the
-          address without a secret only our server has) and the time of each request, not the code.
+          Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
+          26 October 2026 that hash is keyed with a server secret, so it can&apos;t be matched to an
+          address without that secret; requests from before then kept a plain hash, which is weaker.
         </p>
       </LegalSection>
 

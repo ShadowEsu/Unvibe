@@ -8,9 +8,12 @@
  * personal data: replays mask all text and inputs, and emails, tokens and codes
  * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
  * An anonymous id is kept in localStorage. Automated browsers, visitors who
- * opted out with ?notrack=1 (trackingOptOut.ts), and admin or capability pages
- * load no SDK and send nothing. Reaching an admin page by client navigation
- * stops replay there (syncSessionRecording).
+ * opted out with ?notrack=1 (trackingOptOut.ts), and admin, capability and
+ * sign-in pages (/activate, /redeem) load no SDK and send nothing. An SDK that
+ * finishes loading after an opt-out or a client navigation into one of those
+ * pages waits uninitialised. An opt-out after the SDKs started, or a client
+ * navigation into one of those pages, turns their capture and replay off
+ * there (syncSessionRecording).
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
@@ -19,11 +22,14 @@ import {
   MIXPANEL_REPLAY_PERCENT,
   POSTHOG_PRIVACY_CONFIG,
   analyticsAllowedOnPath,
-  mixpanelMayInit,
+  initLoadedSdks,
   mixpanelPrivacyConfig,
   sanitizeUrl,
+  syncCaptureForPage,
   syncReplayForPage,
   type MixpanelReplay,
+  type MixpanelTracking,
+  type PosthogCapture,
   type PosthogReplay,
   type ReplayState,
 } from "@/lib/analyticsPrivacy";
@@ -32,12 +38,12 @@ import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 export type { AnalyticsEvent };
 
 type Props = Record<string, string | number | boolean | undefined>;
-type MixpanelClient = MixpanelReplay & {
+type MixpanelClient = MixpanelReplay & MixpanelTracking & {
   init: (token: string, config: Record<string, unknown>) => void;
-  identify: (id: string) => void;
+  register: (props: Record<string, unknown>) => void;
   track: (event: string, props?: Record<string, unknown>) => void;
 };
-type PosthogClient = PosthogReplay & {
+type PosthogClient = PosthogReplay & PosthogCapture & {
   init: (token: string, config: Record<string, unknown>) => void;
   identify: (id: string) => void;
   capture: (event: string, props?: Record<string, unknown>) => void;
@@ -92,12 +98,14 @@ export const analyticsEnabled = Boolean(POSTHOG_KEY || MIXPANEL_BROWSER_TOKEN);
 
 let mixpanelClient: MixpanelClient | null = null;
 let mixpanelStart: Promise<void> | null = null;
-/** Loaded but not initialised yet, because the load finished on an admin or capability page. */
+/** Loaded but not initialised yet, because the load finished after an opt-out or on an admin page. */
 let mixpanelLoaded: MixpanelClient | null = null;
 const mixpanelQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
 
 let posthogClient: PosthogClient | null = null;
 let posthogStart: Promise<void> | null = null;
+/** Loaded but not initialised yet, because the load finished after an opt-out or on an admin page. */
+let posthogLoaded: PosthogClient | null = null;
 const posthogQueue: Array<{ event: AnalyticsEvent; props: Props }> = [];
 
 let replayState: ReplayState = INITIAL_REPLAY_STATE;
@@ -253,30 +261,41 @@ function startPosthog(): void {
   if (posthogClient || posthogStart) return;
   posthogStart = import("posthog-js")
     .then((mod) => {
-      const posthog = mod.default as PosthogClient;
-      posthog.init(POSTHOG_KEY, {
-        api_host: POSTHOG_HOST,
-        defaults: "2026-05-30",
-        persistence: "localStorage",
-        person_profiles: "identified_only",
-        capture_pageview: true,
-        capture_pageleave: true,
-        // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
-        capture_exceptions: true,
-        disable_session_recording: false,
-        disable_surveys: false,
-        enable_heatmaps: true,
-        capture_dead_clicks: true,
-        ...POSTHOG_PRIVACY_CONFIG,
-      });
-      posthog.identify(anonId());
-      posthogClient = posthog;
-      flushPosthog();
+      posthogLoaded = mod.default as PosthogClient;
       syncSessionRecording();
     })
     .catch(() => {
       posthogStart = null;
     });
+}
+
+/**
+ * Exported for tests (the token argument too), which check the config `posthog.init` receives.
+ *
+ * Ops: PostHog's project-level console log capture (project settings, not this config) must stay
+ * off. When on, the SDK sends each log with the raw page address (`location.href`) and no hook
+ * (`posthog-js` `posthog-logs.js`, the log context's `currentUrl`), so email-link tokens and
+ * codes would go out unsanitized.
+ */
+export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
+  if (!token) return;
+  posthog.init(token, {
+    api_host: POSTHOG_HOST,
+    defaults: "2026-05-30",
+    persistence: "localStorage",
+    person_profiles: "identified_only",
+    capture_pageview: true,
+    capture_pageleave: true,
+    // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
+    capture_exceptions: true,
+    disable_session_recording: false,
+    disable_surveys: false,
+    enable_heatmaps: true,
+    capture_dead_clicks: true,
+    ...POSTHOG_PRIVACY_CONFIG,
+  });
+  posthog.identify(anonId());
+  posthogClient = posthog;
 }
 
 function startMixpanel(): void {
@@ -292,19 +311,43 @@ function startMixpanel(): void {
     });
 }
 
-function initMixpanel(mixpanel: MixpanelClient): void {
-  mixpanelLoaded = null;
-  if (!MIXPANEL_BROWSER_TOKEN) return;
+/**
+ * Exported for tests (the token argument too). The distinct id is set as a super property, not
+ * with `identify`: Mixpanel sends `identify`'s `$identify` event, and the profile updates it
+ * flushes, without `before_send_events`, so the landing URL (an email link's address and token,
+ * an invite code) would go out unsanitized.
+ */
+export function initMixpanel(mixpanel: MixpanelClient, token = MIXPANEL_BROWSER_TOKEN): void {
+  if (!token) return;
+  removeStoredMixpanelBatches();
   // Mixpanel for Startups Pro credits: autocapture + session replay are included.
-  mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
+  mixpanel.init(token, {
     ...mixpanelPrivacyConfig(),
     persistence: "localStorage",
     track_pageview: true,
     ip: true,
   });
-  mixpanel.identify(anonId());
+  mixpanel.register({ distinct_id: anonId() });
   mixpanelClient = mixpanel;
-  flushMixpanel();
+}
+
+/**
+ * Mixpanel's batch queues (`__mpq_<token>_ev`, `_pp`, `_gr`) from visits made while batching was
+ * on. Batching is off and never reads them, but they hold events stored before any hook ran, so
+ * they are removed in case batching is ever turned back on.
+ */
+function removeStoredMixpanelBatches(): void {
+  try {
+    const storage = window.localStorage;
+    const keys: string[] = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (key?.startsWith("__mpq_")) keys.push(key);
+    }
+    for (const key of keys) storage.removeItem(key);
+  } catch {
+    // Storage blocked: nothing was stored either.
+  }
 }
 
 /** Load Mixpanel + PostHog browser SDKs when tokens are present. */
@@ -315,15 +358,30 @@ export function initAnalytics(): void {
 }
 
 /**
- * Starts and stops session replay for the current page (rules in syncReplayForPage), and
- * initialises a Mixpanel SDK that finished loading on an admin page once the visitor leaves it.
- * Call after every navigation; the SDK loaders call it too, and it re-runs itself while a
- * stopped Mixpanel recorder may still come up.
+ * Initialises an SDK that finished loading once the page allows it, turns both SDKs' capture off
+ * after an opt-out and back on when it is lifted (syncCaptureForPage), then starts and stops
+ * session replay for the current page (rules in syncReplayForPage). Call after every navigation,
+ * including one that only changes the query; the SDK loaders call it too, and it re-runs itself
+ * while a stopped Mixpanel recorder may still come up.
  */
 export function syncSessionRecording(): void {
   if (typeof window === "undefined") return;
   const page = { href: window.location.href, trackingDisabled: browserTrackingDisabled() };
-  if (mixpanelLoaded && mixpanelMayInit(page)) initMixpanel(mixpanelLoaded);
+  const syncCapture = () => syncCaptureForPage(page, { posthog: posthogClient, mixpanel: mixpanelClient });
+  ({ posthog: posthogLoaded, mixpanel: mixpanelLoaded } = initLoadedSdks(
+    page,
+    { posthog: posthogLoaded, mixpanel: mixpanelLoaded },
+    {
+      posthog: initPosthog,
+      mixpanel: initMixpanel,
+      syncCapture,
+      flush: () => {
+        flushPosthog();
+        flushMixpanel();
+      },
+    },
+  ));
+  syncCapture();
   replayState = syncReplayForPage(
     replayState,
     { ...page, mixpanelSampled: mixpanelReplaySampled },

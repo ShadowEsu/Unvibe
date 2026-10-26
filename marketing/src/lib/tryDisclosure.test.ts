@@ -16,12 +16,11 @@ describe("Try it disclosure", () => {
     assert.doesNotMatch(kit, /in the browser/i);
   });
 
-  it("the privacy page says the server refuses key formats, names the keyed IP hash and the promo record", () => {
+  it("the privacy page says the server refuses key formats and names the promo record", () => {
     const page = renderToStaticMarkup(createElement(PrivacyPage)).replace(/\s+/g, " ");
     assert.doesNotMatch(page, /generates explanations from the filtered snippet/);
     assert.match(page, /sent to Unvibe&#x27;s server, which refuses common key formats, and then to Google Gemini/);
     assert.match(page, /nothing is filtered in your browser/);
-    assert.match(page, /keyed hash of your IP address/);
     assert.match(page, /redemption record: a fingerprint of the code \(not the code itself\), your account and its email/);
     assert.match(page, /the link to your account and the email are removed/);
   });

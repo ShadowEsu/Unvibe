@@ -133,6 +133,17 @@
    and for the closing download card on home, whose 2 px #6f45d2 ring is 2.78:1 on the dark card. */
 .dark :is(.mnav .paper-join--mac, .vhero .paper-join--mac, .kit__btn--lime, .activate-card .get-unvibe .paper-join, .paper-invite__card .paper-join):focus-visible { outline-color: #c4b5fd; }
 
+/* Focusable scroll areas whose ring the page hid or washed out (390 keyboard walk). Focused state only.
+   - Startup logo strip: its edge-fade mask also masks the outline drawn outside it, so no ring showed. While it
+     has focus the marquee is paused anyway, so the fade goes and the ring shows whole.
+   - /resources code sample: the code window clips everything outside the <pre> (overflow: hidden), and the
+     indigo ring that is left sits on near-black. The ring moves inside, in the light ring colour, in both themes.
+   - /resources shortcuts table: the card sits straight on the colour field, so the ring outside it lands on the
+     field (pink to blue) and is under 3:1 on half its length. The ring moves inside, onto the card. */
+.paper-partners__viewport:focus-visible { -webkit-mask-image: none; mask-image: none; }
+.resources-code-pre:focus-visible { outline: 2px solid #c4b5fd; outline-offset: -3px; }
+.resources-shortcuts-table:focus-visible { outline-offset: -3px; }
+
 /* The founder console's headings sit straight on the page; give it the same light sheet the waitlist admin has. */
 .dark .founder-page { background: rgb(243 238 248 / 0.94); }
 

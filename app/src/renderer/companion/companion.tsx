@@ -19,6 +19,7 @@ import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
+import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
@@ -640,7 +641,7 @@ function MacGlyph() {
   );
 }
 
-function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: string) => void; onSkip: () => void; shortcut: string }) {
+function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn: (email: string) => void; onSkip: () => void; shortcut: string; notice?: string }) {
   return (
     <div className="login">
       <div className="sanFranWash" aria-hidden="true" />
@@ -662,6 +663,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut }: { onSignedIn: (email: str
             <div className="login__mark"><Buddy mood="wave" size={56} follow label="Vibe" /></div>
             <div className="login__brand">UNVIBE</div>
             <h2 className="login__tag">Carry your learning <em>forward.</em></h2>
+            <DeletionNotice message={notice} />
             <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
             <SignInForm onDone={onSignedIn} />
           </aside>
@@ -1184,16 +1186,16 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
   return <button type="button" className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} onClick={onClick}><span className="knob" /></button>;
 }
 
-function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: () => void; onNotice: (message: string) => void }) {
+function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: (message?: string) => void; onNotice: (message: string) => void }) {
   const [confirming, setConfirming] = useState(false);
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const del = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string };
+    const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string; message?: string };
     setBusy(false);
-    if (r.ok) onDeleted(); else setErr(r.error ?? 'Could not delete the account.');
+    if (r.ok) onDeleted(r.message); else setErr(r.error ?? 'Could not delete the account.');
   };
   if (!account) {
     return (
@@ -1233,7 +1235,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
         }}>Sign out</button></div>
       <div className="setrow setrow--stack">
         <div className="sl sl--danger">Delete account</div>
-        <div className="sd" style={{ marginBottom: 12 }}>Permanently removes your account and every review, concept, and streak — on this {deviceName} and on our servers. This cannot be undone.</div>
+        <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review, concept and streak) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
             <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
@@ -1459,7 +1461,7 @@ const SETTINGS_FOCUSABLE = 'button:not([disabled]), input:not([disabled]), selec
 
 function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice, initialTab = 'General' }: {
   info: { version: string; sendsSetupProgress?: boolean }; account: Account; settings: Settings;
-  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: () => void; onNotice: (message: string) => void;
+  onAccountChange: () => void; onSettings: (patch: Partial<Settings>) => Promise<string | undefined>; onClose: () => void; onAccountDeleted: (message?: string) => void; onNotice: (message: string) => void;
   initialTab?: string;
 }) {
   const [tab, setTab] = useState(initialTab);
@@ -1658,6 +1660,8 @@ function App() {
   const [askSeed, setAskSeed] = useState('');
   const [voiceTip, setVoiceTip] = useState(false);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
+  /** The service's note after a confirmed account deletion, shown on the sign-in screen until it is left. */
+  const [deletionNotice, setDeletionNotice] = useState('');
   const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
   const [sideWidth, setSideWidth] = useState(232);
   const sideLive = useRef(232);
@@ -1867,7 +1871,7 @@ function App() {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
-    return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} onSignedIn={async () => { await refresh(); setGate('app'); }} onSkip={() => setGate('app')} /></>);
+    return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} notice={deletionNotice} onSignedIn={async () => { setDeletionNotice(''); await refresh(); setGate('app'); }} onSkip={() => { setDeletionNotice(''); setGate('app'); }} /></>);
   }
 
   return (
@@ -2021,7 +2025,7 @@ function App() {
         <Settings info={info} account={account} settings={settings}
           initialTab={settingsTab}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
-          onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
+          onAccountDeleted={(message) => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setDeletionNotice(message ?? ''); setGate('login'); void refresh(); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
       <UpdateCard />

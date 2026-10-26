@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { explanationFailure } from '../src/core/serviceError';
+import { explanationFailure, serviceMessage } from '../src/core/serviceError';
 
 test('an older service\'s 402 quota_exceeded is a plan message with the Plan offer, not "(402)"', () => {
   const withMessage = explanationFailure(402, { error: 'quota_exceeded', message: 'You\'ve used all 30 free code explanations included in the beta.' });
@@ -55,4 +55,30 @@ test('a 402 pro_required is the Pro upgrade, not a used-up allowance', () => {
   assert.equal(bare.proRequired, true);
   assert.doesNotMatch(bare.message, /402/);
   assert.equal(explanationFailure(402, { error: 'quota_exceeded' }).proRequired, false, 'an older 402 stays an allowance message');
+});
+
+test('serviceMessage passes only a string, trimmed and cut to 300 characters', () => {
+  assert.equal(serviceMessage({ message: '  Plain words.  ' }), 'Plain words.');
+  assert.equal(serviceMessage({ message: 'm'.repeat(1_000) }), 'm'.repeat(300));
+  for (const message of [{ html: '<b>x</b>' }, ['a'], 42, true, null, undefined]) {
+    assert.equal(serviceMessage({ message }), '', JSON.stringify(message));
+  }
+  for (const body of [null, undefined, 'message', 7, {}]) assert.equal(serviceMessage(body), '');
+});
+
+test('every explanation failure shows the service\'s message only as a capped string, or its own text', () => {
+  const cases: Array<[number, { error?: string }]> = [
+    [402, { error: 'pro_required' }],
+    [429, { error: 'plan_limit_reached' }],
+    [413, {}],
+    [503, {}],
+    [400, {}],
+  ];
+  for (const [status, body] of cases) {
+    const fallback = explanationFailure(status, body).message;
+    assert.ok(fallback.length > 0);
+    assert.equal(explanationFailure(status, { ...body, message: { html: '<b>x</b>' } }).message, fallback, `${status}: a non-string message is replaced`);
+    assert.equal(explanationFailure(status, { ...body, message: '   ' }).message, fallback, `${status}: a blank message is replaced`);
+    assert.equal(explanationFailure(status, { ...body, message: ` ${'s'.repeat(1_000)} ` }).message, 's'.repeat(300), `${status}: capped`);
+  }
 });
