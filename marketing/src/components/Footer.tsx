@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const product = [
   ["Product", "/#product"],
+  ["Explain code", "/explain"],
   ["Download", "/beta"],
   ["Pricing", "/pricing"],
   ["Change log", "/releases"],

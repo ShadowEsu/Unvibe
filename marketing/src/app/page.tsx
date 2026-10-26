@@ -48,7 +48,7 @@ export default function HomePage() {
             <p className="paper-meta">Try it here</p>
             <h2 id="try-it-title">Paste code. <em>Vibe explains it.</em></h2>
             <p className="paper-lead">
-              A real explanation in your browser, no download. In the app there is no pasting: select code in any app and
+              A real explanation online, no download. In the app there is no pasting: select code in any app and
               press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows).
             </p>
           </div>
