@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 
@@ -15,11 +16,15 @@ const links = [
 
 /**
  * One dark bar pinned to the top of every page. On phones the menu opens inside the bar
- * (no overlay sheet); Escape or any link closes it and focus returns to the toggle.
+ * (no overlay sheet); Escape or any link closes it and focus returns to the toggle. Tabbing
+ * out of the menu closes it too, so focus never lands on a control hidden under it.
+ * /activate is a full-screen card over the page, so the bar is not rendered there.
  */
 export function Nav() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -32,8 +37,16 @@ export function Nav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  if (pathname?.startsWith("/activate")) return null;
+
   return (
-    <header className={open ? "mnav is-open" : "mnav"}>
+    <header
+      className={open ? "mnav is-open" : "mnav"}
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (open && next instanceof Node && !menu.current?.contains(next) && !toggle.current?.contains(next)) setOpen(false);
+      }}
+    >
       <nav className="mnav__bar paper-wrap" aria-label="Primary">
         <Link href="/" aria-label="Unvibe home" className="mnav__home"><Logo /></Link>
         <ul className="mnav__links">
@@ -65,7 +78,7 @@ export function Nav() {
           </button>
         </div>
       </nav>
-      <div id="mnav-menu" className="mnav__menu paper-wrap" hidden={!open}>
+      <div ref={menu} id="mnav-menu" className="mnav__menu paper-wrap" hidden={!open}>
         <ul>
           {links.map((link) => (
             <li key={link.href}><Link href={link.href} onClick={() => setOpen(false)}>{link.label}</Link></li>

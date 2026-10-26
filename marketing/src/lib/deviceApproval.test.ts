@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from "./deviceApproval";
+import { clearDeviceCode, opensForSignIn, pendingDeviceCode, saveDeviceCode } from "./deviceApproval";
 
 function memoryStorage() {
   const items = new Map<string, string>();
@@ -49,5 +49,25 @@ describe("device code on /activate", () => {
     };
     assert.deepEqual(pendingDeviceCode("?user_code=ABCD1234", blocked), { code: "ABCD1234", fromLink: true, cleanSearch: "" });
     assert.deepEqual(pendingDeviceCode("", blocked), { code: "", fromLink: false, cleanSearch: null });
+  });
+});
+
+describe("what /activate opens with", () => {
+  it("shows the sign-in steps when the app sent a device code", () => {
+    assert.equal(opensForSignIn({ user_code: "ABCD1234" }), true);
+    assert.equal(opensForSignIn({ device: "ABCD1234", utm_source: "app" }), true);
+    assert.equal(opensForSignIn({ device_code: ["ABCD1234"] }), true);
+  });
+
+  it("shows the sign-in steps on the way back from Google or the email link", () => {
+    assert.equal(opensForSignIn({ code: "oauth-exchange-code-1234567890" }), true);
+    assert.equal(opensForSignIn({ error: "access_denied", error_description: "denied" }), true);
+  });
+
+  it("shows the download first to a visitor without a code", () => {
+    assert.equal(opensForSignIn({}), false);
+    assert.equal(opensForSignIn({ utm_source: "x", notrack: "1" }), false);
+    assert.equal(opensForSignIn({ user_code: "  ", code: "" }), false);
+    assert.equal(opensForSignIn({ user_code: [] }), false);
   });
 });

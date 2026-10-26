@@ -10,6 +10,7 @@ import { DownloadCta } from "@/components/paper/DownloadCta";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { faqItems } from "@/data/faq";
+import { SHORTCUTS } from "@/lib/shortcuts";
 
 export const metadata: Metadata = {
   title: { absolute: "Unvibe: understand the code AI writes for you" },
@@ -46,7 +47,10 @@ export default function HomePage() {
           <div className="sec-head">
             <p className="paper-meta">Try it here</p>
             <h2 id="try-it-title">Paste code. <em>Vibe explains it.</em></h2>
-            <p className="paper-lead">A real explanation in your browser. No download, no account.</p>
+            <p className="paper-lead">
+              A real explanation in your browser, no download. In the app there is no pasting: select code in any app and
+              press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows).
+            </p>
           </div>
           <TryIt />
         </div>
