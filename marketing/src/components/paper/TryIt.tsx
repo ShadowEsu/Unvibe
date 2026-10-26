@@ -8,6 +8,7 @@ import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
+import type { DownloadSurface } from "@/lib/downloadTracking";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
 const LEVELS = [
@@ -53,21 +54,41 @@ function render(text: string): string {
 }
 
 /** After a failed request: desktop gets the download buttons; a phone can't run the app, so it gets the email link. */
-function GetIt({ phone }: { phone: boolean }) {
-  if (!phone) return <DownloadRow surface="try_it" />;
+function GetIt({ phone, surface, emailHref }: { phone: boolean; surface: DownloadSurface; emailHref: string }) {
+  if (!phone) return <DownloadRow surface={surface} />;
   return (
-    <a className="try__phone" href="#email-link" onClick={() => track("email_link_cta_clicked", { surface: "try_it" })}>
+    <a className="try__phone" href={emailHref} onClick={() => track("email_link_cta_clicked", { surface })}>
       Email me the link
     </a>
   );
 }
 
+interface TryItProps {
+  /** Code in the editor when the page opens. Default: the debounce sample the home page shows. */
+  sample?: string;
+  /** File name in the editor's title bar. */
+  fileName?: string;
+  /** Download surface under a finished answer, for `download_cta_clicked`. */
+  answerSurface?: DownloadSurface;
+  /** Download surface after a failed request. */
+  errorSurface?: DownloadSurface;
+  /** Where a phone's "Email me the link" goes after a failed request: the home page's form. */
+  emailHref?: string;
+}
+
 /**
  * Paste code, pick a depth, get a real explanation from Vibe. Laid out like the desktop
  * panel: depth buttons along the top, the explanation streaming in below. No account.
+ * With no props it is the home page's box; /explain pages pass their own sample and surfaces.
  */
-export function TryIt() {
-  const [code, setCode] = useState(SAMPLE);
+export function TryIt({
+  sample = SAMPLE,
+  fileName = "your-code.js",
+  answerSurface = "try_it_answer",
+  errorSurface = "try_it",
+  emailHref = "#email-link",
+}: TryItProps) {
+  const [code, setCode] = useState(sample);
   const [level, setLevel] = useState<Level>("intermediate");
   const [state, setState] = useState<"idle" | "thinking" | "done" | "error">("idle");
   const [answer, setAnswer] = useState("");
@@ -157,7 +178,7 @@ export function TryIt() {
   return (
     <div className="try">
       <div className="try__editor">
-        <div className="try__bar"><i /><i /><i /><span>your-code.js</span></div>
+        <div className="try__bar"><i /><i /><i /><span>{fileName}</span></div>
         <label className="sr-only" htmlFor="try-code">Code to explain</label>
         <textarea
           id="try-code"
@@ -173,7 +194,10 @@ export function TryIt() {
           <button type="button" className="try__go" disabled={state === "thinking" || !code.trim()} onClick={() => void explain()}>
             {state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
           </button>
-          <p className="try__fine" id="try-fine">Up to 60 lines. Keys and passwords are blocked.</p>
+          <p className="try__fine" id="try-fine">
+            Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Google Gemini to write the
+            explanation. Don&apos;t paste keys or passwords. Common key formats are refused.
+          </p>
         </div>
       </div>
 
@@ -214,7 +238,7 @@ export function TryIt() {
               <Vibe size={60} follow={false} />
               <p className="try__error">{error}</p>
               <button type="button" className="try__retry" onClick={() => void explain()}>Try again</button>
-              <GetIt phone={phone} />
+              <GetIt phone={phone} surface={errorSurface} emailHref={emailHref} />
             </div>
           ) : (
             <div className="try__answer">
@@ -222,7 +246,7 @@ export function TryIt() {
               {writing ? null : (
                 <div className="try__after">
                   {timeLine ? <p className="try__took">{timeLine}</p> : null}
-                  <GetUnvibe surface="try_it_answer" />
+                  <GetUnvibe surface={answerSurface} />
                   <p className="try__again">Pick another depth above to explain it again. The app does this beside your editor, free.</p>
                 </div>
               )}

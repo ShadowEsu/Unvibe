@@ -132,7 +132,10 @@ export default function PrivacyPage() {
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
           install scripts send one anonymous &apos;installed&apos; count to unvibe.site when
-          they finish, with no code or personal data.
+          they finish, with no code or personal data. If you use the Try it box on the site,
+          the code you paste is sent to Unvibe and Google Gemini to write the explanation. To
+          limit how often the box can be used, Unvibe keeps a hashed form of your IP address
+          and the time of each request, not the code.
         </p>
       </LegalSection>
 
