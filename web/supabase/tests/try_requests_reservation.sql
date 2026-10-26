@@ -11,8 +11,9 @@
 -- it too. Each check is a DO block that raises on failure. It leaves no rows behind: every transaction
 -- ends in rollback (it does use up about 20 values of try_requests_id_seq, which rollback can't undo).
 -- Run it where no live Try traffic writes to try_requests, or the day-cap checks can fail spuriously.
--- Blocks 2 and 3 take the Try lock, so they set idle_in_transaction_session_timeout = 5s: a client that
--- leaves one idle after a failure loses its session after 5 s, and the lock with it.
+-- Blocks 2 and 3 hold the Try lock until their rollback, so they set idle_in_transaction_session_timeout
+-- = 5s: a client that stalls inside one without ending it loses its session after 5 s, and the lock
+-- with it. A failed check needs no timeout: the error aborts the transaction and frees the lock at once.
 --
 -- What this pins: the grants, how the function is declared, that a call that may insert holds the
 -- advisory lock while a capped call never takes it, the caps, and the 22023 and 25000 refusals. It
