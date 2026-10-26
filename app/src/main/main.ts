@@ -57,6 +57,7 @@ import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
+import { grantReturnApp, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { reportProgress, syncProgress } from './progress';
@@ -470,10 +471,11 @@ const FIRST_RUN_SAMPLE = [
 ].join('\n');
 
 /**
- * The app a shortcut press came from while macOS had not allowed Accessibility yet. Once the grant
- * shows up, the panel asks main to go back there and explain the selection already made.
+ * The app a shortcut press came from while macOS had not allowed Accessibility yet, and when. Once
+ * the grant shows up, the panel asks main to go back there and explain the selection already made;
+ * `grantReturnApp` drops presses older than five minutes (Security L2).
  */
-let pendingGrantApp: string | null = null;
+let pendingGrant: PendingGrant | null = null;
 
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
   broadcastShortcut();
@@ -525,7 +527,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (!code && isMac && !options.preferClipboard && !accessibilityGranted(false)) {
     // The panel shows the one-button pre-permission screen (first-run spec, change 2).
     reportProgress('accessibility_asked');
-    pendingGrantApp = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : null;
+    pendingGrant = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? { app: sourceApp, at: Date.now() } : null;
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
@@ -1379,9 +1381,13 @@ app.whenReady().then(() => {
    * selected any more; the panel then says in one line what to do.
    */
   ipcMain.handle('perms:explainAfterGrant', async () => {
-    const fromApp = pendingGrantApp;
-    if (!fromApp || !accessibilityGranted(false)) return { explained: false };
-    pendingGrantApp = null;
+    const fromApp = grantReturnApp(pendingGrant, Date.now());
+    if (!fromApp) {
+      pendingGrant = null;
+      return { explained: false };
+    }
+    if (!accessibilityGranted(false)) return { explained: false };
+    pendingGrant = null;
     const capture = await captureSelection({ fromApp });
     if (!capture.code) return { explained: false };
     await startReview({ captured: { code: capture.code, sourceApp: fromApp } });
