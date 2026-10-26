@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { explainMono } from "./mono";
 import "./explain.css";
 
 const title = "Explain code in plain English, free";
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function ExplainIndexPage() {
   return (
-    <article className="explain-page">
+    <article className={`explain-page ${explainMono.variable}`}>
       <header className="explain-head">
         <h1>Explain code in plain English</h1>
         <p>Paste up to 60 lines, pick a depth and Vibe tells you what the code does. Free, no account.</p>

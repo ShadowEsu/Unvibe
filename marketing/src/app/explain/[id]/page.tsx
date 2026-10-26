@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { explainMono } from "../mono";
 import "../explain.css";
 
 interface Params {
@@ -39,7 +40,7 @@ export default function ExplainLanguagePage({ params }: Params) {
   const others = explainPages.filter(({ id }) => id !== page.id);
 
   return (
-    <article className="explain-page">
+    <article className={`explain-page ${explainMono.variable}`}>
       <header className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}

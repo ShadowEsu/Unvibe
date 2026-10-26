@@ -2,12 +2,14 @@
    The heading and the notes sit on reading cards built from the site's card tokens (--v-card, --v-ink,
    --v-shadow, --v-radius), so they follow the site theme. The Try it box keeps its own styles. */
 
-/* As wide as the Try it box (min(1120px, 100%)), so the cards line up with it. */
+/* Exactly as wide as the Try it box (min(1120px, 100%)), so every card shares its width and left edge.
+   --font-mono uses the face from mono.ts, loaded with the page, in the same stack globals.css builds. */
 .explain-page {
   --explain-muted: color-mix(in srgb, var(--v-ink) 78%, var(--v-card));
+  --font-mono: var(--explain-mono-face), var(--font-mono-fallback), ui-monospace, monospace;
   display: grid;
   gap: clamp(1.25rem, 3vw, 2rem);
-  width: min(70rem, calc(100% - 2.5rem));
+  width: min(1120px, calc(100% - 2.5rem));
   margin-inline: auto;
   padding-block: clamp(5.25rem, 9vw, 7rem) 6rem;
 }
