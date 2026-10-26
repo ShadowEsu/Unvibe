@@ -64,8 +64,8 @@ export const milestones: Milestone[] = [
   {
     date: "13 OCT 2026",
     category: "COMPANY",
-    title: "Meet the founder",
-    summary: "unvibe.site/about introduces Preston Susanto: the story behind Unvibe, what he has built before, the communities he leads, and how to reach him directly.",
+    title: "About page",
+    summary: "unvibe.site/about went live.",
   },
   {
     date: "07 OCT 2026",

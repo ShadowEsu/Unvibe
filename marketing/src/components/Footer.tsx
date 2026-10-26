@@ -21,7 +21,7 @@ const product = [
 ];
 
 const company = [
-  ["Founder", "/about"],
+  ["About", "/about"],
   ["Building Unvibe", "/build"],
   ["Investors", "/investors"],
   ["Privacy", "/privacy"],

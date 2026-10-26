@@ -83,7 +83,6 @@ export function kitSections(): KitSection[] {
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, partner perks worth about $21.5K to $23K).",
-        "Founder: Preston Susanto, student founder in California. Contact preston@unvibe.site.",
       ],
     },
     {
@@ -130,7 +129,7 @@ export function kitSections(): KitSection[] {
       id: "brand",
       title: "Brand identity",
       bullets: [
-        "Voice: Preston, first person, warm, direct, short. A real person, not a company.",
+        "Voice: warm, direct, short and plain, in first person plural (we).",
         "Mascot: Vibe, a lilac blob with an ink outline. One short line in a speech bubble at most.",
         "Colours: paper #f6f1e7, ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe), sky #9fd8ff, sun #ffd84d. Flat colour, ink outlines, small offset shadows. No gradients or glow.",
         "Type: bold grotesque headings (Bricolage Grotesque), one italic serif accent phrase (Instrument Serif Italic), Inter for body.",
