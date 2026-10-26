@@ -35,6 +35,8 @@ test('billing links open only over https on Stripe checkout, Stripe billing or U
   assert.equal(isBillingUrl('https://api.unvibe.site/plan'), true);
   assert.equal(isBillingUrl('http://checkout.stripe.com/c/pay/cs_test_123'), false);
   assert.equal(isBillingUrl('https://checkout.stripe.com.evil.example/c/pay'), false);
+  assert.equal(isBillingUrl('https://evilunvibe.site/'), false);
+  assert.equal(isBillingUrl('https://notcheckout.stripe.com/'), false);
   assert.equal(isBillingUrl('https://evil.example/?u=checkout.stripe.com'), false);
   assert.equal(isBillingUrl('https://user:pass@checkout.stripe.com/'), false);
   assert.equal(isBillingUrl('file:///etc/passwd'), false);
