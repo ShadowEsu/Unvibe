@@ -97,16 +97,25 @@ if ! codesign --verify --deep --strict -R='${BETA_MAC_SIGNING_REQUIREMENT}' "$mo
   stop "The downloaded app failed its signature check. Nothing was installed, and any Unvibe you already have is unchanged."
 fi
 
+# Copy next to the installed app first and swap only once the copy is complete, so a failed copy (a full
+# disk, say) leaves any installed Unvibe as it was. A leftover copy from an interrupted run goes first.
+echo "Copying Unvibe…"
+rm -rf "$DEST.new"
+if ! ditto "$mountPoint/Unvibe.app" "$DEST.new"; then
+  rm -rf "$DEST.new"
+  stop "Could not copy Unvibe into Applications. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+
 echo "Closing any running Unvibe…"
 osascript -e 'tell application id "com.unvibe.app" to quit' >/dev/null 2>&1 || true
 sleep 1
 pkill -x Unvibe >/dev/null 2>&1 || true
 
 echo "Installing to Applications…"
-if [ -d "$DEST" ]; then
-  rm -rf "$DEST"
+if ! { rm -rf "$DEST" && mv "$DEST.new" "$DEST"; }; then
+  rm -rf "$DEST.new"
+  stop "Could not replace the Unvibe in Applications. Run this installer again."
 fi
-ditto "$mountPoint/Unvibe.app" "$DEST"
 
 echo "Opening Unvibe…"
 open "$DEST"

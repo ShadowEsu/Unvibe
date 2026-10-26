@@ -72,7 +72,8 @@ for a in "$@"; do [ "$a" = "-R=$FIXTURE_PIN" ] && pinned=0; done
 exit "\${FIXTURE_CODESIGN_EXIT:-0}"`,
   rm: `for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
 exec /bin/rm "$@"`,
-  ditto: "exit 0",
+  ditto: `exit "\${FIXTURE_DITTO_EXIT:-0}"`,
+  mv: "exit 0",
   osascript: "exit 0",
   pkill: "exit 0",
   open: "exit 0",
@@ -109,7 +110,8 @@ describe("Mac install script, run with bash against stubs", () => {
 
   after(() => rmSync(dir, { recursive: true, force: true }));
 
-  function run(sums: string | null, codesignExit = 0, appLink = false): Run {
+  /** Fixture knobs: the pinned verify's exit code, a symlinked Unvibe.app, and ditto's exit code. */
+  function run(sums: string | null, fixture: { codesignExit?: number; appLink?: boolean; dittoExit?: number } = {}): Run {
     const log = path.join(dir, `calls-${Math.random().toString(36).slice(2)}.log`);
     const sumsFile = path.join(dir, "SHA256SUMS-mac.txt");
     rmSync(sumsFile, { force: true });
@@ -124,22 +126,26 @@ describe("Mac install script, run with bash against stubs", () => {
         STUB_LOG: log,
         FIXTURE_DMG: dmg,
         FIXTURE_SUMS: sumsFile,
-        FIXTURE_CODESIGN_EXIT: String(codesignExit),
+        FIXTURE_CODESIGN_EXIT: String(fixture.codesignExit ?? 0),
         FIXTURE_PIN: PINNED_REQUIREMENT,
-        FIXTURE_APP_LINK: appLink ? "1" : "0",
+        FIXTURE_APP_LINK: fixture.appLink ? "1" : "0",
+        FIXTURE_DITTO_EXIT: String(fixture.dittoExit ?? 0),
       },
     });
     const calls = readFileSync(log, "utf8").split("\n").filter(Boolean).map((line) => line.split("\x1f"));
     return { status: result.status, output: `${result.stdout}${result.stderr}`, calls };
   }
 
-  const removesInstall = (c: Call) => c[0] === "rm" && c.slice(1).some((a) => a.startsWith("/Applications"));
+  const DEST = "/Applications/Unvibe.app";
+  const STAGED = `${DEST}.new`;
+  const touchesApplications = (c: Call) => c.slice(1).some((a) => a.startsWith("/Applications"));
+  const removesInstall = (c: Call) => c[0] === "rm" && c.includes(DEST);
 
   function assertNothingInstalled(r: Run) {
-    for (const cmd of ["ditto", "osascript", "pkill", "open", "xattr"]) {
+    for (const cmd of ["ditto", "mv", "osascript", "pkill", "open", "xattr"]) {
       assert.equal(named(r.calls, cmd).length, 0, `${cmd} must not run: ${show(r.calls)}`);
     }
-    assert.ok(!r.calls.some(removesInstall), "must not remove the installed app");
+    assert.ok(!named(r.calls, "rm").some(touchesApplications), "must not remove anything in /Applications");
     assert.ok(!named(r.calls, "codesign").some((c) => c.includes("--sign")), "must not re-sign");
     assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   }
@@ -187,7 +193,7 @@ describe("Mac install script, run with bash against stubs", () => {
   });
 
   it("passes a matching checksum, then stops without re-signing when the signature fails", () => {
-    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 1);
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { codesignExit: 1 });
     assert.match(r.output, /Checksum verified\./);
     assert.ok(named(r.calls, "hdiutil").some((c) => c[1] === "attach"), "a matching checksum continues to mount");
     // Only the release's own signature passes: a plain --verify also accepts an ad-hoc re-signed copy.
@@ -202,25 +208,51 @@ describe("Mac install script, run with bash against stubs", () => {
     assertNothingInstalled(r);
   });
 
-  it("installs exactly the checked app, and only after the signature check passes", () => {
-    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 0);
+  it("copies exactly the checked app next to the installed one, then swaps it in, all after the signature check", () => {
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`);
     assert.equal(r.status, 0, r.output);
     const app = `${mountPointOf(r)}/Unvibe.app`;
     assert.equal(named(r.calls, "codesign").length, 1, `exactly one codesign call: ${show(r.calls)}`);
     const verify = assertOnePinnedVerify(r);
     assert.equal(verify[verify.length - 1], app, "codesign checks the app on the mounted image");
-    const dittos = named(r.calls, "ditto");
-    assert.deepEqual(dittos, [["ditto", app, "/Applications/Unvibe.app"]], "ditto copies exactly the checked app");
     const checkedAt = r.calls.indexOf(verify);
-    assert.ok(r.calls.indexOf(dittos[0]) > checkedAt, "ditto runs after codesign");
-    // rm only runs when an Unvibe is already installed on the test machine; if it does, it comes after codesign.
-    r.calls.forEach((c, i) => {
-      if (removesInstall(c)) assert.ok(i > checkedAt, `rm of the installed app runs after codesign: ${show(r.calls)}`);
-    });
+    const dittos = named(r.calls, "ditto");
+    assert.equal(dittos.length, 1, `exactly one ditto: ${show(r.calls)}`);
+    const copiedAt = r.calls.indexOf(dittos[0]);
+    const removedAt = r.calls.findIndex(removesInstall);
+    assert.ok(removedAt > copiedAt, `the installed app is removed only after the new copy is complete: ${show(r.calls)}`);
+    assert.deepEqual(dittos[0], ["ditto", app, STAGED], "ditto copies exactly the checked app next to the installed one");
+    assert.ok(copiedAt > checkedAt, "the copy starts after codesign");
+    assert.deepEqual(
+      named(r.calls, "rm").filter(touchesApplications),
+      [["rm", "-rf", STAGED], ["rm", "-rf", DEST]],
+      "a leftover copy is cleared before copying; the installed app is removed only for the swap",
+    );
+    const moves = named(r.calls, "mv");
+    assert.deepEqual(moves, [["mv", STAGED, DEST]], "the complete copy is moved into place");
+    assert.ok(r.calls.indexOf(moves[0]) > removedAt, "mv runs after the old app is removed");
+    assert.deepEqual(named(r.calls, "open"), [["open", DEST]], "opens the installed app");
+  });
+
+  it("keeps the installed app and stops when the copy fails", () => {
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { dittoExit: 1 });
+    assert.notEqual(r.status, 0, r.output);
+    assert.ok(!r.calls.some(removesInstall), `the installed app is never removed: ${show(r.calls)}`);
+    assert.match(r.output, /Could not copy Unvibe into Applications\. Nothing was installed, and any Unvibe you already have is unchanged\./);
+    assert.ok(r.output.includes(HELP_URL), r.output);
+    assert.deepEqual(
+      named(r.calls, "rm").filter(touchesApplications),
+      [["rm", "-rf", STAGED], ["rm", "-rf", STAGED]],
+      "the partial copy is removed, and nothing else in /Applications",
+    );
+    for (const cmd of ["mv", "osascript", "pkill", "open"]) {
+      assert.equal(named(r.calls, cmd).length, 0, `${cmd} must not run after a failed copy: ${show(r.calls)}`);
+    }
+    assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   });
 
   it("stops when the disk image's Unvibe.app is a symlink, before the signature check", () => {
-    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 0, true);
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { appLink: true });
     assert.match(r.output, /did not contain Unvibe\.app as a real folder/, r.output);
     assert.notEqual(r.status, 0, r.output);
     assert.equal(named(r.calls, "codesign").length, 0, "must stop before codesign");
@@ -250,14 +282,22 @@ describe("Mac install script text", () => {
     assert.ok(script.split("\n").includes(line), "the Authority print line is exactly the sanitised one");
   });
 
-  it("checks the signature before it removes the installed app or copies the new one", () => {
-    // Text order, because the run above only reaches rm when an Unvibe is already installed on the test machine.
-    const verifyAt = script.indexOf("codesign --verify");
-    const rmAt = script.indexOf(`rm -rf "$DEST"`);
-    const dittoAt = script.indexOf(`ditto "$mountPoint/Unvibe.app" "$DEST"`);
-    assert.ok(verifyAt > 0 && rmAt > 0 && dittoAt > 0, "all three are in the script");
-    assert.ok(verifyAt < rmAt, "codesign comes before rm");
-    assert.ok(verifyAt < dittoAt, "codesign comes before ditto");
+  it("checks the signature, then copies next to the installed app, and only then removes it and moves the copy in", () => {
+    const at = (text: string) => {
+      const index = script.indexOf(text);
+      assert.ok(index > 0, `the script contains ${text}`);
+      return index;
+    };
+    const verifyAt = at("codesign --verify");
+    const clearAt = at(`rm -rf "$DEST.new"\nif ! ditto`);
+    const copyAt = at(`if ! ditto "$mountPoint/Unvibe.app" "$DEST.new"; then`);
+    const quitAt = at("osascript -e");
+    const swapAt = at(`if ! { rm -rf "$DEST" && mv "$DEST.new" "$DEST"; }; then`);
+    assert.ok(verifyAt < clearAt, "codesign comes before anything in /Applications is removed");
+    assert.ok(clearAt < copyAt, "a leftover copy is cleared before copying");
+    assert.ok(copyAt < quitAt, "the copy is complete before the running app is closed");
+    assert.ok(quitAt < swapAt, "the installed app is removed only for the swap, after the copy");
+    assert.equal(script.split(`rm -rf "$DEST"`).length, 2, `exactly one rm of the installed app`);
   });
 
   it("discloses the installed count near the top and still sends it", () => {
