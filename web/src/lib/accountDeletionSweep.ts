@@ -14,6 +14,11 @@ export const SWEEP_STALE_AFTER_MS = 60 * 60_000;
 export const SWEEP_OVERDUE_AFTER_MS = 7 * 24 * 60 * 60_000;
 /** Each row can list every Blob record, so a small cap keeps one run inside the function time limit. */
 export const SWEEP_LIMIT = 10;
+/**
+ * The run stops retrying rows after 40 s, 20 s inside the route's maxDuration (60 s), so it always
+ * gets to count what is left and write its counts line.
+ */
+export const SWEEP_TIME_BUDGET_MS = 40_000;
 /** Vercel recommends a random CRON_SECRET of at least 16 characters; anything shorter is not configured. */
 const MIN_SECRET_LENGTH = 16;
 
@@ -32,27 +37,59 @@ export function isCronRequest(req: Request, secret: string): boolean {
 
 /** Counts only: the sweep never reports an email or an account id. */
 export interface SweepCounts {
-  /** Stale rows retried in this run (at most SWEEP_LIMIT). */
+  /** Stale rows listed for this run (at most SWEEP_LIMIT). */
+  found: number;
+  /** Listed rows the run started on before its time budget ran out. */
   checked: number;
   done: number;
   /** Account erased; the Blob cleanup failed again (recorded as failed on the row). */
   cleanupPending: number;
   /** An earlier step (Auth identity, account data, record done) failed. */
   failed: number;
-  /** Started rows older than an hour after this run. */
+  /** Started rows older than an hour: after this run, or before it when the budget stopped it. */
   stale: number;
-  /** Started rows older than 7 days after this run. */
+  /** Started rows older than 7 days: after this run, or before it when the budget stopped it. */
   overdue: number;
+  /** The time budget ran out before every listed row was finished. */
+  stoppedOnBudget: boolean;
 }
 
-/** Retries the stale deletions, then counts what is left. Listing or counting errors throw. */
-export async function sweepAccountDeletions(store: Store): Promise<SweepCounts> {
+/** Resolves 'out_of_time' if `work` takes longer than `ms`; the work itself keeps going. */
+async function within<T>(work: Promise<T>, ms: number): Promise<T | 'out_of_time'> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<'out_of_time'>((resolve) => { timer = setTimeout(() => resolve('out_of_time'), ms); });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Counts the stale and overdue rows, retries the stale deletions until the time budget runs out, then
+ * counts again, and logs one ACCOUNT_DELETION_SWEEP counts line on every run (plus
+ * ACCOUNT_DELETION_OVERDUE when any row is overdue). A row cut off by the budget is left as it is:
+ * every step can run again, so a later run finishes it. Listing or counting errors throw.
+ */
+export async function sweepAccountDeletions(store: Store, budgetMs: number = SWEEP_TIME_BUDGET_MS): Promise<SweepCounts> {
+  const deadline = Date.now() + budgetMs;
+  // Counted before the loop, so a run the budget stops still reports (and alerts on) them.
+  let stale = await store.staleAccountDeletionCount(SWEEP_STALE_AFTER_MS);
+  let overdue = await store.staleAccountDeletionCount(SWEEP_OVERDUE_AFTER_MS);
   const rows = await store.staleAccountDeletions(SWEEP_STALE_AFTER_MS, SWEEP_LIMIT);
+  let checked = 0;
   let done = 0;
   let cleanupPending = 0;
   let failed = 0;
+  let stoppedOnBudget = false;
   for (const deletion of rows) {
-    const run = await runRemainingDeletionSteps(store, deletion);
+    const left = deadline - Date.now();
+    const run = left > 0 ? await within(runRemainingDeletionSteps(store, deletion), left) : 'out_of_time';
+    if (run === 'out_of_time') {
+      stoppedOnBudget = true;
+      break;
+    }
+    checked += 1;
     if (run.result === 'done') {
       done += 1;
     } else if (run.result === 'cleanup_failed') {
@@ -63,9 +100,12 @@ export async function sweepAccountDeletions(store: Store): Promise<SweepCounts> 
       console.error(`account deletion sweep: ${run.step} failed`, errorSummary(run.error));
     }
   }
-  const stale = await store.staleAccountDeletionCount(SWEEP_STALE_AFTER_MS);
-  const overdue = await store.staleAccountDeletionCount(SWEEP_OVERDUE_AFTER_MS);
-  const counts = { checked: rows.length, done, cleanupPending, failed, stale, overdue };
+  if (!stoppedOnBudget) {
+    stale = await store.staleAccountDeletionCount(SWEEP_STALE_AFTER_MS);
+    overdue = await store.staleAccountDeletionCount(SWEEP_OVERDUE_AFTER_MS);
+  }
+  const counts = { found: rows.length, checked, done, cleanupPending, failed, stale, overdue, stoppedOnBudget };
+  console.log('account deletion sweep: counts', JSON.stringify({ code: 'ACCOUNT_DELETION_SWEEP', ...counts }));
   if (overdue > 0) {
     console.error('account deletion sweep: deletions overdue', JSON.stringify({ code: 'ACCOUNT_DELETION_OVERDUE', ...counts }));
   }

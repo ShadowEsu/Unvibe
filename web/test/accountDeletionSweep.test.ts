@@ -5,7 +5,7 @@ import { DELETE as deleteAccount } from '../app/api/v1/account/route';
 import { GET as sweepRoute } from '../app/api/v1/internal/account-deletions/sweep/route';
 import { getStore } from '../src/data/store';
 import { accountDeletionServices } from '../src/lib/accountDeletionServices';
-import { SWEEP_LIMIT } from '../src/lib/accountDeletionSweep';
+import { SWEEP_LIMIT, sweepAccountDeletions, type SweepCounts } from '../src/lib/accountDeletionSweep';
 
 // The daily sweep with the memory store, a fake Supabase Auth admin API and a fake Blob store.
 delete process.env.SUPABASE_URL;
@@ -23,13 +23,21 @@ services.auth = {
   },
 };
 
-/** Blob beta-download records by email; reading fails for the emails in brokenBlob. Every attempt is logged. */
+/**
+ * Blob beta-download records by email; reading fails for the emails in brokenBlob, and waits while
+ * blobStall is set (calling onStall first). Every attempt is logged.
+ */
 const betaRecords = new Map<string, number>();
 const brokenBlob = new Set<string>();
 const blobAttempts: string[] = [];
+let blobStall: { until: Promise<void>; onStall: () => void } | undefined;
 services.betaDownloads = {
   async deleteForEmail(email) {
     if (email) blobAttempts.push(email);
+    if (blobStall) {
+      blobStall.onStall();
+      await blobStall.until;
+    }
     if (email && brokenBlob.has(email)) throw new Error('Unsupported state or unable to authenticate data');
     if (email) betaRecords.delete(email);
     return 'deleted';
@@ -75,18 +83,37 @@ async function leftForTheSweep(ageMs: number) {
   return { ...me, email };
 }
 
-/** Runs `work` with console.error captured; returns each logged line. */
-async function capturingErrors(work: () => Promise<void>): Promise<string[]> {
+/** Runs `work` with console.log and console.error captured; returns each logged line. */
+async function capturingLogs(work: () => Promise<void>): Promise<string[]> {
   const lines: string[] = [];
-  const original = console.error;
-  console.error = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
+  const original = { log: console.log, error: console.error };
+  console.log = console.error = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
   try {
     await work();
   } finally {
-    console.error = original;
+    console.log = original.log;
+    console.error = original.error;
   }
   return lines;
 }
+
+/** The one ACCOUNT_DELETION_SWEEP counts line among `lines`, parsed; fails unless there is exactly one. */
+function countsLine(lines: string[]): Record<string, unknown> {
+  const found = lines.filter((line) => line.startsWith('account deletion sweep: counts {"code":"ACCOUNT_DELETION_SWEEP",'));
+  assert.equal(found.length, 1, lines.join('\n'));
+  const payload = JSON.parse(found[0].slice(found[0].indexOf('{'))) as Record<string, unknown>;
+  assert.deepEqual(Object.keys(payload), ['code', 'found', 'checked', 'done', 'cleanupPending', 'failed', 'stale', 'overdue', 'stoppedOnBudget']);
+  return payload;
+}
+
+test('with nothing to retry, the sweep still logs its counts line', async () => {
+  process.env.CRON_SECRET = SECRET;
+  let answer: Record<string, unknown> = {};
+  const logged = await capturingLogs(async () => { answer = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, unknown>; });
+  const counts = countsLine(logged);
+  assert.deepEqual(counts, { code: 'ACCOUNT_DELETION_SWEEP', found: 0, checked: 0, done: 0, cleanupPending: 0, failed: 0, stale: 0, overdue: 0, stoppedOnBudget: false });
+  assert.deepEqual(answer, { ok: true, found: 0, checked: 0, done: 0, cleanupPending: 0, failed: 0, stale: 0, overdue: 0, stoppedOnBudget: false });
+});
 
 test('without CRON_SECRET (or with a short one) the sweep refuses every call: fail closed', async () => {
   delete process.env.CRON_SECRET;
@@ -100,12 +127,15 @@ test('without CRON_SECRET (or with a short one) the sweep refuses every call: fa
   brokenBlob.delete(stuck.email);
 });
 
-test('the sweep needs the exact bearer secret: none, wrong or longer is 401 and runs nothing', async () => {
+test('the sweep needs the exact bearer secret: none, wrong or longer is 401, logged, and runs nothing', async () => {
   process.env.CRON_SECRET = SECRET;
   const attempts = blobAttempts.length;
   for (const authorization of [undefined, `Bearer ${SECRET}x`, `Bearer ${SECRET.slice(0, -1)}`, SECRET, `Basic ${SECRET}`, 'Bearer wrong']) {
-    const refused = await sweep(authorization);
-    assert.equal(refused.status, 401, String(authorization));
+    let status = 0;
+    const logged = await capturingLogs(async () => { status = (await sweep(authorization)).status; });
+    assert.equal(status, 401, String(authorization));
+    // One fixed line, with nothing from the request header in it.
+    assert.deepEqual(logged, ['account deletion sweep: unauthorized call refused {"code":"ACCOUNT_DELETION_SWEEP_UNAUTHORIZED"}'], String(authorization));
   }
   assert.equal(blobAttempts.length, attempts, 'no deletion step ran');
   assert.equal((await sweep(`Bearer ${SECRET}`)).status, 200);
@@ -115,10 +145,15 @@ test('a stale row whose Blob step now works becomes done, the email forgotten an
   process.env.CRON_SECRET = SECRET;
   const stuck = await leftForTheSweep(2 * 3_600_000);
   brokenBlob.delete(stuck.email);
-  const answer = await sweep(`Bearer ${SECRET}`);
+  let answer: Response | undefined;
+  const logged = await capturingLogs(async () => { answer = await sweep(`Bearer ${SECRET}`); });
+  assert.ok(answer);
   assert.equal(answer.status, 200);
   const counts = await answer.json() as Record<string, unknown>;
   assert.ok(Number(counts.done) >= 1, JSON.stringify(counts));
+  const line = countsLine(logged);
+  assert.equal(line.done, counts.done, 'the log line carries the same counts');
+  assert.ok(logged.every((entry) => !entry.includes(stuck.email) && !entry.includes(stuck.userId)), logged.join('\n'));
   const deletion = await store.accountDeletion(stuck.userId);
   assert.ok(deletion);
   assert.equal(deletion.state, 'done');
@@ -176,22 +211,23 @@ test('a row still started after 7 days logs ACCOUNT_DELETION_OVERDUE with counts
   process.env.CRON_SECRET = SECRET;
   const overdue = await leftForTheSweep(8 * 24 * 3_600_000);
   let counts: Record<string, number> = {};
-  const logged = await capturingErrors(async () => {
+  const logged = await capturingLogs(async () => {
     counts = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, number>;
   });
   assert.ok(counts.overdue >= 1, JSON.stringify(counts));
   const lines = logged.filter((line) => line.includes('ACCOUNT_DELETION_OVERDUE'));
   assert.equal(lines.length, 1, logged.join('\n'));
   const payload = JSON.parse(lines[0].slice(lines[0].indexOf('{'))) as Record<string, unknown>;
-  assert.deepEqual(Object.keys(payload).sort(), ['checked', 'cleanupPending', 'code', 'done', 'failed', 'overdue', 'stale']);
-  assert.ok(Object.entries(payload).every(([key, value]) => key === 'code' || typeof value === 'number'));
+  assert.deepEqual(Object.keys(payload).sort(), ['checked', 'cleanupPending', 'code', 'done', 'failed', 'found', 'overdue', 'stale', 'stoppedOnBudget']);
+  assert.ok(Object.entries(payload).every(([key, value]) => key === 'code' || typeof value === (key === 'stoppedOnBudget' ? 'boolean' : 'number')));
+  assert.equal(countsLine(logged).overdue, counts.overdue);
   for (const line of logged) {
     assert.ok(!line.includes(overdue.email) && !line.includes(overdue.userId), `no email or id: ${line}`);
   }
   // Fixed: the next run finishes it and the alert stops.
   brokenBlob.delete(overdue.email);
   let after: Record<string, number> = {};
-  const quiet = await capturingErrors(async () => { after = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, number>; });
+  const quiet = await capturingLogs(async () => { after = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, number>; });
   assert.equal((await store.accountDeletion(overdue.userId))?.state, 'done');
   assert.equal(after.overdue, 0);
   assert.ok(!quiet.some((line) => line.includes('ACCOUNT_DELETION_OVERDUE')), quiet.join('\n'));
@@ -208,4 +244,56 @@ test(`one run retries at most ${SWEEP_LIMIT} rows, and the next run reaches the 
   await sweep(`Bearer ${SECRET}`);
   const reached = new Set(blobAttempts.slice(before));
   assert.ok(many.every((row) => reached.has(row.email)), 'least recently tried first: two runs reach every row');
+});
+
+test('a run the time budget stops still logs its counts line, with the overdue rows counted before the loop', async () => {
+  process.env.CRON_SECRET = SECRET;
+  const overdue = await leftForTheSweep(8 * 24 * 3_600_000);
+  brokenBlob.delete(overdue.email);
+  // Every Blob step now hangs. ES2022 lib: no Promise.withResolvers.
+  let release = () => {};
+  let stalled = () => {};
+  const reachedBlob = new Promise<void>((resolve) => { stalled = resolve; });
+  blobStall = { until: new Promise<void>((resolve) => { release = resolve; }), onStall: () => stalled() };
+  // Once the rows are listed the time is gone: a count after the loop would fail the run.
+  let listed = false;
+  const timed = Object.create(store) as typeof store;
+  timed.staleAccountDeletions = async (olderThanMs, limit) => {
+    listed = true;
+    return store.staleAccountDeletions(olderThanMs, limit);
+  };
+  timed.staleAccountDeletionCount = async (olderThanMs) => {
+    if (listed) throw new Error('counted after the loop');
+    return store.staleAccountDeletionCount(olderThanMs);
+  };
+  // The budget's clock is driven by hand: the run is stuck on its first row until 100 ms "pass".
+  mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.now() });
+  let counts: SweepCounts | undefined;
+  let settled = false;
+  const logged: string[] = [];
+  try {
+    const run = capturingLogs(async () => { counts = await sweepAccountDeletions(timed, 100); }).then((lines) => { logged.push(...lines); settled = true; });
+    await reachedBlob;
+    mock.timers.tick(100);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settled, true, 'the run stopped at its budget while the row was still running');
+    await run;
+  } finally {
+    mock.timers.reset();
+    release();
+    blobStall = undefined;
+  }
+  assert.ok(counts);
+  assert.equal(counts.stoppedOnBudget, true);
+  assert.equal(counts.checked, 0, 'the row cut off is not counted as retried');
+  assert.ok(counts.found >= 1 && counts.overdue >= 1 && counts.stale >= 1, JSON.stringify(counts));
+  const line = countsLine(logged);
+  assert.equal(line.stoppedOnBudget, true);
+  assert.equal(line.overdue, counts.overdue);
+  assert.equal(logged.filter((entry) => entry.includes('ACCOUNT_DELETION_OVERDUE')).length, 1, logged.join('\n'));
+  assert.ok(logged.every((entry) => !entry.includes(overdue.email) && !entry.includes(overdue.userId)), logged.join('\n'));
+  // The budget leaves the rows as they were; full runs finish them.
+  await sweep(`Bearer ${SECRET}`);
+  await sweep(`Bearer ${SECRET}`);
+  assert.equal((await store.accountDeletion(overdue.userId))?.state, 'done');
 });
