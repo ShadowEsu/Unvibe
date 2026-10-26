@@ -313,7 +313,7 @@ test('an app running from App Translocation is told to move to Applications, bef
     const release = fakeRelease('the real disk image', (sha) => `${sha}  Unvibe-0.1.45-mac-arm64.dmg\n`);
     const macTarget = '/private/var/folders/xy/abc/T/AppTranslocation/0A1B2C3D-4E5F/d/Unvibe.app';
     const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, macTarget, workRoot: root });
-    assert.ok(!refused.ok);
+    assert.ok(!refused.ok, 'a translocated app is refused before anything is downloaded');
     assert.equal(refused.error, 'Move Unvibe to your Applications folder first, then update.', 'a translocated app is refused with a way out');
     assert.deepEqual(release.urls, [], 'nothing is downloaded');
     assert.deepEqual(readdirSync(root), [], 'no download folder is created');
@@ -331,7 +331,7 @@ test('release addresses are checked as parsed, so dot segments cannot leave the 
       const release = fakeRelease('a disk image', (sha) => `${sha}  Unvibe.dmg\n`);
       const info = { available: true, current: '0.1.44', latest: '0.1.45', url };
       const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, workRoot: root });
-      assert.ok(!refused.ok);
+      assert.ok(!refused.ok, 'an address that leaves the releases folder once parsed is refused');
       assert.match(refused.error, /unexpected address/, 'the asset address is checked after parsing');
       const sums = fakeFetch(`${dl.sha}  Unvibe.dmg\n`);
       assert.match(await verifyDownload(dl.file, url, 'darwin', sums.fetchImpl) ?? '', /unexpected address/, 'the checksum file address is checked after parsing');
