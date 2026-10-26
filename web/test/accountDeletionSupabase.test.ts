@@ -207,10 +207,13 @@ test('beta-download records: reads run 8 at a time, and a page\'s matches are de
   assert.deepEqual(blob.seen.filter((s) => s.path === '/api/blob/delete').map((s) => s.body), [{ urls: [`${base}p1-3.enc`] }]);
 });
 
-test('beta-download records: once one read fails, no new read starts and nothing is deleted', async () => {
+// The time limit is a backstop: the reads are released by the failing read itself, never by the
+// outcome, so a build that swallows the failure finishes (and fails) instead of waiting forever.
+test('beta-download records: once one read fails, no new read starts and nothing is deleted', { timeout: 10_000 }, async () => {
   const base = 'https://store123.private.blob.vercel-storage.com/beta-downloads/item/';
   const names = Array.from({ length: 20 }, (_, index) => `r-${index}`);
-  // Every read but the failing one waits here until the failure has surfaced.
+  // Every read but the failing one waits here. The failing read opens the gate on the next
+  // event-loop turn, after its worker has already seen the 503 (no wall-clock wait).
   let release = () => {};
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const blob = fakeFetch(async (_request, url) => {
@@ -219,12 +222,14 @@ test('beta-download records: once one read fails, no new read starts and nothing
     }
     if (url.host === 'vercel.com' && url.pathname === '/api/blob/delete') return Response.json({});
     const name = url.pathname.split('/').pop()?.replace('.enc', '') ?? '';
-    if (name === 'r-0') return new Response('unavailable', { status: 503 });
+    if (name === 'r-0') {
+      setImmediate(release);
+      return new Response('unavailable', { status: 503 });
+    }
     await gate;
     return new Response(encryptRecord({ email: 'leaving@account.test', release: '1.0.0' }, BLOB_ENV.WAITLIST_ADMIN_TOKEN as string));
   });
   await assert.rejects(vercelBlobBetaDownloads(BLOB_ENV, blob.fetcher).deleteForEmail('leaving@account.test'), /Blob read failed: 503/);
-  release();
   // Let the workers still holding a read finish; without the stop they would go on to read the rest.
   // setImmediate drains the event loop (no wall-clock wait): the reads settle through I/O callbacks.
   for (let turn = 0; turn < 20; turn += 1) await new Promise((resolve) => setImmediate(resolve));
