@@ -527,6 +527,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
 }
 
 export function gradeComprehension(win: BrowserWindow, session: ReviewSession, choice: number): void {
+  if (wipedSinceRun(session)) return;
   const a = session.pendingAnswer;
   if (!a) return;
   const correct = choice === a.answerIndex;
