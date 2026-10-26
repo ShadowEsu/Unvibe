@@ -18,6 +18,7 @@ import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
 import { flush } from '../src/main/sync';
 import { askChat, askStudyAssistant } from '../src/main/studyQuiz';
+import { invalidateAppUsage } from '../src/main/usage';
 import type { LocalEvent } from '../src/core/learning';
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
@@ -459,6 +460,41 @@ test('a Chat reply from the person\'s own key that arrives after a wipe writes n
     assert.deepEqual(store().events(), [], 'no chat lesson written into the wiped store');
   } finally {
     provider.restore();
+  }
+});
+
+test('a wipe during Chat\'s usage check stops the reply from writing anything', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage(); // no usage snapshot: Chat asks the service before it replies
+  const original = globalThis.fetch;
+  let usageAsked!: () => void;
+  const asked = new Promise<void>((resolve) => { usageAsked = resolve; });
+  let answerUsage!: () => void;
+  const usageAnswered = new Promise<void>((resolve) => { answerUsage = resolve; });
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/api/v1/billing/overview')) {
+      usageAsked();
+      await usageAnswered;
+      throw new TypeError('fetch failed'); // Chat then counts usage locally and goes on
+    }
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A reply.' }] } }] })}\n\n`);
+    }
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    const chatting = askChat({ question: 'What does map do?' });
+    await asked;
+    store().wipeEverything();
+    answerUsage();
+    const result = await chatting;
+    assert.equal(result.ok, false);
+    assert.match(result.ok ? '' : result.error, /erased while this was running/);
+    assert.deepEqual(store().events(), [], 'no chat lesson written into the wiped store');
+  } finally {
+    answerUsage();
+    globalThis.fetch = original;
   }
 });
 
