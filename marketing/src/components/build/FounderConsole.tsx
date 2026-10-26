@@ -9,7 +9,7 @@ type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
 
 export function FounderConsole() {
   const [status, setStatus] = useState<PublicStatus | null>(null);
-  const [message, setMessage] = useState("Checking the founder clock.");
+  const [message, setMessage] = useState("Checking the build clock.");
   const [busy, setBusy] = useState(false);
   const [hoursInput, setHoursInput] = useState("162");
   const [minutesInput, setMinutesInput] = useState("34");
@@ -25,13 +25,13 @@ export function FounderConsole() {
     try {
       const response = await fetch("/api/build-status", { cache: "no-store" });
       const next = await readResponseJson<PublicStatus & { error?: string }>(response);
-      if (!response.ok) throw new Error(next.error || "Could not load the founder clock.");
+      if (!response.ok) throw new Error(next.error || "Could not load the build clock.");
       setStatus(next);
       setTick(0);
       syncInputs(next.totalSeconds);
       setMessage(next.isLive ? "Clock is on. Hours and minutes are counting." : "Clock is off. Hours and minutes are paused.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not load the founder clock.");
+      setMessage(error instanceof Error ? error.message : "Could not load the build clock.");
     }
   }, []);
 
@@ -44,14 +44,14 @@ export function FounderConsole() {
         body: JSON.stringify(action),
       });
       const payload = await readResponseJson<PublicStatus & { error?: string }>(response);
-      if (!response.ok) throw new Error(payload.error || "Could not update the founder clock.");
+      if (!response.ok) throw new Error(payload.error || "Could not update the build clock.");
       setStatus(payload);
       setTick(0);
       if (action.action !== "heartbeat") syncInputs(payload.totalSeconds);
       setMessage(payload.isLive ? "Clock is on. Hours and minutes are counting." : "Clock is off. Hours and minutes are paused.");
     } catch (error) {
       if (!options?.quiet) {
-        setMessage(error instanceof Error ? error.message : "Could not update the founder clock.");
+        setMessage(error instanceof Error ? error.message : "Could not update the build clock.");
       }
     } finally {
       if (!options?.quiet) setBusy(false);
@@ -93,7 +93,7 @@ export function FounderConsole() {
 
   return (
     <div className="founder-console">
-      <p className="paper-meta">Founder control</p>
+      <p className="paper-meta">Build clock</p>
       <h2>{live ? "Hours and minutes are on." : "Hours and minutes are off."}</h2>
       <p>{message}</p>
       <p className="founder-console__clock" aria-live="polite">
@@ -128,7 +128,7 @@ export function FounderConsole() {
             inputMode="numeric"
             value={hoursInput}
             onChange={(event) => setHoursInput(event.target.value)}
-            aria-label="Founder hours"
+            aria-label="Build hours"
           />
         </label>
         <label>
@@ -137,7 +137,7 @@ export function FounderConsole() {
             inputMode="numeric"
             value={minutesInput}
             onChange={(event) => setMinutesInput(event.target.value)}
-            aria-label="Founder minutes"
+            aria-label="Build minutes"
           />
         </label>
         <button type="submit" disabled={busy || !status}>Save time</button>
