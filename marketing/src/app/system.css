@@ -128,8 +128,9 @@
 }
 
 /* These light buttons sit straight on the dark page, so their focus ring (drawn outside the fill) keeps the
-   dark theme's ring colour (the .dark --u-focus), not the island's ink. */
-.dark :is(.mnav .paper-join--mac, .vhero .paper-join--mac, .kit__btn--lime):focus-visible { outline-color: #c4b5fd; }
+   dark theme's ring colour (the .dark --u-focus), not the island's ink. The same goes for GetUnvibe on the dark
+   /activate card, whose #3c2fb8 ring is 1.84:1 there (under a Try it answer it sits on the white panel and keeps it). */
+.dark :is(.mnav .paper-join--mac, .vhero .paper-join--mac, .kit__btn--lime, .activate-card .get-unvibe .paper-join):focus-visible { outline-color: #c4b5fd; }
 
 /* The founder console's headings sit straight on the page; give it the same light sheet the waitlist admin has. */
 .dark .founder-page { background: rgb(243 238 248 / 0.94); }
