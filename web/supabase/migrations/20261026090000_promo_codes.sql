@@ -25,8 +25,10 @@
 -- Locking: every redemption and revocation in a batch first takes that batch's row lock
 -- (select ... for update), so the cap, one-per-account and used checks always see every committed
 -- redemption of the batch. The account's subscription row is locked next, before its end date is
--- read, so a concurrent grant from another batch, a gift or the welcome month cannot interleave
--- with this one and lose months. The order is always batch row, then subscription row.
+-- read. add_pro_months (re-declared at the end of this file) takes the same row lock before it reads
+-- the end date, so a concurrent grant from another batch, a gift or the welcome month waits for this
+-- one instead of writing back an end date read before it. The order is always batch row, then
+-- subscription row.
 --
 -- RLS is on with no policies; public, anon and authenticated have no table or function rights.
 -- Only the service role (the API) can call the two functions.
@@ -40,6 +42,7 @@
 --   drop table if exists public.promo_codes;
 --   drop table if exists public.promo_batches;
 --   commit;
+-- After a rollback, add_pro_months keeps its subscription row lock (safe: it only makes grants wait).
 
 begin;
 
@@ -292,5 +295,45 @@ end;
 $$;
 revoke all on function public.revoke_promo_code(text) from public, anon, authenticated;
 grant execute on function public.revoke_promo_code(text) to service_role;
+
+-- add_pro_months, re-declared with one change: it locks the subscription row before it reads the end
+-- date. Every complimentary grant goes through it (gift, welcome, feedback and referral months, and
+-- this promo), so grants to one account now run one at a time. Before, a gift's plain read didn't wait
+-- for a redemption holding the lock: it read the old end date and, once the redemption committed,
+-- wrote that date plus 30 days, so the promo's months were lost (Security R1: 68 of 500 concurrent
+-- rounds on real Postgres). Everything else is line for line 20261006120000_referrals_and_app_waitlist.sql;
+-- create or replace keeps its grants (none for public, anon or authenticated).
+create or replace function public.add_pro_months(p_user_id uuid, p_months integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_workspace_id uuid;
+  v_sub subscriptions%rowtype;
+  v_from timestamptz := now();
+begin
+  if p_months is null or p_months <= 0 then return false; end if;
+  v_workspace_id := ensure_personal_workspace(p_user_id);
+  select * into strict v_sub from subscriptions where workspace_id = v_workspace_id for update;
+  if v_sub.stripe_subscription_id is not null and v_sub.status not in ('canceled', 'inactive') then
+    return false;
+  end if;
+  if v_sub.plan = 'pro' and v_sub.status = 'trialing' and v_sub.current_period_end > now() then
+    v_from := v_sub.current_period_end;
+  end if;
+  update subscriptions
+    set plan = 'pro',
+        interval = 'monthly',
+        status = 'trialing',
+        seats = 1,
+        current_period_start = case when v_from > now() then coalesce(current_period_start, now()) else now() end,
+        current_period_end = least(v_from + make_interval(days => 30 * p_months), now() + interval '12 months'),
+        updated_at = now()
+    where workspace_id = v_workspace_id;
+  return true;
+end;
+$$;
 
 commit;
