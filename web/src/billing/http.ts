@@ -1,8 +1,8 @@
-import { userFromRequest } from '@/lib/auth';
+import { userOrRefusal } from '@/lib/auth';
 
-export async function requireUser(req: Request): Promise<string | Response> {
-  const userId = await userFromRequest(req);
-  return userId ?? Response.json({ error: 'unauthorized', message: 'Sign in to continue.' }, { status: 401 });
+/** 401 without a session, 410 while the account is being deleted (nothing is written for it). */
+export function requireUser(req: Request): Promise<string | Response> {
+  return userOrRefusal(req, () => Response.json({ error: 'unauthorized', message: 'Sign in to continue.' }, { status: 401 }));
 }
 
 // Provider and configuration text (Stripe errors, env names, key mode) must never reach the

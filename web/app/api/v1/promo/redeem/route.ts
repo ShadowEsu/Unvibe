@@ -1,4 +1,5 @@
 import { PROMO_RESPONSES, promoBackend, PromoUnavailableError } from '@/billing/promo';
+import { getStore } from '@/data/store';
 import { normalisePromoCode, promoCodeHash } from '@/lib/promoCode';
 
 export const runtime = 'nodejs';
@@ -50,6 +51,8 @@ export async function POST(req: Request): Promise<Response> {
     const account = await backend.verifyAccessToken(accessToken);
     if (!account) return failure('unauthorized', 401, 'Your sign-in has expired. Sign in again.');
     if (rateLimited('user', account.id)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
+    // The upsert below would re-create an account that is being deleted.
+    if (await getStore().accountDeletion(account.id)) return failure('account_deleted', 410, 'This account was deleted or is being deleted.');
     await backend.upsertUser(account);
     const result = await backend.redeem(account.id, promoCodeHash(code));
     const { http, message } = PROMO_RESPONSES[result.status];

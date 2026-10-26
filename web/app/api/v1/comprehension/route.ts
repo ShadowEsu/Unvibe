@@ -2,7 +2,7 @@ import { selectProvider, buildComprehensionPrompt } from '@/ai';
 import { parseQuestion } from '@/ai/comprehension';
 import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import { unauthorized, userFromRequest } from '@/lib/auth';
+import { accountDeleted, sessionUser, unauthorized } from '@/lib/auth';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
@@ -13,7 +13,9 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
   const trialInstall = trialInstallFromRequest(req);
-  const userId = trialInstall ? null : await userFromRequest(req);
+  const session = trialInstall ? null : await sessionUser(req);
+  if (session?.deleting) return accountDeleted();
+  const userId = session?.userId ?? null;
   const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
   const provider = selectProvider(payload?.model);
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {

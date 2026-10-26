@@ -1,6 +1,6 @@
 import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
-import { unauthorized, userFromRequest } from '@/lib/auth';
+import { accountDeleted, sessionUser, unauthorized } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { proRequired, recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
@@ -23,7 +23,9 @@ export async function POST(req: Request): Promise<Response> {
   if (tooLarge) return tooLarge;
 
   const trialInstall = trialInstallFromRequest(req);
-  const userId = trialInstall ? null : await userFromRequest(req);
+  const session = trialInstall ? null : await sessionUser(req);
+  if (session?.deleting) return accountDeleted();
+  const userId = session?.userId ?? null;
   const provider = selectProvider(payload.model);
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();
