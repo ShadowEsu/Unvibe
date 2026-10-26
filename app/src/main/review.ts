@@ -153,8 +153,17 @@ function persistUnderstoodSnapshot(session: ReviewSession): void {
   store().saveFileSnapshot(session.file, session.project, session.snapshotText.slice(0, 12_000));
 }
 
-/** Mark the current review understood (Got it) and refresh the file memory baseline when safe. */
+/** True once the store was wiped (account deletion, Erase everything) after this session's latest run started. */
+function wipedSinceRun(session: ReviewSession): boolean {
+  return session.wipeGeneration !== undefined && session.wipeGeneration !== store().wipeGeneration();
+}
+
+/**
+ * Mark the current review understood (Got it) and refresh the file memory baseline when safe. On a
+ * panel that outlived a wipe nothing is saved: no lesson, outcome or file snapshot.
+ */
 export function markUnderstood(win: BrowserWindow, session: ReviewSession): void {
+  if (wipedSinceRun(session)) return;
   if (!session.recorded) recordReview(win, session, false);
   try {
     store().setOutcome(session.reviewId, 'understood');
@@ -204,7 +213,7 @@ function appendExplanation(session: ReviewSession, text: string): void {
  */
 function recordReview(win: BrowserWindow, session: ReviewSession, followUp: boolean): boolean {
   if (!session.code) return false;
-  if (session.wipeGeneration !== undefined && session.wipeGeneration !== store().wipeGeneration()) return false;
+  if (wipedSinceRun(session)) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
     if (followUp) return true;
@@ -288,6 +297,8 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   session.level = opts.level;
   session.explanationText = '';
   session.islandStreaming = false;
+  // A lesson this panel saved before a wipe went with it: this run saves a new one.
+  if (wipedSinceRun(session)) session.recorded = false;
   session.wipeGeneration = store().wipeGeneration();
   pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 

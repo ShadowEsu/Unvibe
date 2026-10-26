@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { initWidget, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 
 /** Every request body the backend received, by path. */
@@ -186,4 +186,23 @@ test('a review that started before a wipe saves no lesson when its answer arrive
   assert.deepEqual(store().events(), []);
   await runReview(win, s, { level: 'intermediate' });
   assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION at intermediate/, 'a run started after the wipe is saved');
+});
+
+test('"Got it" on a panel that outlived a wipe saves no file snapshot; after a new run it does', async () => {
+  const { win, events } = panel();
+  const file = `wipe-${Math.random().toString(36).slice(2)}.js`;
+  const s: ReviewSession = { ...session('intermediate'), file, snapshotText: 'function debounce(fn, wait) {}' };
+  await runReview(win, s, { level: 'intermediate' });
+  assert.ok(lesson(s.reviewId), 'the run was saved before the wipe');
+  // The wipe lands while this panel is still open, then the person presses Got it.
+  store().wipeEverything();
+  markUnderstood(win, s);
+  assert.equal(store().fileSnapshot(file), undefined, 'no snapshot written into the wiped store');
+  assert.deepEqual(store().events(), []);
+  assert.ok(!events.some((ev) => ev.type === 'understood'));
+  // A run started after the wipe is new learning: Got it saves it and its snapshot.
+  await runReview(win, s, { level: 'intermediate' });
+  markUnderstood(win, s);
+  assert.ok(store().fileSnapshot(file), 'a run started after the wipe saves its snapshot');
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood');
 });
