@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,7 +17,7 @@ import { knowledgeStore } from '../src/main/knowledgeStore';
 import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
 import { flush } from '../src/main/sync';
-import { answerQuizCard, askChat, askStudyAssistant, startQuizCard } from '../src/main/studyQuiz';
+import { abortChatAndStudy, answerQuizCard, askChat, askStudyAssistant, saveChatThread, startQuizCard } from '../src/main/studyQuiz';
 import { invalidateAppUsage } from '../src/main/usage';
 import type { LocalEvent } from '../src/core/learning';
 
@@ -357,6 +357,22 @@ test('with no account at all, Erase everything clears the learning without askin
   assert.deepEqual(knowledgeStore().teachBacks(), []);
 });
 
+test('signed out, Erase everything also clears renderer storage, the HTTP cache and the project folder', async () => {
+  signedInWithData();
+  store().signOut();
+  const result = await deleteAccountAndLocalData(stopReviews);
+  assert.deepEqual(result, { ok: true, status: 'erased_locally' });
+  assert.deepEqual(sessionCalls, [
+    { call: 'clearStorageData', options: { storages: ['localstorage', 'indexdb', 'websql', 'filesystem', 'cookies', 'cachestorage', 'serviceworkers'] } },
+    { call: 'clearCache' },
+  ]);
+  assert.equal(settings().all().lastProjectRoot, undefined);
+  const onDisk = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Record<string, unknown>;
+  assert.equal('lastProjectRoot' in onDisk, false);
+  assert.deepEqual(store().events(), []);
+  assert.deepEqual(knowledgeStore().teachBacks(), []);
+});
+
 /**
  * Answers the sync routes and DELETE. GET /history (the pull) waits for `release`; with `honourAbort`
  * it ends when its request is aborted, the way a real network request does.
@@ -559,5 +575,122 @@ test('account deletion aborts a Chat reply still streaming from the person\'s ow
     assertClearedAndPreferencesKept();
   } finally {
     provider.restore();
+  }
+});
+
+test('knowledge and learning are wiped together after renderer cleanup with no async gap', async () => {
+  signedInWithData();
+  const generation = store().wipeGeneration();
+  const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
+  const wipe = knowledgeStore().wipe.bind(knowledgeStore());
+  let cleanupCallsAtWipe: string[] = [];
+  let generationAtWipe = -1;
+  let generationAtNextTurn = -1;
+  const watched = mock.method(knowledgeStore(), 'wipe', () => {
+    cleanupCallsAtWipe = sessionCalls.map((entry) => entry.call);
+    generationAtWipe = store().wipeGeneration();
+    wipe();
+    queueMicrotask(() => { generationAtNextTurn = store().wipeGeneration(); });
+  });
+  try {
+    const result = await deleteAccountAndLocalData(stopReviews);
+    assert.equal(result.ok, true);
+    assert.deepEqual(cleanupCallsAtWipe, ['clearStorageData', 'clearCache']);
+    assert.equal(generationAtWipe, generation, 'knowledge clears immediately before learning');
+    assert.equal(generationAtNextTurn, generation + 1, 'no await leaves the old generation visible after knowledge clears');
+    assertClearedAndPreferencesKept();
+  } finally {
+    watched.mock.restore();
+    service.restore();
+  }
+});
+
+test('Chat cancelled during its usage check says cancelled and starts no provider request', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  const original = globalThis.fetch;
+  let usageAsked!: () => void;
+  const asked = new Promise<void>((resolve) => { usageAsked = resolve; });
+  let answerUsage!: () => void;
+  const answered = new Promise<void>((resolve) => { answerUsage = resolve; });
+  let providerCalls = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/api/v1/billing/overview')) {
+      usageAsked();
+      await answered;
+      throw new TypeError('fetch failed');
+    }
+    providerCalls += 1;
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    const chatting = askChat({ question: 'What does map do?' });
+    await asked;
+    abortChatAndStudy();
+    answerUsage();
+    const result = await chatting;
+    assert.equal(result.ok, false);
+    assert.equal(result.ok ? '' : result.error, 'The request was cancelled.');
+    assert.equal(providerCalls, 0);
+    assert.equal(store().events().length, 1, 'no cancelled Chat lesson was saved');
+  } finally {
+    answerUsage();
+    globalThis.fetch = original;
+  }
+});
+
+test('a Chat reply whose usage refresh outlives a wipe is not ok, and its conversation is not saved', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  // The open conversation started before the wipe, so it carries this generation.
+  const conversationGeneration = store().wipeGeneration();
+  const original = globalThis.fetch;
+  let overviewCalls = 0;
+  let refreshAsked!: () => void;
+  const asked = new Promise<void>((resolve) => { refreshAsked = resolve; });
+  let releaseRefresh!: () => void;
+  const released = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/api/v1/billing/overview')) {
+      overviewCalls += 1;
+      // The second usage read is the refresh after the reply: hold it while the store is wiped.
+      if (overviewCalls === 2) {
+        refreshAsked();
+        await released;
+      }
+      throw new TypeError('fetch failed');
+    }
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A reply.' }] } }] })}\n\n`);
+    }
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  const turns = [
+    { role: 'user' as const, content: 'const secretSauce = 1; what does this do?', ts: new Date().toISOString() },
+    { role: 'assistant' as const, content: 'A reply.', ts: new Date().toISOString() },
+  ];
+  try {
+    const chatting = askChat({ question: 'const secretSauce = 1; what does this do?' });
+    await asked;
+    store().wipeEverything();
+    releaseRefresh();
+    const result = await chatting;
+    assert.equal(result.ok, false, 'no success reply after the wipe');
+    assert.match(result.ok ? '' : result.error, /erased while this was running/);
+    const stale = saveChatThread({ id: 'thread-before', title: 'Before', startedAt: turns[0].ts, updatedAt: turns[1].ts, turns }, conversationGeneration);
+    assert.equal(stale.ok, false);
+    assert.deepEqual(store().chatThreads(), [], 'no conversation written into the wiped store');
+    // A conversation started after the wipe saves as before.
+    const after = await askChat({ question: 'What does map do?' });
+    assert.equal(after.ok, true);
+    assert.equal(after.ok ? after.wipeGeneration : -1, store().wipeGeneration());
+    const saved = saveChatThread({ id: 'thread-after', title: 'After', startedAt: turns[0].ts, updatedAt: turns[1].ts, turns }, after.ok ? after.wipeGeneration : -1);
+    assert.deepEqual(saved, { ok: true });
+    assert.deepEqual(store().chatThreads().map((thread) => thread.id), ['thread-after']);
+  } finally {
+    releaseRefresh();
+    globalThis.fetch = original;
   }
 });

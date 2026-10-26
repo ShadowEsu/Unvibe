@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import { claimGiftCode } from '../src/main/backend';
 import { store } from '../src/main/store';
-import { askStudyAssistant } from '../src/main/studyQuiz';
+import { askChat, askStudyAssistant } from '../src/main/studyQuiz';
 
 /** What the service answers next: a JSON refusal, or an SSE stream of these events. */
 let answer: { status: number; body: unknown } | { events: unknown[] } = { status: 200, body: {} };
@@ -56,3 +56,28 @@ test('a study answer stream that ends in an error shows its message only as a ca
     assert.equal(result.ok ? '' : result.error, 'The assistant could not answer.', name);
   }
 });
+
+for (const caller of ['study', 'Chat'] as const) {
+  test(`a ${caller} HTTP refusal shows only capped service text and preserves the allowance`, async () => {
+    store().wipeEverything();
+    store().recordReview({
+      id: 'refused-lesson', ts: new Date().toISOString(), eventType: 'explanation_completed', localDate: new Date().toISOString().slice(0, 10),
+      timezone: 'UTC', scope: 'selection', level: 'beginner', outcome: 'reviewed', lines: 1, code: 'const total = a + b;',
+    });
+    const before = store().studyAskUsage().used;
+    answer = { status: 429, body: { error: 'plan_limit_reached', message: ` ${'r'.repeat(1_000)} ` } };
+    const capped = await (caller === 'study'
+      ? askStudyAssistant({ eventId: 'refused-lesson', question: 'Why add them?' })
+      : askChat({ question: 'What does addition do?' }));
+    assert.equal(capped.ok ? '' : capped.error, 'r'.repeat(300));
+    for (const [name, message] of HOSTILE) {
+      answer = { status: 429, body: { error: 'plan_limit_reached', message } };
+      const result = await (caller === 'study'
+        ? askStudyAssistant({ eventId: 'refused-lesson', question: 'Why add them?' })
+        : askChat({ question: 'What does addition do?' }));
+      assert.equal(result.ok ? '' : result.error, "You have used this plan's explanations for now. Open Plan & usage to see when they reset or to upgrade.", name);
+    }
+    assert.equal(store().studyAskUsage().used, before);
+    assert.equal(store().events().length, 1, 'no Chat lesson was saved from a refusal');
+  });
+}

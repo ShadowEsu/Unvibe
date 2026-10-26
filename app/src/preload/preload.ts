@@ -97,7 +97,7 @@ const api = {
     startedAt: string;
     updatedAt: string;
     turns: Array<{ role: 'user' | 'assistant'; content: string; ts: string }>;
-  }) => ipcRenderer.invoke('chat:saveThread', thread),
+  }, wipeGeneration: number) => ipcRenderer.invoke('chat:saveThread', thread, wipeGeneration),
   deleteChatThread: (id: string) => ipcRenderer.invoke('chat:deleteThread', id),
   syncStatus: () => ipcRenderer.invoke('sync:status'),
   retrySync: () => ipcRenderer.invoke('sync:retry'),

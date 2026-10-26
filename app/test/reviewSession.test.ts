@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 
 /** Every request body the backend received, by path. */
@@ -205,4 +205,68 @@ test('"Got it" on a panel that outlived a wipe saves no file snapshot; after a n
   markUnderstood(win, s);
   assert.ok(store().fileSnapshot(file), 'a run started after the wipe saves its snapshot');
   assert.equal(lesson(s.reviewId)?.outcome, 'understood');
+});
+
+test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; after a new run it does', async () => {
+  const { win, events } = panel();
+  const file = `quiz-wipe-${Math.random().toString(36).slice(2)}.js`;
+  const s: ReviewSession = { ...session('intermediate'), file, snapshotText: 'function debounce(fn, wait) {}' };
+  await runReview(win, s, { level: 'intermediate' });
+  await startComprehension(win, s);
+  assert.ok(lesson(s.reviewId));
+  store().wipeEverything();
+  gradeComprehension(win, s, 0);
+  assert.equal(store().fileSnapshot(file), undefined, 'no snapshot written into the wiped store');
+  assert.deepEqual(store().events(), []);
+  assert.ok(!events.some((ev) => ev.type === 'graded'));
+  await runReview(win, s, { level: 'intermediate' });
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 0);
+  assert.ok(store().fileSnapshot(file));
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood');
+});
+
+test('review streams forward only the token, done and error events the service sends', async () => {
+  const appOnly = ['init', 'understood', 'status', 'consent', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
+  const { win, events } = panel();
+  // Forwarded events are rebuilt without extra fields, so the stream's own values mark them.
+  reviewEvents = [...appOnly, 'token', 'error', 'unhandled', 'constructor', '', 'done'].map((type) => ({
+    type, text: 'marker words', message: 'marker notice', model: 'marker-model', mock: false,
+  }));
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  const fromStream = events.filter((ev) => ev.text === 'marker words' || ev.message === 'marker notice' || ev.model === 'marker-model');
+  assert.deepEqual(fromStream.map((ev) => ev.type), ['token', 'error', 'done']);
+});
+
+test('streamed token, done and error events reach the panel with only their checked fields', async () => {
+  const { win, events } = panel();
+  const extras = { html: '<img src=x onerror=alert(1)>', extra: { nested: { deep: ['x'] } }, tabId: 'other-tab' };
+  reviewEvents = [
+    { type: 'token', text: 'Kept words.', ...extras },
+    { type: 'token', text: { html: '<b>not text</b>' }, ...extras },
+    { type: 'error', message: { html: '<b>x</b>' }, code: 'pro_required', upgradePath: 'https://elsewhere.test', ...extras },
+    { type: 'done', model: 'service-model', mock: 'yes', ...extras },
+    { type: 'done', model: { name: 'x' }, mock: true, ...extras },
+  ];
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  const streamed = events.filter((ev) => ev.type === 'token' || ev.type === 'done' || ev.type === 'error');
+  assert.deepEqual(streamed, [
+    { type: 'token', text: 'Kept words.', tabId: '1' },
+    { type: 'error', message: 'The explanation service could not complete that request. Please try again.', tabId: '1' },
+    { type: 'done', model: 'service-model', mock: false, tabId: '1' },
+    { type: 'done', model: undefined, mock: true, tabId: '1' },
+  ]);
+  for (const ev of streamed) {
+    const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'tabId', 'type'];
+    assert.deepEqual(Object.keys(ev).sort(), expected);
+    assert.ok(Object.values(ev).every((value) => value === undefined || typeof value === 'string' || typeof value === 'boolean'), JSON.stringify(ev));
+  }
 });

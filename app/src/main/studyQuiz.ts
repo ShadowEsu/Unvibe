@@ -8,7 +8,7 @@ import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
 import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
-import { store } from './store';
+import { store, type ChatThread } from './store';
 import { flush } from './sync';
 import { readAiKey } from './aiKey';
 import { settings } from './settings';
@@ -19,7 +19,10 @@ import { scanTypedText } from '../core/secretFilter';
 /** Typed text has no consent step, so any secret finding stops it before anything leaves the Mac. */
 const SECRET_IN_MESSAGE = 'That looks like it contains a key, token, or password, so nothing was sent. Remove it and try again.';
 
-type AskResult = { ok: true; answer: string; remaining: number } | { ok: false; error: string; remaining?: number; code?: 'secret' };
+type AskFailure = { ok: false; error: string; remaining?: number; code?: 'secret' };
+type AskResult = { ok: true; answer: string; remaining: number } | AskFailure;
+/** `wipeGeneration`: store().wipeGeneration() when this reply's request started. Saving its thread needs it. */
+type ChatResult = { ok: true; answer: string; remaining: number; wipeGeneration: number } | AskFailure;
 
 interface PendingQuiz {
   eventId: string;
@@ -37,15 +40,17 @@ const inFlight = new Set<AbortController>();
 const WIPED_MEANWHILE = 'The learning on this computer was erased while this was running, so nothing was saved.';
 
 /**
- * Tracks one request until `done`. `wiped()` is true once the store was wiped after it started: a reply
- * that arrives anyway (a provider that ignores the abort) must not write into the erased store.
+ * Tracks one request until `done`. `generation` is store().wipeGeneration() when it started; `wiped()`
+ * is true once the store was wiped after that: a reply that arrives anyway (a provider that ignores
+ * the abort) must not write into the erased store.
  */
-function trackRequest(): { signal: AbortSignal; wiped: () => boolean; done: () => void } {
+function trackRequest(): { signal: AbortSignal; generation: number; wiped: () => boolean; done: () => void } {
   const controller = new AbortController();
   const generation = store().wipeGeneration();
   inFlight.add(controller);
   return {
     signal: controller.signal,
+    generation,
     wiped: () => store().wipeGeneration() !== generation,
     done: () => { inFlight.delete(controller); },
   };
@@ -334,7 +339,7 @@ export function answerQuizCard(eventId: string, choice: number):
 export async function askChat(input: {
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   question: string;
-}): Promise<AskResult> {
+}): Promise<ChatResult> {
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Type a message first.' };
   if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };
@@ -346,6 +351,7 @@ export async function askChat(input: {
   try {
     const usage = await cachedAppUsage();
     remaining = usage.remaining;
+    if (request.signal.aborted) return { ok: false, error: 'The request was cancelled.', remaining };
     const localKey = readAiKey();
     if (usage.remaining <= 0 && !localKey) {
       return { ok: false, error: 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.', remaining: 0 };
@@ -410,7 +416,8 @@ export async function askChat(input: {
     });
     void flush();
     const next = await refreshAppUsage();
-    return { ok: true, answer, remaining: next.remaining };
+    if (request.wiped()) return { ok: false, error: WIPED_MEANWHILE };
+    return { ok: true, answer, remaining: next.remaining, wipeGeneration: request.generation };
   } catch (err) {
     return {
       ok: false,
@@ -420,4 +427,14 @@ export async function askChat(input: {
   } finally {
     request.done();
   }
+}
+
+/**
+ * Saves a Chat thread only while the store is still at `wipeGeneration`, the generation the
+ * conversation started in: a conversation from before a wipe never writes back into the erased store.
+ */
+export function saveChatThread(thread: ChatThread, wipeGeneration: number): { ok: true } | { ok: false; error: string } {
+  if (wipeGeneration !== store().wipeGeneration()) return { ok: false, error: WIPED_MEANWHILE };
+  store().saveChatThread(thread);
+  return { ok: true };
 }

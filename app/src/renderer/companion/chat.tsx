@@ -159,6 +159,10 @@ export function Chat({
   const [showVoice, setShowVoice] = useState(voiceTip);
   const threadRef = useRef(newThreadId());
   const startedRef = useRef(new Date().toISOString());
+  // The store's wipe generation when this conversation started; main drops saves from an older one.
+  const threadGenRef = useRef<number | null>(null);
+  // The wipe generation of the saved list on screen, for a resumed conversation.
+  const savedGenRef = useRef<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const seededRef = useRef(false);
@@ -191,8 +195,10 @@ export function Chat({
 
   const loadSaved = () => {
     void window.unvibe.chatThreads().then((result) => {
-      const next = result as { ok?: boolean; threads?: SavedThread[] };
+      const next = result as { ok?: boolean; threads?: SavedThread[]; wipeGeneration?: number };
       setSaved(next?.threads ?? []);
+      savedGenRef.current = next?.wipeGeneration ?? null;
+      if (threadGenRef.current === null) threadGenRef.current = savedGenRef.current;
     });
   };
 
@@ -205,7 +211,7 @@ export function Chat({
     });
   }, []);
 
-  const persist = (next: ChatMessage[]) => {
+  const persist = (next: ChatMessage[], wipeGeneration: number) => {
     if (next.length === 0) return;
     const now = new Date().toISOString();
     void window.unvibe
@@ -215,13 +221,14 @@ export function Chat({
         startedAt: startedRef.current,
         updatedAt: now,
         turns: next.map((item) => ({ role: item.role, content: item.content, ts: item.ts ?? now })),
-      })
+      }, wipeGeneration)
       .then(loadSaved);
   };
 
   const startNew = () => {
     threadRef.current = newThreadId();
     startedRef.current = new Date().toISOString();
+    threadGenRef.current = null;
     setMessages([]);
     setError('');
     loadSaved();
@@ -231,6 +238,7 @@ export function Chat({
   const resume = (thread: SavedThread) => {
     threadRef.current = thread.id;
     startedRef.current = thread.startedAt;
+    threadGenRef.current = savedGenRef.current;
     setMessages(thread.turns.map((turn) => ({ role: turn.role, content: turn.content, ts: turn.ts })));
     setError('');
     areaRef.current?.focus();
@@ -263,7 +271,7 @@ export function Chat({
     const result = await window.unvibe.chatAsk({
       messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
       question,
-    }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string };
+    }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number };
     window.clearTimeout(thinkTimer);
     setBusy(false);
     if (result.remaining !== undefined) setLeft(result.remaining);
@@ -275,7 +283,7 @@ export function Chat({
       setBuddyMood('idle');
       return;
     }
-    if (!result.ok || !result.answer) {
+    if (!result.ok || !result.answer || result.wipeGeneration === undefined) {
       setError(result.error ?? 'Chat could not reply.');
       setBuddyMood('confused');
       window.setTimeout(() => setBuddyMood('idle'), 3200);
@@ -285,7 +293,8 @@ export function Chat({
     window.setTimeout(() => setBuddyMood('idle'), 2600);
     const answered: ChatMessage[] = [...nextMessages, { role: 'assistant', content: result.answer, ts: new Date().toISOString() }];
     setMessages(answered);
-    persist(answered);
+    threadGenRef.current ??= result.wipeGeneration;
+    persist(answered, threadGenRef.current);
     void onRefresh();
     areaRef.current?.focus();
   };

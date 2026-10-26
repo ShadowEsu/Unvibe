@@ -461,12 +461,18 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       if (done) break;
       stillStreaming();
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
-        if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
-        // The service's error text reaches the panel only as a capped string.
-        send(win, session, ev.type === 'error'
-          ? { ...ev, message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' }
-          : ev);
-        if (ev.type === 'done') {
+        // The service streams only token, done and error (web/app/api/v1/reviews/route.ts). Each is
+        // rebuilt from the checked fields the panel reads, so nothing else the service sends reaches
+        // it; any other type is dropped (init, usage, consent and the rest come from the app).
+        if (ev.type === 'token') {
+          if (typeof ev.text !== 'string') continue;
+          appendExplanation(session, ev.text);
+          send(win, session, { type: 'token', text: ev.text });
+        } else if (ev.type === 'error') {
+          // The service's error text reaches the panel only as a capped string.
+          send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
+        } else if (ev.type === 'done') {
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model : undefined, mock: ev.mock === true });
           completed = true;
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
@@ -527,6 +533,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
 }
 
 export function gradeComprehension(win: BrowserWindow, session: ReviewSession, choice: number): void {
+  if (wipedSinceRun(session)) return;
   const a = session.pendingAnswer;
   if (!a) return;
   const correct = choice === a.answerIndex;
