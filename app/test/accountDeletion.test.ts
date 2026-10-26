@@ -217,6 +217,54 @@ test('a long refusal message is cut to 300 characters', async () => {
   assertNothingCleared();
 });
 
+const NOT_DELETED: Array<[string, Answer]> = [
+  ['401 (the service no longer knows the session)', { status: 401, body: { error: 'unauthorized' } }],
+  ['500 with { ok: true }', { status: 500, body: { ok: true } }],
+  ['200 {}', { status: 200, body: {} }],
+  ['200 { ok: false }', { status: 200, body: { ok: false } }],
+  ['200 with a text body', { status: 200, text: '<html><body>Welcome</body></html>' }],
+];
+
+for (const [name, answer] of NOT_DELETED) {
+  test(`${name} clears nothing`, async () => {
+    const result = await deleteWith(answer);
+    assert.equal(result.ok, false);
+    assertNothingCleared();
+  });
+}
+
+/** One deletion attempt against `answer`, with the network stand-in removed afterwards. */
+async function attempt(answer: Answer) {
+  const service = serviceAnswers(answer);
+  try {
+    return await deleteAccountAndLocalData(stopReviews);
+  } finally {
+    service.restore();
+  }
+}
+
+test('a key file that can\'t be removed stops the cleanup with the session kept, and a retry finishes it', async () => {
+  signedInWithData();
+  blockFile(KEY_FILE); // a non-empty directory where the API key file goes can't be unlinked
+  try {
+    const first = await attempt({ status: 200, body: { ok: true, status: 'deleted' } });
+    assert.deepEqual(first, {
+      ok: false,
+      error: 'Your account was deleted, but some data on this computer could not be removed. The API key saved in Unvibe could not be removed. Try again to finish.',
+    });
+    assert.equal(store().token(), 'session-token', 'the session stays for the retry');
+    assert.equal(store().events().length, 1);
+    assert.equal(settings().all().displayName, 'Sample Person');
+
+    rmSync(KEY_FILE, { recursive: true, force: true });
+    const retry = await attempt({ status: 200, body: { ok: true, status: 'already_deleted' } });
+    assert.deepEqual(retry, { ok: true, status: 'already_deleted' });
+    assertClearedAndPreferencesKept();
+  } finally {
+    rmSync(KEY_FILE, { recursive: true, force: true });
+  }
+});
+
 test('a clear that can\'t be saved throws and leaves memory matching what is on disk', () => {
   signedInWithData();
   const files = [STORE_FILE, KNOWLEDGE_FILE, SETTINGS_FILE];
