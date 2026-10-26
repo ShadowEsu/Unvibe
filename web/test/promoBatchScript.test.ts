@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -141,6 +142,66 @@ test('generate: refuses a CSV or SQL folder other users can write, and writes no
     await assert.rejects(script(['generate', 'shared', '2', '--csv', privateCsv, '--sql', sql]), /can be written by other users/, `SQL in a ${mode.toString(8)} folder`);
     for (const path of [csv, sql, privateCsv]) assert.throws(() => statSync(path), `${path} was not written`);
   }
+});
+
+test('generate prints the SQL sha256, and verify accepts the untouched files, also after a take', async () => {
+  const csv = join(dir, 'ver.csv');
+  const sql = join(dir, 'ver.sql');
+  const { stdout } = await script(['generate', 'verbatch', '4', '--csv', csv, '--sql', sql]);
+  const printed = /^SQL sha256: ([0-9a-f]{64})$/m.exec(stdout)?.[1];
+  assert.equal(printed, createHash('sha256').update(readFileSync(sql)).digest('hex'), 'the printed sha256 is the file\'s');
+  assert.match(stdout, /verify verbatch --csv /, 'it says how to verify, with the paths it used');
+  const ok = await script(['verify', 'verbatch', '--csv', csv, '--sql', sql]);
+  assert.match(ok.stdout, /^OK: .* is exactly the insert for the 4 codes in /m);
+  assert.match(ok.stdout, /^batch verbatch \(verbatch\): 3 months, cap 300, redeem by 2026-11-30 23:59:59 America\/Los_Angeles$/m);
+  assert.ok(ok.stdout.includes(`SQL sha256: ${printed}`));
+  await script(['take', 'verbatch', 'Ada', '--csv', csv]);
+  await script(['verify', 'verbatch', '--csv', csv, '--sql', sql]);
+});
+
+test('verify: refuses an SQL that no longer matches the private CSV', async () => {
+  const fresh = async (name: string) => {
+    const csv = join(dir, `${name}.csv`);
+    const sql = join(dir, `${name}.sql`);
+    await script(['generate', name, '3', '--csv', csv, '--sql', sql]);
+    return { csv, sql, text: readFileSync(sql, 'utf8') };
+  };
+  const swapped = await fresh('swapone');
+  writeFileSync(swapped.sql, swapped.text.replace(/'[0-9a-f]{64}'/, `'${'0'.repeat(64)}'`));
+  await assert.rejects(script(['verify', 'swapone', '--csv', swapped.csv, '--sql', swapped.sql]), /does not match the codes/, 'a swapped hash');
+  const extra = await fresh('extrastmt');
+  writeFileSync(extra.sql, extra.text.replace('commit;', "update public.profiles set plan = 'pro';\ncommit;"));
+  await assert.rejects(script(['verify', 'extrastmt', '--csv', extra.csv, '--sql', extra.sql]), /does not match the codes/, 'an added statement');
+  const fewer = await fresh('fewercodes');
+  writeFileSync(fewer.csv, readFileSync(fewer.csv, 'utf8').trimEnd().split('\n').slice(0, -1).join('\n') + '\n');
+  await assert.rejects(script(['verify', 'fewercodes', '--csv', fewer.csv, '--sql', fewer.sql]), /does not match the codes/, 'a code dropped from the CSV');
+  await assert.rejects(script(['verify', 'otherbatch', '--csv', fewer.csv, '--sql', swapped.sql]), /is for batch swapone, not otherbatch/, 'another batch\'s SQL');
+  const many = await fresh('toomany');
+  writeFileSync(many.sql, many.text.replace("', 3, timestamptz", "', 24, timestamptz"));
+  await assert.rejects(script(['verify', 'toomany', '--csv', many.csv, '--sql', many.sql]), /gives 24 months/, 'months outside 1 to 12');
+});
+
+test('generate refuses a promo folder under a parent other users can change; a sticky parent is fine', async () => {
+  const open = join(dir, 'open-parent');
+  mkdirSync(open);
+  chmodSync(open, 0o777);
+  const inner = join(open, 'mine');
+  await assert.rejects(script(['generate', 'underopen', '2', '--csv', join(inner, 'c.csv'), '--sql', join(inner, 'c.sql')]), /a folder above .* can be changed by other users/, 'a writable parent');
+  for (const path of [join(inner, 'c.csv'), join(inner, 'c.sql')]) assert.throws(() => statSync(path), `${path} was not written`);
+  const target = join(dir, 'private-target');
+  mkdirSync(target, { mode: 0o700 });
+  symlinkSync(target, join(open, 'link'));
+  await assert.rejects(script(['generate', 'vialink', '2', '--csv', join(open, 'link', 'c.csv'), '--sql', join(open, 'link', 'c.sql')]), /can be changed by other users/, 'a link placed in a writable parent');
+  const sticky = join(dir, 'sticky-parent');
+  mkdirSync(sticky);
+  chmodSync(sticky, 0o1777);
+  const mine = join(sticky, 'mine');
+  await script(['generate', 'understicky', '2', '--csv', join(mine, 'c.csv'), '--sql', join(mine, 'c.sql')]);
+  await script(['take', 'understicky', 'Ada', '--csv', join(mine, 'c.csv')]);
+});
+
+test('take: a missing CSV says so', async () => {
+  await assert.rejects(script(['take', 'nobatch', 'Ada', '--csv', join(dir, 'nowhere', 'x.csv')]), /no CSV at /);
 });
 
 test('list and revoke go through the admin API with the token from the environment', async () => {

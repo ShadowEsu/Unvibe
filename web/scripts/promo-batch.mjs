@@ -6,10 +6,15 @@
 //       Writes the codes to a private CSV (mode 600; columns code, given_to, given_at; default
 //       ~/.config/unvibe-promo/unvibe-promo-<batch>.csv) and a hash-only SQL insert (the batch
 //       row plus sha256("unvibe-promo:" + code) per code; default next to the CSV). Never
-//       overwrites either file. The SQL is run once, by hand, with the owner's yes.
+//       overwrites either file. The SQL is run once, by hand, with the owner's yes. Prints the SQL's
+//       sha256.
 //   node scripts/promo-batch.mjs take <batch> <who> [--csv path]
 //       Marks the next unused code as given to <who> (with the time) and prints it. A lock file
 //       next to the CSV makes sure two senders never get the same code.
+//   node scripts/promo-batch.mjs verify <batch> [--csv path] [--sql path]
+//       Run right before the SQL goes to production: checks that it is exactly the insert generate
+//       writes for the codes in the CSV (nothing added, removed or swapped), and prints the batch
+//       settings and the SQL's sha256 to compare with what generate printed.
 //   node scripts/promo-batch.mjs list
 //   node scripts/promo-batch.mjs revoke <code>
 //       Call the API's admin endpoint: UNVIBE_APP_BACKEND_URL (e.g. https://api.unvibe.site) and
@@ -18,7 +23,7 @@
 // Codes: 16 characters of Crockford base32, 80 bits from crypto.randomInt, shown XXXX-XXXX-XXXX-XXXX.
 // Normalising and hashing match web/src/lib/promoCode.ts (test/promoBatchScript.test.ts checks).
 import { createHash, randomInt } from 'node:crypto';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +33,7 @@ const CODE_RE = /^[0-9A-HJKMNP-TV-Z]{16}$/;
 const BATCH_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const HEADER = 'code,given_to,given_at';
 const DEFAULTS = { months: 3, cap: 300, redeemBy: '2026-11-30 23:59:59 America/Los_Angeles' };
+const REDEEM_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})? [A-Za-z_]+\/[A-Za-z_]+$/;
 const LABELS = { calhacks13: 'Cal Hacks 13.0' };
 const LOCK_WAIT_MS = 10_000;
 
@@ -144,9 +150,30 @@ export function insertSql({ batch, label, months, cap, redeemBy, hashes, generat
   ].join('\n');
 }
 
-/** Another user who can write the folder could swap the CSV or the SQL, or plant files beside them. */
+/**
+ * Another user who can change the folder, or any folder above it, could swap the CSV or the SQL or
+ * plant files beside them. The folder must be yours and not group- or world-writable. Every folder
+ * above it, both as written and as reached through symlinks, must belong to you or root and must not
+ * be group- or world-writable unless it has the sticky bit (like /tmp, where others can't rename or
+ * delete what is yours).
+ */
 function assertPrivateFolder(folder) {
-  if (existsSync(folder) && (statSync(folder).mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
+  if (!existsSync(folder)) return;
+  const uid = typeof process.getuid === 'function' ? process.getuid() : undefined;
+  const own = statSync(folder);
+  if (!own.isDirectory()) fail(`${folder} is not a folder`);
+  if (uid !== undefined && own.uid !== uid) fail(`${folder} belongs to another user; use a folder of your own`);
+  if ((own.mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
+  for (const start of new Set([resolve(folder), realpathSync(folder)])) {
+    for (let dir = dirname(start); ; dir = dirname(dir)) {
+      const parent = lstatSync(dir);
+      const shared = !parent.isSymbolicLink() && (parent.mode & 0o022) !== 0 && (parent.mode & 0o1000) === 0;
+      if (shared || (uid !== undefined && parent.uid !== uid && parent.uid !== 0)) {
+        fail(`${dir}, a folder above ${folder}, can be changed by other users; keep the promo files in a folder only you control`);
+      }
+      if (dir === dirname(dir)) break;
+    }
+  }
 }
 
 function generate(batch, countText, options) {
@@ -158,7 +185,7 @@ function generate(batch, countText, options) {
   const cap = Number(options.cap ?? DEFAULTS.cap);
   if (!Number.isInteger(cap) || cap < 1) fail('--cap must be a whole number above 0');
   const redeemBy = options['redeem-by'] ?? DEFAULTS.redeemBy;
-  if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})? [A-Za-z_]+\/[A-Za-z_]+$/.test(redeemBy)) {
+  if (!REDEEM_RE.test(redeemBy)) {
     fail('--redeem-by must look like "2026-11-30 23:59:59 America/Los_Angeles"');
   }
   const label = (options.label ?? LABELS[batch] ?? batch).slice(0, 120);
@@ -180,6 +207,9 @@ function generate(batch, countText, options) {
   console.log(`${count} codes for ${batch} (${months} months, cap ${cap}, redeem by ${redeemBy})`);
   console.log(`codes (private, mode 600): ${csvPath}`);
   console.log(`hash-only SQL: ${sqlPath}`);
+  console.log(`SQL sha256: ${sha256Hex(sql)}`);
+  const paths = `${options.csv ? ` --csv ${JSON.stringify(csvPath)}` : ''}${options.sql ? ` --sql ${JSON.stringify(sqlPath)}` : ''}`;
+  console.log(`right before running it on production: node scripts/promo-batch.mjs verify ${batch}${paths}`);
 }
 
 // ------------------------------------------------------------------------------ take
@@ -219,6 +249,7 @@ function take(batch, who, options) {
   if (!recipient) fail('say who the code is for, e.g. take calhacks13 "Ada L. (ada@school.edu)"');
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   assertPrivateFolder(dirname(csvPath));
+  if (!existsSync(csvPath)) fail(`no CSV at ${csvPath}`);
   const code = withLock(`${csvPath}.lock`, () => {
     const rows = readCodes(csvPath);
     const next = rows.find((row) => !row.givenTo);
@@ -231,6 +262,55 @@ function take(batch, who, options) {
     return next.code;
   });
   console.log(code);
+}
+
+// ------------------------------------------------------------------------------ verify
+
+const GENERATED_RE = /^-- Generated (\S+) by web\/scripts\/promo-batch\.mjs\./;
+const BATCH_ROW_RE = /^ {2}values \('((?:[^']|'')*)', '((?:[^']|'')*)', (\d+), timestamptz '((?:[^']|'')*)', (\d+)\);$/;
+const unquote = (value) => value.replace(/''/g, "'");
+
+function sha256Hex(text) {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+/**
+ * The SQL must be exactly what generate writes for the codes in the private CSV: rebuilt here from
+ * the CSV and compared byte for byte, so an added statement, a swapped hash or a dropped code all
+ * fail. The batch settings come from the SQL itself, so they are printed for the owner to confirm.
+ */
+function verify(batch, options) {
+  if (!BATCH_RE.test(batch ?? '')) fail('batch must be lower case letters, digits, - or _');
+  const csvPath = resolve(options.csv ?? defaultCsv(batch));
+  const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
+  for (const folder of new Set([dirname(csvPath), dirname(sqlPath)])) assertPrivateFolder(folder);
+  if (!existsSync(sqlPath)) fail(`no SQL at ${sqlPath}`);
+  const sql = readFileSync(sqlPath, 'utf8');
+  const lines = sql.split('\n');
+  const generatedAt = GENERATED_RE.exec(lines[1] ?? '')?.[1];
+  const row = BATCH_ROW_RE.exec(lines[5] ?? '');
+  if (!generatedAt || !row) fail(`${sqlPath} is not a promo insert written by generate; do not run it`);
+  const [, id, label, monthsText, redeemBy, capText] = row;
+  if (unquote(id) !== batch) fail(`${sqlPath} is for batch ${unquote(id)}, not ${batch}`);
+  const months = Number(monthsText);
+  const cap = Number(capText);
+  const hashes = readCodes(csvPath).map(({ code: raw }) => {
+    const code = normalise(raw);
+    if (!code) fail(`${csvPath} has a row that is not a promo code`);
+    return hashOf(code);
+  });
+  const want = insertSql({ batch, label: unquote(label), months, cap, redeemBy: unquote(redeemBy), hashes, generatedAt }).split('\n');
+  if (want.join('\n') !== sql) {
+    let at = 0;
+    while (at < want.length && at < lines.length && want[at] === lines[at]) at += 1;
+    fail(`${sqlPath} does not match the codes in ${csvPath} (first difference on line ${at + 1}); do not run it`);
+  }
+  if (months < 1 || months > 12) fail(`${sqlPath} gives ${months} months; generate allows 1 to 12`);
+  if (cap < 1) fail(`${sqlPath} has a cap of ${cap}`);
+  if (!REDEEM_RE.test(unquote(redeemBy))) fail(`${sqlPath} has an unexpected redeem-by date`);
+  console.log(`OK: ${sqlPath} is exactly the insert for the ${hashes.length} codes in ${csvPath}.`);
+  console.log(`batch ${batch} (${unquote(label)}): ${months} months, cap ${cap}, redeem by ${unquote(redeemBy)}`);
+  console.log(`SQL sha256: ${sha256Hex(sql)}`);
 }
 
 // ------------------------------------------------------------------------------ admin API
@@ -289,7 +369,8 @@ async function main() {
   if (command === 'take') return take(positional[0], positional.slice(1).join(' '), options);
   if (command === 'list') return list();
   if (command === 'revoke') return revoke(positional[0]);
-  fail('usage: generate <batch> <count> [--csv path] [--sql path] | take <batch> <who> [--csv path] | list | revoke <code>');
+  if (command === 'verify') return verify(positional[0], options);
+  fail('usage: generate <batch> <count> [--csv path] [--sql path] | take <batch> <who> [--csv path] | verify <batch> [--csv path] [--sql path] | list | revoke <code>');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
