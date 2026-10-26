@@ -1709,6 +1709,7 @@ function App() {
       }
     })();
     const onFocus = () => void refresh();
+    const offLearning = window.unvibe.onLearningChanged(() => void refresh());
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
     window.unvibe.onShowPage((next) => {
       if (next === 'Settings') {
@@ -1742,6 +1743,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('focus', onFocus);
+      offLearning();
     };
   }, []);
 
