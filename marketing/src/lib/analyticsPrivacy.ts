@@ -12,9 +12,13 @@
  * - Admin and capability pages (`/founder`, `/waitlist`, `/waitlist-admin`, `/s/…`) load no SDK.
  *   When a visitor reaches one by client navigation from a public page, both replays stop until
  *   they leave it, and every SDK event recorded there is dropped before sending.
+ * - Opt-out (`?notrack=1`, trackingOptOut.ts): both hooks check it again on every event, so an
+ *   opt-out after the SDKs started drops what they would send next, and `syncCaptureForPage`
+ *   turns both SDKs' own capture off, which also stops their replays.
  */
 
 import type { BeforeSendFn, CaptureResult } from "posthog-js";
+import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export const REDACTED = "redacted";
 
@@ -115,9 +119,11 @@ function sentFromPrivatePage(properties: PropertyBag | undefined): boolean {
   return typeof url === "string" && !analyticsAllowedOnPath(pagePath(url));
 }
 
-/** PostHog `before_send`: every event, pageview and person update. */
+/** PostHog `before_send`: every event, pageview, person update and replay snapshot. */
 export const posthogBeforeSend: BeforeSendFn = (event: CaptureResult | null) => {
   if (!event) return event;
+  // An opt-out after the SDK started.
+  if (browserTrackingDisabled()) return null;
   // Pageviews, autocapture, heatmaps and exceptions after a client navigation into an admin page.
   if (sentFromPrivatePage(event.properties)) return null;
   return {
@@ -145,9 +151,9 @@ export function maskReplayNetworkEntry<T extends NetworkEntry>(entry: T): T {
   return { ...rest, name: sanitizeUrl(entry.name) } as T;
 }
 
-/** Mixpanel `before_send_events`: every tracked, autocaptured and pageview event. Null drops it. */
+/** Mixpanel `before_send_events`: every tracked, autocaptured and pageview event (not replays). Null drops it. */
 export function mixpanelBeforeSend<T extends { properties: PropertyBag }>(payload: T): T | null {
-  if (sentFromPrivatePage(payload.properties)) return null;
+  if (browserTrackingDisabled() || sentFromPrivatePage(payload.properties)) return null;
   return { ...payload, properties: sanitizeProperties(payload.properties) };
 }
 
@@ -215,9 +221,29 @@ export function mixpanelPrivacyConfig() {
   };
 }
 
-/** Whether Mixpanel may initialise now: a public page in a tracked browser (not after a navigation into an admin page). */
-export function mixpanelMayInit(page: { href: string; trackingDisabled: boolean }): boolean {
+/** A public page in a tracked browser: the only place an SDK may start, capture or record. */
+function trackedPublicPage(page: { href: string; trackingDisabled: boolean }): boolean {
   return !page.trackingDisabled && analyticsAllowedOnPath(pagePath(page.href));
+}
+
+/** SDKs that finished loading and have not been initialised yet. */
+export type LoadedSdks<P, M> = { readonly posthog: P | null; readonly mixpanel: M | null };
+
+/**
+ * Initialises the SDKs that finished loading, if the page they finished on is a public page in a
+ * tracked browser. A load that finishes after an opt-out or a client navigation into an admin or
+ * capability page initialises nothing, and the SDK waits (it is returned) for a later call.
+ * Returns the SDKs still waiting.
+ */
+export function initLoadedSdks<P, M>(
+  page: { href: string; trackingDisabled: boolean },
+  loaded: LoadedSdks<P, M>,
+  init: { posthog(sdk: P): void; mixpanel(sdk: M): void },
+): LoadedSdks<P, M> {
+  if (!trackedPublicPage(page)) return loaded;
+  if (loaded.posthog) init.posthog(loaded.posthog);
+  if (loaded.mixpanel) init.mixpanel(loaded.mixpanel);
+  return { posthog: null, mixpanel: null };
 }
 
 /** posthog-js session replay controls. */
@@ -232,6 +258,46 @@ export type MixpanelReplay = {
   start_session_recording(): unknown;
   get_session_recording_properties(): { $mp_replay_id?: string };
 };
+
+/** posthog-js capture controls. Its replay snapshots are captured events, so they stop too. */
+export type PosthogCapture = {
+  has_opted_out_capturing(): boolean;
+  opt_out_capturing(): void;
+  opt_in_capturing(options: { captureEventName: false }): void;
+};
+
+/** mixpanel-browser tracking controls. An opt-out also stops its replay and clears queued sends. */
+export type MixpanelTracking = {
+  has_opted_out_tracking(): boolean;
+  opt_out_tracking(options: { delete_user: false }): void;
+  opt_in_tracking(options: { track: () => void }): void;
+};
+
+/**
+ * Call on every client navigation (including one that only changes the query) and after each SDK
+ * initialises, before `syncReplayForPage`. After an opt-out it turns both SDKs' own capture off:
+ * nothing is captured, sent or recorded, and a replay buffer flushed by the stop that follows is
+ * dropped. When tracking is allowed again it turns capture back on, sending no opt-in event, so
+ * the replay start that follows is not refused. The SDKs keep their opt-out in this browser, so it
+ * is also turned back on when a later visit loads them where tracking is allowed.
+ */
+export function syncCaptureForPage(
+  page: { href: string; trackingDisabled: boolean },
+  sdk: { posthog: PosthogCapture | null; mixpanel: MixpanelTracking | null },
+): void {
+  const allowed = !page.trackingDisabled;
+  if (sdk.posthog) {
+    const off = sdk.posthog.has_opted_out_capturing();
+    if (!allowed && !off) sdk.posthog.opt_out_capturing();
+    else if (allowed && off) sdk.posthog.opt_in_capturing({ captureEventName: false });
+  }
+  if (sdk.mixpanel) {
+    const off = sdk.mixpanel.has_opted_out_tracking();
+    // Keeps the person profile; Mixpanel would otherwise send a delete for it.
+    if (!allowed && !off) sdk.mixpanel.opt_out_tracking({ delete_user: false });
+    else if (allowed && off) sdk.mixpanel.opt_in_tracking({ track: () => undefined });
+  }
+}
 
 /**
  * What `syncReplayForPage` did last: the PostHog replay it paused, the Mixpanel replay it started,
@@ -267,7 +333,7 @@ export function syncReplayForPage(
   page: { href: string; trackingDisabled: boolean; mixpanelSampled: boolean },
   sdk: { posthog: PosthogReplay | null; mixpanel: MixpanelReplay | null },
 ): ReplayState {
-  const publicPage = !page.trackingDisabled && analyticsAllowedOnPath(pagePath(page.href));
+  const publicPage = trackedPublicPage(page);
   let { posthogPaused, mixpanelStarted, mixpanelStopPending } = state;
   if (sdk.posthog) {
     if (!publicPage && !posthogPaused) {

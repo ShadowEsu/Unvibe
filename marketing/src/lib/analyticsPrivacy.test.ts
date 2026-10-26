@@ -1,20 +1,22 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import type { CaptureResult } from "posthog-js";
 import {
   INITIAL_REPLAY_STATE,
   POSTHOG_PRIVACY_CONFIG,
   REPLAY_BLOCK_CLASS,
   analyticsAllowedOnPath,
+  initLoadedSdks,
   maskReplayNetworkEntry,
   mixpanelBeforeSend,
-  mixpanelMayInit,
   mixpanelPrivacyConfig,
   posthogBeforeSend,
   sanitizeUrl,
+  syncCaptureForPage,
   syncReplayForPage,
 } from "./analyticsPrivacy";
 import { feedbackRewardUrl, signEmail } from "./rewardLink";
+import { NOTRACK_STORAGE_KEY } from "./trackingOptOut";
 import { unsubscribeUrl } from "./unsubscribe";
 
 process.env.REWARD_LINK_SECRET = "analytics-privacy-test-secret";
@@ -182,11 +184,17 @@ describe("analytics privacy config", () => {
     assert.ok(mixpanelPrivacyConfig().record_block_class.test("mp-block"), "Mixpanel's own default class still blocks");
   });
 
-  it("Mixpanel starts only on a public page, for a tracked browser", () => {
-    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/pricing", trackingDisabled: false }), true);
-    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/founder", trackingDisabled: false }), false, "in-flight load that lands on an admin page");
-    assert.equal(mixpanelMayInit({ href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false }), false);
-    assert.equal(mixpanelMayInit({ href: "https://unvibe.site/pricing", trackingDisabled: true }), false);
+  it("a loaded SDK initialises only on a public page, for a tracked browser, and waits otherwise", () => {
+    const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
+    for (const page of [
+      { href: "https://unvibe.site/founder", trackingDisabled: false },
+      { href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false },
+    ]) {
+      const calls: string[] = [];
+      const init = { posthog: (sdk: string) => void calls.push(sdk), mixpanel: (sdk: string) => void calls.push(sdk) };
+      assert.deepEqual(initLoadedSdks(page, loaded, init), loaded, `load that finishes on ${page.href} keeps waiting`);
+      assert.deepEqual(calls, [], page.href);
+    }
   });
 
   it("admin and capability pages load no analytics SDK", () => {
@@ -336,5 +344,112 @@ describe("session replay on client navigation", () => {
       const state = syncReplayForPage(INITIAL_REPLAY_STATE, { href, ...tracked }, { posthog: null, mixpanel: null });
       assert.deepEqual(state, INITIAL_REPLAY_STATE, href);
     }
+  });
+});
+
+/** Fake SDK clients that log which capture controls were called, and keep the opt-out like the real ones. */
+function fakeCapture({ posthogOff = false, mixpanelOff = false } = {}) {
+  const calls: string[] = [];
+  return {
+    calls,
+    sdk: {
+      posthog: {
+        has_opted_out_capturing: () => posthogOff,
+        opt_out_capturing: () => {
+          calls.push("posthog.opt_out");
+          posthogOff = true;
+        },
+        opt_in_capturing: (options: { captureEventName: false }) => {
+          calls.push(`posthog.opt_in ${JSON.stringify(options)}`);
+          posthogOff = false;
+        },
+      },
+      mixpanel: {
+        has_opted_out_tracking: () => mixpanelOff,
+        opt_out_tracking: (options: { delete_user: false }) => {
+          calls.push(`mixpanel.opt_out ${JSON.stringify(options)}`);
+          mixpanelOff = true;
+        },
+        opt_in_tracking: (options: { track: () => void }) => {
+          calls.push(`mixpanel.opt_in track:${typeof options.track}`);
+          mixpanelOff = false;
+        },
+      },
+    },
+  };
+}
+
+describe("an opt-out after the SDKs started", () => {
+  const realWindow: unknown = Reflect.get(globalThis, "window");
+
+  /** The browser state `browserTrackingDisabled` reads, on the given query, as after a client navigation. */
+  function installWindow(search: string, storage: Map<string, string>) {
+    Reflect.set(globalThis, "window", {
+      navigator: { webdriver: false },
+      location: { href: `${PUBLIC}${search}`, pathname: "/pricing", search },
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => void storage.set(key, value),
+        removeItem: (key: string) => void storage.delete(key),
+      },
+    });
+  }
+
+  afterEach(() => {
+    Reflect.set(globalThis, "window", realWindow);
+  });
+
+  it("both hooks drop the next event, including replay snapshots and events on later pages", () => {
+    const storage = new Map<string, string>();
+    const posthogEvent = (): CaptureResult => ({ uuid: "u4", event: "$pageview", properties: { $current_url: PUBLIC } });
+    const mixpanelEvent = () => ({ event: "$mp_click", properties: { $current_url: PUBLIC } });
+    installWindow("", storage);
+    assert.ok(posthogBeforeSend(posthogEvent()), "PostHog sends before the opt-out");
+    assert.ok(mixpanelBeforeSend(mixpanelEvent()), "Mixpanel sends before the opt-out");
+    installWindow("?notrack=1", storage);
+    assert.equal(posthogBeforeSend(posthogEvent()), null, "PostHog event after ?notrack=1");
+    assert.equal(mixpanelBeforeSend(mixpanelEvent()), null, "Mixpanel event after ?notrack=1");
+    installWindow("", storage);
+    assert.equal(storage.get(NOTRACK_STORAGE_KEY), "1");
+    const snapshot: CaptureResult = { uuid: "u5", event: "$snapshot", properties: { $snapshot_data: [] } };
+    assert.equal(posthogBeforeSend(snapshot), null, "PostHog replay snapshot on a later page");
+    assert.equal(mixpanelBeforeSend(mixpanelEvent()), null, "Mixpanel event on a later page");
+  });
+
+  it("an SDK that finishes loading after the opt-out is not initialised", () => {
+    const loaded = { posthog: "posthog", mixpanel: "mixpanel" };
+    const calls: string[] = [];
+    const init = { posthog: (sdk: string) => void calls.push(sdk), mixpanel: (sdk: string) => void calls.push(sdk) };
+    assert.deepEqual(initLoadedSdks({ href: PUBLIC, trackingDisabled: true }, loaded, init), loaded, "still waiting after the opt-out");
+    assert.deepEqual(calls, [], "no SDK initialised after the opt-out");
+    assert.deepEqual(initLoadedSdks({ href: PUBLIC, trackingDisabled: false }, loaded, init), { posthog: null, mixpanel: null });
+    assert.deepEqual(calls, ["posthog", "mixpanel"], "both initialise once tracking is allowed");
+  });
+
+  it("turns off both SDKs' capture and stops both replays", () => {
+    const capture = fakeCapture();
+    const replay = fakeSdks();
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: false }, capture.sdk);
+    const started = syncReplayForPage(INITIAL_REPLAY_STATE, { href: PUBLIC, ...tracked }, replay.sdk);
+    assert.deepEqual(capture.calls, [], "a tracked page changes nothing");
+    const optedOut = { href: `${PUBLIC}?notrack=1`, trackingDisabled: true };
+    syncCaptureForPage(optedOut, capture.sdk);
+    assert.deepEqual(capture.calls, ["posthog.opt_out", 'mixpanel.opt_out {"delete_user":false}'], "capture turned off");
+    syncReplayForPage(started, { ...optedOut, mixpanelSampled: true }, replay.sdk);
+    assert.deepEqual(replay.calls, ["mixpanel.start", "posthog.stop", "mixpanel.stop"], "both replays stopped");
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: true }, capture.sdk);
+    assert.equal(capture.calls.length, 2, "already off: nothing called again");
+  });
+
+  it("?notrack=0, or a later visit, turns capture back on and sends no opt-in event", () => {
+    const capture = fakeCapture({ posthogOff: true, mixpanelOff: true });
+    syncCaptureForPage({ href: `${PUBLIC}?notrack=0`, trackingDisabled: false }, capture.sdk);
+    assert.deepEqual(capture.calls, ['posthog.opt_in {"captureEventName":false}', "mixpanel.opt_in track:function"]);
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: false }, capture.sdk);
+    assert.equal(capture.calls.length, 2, "already on: nothing called again");
+  });
+
+  it("does nothing, and does not throw, before the SDKs have initialised", () => {
+    syncCaptureForPage({ href: PUBLIC, trackingDisabled: true }, { posthog: null, mixpanel: null });
   });
 });
