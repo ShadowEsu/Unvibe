@@ -95,7 +95,7 @@ export function kitSections(): KitSection[] {
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
         "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. From app 0.1.44, typed questions and Chat are filtered too; older versions don't filter them, so say so if asked.",
         "Objection: \"Is it really free?\" Answer: yes. Pro adds Expert depth, git diffs and nearby-file context, and your first month of Pro is free anyway.",
-        `Call to action: ${SITE} (download), or try it in the browser on the homepage with no install.`,
+        `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Google Gemini) with no install.`,
       ],
     },
     {
