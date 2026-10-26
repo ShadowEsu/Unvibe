@@ -17,7 +17,7 @@ function unavailable(error: unknown): Response {
 }
 
 /**
- * Founder-only promo list and revoke, behind UNVIBE_ADMIN_STATS_TOKEN as a bearer token. There
+ * Admin-only promo list and revoke, behind UNVIBE_ADMIN_STATS_TOKEN as a bearer token. There
  * is no create: batches and code hashes only come from the one-off SQL insert, so a leaked token
  * cannot mint Pro.
  */
