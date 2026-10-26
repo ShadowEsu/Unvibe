@@ -46,8 +46,12 @@ after(() => {
   return new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
-function script(args: string[], env: Record<string, string> = {}) {
-  return run(process.execPath, [SCRIPT, ...args], { env: { PATH: process.env.PATH ?? '', HOME: dir, ...env } });
+/** The script with HOME in the temp dir and no admin settings unless the test passes them. */
+function script(args: string[], extra: Record<string, string> = {}) {
+  const env: NodeJS.ProcessEnv = { ...process.env, HOME: dir };
+  Reflect.deleteProperty(env, 'UNVIBE_APP_BACKEND_URL');
+  Reflect.deleteProperty(env, 'UNVIBE_ADMIN_STATS_TOKEN');
+  return run(process.execPath, [SCRIPT, ...args], { env: Object.assign(env, extra), encoding: 'utf8' });
 }
 
 function codesIn(csv: string): string[] {
