@@ -188,7 +188,7 @@ for (const step of ['begin', 'auth', 'erase', 'blob', 'finish'] as const) {
   });
 }
 
-test('a Blob record that never reads: the account is erased, one retry gets 503, the next answers deleted', async () => {
+test('a Blob record that never reads: the account is erased, one retry gets 503, the next answers deleted and says what is left', async () => {
   const me = await person();
   brokenBlob.add(me.email);
   const logged = await capturingErrors(async () => {
@@ -199,7 +199,10 @@ test('a Blob record that never reads: the account is erased, one retry gets 503,
     assert.equal((await store.accountInfo(me.userId)).email, undefined, 'the account rows are erased');
     assert.equal(await store.userForToken(me.token), null);
     const second = await remove(me.token);
-    assert.deepEqual(second.body, { ok: true, status: 'deleted' }, 'no 503 for ever');
+    assert.equal(second.status, 200, 'no 503 for ever');
+    assert.equal(second.body.status, 'deleted', 'the app clears its local data only on deleted');
+    // The message says what is really left: the beta-download cleanup and the address kept for it.
+    assert.match(String(second.body.message), /^Your account and app data are deleted\. We could not check for beta-download records just now; any we find, and the email address kept to find them, will be removed within 30 days\.$/);
   });
   const deletion = await store.accountDeletion(me.userId);
   assert.equal(deletion?.state, 'started', 'the row stays for the follow-up');

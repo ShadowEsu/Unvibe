@@ -43,6 +43,8 @@ export async function GET(req: Request): Promise<Response> {
 const NOT_STARTED = 'Nothing was deleted. Try again in a minute.';
 const NOT_FINISHED = 'Your account is not fully deleted yet. Try again in a minute to finish.';
 const BLOB_PENDING = 'Your account and its data are deleted. One cleanup step did not finish. Try again in a minute.';
+/** The account is erased; only the Blob beta-download cleanup (and the address kept for it) is left. */
+const CLEANUP_PENDING = 'Your account and app data are deleted. We could not check for beta-download records just now; any we find, and the email address kept to find them, will be removed within 30 days.';
 
 /** Provider errors (Stripe, Supabase, Blob) can quote account details: only errorSummary reaches the log. */
 function unavailable(step: string, error: unknown, message: string): Response {
@@ -51,8 +53,8 @@ function unavailable(step: string, error: unknown, message: string): Response {
 }
 
 /** The browser session cookie holds the app token, which no longer resolves; the browser drops it too. */
-function deleted(status: 'deleted' | 'already_deleted'): Response {
-  return Response.json({ ok: true, status }, { headers: { 'set-cookie': 'uncode_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' } });
+function deleted(status: 'deleted' | 'already_deleted', message?: string): Response {
+  return Response.json({ ok: true, status, ...(message ? { message } : {}) }, { headers: { 'set-cookie': 'uncode_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' } });
 }
 
 /** Refused before anything was recorded or deleted. */
@@ -185,7 +187,9 @@ export async function DELETE(req: Request): Promise<Response> {
       await store.recordAccountDeletionStep(userId, 'app_data', 'failed').catch(() => undefined);
       if (!failedBefore) return unavailable('beta-download records', error, BLOB_PENDING);
       console.error('account delete: beta-download cleanup left for follow-up', JSON.stringify({ code: 'ACCOUNT_DELETION_BLOB_PENDING', error: errorSummary(error) }));
-      return deleted('deleted');
+      // Still status deleted (the account is gone, and the app clears its local data only on
+      // deleted); the message says what is left and by when the daily sweep or the runbook removes it.
+      return deleted('deleted', CLEANUP_PENDING);
     }
   }
   // 7. Done: the captured email is forgotten.
