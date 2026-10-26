@@ -8,14 +8,17 @@
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f web/supabase/tests/try_requests_reservation.sql
 --
 -- Plain SQL with no extensions or psql meta-commands, so a multi-statement query from any client runs
--- it too. Each check is a DO block that raises on failure. It leaves nothing behind: every transaction
--- ends in rollback.
+-- it too. Each check is a DO block that raises on failure. It leaves no rows behind: every transaction
+-- ends in rollback (it does use up about 20 values of try_requests_id_seq, which rollback can't undo).
+-- Run it where no live Try traffic writes to try_requests, or the day-cap checks can fail spuriously.
 -- Blocks 2 and 3 take the Try lock, so they set idle_in_transaction_session_timeout = 5s: a client that
 -- leaves one idle after a failure loses its session after 5 s, and the lock with it.
 --
--- The concurrency guarantee itself (a burst of concurrent calls at a cap admits exactly one) needs
--- many connections at once, which one script can't open; the lock checks below pin the mechanism:
--- a call that may insert holds the advisory lock, and a capped call never takes it.
+-- What this pins: the grants, how the function is declared, that a call that may insert holds the
+-- advisory lock while a capped call never takes it, the caps, and the 22023 and 25000 refusals. It
+-- can't catch the lock moved after the counts, the locked recount removed or the wrong lock scope:
+-- those need a burst of concurrent calls at a cap (exactly one may be admitted), which one script
+-- can't open. Until CI has a Postgres service, that concurrency test stays the real gate.
 
 -- 1. Catalog: who may call the function and touch the table, and how the function is declared.
 begin;
