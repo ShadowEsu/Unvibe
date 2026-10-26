@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { app, safeStorage, sessionCalls } from './electronStub';
+import { app, safeStorage, session, sessionCalls } from './electronStub';
 
 // Everything under userData belongs to this file only. The keychain stand-in "works" so a session and
 // an API key can be saved the way they are on a real computer.
@@ -371,6 +371,27 @@ test('signed out, Erase everything also clears renderer storage, the HTTP cache 
   assert.equal('lastProjectRoot' in onDisk, false);
   assert.deepEqual(store().events(), []);
   assert.deepEqual(knowledgeStore().teachBacks(), []);
+});
+
+test('signed out, a project folder picked while renderer storage is clearing is still forgotten', async () => {
+  signedInWithData();
+  store().signOut();
+  const clearStorage = session.defaultSession.clearStorageData;
+  const picked = mock.method(session.defaultSession, 'clearStorageData', async (options?: Electron.ClearStorageDataOptions) => {
+    // A folder pick lands while the erase is awaiting this clear.
+    settings().set({ lastProjectRoot: path.join(userData, 'picked-during-erase') });
+    await clearStorage(options);
+  });
+  try {
+    const result = await deleteAccountAndLocalData(stopReviews);
+    assert.deepEqual(result, { ok: true, status: 'erased_locally' });
+    assert.equal(picked.mock.callCount(), 1);
+  } finally {
+    picked.mock.restore();
+  }
+  assert.equal(settings().all().lastProjectRoot, undefined);
+  const onDisk = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Record<string, unknown>;
+  assert.equal('lastProjectRoot' in onDisk, false);
 });
 
 /**

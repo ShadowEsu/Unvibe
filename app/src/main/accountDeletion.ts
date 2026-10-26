@@ -69,8 +69,9 @@ export async function deleteAccountAndLocalData(stopReviews: () => void): Promis
     try {
       stopReviews();
       abortChatAndStudy();
-      settings().forgetProjectRoot();
       await clearLocalLearning();
+      // After the awaits, so a folder picked while they ran can't be saved back.
+      settings().forgetProjectRoot();
     } catch (err) {
       return { ok: false, error: reason(err, 'Learning on this computer could not be erased.') };
     }
