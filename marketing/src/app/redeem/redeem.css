@@ -1,0 +1,221 @@
+/*
+ * /redeem: promo codes. One card in the normal page flow, so the site header and footer stay
+ * usable around it. Text is 13 px or more.
+ */
+
+.redeem-root {
+  color: var(--ink);
+}
+
+.redeem-shell {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  min-height: 70vh;
+  padding: clamp(6.5rem, 12vw, 8.5rem) 1.25rem 4rem;
+}
+
+.redeem-card {
+  box-sizing: border-box;
+  width: min(100%, 32rem);
+  height: fit-content;
+  padding: 2rem;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-card);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-key);
+}
+
+.redeem-title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  font-weight: 760;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.redeem-sub {
+  max-width: 26rem;
+  margin: 1rem 0 1.6rem;
+  color: var(--ink-muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.redeem-label {
+  display: block;
+  margin: 0 0 0.45rem;
+  color: var(--ink-muted);
+  font-size: max(13px, 0.8125rem);
+  font-weight: 700;
+}
+
+.redeem-field {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: var(--radius-field);
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+}
+
+.redeem-field:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.redeem-field--code {
+  margin-bottom: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.redeem-hint {
+  margin: 0 0 0.9rem;
+  color: var(--ink-muted);
+  font-size: max(13px, 0.8125rem);
+  line-height: 1.45;
+}
+
+.redeem-btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.25rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: var(--radius-field);
+  color: var(--paper);
+  background: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.redeem-btn:focus-visible,
+.redeem-link:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.redeem-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.redeem-btn--quiet {
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.redeem-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 1.2rem 0;
+  color: var(--ink-muted);
+  font-size: max(13px, 0.8125rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.redeem-divider::before,
+.redeem-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.redeem-account {
+  margin: 0 0 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.redeem-link {
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.redeem-note {
+  margin: 0.8rem 0 0;
+  color: var(--ink-muted);
+  font-size: max(13px, 0.85rem);
+  line-height: 1.45;
+}
+
+.redeem-note--field {
+  margin: -0.35rem 0 0.75rem;
+}
+
+.redeem-note--error,
+.redeem-result--error {
+  padding-left: 0.6rem;
+  border-left: 3px solid #b3261e;
+  color: #8c1d18;
+  font-weight: 600;
+}
+
+.redeem-result {
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.redeem-result--ok {
+  padding-left: 0.6rem;
+  border-left: 3px solid #1b6e3a;
+  color: #14522b;
+  font-weight: 700;
+}
+
+.redeem-next {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.redeem-next__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.redeem-next__body {
+  margin: 0 0 1rem;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.redeem-next .paper-join {
+  max-width: 100%;
+}
+
+@media (max-width: 420px) {
+  .redeem-card {
+    padding: 1.4rem 1.1rem;
+  }
+}
