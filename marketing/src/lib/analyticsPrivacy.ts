@@ -191,7 +191,7 @@ export function analyticsAllowedOnPath(pathname: string): boolean {
 
 /**
  * Elements with this class are left out of every replay (both SDKs record a blank box instead).
- * Admin and capability pages wrap their content in it: a client navigation renders the new page
+ * Admin, capability and sign-in pages wrap their content in it: a client navigation renders the new page
  * before `syncReplayForPage` stops the replay, and the frames of that moment show no content.
  */
 export const REPLAY_BLOCK_CLASS = "ph-no-capture";
