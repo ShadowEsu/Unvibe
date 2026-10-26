@@ -169,10 +169,42 @@ test('beta-download records: every release of this email is deleted, nobody else
   });
   assert.equal(await vercelBlobBetaDownloads(BLOB_ENV, blob.fetcher).deleteForEmail('leaving@account.test'), 'deleted');
   const deletes = blob.seen.filter((s) => s.path === '/api/blob/delete');
-  assert.deepEqual(deletes.map((s) => s.body), [{ urls: [
-    'https://store123.private.blob.vercel-storage.com/beta-downloads/item/a.enc',
-    'https://store123.private.blob.vercel-storage.com/beta-downloads/item/c.enc',
-  ] }]);
+  // Each page's matches go before the next page is listed.
+  assert.deepEqual(deletes.map((s) => s.body), [
+    { urls: ['https://store123.private.blob.vercel-storage.com/beta-downloads/item/a.enc'] },
+    { urls: ['https://store123.private.blob.vercel-storage.com/beta-downloads/item/c.enc'] },
+  ]);
+});
+
+test('beta-download records: reads run 8 at a time, and a page\'s matches are deleted before the next page is read', async () => {
+  const base = 'https://store123.private.blob.vercel-storage.com/beta-downloads/item/';
+  const firstPage = Array.from({ length: 20 }, (_, index) => `p1-${index}`);
+  const owner = (name: string) => (name === 'p1-3' || name === 'p2-0' ? 'leaving@account.test' : `other-${name}@account.test`);
+  let inFlight = 0;
+  let mostInFlight = 0;
+  const blob = fakeFetch(async (_request, url) => {
+    if (url.host === 'vercel.com' && url.pathname === '/api/blob') {
+      const names = url.searchParams.get('cursor') === 'next' ? ['p2-0', 'p2-1'] : firstPage;
+      return Response.json({ blobs: names.map((name) => ({ url: `${base}${name}.enc`, pathname: `beta-downloads/item/${name}.enc` })), hasMore: !url.searchParams.get('cursor'), cursor: 'next' });
+    }
+    if (url.host === 'vercel.com' && url.pathname === '/api/blob/delete') return Response.json({});
+    const name = url.pathname.split('/').pop()?.replace('.enc', '') ?? '';
+    // The second page's last record can't be read: the scan stops there.
+    if (name === 'p2-1') return new Response('unavailable', { status: 503 });
+    inFlight += 1;
+    mostInFlight = Math.max(mostInFlight, inFlight);
+    // Every worker's read starts before any finishes, so the count shows how many run at once.
+    await Promise.resolve();
+    inFlight -= 1;
+    return new Response(encryptRecord({ email: owner(name), release: '1.0.0' }, BLOB_ENV.WAITLIST_ADMIN_TOKEN as string));
+  });
+  await assert.rejects(vercelBlobBetaDownloads(BLOB_ENV, blob.fetcher).deleteForEmail('leaving@account.test'), /Blob read failed: 503/);
+  assert.equal(mostInFlight, 8);
+  const order = blob.seen.map((s) => (s.path.startsWith('/api/blob/delete') ? 'delete' : s.path.startsWith('/api/blob?') ? 'list' : 'read'));
+  const deleteAt = order.indexOf('delete');
+  assert.ok(deleteAt > 0 && deleteAt < order.lastIndexOf('list'), order.join(','));
+  // The scan that stopped on page 2 already removed the page 1 match; the next scan has one record fewer.
+  assert.deepEqual(blob.seen.filter((s) => s.path === '/api/blob/delete').map((s) => s.body), [{ urls: [`${base}p1-3.enc`] }]);
 });
 
 test('beta-download records: no credentials is not_configured outside production (and no request); any failure throws', async () => {

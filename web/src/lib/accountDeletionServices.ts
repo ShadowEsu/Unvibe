@@ -36,6 +36,12 @@ export function supabaseAuthIdentities(url: string, serviceRoleKey: string, fetc
 const BLOB_API = 'https://vercel.com/api/blob';
 /** Where the site keeps one encrypted record per (release, email); see the site's betaDownloadStore. */
 const BETA_DOWNLOAD_PREFIX = 'beta-downloads/item/';
+/**
+ * Records read at once. The scan has no saved position (a cursor would need a new column), so a
+ * run cut off by the sweep's budget starts again; reading in parallel makes a full scan about this
+ * many times shorter, so far larger stores finish inside one run.
+ */
+const BLOB_READ_CONCURRENCY = 8;
 
 /** The site's record encryption (waitlistCrypto): AES-256-GCM, key sha256("unvibe-waitlist-storage-v1:" + secret). */
 function decryptRecord(payload: string, secret: string): unknown {
@@ -54,7 +60,9 @@ function decryptRecord(payload: string, secret: string): unknown {
 /**
  * Record paths hash the release with the email, so the records of one email cannot be named
  * directly: every record is read and the matching ones are deleted. A record that cannot be read
- * or decrypted stops the step (it might be this person's).
+ * or decrypted stops the step (it might be this person's). Each page's matches are deleted before
+ * the next page is listed, so a scan that stops partway keeps what it removed and the next scan
+ * has those records fewer to read.
  */
 export function vercelBlobBetaDownloads(env: NodeJS.ProcessEnv = process.env, fetcher: typeof fetch = fetch): BetaDownloadRecords {
   return {
@@ -73,30 +81,37 @@ export function vercelBlobBetaDownloads(env: NodeJS.ProcessEnv = process.env, fe
       }
       // Same headers as the @vercel/blob SDK: the store id is the fourth part of a read-write token.
       const headers = { authorization: `Bearer ${token}`, 'x-api-version': '12', 'x-vercel-blob-store-id': token.split('_')[3] ?? '' };
-      const matches: string[] = [];
       let cursor: string | undefined;
       do {
         const query = new URLSearchParams({ prefix: BETA_DOWNLOAD_PREFIX, limit: '1000', ...(cursor ? { cursor } : {}) });
         const listed = await fetcher(`${BLOB_API}?${query}`, { headers, cache: 'no-store' });
         if (!listed.ok) throw new Error(`Blob list failed: ${listed.status}`);
         const page = (await listed.json()) as { blobs?: Array<{ url: string; pathname: string }>; cursor?: string; hasMore?: boolean };
-        for (const blob of page.blobs ?? []) {
-          if (!blob.pathname.endsWith('.enc')) continue;
-          const location = new URL(blob.url);
-          location.searchParams.set('cache', '0');
-          const read = await fetcher(location, { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' });
-          if (!read.ok) throw new Error(`Blob read failed: ${read.status}`);
-          const record = decryptRecord(await read.text(), secret) as { email?: unknown };
-          if (typeof record.email === 'string' && record.email.trim().toLowerCase() === target) matches.push(blob.url);
+        const records = (page.blobs ?? []).filter((blob) => blob.pathname.endsWith('.enc'));
+        const matched: boolean[] = [];
+        let next = 0;
+        const readRecords = async (): Promise<void> => {
+          while (next < records.length) {
+            const index = next;
+            next += 1;
+            const location = new URL(records[index].url);
+            location.searchParams.set('cache', '0');
+            const read = await fetcher(location, { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' });
+            if (!read.ok) throw new Error(`Blob read failed: ${read.status}`);
+            const record = decryptRecord(await read.text(), secret) as { email?: unknown };
+            matched[index] = typeof record.email === 'string' && record.email.trim().toLowerCase() === target;
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(BLOB_READ_CONCURRENCY, records.length) }, readRecords));
+        const matches = records.filter((_, index) => matched[index]).map((blob) => blob.url);
+        if (matches.length > 0) {
+          const deleted = await fetcher(`${BLOB_API}/delete`, {
+            method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ urls: matches }),
+          });
+          if (!deleted.ok) throw new Error(`Blob delete failed: ${deleted.status}`);
         }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
-      if (matches.length > 0) {
-        const deleted = await fetcher(`${BLOB_API}/delete`, {
-          method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ urls: matches }),
-        });
-        if (!deleted.ok) throw new Error(`Blob delete failed: ${deleted.status}`);
-      }
       return 'deleted';
     },
   };
