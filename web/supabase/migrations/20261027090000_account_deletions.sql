@@ -67,9 +67,11 @@ create table if not exists public.account_deletions (
 create index if not exists account_deletions_token_hashes_idx on public.account_deletions using gin (token_hashes);
 
 alter table public.account_deletions enable row level security;
-revoke all on table public.account_deletions from public, anon, authenticated;
+revoke all on table public.account_deletions from public, anon, authenticated, service_role;
 -- The functions are security invoker and the API reads and updates the rows itself, so the service
--- role needs these rights explicitly, not through Supabase's default privileges. No delete.
+-- role gets exactly these rights, by an explicit grant: Supabase's default privileges may give it
+-- none of them or all of them (production gives all, delete and truncate included), and the revoke
+-- above takes those back. No delete.
 grant select, insert, update on table public.account_deletions to service_role;
 
 create or replace function public.begin_account_deletion(p_user_id uuid, p_email text, p_token_hash text)
