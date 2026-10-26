@@ -261,11 +261,26 @@ class SettingsStore {
 
   private persist(): void {
     try {
-      mkdirSync(path.dirname(this.file), { recursive: true });
-      writeFileSync(this.file, JSON.stringify(this.data), { mode: 0o600 });
+      this.write();
     } catch {
       /* best-effort */
     }
+  }
+
+  private write(): void {
+    mkdirSync(path.dirname(this.file), { recursive: true });
+    writeFileSync(this.file, JSON.stringify(this.data), { mode: 0o600 });
+  }
+
+  /**
+   * Account deletion: forget the person's name, email, gift code and project folder, and stop
+   * using the API key that deletion removes. App preferences stay. Throws when the file can't be saved,
+   * so deletion never reports these as gone while they are still on disk.
+   */
+  forgetPerson(): void {
+    this.data = { ...this.data, displayName: '', profileEmail: '', giftCode: '', useOwnAi: false };
+    delete this.data.lastProjectRoot;
+    this.write();
   }
 
   set(patch: Partial<Settings>): Settings {

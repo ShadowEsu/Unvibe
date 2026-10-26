@@ -236,12 +236,22 @@ export async function signUp(email: string): Promise<Account> {
   return json<Account>(res);
 }
 
-export async function deleteAccount(token: string): Promise<void> {
+export type AccountDeletionStatus = 'deleted' | 'already_deleted';
+
+/**
+ * DELETE /api/v1/account. Resolves only when the service says the account is gone: `deleted`, or
+ * `already_deleted` when an earlier request finished but its answer was lost. Older services answer
+ * `{ ok: true }` without a status, which also means deleted.
+ */
+export async function deleteAccount(token: string): Promise<AccountDeletionStatus> {
   const res = await request(`${BACKEND}/api/v1/account`, {
     method: 'DELETE',
     headers: { authorization: `Bearer ${token}` },
   });
-  await json<{ ok: boolean }>(res);
+  const body = await json<{ ok?: unknown; status?: unknown }>(res);
+  if (body.ok === true && (body.status === undefined || body.status === 'deleted')) return 'deleted';
+  if (body.ok === true && body.status === 'already_deleted') return 'already_deleted';
+  throw new Error('The service gave an answer Unvibe did not expect, so nothing was removed from this Mac. Try again in a minute.');
 }
 
 export async function signOut(token: string): Promise<void> {

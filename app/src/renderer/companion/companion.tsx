@@ -15,6 +15,7 @@ import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
 import type { ChangeBrief } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
+import { clearReviewChecklists } from '../../core/reviewChecklist';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
@@ -1191,9 +1192,13 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
   const [err, setErr] = useState('');
   const del = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.deleteAccount()) as { ok: boolean; error?: string };
+    const r = (await window.unvibe.deleteAccount()) as { ok: boolean; status?: string; error?: string };
     setBusy(false);
-    if (r.ok) onDeleted(); else setErr(r.error ?? 'Could not delete the account.');
+    if (!r.ok) { setErr(r.error ?? 'Could not delete the account.'); return; }
+    if (r.status === 'deleted' || r.status === 'already_deleted') {
+      try { clearReviewChecklists(window.localStorage); } catch { /* storage blocked */ }
+    }
+    onDeleted();
   };
   if (!account) {
     return (
@@ -2021,7 +2026,7 @@ function App() {
         <Settings info={info} account={account} settings={settings}
           initialTab={settingsTab}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
-          onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); }}
+          onAccountDeleted={() => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setGate('login'); void refresh(); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
       <UpdateCard />
