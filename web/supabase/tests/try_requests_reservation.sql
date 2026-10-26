@@ -10,6 +10,8 @@
 -- Plain SQL with no extensions or psql meta-commands, so a multi-statement query from any client runs
 -- it too. Each check is a DO block that raises on failure. It leaves nothing behind: every transaction
 -- ends in rollback.
+-- Blocks 2 and 3 take the Try lock, so they set idle_in_transaction_session_timeout = 5s: a client that
+-- leaves one idle after a failure loses its session after 5 s, and the lock with it.
 --
 -- The concurrency guarantee itself (a burst of concurrent calls at a cap admits exactly one) needs
 -- many connections at once, which one script can't open; the lock checks below pin the mechanism:
@@ -62,6 +64,7 @@ rollback;
 -- 2. Lock: a capped call refuses before the lock; a call that inserts holds it. The key
 -- 8390902506592760694 shows in pg_locks as classid = high 32 bits, objid = low 32 bits, objsubid 1.
 begin;
+set local idle_in_transaction_session_timeout = '5s';
 set local role service_role;
 do $$
 declare
@@ -107,6 +110,7 @@ rollback;
 -- 3. Caps and arguments, as the API's role. The day cap is passed relative to the rows already in the
 -- last day, so existing rows can't break the checks.
 begin;
+set local idle_in_transaction_session_timeout = '5s';
 set local role service_role;
 do $$
 declare
