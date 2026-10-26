@@ -51,10 +51,12 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   the session token.
 - Sealed trial builds also send write-once setup progress to `POST /api/v1/trial/progress`
   (`app/src/main/progress.ts`): setup finished, Accessibility asked and allowed (Mac), signed in
-  (UTC day only), level question answered, launch-at-login question shown and accepted. One
-  timestamp per step, no code, file names, email or IP. Settings, Privacy & Data, "Send anonymous
-  setup progress" turns these off; it does not cover the rows above, which come from requests the
-  app makes anyway. The public privacy page must describe this before a release that sends them.
+  (UTC day only), level question answered. The server also accepts launch-at-login question shown
+  and accepted, but no app build sends them yet; add them to unvibe.site/privacy and
+  `app/PRIVACY.md` in the release that does. One timestamp per step, no code, file names, email or
+  IP. Settings, Privacy & Data, "Send anonymous setup progress" turns these off; it does not cover
+  the rows above, which come from requests the app makes anyway. Both are described on
+  unvibe.site/privacy and in `app/PRIVACY.md`.
 
 ## Required before inviting external beta users
 

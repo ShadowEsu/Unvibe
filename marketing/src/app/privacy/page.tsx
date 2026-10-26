@@ -90,10 +90,25 @@ export default function PrivacyPage() {
           trackers.
         </p>
         <p>
-          Without an account, the app sends a random install ID with each cloud explanation so we can
-          count your free explanations. We store that ID with a few dates and counts: when it first
-          asked, how many it has used, and when it first explained the setup sample and your own code.
-          We do not store your code or prompts with it.
+          Without an account, the app sends a random install ID, your computer&apos;s system
+          (Mac or Windows) and the app version with each cloud explanation and with the usage
+          check it makes when it starts, so we can count your free explanations. We store, under a
+          hashed form of that ID: when the app first started, the system and the version it started
+          on (stored once and never updated), how many explanations it has used, and when it first
+          explained the setup sample, first explained your own code, and first explained code again
+          on a later day of its first week. We do not store your code or prompts with it. Signed in,
+          explanations carry your sign-in token instead of the install ID.
+        </p>
+        <p>
+          The app also sends anonymous setup progress, one message per step the first time it
+          happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, and
+          the explanation level question answered. Each message carries the step name with the same
+          random install ID, system and app version as above, never your sign-in token. We keep only
+          the step and the time it arrived (for signing in, only the day), never your code, file
+          names, email or IP address. A step that does not get through is sent
+          again on a later launch. To turn this off, open Settings, then Privacy &amp; Data, and switch
+          off Send anonymous setup progress. That switch does not cover the install ID, dates and
+          counts in the paragraph above, which come with requests the app makes anyway.
         </p>
       </LegalSection>
 
