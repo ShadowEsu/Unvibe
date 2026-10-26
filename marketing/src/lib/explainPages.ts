@@ -565,8 +565,8 @@ class Reports {
     ],
     notes: [
       "A customer with no paid orders is left out of the result, not listed with 0. A customer whose only order is `PENDING` never reaches `groupingBy`.",
-      "`TreeMap::new` keeps the customers in name order. Without it, `groupingBy` returns a `HashMap`, which makes no promise about order.",
-      "`topKey` returns an `Optional` because an empty map has no top key: it gives `Optional.empty`, never `null`. On a tie, `max` keeps the entry it met first, which in a `TreeMap` is the name that sorts first.",
+      "`TreeMap::new` keeps the customers in name order. Without it, `groupingBy` promises no particular map or order; the JDK hands back a `HashMap`.",
+      "`topKey` returns an `Optional` because an empty map has no top key: it gives `Optional.empty`, never `null`. The spec doesn't say which entry wins a tie; the JDK keeps the one `max` met first, which in a `TreeMap` is the name that sorts first.",
       "`o.status().equals(\"PAID\")` throws `NullPointerException` on an order whose status is `null`. Written as `\"PAID\".equals(o.status())`, it skips that order instead.",
     ],
     watchOut:
