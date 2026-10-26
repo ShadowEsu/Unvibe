@@ -63,9 +63,12 @@ type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 export async function verifyDownload(file: string, assetUrl: string, platform: NodeJS.Platform, fetchImpl: Fetch = networkFetch): Promise<string | null> {
   const sumsName = checksumAssetName(platform);
   if (!sumsName) return 'Automatic updates are not available on this system.';
-  const assetName = decodeURIComponent(path.posix.basename(new URL(assetUrl).pathname));
-  const sumsUrl = new URL(sumsName, assetUrl).toString();
-  if (!ASSET_HOST.test(sumsUrl)) return 'Refusing to download an update from an unexpected address.';
+  // Checked as parsed (`href`), not as written: dot segments like `/download/../../` can leave the
+  // repository's releases while the raw string still matches.
+  const asset = new URL(assetUrl);
+  const sumsUrl = new URL(sumsName, asset).href;
+  if (!ASSET_HOST.test(asset.href) || !ASSET_HOST.test(sumsUrl)) return 'Refusing to download an update from an unexpected address.';
+  const assetName = decodeURIComponent(path.posix.basename(asset.pathname));
   const unchanged = 'The update was not installed, and your Unvibe is unchanged.';
   let sums: string;
   try {
@@ -217,17 +220,19 @@ export async function prepareUpdate(
 ): Promise<{ ok: true; file: string; script?: string } | { ok: false; error: string }> {
   const { platform, fetchImpl, pid, portable, macTarget = '/Applications/Unvibe.app', workRoot = tmpdir(), onProgress } = opts;
   if (!info.available || !info.url || !info.latest) return { ok: false, error: 'You already have the newest Unvibe.' };
-  if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
+  // The parsed address (`href`) is what gets fetched, so that is what must match, not the raw string.
+  const assetUrl = URL.canParse(info.url) ? new URL(info.url).href : '';
+  if (!ASSET_HOST.test(assetUrl)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
   // A downloaded app that was opened without being moved runs from a read-only copy (App
   // Translocation), so the helper could never replace it and the update would silently do nothing.
   if (platform === 'darwin' && macTarget.includes('/AppTranslocation/')) return { ok: false, error: 'Move Unvibe to your Applications folder first, then update.' };
 
-  const assetName = path.basename(new URL(info.url).pathname);
+  const assetName = path.basename(new URL(assetUrl).pathname);
   const dir = portable ? path.dirname(portable) : await mkdtemp(path.join(workRoot, 'unvibe-update-'));
   const file = portable ? `${portable}.download` : path.join(dir, assetName);
   const discard = () => rm(portable ? file : dir, { recursive: true, force: true }).catch(() => undefined);
   try {
-    const res = await fetchImpl(info.url, { redirect: 'follow', signal: AbortSignal.timeout(10 * 60_000) });
+    const res = await fetchImpl(assetUrl, { redirect: 'follow', signal: AbortSignal.timeout(10 * 60_000) });
     if (!res.ok || !res.body) {
       await discard();
       return { ok: false, error: `Download failed (${res.status}).` };
@@ -248,7 +253,7 @@ export async function prepareUpdate(
 
   let problem: string | null;
   try {
-    problem = await verifyDownload(file, info.url, platform, fetchImpl);
+    problem = await verifyDownload(file, assetUrl, platform, fetchImpl);
   } catch (error) {
     problem = `Could not check the download (${error instanceof Error ? error.message : String(error)}). The update was not installed, and your Unvibe is unchanged.`;
   }

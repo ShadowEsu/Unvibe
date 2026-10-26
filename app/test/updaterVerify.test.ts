@@ -313,3 +313,25 @@ test('an app running from App Translocation is told to move to Applications, bef
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('release addresses are checked as parsed, so dot segments cannot leave the repository', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
+  const dl = download('a disk image');
+  try {
+    for (const url of [`${RELEASE}/../../../../../evil/Unvibe/releases/download/v9/Unvibe.dmg`, `${RELEASE}/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/evil/Unvibe.dmg`]) {
+      assert.match(url, /^https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/download\//, 'the raw string looks like a release asset');
+      const release = fakeRelease('a disk image', (sha) => `${sha}  Unvibe.dmg\n`);
+      const info = { available: true, current: '0.1.44', latest: '0.1.45', url };
+      const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, workRoot: root });
+      assert.ok(!refused.ok);
+      assert.match(refused.error, /unexpected address/, 'the asset address is checked after parsing');
+      const sums = fakeFetch(`${dl.sha}  Unvibe.dmg\n`);
+      assert.match(await verifyDownload(dl.file, url, 'darwin', sums.fetchImpl) ?? '', /unexpected address/, 'the checksum file address is checked after parsing');
+      assert.deepEqual([...release.urls, ...sums.urls], [], 'nothing is fetched');
+    }
+    assert.deepEqual(readdirSync(root), [], 'no download folder is created');
+  } finally {
+    dl.cleanup();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
