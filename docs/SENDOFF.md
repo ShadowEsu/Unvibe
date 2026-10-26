@@ -413,7 +413,7 @@ When you finish one, move it to the session log with the evidence.
 - [ ] **[agent]** Windows installers are unsigned (SmartScreen warning). Research the cheapest
       code-signing route (Azure Trusted Signing etc.) and present costs to Preston.
 - [ ] **[agent]** Dependency advisories: Electron 43 / electron-builder 26 and Next 16 upgrades are
-      deferred (`docs/release/founder-decisions.md`). Plan, do not just bump (change-control rule).
+      deferred (`docs/release/owner-decisions.md`). Plan, do not just bump (change-control rule).
 
 ### First-run funnel (most important for the business)
 - [x] Guided first run, shipped in v0.1.42. Launch to first explanation took 17.8 s on Mac and 11.0 s on Windows (device test 39102449853).

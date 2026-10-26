@@ -1,4 +1,4 @@
-# Founder paste list — turn on charging
+# Owner paste list: turn on charging
 
 Everything in code is ready. Checkout stays **off** until you paste these into
 Vercel / Stripe / Supabase. Do **not** commit secrets or paste them into chat

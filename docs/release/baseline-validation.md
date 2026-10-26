@@ -27,7 +27,7 @@ Environment: macOS 26.2 (arm64), Node.js 25.7.0, npm 11.10.1. These results desc
 ## Decisions from the baseline
 
 - Upgrade the marketing site from Next.js 14.2.5 to the already-used 14.2.35 patch release and rerun its checks.
-- Do not auto-upgrade the web/backend to Next.js 16. That is a breaking major migration and remains a founder-approved follow-up; the release verification must identify the acknowledged advisory without hiding new findings.
+- Do not auto-upgrade the web/backend to Next.js 16. That is a breaking major migration and remains an owner-approved follow-up; the release verification must identify the acknowledged advisory without hiding new findings.
 - Treat Supabase, real-provider AI, account deletion against staging, two-device sync, signing, notarization, and distribution as unverified until their credential-gated runbooks are completed.
 
 Timing was captured with `/usr/bin/time -p` while independent surfaces were run concurrently. It is a reproducible engineering baseline, not a performance benchmark.
