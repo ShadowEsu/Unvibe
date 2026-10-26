@@ -39,6 +39,14 @@ test('SupabaseStore.eraseAccount maps the Teams refusal and reports every other 
   await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).eraseAccount(USER_ID), /Could not delete account data: canceling statement/);
 });
 
+test('SupabaseStore.beginAccountDeletion maps the Teams refusal (nothing recorded) and reports every other failure', async () => {
+  const hash = createHash('sha256').update('app-token').digest('hex');
+  const refused = fakeFetch(() => Response.json({ code: 'P0001', message: 'team_has_members', details: null, hint: null }, { status: 400 }));
+  await assert.rejects(new SupabaseStore(URL_BASE, 'key', refused.fetcher).beginAccountDeletion(USER_ID, undefined, hash), TeamHasMembersError);
+  const failed = fakeFetch(() => Response.json({ code: '57014', message: 'canceling statement due to statement timeout' }, { status: 500 }));
+  await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).beginAccountDeletion(USER_ID, undefined, hash), /Could not start account deletion: canceling statement/);
+});
+
 test('SupabaseStore deletion state: begin, lookup by token hash, done', async () => {
   const hash = createHash('sha256').update('app-token').digest('hex');
   const { fetcher, seen } = fakeFetch((request, url) => {

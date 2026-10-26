@@ -54,6 +54,11 @@ function deleted(status: 'deleted' | 'already_deleted'): Response {
   return Response.json({ ok: true, status }, { headers: { 'set-cookie': 'uncode_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' } });
 }
 
+/** Refused before anything was recorded or deleted. */
+function teamHasMembers(): Response {
+  return Response.json({ error: 'team_has_members', message: new TeamHasMembersError().message }, { status: 409 });
+}
+
 /**
  * App Store requirement: an authenticated user can delete their account and all their data.
  *
@@ -126,16 +131,16 @@ export async function DELETE(req: Request): Promise<Response> {
     } catch (error) {
       return unavailable('team members lookup', error, notDone);
     }
-    if (members.some((member) => member.userId !== userId)) {
-      return Response.json({ error: 'team_has_members', message: new TeamHasMembersError().message }, { status: 409 });
-    }
+    if (members.some((member) => member.userId !== userId)) return teamHasMembers();
   }
 
-  // 3. Started: from here nothing re-creates or writes to this account.
+  // 3. Started: from here nothing re-creates or writes to this account. begin repeats the Teams
+  // check under the workspace locks, so a member who joined after step 2 is refused here too.
   let deletion: AccountDeletion;
   try {
     deletion = await store.beginAccountDeletion(userId, (await store.accountInfo(userId)).email, tokenHash);
   } catch (error) {
+    if (error instanceof TeamHasMembersError && notDone === NOT_STARTED) return teamHasMembers();
     return unavailable('record started', error, notDone);
   }
   if (deletion.state === 'done') return deleted('already_deleted');

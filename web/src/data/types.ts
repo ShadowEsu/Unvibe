@@ -117,7 +117,11 @@ export interface Store {
   accountDeletion(userId: string): Promise<AccountDeletion | null>;
   /** The deletion that the token with this sha256 hex asked for, whatever its state. */
   accountDeletionForToken(tokenHash: string): Promise<AccountDeletion | null>;
-  /** Records started with the email and the token hash, or adds the hash to a started deletion. A done one comes back unchanged. */
+  /**
+   * Records started with the email and the token hash, or adds the hash to a started deletion. A done
+   * one comes back unchanged. Throws TeamHasMembersError, recording nothing, while the account owns a
+   * team workspace with other members.
+   */
   beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion>;
   recordAccountDeletionStep(userId: string, step: 'beta_downloads' | 'auth_identity', betaDownloads?: BetaDownloadCleanup): Promise<void>;
   /**

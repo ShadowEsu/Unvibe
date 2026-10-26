@@ -166,6 +166,8 @@ export class MemoryStore implements Store {
   }
 
   async beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion> {
+    // Mirrors begin_account_deletion: a Teams owner with members is refused before anything is recorded.
+    new MemoryBillingStore().refuseTeamWithMembers(userId);
     let deletion = this.data.deletions.get(userId);
     if (!deletion) {
       deletion = { userId, state: 'started', step: 'started', tokenHashes: new Set() };

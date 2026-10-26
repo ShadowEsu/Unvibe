@@ -7,10 +7,12 @@
 --     sha256 hex of the app session tokens that asked for the deletion: a repeated DELETE whose
 --     token is already gone (the first response was lost) is answered "already deleted".
 --   * begin_account_deletion: records started (or adds one more token hash). A done row is
---     never reopened.
---   * erase_account_data: the public side in one transaction. Refuses (team_has_members) when
---     the account owns a team workspace with other members, because deleting the workspace
---     would delete their learning data. Otherwise: deletes or anonymises the email-keyed rows
+--     never reopened. Refuses (team_has_members), recording nothing, when the account owns a team
+--     workspace with other members, because deleting the workspace would delete their learning
+--     data; it locks the owned workspaces first, so a concurrent join either is seen here or is
+--     refused by the membership trigger.
+--   * erase_account_data: the public side in one transaction. Repeats the Teams refusal. Then
+--     deletes or anonymises the email-keyed rows
 --     (waitlist, gift claims and redemptions, feedback bonus grants, site feedback, invitations
 --     to the address), keeps promo redemptions without the account or the email, deletes owned
 --     workspaces and memberships, then the users row. tokens, device codes, events and the rest
@@ -64,6 +66,15 @@ set search_path = public, pg_temp
 as $$
 begin
   if p_token_hash !~ '^[0-9a-f]{64}$' then raise exception 'token hash must be sha256 hex'; end if;
+  -- Teams owners: refuse, recording nothing, while an owned team has another member. The row locks
+  -- make a concurrent join wait for this transaction; its membership trigger then sees this row.
+  perform 1 from public.workspaces w where w.owner_user_id = p_user_id for update;
+  if exists (
+    select 1 from public.workspaces w join public.workspace_members m on m.workspace_id = w.id
+    where w.owner_user_id = p_user_id and w.type <> 'personal' and m.user_id <> p_user_id
+  ) then
+    raise exception 'team_has_members';
+  end if;
   -- No email from the caller (its users read can fail): capture the users row's, in this insert.
   insert into public.account_deletions as d (user_id, email, token_hashes)
     values (p_user_id, coalesce(nullif(lower(trim(coalesce(p_email, ''))), ''),
@@ -94,8 +105,8 @@ begin
   v_emails := v_emails || coalesce((select array_agg(lower(trim(u.email))) from public.users u
     where u.id = p_user_id and coalesce(trim(u.email), '') <> ''), '{}');
 
-  -- Teams owners: refuse while another member would lose their data with the workspace. The row
-  -- locks make a concurrent invitation accept wait for this transaction.
+  -- Teams owners, again inside this transaction (begin_account_deletion already refused, and the
+  -- membership trigger refuses joins since): another member would lose their data with the workspace.
   perform 1 from public.workspaces w where w.owner_user_id = p_user_id for update;
   if exists (
     select 1 from public.workspaces w join public.workspace_members m on m.workspace_id = w.id
@@ -170,6 +181,10 @@ security invoker
 set search_path = public, pg_temp
 as $$
 begin
+  -- Waits while begin_account_deletion holds the owner's workspace lock (for update). This function
+  -- is volatile, so in read committed the next statement reads with a new snapshot and sees the
+  -- deletion row that transaction committed.
+  perform 1 from public.workspaces w where w.id = new.workspace_id for key share;
   if exists (
     select 1 from public.account_deletions d
     where d.user_id = new.user_id

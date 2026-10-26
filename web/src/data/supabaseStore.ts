@@ -174,6 +174,7 @@ export class SupabaseStore implements Store {
 
   async beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion> {
     const { data, error } = await this.db.rpc('begin_account_deletion', { p_user_id: userId, p_email: email ?? null, p_token_hash: tokenHash });
+    if (error?.code === 'P0001' && error.message === 'team_has_members') throw new TeamHasMembersError();
     if (error) throw new Error(`Could not start account deletion: ${error.message}`);
     const row = Array.isArray(data) ? data[0] : data;
     if (!row || typeof row !== 'object') throw new Error('Could not start account deletion: no row returned.');

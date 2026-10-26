@@ -362,16 +362,21 @@ export class MemoryBillingStore implements BillingStore {
     this.data.audits.push({ userId, workspaceId, action, metadata, at: this.now().toISOString() });
   }
 
-  /**
-   * Memory side of erase_account_data (called by MemoryStore.eraseAccount). Refuses before deleting
-   * anything while a team workspace this user owns has other members.
-   */
-  async deleteUserBilling(userId: string): Promise<void> {
+  /** The Teams check of begin_account_deletion and erase_account_data: throws while an owned team has another member. */
+  refuseTeamWithMembers(userId: string): void {
     const ownedTeams = [...this.data.workspaces.values()].filter((workspace) => workspace.type !== 'personal' && workspace.ownerUserId === userId);
     for (const [key] of this.data.memberships) {
       const [workspaceId, memberUserId] = key.split(':');
       if (memberUserId !== userId && ownedTeams.some((team) => team.id === workspaceId)) throw new TeamHasMembersError();
     }
+  }
+
+  /**
+   * Memory side of erase_account_data (called by MemoryStore.eraseAccount). Refuses before deleting
+   * anything while a team workspace this user owns has other members.
+   */
+  async deleteUserBilling(userId: string): Promise<void> {
+    this.refuseTeamWithMembers(userId);
     // usage_events rows cascade with the user in SQL.
     this.data.usageEvents = this.data.usageEvents.filter((event) => event.userId !== userId);
     for (const [key] of [...this.data.memberships]) if (key.endsWith(`:${userId}`)) this.data.memberships.delete(key);

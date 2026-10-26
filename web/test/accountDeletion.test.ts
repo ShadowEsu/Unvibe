@@ -211,6 +211,31 @@ test('a Teams owner with members gets 409 team_has_members and nothing is delete
   assert.equal((await billing.listMembers(owner.userId, team.id)).length, 2, 'the team and its member are intact');
 });
 
+test('a member who joins between the Teams check and the start is refused at the start: 409, nothing deleted', async () => {
+  const owner = await person();
+  const member = await person();
+  const team = await teamWith(owner);
+  const listMembers = billing.listMembers.bind(billing);
+  // The join lands right after step 2 read the (empty) team.
+  billing.listMembers = async (userId, workspaceId) => {
+    const seen = await listMembers(userId, workspaceId);
+    billing.listMembers = listMembers;
+    const hash = createHash('sha256').update(randomBytes(32)).digest('hex');
+    await billing.createInvitation(owner.userId, team.id, member.email, 'member', hash, new Date(Date.now() + 86_400_000).toISOString());
+    await billing.acceptInvitation(member.userId, hash, member.email);
+    return seen;
+  };
+  const calls = authCalls.length;
+  const result = await remove(owner.token);
+  billing.listMembers = listMembers;
+  assert.equal(result.status, 409);
+  assert.equal(result.body.error, 'team_has_members');
+  assert.equal(authCalls.length, calls, 'Supabase Auth was not called');
+  assert.equal(await store.accountDeletion(owner.userId), null, 'no deletion was started');
+  assert.equal(await signedIn(owner.token), true, 'the owner can still remove the member');
+  assert.equal((await billing.listMembers(owner.userId, team.id)).length, 2);
+});
+
 test('an owned team with no other members is deleted with the account', async () => {
   const owner = await person();
   const team = await teamWith(owner);
