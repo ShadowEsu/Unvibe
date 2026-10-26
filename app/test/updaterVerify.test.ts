@@ -28,6 +28,14 @@ test('the macOS helper verifies the mounted app with the pinned requirement befo
   assert.doesNotMatch(script, /--sign/, 'the helper never re-signs');
 });
 
+test('the release workflow checks the same pin as the app: the certificate before packaging, the built installers after', () => {
+  // dist-test/ sits in app/, so the repository root is two folders up.
+  const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
+  assert.ok(workflow.includes(`codesign --verify --deep --strict --verbose=2 -R='${MAC_SIGNING_REQUIREMENT}' "$app"`), 'the built installers are verified with the app\'s requirement');
+  const leaf = /certificate leaf = H"([0-9a-f]{40})"/.exec(MAC_SIGNING_REQUIREMENT)?.[1];
+  assert.ok(leaf && workflow.includes(`if [ "$leaf" != "${leaf}" ]; then`), 'the signing certificate is checked against the pinned leaf before packaging');
+});
+
 test('the macOS helper only installs the version the update is for, checked after the signature and before rm', () => {
   const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
   const verify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/w/mnt/Unvibe.app'`);

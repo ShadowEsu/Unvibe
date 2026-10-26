@@ -71,15 +71,22 @@ jobs:
       # Optional stable signing identity (self-signed, not Apple-issued). With it every Mac
       # build has the same signature, so macOS keeps the Accessibility permission and the
       # keychain stops asking for the login password after each update. Without the secrets
-      # the build falls back to ad-hoc signing in scripts/afterPackHook.cjs.
+      # the build falls back to ad-hoc signing in scripts/afterPackHook.cjs. A release must be
+      # signed with the certificate the app and install.sh pin (MAC_SIGNING_REQUIREMENT in
+      # app/src/main/updater.ts), so publishing stops here before anything is uploaded without it.
       - name: Prepare stable Mac signing identity
         if: matrix.os == 'macos-latest'
         shell: bash
         env:
           MAC_SELF_SIGN_P12: ${{ secrets.MAC_SELF_SIGN_P12 }}
           MAC_SELF_SIGN_PASSWORD: ${{ secrets.MAC_SELF_SIGN_PASSWORD }}
+          PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
         run: |
           if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
+            if [ "$PUBLISH" = "true" ]; then
+              echo "No stable signing identity configured. The app's updater and install.sh refuse builds not signed with it, so this release is not published."
+              exit 1
+            fi
             echo "No stable signing identity configured; builds use ad-hoc signing."
             exit 0
           fi
@@ -97,6 +104,12 @@ jobs:
           sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$RUNNER_TEMP/sign.pem"
           rm -f "$RUNNER_TEMP/sign.p12"
           security find-identity -v -p codesigning "$kc"
+          # The SHA-1 of this certificate is the "certificate leaf" the app's update check pins.
+          leaf="$(security find-certificate -c "Unvibe Self Signed" -Z "$kc" | awk '/^SHA-1 hash:/ { print tolower($3) }')"
+          if [ "$leaf" != "c9da4f618adf98911a450e041b8f336574a99d0e" ]; then
+            echo "The signing certificate ($leaf) is not the one the app's updater and install.sh pin, so they would refuse this build."
+            exit 1
+          fi
           echo "UNVIBE_SIGN_IDENTITY=Unvibe Self Signed" >> "$GITHUB_ENV"
           echo "UNVIBE_SIGN_KEYCHAIN=$kc" >> "$GITHUB_ENV"
 
@@ -168,7 +181,8 @@ jobs:
             hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" >/dev/null
             app="$mnt/Unvibe.app"
             echo "== $dmg"
-            codesign --verify --deep --strict --verbose=2 "$app"
+            # The same requirement the app's updater and install.sh check (MAC_SIGNING_REQUIREMENT).
+            codesign --verify --deep --strict --verbose=2 -R='identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"' "$app"
             ls "$mnt/.background" >/dev/null
             arch="$(lipo -archs "$app/Contents/MacOS/Unvibe")"
             echo "arch: $arch"
