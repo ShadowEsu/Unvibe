@@ -225,3 +225,17 @@ test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; a
   assert.ok(store().fileSnapshot(file));
   assert.equal(lesson(s.reviewId)?.outcome, 'understood');
 });
+
+test('review streams forward exactly the event types handled by the panel', async () => {
+  const handled = ['init', 'understood', 'status', 'consent', 'blocked', 'token', 'error', 'quizError', 'cancelled', 'question', 'graded', 'usage', 'done'];
+  const { win, events } = panel();
+  reviewEvents = [...handled, 'unhandled', 'constructor', ''].map((type) => ({
+    type, streamMarker: true, text: 'words', message: 'notice', model: 'test', mock: false,
+  }));
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.deepEqual(events.filter((ev) => ev.streamMarker).map((ev) => ev.type), handled);
+});
