@@ -359,7 +359,7 @@ export async function pullEvents(
   return [...byId.values()].sort((a, b) => a.ts.localeCompare(b.ts) || a.id.localeCompare(b.id));
 }
 
-export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null): Promise<ComprehensionQuestion> {
+export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null, signal?: AbortSignal): Promise<ComprehensionQuestion> {
   const res = await request(`${BACKEND}/api/v1/comprehension`, {
     method: 'POST',
     headers: {
@@ -367,6 +367,7 @@ export async function fetchQuestion(payload: ReviewRequestPayload, token?: strin
       ...aiAuthHeaders(token),
     },
     body: JSON.stringify(payload),
+    signal,
   });
   return json<ComprehensionQuestion>(res);
 }

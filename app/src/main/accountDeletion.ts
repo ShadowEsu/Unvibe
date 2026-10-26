@@ -10,6 +10,7 @@ import { knowledgeStore } from './knowledgeStore';
 import { settings } from './settings';
 import { store } from './store';
 import { cancelSync } from './sync';
+import { abortChatAndStudy } from './studyQuiz';
 
 /** `message`: the service's note for the person on a confirmed deletion, already cut to 300 characters. */
 export type AccountDeletionResult =
@@ -50,13 +51,15 @@ export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${proc
 
 /**
  * `stopReviews` ends every review in progress (the main process owns the panel and its sessions);
- * it runs before anything is cleared, so a review finishing late can't save a lesson back.
+ * it runs before anything is cleared, with in-flight Chat, study and quiz requests aborted too, so a
+ * reply finishing late can't save a lesson back.
  */
 export async function deleteAccountAndLocalData(stopReviews: () => void): Promise<AccountDeletionResult> {
   if (!store().account()) {
     // Signed out: no account to delete. Erase the learning on this computer, as before.
     try {
       stopReviews();
+      abortChatAndStudy();
       store().wipeEverything();
       knowledgeStore().wipe();
     } catch (err) {
@@ -77,6 +80,7 @@ export async function deleteAccountAndLocalData(stopReviews: () => void): Promis
   try {
     // A review or sync still running could otherwise write the deleted account's data back.
     stopReviews();
+    abortChatAndStudy();
     await cancelSync();
     await clearAccountData();
   } catch (err) {

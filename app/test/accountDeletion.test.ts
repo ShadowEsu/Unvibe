@@ -17,6 +17,7 @@ import { knowledgeStore } from '../src/main/knowledgeStore';
 import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
 import { flush } from '../src/main/sync';
+import { askChat, askStudyAssistant } from '../src/main/studyQuiz';
 import type { LocalEvent } from '../src/core/learning';
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
@@ -404,5 +405,81 @@ test('a sync answer that arrives after the session ended is not saved', { timeou
   } finally {
     service.restore();
     await syncing;
+  }
+});
+
+/**
+ * The person's own provider (Gemini, the default) answers after `release`. With `honourAbort` the
+ * request ends when aborted; without it the reply still arrives, like a provider that ignores the abort.
+ * DELETE /api/v1/account answers deleted; every other request fails like an offline network.
+ */
+function ownKeyProvider(honourAbort: boolean) {
+  const original = globalThis.fetch;
+  let providerSignal: AbortSignal | undefined;
+  let called!: () => void;
+  const started = new Promise<void>((resolve) => { called = resolve; });
+  let release!: () => void;
+  const replied = new Promise<void>((resolve) => { release = resolve; });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (init?.method === 'DELETE' && /\/api\/v1\/account$/.test(url)) return Response.json({ ok: true, status: 'deleted' });
+    if (!url.includes('generativelanguage.googleapis.com')) throw new TypeError('fetch failed');
+    providerSignal = init?.signal ?? undefined;
+    called();
+    const aborted = new Promise<never>((_, reject) => {
+      if (honourAbort) providerSignal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    });
+    await Promise.race([replied, aborted]);
+    return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A late reply.' }] } }] })}\n\n`);
+  }) as typeof fetch;
+  return { started, release, providerSignal: () => providerSignal, restore: () => { release(); globalThis.fetch = original; } };
+}
+
+test('a Chat reply from the person\'s own key that arrives after a wipe writes nothing', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  const provider = ownKeyProvider(false);
+  try {
+    const chatting = askChat({ question: 'What does map do?' });
+    await provider.started;
+    store().wipeEverything();
+    provider.release();
+    const result = await chatting;
+    assert.equal(result.ok, false);
+    assert.deepEqual(store().events(), [], 'no chat lesson written into the wiped store');
+  } finally {
+    provider.restore();
+  }
+});
+
+test('a study answer that arrives after a wipe uses no allowance and writes nothing', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  const provider = ownKeyProvider(false);
+  try {
+    const asking = askStudyAssistant({ eventId: 'lesson-1', question: 'Why add them?' });
+    await provider.started;
+    store().wipeEverything();
+    provider.release();
+    const result = await asking;
+    assert.equal(result.ok, false);
+    assert.equal(store().studyAskUsage().used, 0, 'no daily study count written into the wiped store');
+  } finally {
+    provider.restore();
+  }
+});
+
+test('account deletion aborts a Chat reply still streaming from the person\'s own key', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  const provider = ownKeyProvider(true);
+  try {
+    const chatting = askChat({ question: 'What does map do?' });
+    await provider.started;
+    const deleted = await deleteAccountAndLocalData(stopReviews);
+    assert.equal(provider.providerSignal()?.aborted, true, 'the provider request was aborted');
+    const result = await chatting;
+    assert.deepEqual(deleted, { ok: true, status: 'deleted' });
+    assert.equal(result.ok, false);
+    assertClearedAndPreferencesKept();
+  } finally {
+    provider.restore();
   }
 });

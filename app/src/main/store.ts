@@ -95,6 +95,8 @@ function learningChanged(): void {
 class Store {
   private data: Data = { events: [], outbox: [] };
   private file: string;
+  /** Goes up on every wipe, so a request started before it can tell its result belongs to erased data. */
+  private wipes = 0;
 
   constructor() {
     const dir = app.getPath('userData');
@@ -370,7 +372,13 @@ class Store {
     const empty: Data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
     this.save(empty);
     this.data = empty;
+    this.wipes += 1;
     learningChanged();
+  }
+
+  /** Compare before and after a slow request: a change means the store was wiped meanwhile. */
+  wipeGeneration(): number {
+    return this.wipes;
   }
 
   // ---- saved Ask conversations ----
