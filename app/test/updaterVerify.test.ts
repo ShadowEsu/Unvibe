@@ -20,10 +20,10 @@ test('the macOS helper verifies the mounted app with the pinned requirement befo
   assert.equal(MAC_SIGNING_REQUIREMENT, PINNED_REQUIREMENT, 'the app pins the same requirement as install.sh');
   const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
   const verify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/w/mnt/Unvibe.app'`);
-  const remove = script.indexOf(`rm -rf '/Applications/Unvibe.app'`);
+  const moveAside = script.indexOf(`mv '/Applications/Unvibe.app' '/Applications/Unvibe.app.old'`);
   assert.ok(verify >= 0, 'the mounted app is checked against the pinned requirement');
-  assert.ok(remove >= 0);
-  assert.ok(verify < remove, 'the pinned verify comes before rm -rf of the installed app');
+  assert.ok(moveAside >= 0, 'the installed app is moved aside, not deleted');
+  assert.ok(verify < moveAside, 'the pinned verify comes before the installed app is moved aside');
   assert.ok(script.indexOf('ditto ') > verify, 'nothing is copied before the check');
   assert.doesNotMatch(script, /--sign/, 'the helper never re-signs');
 });
@@ -36,12 +36,12 @@ test('the release workflow checks the same pin as the app: the certificate befor
   assert.ok(leaf && workflow.includes(`if [ "$leaf" != "${leaf}" ]; then`), 'the signing certificate is checked against the pinned leaf before packaging');
 });
 
-test('the macOS helper only installs the version the update is for, checked after the signature and before rm', () => {
+test('the macOS helper only installs the version the update is for, checked after the signature and before the installed app is touched', () => {
   const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
   const verify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/w/mnt/Unvibe.app'`);
   const version = script.indexOf(`[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/w/mnt/Unvibe.app/Contents/Info.plist' 2>/dev/null)" = '0.1.45' ]`);
-  const remove = script.indexOf(`rm -rf '/Applications/Unvibe.app'`);
-  assert.ok(version > verify && verify >= 0 && version < remove, 'the mounted app\'s version must equal the release version, checked after the pinned codesign and before rm');
+  const moveAside = script.indexOf(`mv '/Applications/Unvibe.app' '/Applications/Unvibe.app.old'`);
+  assert.ok(version > verify && verify >= 0 && version < moveAside, 'the mounted app\'s version must equal the release version, checked after the pinned codesign and before the installed app is moved aside');
 });
 
 test('the macOS helper copies the app beside the installed one and checks the copy again before swapping it in', () => {
@@ -51,11 +51,14 @@ test('the macOS helper copies the app beside the installed one and checks the co
   const permissions = script.indexOf(`chmod -R u+rwX,go-w '/Applications/Unvibe.app.new' || refuse`);
   const stagedVerify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/Applications/Unvibe.app.new' >/dev/null 2>&1 || refuse`);
   const stagedVersion = script.indexOf(`[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/Applications/Unvibe.app.new/Contents/Info.plist' 2>/dev/null)" = '0.1.45' ] || refuse`);
-  const swap = script.indexOf(`rm -rf '/Applications/Unvibe.app' && mv '/Applications/Unvibe.app.new' '/Applications/Unvibe.app' || refuse`);
+  const moveAside = script.indexOf(`if [ -e '/Applications/Unvibe.app' ] || [ -L '/Applications/Unvibe.app' ]; then mv '/Applications/Unvibe.app' '/Applications/Unvibe.app.old' || refuse; fi`);
+  const moveIn = script.indexOf(`mv '/Applications/Unvibe.app.new' '/Applications/Unvibe.app' || { if [ -e '/Applications/Unvibe.app.old' ] || [ -L '/Applications/Unvibe.app.old' ]; then mv '/Applications/Unvibe.app.old' '/Applications/Unvibe.app'; fi; refuse; }`);
+  const removeOld = script.lastIndexOf(`rm -rf '/Applications/Unvibe.app.old' 2>/dev/null`);
   assert.ok(mountVersion >= 0 && copy > mountVersion, 'the mounted app passes both checks before it is copied, without ACLs, extended attributes or resource forks');
   assert.ok(permissions > copy && stagedVerify > permissions, 'only the owner can write to the copy, and that is set before it is checked');
   assert.ok(stagedVersion > stagedVerify, 'the staged copy is checked with the pin and the version');
-  assert.ok(swap > stagedVersion, 'the staged copy passes its checks before it replaces the installed app');
+  assert.ok(moveAside > stagedVersion, 'the staged copy passes its checks before the installed app is moved aside');
+  assert.ok(moveIn > moveAside && removeOld > moveIn, 'the old app is deleted only after the new one is in place, and moved back if it can\'t be');
 });
 
 /**
@@ -64,9 +67,12 @@ test('the macOS helper copies the app beside the installed one and checks the co
  * With `mountedApp: 'symlink'`, the image's Unvibe.app is a symlink to a bundle elsewhere. The image's
  * app reports `mountedVersion`; the helper is generated for 0.1.45. PlistBuddy is called by its full
  * path, so the script's /usr/libexec/PlistBuddy is pointed at a stub that prints the version file.
+ * `installed: 'locked'` gives the installed app a read-only folder with a file in it, which rm can't
+ * fully delete; `'none'` means there is no installed app yet. `newMoveFails` makes `mv` fail when it
+ * moves the `.new` copy.
  */
-function runHelper(opts: { codesignFails?: 'mount' | 'staged'; dittoFails?: boolean; mountedApp?: 'folder' | 'symlink'; mountedVersion?: string } = {}) {
-  const { codesignFails = '', dittoFails = false, mountedApp = 'folder', mountedVersion = '0.1.45' } = opts;
+function runHelper(opts: { codesignFails?: 'mount' | 'staged'; dittoFails?: boolean; mountedApp?: 'folder' | 'symlink'; mountedVersion?: string; installed?: 'app' | 'locked' | 'none'; newMoveFails?: boolean } = {}) {
+  const { codesignFails = '', dittoFails = false, mountedApp = 'folder', mountedVersion = '0.1.45', installed = 'app', newMoveFails = false } = opts;
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
   const bin = path.join(root, 'bin');
   const dir = path.join(root, 'work');
@@ -74,8 +80,13 @@ function runHelper(opts: { codesignFails?: 'mount' | 'staged'; dittoFails?: bool
   const log = path.join(root, 'calls.log');
   mkdirSync(bin);
   mkdirSync(dir);
-  mkdirSync(target, { recursive: true });
-  writeFileSync(path.join(target, 'marker'), 'OLD');
+  mkdirSync(path.dirname(target));
+  if (installed !== 'none') {
+    mkdirSync(path.join(target, 'Contents', 'Resources', 'locked'), { recursive: true });
+    writeFileSync(path.join(target, 'marker'), 'OLD');
+    writeFileSync(path.join(target, 'Contents', 'Resources', 'locked', 'file'), 'OLD RESOURCE');
+    if (installed === 'locked') chmodSync(path.join(target, 'Contents', 'Resources', 'locked'), 0o555);
+  }
   const stubs: Record<string, string> = {
     hdiutil: `echo "hdiutil $*" >> "$LOG"
 if [ "$1" = "attach" ]; then
@@ -101,6 +112,9 @@ if [ "$DITTO_FAILS" = 1 ]; then mkdir -p "$dst"; exit 1; fi
 exec cp -Rp "$src" "$dst"`,
     rm: `for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
 exec /bin/rm "$@"`,
+    mv: `echo "mv $*" >> "$LOG"
+case "$1" in *.new) [ "$MV_NEW_FAILS" = 1 ] && exit 1 ;; esac
+exec /bin/mv "$@"`,
   };
   for (const [name, body] of Object.entries(stubs)) {
     writeFileSync(path.join(bin, name), `#!/bin/bash\n${body}\n`);
@@ -117,17 +131,23 @@ exec /bin/rm "$@"`,
     LOG: log,
     CODESIGN_FAILS: codesignFails,
     DITTO_FAILS: dittoFails ? '1' : '',
+    MV_NEW_FAILS: newMoveFails ? '1' : '',
     MOUNTED_APP: mountedApp,
     MOUNTED_VERSION: mountedVersion,
     ELSEWHERE: path.join(root, 'elsewhere', 'Unvibe.app'),
   };
   const result = spawnSync('/bin/bash', [script], { env, encoding: 'utf8' });
   const calls = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [];
-  const marker = readFileSync(path.join(target, 'marker'), 'utf8').trim();
-  const markerMode = statSync(path.join(target, 'marker')).mode;
+  const read = (file: string) => (existsSync(file) ? readFileSync(file, 'utf8').trim() : '(missing)');
+  const marker = read(path.join(target, 'marker'));
+  const markerMode = existsSync(path.join(target, 'marker')) ? statSync(path.join(target, 'marker')).mode : 0;
+  const installedVersion = read(path.join(target, 'Contents', 'Info.plist'));
+  const oldResource = read(path.join(target, 'Contents', 'Resources', 'locked', 'file'));
   const stagedLeft = existsSync(`${target}.new`);
+  // The read-only folder has to be writable again before the scratch directory can be removed.
+  spawnSync('chmod', ['-R', 'u+w', root]);
   rmSync(root, { recursive: true, force: true });
-  return { status: result.status, calls, marker, markerMode, stagedLeft, target, dir };
+  return { status: result.status, calls, marker, markerMode, installedVersion, oldResource, stagedLeft, target, dir };
 }
 
 test('a mounted app that fails the signature check leaves the installed app untouched and reopens it', { skip: process.platform === 'win32' }, () => {
@@ -160,6 +180,30 @@ test('a staged copy that fails its check, or a failed copy, keeps the installed 
     assert.ok(!run.stagedLeft, `${label}: no .new is left behind`);
     assert.ok(run.calls.includes(`open ${run.target}`), `${label}: the old app is opened again`);
   }
+});
+
+test('an old app that rm cannot fully delete does not stop the new version from being installed', { skip: process.platform === 'win32' }, () => {
+  const run = runHelper({ installed: 'locked' });
+  assert.equal(run.status, 0, 'a leftover .old does not fail the update');
+  assert.equal(run.installedVersion, '0.1.45', 'the new version is installed');
+  assert.equal(run.marker, 'NEW');
+  assert.ok(!run.stagedLeft, 'the staged copy was moved into place');
+  assert.ok(run.calls.includes(`open ${run.target}`), 'the new app is opened');
+});
+
+test('if the new app cannot be moved into place, the old app is moved back intact', { skip: process.platform === 'win32' }, () => {
+  const run = runHelper({ newMoveFails: true });
+  assert.equal(run.status, 1, 'the failed swap exits 1');
+  assert.equal(run.marker, 'OLD', 'the old app is back at the target');
+  assert.equal(run.oldResource, 'OLD RESOURCE', 'the old app is intact, nested files included');
+  assert.ok(!run.stagedLeft, 'no .new is left behind');
+  assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
+});
+
+test('an app with no installed copy at the target is installed there', { skip: process.platform === 'win32' }, () => {
+  const run = runHelper({ installed: 'none' });
+  assert.equal(run.status, 0, 'a target that does not exist yet is not a failure');
+  assert.equal(run.installedVersion, '0.1.45', 'the new version is installed at the target');
 });
 
 test('a validly signed app of another version is refused and the installed app is untouched', { skip: process.platform === 'win32' }, () => {

@@ -144,9 +144,12 @@ function shellQuote(value: string): string {
  * The helper that swaps the app after Unvibe quits. The mounted app must pass the pinned signature
  * check before anything is copied. It is then copied beside the installed app (`<target>.new`), and
  * that copy must pass the same checks before it replaces the installed app, so nothing changes
- * between the check and the swap. On any failure the installed app stays as it is, the copy is
- * removed, the old app is reopened, and the script exits 1. It never re-signs: a re-signed copy
- * would run with a different identity, and macOS drops the Accessibility permission for it.
+ * between the check and the swap. The installed app is not deleted to make room: it is moved aside
+ * to `<target>.old`, the new app is moved into its place, and only then is the old one deleted. If
+ * the new app can't be moved in, the old one is moved back. On any failure the installed app stays
+ * as it is, the copy is removed, the old app is reopened, and the script exits 1. A leftover `.old`
+ * that can't be deleted doesn't fail the update. It never re-signs: a re-signed copy would run
+ * with a different identity, and macOS drops the Accessibility permission for it.
  * The copy takes no ACLs, extended attributes (quarantine included) or resource forks, which the
  * signature doesn't seal, and only its owner can write to it. Unvibe.app in the image must be a
  * real folder, not a symlink: a link to a validly signed bundle elsewhere (even the installed app
@@ -160,6 +163,7 @@ export function macUpdateScript(opts: { pid: number; file: string; dir: string; 
   const mounted = shellQuote(`${mount}/Unvibe.app`);
   const staged = shellQuote(`${target}.new`);
   const installed = shellQuote(target);
+  const old = shellQuote(`${target}.old`);
   const pin = shellQuote(MAC_SIGNING_REQUIREMENT);
   const wanted = shellQuote(version);
   const readVersion = `/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString'`;
@@ -183,7 +187,14 @@ export function macUpdateScript(opts: { pid: number; file: string; dir: string; 
     `chmod -R u+rwX,go-w ${staged} || refuse`,
     `codesign --verify --deep --strict -R=${pin} ${staged} >/dev/null 2>&1 || refuse`,
     `[ "$(${readVersion} ${shellQuote(`${target}.new/Contents/Info.plist`)} 2>/dev/null)" = ${wanted} ] || refuse`,
-    `rm -rf ${installed} && mv ${staged} ${installed} || refuse`,
+    // A `.old` an earlier update couldn't delete is moved out of the way under a unique name, so
+    // the installed app is never moved into it.
+    `rm -rf ${old} 2>/dev/null`,
+    `if [ -e ${old} ] || [ -L ${old} ]; then mv ${old} ${old}."$$" || refuse; fi`,
+    // An app running from elsewhere (e.g. ~/Downloads) updates into a target that doesn't exist yet.
+    `if [ -e ${installed} ] || [ -L ${installed} ]; then mv ${installed} ${old} || refuse; fi`,
+    `mv ${staged} ${installed} || { if [ -e ${old} ] || [ -L ${old} ]; then mv ${old} ${installed}; fi; refuse; }`,
+    `rm -rf ${old} 2>/dev/null`,
     `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
     `open ${installed}`,
     `rm -rf ${shellQuote(dir)}`,
