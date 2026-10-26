@@ -337,14 +337,18 @@ test('a row still started after 7 days logs ACCOUNT_DELETION_OVERDUE with counts
   assert.ok(!quiet.some((line) => line.includes('ACCOUNT_DELETION_OVERDUE')), quiet.join('\n'));
 });
 
-test(`one run retries at most ${SWEEP_LIMIT} rows, and the next run reaches the rest`, async () => {
+test('one run retries at most 10 rows, and the next run reaches the rest', async () => {
   process.env.CRON_SECRET = SECRET;
+  // The cap is written out: a larger SWEEP_LIMIT must fail here, not move the test along with it.
+  const cap = 10;
+  assert.equal(SWEEP_LIMIT, cap);
   const many = [];
-  for (let i = 0; i < SWEEP_LIMIT + 2; i += 1) many.push(await leftForTheSweep(2 * 3_600_000));
+  for (let i = 0; i < cap + 2; i += 1) many.push(await leftForTheSweep(2 * 3_600_000));
   const before = blobAttempts.length;
   const first = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, number>;
-  assert.equal(first.checked, SWEEP_LIMIT);
-  assert.equal(blobAttempts.length - before, SWEEP_LIMIT, 'no more Blob work than the cap');
+  assert.equal(first.found, cap);
+  assert.equal(first.checked, cap);
+  assert.equal(blobAttempts.length - before, cap, 'no more Blob work than the cap');
   await sweep(`Bearer ${SECRET}`);
   const reached = new Set(blobAttempts.slice(before));
   assert.ok(many.every((row) => reached.has(row.email)), 'least recently tried first: two runs reach every row');

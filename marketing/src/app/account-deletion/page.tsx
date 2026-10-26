@@ -69,6 +69,12 @@ export default function AccountDeletionPage() {
             require.
           </li>
           <li>
+            Our billing audit log keeps its entries, such as checkouts, seat changes, refunds and team
+            membership changes. They hold no email address and no longer point to your account. Some
+            keep Stripe payment or subscription IDs, and a change to your membership of someone
+            else&apos;s team keeps your account ID.
+          </li>
+          <li>
             We keep a small deletion record: your account ID, one-way hashes of the sign-in tokens
             that asked for the deletion, which steps finished, the beta-download outcome, and when
             the deletion started and finished. Once the deletion is done it holds no email address.
