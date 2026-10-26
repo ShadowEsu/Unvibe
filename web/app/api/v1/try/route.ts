@@ -75,11 +75,16 @@ export async function POST(req: Request): Promise<Response> {
   const checked = validateTry(await req.json().catch(() => null));
   if (!checked.ok) return Response.json({ error: checked.error }, { status: 400, headers });
 
+  const resting = () => Response.json({ error: 'The live demo is resting right now. Download Unvibe to try it on your code.' }, { status: 503, headers });
   const provider = tryProvider();
   // Never pass off mock output as a real explanation.
-  if (!provider || provider.mock) return Response.json({ error: 'The live demo is resting right now. Download Unvibe to try it on your code.' }, { status: 503, headers });
+  if (!provider || provider.mock) return resting();
 
-  const limited = await overLimit(hashVisitor(clientIp(req))).catch(() => null);
+  // No server secret to key the IP hash with (production): don't store an address hash anyone can reverse.
+  const visitor = hashVisitor(clientIp(req));
+  if (!visitor) return resting();
+
+  const limited = await overLimit(visitor).catch(() => null);
   if (limited) return Response.json({ error: limited }, { status: 429, headers });
 
   try {

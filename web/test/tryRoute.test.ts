@@ -1,3 +1,4 @@
+import { createHash, createHmac } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/try/route';
@@ -120,4 +121,39 @@ test('outside production ENABLE_MOCK_AI selects the labelled mock, which Try nev
   setEnv({ ENABLE_MOCK_AI: 'true', GEMINI_API_KEY: 'local-gemini-key' });
   assert.equal((await POST(tryRequest())).status, 503);
   assert.deepEqual(calls, { gemini: 0, openrouter: 0, anthropic: 0 });
+});
+
+function storedHash(): string {
+  const last = inserted.at(-1);
+  assert.ok(last && typeof last === 'object' && 'ip_hash' in last && typeof last.ip_hash === 'string', 'Try stored one row');
+  return last.ip_hash;
+}
+
+test('the stored IP hash is an HMAC keyed by the service-role key, not sha256 of a public constant', async () => {
+  production();
+  const ip = '203.0.113.7';
+  assert.equal((await POST(tryRequest(ip))).status, 200);
+  const stored = storedHash();
+  assert.notEqual(stored, createHash('sha256').update(`unvibe-try:${ip}`).digest('hex').slice(0, 32));
+  assert.equal(stored, createHmac('sha256', 'local-service-role-key').update(`unvibe-try:${ip}`).digest('hex').slice(0, 32));
+});
+
+test('the same IP hashes differently under different keys, and TRY_IP_SALT wins over the service-role key', async () => {
+  const ip = '203.0.113.8';
+  const hashes: string[] = [];
+  for (const salt of ['local-try-salt-one', 'local-try-salt-two', undefined]) {
+    production({ TRY_IP_SALT: salt });
+    assert.equal((await POST(tryRequest(ip))).status, 200);
+    hashes.push(storedHash());
+  }
+  assert.equal(new Set(hashes).size, 3);
+  assert.equal(hashes[0], createHmac('sha256', 'local-try-salt-one').update(`unvibe-try:${ip}`).digest('hex').slice(0, 32));
+});
+
+test('production with neither TRY_IP_SALT nor the service-role key answers 503 and calls no model', async () => {
+  production({ SUPABASE_SERVICE_ROLE_KEY: undefined, TRY_IP_SALT: undefined });
+  const res = await POST(tryRequest());
+  assert.equal(res.status, 503);
+  assert.equal(calls.gemini, 0);
+  assert.equal(inserted.length, 0);
 });
