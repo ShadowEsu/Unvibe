@@ -1,14 +1,6 @@
-Unvibe trial Mac build (Apple Silicon)
+Unvibe for Mac and Windows
 
-Download:
-  https://kgtnwm7mfrhop6vj.public.blob.vercel-storage.com/investors/Unvibe-0.1.0-arm64-unsigned.dmg?v=20260721-final
+Download the current version, with its checksums and install help, from:
+  https://unvibe.site/beta
 
-Also linked from:
-  https://unvibe.site/investors
-
-Limits:
-  The app enforces its current in-product trial limits.
-
-Notes:
-  Unsigned beta. Right-click → Open if Gatekeeper blocks.
-  No AI provider key is inside the DMG.
+Older trial builds, including 0.1.0, are no longer supported.
