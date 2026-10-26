@@ -67,6 +67,72 @@ test('built installers are checked with the pin when the identity signed them or
   ].join('\n')), 'a signed or publishing build must pass the pin; an ad-hoc test build keeps its artifacts');
 });
 
+/**
+ * Runs the "Package (publish to release)" step's bash from the workflow as GitHub does
+ * (`bash --noprofile --norc -eo pipefail`), for the matrix entry with `platformFlag` on `runnerOs`.
+ * The step's env comes from the YAML; a `${{ ... }}` value is empty, as an unset secret arrives.
+ * `npx` and `sudo` are stubs; `npx` logs its arguments.
+ */
+function runPublishStep(opts: { runnerOs: 'macOS' | 'Windows'; platformFlag: '--mac' | '--win'; identity?: string }) {
+  const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
+  const start = workflow.indexOf('      - name: Package (publish to release)\n');
+  assert.ok(start >= 0, 'the workflow has the publish step');
+  const lines = workflow.slice(start).split('\n');
+  const env: Record<string, string> = {};
+  for (let i = lines.indexOf('        env:') + 1; /^ {10}\S/.test(lines[i]); i++) {
+    const entry = /^ {10}([A-Z_]+): (.*)$/.exec(lines[i]);
+    if (entry) env[entry[1]] = entry[2].startsWith('${{') ? '' : entry[2].replace(/^"(.*)"$/, '$1');
+  }
+  const body: string[] = [];
+  for (const line of lines.slice(lines.indexOf('        run: |') + 1)) {
+    if (line !== '' && !line.startsWith(' '.repeat(10))) break;
+    body.push(line.slice(10));
+  }
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-publish-step-test-'));
+  const bin = path.join(root, 'bin');
+  const calls = path.join(root, 'npx.log');
+  mkdirSync(bin);
+  const stubs: Record<string, string> = {
+    npx: `printf '%s\\n' "$*" >> "$CALLS"; exit 0`,
+    sudo: 'exit 0',
+  };
+  for (const [name, stub] of Object.entries(stubs)) {
+    writeFileSync(path.join(bin, name), `#!/bin/bash\n${stub}\n`);
+    chmodSync(path.join(bin, name), 0o755);
+  }
+  const script = path.join(root, 'publish.sh');
+  writeFileSync(script, body.join('\n').replaceAll('${{ matrix.platformFlag }}', opts.platformFlag));
+  try {
+    const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', script], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...env, PATH: `${bin}:${process.env.PATH}`, CALLS: calls, RUNNER_OS: opts.runnerOs, ...(opts.identity === undefined ? {} : { UNVIBE_SIGN_IDENTITY: opts.identity }) },
+    });
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      npx: existsSync(calls) ? readFileSync(calls, 'utf8').trim().split('\n') : [],
+    };
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+test('a Mac publish without the stable signing identity stops before electron-builder runs', { skip: process.platform === 'win32' }, () => {
+  for (const [label, identity] of [['unset', undefined], ['empty', '']] as const) {
+    const run = runPublishStep({ runnerOs: 'macOS', platformFlag: '--mac', identity });
+    assert.notEqual(run.status, 0, `identity ${label}: the step fails`);
+    assert.deepEqual(run.npx, [], `identity ${label}: electron-builder is never called, so nothing is uploaded`);
+    assert.match(run.stdout, /this release is not published/, `identity ${label}: the log says why`);
+  }
+  const signed = runPublishStep({ runnerOs: 'macOS', platformFlag: '--mac', identity: 'Unvibe Self Signed' });
+  assert.equal(signed.status, 0, 'with the identity the step goes ahead');
+  assert.deepEqual(signed.npx, ['electron-builder --mac --publish always'], 'with the identity electron-builder publishes');
+  const windows = runPublishStep({ runnerOs: 'Windows', platformFlag: '--win' });
+  assert.equal(windows.status, 0, 'the check is Mac only');
+  assert.deepEqual(windows.npx, ['electron-builder --win --publish always'], 'a Windows publish, which has no Mac identity, still reaches electron-builder');
+});
+
 test('the packaging hook checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-afterpack-test-'));
   const bin = path.join(root, 'bin');

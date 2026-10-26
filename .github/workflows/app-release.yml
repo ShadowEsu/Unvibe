@@ -148,6 +148,11 @@ jobs:
           # An unset repo secret arrives as an empty string, which electron-builder misreads as a path.
           if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; fi
           if [ "$RUNNER_OS" = "macOS" ]; then
+            # scripts/afterPackHook.cjs signs with the pinned certificate, and checks it, only when the
+            # identity is set, and the installers are verified only after they are uploaded. Without it
+            # this would publish an ad-hoc build, so it stops here even if the steps above disagree
+            # about whether this run publishes.
+            [ -n "${UNVIBE_SIGN_IDENTITY:-}" ] || { echo "The stable signing identity was not imported, so this Mac build would be signed ad-hoc. The app's updater and install.sh would refuse it, so this release is not published."; exit 1; }
             # Spotlight indexing a freshly mounted DMG keeps it busy, so "hdiutil detach" fails
             # and the Apple silicon DMG never uploads. Indexing is useless on a CI runner.
             sudo mdutil -a -i off >/dev/null 2>&1 || true
