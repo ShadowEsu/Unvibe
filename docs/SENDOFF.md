@@ -397,21 +397,21 @@ Full detail per version: `marketing/src/data/milestones.ts` and `git log` (272+ 
 
 ## 9. Open tasks, big and small
 
-Legend: **[agent]** you can do it now; **[Preston]** needs him; **[decide]** needs his decision first.
+Legend: **[agent]** you can do it now; **[owner]** needs the owner; **[decide]** needs the owner's decision first.
 When you finish one, move it to the session log with the evidence.
 
 ### Release and quality
-- [ ] **[agent/Preston]** Verify on a real Mac that updating v0.1.40 → v0.1.41 keeps Accessibility
+- [ ] **[agent/owner]** Verify on a real Mac that updating v0.1.40 → v0.1.41 keeps Accessibility
       granted (the whole point of stable signing). If it does, simplify the post-update repair
       message; if not, investigate the designated requirement of the signature.
 - [ ] **[agent]** Native Windows portable self-update is unverified. Extend `real-device-test.yml`
       with an update step (install vN-1 portable, trigger update, confirm the pinned path runs vN).
 - [ ] **[agent]** Completed Google login is not tested (stops at Google's page). Needs a test
-      account; ask Preston before creating one.
-- [ ] **[agent]** Releases are marked `prerelease: true` on GitHub. Ask Preston whether the stable
+      account; ask the owner before creating one.
+- [ ] **[agent]** Releases are marked `prerelease: true` on GitHub. Ask the owner whether the stable
       line should be a full release (affects "latest" links).
 - [ ] **[agent]** Windows installers are unsigned (SmartScreen warning). Research the cheapest
-      code-signing route (Azure Trusted Signing etc.) and present costs to Preston.
+      code-signing route (Azure Trusted Signing etc.) and present costs to the owner.
 - [ ] **[agent]** Dependency advisories: Electron 43 / electron-builder 26 and Next 16 upgrades are
       deferred (`docs/release/owner-decisions.md`). Plan, do not just bump (change-control rule).
 
@@ -423,7 +423,7 @@ When you finish one, move it to the session log with the evidence.
       funnel") and add a row to the funnel table in section 14. First check of the new phone path:
       `phone_link_sent` / `phone_try_clicked` counts vs. phone page views.
 - [ ] **[decide]** Phones are 28% of visitors. Optional next step: "email me the download link"
-      (needs Resend sending to the visitor, so it needs Preston's OK).
+      (needs Resend sending to the visitor, so it needs the owner's OK).
 - [ ] **[agent]** Exclude `?ref=agent-smoke` visits from funnel numbers (agent smoke tests).
 
 ### Product ideas queued (from user research)
@@ -432,29 +432,29 @@ When you finish one, move it to the session log with the evidence.
 - [ ] **[decide]** Linux build (5 asks).
 
 ### Billing
-- [ ] **[Preston]** Approve the Stripe Composio link (current connections are EXPIRED) and say "go
+- [ ] **[owner]** Approve the Stripe Composio link (current connections are EXPIRED) and say "go
       live". Then **[agent]**: create live Pro (+ Teams monthly/annual) prices matching
       `plans.ts`, a live webhook to `/api/v1/billing/webhook`, set the env vars in `unvibe-api`,
-      redeploy, verify a real checkout with Preston's card and refund.
+      redeploy, verify a real checkout with the owner's card and refund.
 
 ### Accounts and cleanup
-- [ ] **[Preston]** X/Twitter: create `@unvibe_app` (matches Instagram/TikTok), then the agent
+- [ ] **[owner]** X/Twitter: create `@unvibe_app` (matches Instagram/TikTok), then the agent
       un-hides the X link (`marketing/src/lib/contact.ts` `X_URL`,
-      `marketing/src/components/paper/SocialFollow.tsx`). Deferred by Preston on 17 Oct.
+      `marketing/src/components/paper/SocialFollow.tsx`). Deferred by the owner on 17 Oct.
 - [ ] **[owner]** Delete the now-empty Supabase orgs CauliformAI and a second, empty org in the dashboard
       if wanted (API cannot). Optional, they cost nothing.
-- [ ] **[Preston]** Two Supabase management tokens were pasted into a chat on 17 Oct. Revoke and
+- [ ] **[owner]** Two Supabase management tokens were pasted into a chat on 17 Oct. Revoke and
       reissue them at https://supabase.com/dashboard/account/tokens when convenient, then update
       `~/.config/preston-secrets/supabase.env`.
 - [ ] **[agent]** Update the stale sections of `AGENTS.md`/`CLAUDE.md` (Windows not excluded,
-      current design is v7 paper-and-ink) after asking Preston, since those files steer every agent.
+      current design is v7 paper-and-ink) after asking the owner, since those files steer every agent.
 - [ ] **[agent]** Old remote branches (`codex/*`, `marketing`, old `claude/*`): list them for
-      Preston and ask whether to delete. Do not delete on your own.
-- [ ] **[Preston]** `~/Unvibe` checkout has ~99 uncommitted changes and is far behind. Only he
+      the owner and ask whether to delete. Do not delete on your own.
+- [ ] **[owner]** `~/Unvibe` checkout has ~99 uncommitted changes and is far behind. Only the owner
       knows if those deletions are intended.
 - [ ] **[decide]** Apple Developer ID ($99/yr) removes the browser-download "Open Anyway" step.
 
-### Owned by Preston, do not touch
+### The owner's own tasks, do not touch
 - Inbox follow-ups and personal outreach.
 - The daily health check routine.
 
