@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { spawn } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,13 +13,73 @@ import { isNewer, pickAsset } from '../core/update';
 export { isNewer, pickAsset };
 
 /**
- * Self-update without code signing. Checks the public GitHub releases, and on request
- * downloads the right installer, quits, swaps the app in place and reopens it. Only release
- * assets from this repository are ever downloaded.
+ * Self-update from the public GitHub releases. On request it downloads the right installer, checks
+ * it against the SHA-256 published in the same release, quits, swaps the app in place and reopens
+ * it. Only release assets from this repository are ever downloaded. On macOS the new app must also
+ * pass MAC_SIGNING_REQUIREMENT before the installed one is touched; nothing is ever re-signed.
  */
 
 const REPO = 'ShadowEsu/Unvibe';
 const ASSET_HOST = /^https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/download\//;
+
+/**
+ * The signature a macOS update must carry: the release's self-signed certificate ("Unvibe Self
+ * Signed") and bundle id. A copy re-signed by anyone else fails. Same value as
+ * BETA_MAC_SIGNING_REQUIREMENT in marketing/src/lib/betaInstallScript.ts (install.sh); both tests
+ * pin the literal, so the two can't drift apart unnoticed.
+ */
+export const MAC_SIGNING_REQUIREMENT =
+  'identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"';
+
+/** The checksum file app-release.yml publishes next to each platform's installers. */
+export function checksumAssetName(platform: NodeJS.Platform): string | undefined {
+  if (platform === 'darwin') return 'SHA256SUMS-mac.txt';
+  if (platform === 'win32') return 'SHA256SUMS-windows.txt';
+  return undefined;
+}
+
+/** The SHA-256 a checksum file lists for one asset (`<hex>  <name>` or `<hex> *<name>` lines). */
+export function expectedSha256(sums: string, assetName: string): string | undefined {
+  for (const line of sums.split(/\r?\n/)) {
+    const match = /^([0-9a-fA-F]{64})\s+\*?(.+?)\s*$/.exec(line);
+    if (match && match[2] === assetName) return match[1].toLowerCase();
+  }
+  return undefined;
+}
+
+async function sha256File(file: string): Promise<string> {
+  const hash = createHash('sha256');
+  await pipeline(createReadStream(file), hash);
+  return hash.digest('hex');
+}
+
+type Fetch = (url: string, init: RequestInit) => Promise<Response>;
+
+/**
+ * Checks a downloaded installer against the checksum file of the same release (same tag, same
+ * folder as the asset). Returns why it can't be installed, or null when it matches. No checksum,
+ * no install.
+ */
+export async function verifyDownload(file: string, assetUrl: string, platform: NodeJS.Platform, fetchImpl: Fetch = networkFetch): Promise<string | null> {
+  const sumsName = checksumAssetName(platform);
+  if (!sumsName) return 'Automatic updates are not available on this system.';
+  const assetName = decodeURIComponent(path.posix.basename(new URL(assetUrl).pathname));
+  const sumsUrl = new URL(sumsName, assetUrl).toString();
+  if (!ASSET_HOST.test(sumsUrl)) return 'Refusing to download an update from an unexpected address.';
+  const unchanged = 'The update was not installed, and your Unvibe is unchanged.';
+  let sums: string;
+  try {
+    const res = await fetchImpl(sumsUrl, { redirect: 'follow', signal: AbortSignal.timeout(20_000) });
+    if (!res.ok) return `Could not download the update's published checksums (${res.status}). ${unchanged}`;
+    sums = await res.text();
+  } catch (error) {
+    return `Could not download the update's published checksums (${error instanceof Error ? error.message : String(error)}). ${unchanged}`;
+  }
+  const expected = expectedSha256(sums, assetName);
+  if (!expected) return `The published checksums have no line for ${assetName}. ${unchanged}`;
+  if ((await sha256File(file)) !== expected) return `The download does not match its published checksum. ${unchanged}`;
+  return null;
+}
 
 export interface UpdateInfo {
   available: boolean;
@@ -74,6 +135,38 @@ function macBundlePath(): string {
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * The helper that swaps the app after Unvibe quits. The mounted app must pass the pinned signature
+ * check before the installed app is touched. If it doesn't, the installed app stays as it is and is
+ * reopened, and the script exits 1 like its other failures. It never re-signs: a re-signed copy
+ * would run with a different identity, and macOS drops the Accessibility permission for it.
+ * Quarantine is cleared only on a copy that passed.
+ */
+export function macUpdateScript(opts: { pid: number; file: string; dir: string; mount: string; target: string }): string {
+  const { pid, file, dir, mount, target } = opts;
+  const mounted = shellQuote(`${mount}/Unvibe.app`);
+  return [
+    '#!/bin/bash',
+    `while kill -0 ${pid} 2>/dev/null; do sleep 0.3; done`,
+    `mkdir -p ${shellQuote(mount)}`,
+    `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || { open ${shellQuote(target)}; exit 1; }`,
+    `if [ -d ${mounted} ] && codesign --verify --deep --strict -R=${shellQuote(MAC_SIGNING_REQUIREMENT)} ${mounted} >/dev/null 2>&1; then`,
+    `  rm -rf ${shellQuote(target)}`,
+    `  ditto ${mounted} ${shellQuote(target)}`,
+    `  xattr -cr ${shellQuote(target)} 2>/dev/null`,
+    'else',
+    `  hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
+    `  open ${shellQuote(target)}`,
+    `  rm -rf ${shellQuote(dir)}`,
+    '  exit 1',
+    'fi',
+    `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
+    `open ${shellQuote(target)}`,
+    `rm -rf ${shellQuote(dir)}`,
+    '',
+  ].join('\n');
 }
 
 /** Starts a detached process and resolves once Windows has actually created it. */
@@ -136,27 +229,20 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
     return { ok: false, error: `Download failed: ${error instanceof Error ? error.message : String(error)}` };
   }
 
+  // Checked in this process, before any helper exists: a download that doesn't match the release's
+  // published checksum is deleted, and the installed app is never touched.
+  const problem = await verifyDownload(file, info.url, process.platform);
+  if (problem) {
+    // The portable download sits beside the user's .exe: delete only the download there.
+    await rm(portable ? file : dir, { recursive: true, force: true }).catch(() => undefined);
+    return { ok: false, error: problem };
+  }
+
   if (process.platform === 'darwin') {
     const bundle = macBundlePath();
     const target = bundle.endsWith('.app') && !bundle.startsWith('/Volumes/') ? bundle : '/Applications/Unvibe.app';
-    const mount = path.join(dir, 'mnt');
     const script = path.join(dir, 'update.sh');
-    await writeFile(script, [
-      '#!/bin/bash',
-      `while kill -0 ${process.pid} 2>/dev/null; do sleep 0.3; done`,
-      `mkdir -p ${shellQuote(mount)}`,
-      `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || { open ${shellQuote(target)}; exit 1; }`,
-      `if [ -d ${shellQuote(`${mount}/Unvibe.app`)} ]; then`,
-      `  rm -rf ${shellQuote(target)}`,
-      `  ditto ${shellQuote(`${mount}/Unvibe.app`)} ${shellQuote(target)}`,
-      `  xattr -cr ${shellQuote(target)} 2>/dev/null`,
-      `  codesign --verify --deep --strict ${shellQuote(target)} >/dev/null 2>&1 || codesign --force --deep --sign - ${shellQuote(target)} >/dev/null 2>&1`,
-      'fi',
-      `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
-      `open ${shellQuote(target)}`,
-      `rm -rf ${shellQuote(dir)}`,
-      '',
-    ].join('\n'), { mode: 0o700 });
+    await writeFile(script, macUpdateScript({ pid: process.pid, file, dir, mount: path.join(dir, 'mnt'), target }), { mode: 0o700 });
     spawn('/bin/bash', [script], { detached: true, stdio: 'ignore' }).unref();
   } else if (process.platform === 'win32') {
     let launched: { ok: boolean; error?: string };
