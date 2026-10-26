@@ -5,7 +5,7 @@ import { DELETE as deleteAccount, GET as accountInfo } from '../app/api/v1/accou
 import { getBillingStore } from '../src/billing/store';
 import { getStore } from '../src/data/store';
 import type { Account } from '../src/data/types';
-import { accountDeletionServices } from '../src/lib/accountDeletionServices';
+import { accountDeletionServices, vercelBlobBetaDownloads } from '../src/lib/accountDeletionServices';
 
 // DELETE /api/v1/account with the memory stores, a fake Supabase Auth admin API and a fake Blob
 // store. The SQL transaction itself is tested separately (erase_account_data, sqltest).
@@ -216,6 +216,47 @@ test('a Blob record that never reads: the account is erased, one retry gets 503,
   brokenBlob.delete(me.email);
   assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
   await assertGone(me);
+});
+
+/** Runs `work` with the real Vercel Blob cleanup, without Blob settings, under NODE_ENV `nodeEnv` (no request is made). */
+async function withUnconfiguredBlob(nodeEnv: string, work: () => Promise<void>): Promise<void> {
+  const noFetch = (async () => { throw new Error('no request expected'); }) as unknown as typeof fetch;
+  const working = services.betaDownloads;
+  services.betaDownloads = vercelBlobBetaDownloads({ NODE_ENV: nodeEnv } as unknown as NodeJS.ProcessEnv, noFetch);
+  try {
+    await work();
+  } finally {
+    services.betaDownloads = working;
+  }
+}
+
+test('in production, missing Blob settings fail the cleanup like a Blob failure: the row stays started with its email', async () => {
+  const me = await person();
+  await withUnconfiguredBlob('production', async () => {
+    await capturingErrors(async () => {
+      assert.equal((await remove(me.token)).status, 503);
+      const second = await remove(me.token);
+      assert.equal(second.status, 200);
+      assert.equal(second.body.status, 'deleted');
+      assert.match(String(second.body.message), /^Your account and app data are deleted\. We could not check for beta-download records just now; any we find, and the email address kept to find them, will be removed within 30 days\.$/);
+    });
+  });
+  assert.equal(await store.userForToken(me.token), null, 'the account is erased');
+  const deletion = await store.accountDeletion(me.userId);
+  assert.equal(deletion?.state, 'started', 'left for the sweep and the 30-day path');
+  assert.equal(deletion.betaDownloads, 'failed');
+  assert.equal(deletion.email, me.email, 'the email stays so the records can still be found');
+});
+
+test('outside production, missing Blob settings still record not_configured and finish', async () => {
+  const me = await person();
+  await withUnconfiguredBlob('development', async () => {
+    assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
+  });
+  const deletion = await store.accountDeletion(me.userId);
+  assert.equal(deletion?.state, 'done');
+  assert.equal(deletion.betaDownloads, 'not_configured');
+  assert.equal(deletion.email, undefined);
 });
 
 test('a deletion resumed more than an hour after it started logs ACCOUNT_DELETION_STALE, with no email or id', async () => {

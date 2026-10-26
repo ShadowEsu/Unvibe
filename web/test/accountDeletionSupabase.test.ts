@@ -161,9 +161,16 @@ test('beta-download records: every release of this email is deleted, nobody else
   ] }]);
 });
 
-test('beta-download records: no credentials is not_configured (and no request); any failure throws', async () => {
+test('beta-download records: no credentials is not_configured outside production (and no request); any failure throws', async () => {
   const none = fakeFetch(() => { throw new Error('no request expected'); });
-  assert.equal(await vercelBlobBetaDownloads({} as NodeJS.ProcessEnv, none.fetcher).deleteForEmail('leaving@account.test'), 'not_configured');
+  for (const nodeEnv of [undefined, 'development', 'test']) {
+    assert.equal(await vercelBlobBetaDownloads({ NODE_ENV: nodeEnv } as unknown as NodeJS.ProcessEnv, none.fetcher).deleteForEmail('leaving@account.test'), 'not_configured');
+  }
+  // In production a missing setting is a failure, so the row is not marked done with its email cleared.
+  const production = { NODE_ENV: 'production' } as unknown as NodeJS.ProcessEnv;
+  for (const env of [production, { ...production, BLOB_READ_WRITE_TOKEN: BLOB_ENV.BLOB_READ_WRITE_TOKEN }, { ...production, WAITLIST_ADMIN_TOKEN: BLOB_ENV.WAITLIST_ADMIN_TOKEN }]) {
+    await assert.rejects(vercelBlobBetaDownloads(env, none.fetcher).deleteForEmail('leaving@account.test'), /Blob is not configured/);
+  }
   assert.equal(none.seen.length, 0);
   const record = { a: { email: 'leaving@account.test', release: '1.0.0' } };
   await assert.rejects(vercelBlobBetaDownloads(BLOB_ENV, fakeBlob(record, { failList: true }).fetcher).deleteForEmail('leaving@account.test'), /Blob list failed: 503/);

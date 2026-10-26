@@ -13,7 +13,10 @@ export interface AuthIdentities {
 }
 
 export interface BetaDownloadRecords {
-  /** Deletes every record for the email. 'no_email' without an address; 'not_configured' when this deployment has no Blob credentials. Throws on any failure. */
+  /**
+   * Deletes every record for the email. 'no_email' without an address; 'not_configured' when a
+   * deployment outside production has no Blob credentials (in production that throws). Throws on any failure.
+   */
   deleteForEmail(email: string | undefined): Promise<BetaDownloadCleanup>;
 }
 
@@ -61,7 +64,13 @@ export function vercelBlobBetaDownloads(env: NodeJS.ProcessEnv = process.env, fe
       if (!target) return 'no_email';
       const token = env.BLOB_READ_WRITE_TOKEN?.trim();
       const secret = env.WAITLIST_ADMIN_TOKEN?.trim();
-      if (!token || !secret) return 'not_configured';
+      if (!token || !secret) {
+        // In production the site's records can exist even when this deployment cannot read them: a missing setting
+        // fails the step, so the row stays started with its email for the sweep and the 30-day path.
+        // Same production check as getStore (src/data/store.ts).
+        if (env.NODE_ENV === 'production') throw new Error('Blob is not configured: BLOB_READ_WRITE_TOKEN or WAITLIST_ADMIN_TOKEN is missing.');
+        return 'not_configured';
+      }
       // Same headers as the @vercel/blob SDK: the store id is the fourth part of a read-write token.
       const headers = { authorization: `Bearer ${token}`, 'x-api-version': '12', 'x-vercel-blob-store-id': token.split('_')[3] ?? '' };
       const matches: string[] = [];
