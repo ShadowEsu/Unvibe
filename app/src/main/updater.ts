@@ -144,17 +144,22 @@ function shellQuote(value: string): string {
  * would run with a different identity, and macOS drops the Accessibility permission for it.
  * Quarantine is cleared only on a copy that passed. Unvibe.app in the image must be a real folder,
  * not a symlink: a link to a validly signed bundle elsewhere (even the installed app itself) would
- * pass codesign and then be deleted and copied over.
+ * pass codesign and then be deleted and copied over. The signed app must also be the version this
+ * update is for (`version`, the release tag): an older build carries the same signature, so without
+ * this a release could roll users back to an updater without these checks. Info.plist is sealed by
+ * the signature, so once codesign passes its version can be trusted.
  */
-export function macUpdateScript(opts: { pid: number; file: string; dir: string; mount: string; target: string }): string {
-  const { pid, file, dir, mount, target } = opts;
+export function macUpdateScript(opts: { pid: number; file: string; dir: string; mount: string; target: string; version: string }): string {
+  const { pid, file, dir, mount, target, version } = opts;
   const mounted = shellQuote(`${mount}/Unvibe.app`);
+  const plist = shellQuote(`${mount}/Unvibe.app/Contents/Info.plist`);
+  const versionCheck = `[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ${plist} 2>/dev/null)" = ${shellQuote(version)} ]`;
   return [
     '#!/bin/bash',
     `while kill -0 ${pid} 2>/dev/null; do sleep 0.3; done`,
     `mkdir -p ${shellQuote(mount)}`,
     `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || { open ${shellQuote(target)}; exit 1; }`,
-    `if [ -d ${mounted} ] && [ ! -L ${mounted} ] && codesign --verify --deep --strict -R=${shellQuote(MAC_SIGNING_REQUIREMENT)} ${mounted} >/dev/null 2>&1; then`,
+    `if [ -d ${mounted} ] && [ ! -L ${mounted} ] && codesign --verify --deep --strict -R=${shellQuote(MAC_SIGNING_REQUIREMENT)} ${mounted} >/dev/null 2>&1 && ${versionCheck}; then`,
     `  rm -rf ${shellQuote(target)}`,
     `  ditto ${mounted} ${shellQuote(target)}`,
     `  xattr -cr ${shellQuote(target)} 2>/dev/null`,
@@ -203,7 +208,7 @@ export async function installUpdate(onProgress?: (pct: number) => void): Promise
 
 async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boolean; error?: string }> {
   const info = await checkForUpdate(true);
-  if (!info.available || !info.url) return { ok: false, error: 'You already have the newest Unvibe.' };
+  if (!info.available || !info.url || !info.latest) return { ok: false, error: 'You already have the newest Unvibe.' };
   if (!ASSET_HOST.test(info.url)) return { ok: false, error: 'Refusing to download an update from an unexpected address.' };
 
   const portable = portableExecutable();
@@ -244,7 +249,7 @@ async function runInstall(onProgress?: (pct: number) => void): Promise<{ ok: boo
     const bundle = macBundlePath();
     const target = bundle.endsWith('.app') && !bundle.startsWith('/Volumes/') ? bundle : '/Applications/Unvibe.app';
     const script = path.join(dir, 'update.sh');
-    await writeFile(script, macUpdateScript({ pid: process.pid, file, dir, mount: path.join(dir, 'mnt'), target }), { mode: 0o700 });
+    await writeFile(script, macUpdateScript({ pid: process.pid, file, dir, mount: path.join(dir, 'mnt'), target, version: info.latest }), { mode: 0o700 });
     spawn('/bin/bash', [script], { detached: true, stdio: 'ignore' }).unref();
   } else if (process.platform === 'win32') {
     let launched: { ok: boolean; error?: string };

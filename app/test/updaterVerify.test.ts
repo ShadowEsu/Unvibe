@@ -18,7 +18,7 @@ const RELEASE = 'https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.45';
 
 test('the macOS helper verifies the mounted app with the pinned requirement before touching the installed app, and never re-signs', () => {
   assert.equal(MAC_SIGNING_REQUIREMENT, PINNED_REQUIREMENT, 'the app pins the same requirement as install.sh');
-  const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app' });
+  const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
   const verify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/w/mnt/Unvibe.app'`);
   const remove = script.indexOf(`rm -rf '/Applications/Unvibe.app'`);
   assert.ok(verify >= 0, 'the mounted app is checked against the pinned requirement');
@@ -28,12 +28,23 @@ test('the macOS helper verifies the mounted app with the pinned requirement befo
   assert.doesNotMatch(script, /--sign/, 'the helper never re-signs');
 });
 
+test('the macOS helper only installs the version the update is for, checked after the signature and before rm', () => {
+  const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
+  const verify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/w/mnt/Unvibe.app'`);
+  const version = script.indexOf(`[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/w/mnt/Unvibe.app/Contents/Info.plist' 2>/dev/null)" = '0.1.45' ]`);
+  const remove = script.indexOf(`rm -rf '/Applications/Unvibe.app'`);
+  assert.ok(version > verify && verify >= 0 && version < remove, 'the mounted app\'s version must equal the release version, checked after the pinned codesign and before rm');
+});
+
 /**
  * Runs the generated helper with every command that could change the machine replaced by a stub
  * that logs its arguments. The installed app is a folder with a marker file in a scratch directory.
- * With `mountedApp: 'symlink'`, the image's Unvibe.app is a symlink to a bundle elsewhere.
+ * With `mountedApp: 'symlink'`, the image's Unvibe.app is a symlink to a bundle elsewhere. The image's
+ * app reports `mountedVersion`; the helper is generated for 0.1.45. PlistBuddy is called by its full
+ * path, so the script's /usr/libexec/PlistBuddy is pointed at a stub that prints the version file.
  */
-function runHelper(codesignExit: number, mountedApp: 'folder' | 'symlink' = 'folder') {
+function runHelper(opts: { codesignExit?: number; mountedApp?: 'folder' | 'symlink'; mountedVersion?: string } = {}) {
+  const { codesignExit = 0, mountedApp = 'folder', mountedVersion = '0.1.45' } = opts;
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
   const bin = path.join(root, 'bin');
   const dir = path.join(root, 'work');
@@ -49,13 +60,15 @@ if [ "$1" = "attach" ]; then
   mp=""; prev=""
   for a in "$@"; do [ "$prev" = "-mountpoint" ] && mp="$a"; prev="$a"; done
   if [ "$MOUNTED_APP" = symlink ]; then
-    mkdir -p "$ELSEWHERE"; echo NEW > "$ELSEWHERE/marker"; ln -s "$ELSEWHERE" "$mp/Unvibe.app"
+    app="$ELSEWHERE"; ln -s "$ELSEWHERE" "$mp/Unvibe.app"
   else
-    mkdir -p "$mp/Unvibe.app"; echo NEW > "$mp/Unvibe.app/marker"
+    app="$mp/Unvibe.app"
   fi
+  mkdir -p "$app/Contents"; echo NEW > "$app/marker"; echo "$MOUNTED_VERSION" > "$app/Contents/Info.plist"
 fi
 exit 0`,
     codesign: `echo "codesign $*" >> "$LOG"; exit ${codesignExit}`,
+    PlistBuddy: 'echo "PlistBuddy $*" >> "$LOG"; for a in "$@"; do f="$a"; done; exec cat "$f"',
     open: 'echo "open $*" >> "$LOG"; exit 0',
     ditto: 'echo "ditto $*" >> "$LOG"; exec cp -R "$1" "$2"',
     xattr: 'echo "xattr $*" >> "$LOG"; exit 0',
@@ -69,8 +82,9 @@ exec /bin/rm "$@"`,
   // A process that has already exited, so the helper does not wait for Unvibe to quit.
   const pid = spawnSync(process.execPath, ['-e', '0']).pid;
   const script = path.join(dir, 'update.sh');
-  writeFileSync(script, macUpdateScript({ pid, file: path.join(dir, 'Unvibe.dmg'), dir, mount: path.join(dir, 'mnt'), target }));
-  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, LOG: log, MOUNTED_APP: mountedApp, ELSEWHERE: path.join(root, 'elsewhere', 'Unvibe.app') };
+  const generated = macUpdateScript({ pid, file: path.join(dir, 'Unvibe.dmg'), dir, mount: path.join(dir, 'mnt'), target, version: '0.1.45' });
+  writeFileSync(script, generated.replaceAll('/usr/libexec/PlistBuddy', path.join(bin, 'PlistBuddy')));
+  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, LOG: log, MOUNTED_APP: mountedApp, MOUNTED_VERSION: mountedVersion, ELSEWHERE: path.join(root, 'elsewhere', 'Unvibe.app') };
   const result = spawnSync('/bin/bash', [script], { env, encoding: 'utf8' });
   const calls = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [];
   const marker = readFileSync(path.join(target, 'marker'), 'utf8').trim();
@@ -79,23 +93,33 @@ exec /bin/rm "$@"`,
 }
 
 test('a mounted app that fails the signature check leaves the installed app untouched and reopens it', { skip: process.platform === 'win32' }, () => {
-  const run = runHelper(1);
+  const run = runHelper({ codesignExit: 1 });
   assert.equal(run.marker, 'OLD', 'the installed app is untouched');
   assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
   assert.equal(run.status, 1, 'the stop is reported like the helper\'s other failures (exit 1)');
   assert.ok(!run.calls.some((c) => c.startsWith('ditto') || c.startsWith('xattr')), 'nothing is copied in');
   assert.ok(run.calls.some((c) => c.startsWith('hdiutil detach')), 'the image is detached');
 
-  const ok = runHelper(0);
+  const ok = runHelper();
   assert.equal(ok.marker, 'NEW', 'a build that passes replaces the installed app');
   assert.equal(ok.status, 0);
   assert.ok(ok.calls.includes(`codesign --verify --deep --strict -R=${PINNED_REQUIREMENT} ${ok.dir}/mnt/Unvibe.app`), 'the mounted app, not the installed one, is verified');
+  assert.ok(ok.calls.includes(`PlistBuddy -c Print :CFBundleShortVersionString ${ok.dir}/mnt/Unvibe.app/Contents/Info.plist`), 'the mounted app\'s version is read');
   assert.ok(ok.calls.includes(`open ${ok.target}`));
+});
+
+test('a validly signed app of another version is refused and the installed app is untouched', { skip: process.platform === 'win32' }, () => {
+  // codesign passes (exit 0): an older release carries the same signature.
+  const run = runHelper({ mountedVersion: '0.1.44' });
+  assert.equal(run.status, 1, 'a version other than the release\'s is refused (exit 1)');
+  assert.equal(run.marker, 'OLD', 'the installed app is untouched');
+  assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
+  assert.ok(!run.calls.some((c) => c.startsWith('ditto') || c.startsWith('xattr')), 'nothing is copied in');
 });
 
 test('a symlinked Unvibe.app in the image is refused, even when what it points at is validly signed', { skip: process.platform === 'win32' }, () => {
   // codesign passes (exit 0): the link points at a correctly signed bundle somewhere else.
-  const run = runHelper(0, 'symlink');
+  const run = runHelper({ mountedApp: 'symlink' });
   assert.equal(run.marker, 'OLD', 'a symlinked Unvibe.app leaves the installed app untouched');
   assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
   assert.equal(run.status, 1);
