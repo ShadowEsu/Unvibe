@@ -93,6 +93,8 @@ export function HowItWorks() {
             text="AI writes the code in seconds. Unvibe helps you understand every line before you ship it."
             accent={["understand", "every", "line"]}
           />
+        </div>
+        <div className="paper-wrap u-sheet">
           <div className="hiw__head">
             <p className="paper-meta">How it works</p>
             <h2 id="hiw-title" className="mt-3">Four steps, <em>one panel.</em></h2>
@@ -102,7 +104,7 @@ export function HowItWorks() {
       </section>
 
       <section className="paper-section hiw hiw--pages" aria-labelledby="pages-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <div className="hiw__head">
             <p className="paper-meta">The rest of the app</p>
             <h2 id="pages-title" className="mt-3">Where it <em>sticks.</em></h2>

@@ -1,0 +1,211 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Surface and motion system (site upgrade, agents/unvibe/site-upgrade-spec-2026-10-22.md).
+   The dusk photo is the stage; reading happens on sheets. Three elevation steps, one accent,
+   one type and spacing scale, motion tokens from ui-review-rubric §5. Loads last.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces and text (light). */
+  --u-ink: #141414;
+  --u-sheet: #fffdf6;
+  --u-card: #ffffff;
+  --u-raise: #f5f2ea;
+  --u-text: #141414;
+  --u-text-2: #3a3732;
+  --u-line: rgb(20 20 20 / 0.14);
+  --u-line-strong: #141414;
+  --u-accent: #d6f45a;
+  --u-on-accent: #141414;
+  --u-mark: #d6f45a;
+  --u-accent-ink: #3c2fb8;
+  --u-focus: #3c2fb8;
+  --u-veil: rgb(255 253 246 / 0.84);
+  --u-hover: rgb(20 20 20 / 0.06);
+  --u-cta: #141414;
+  --u-on-cta: #ffffff;
+  --u-cta-edge: #000000;
+  --u-error: #b42318;
+
+  /* Elevation: 0 hairline only, 1 sheet, 2 the one primary object per view. */
+  --u-lift-1: 0 1px 0 rgb(20 20 20 / 0.04), 0 18px 40px -22px rgb(44 22 92 / 0.45);
+  --u-lift-2: 4px 4px 0 var(--u-ink);
+  --u-lift-2-hover: 6px 6px 0 var(--u-ink);
+  --u-radius-sheet: 28px;
+  --u-radius-card: 18px;
+
+  /* Type (1.25 ratio; html is 17-18 px) and spacing. 13 px is the floor for visible labels. */
+  --u-step-3: clamp(2rem, 3.2vw, 2.75rem);
+  --u-step-2: 1.5rem;
+  --u-step-1: 1.1875rem;
+  --u-step-0: 1.0625rem;
+  --u-step--1: 0.875rem;
+  --u-step--2: max(13px, 0.76rem);
+  --u-measure: 68ch;
+  --u-space-section: clamp(64px, 9vw, 128px);
+  --u-gap-sheet: clamp(24px, 4vw, 48px);
+
+  /* Motion. Hover/press 110-160 ms, enter 280-400 ms, exit 150 ms or less. */
+  --u-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --u-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --u-dur-press: 110ms;
+  --u-dur-hover: 160ms;
+  --u-dur-enter: 320ms;
+  --u-dur-exit: 150ms;
+}
+
+/* Dark: San Francisco after sunset. The same photo under a night veil; sheets and cards are night
+   surfaces; ink outlines and the sticker offset turn paper-coloured (the brand's dark sticker). */
+.dark {
+  --u-ink: #f2eef9;
+  --u-sheet: #17121f;
+  --u-card: #201a2b;
+  --u-raise: #2a2337;
+  --u-text: #f2eef9;
+  --u-text-2: #c9c2d6;
+  --u-line: rgb(242 238 249 / 0.14);
+  --u-line-strong: #f2eef9;
+  --u-accent: #d6f45a;
+  --u-on-accent: #141414;
+  --u-mark: rgb(214 244 90 / 0.3);
+  --u-accent-ink: #c4b5fd;
+  --u-focus: #c4b5fd;
+  --u-veil: rgb(23 18 31 / 0.84);
+  --u-hover: rgb(242 238 249 / 0.08);
+  --u-cta: #f2eef9;
+  --u-on-cta: #141414;
+  --u-cta-edge: #a59eb4;
+  --u-error: #fca5a5;
+  --u-lift-1: 0 1px 0 rgb(0 0 0 / 0.25), 0 18px 40px -22px rgb(0 0 0 / 0.85);
+
+  /* The sticker system's ink and card follow the theme; fills that must stay ink use --u-cta. */
+  --v-ink: #f2eef9;
+  --v-card: #201a2b;
+  --dusk-veil: linear-gradient(180deg, rgb(12 9 20 / 0.8) 0%, rgb(12 9 20 / 0.86) 50%, rgb(12 9 20 / 0.9) 100%);
+
+  /* The older paper tokens (globals.css :root) that globals' own .dark block leaves light. */
+  --ink-muted: #d9d2e6;
+  --ink-faint: #c9c2d6;
+  --hairline: rgb(242 238 249 / 0.18);
+  --paper-raised: rgb(242 238 249 / 0.06);
+  --brand: #c4b5fd;
+  --brand-deep: #ddd3ff;
+  --brand-soft: #2d2049;
+  --brand-mist: rgb(196 181 253 / 0.12);
+  --brand-wash: rgb(196 181 253 / 0.14);
+  --glass: rgb(23 18 31 / 0.4);
+  --glass-fill: rgb(23 18 31 / 0.5);
+  --glass-edge: rgb(242 238 249 / 0.16);
+  --glass-field: rgb(23 18 31 / 0.6);
+  --key-face: #2a2337;
+  --key-edge: #4a4060;
+  --key-shade: #0c0912;
+  --key-shine: rgb(255 255 255 / 0.08);
+  --key-inset: rgb(255 255 255 / 0.06);
+  --nav-menu-fill: rgb(23 18 31 / 0.94);
+  --nav-menu-edge: rgb(242 238 249 / 0.14);
+}
+
+/* Panels that show the product UI keep the app's light look in both themes. */
+.dark .try__panel { --v-ink: #141414; --u-text: #141414; --u-text-2: #3a3732; --u-line: rgb(20 20 20 / 0.14); --u-card: #ffffff; color: #141414; }
+
+/* Lime, sky, sun and lilac fills are light in both themes, so their text, outlines and inner cards stay
+   light-theme. The about page and the two private admin views (/founder console, /waitlist) keep their own
+   light sheets in both themes (they are not part of this upgrade). */
+.dark :is(.stats-strip__item, .inv-stat--lime, .inv-stat--sky, .inv-stat--sun, .inv-stat--lilac, .inv-card span, .inv-pill, .inv-row--lead,
+  .resources-card__step, .paper-beta__os button.is-on, .try__go, .invite__form button, .invite__actions button, .fb-star.is-on, .fb-bonus,
+  .remind__row button, .pstats__tile[data-tone], .pstats__warn, .kit__btn--lime, .kit__row--head, .kit__file, .fos__card--fast, .paper-join--mac,
+  .paper-pricing .marketing-plan-card.featured, .resources-arch-node--shield, .resources-arch-node--island, .founder-about, .founder-page, .admin-shell) {
+  --v-ink: #141414; --u-text: #141414; --u-text-2: #2e2c27; --u-line: rgb(20 20 20 / 0.14); --u-card: #ffffff; --v-card: #ffffff;
+  --u-accent-ink: #3c2fb8; --u-focus: #3c2fb8;
+  --ink: #12110f; --ink-muted: #12110f; --ink-faint: #1c1a16; --brand: #6f45d2; --brand-deep: #3d2080; --brand-soft: #e8dff8;
+  --brand-mist: rgb(111 69 210 / 0.12); --brand-wash: rgb(111 69 210 / 0.1); --purple: #1c1a16; --hairline: #d4cce0;
+  --paper-raised: rgb(255 255 255 / 0.42); --glass: rgb(255 255 255 / 0.14); --glass-fill: rgb(255 255 255 / 0.16);
+  --glass-edge: rgb(255 255 255 / 0.34); --glass-field: rgb(255 255 255 / 0.22);
+  --key-face: #ebe4f6; --key-edge: #c4b6dc; --key-shade: #9d86c4; --key-shine: rgb(255 255 255 / 0.72); --key-inset: rgb(255 255 255 / 0.9);
+  --bg: 246 243 236; --surface: 255 252 247; --surface-2: 246 243 236; --line: 217 211 198; --line-strong: 184 176 160;
+  --fg: 28 26 22; --fg-muted: 92 87 78; --fg-faint: 138 132 120;
+  color: #141414;
+}
+
+/* These light buttons sit straight on the dark page, so their focus ring (drawn outside the fill) keeps the
+   dark theme's ring colour (the .dark --u-focus), not the island's ink. The same goes for GetUnvibe on the dark
+   /activate card, whose #3c2fb8 ring is 1.84:1 there (under a Try it answer it sits on the white panel and keeps it),
+   and for the closing download card on home, whose 2 px #6f45d2 ring is 2.78:1 on the dark card. */
+.dark :is(.mnav .paper-join--mac, .vhero .paper-join--mac, .kit__btn--lime, .activate-card .get-unvibe .paper-join, .paper-invite__card .paper-join):focus-visible { outline-color: #c4b5fd; }
+
+/* The founder console's headings sit straight on the page; give it the same light sheet the waitlist admin has. */
+.dark .founder-page { background: rgb(243 238 248 / 0.94); }
+
+/* globals.css paints the filled pricing button var(--purple) with white text; the dark --purple is light (2.4:1), so it keeps a deep purple. */
+.dark .pricing-button:not(.pricing-button--quiet) { background: #6d4ad6 !important; }
+
+/* The night colour under the photo: what shows before the photo loads or past an overscroll, and the
+   background axe resolves for text on the field (it can't see the photo pseudo-elements). */
+html.dark { background-color: #120d1a; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, .flexacc__title { text-wrap: balance; }
+p, li, figcaption, summary { text-wrap: pretty; }
+:is(time, .paper-beta__specs, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
+
+/* Links in running text: the underline thickens on hover. */
+main a:not([class]) {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-thickness var(--u-dur-hover) var(--u-ease);
+}
+main a:not([class]):hover { text-decoration-thickness: 2px; }
+
+/* ── Sheets: one paper surface per section; eyebrows and small copy read on it, never on the field ── */
+.u-sheet {
+  padding: clamp(24px, 4.5vw, 56px); border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
+  background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
+}
+.u-sheet .sec-head > .paper-meta, .u-sheet .hiw__head > .paper-meta { padding: 0; border-radius: 0; background: none; }
+.u-sheet .sec-head > .paper-lead { padding: 0; border-radius: 0; background: none; }
+@media (max-width: 520px) {
+  .paper-wrap.u-sheet { width: calc(100% - 1.5rem); }
+  .u-sheet { padding: 22px 16px; border-radius: 22px; }
+}
+
+/* The investor and build pages read on sheets too: their ink sat straight on the photo field at 1.8 to
+   4.4:1 in light. /investors is one long sheet; /build gets one per section (its photo band keeps white
+   type on the photo). */
+.inv, .build-page .paper-section > .paper-wrap {
+  border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
+  background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
+}
+.inv { margin: 6.5rem auto 3rem; padding: clamp(28px, 5vw, 64px); }
+.inv-hero { min-height: 0; }
+.build-page .paper-section > .paper-wrap { padding: clamp(24px, 4.5vw, 56px); }
+.build-page .paper-section > .paper-wrap .paper-center > .paper-meta { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (max-width: 520px) {
+  .inv, .build-page .paper-section > .paper-wrap { width: calc(100% - 1.5rem); padding: 22px 16px; border-radius: 22px; }
+}
+
+/* Inside a sheet, nested stickers flatten to hairline rows: one surface, one primary object per view.
+   (Install card, FAQ rows and the closing card carry vibe.css card rules marked !important.) */
+.u-sheet :is(.claude-startups, .paper-partners) { margin: 0; padding: clamp(20px, 3vw, 32px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.u-sheet .paper-partners { margin-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--u-line); }
+.u-sheet .claude-startups { padding-top: 0; }
+.u-sheet .paper-beta { width: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
+.u-sheet .paper-faq { gap: 0; max-width: none; }
+.u-sheet .paper-faq details {
+  margin: 0; padding: 1.1rem 0.25rem !important; border: 0 !important; border-bottom: 1px solid var(--u-line) !important;
+  border-radius: 0 !important; background: none !important; box-shadow: none !important;
+}
+.u-sheet .paper-faq details:first-child { border-top: 1px solid var(--u-line) !important; }
+.u-sheet .paper-faq summary::after { border-color: var(--u-line); background: var(--u-card); color: var(--u-text); }
+
+/* Two-column sheet: the heading stays in view on the left while the content scrolls on the right. */
+@media (min-width: 900px) {
+  .u-split { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 3rem; align-items: start; }
+  .u-split > .sec-head { position: sticky; top: 6rem; justify-items: start; margin: 0; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main a:not([class]) { transition: none; }
+}

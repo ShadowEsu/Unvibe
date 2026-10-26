@@ -148,6 +148,9 @@
   transform: translateY(-1px);
 }
 
+.dark .paper-center > .paper-text-link { border-color: var(--u-line); background: var(--u-card); }
+.dark .paper-center > .paper-text-link:hover { background: var(--u-raise); }
+
 .paper-center > .paper-text-link:hover::after {
   transform: translateX(3px);
 }
@@ -399,13 +402,13 @@ html[data-performance="lite"] .paper-hero > img {
   z-index: 80;
   width: min(340px, calc(100vw - 24px));
   padding: 1rem 1.1rem 1.1rem;
-  border: 1px solid rgb(255 255 255 / 0.6);
+  border: 1px solid var(--u-line);
   border-radius: 18px;
-  background: linear-gradient(155deg, rgb(255 255 255 / 0.82), rgb(255 255 255 / 0.62));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 24px 60px -20px rgb(40 20 80 / 0.55);
+  background: var(--u-veil);
+  box-shadow: var(--u-lift-1);
   backdrop-filter: blur(24px) saturate(1.7);
   -webkit-backdrop-filter: blur(24px) saturate(1.7);
-  color: var(--ink);
+  color: var(--u-text);
   animation: selIn 0.38s var(--ease-out-soft) both;
 }
 
@@ -426,9 +429,10 @@ html[data-performance="lite"] .paper-hero > img {
 .paper-footer__status kbd,
 .palette__foot kbd {
   padding: 0.1rem 0.4rem;
-  border: 1px solid rgb(18 17 15 / 0.15);
+  border: 1px solid var(--u-line);
   border-radius: 6px;
-  background: rgb(255 255 255 / 0.7);
+  background: var(--u-raise);
+  color: var(--u-text);
   font-family: var(--font-mono);
   font-size: max(13px, 0.7rem);
   font-weight: 600;
@@ -466,8 +470,8 @@ html[data-performance="lite"] .paper-hero > img {
   margin-top: 0.7rem;
   padding: 0.45rem 0.9rem;
   border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: #f7f4ee;
+  background: var(--u-cta);
+  color: var(--u-on-cta);
   font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none;
@@ -509,10 +513,11 @@ html[data-performance="lite"] .paper-hero > img {
 .palette__panel {
   width: min(36rem, 100%);
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 0.65);
+  border: 1px solid var(--u-line);
   border-radius: 20px;
-  background: linear-gradient(155deg, rgb(255 255 255 / 0.88), rgb(255 255 255 / 0.72));
-  box-shadow: inset 0 1px 0 #fff, 0 40px 90px -30px rgb(30 12 60 / 0.6);
+  background: var(--u-sheet);
+  box-shadow: var(--u-lift-1);
+  color: var(--u-text);
   backdrop-filter: blur(30px) saturate(1.8);
   -webkit-backdrop-filter: blur(30px) saturate(1.8);
   animation: selIn 0.28s var(--ease-out-soft) both;
@@ -522,10 +527,10 @@ html[data-performance="lite"] .paper-hero > img {
   width: 100%;
   padding: 1.1rem 1.25rem;
   border: 0;
-  border-bottom: 1px solid rgb(18 17 15 / 0.08);
+  border-bottom: 1px solid var(--u-line);
   outline: none;
   background: transparent;
-  color: var(--ink);
+  color: var(--u-text);
   font: 500 1.05rem var(--font-sans);
 }
 
@@ -549,22 +554,23 @@ html[data-performance="lite"] .paper-hero > img {
 }
 
 .palette__list li small {
-  color: rgb(18 17 15 / 0.55);
+  color: var(--u-text-2);
   font-size: 0.78rem;
 }
 
 .palette__list li.is-active {
-  background: var(--ink);
-  color: #f7f4ee;
+  background: var(--u-cta);
+  color: var(--u-on-cta);
 }
 
 .palette__list li.is-active small {
-  color: rgb(247 244 238 / 0.7);
+  color: inherit;
+  opacity: 0.75;
 }
 
 .palette__empty {
   justify-content: center;
-  color: rgb(18 17 15 / 0.55);
+  color: var(--u-text-2);
   cursor: default;
 }
 
@@ -572,8 +578,8 @@ html[data-performance="lite"] .paper-hero > img {
   display: flex;
   gap: 1rem;
   padding: 0.6rem 1rem;
-  border-top: 1px solid rgb(18 17 15 / 0.08);
-  color: rgb(18 17 15 / 0.6);
+  border-top: 1px solid var(--u-line);
+  color: var(--u-text-2);
   font-size: 0.72rem;
 }
 
@@ -675,12 +681,11 @@ html[data-performance="lite"] .paper-hero > img {
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.55rem 0.55rem 0.55rem 1rem;
-    border: 1px solid rgb(255 255 255 / 0.6);
+    border: 1px solid var(--u-line);
     border-radius: var(--radius-pill);
-    background: linear-gradient(150deg, rgb(255 252 248 / 0.85), rgb(255 252 248 / 0.65));
-    box-shadow: 0 16px 40px -16px rgb(40 20 80 / 0.5);
-    backdrop-filter: blur(22px) saturate(1.7);
-    -webkit-backdrop-filter: blur(22px) saturate(1.7);
+    background: var(--u-sheet);
+    color: var(--u-text);
+    box-shadow: var(--u-lift-1);
     font-size: 0.85rem;
     transform: translateY(160%);
     transition: transform 420ms var(--ease-out-soft);
@@ -693,8 +698,8 @@ html[data-performance="lite"] .paper-hero > img {
   .mobile-dl a {
     padding: 0.6rem 1.1rem;
     border-radius: var(--radius-pill);
-    background: var(--ink);
-    color: #f7f4ee;
+    background: var(--u-cta);
+    color: var(--u-on-cta);
     font-weight: 600;
     text-decoration: none;
   }
@@ -807,6 +812,11 @@ html[data-performance="lite"] .paper-hero > img {
   font-size: 0.8rem;
 }
 
+/* The theme control needs JS (the boot script adds .js); without it the page is light and the control does nothing. */
+html:not(.js) .paper-footer__theme {
+  display: none;
+}
+
 .paper-footer__dot {
   width: 7px;
   height: 7px;
@@ -814,22 +824,6 @@ html[data-performance="lite"] .paper-hero > img {
   background: #28c840;
   box-shadow: 0 0 10px rgb(40 200 64 / 0.7);
   animation: pulse-dot 2s ease-in-out infinite;
-}
-
-.paper-footer__word {
-  margin: 0 0 -0.18em;
-  font-family: var(--font-display);
-  font-size: clamp(6rem, 24vw, 22rem);
-  font-weight: 400;
-  letter-spacing: -0.05em;
-  line-height: 0.8;
-  text-align: center;
-  color: transparent;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0));
-  -webkit-background-clip: text;
-  background-clip: text;
-  user-select: none;
-  pointer-events: none;
 }
 
 .paper-log > * {
