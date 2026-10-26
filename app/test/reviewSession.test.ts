@@ -226,10 +226,10 @@ test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; a
   assert.equal(lesson(s.reviewId)?.outcome, 'understood');
 });
 
-test('review streams forward exactly the event types handled by the panel', async () => {
-  const handled = ['init', 'understood', 'status', 'consent', 'blocked', 'token', 'error', 'quizError', 'cancelled', 'question', 'graded', 'usage', 'done'];
+test('review streams forward only the token, done and error events the service sends', async () => {
+  const appOnly = ['init', 'understood', 'status', 'consent', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
   const { win, events } = panel();
-  reviewEvents = [...handled, 'unhandled', 'constructor', ''].map((type) => ({
+  reviewEvents = [...appOnly, 'token', 'error', 'unhandled', 'constructor', '', 'done'].map((type) => ({
     type, streamMarker: true, text: 'words', message: 'notice', model: 'test', mock: false,
   }));
   try {
@@ -237,5 +237,5 @@ test('review streams forward exactly the event types handled by the panel', asyn
   } finally {
     reviewEvents = null;
   }
-  assert.deepEqual(events.filter((ev) => ev.streamMarker).map((ev) => ev.type), handled);
+  assert.deepEqual(events.filter((ev) => ev.streamMarker).map((ev) => ev.type), ['token', 'error', 'done']);
 });

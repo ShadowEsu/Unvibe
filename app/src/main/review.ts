@@ -27,11 +27,9 @@ import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
 import { productEvent } from '../core/productEvents';
 
-// Keep this list aligned with the widget's event handlers, including usage outside its switch.
-const PANEL_STREAM_EVENTS: Record<WidgetEvent['type'], true> = {
-  init: true, understood: true, status: true, consent: true, blocked: true, token: true, done: true, error: true,
-  quizError: true, cancelled: true, question: true, graded: true, usage: true,
-};
+// The explanation service streams only these (web/app/api/v1/reviews/route.ts). Every other panel
+// event (init, usage, consent and the rest) comes from the app, so a stream can't send one.
+const SERVICE_STREAM_EVENTS = new Set<string>(['token', 'done', 'error']);
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
@@ -467,7 +465,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       if (done) break;
       stillStreaming();
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
-        if (!Object.hasOwn(PANEL_STREAM_EVENTS, ev.type)) continue;
+        if (!SERVICE_STREAM_EVENTS.has(ev.type)) continue;
         if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
         // The service's error text reaches the panel only as a capped string.
         send(win, session, ev.type === 'error'
