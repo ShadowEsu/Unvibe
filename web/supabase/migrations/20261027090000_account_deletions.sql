@@ -22,6 +22,7 @@
 --     a deletion row, so a session that outlives the deletion cannot re-create the account.
 --   * workspace_members_refuse_deleted_account: nobody joins a workspace owned by an account
 --     being deleted, and an account being deleted joins nothing.
+--   * stale_account_deletions: how many deletions are still started after an hour (alerting).
 --
 -- RLS is on with no policies; public, anon and authenticated have no table or function rights.
 -- Only the service role (the API) calls the functions.
@@ -34,6 +35,7 @@
 --   drop function if exists public.refuse_deleted_account();
 --   drop function if exists public.erase_account_data(uuid);
 --   drop function if exists public.begin_account_deletion(uuid, text, text);
+--   drop function if exists public.stale_account_deletions(interval);
 --   drop table if exists public.account_deletions;
 --   commit;
 
@@ -42,12 +44,15 @@ begin;
 create table if not exists public.account_deletions (
   user_id uuid primary key,
   state text not null default 'started' check (state in ('started', 'done')),
-  step text not null default 'started' check (step in ('started', 'beta_downloads', 'auth_identity', 'app_data', 'done')),
+  -- The last step that finished, in this order. The Blob cleanup runs after the account rows are
+  -- erased, so a Blob record that cannot be read never holds the account itself.
+  step text not null default 'started' check (step in ('started', 'auth_identity', 'app_data', 'beta_downloads', 'done')),
   email text,
   token_hashes text[] not null default '{}',
   -- deleted: the Blob records for the email were removed (or there were none). not_configured:
-  -- this deployment has no Blob credentials, so the records were not looked up.
-  beta_downloads text check (beta_downloads in ('deleted', 'not_configured')),
+  -- this deployment has no Blob credentials, so the records were not looked up. failed: the last
+  -- attempt threw; the row stays started, with the email, until a retry or a follow-up cleans up.
+  beta_downloads text check (beta_downloads in ('deleted', 'not_configured', 'failed')),
   started_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   done_at timestamptz,
@@ -59,7 +64,7 @@ alter table public.account_deletions enable row level security;
 revoke all on table public.account_deletions from public, anon, authenticated;
 
 create or replace function public.begin_account_deletion(p_user_id uuid, p_email text, p_token_hash text)
-returns table(state text, step text, email text)
+returns table(state text, step text, email text, beta_downloads text, started_at timestamptz)
 language plpgsql
 security invoker
 set search_path = public, pg_temp
@@ -84,11 +89,25 @@ begin
         email = coalesce(d.email, excluded.email),
         updated_at = now()
     where d.state = 'started';
-  return query select d.state, d.step, d.email from public.account_deletions d where d.user_id = p_user_id;
+  return query select d.state, d.step, d.email, d.beta_downloads, d.started_at from public.account_deletions d where d.user_id = p_user_id;
 end;
 $$;
 revoke all on function public.begin_account_deletion(uuid, text, text) from public, anon, authenticated;
 grant execute on function public.begin_account_deletion(uuid, text, text) to service_role;
+
+-- Deletions still started after p_older_than (1 hour by default): a failing step the person has not
+-- retried, or Blob cleanup left for a follow-up. The deploy check and the alert read this count.
+create or replace function public.stale_account_deletions(p_older_than interval default interval '1 hour')
+returns integer
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  select count(*)::integer from public.account_deletions d where d.state = 'started' and d.started_at < now() - p_older_than;
+$$;
+revoke all on function public.stale_account_deletions(interval) from public, anon, authenticated;
+grant execute on function public.stale_account_deletions(interval) to service_role;
 
 create or replace function public.erase_account_data(p_user_id uuid)
 returns void

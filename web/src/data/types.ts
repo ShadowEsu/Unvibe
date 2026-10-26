@@ -84,13 +84,18 @@ export interface Account {
 
 /** deleted: the Blob beta-download records for the email are gone (or there were none). */
 export type BetaDownloadCleanup = 'deleted' | 'not_configured';
+/** What account_deletions.beta_downloads records: the cleanup's answer, or failed (the step threw). */
+export type BetaDownloadOutcome = BetaDownloadCleanup | 'failed';
 
 export interface AccountDeletion {
   userId: string;
   state: 'started' | 'done';
-  step: 'started' | 'beta_downloads' | 'auth_identity' | 'app_data' | 'done';
+  /** The last step that finished, in order: started, auth_identity, app_data, beta_downloads, done. */
+  step: 'started' | 'auth_identity' | 'app_data' | 'beta_downloads' | 'done';
   /** Captured when the deletion started; cleared once it is done. */
   email?: string;
+  betaDownloads?: BetaDownloadOutcome;
+  startedAt: string;
 }
 
 /** Backend persistence + auth. Two implementations: MemoryStore (dev) and SupabaseStore (prod). */
@@ -123,7 +128,8 @@ export interface Store {
    * team workspace with other members.
    */
   beginAccountDeletion(userId: string, email: string | undefined, tokenHash: string): Promise<AccountDeletion>;
-  recordAccountDeletionStep(userId: string, step: 'beta_downloads' | 'auth_identity', betaDownloads?: BetaDownloadCleanup): Promise<void>;
+  /** Records a finished step; for the Blob step also its outcome ('failed' keeps step app_data). */
+  recordAccountDeletionStep(userId: string, step: 'auth_identity' | 'app_data' | 'beta_downloads', betaDownloads?: BetaDownloadOutcome): Promise<void>;
   /**
    * The public side in one transaction: email-keyed rows, billing and workspaces, then the user row
    * (tokens go with it). Throws TeamHasMembersError, and deletes nothing, when the account owns a

@@ -49,15 +49,16 @@ test('SupabaseStore.beginAccountDeletion maps the Teams refusal (nothing recorde
 
 test('SupabaseStore deletion state: begin, lookup by token hash, done', async () => {
   const hash = createHash('sha256').update('app-token').digest('hex');
+  const STARTED = '2026-10-27T09:00:00+00:00';
   const { fetcher, seen } = fakeFetch((request, url) => {
-    if (url.pathname === '/rest/v1/rpc/begin_account_deletion') return Response.json([{ state: 'started', step: 'started', email: 'leaving@account.test' }]);
-    if (url.pathname === '/rest/v1/account_deletions' && request.method === 'GET') return Response.json([{ user_id: USER_ID, state: 'done', step: 'done', email: null }]);
+    if (url.pathname === '/rest/v1/rpc/begin_account_deletion') return Response.json([{ state: 'started', step: 'started', email: 'leaving@account.test', beta_downloads: null, started_at: STARTED }]);
+    if (url.pathname === '/rest/v1/account_deletions' && request.method === 'GET') return Response.json([{ user_id: USER_ID, state: 'done', step: 'done', email: null, beta_downloads: 'failed', started_at: STARTED }]);
     return new Response(null, { status: 204 });
   });
   const store = new SupabaseStore(URL_BASE, 'key', fetcher);
-  assert.deepEqual(await store.beginAccountDeletion(USER_ID, 'Leaving@Account.test', hash), { userId: USER_ID, state: 'started', step: 'started', email: 'leaving@account.test' });
+  assert.deepEqual(await store.beginAccountDeletion(USER_ID, 'Leaving@Account.test', hash), { userId: USER_ID, state: 'started', step: 'started', email: 'leaving@account.test', startedAt: STARTED });
   assert.deepEqual(seen[0].body, { p_user_id: USER_ID, p_email: 'Leaving@Account.test', p_token_hash: hash });
-  assert.deepEqual(await store.accountDeletionForToken(hash), { userId: USER_ID, state: 'done', step: 'done' });
+  assert.deepEqual(await store.accountDeletionForToken(hash), { userId: USER_ID, state: 'done', step: 'done', betaDownloads: 'failed', startedAt: STARTED });
   assert.ok(decodeURIComponent(seen[1].path).includes(`token_hashes=cs.{${hash}}`), seen[1].path);
   await store.finishAccountDeletion(USER_ID);
   assert.equal(seen[2].method, 'PATCH');

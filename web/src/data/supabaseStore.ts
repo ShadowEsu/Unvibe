@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   Account,
   AccountDeletion,
-  BetaDownloadCleanup,
+  BetaDownloadOutcome,
   DeviceCode,
   EventRecord,
   IncomingEvent,
@@ -21,6 +21,8 @@ function deletionFromRow(row: Record<string, unknown>): AccountDeletion {
     state: row.state === 'done' ? 'done' : 'started',
     step: row.step as AccountDeletion['step'],
     ...(typeof row.email === 'string' && row.email ? { email: row.email } : {}),
+    ...(typeof row.beta_downloads === 'string' ? { betaDownloads: row.beta_downloads as BetaDownloadOutcome } : {}),
+    startedAt: String(row.started_at),
   };
 }
 
@@ -157,7 +159,7 @@ export class SupabaseStore implements Store {
    * one needs the table), so a missing table reads as "no deletion", and every other error throws.
    */
   private async deletionWhere(column: 'user_id' | 'token_hashes', value: string): Promise<AccountDeletion | null> {
-    const query = this.db.from('account_deletions').select('user_id, state, step, email');
+    const query = this.db.from('account_deletions').select('user_id, state, step, email, beta_downloads, started_at');
     const { data, error } = await (column === 'user_id' ? query.eq('user_id', value) : query.contains('token_hashes', [value])).maybeSingle();
     if (error?.code === 'PGRST205' || error?.code === '42P01') return null;
     if (error) throw new Error(`Could not read account deletion: ${error.message}`);
@@ -181,7 +183,7 @@ export class SupabaseStore implements Store {
     return deletionFromRow({ ...(row as Record<string, unknown>), user_id: userId });
   }
 
-  async recordAccountDeletionStep(userId: string, step: 'beta_downloads' | 'auth_identity', betaDownloads?: BetaDownloadCleanup): Promise<void> {
+  async recordAccountDeletionStep(userId: string, step: 'auth_identity' | 'app_data' | 'beta_downloads', betaDownloads?: BetaDownloadOutcome): Promise<void> {
     const { error } = await this.db.from('account_deletions')
       .update({ step, ...(betaDownloads ? { beta_downloads: betaDownloads } : {}), updated_at: new Date().toISOString() })
       .eq('user_id', userId).eq('state', 'started');

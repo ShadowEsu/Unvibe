@@ -20,13 +20,14 @@ import { PROMO_ALPHABET, promoCodeHash } from '../src/lib/promoCode';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-let blobDown = false;
-accountDeletionServices().betaDownloads = {
-  async deleteForEmail() {
-    if (blobDown) throw new Error('Blob list failed: 503');
-    return 'deleted';
+let authDown = false;
+accountDeletionServices().auth = {
+  async deleteUser() {
+    if (authDown) throw new Error('Supabase Auth delete failed: 503 no status');
+    return 'not_found';
   },
 };
+accountDeletionServices().betaDownloads = { deleteForEmail: async () => 'deleted' };
 
 const store = getStore();
 
@@ -38,13 +39,13 @@ function call(handler: (req: Request) => Promise<Response>, path: string, token:
   }));
 }
 
-/** A person whose deletion started and then stopped at the Blob step (state started). */
+/** A person whose deletion started and then stopped at the Auth step (state started, session alive). */
 async function personMidDeletion() {
   const me = await store.signIn(`midway-${randomUUID()}@account.test`);
   await store.upsertEvents(me.userId, [{ id: randomUUID(), ts: new Date().toISOString(), scope: 'selection', level: 'beginner', outcome: 'understood' }]);
-  blobDown = true;
+  authDown = true;
   const stopped = await call(deleteAccount, '/api/v1/account', me.token, { method: 'DELETE' });
-  blobDown = false;
+  authDown = false;
   assert.equal(stopped.status, 503);
   assert.equal((await store.accountDeletion(me.userId))?.state, 'started');
   return me;

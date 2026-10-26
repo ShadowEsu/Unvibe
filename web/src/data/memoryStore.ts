@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type {
   Account,
   AccountDeletion,
-  BetaDownloadCleanup,
+  BetaDownloadOutcome,
   DeviceCode,
   EventRecord,
   IncomingEvent,
@@ -29,7 +29,6 @@ interface TokenRecord {
 
 interface MemoryDeletion extends AccountDeletion {
   tokenHashes: Set<string>;
-  betaDownloads?: BetaDownloadCleanup;
 }
 
 interface MemoryData {
@@ -40,8 +39,8 @@ interface MemoryData {
   deletions: Map<string, MemoryDeletion>;
 }
 
-function publicDeletion({ userId, state, step, email }: MemoryDeletion): AccountDeletion {
-  return { userId, state, step, ...(email ? { email } : {}) };
+function publicDeletion({ tokenHashes: _tokenHashes, ...deletion }: MemoryDeletion): AccountDeletion {
+  return deletion;
 }
 
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -170,7 +169,7 @@ export class MemoryStore implements Store {
     new MemoryBillingStore().refuseTeamWithMembers(userId);
     let deletion = this.data.deletions.get(userId);
     if (!deletion) {
-      deletion = { userId, state: 'started', step: 'started', tokenHashes: new Set() };
+      deletion = { userId, state: 'started', step: 'started', startedAt: new Date().toISOString(), tokenHashes: new Set() };
       this.data.deletions.set(userId, deletion);
     }
     if (deletion.state === 'started') {
@@ -182,7 +181,7 @@ export class MemoryStore implements Store {
     return publicDeletion(deletion);
   }
 
-  async recordAccountDeletionStep(userId: string, step: 'beta_downloads' | 'auth_identity', betaDownloads?: BetaDownloadCleanup): Promise<void> {
+  async recordAccountDeletionStep(userId: string, step: 'auth_identity' | 'app_data' | 'beta_downloads', betaDownloads?: BetaDownloadOutcome): Promise<void> {
     const deletion = this.data.deletions.get(userId);
     if (deletion?.state !== 'started') return;
     deletion.step = step;

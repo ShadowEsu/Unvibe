@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { test } from 'node:test';
+import { mock, test } from 'node:test';
 import { DELETE as deleteAccount, GET as accountInfo } from '../app/api/v1/account/route';
 import { getBillingStore } from '../src/billing/store';
 import { getStore } from '../src/data/store';
@@ -32,11 +32,12 @@ services.auth = {
   },
 };
 
-/** Blob beta-download records, by email. */
+/** Blob beta-download records, by email; reading fails for the emails in brokenBlob. */
 const betaRecords = new Map<string, number>();
+const brokenBlob = new Set<string>();
 services.betaDownloads = {
   async deleteForEmail(email) {
-    if (failing('blob')) throw new Error('Blob list failed: 503');
+    if (failing('blob') || (email && brokenBlob.has(email))) throw new Error('Unsupported state or unable to authenticate data');
     if (email) betaRecords.delete(email);
     return 'deleted';
   },
@@ -93,6 +94,19 @@ async function signedIn(token: string): Promise<boolean> {
   return (await accountInfo(new Request('http://localhost/api/v1/account', { headers: { authorization: `Bearer ${token}` } }))).status === 200;
 }
 
+/** Runs `work` with console.error captured; returns each logged line. */
+async function capturingErrors(work: () => Promise<void>): Promise<string[]> {
+  const lines: string[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
+  try {
+    await work();
+  } finally {
+    console.error = original;
+  }
+  return lines;
+}
+
 async function assertGone(me: { userId: string; token: string; email: string }) {
   assert.equal(identities.has(me.userId), false, 'the Supabase Auth identity is deleted');
   assert.equal(betaRecords.has(me.email), false, 'the beta-download records are deleted');
@@ -100,7 +114,12 @@ async function assertGone(me: { userId: string; token: string; email: string }) 
   assert.equal((await store.accountInfo(me.userId)).email, undefined, 'the users row is gone');
   assert.deepEqual(await store.history(me.userId, 10), [], 'the learning events are gone');
   assert.deepEqual(await billing.existingWorkspaces(me.userId), [], 'no workspace is left (or created) for the account');
-  assert.deepEqual(await store.accountDeletion(me.userId), { userId: me.userId, state: 'done', step: 'done' }, 'done, and the email is forgotten');
+  const deletion = await store.accountDeletion(me.userId);
+  assert.ok(deletion);
+  assert.equal(deletion.state, 'done');
+  assert.equal(deletion.step, 'done');
+  assert.equal(deletion.email, undefined, 'the email is forgotten');
+  assert.equal(deletion.betaDownloads, 'deleted');
 }
 
 /** A team owned by `owner` with `member` in it, through the real invitation flow. */
@@ -140,7 +159,7 @@ test('a token that never asked for a deletion is 401, not already_deleted', asyn
   assert.equal(result.status, 401);
 });
 
-for (const step of ['begin', 'blob', 'auth', 'erase', 'finish'] as const) {
+for (const step of ['begin', 'auth', 'erase', 'blob', 'finish'] as const) {
   test(`a failure at "${step}" answers 503, reports nothing as done, and a retry with the same token completes`, async () => {
     const me = await person();
     failOnce = step;
@@ -154,9 +173,13 @@ for (const step of ['begin', 'blob', 'auth', 'erase', 'finish'] as const) {
     } else {
       assert.equal((await store.accountDeletion(me.userId))?.state, 'started');
     }
-    if (step !== 'finish') {
+    if (step === 'begin' || step === 'auth' || step === 'erase') {
       // The app token is the retry credential: it survives every failure before the transaction commits.
       assert.equal(await store.userForToken(me.token), me.userId, 'the app token still works for the retry');
+    } else {
+      // Blob and done run after the erase: the account is already gone, and the token-hash path resumes.
+      assert.equal(await store.userForToken(me.token), null);
+      assert.equal((await store.accountInfo(me.userId)).email, undefined, 'the account rows are erased');
     }
     const retry = await remove(me.token);
     assert.equal(retry.status, 200);
@@ -164,6 +187,51 @@ for (const step of ['begin', 'blob', 'auth', 'erase', 'finish'] as const) {
     await assertGone(me);
   });
 }
+
+test('a Blob record that never reads: the account is erased, one retry gets 503, the next answers deleted', async () => {
+  const me = await person();
+  brokenBlob.add(me.email);
+  const logged = await capturingErrors(async () => {
+    const first = await remove(me.token);
+    assert.equal(first.status, 503);
+    assert.match(String(first.body.message), /account and its data are deleted/);
+    assert.equal(identities.has(me.userId), false, 'the Auth identity is gone');
+    assert.equal((await store.accountInfo(me.userId)).email, undefined, 'the account rows are erased');
+    assert.equal(await store.userForToken(me.token), null);
+    const second = await remove(me.token);
+    assert.deepEqual(second.body, { ok: true, status: 'deleted' }, 'no 503 for ever');
+  });
+  const deletion = await store.accountDeletion(me.userId);
+  assert.equal(deletion?.state, 'started', 'the row stays for the follow-up');
+  assert.equal(deletion?.betaDownloads, 'failed');
+  assert.equal(deletion?.email, me.email, 'the email stays only so the records can still be found');
+  const pending = logged.find((line) => line.includes('ACCOUNT_DELETION_BLOB_PENDING'));
+  assert.ok(pending, logged.join('\n'));
+  assert.ok(!pending.includes(me.email) && !pending.includes(me.userId), 'no email or id in the log');
+  // Once Blob reads again (the follow-up), the same token finishes the deletion.
+  brokenBlob.delete(me.email);
+  assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
+  await assertGone(me);
+});
+
+test('a deletion resumed more than an hour after it started logs ACCOUNT_DELETION_STALE, with no email or id', async () => {
+  const me = await person();
+  mock.timers.enable({ apis: ['Date'], now: Date.now() - 2 * 3_600_000 });
+  failOnce = 'erase';
+  try {
+    assert.equal((await remove(me.token)).status, 503);
+  } finally {
+    mock.timers.reset();
+  }
+  const logged = await capturingErrors(async () => {
+    assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
+  });
+  const stale = logged.find((line) => line.includes('ACCOUNT_DELETION_STALE'));
+  assert.ok(stale, logged.join('\n'));
+  assert.match(stale, /"ageMinutes":1[2-9]\d/);
+  assert.ok(!stale.includes(me.email) && !stale.includes(me.userId));
+  await assertGone(me);
+});
 
 test('an identity Supabase Auth no longer has (user_not_found) counts as deleted', async () => {
   const me = await person();
