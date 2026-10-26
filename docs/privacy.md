@@ -39,8 +39,10 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   reviewed in migrations but not proven against a staging project in this run.
 - Provider retention and model-training promises depend on the selected provider contract and
   deployment settings; they must be verified before public legal copy makes those claims.
-- The desktop app sends no product analytics. Its build has no PostHog, Mixpanel or other
-  analytics client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing. The
+- The desktop app has no analytics SDK. Its build has no PostHog, Mixpanel or other analytics
+  client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing. What it does send
+  about setup is listed below (anonymous setup progress, on by default, with a switch to turn it
+  off). The
   website's Mixpanel and PostHog tracking is described on unvibe.site/privacy. Incident-response
   alerting is still not configured.
 - Without an account, each cloud explanation and the launch usage check carry a random install ID
