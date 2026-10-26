@@ -49,11 +49,17 @@ function memory(): { visitors: Map<string, number[]>; all: number[] } {
   return g.__unvibeTryMemory;
 }
 
+/** A head count PostgREST really returned: `parseInt` of a malformed content-range gives NaN, still a `number`. */
+function isCount(count: number | null): count is number {
+  return Number.isSafeInteger(count) && (count as number) >= 0;
+}
+
 /**
  * Counts this visitor's requests in the last hour and everyone's in the last day, then records this one.
- * Returns null only when the request is under both caps and was recorded. Any store error, a count the
- * store didn't return (a missing table answers a head count with no count), or a failed insert is a 503,
- * so a broken store never means no limit. Production never falls back to process memory.
+ * Returns null only when the request is under both caps and the store returned the recorded row. Any store
+ * error, a count the store didn't return or that isn't a whole number from 0 (a missing table answers a
+ * head count with no count), or an insert that didn't return its row (a bodyless answer has no error) is
+ * a 503, so a broken store never means no limit. Production never falls back to process memory.
  */
 async function reserveTry(visitor: string): Promise<Refusal | null> {
   const url = process.env.SUPABASE_URL?.trim();
@@ -66,11 +72,11 @@ async function reserveTry(visitor: string): Promise<Refusal | null> {
       db.from('try_requests').select('id', { count: 'exact', head: true }).eq('ip_hash', visitor).gte('created_at', hourAgo),
       db.from('try_requests').select('id', { count: 'exact', head: true }).gte('created_at', dayAgo),
     ]);
-    if (mine.error || all.error || typeof mine.count !== 'number' || typeof all.count !== 'number') return UNAVAILABLE;
+    if (mine.error || all.error || !isCount(mine.count) || !isCount(all.count)) return UNAVAILABLE;
     if (mine.count >= TRY_PER_IP_PER_HOUR) return HOUR_CAP;
     if (all.count >= TRY_GLOBAL_PER_DAY) return DAY_CAP;
-    const { error } = await db.from('try_requests').insert({ ip_hash: visitor });
-    return error ? UNAVAILABLE : null;
+    const row = await db.from('try_requests').insert({ ip_hash: visitor }).select('id').single();
+    return row.error || row.data?.id == null ? UNAVAILABLE : null;
   }
   if (process.env.NODE_ENV === 'production') return UNAVAILABLE;
   const now = Date.now();
