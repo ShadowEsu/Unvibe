@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { MAC_SIGNING_REQUIREMENT, macUpdateScript, prepareUpdate, verifyDownload } from '../src/main/updater';
@@ -24,7 +24,7 @@ test('the macOS helper verifies the mounted app with the pinned requirement befo
   assert.ok(verify >= 0, 'the mounted app is checked against the pinned requirement');
   assert.ok(remove >= 0);
   assert.ok(verify < remove, 'the pinned verify comes before rm -rf of the installed app');
-  assert.ok(script.indexOf('xattr') > verify, 'quarantine is cleared only after the check');
+  assert.ok(script.indexOf('ditto ') > verify, 'nothing is copied before the check');
   assert.doesNotMatch(script, /--sign/, 'the helper never re-signs');
 });
 
@@ -39,12 +39,14 @@ test('the macOS helper only installs the version the update is for, checked afte
 test('the macOS helper copies the app beside the installed one and checks the copy again before swapping it in', () => {
   const script = macUpdateScript({ pid: 4242, file: '/w/Unvibe.dmg', dir: '/w', mount: '/w/mnt', target: '/Applications/Unvibe.app', version: '0.1.45' });
   const mountVersion = script.indexOf(`[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/w/mnt/Unvibe.app/Contents/Info.plist' 2>/dev/null)" = '0.1.45' ] || refuse`);
-  const copy = script.indexOf(`ditto '/w/mnt/Unvibe.app' '/Applications/Unvibe.app.new' || refuse`);
+  const copy = script.indexOf(`ditto --noacl --noextattr --norsrc '/w/mnt/Unvibe.app' '/Applications/Unvibe.app.new' || refuse`);
+  const permissions = script.indexOf(`chmod -R u+rwX,go-w '/Applications/Unvibe.app.new' || refuse`);
   const stagedVerify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/Applications/Unvibe.app.new' >/dev/null 2>&1 || refuse`);
   const stagedVersion = script.indexOf(`[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/Applications/Unvibe.app.new/Contents/Info.plist' 2>/dev/null)" = '0.1.45' ] || refuse`);
   const swap = script.indexOf(`rm -rf '/Applications/Unvibe.app' && mv '/Applications/Unvibe.app.new' '/Applications/Unvibe.app' || refuse`);
-  assert.ok(mountVersion >= 0 && copy > mountVersion, 'the mounted app passes both checks before it is copied');
-  assert.ok(stagedVerify > copy && stagedVersion > stagedVerify, 'the staged copy is checked with the pin and the version');
+  assert.ok(mountVersion >= 0 && copy > mountVersion, 'the mounted app passes both checks before it is copied, without ACLs, extended attributes or resource forks');
+  assert.ok(permissions > copy && stagedVerify > permissions, 'only the owner can write to the copy, and that is set before it is checked');
+  assert.ok(stagedVersion > stagedVerify, 'the staged copy is checked with the pin and the version');
   assert.ok(swap > stagedVersion, 'the staged copy passes its checks before it replaces the installed app');
 });
 
@@ -76,7 +78,7 @@ if [ "$1" = "attach" ]; then
   else
     app="$mp/Unvibe.app"
   fi
-  mkdir -p "$app/Contents"; echo NEW > "$app/marker"; echo "$MOUNTED_VERSION" > "$app/Contents/Info.plist"
+  mkdir -p "$app/Contents"; echo NEW > "$app/marker"; chmod 666 "$app/marker"; echo "$MOUNTED_VERSION" > "$app/Contents/Info.plist"
 fi
 exit 0`,
     codesign: `echo "codesign $*" >> "$LOG"
@@ -88,8 +90,7 @@ exit 0`,
     ditto: `echo "ditto $*" >> "$LOG"
 for a in "$@"; do src="$dst"; dst="$a"; done
 if [ "$DITTO_FAILS" = 1 ]; then mkdir -p "$dst"; exit 1; fi
-exec cp -R "$src" "$dst"`,
-    xattr: 'echo "xattr $*" >> "$LOG"; exit 0',
+exec cp -Rp "$src" "$dst"`,
     rm: `for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
 exec /bin/rm "$@"`,
   };
@@ -115,9 +116,10 @@ exec /bin/rm "$@"`,
   const result = spawnSync('/bin/bash', [script], { env, encoding: 'utf8' });
   const calls = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [];
   const marker = readFileSync(path.join(target, 'marker'), 'utf8').trim();
+  const markerMode = statSync(path.join(target, 'marker')).mode;
   const stagedLeft = existsSync(`${target}.new`);
   rmSync(root, { recursive: true, force: true });
-  return { status: result.status, calls, marker, stagedLeft, target, dir };
+  return { status: result.status, calls, marker, markerMode, stagedLeft, target, dir };
 }
 
 test('a mounted app that fails the signature check leaves the installed app untouched and reopens it', { skip: process.platform === 'win32' }, () => {
@@ -125,7 +127,7 @@ test('a mounted app that fails the signature check leaves the installed app unto
   assert.equal(run.marker, 'OLD', 'the installed app is untouched');
   assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
   assert.equal(run.status, 1, 'the stop is reported like the helper\'s other failures (exit 1)');
-  assert.ok(!run.calls.some((c) => c.startsWith('ditto') || c.startsWith('xattr')), 'nothing is copied in');
+  assert.ok(!run.calls.some((c) => c.startsWith('ditto')), 'nothing is copied in');
   assert.ok(run.calls.some((c) => c.startsWith('hdiutil detach')), 'the image is detached');
 
   const ok = runHelper();
@@ -140,6 +142,7 @@ test('a mounted app that fails the signature check leaves the installed app unto
   assert.ok(mountVerify < copy && copy < stagedVerify, 'the copy is verified again after it is made');
   assert.ok(ok.calls.includes(`PlistBuddy -c Print :CFBundleShortVersionString ${ok.target}.new/Contents/Info.plist`), 'the copy\'s version is read');
   assert.ok(!ok.stagedLeft, 'the staged copy was moved into place');
+  assert.equal(ok.markerMode & 0o022, 0, 'a file writable by anyone in the image is writable only by its owner once installed');
 });
 
 test('a staged copy that fails its check, or a failed copy, keeps the installed app and leaves no .new', { skip: process.platform === 'win32' }, () => {
@@ -148,7 +151,6 @@ test('a staged copy that fails its check, or a failed copy, keeps the installed 
     assert.equal(run.marker, 'OLD', `${label}: the installed app is kept`);
     assert.ok(!run.stagedLeft, `${label}: no .new is left behind`);
     assert.ok(run.calls.includes(`open ${run.target}`), `${label}: the old app is opened again`);
-    assert.ok(!run.calls.some((c) => c.startsWith('xattr')), `${label}: quarantine is never cleared`);
   }
 });
 
@@ -158,7 +160,7 @@ test('a validly signed app of another version is refused and the installed app i
   assert.equal(run.status, 1, 'a version other than the release\'s is refused (exit 1)');
   assert.equal(run.marker, 'OLD', 'the installed app is untouched');
   assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
-  assert.ok(!run.calls.some((c) => c.startsWith('ditto') || c.startsWith('xattr')), 'nothing is copied in');
+  assert.ok(!run.calls.some((c) => c.startsWith('ditto')), 'nothing is copied in');
 });
 
 test('a symlinked Unvibe.app in the image is refused, even when what it points at is validly signed', { skip: process.platform === 'win32' }, () => {
@@ -167,7 +169,7 @@ test('a symlinked Unvibe.app in the image is refused, even when what it points a
   assert.equal(run.marker, 'OLD', 'a symlinked Unvibe.app leaves the installed app untouched');
   assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
   assert.equal(run.status, 1);
-  assert.ok(!run.calls.some((c) => c.startsWith('ditto') || c.startsWith('xattr')), 'nothing is copied in');
+  assert.ok(!run.calls.some((c) => c.startsWith('ditto')), 'nothing is copied in');
 });
 
 function fakeFetch(body: string | null, status = 200) {

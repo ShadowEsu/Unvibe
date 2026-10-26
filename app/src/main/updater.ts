@@ -144,12 +144,13 @@ function shellQuote(value: string): string {
  * between the check and the swap. On any failure the installed app stays as it is, the copy is
  * removed, the old app is reopened, and the script exits 1. It never re-signs: a re-signed copy
  * would run with a different identity, and macOS drops the Accessibility permission for it.
- * Quarantine is cleared only on a copy that passed. Unvibe.app in the image must be a real folder,
- * not a symlink: a link to a validly signed bundle elsewhere (even the installed app itself) would
- * pass codesign and then be copied in. The signed app must also be the version this update is for
- * (`version`, the release tag): an older build carries the same signature, so without this a
- * release could roll users back to an updater without these checks. Info.plist is sealed by the
- * signature, so once codesign passes its version can be trusted.
+ * The copy takes no ACLs, extended attributes (quarantine included) or resource forks, which the
+ * signature doesn't seal, and only its owner can write to it. Unvibe.app in the image must be a
+ * real folder, not a symlink: a link to a validly signed bundle elsewhere (even the installed app
+ * itself) would pass codesign and then be copied in. The signed app must also be the version this
+ * update is for (`version`, the release tag): an older build carries the same signature, so without
+ * this a release could roll users back to an updater without these checks. Info.plist is sealed by
+ * the signature, so once codesign passes its version can be trusted.
  */
 export function macUpdateScript(opts: { pid: number; file: string; dir: string; mount: string; target: string; version: string }): string {
   const { pid, file, dir, mount, target, version } = opts;
@@ -175,10 +176,10 @@ export function macUpdateScript(opts: { pid: number; file: string; dir: string; 
     `codesign --verify --deep --strict -R=${pin} ${mounted} >/dev/null 2>&1 || refuse`,
     `[ "$(${readVersion} ${shellQuote(`${mount}/Unvibe.app/Contents/Info.plist`)} 2>/dev/null)" = ${wanted} ] || refuse`,
     `rm -rf ${staged}`,
-    `ditto ${mounted} ${staged} || refuse`,
+    `ditto --noacl --noextattr --norsrc ${mounted} ${staged} || refuse`,
+    `chmod -R u+rwX,go-w ${staged} || refuse`,
     `codesign --verify --deep --strict -R=${pin} ${staged} >/dev/null 2>&1 || refuse`,
     `[ "$(${readVersion} ${shellQuote(`${target}.new/Contents/Info.plist`)} 2>/dev/null)" = ${wanted} ] || refuse`,
-    `xattr -cr ${staged} 2>/dev/null`,
     `rm -rf ${installed} && mv ${staged} ${installed} || refuse`,
     `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
     `open ${installed}`,
