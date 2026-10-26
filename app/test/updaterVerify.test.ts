@@ -71,7 +71,7 @@ test('built installers are checked with the pin when the identity signed them or
  * Runs the "Package (publish to release)" step's bash from the workflow as GitHub does
  * (`bash --noprofile --norc -eo pipefail`), for the matrix entry with `platformFlag` on `runnerOs`.
  * The step's env comes from the YAML; a `${{ ... }}` value is empty, as an unset secret arrives.
- * `npx` and `sudo` are stubs; `npx` logs its arguments.
+ * `npx` and `sudo` are stubs: `npx` logs its arguments and the CSC_IDENTITY_AUTO_DISCOVERY it sees.
  */
 function runPublishStep(opts: { runnerOs: 'macOS' | 'Windows'; platformFlag: '--mac' | '--win'; identity?: string }) {
   const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
@@ -91,9 +91,10 @@ function runPublishStep(opts: { runnerOs: 'macOS' | 'Windows'; platformFlag: '--
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-publish-step-test-'));
   const bin = path.join(root, 'bin');
   const calls = path.join(root, 'npx.log');
+  const seen = path.join(root, 'npx-env.log');
   mkdirSync(bin);
   const stubs: Record<string, string> = {
-    npx: `printf '%s\\n' "$*" >> "$CALLS"; exit 0`,
+    npx: `printf '%s\\n' "$*" >> "$CALLS"; printf '%s\\n' "\${CSC_IDENTITY_AUTO_DISCOVERY-unset}" >> "$SEEN"; exit 0`,
     sudo: 'exit 0',
   };
   for (const [name, stub] of Object.entries(stubs)) {
@@ -106,12 +107,13 @@ function runPublishStep(opts: { runnerOs: 'macOS' | 'Windows'; platformFlag: '--
     const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', script], {
       cwd: root,
       encoding: 'utf8',
-      env: { ...env, PATH: `${bin}:${process.env.PATH}`, CALLS: calls, RUNNER_OS: opts.runnerOs, ...(opts.identity === undefined ? {} : { UNVIBE_SIGN_IDENTITY: opts.identity }) },
+      env: { ...env, PATH: `${bin}:${process.env.PATH}`, CALLS: calls, SEEN: seen, RUNNER_OS: opts.runnerOs, ...(opts.identity === undefined ? {} : { UNVIBE_SIGN_IDENTITY: opts.identity }) },
     });
     return {
       status: result.status,
       stdout: result.stdout,
       npx: existsSync(calls) ? readFileSync(calls, 'utf8').trim().split('\n') : [],
+      autoDiscovery: existsSync(seen) ? readFileSync(seen, 'utf8').trim().split('\n') : [],
     };
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -131,6 +133,15 @@ test('a Mac publish without the stable signing identity stops before electron-bu
   const windows = runPublishStep({ runnerOs: 'Windows', platformFlag: '--win' });
   assert.equal(windows.status, 0, 'the check is Mac only');
   assert.deepEqual(windows.npx, ['electron-builder --win --publish always'], 'a Windows publish, which has no Mac identity, still reaches electron-builder');
+});
+
+test('electron-builder publishing a Mac release cannot find a signing identity on its own and re-sign the app', { skip: process.platform === 'win32' }, () => {
+  const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
+  const publish = workflow.slice(workflow.indexOf('- name: Package (publish to release)'), workflow.indexOf('        run: |', workflow.indexOf('- name: Package (publish to release)')));
+  assert.match(publish, /\n {10}CSC_IDENTITY_AUTO_DISCOVERY: "false"\n/, 'the publish step\'s env turns identity auto-discovery off');
+  const run = runPublishStep({ runnerOs: 'macOS', platformFlag: '--mac', identity: 'Unvibe Self Signed' });
+  assert.deepEqual(run.npx, ['electron-builder --mac --publish always']);
+  assert.deepEqual(run.autoDiscovery, ['false'], 'electron-builder runs with CSC_IDENTITY_AUTO_DISCOVERY=false, so the signature scripts/afterPackHook.cjs checked is the one uploaded');
 });
 
 test('the packaging hook checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {

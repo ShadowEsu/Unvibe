@@ -143,6 +143,10 @@ jobs:
           # signing identity": the app's updater and install.sh only accept the pinned certificate.
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          # scripts/afterPackHook.cjs signs the app and checks the pin before electron-builder's own
+          # signing step. If electron-builder found a signing identity on its own and signed again,
+          # the release would carry a signature that check never saw.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
         shell: bash
         run: |
           # An unset repo secret arrives as an empty string, which electron-builder misreads as a path.
