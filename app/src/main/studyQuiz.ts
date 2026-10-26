@@ -3,7 +3,7 @@
  * Network stays here; code/explanations used as context never sync as lesson bodies.
  */
 import { SseParser } from '../core/sse';
-import { explanationFailure } from '../core/serviceError';
+import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
@@ -134,7 +134,7 @@ async function collectReviewText(payload: ReviewRequestPayload, signal: AbortSig
           model = ev.model ?? model;
           mock = Boolean(ev.mock);
         }
-        if (ev.type === 'error') throw new Error(ev.message || 'The assistant could not answer.');
+        if (ev.type === 'error') throw new Error(serviceMessage(ev) || 'The assistant could not answer.');
       }
     }
     return { text: text.trim(), model, mock };

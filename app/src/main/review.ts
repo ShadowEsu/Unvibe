@@ -5,7 +5,7 @@
 import { net, type BrowserWindow } from 'electron';
 import { scanReviewPayload, hasBlocking, type SecretFinding } from '../core/secretFilter';
 import { SseParser } from '../core/sse';
-import { explanationFailure } from '../core/serviceError';
+import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
@@ -446,7 +446,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       stillStreaming();
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
         if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
-        send(win, session, ev);
+        // The service's error text reaches the panel only as a capped string.
+        send(win, session, ev.type === 'error'
+          ? { ...ev, message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' }
+          : ev);
         if (ev.type === 'done') {
           completed = true;
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });

@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
+import { serviceMessage } from '../core/serviceError';
 import { store } from './store';
 import { bakedTrialToken } from './trial';
 import { resolveBackendUrl } from './backendUrl';
@@ -120,12 +121,6 @@ async function request(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
-/** A service `message` shown to the person as plain text: trimmed and cut to 300 characters, '' when absent. */
-function serviceMessage(body: unknown): string {
-  const message = body && typeof body === 'object' && 'message' in body ? body.message : undefined;
-  return typeof message === 'string' ? message.trim().slice(0, 300) : '';
-}
-
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => ({}));
@@ -164,8 +159,7 @@ export async function claimGiftCode(token: string, code: string): Promise<{ mont
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ code }),
   });
   if (res.status === 400 || res.status === 409) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string };
-    throw new Error(body.message ?? 'That gift code could not be used.');
+    throw new Error(serviceMessage(await res.json().catch(() => null)) || 'That gift code could not be used.');
   }
   return json(res);
 }

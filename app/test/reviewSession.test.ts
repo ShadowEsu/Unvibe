@@ -21,6 +21,8 @@ const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
 let quizStatus: number | null = null;
 /** When set, the explanation service refuses with this response instead of explaining. */
 let reviewRefusal: { status: number; body: Record<string, unknown> } | null = null;
+/** When set, the explanation service streams these events instead of explaining. */
+let reviewEvents: object[] | null = null;
 
 /** A backend that explains code, answers questions differently, and writes one quiz question. */
 net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -32,7 +34,7 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
     const text = body.question
       ? `ANSWER to "${body.question}"`
       : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
-    const events = [{ type: 'token', text }, { type: 'done', model: 'test', mock: false }];
+    const events = reviewEvents ?? [{ type: 'token', text }, { type: 'done', model: 'test', mock: false }];
     return new Response(events.map((ev) => `data: ${JSON.stringify(ev)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } });
   }
   if (url.pathname === '/api/v1/comprehension') {
@@ -139,4 +141,29 @@ test('a server 402 pro_required opens the Pro upgrade panel, not the plan limit'
   assert.equal(errors[0]?.code, 'pro_required');
   assert.equal(errors[0]?.upgradePath, '/plan');
   assert.match(String(errors[0]?.message), /included with Unvibe Pro/);
+});
+
+test('the service\'s error text reaches the panel only as a capped string, streamed or refused', async () => {
+  const hostile: unknown[] = [{ html: '<img src=x onerror=alert(1)>' }, ['a'], 42, '   '];
+  const firstError = async (setup: () => void): Promise<unknown> => {
+    const { win, events } = panel();
+    setup();
+    try {
+      await runReview(win, session('intermediate'), { level: 'intermediate' });
+    } finally {
+      reviewEvents = null;
+      reviewRefusal = null;
+    }
+    return events.find((ev) => ev.type === 'error')?.message;
+  };
+  assert.equal(await firstError(() => { reviewEvents = [{ type: 'error', message: ` ${'r'.repeat(1_000)} ` }]; }), 'r'.repeat(300));
+  assert.equal(await firstError(() => { reviewRefusal = { status: 413, body: { error: 'too_long', message: 'q'.repeat(1_000) } }; }), 'q'.repeat(300));
+  for (const message of hostile) {
+    assert.equal(await firstError(() => { reviewEvents = [{ type: 'error', message }]; }), 'The explanation service could not complete that request. Please try again.', `streamed ${JSON.stringify(message)}`);
+    assert.equal(
+      await firstError(() => { reviewRefusal = { status: 429, body: { error: 'plan_limit_reached', message } }; }),
+      'You have used this plan\'s explanations for now. Open Plan & usage to see when they reset or to upgrade.',
+      `refused ${JSON.stringify(message)}`,
+    );
+  }
 });
