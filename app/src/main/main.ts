@@ -17,7 +17,6 @@ import {
   nativeImage,
   powerMonitor,
   screen,
-  session,
   shell,
   systemPreferences,
 } from 'electron';
@@ -1647,10 +1646,7 @@ app.whenReady().then(() => {
       if (panel && !panel.isDestroyed()) panel.close();
       clearPanelSessions();
     });
-    if (!result.ok) return result;
-    invalidateAppUsage();
-    // Responses fetched with the session (account, plan, gifts) may sit in the HTTP cache.
-    await session.defaultSession.clearCache().catch(() => undefined);
+    if (result.ok) invalidateAppUsage();
     return result;
   });
 });

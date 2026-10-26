@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { ChangeBrief, BriefScope } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
 import { buildAgentReview, type AgentReview } from '../../core/agentReview';
-import { reviewChecklistKey } from '../../core/reviewChecklist';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
 
@@ -218,7 +217,7 @@ function AgentReviewCard({ review, repo, busy, onExplain, onRefreshKnowledge }: 
   onExplain: () => void;
   onRefreshKnowledge: (id: string) => void;
 }) {
-  const storageKey = reviewChecklistKey(repo, review.headline);
+  const storageKey = `unvibe.agentReview.${repo}.${review.headline}`;
   const [checked, setChecked] = useState<number[]>(() => {
     try { return JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as number[]; } catch { return []; }
   });

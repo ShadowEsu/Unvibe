@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { app, safeStorage } from './electronStub';
+import { app, safeStorage, sessionCalls } from './electronStub';
 
 // Everything under userData belongs to this file only. The keychain stand-in "works" so a session and
 // an API key can be saved the way they are on a real computer.
@@ -18,7 +18,6 @@ import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
 import { flush } from '../src/main/sync';
 import type { LocalEvent } from '../src/core/learning';
-import { clearReviewChecklists, reviewChecklistKey } from '../src/core/reviewChecklist';
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
 const SETTINGS_FILE = path.join(userData, 'unvibe-settings.json');
@@ -89,6 +88,7 @@ function signedInWithData(): void {
     shortcut: 'Control+Alt+K',
     soundEffects: false,
   });
+  sessionCalls.length = 0;
 }
 
 function assertNothingCleared(): void {
@@ -101,6 +101,7 @@ function assertNothingCleared(): void {
   assert.equal(s.profileEmail, 'person@example.com');
   assert.equal(s.lastProjectRoot, path.join(userData, 'project'));
   assert.equal(s.useOwnAi, true);
+  assert.deepEqual(sessionCalls, [], 'renderer storage and the HTTP cache stay');
 }
 
 function assertClearedAndPreferencesKept(): void {
@@ -124,6 +125,12 @@ function assertClearedAndPreferencesKept(): void {
   assert.equal(s.theme, 'dark');
   assert.equal(s.shortcut, 'Control+Alt+K');
   assert.equal(s.soundEffects, false);
+  // Renderer web storage (checklists keyed by repository name) and the HTTP cache go through the
+  // session, which also removes what localStorage.removeItem would leave in LevelDB.
+  assert.deepEqual(sessionCalls, [
+    { call: 'clearStorageData', options: { storages: ['localstorage', 'indexdb', 'websql', 'filesystem', 'cookies', 'cachestorage', 'serviceworkers'] } },
+    { call: 'clearCache' },
+  ]);
 }
 
 async function deleteWith(answer: Answer) {
@@ -306,20 +313,4 @@ test('a sync answer that arrives after the session ended is not saved', { timeou
     service.restore();
     await syncing;
   }
-});
-
-test('after-agent review checklists are removed and other renderer keys stay', () => {
-  const items = new Map<string, string>([
-    [reviewChecklistKey('my-repo', 'Auth change'), '[0,1]'],
-    [reviewChecklistKey('other-repo', 'Billing'), '[2]'],
-    ['unvibe.panelTheme2', 'dark'],
-    ['unvibe.feedbackAsked', '1'],
-  ]);
-  const storage = {
-    get length() { return items.size; },
-    key: (i: number) => [...items.keys()][i] ?? null,
-    removeItem: (key: string) => { items.delete(key); },
-  };
-  clearReviewChecklists(storage);
-  assert.deepEqual([...items.keys()], ['unvibe.panelTheme2', 'unvibe.feedbackAsked']);
 });
