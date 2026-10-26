@@ -81,6 +81,7 @@ import {
 } from './backend';
 import { setBar, notify, pulseBar } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
+import { serviceMessage } from '../core/serviceError';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
 import { installHardening } from './hardening';
 import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
@@ -1331,8 +1332,8 @@ app.whenReady().then(() => {
         body: JSON.stringify({ rating, message, email, source: 'app', appVersion: app.getVersion() }),
         signal: AbortSignal.timeout(10_000),
       });
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) return { ok: false, error: body.error ?? 'Could not send feedback.' };
+      const body = (await response.json().catch(() => ({}))) as { error?: unknown };
+      if (!response.ok) return { ok: false, error: serviceMessage({ message: body.error }) || 'Could not send feedback.' };
       return { ok: true };
     } catch {
       return { ok: false, error: 'Could not reach unvibe.site. Check your connection and try again.' };
