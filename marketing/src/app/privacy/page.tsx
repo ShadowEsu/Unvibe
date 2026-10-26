@@ -90,17 +90,18 @@ export default function PrivacyPage() {
           trackers.
         </p>
         <p>
-          Without an account, the app sends a random install ID, your computer&apos;s system
-          (Mac or Windows) and the app version with each cloud explanation and with the usage
-          check it makes when it starts, so we can count your free explanations. We store, under a
-          hashed form of that ID: when the app first started, the system and the version it started
-          on (stored once and never updated), how many explanations it has used, and when it first
+          Without an account, the app sends a random install ID with each cloud explanation and with
+          the usage check it makes when it starts, so we can count your free explanations. From
+          version 0.1.44 it also sends your computer&apos;s system (Mac or Windows) and the app
+          version. We store, under a hashed form of that ID: when the app first started, the system
+          and the version it started on (from 0.1.44, stored once and never updated), how many
+          explanations it has used, and when it first
           explained the setup sample, first explained your own code, and first explained code again
           on a later day of its first week. We do not store your code or prompts with it. Signed in,
           explanations carry your sign-in token instead of the install ID.
         </p>
         <p>
-          The app also sends anonymous setup progress, one message per step the first time it
+          From version 0.1.44, the app also sends anonymous setup progress, one message per step the first time it
           happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, the
           explanation level question answered, and the question about opening Unvibe when you log in
           shown and answered yes. Each message carries the step name with the same
