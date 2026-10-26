@@ -173,6 +173,27 @@ jobs:
           "PASS  Portable exe opens and stays open"
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
 
+      # The portable run is a fresh install too (its own profile): leave it out of founder stats like
+      # the walkthrough's. Runs even if the portable check failed, since the app may have registered.
+      - name: Flag the portable exe's install as QA (Windows)
+        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != ''
+        shell: pwsh
+        env:
+          UNVIBE_ADMIN_STATS_TOKEN: ${{ secrets.UNVIBE_ADMIN_STATS_TOKEN }}
+        run: |
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          $store = "$env:RUNNER_TEMP\portable-profile\unvibe-store.json"
+          if (-not $env:UNVIBE_ADMIN_STATS_TOKEN) { 'QA install flag (portable): skipped, no token'; exit 0 }
+          if (-not (Test-Path $store)) { 'QA install flag (portable): skipped, the app wrote no store'; exit 0 }
+          try {
+            $installId = (Get-Content $store -Raw | ConvertFrom-Json -AsHashtable)['installId']
+            if (-not $installId) { 'QA install flag (portable): skipped, no installId in the store'; exit 0 }
+            $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+              -Headers @{ authorization = "Bearer $env:UNVIBE_ADMIN_STATS_TOKEN" } -ContentType 'application/json' `
+              -Body (@{ installId = $installId } | ConvertTo-Json -Compress)
+            "QA install flag (portable): $($r.StatusCode)"
+          } catch { "QA install flag (portable) failed: $($_.Exception.Message)" }
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
