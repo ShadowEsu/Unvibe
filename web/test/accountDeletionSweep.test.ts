@@ -376,15 +376,15 @@ test('a run the time budget stops still logs its counts line, with the overdue r
     if (listed) throw new Error('counted after the loop');
     return store.staleAccountDeletionCount(olderThanMs);
   };
-  // The budget's clock is driven by hand: the run is stuck on its first row until 100 ms "pass".
+  // The budget's clock is driven by hand until the first row reaches its deadline.
   mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.now() });
   let counts: SweepCounts | undefined;
   let settled = false;
   const logged: string[] = [];
   try {
-    const run = capturingLogs(async () => { counts = await sweepAccountDeletions(timed, 100); }).then((lines) => { logged.push(...lines); settled = true; });
+    const run = capturingLogs(async () => { counts = await sweepAccountDeletions(timed, 15_000); }).then((lines) => { logged.push(...lines); settled = true; });
     await reachedBlob;
-    mock.timers.tick(100);
+    mock.timers.tick(15_000);
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(settled, true, 'the run stopped at its budget while the row was still running');
     await run;
@@ -402,7 +402,7 @@ test('a run the time budget stops still logs its counts line, with the overdue r
   assert.equal(line.overdue, counts.overdue);
   assert.equal(logged.filter((entry) => entry.includes('ACCOUNT_DELETION_OVERDUE')).length, 1, logged.join('\n'));
   assert.ok(logged.every((entry) => !entry.includes(overdue.email) && !entry.includes(overdue.userId)), logged.join('\n'));
-  // The budget leaves the rows as they were; full runs finish them.
+  // Full runs finish the remaining rows.
   await sweep(`Bearer ${SECRET}`);
   await sweep(`Bearer ${SECRET}`);
   assert.equal((await store.accountDeletion(overdue.userId))?.state, 'done');
@@ -435,4 +435,50 @@ test('rows stuck before the erase move to the back of the list: a good row behin
   // The touch moves only the list order: the 1 h and 7-day clocks still count from the start.
   assert.ok(second.stale >= 11 && second.overdue >= 11, JSON.stringify(second));
   assert.equal(logged.filter((line) => line.includes('ACCOUNT_DELETION_OVERDUE')).length, 1, logged.join('\n'));
+});
+
+test('a row cut off at budget is touched and logs only a fixed line, even when the touch fails', async () => {
+  const me = await stoppedBeforeErase(false);
+  const row = await store.accountDeletion(me.userId);
+  assert.ok(row);
+  for (const touchFails of [false, true]) {
+    let touched = 0;
+    const timed = Object.create(store) as typeof store;
+    timed.staleAccountDeletions = async () => [row];
+    timed.touchAccountDeletion = async (userId) => {
+      assert.equal(userId, me.userId);
+      touched += 1;
+      if (touchFails) throw new Error('touch unavailable');
+      await store.touchAccountDeletion(userId);
+    };
+    const logged = await capturingLogs(async () => {
+      const counts = await sweepAccountDeletions(timed, 0);
+      assert.equal(counts.stoppedOnBudget, true);
+      assert.equal(counts.checked, 0);
+    });
+    assert.equal(touched, 1);
+    assert.ok(logged.includes('account deletion sweep: row cut off at budget'));
+    assert.equal(logged.some((line) => line.startsWith('account deletion sweep: moving a stuck row back failed')), touchFails);
+    assert.ok(logged.every((line) => !line.includes(me.email) && !line.includes(me.userId)));
+  }
+  await untouched(me);
+});
+
+test('a sweep starts a row only with at least 15 seconds left', async () => {
+  for (const remaining of [14_999, 15_000]) {
+    const me = await stoppedBeforeErase(false);
+    const row = await store.accountDeletion(me.userId);
+    assert.ok(row);
+    const timed = Object.create(store) as typeof store;
+    timed.staleAccountDeletions = async () => [row];
+    mock.timers.enable({ apis: ['Date'], now: Date.now() });
+    try {
+      const counts = await sweepAccountDeletions(timed, remaining);
+      assert.equal(counts.checked, remaining === 15_000 ? 1 : 0);
+      assert.equal(counts.stoppedOnBudget, remaining < 15_000);
+      assert.equal(identities.has(me.userId), remaining < 15_000);
+    } finally {
+      mock.timers.reset();
+    }
+  }
 });

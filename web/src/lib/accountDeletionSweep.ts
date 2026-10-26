@@ -92,8 +92,8 @@ async function retryDeletion(store: Store, deletion: AccountDeletion): Promise<S
 /**
  * Counts the stale and overdue rows, retries the stale deletions until the time budget runs out, then
  * counts again, and logs one ACCOUNT_DELETION_SWEEP counts line on every run (plus
- * ACCOUNT_DELETION_OVERDUE when any row is overdue). A row cut off by the budget is left as it is:
- * every step can run again, so a later run finishes it. Listing or counting errors throw.
+ * ACCOUNT_DELETION_OVERDUE when any row is overdue). A row cut off by the budget moves to the
+ * back of the list: every step can run again, so a later run finishes it. Listing or counting errors throw.
  */
 export async function sweepAccountDeletions(store: Store, budgetMs: number = SWEEP_TIME_BUDGET_MS): Promise<SweepCounts> {
   const deadline = Date.now() + budgetMs;
@@ -109,9 +109,13 @@ export async function sweepAccountDeletions(store: Store, budgetMs: number = SWE
   let stoppedOnBudget = false;
   for (const deletion of rows) {
     const left = deadline - Date.now();
-    const run = left > 0 ? await within(retryDeletion(store, deletion), left) : 'out_of_time';
+    const run = left >= 15_000 ? await within(retryDeletion(store, deletion), left) : 'out_of_time';
     if (run === 'out_of_time') {
       stoppedOnBudget = true;
+      await store.touchAccountDeletion(deletion.userId).catch((error: unknown) => {
+        console.error('account deletion sweep: moving a stuck row back failed', errorSummary(error));
+      });
+      console.error('account deletion sweep: row cut off at budget');
       break;
     }
     checked += 1;
