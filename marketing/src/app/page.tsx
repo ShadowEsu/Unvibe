@@ -34,7 +34,7 @@ export default function HomePage() {
       <HowItWorks />
 
       <section className="paper-section" aria-label="What Unvibe can explain">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <ScrollSyncedList
             prefix="Select it, and Vibe explains"
             items={["a React hook.", "a SQL query.", "a regex.", "a shell script.", "the diff your agent just wrote."]}
@@ -43,7 +43,7 @@ export default function HomePage() {
       </section>
 
       <section className="paper-section" id="try-it" aria-labelledby="try-it-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <div className="sec-head">
             <p className="paper-meta">Try it here</p>
             <h2 id="try-it-title">Paste code. <em>Vibe explains it.</em></h2>
@@ -57,7 +57,7 @@ export default function HomePage() {
       </section>
 
       <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet">
           <div className="sec-head">
             <p className="paper-meta">Download</p>
             <h2 id="install-title">Free for <em>Mac and Windows.</em></h2>
@@ -70,7 +70,7 @@ export default function HomePage() {
       <BackingStrip />
 
       <section className="paper-section" aria-labelledby="faq-title">
-        <div className="paper-wrap">
+        <div className="paper-wrap u-sheet u-split">
           <div className="sec-head">
             <p className="paper-meta">Questions</p>
             <h2 id="faq-title">Short <em>answers.</em></h2>

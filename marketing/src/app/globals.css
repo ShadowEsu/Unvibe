@@ -994,10 +994,13 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .product-story__visual { min-height: 270px; margin: 12px; }
 }
 
-/* Public site is paper. Keep html.dark harmless if a leftover class appears. */
-html,
-html.dark {
+/* Light by default; html.dark (set before paint from the stored choice or the system) is the night theme. */
+html {
   color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 html body,

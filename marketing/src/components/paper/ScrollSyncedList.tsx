@@ -10,8 +10,9 @@ interface ScrollSyncedListProps {
 
 /**
  * A fixed prefix beside a list that scrolls normally; the line nearest the middle of the
- * screen is underlined. Every line stays fully opaque, including inactive lines.
- * No scroll snapping or hijacking; reduced motion and lite devices skip the scroll work.
+ * screen gets a text-selection highlight, the way you select code before pressing the shortcut.
+ * Every line stays fully opaque. No scroll snapping or hijacking; reduced motion and lite
+ * devices skip the scroll work.
  */
 export function ScrollSyncedList({ prefix, items }: ScrollSyncedListProps) {
   const listRef = useRef<HTMLUListElement>(null);
@@ -54,7 +55,7 @@ export function ScrollSyncedList({ prefix, items }: ScrollSyncedListProps) {
     <div className="ssync">
       <p className="ssync__prefix">{prefix}</p>
       <ul ref={listRef} className="ssync__list">
-        {items.map((item) => <li key={item}>{item}</li>)}
+        {items.map((item) => <li key={item}><span>{item}</span></li>)}
       </ul>
     </div>
   );
