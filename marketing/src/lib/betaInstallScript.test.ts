@@ -2,7 +2,7 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
@@ -26,9 +26,10 @@ const PINNED_REQUIREMENT = 'identifier "com.unvibe.app" and certificate leaf = H
 
 /**
  * Every external command the Mac script could use to change the machine is replaced by a stub
- * that only logs its arguments, one log line per call: the command name, then each argument after a
- * \x1f separator, so argument boundaries survive. `rm` forwards to the real one except for anything
- * under /Applications, so a regression can never delete an installed copy while the test runs.
+ * that logs its arguments, one log line per call: the command name, then each argument after a
+ * \x1f separator, so argument boundaries survive. The run tests point the script's DEST at a folder in
+ * the test directory, so `rm`, `mv` and `ditto` (as `cp -R`) do their real work there. Each of them
+ * does nothing for anything under /Applications, so a regression can never touch an installed copy.
  */
 const STUBS: Record<string, string> = {
   uname: `[ "$1" = "-m" ] && echo arm64 || echo Darwin`,
@@ -82,8 +83,16 @@ for a in "$@"; do [ "$a" = "-R=$FIXTURE_PIN" ] && pinned=0; done
 exit "\${FIXTURE_CODESIGN_EXIT:-0}"`,
   rm: `for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
 exec /bin/rm "$@"`,
-  ditto: `exit "\${FIXTURE_DITTO_EXIT:-0}"`,
-  mv: "exit 0",
+  // FIXTURE_DITTO_EXIT other than 0 leaves a partial copy behind and fails, like a full disk.
+  ditto: `if [ "\${FIXTURE_DITTO_EXIT:-0}" != 0 ]; then mkdir -p "$2"; exit "$FIXTURE_DITTO_EXIT"; fi
+for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
+exec cp -R "$1" "$2"`,
+  // FIXTURE_MV_FAIL makes any mv whose source ends with it fail, as a rename refused by the system would.
+  mv: `if [ -n "$FIXTURE_MV_FAIL" ]; then
+  case "$1" in *"$FIXTURE_MV_FAIL") echo "mv: rename $1 to $2: Operation not permitted" >&2; exit 1 ;; esac
+fi
+for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
+exec /bin/mv "$@"`,
   osascript: "exit 0",
   pkill: "exit 0",
   open: "exit 0",
@@ -102,9 +111,21 @@ describe("Mac install script, run with bash against stubs", () => {
   let dir = "";
   let dmg = "";
   let dmgSha = "";
+  /** Stands in for /Applications. */
+  let target = "";
+  let DEST = "";
+  let STAGED = "";
+  let OLD = "";
+  const OLD_VERSION = "0.1.43";
+  /** Makes every folder writable again, so a read-only fixture can be deleted. */
+  const unlock = (folder: string) => spawnSync("chmod", ["-R", "u+w", folder]);
 
   before(() => {
     dir = mkdtempSync(path.join(tmpdir(), "unvibe-install-test-"));
+    target = path.join(dir, "Applications");
+    DEST = path.join(target, "Unvibe.app");
+    STAGED = `${DEST}.new`;
+    OLD = `${DEST}.old`;
     const bin = path.join(dir, "bin");
     spawnSync("mkdir", ["-p", bin]);
     for (const [name, body] of Object.entries(STUBS)) {
@@ -112,20 +133,54 @@ describe("Mac install script, run with bash against stubs", () => {
       writeFileSync(file, `#!/bin/bash\n{ printf '%s' "${name}"; for a in "$@"; do printf '\\x1f%s' "$a"; done; printf '\\n'; } >> "$STUB_LOG"\n${body}\n`);
       chmodSync(file, 0o755);
     }
-    // install.sh calls PlistBuddy by its absolute path (the text test pins it); the copy under test calls the stub.
-    writeFileSync(path.join(dir, "install.sh"), betaInstallScript().replaceAll("/usr/libexec/PlistBuddy", "PlistBuddy"));
+    // The copy under test calls the PlistBuddy stub and installs into the test folder; the text tests pin
+    // the real PlistBuddy path and DEST.
+    const script = betaInstallScript()
+      .replaceAll("/usr/libexec/PlistBuddy", "PlistBuddy")
+      .replace(`DEST="/Applications/Unvibe.app"`, `DEST="${DEST}"`);
+    writeFileSync(path.join(dir, "install.sh"), script);
     dmg = path.join(dir, "fixture.dmg");
     writeFileSync(dmg, "not really a disk image");
     dmgSha = createHash("sha256").update(readFileSync(dmg)).digest("hex");
   });
 
-  after(() => rmSync(dir, { recursive: true, force: true }));
+  after(() => {
+    unlock(dir);
+    rmSync(dir, { recursive: true, force: true });
+  });
 
-  /** Fixture knobs: the pinned verify's exit code, a symlinked Unvibe.app, ditto's exit code and the app's version. */
+  /**
+   * Fixture knobs: the pinned verify's exit code, a symlinked Unvibe.app, ditto's exit code, the mounted app's
+   * version, a failing mv, and what is installed before the run: nothing, version 0.1.43 (the default), 0.1.43
+   * with a read-only nested folder, or whatever the previous run left ("keep").
+   */
   function run(
     sums: string | null,
-    fixture: { codesignExit?: number; appLink?: boolean; dittoExit?: number; appVersion?: string } = {},
+    fixture: {
+      codesignExit?: number;
+      appLink?: boolean;
+      dittoExit?: number;
+      appVersion?: string;
+      mvFail?: string;
+      installed?: "none" | "old" | "readonly" | "keep";
+    } = {},
   ): Run {
+    const installed = fixture.installed ?? "old";
+    if (installed !== "keep") {
+      unlock(target);
+      rmSync(target, { recursive: true, force: true });
+      mkdirSync(target);
+      if (installed !== "none") {
+        mkdirSync(path.join(DEST, "Contents", "Resources"), { recursive: true });
+        writeFileSync(path.join(DEST, "Contents", "Info.plist"), OLD_VERSION);
+      }
+      if (installed === "readonly") {
+        const locked = path.join(DEST, "Contents", "Resources", "locked");
+        mkdirSync(locked);
+        writeFileSync(path.join(locked, "owned-by-someone-else"), "x");
+        chmodSync(locked, 0o555);
+      }
+    }
     const log = path.join(dir, `calls-${Math.random().toString(36).slice(2)}.log`);
     const sumsFile = path.join(dir, "SHA256SUMS-mac.txt");
     rmSync(sumsFile, { force: true });
@@ -145,22 +200,31 @@ describe("Mac install script, run with bash against stubs", () => {
         FIXTURE_APP_LINK: fixture.appLink ? "1" : "0",
         FIXTURE_DITTO_EXIT: String(fixture.dittoExit ?? 0),
         FIXTURE_APP_VERSION: fixture.appVersion ?? INSTALLED_VERSION,
+        FIXTURE_MV_FAIL: fixture.mvFail ?? "",
       },
     });
     const calls = readFileSync(log, "utf8").split("\n").filter(Boolean).map((line) => line.split("\x1f"));
     return { status: result.status, output: `${result.stdout}${result.stderr}`, calls };
   }
 
-  const DEST = "/Applications/Unvibe.app";
-  const STAGED = `${DEST}.new`;
-  const touchesApplications = (c: Call) => c.slice(1).some((a) => a.startsWith("/Applications"));
+  /** The version of the app at DEST after the run, or null when there is none. */
+  function installedVersion(): string | null {
+    try {
+      return readFileSync(path.join(DEST, "Contents", "Info.plist"), "utf8");
+    } catch {
+      return null;
+    }
+  }
+
+  const touchesTarget = (c: Call) => c.slice(1).some((a) => a.startsWith(target));
   const removesInstall = (c: Call) => c[0] === "rm" && c.includes(DEST);
 
   function assertNothingInstalled(r: Run) {
     for (const cmd of ["ditto", "mv", "osascript", "pkill", "open", "xattr"]) {
       assert.equal(named(r.calls, cmd).length, 0, `${cmd} must not run: ${show(r.calls)}`);
     }
-    assert.ok(!named(r.calls, "rm").some(touchesApplications), "must not remove anything in /Applications");
+    assert.ok(!named(r.calls, "rm").some(touchesTarget), "must not remove anything in Applications");
+    assert.equal(installedVersion(), OLD_VERSION, "the installed app is unchanged");
     assert.ok(!named(r.calls, "codesign").some((c) => c.includes("--sign")), "must not re-sign");
     assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   }
@@ -223,7 +287,7 @@ describe("Mac install script, run with bash against stubs", () => {
     assertNothingInstalled(r);
   });
 
-  it("copies exactly the checked app next to the installed one, then swaps it in, all after the signature check", () => {
+  it("copies exactly the checked app next to the installed one, moves the old one aside, then moves the copy in", () => {
     const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`);
     assert.equal(r.status, 0, r.output);
     const app = `${mountPointOf(r)}/Unvibe.app`;
@@ -231,27 +295,63 @@ describe("Mac install script, run with bash against stubs", () => {
     const verify = assertOnePinnedVerify(r);
     assert.equal(verify[verify.length - 1], app, "codesign checks the app on the mounted image");
     const checkedAt = r.calls.indexOf(verify);
+    assert.ok(!r.calls.some(removesInstall), `the installed app is never deleted in place, only moved aside: ${show(r.calls)}`);
     const dittos = named(r.calls, "ditto");
-    assert.equal(dittos.length, 1, `exactly one ditto: ${show(r.calls)}`);
+    assert.deepEqual(dittos, [["ditto", app, STAGED]], "ditto copies exactly the checked app next to the installed one");
     const copiedAt = r.calls.indexOf(dittos[0]);
-    const removedAt = r.calls.findIndex(removesInstall);
-    assert.ok(removedAt > copiedAt, `the installed app is removed only after the new copy is complete: ${show(r.calls)}`);
-    assert.deepEqual(dittos[0], ["ditto", app, STAGED], "ditto copies exactly the checked app next to the installed one");
     assert.ok(copiedAt > checkedAt, "the copy starts after codesign");
     const versionReads = named(r.calls, "PlistBuddy");
     assert.deepEqual(versionReads, [["PlistBuddy", "-c", "Print :CFBundleShortVersionString", `${app}/Contents/Info.plist`]], "reads the mounted app's version");
     const versionAt = r.calls.indexOf(versionReads[0]);
-    const firstRemoveAt = r.calls.findIndex((c) => c[0] === "rm" && touchesApplications(c));
-    assert.ok(versionAt > checkedAt && versionAt < firstRemoveAt, "the version is read after codesign and before anything in /Applications is removed");
-    assert.deepEqual(
-      named(r.calls, "rm").filter(touchesApplications),
-      [["rm", "-rf", STAGED], ["rm", "-rf", DEST]],
-      "a leftover copy is cleared before copying; the installed app is removed only for the swap",
-    );
+    const firstRemoveAt = r.calls.findIndex((c) => c[0] === "rm" && touchesTarget(c));
+    assert.ok(versionAt > checkedAt && versionAt < firstRemoveAt, "the version is read after codesign and before anything in Applications is removed");
     const moves = named(r.calls, "mv");
-    assert.deepEqual(moves, [["mv", STAGED, DEST]], "the complete copy is moved into place");
-    assert.ok(r.calls.indexOf(moves[0]) > removedAt, "mv runs after the old app is removed");
+    assert.deepEqual(moves, [["mv", DEST, OLD], ["mv", STAGED, DEST]], "the old app is moved aside, then the copy is moved in");
+    const removes = named(r.calls, "rm").filter(touchesTarget);
+    assert.deepEqual(removes, [["rm", "-rf", STAGED], ["rm", "-rf", OLD], ["rm", "-rf", OLD]], "clears a leftover copy and a leftover .old, and deletes the old app last");
+    const [asideAt, inAt, lastRemoveAt] = [r.calls.indexOf(moves[0]), r.calls.indexOf(moves[1]), r.calls.lastIndexOf(removes[2])];
+    assert.ok(copiedAt < asideAt && asideAt < inAt && inAt < lastRemoveAt, `copy, move aside, move in, then delete the old app: ${show(r.calls)}`);
+    assert.equal(installedVersion(), INSTALLED_VERSION, "the new version is in place");
+    assert.deepEqual(readdirSync(target), ["Unvibe.app"], "no .new or .old is left behind");
     assert.deepEqual(named(r.calls, "open"), [["open", DEST]], "opens the installed app");
+  });
+
+  it("installs when no Unvibe is installed yet, with nothing to move aside", () => {
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { installed: "none" });
+    assert.equal(r.status, 0, r.output);
+    assert.deepEqual(named(r.calls, "mv"), [["mv", STAGED, DEST]], "only the copy is moved");
+    assert.equal(installedVersion(), INSTALLED_VERSION, "the new version is in place");
+    assert.deepEqual(readdirSync(target), ["Unvibe.app"], "nothing else is left behind");
+  });
+
+  it(
+    "installs over an old app it can't fully delete, and renames that leftover on the next run",
+    { skip: process.getuid?.() === 0 ? "root can delete a read-only folder" : false },
+    () => {
+      const first = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { installed: "readonly" });
+      assert.equal(first.status, 0, `installs although the old app has a read-only nested folder: ${first.output}`);
+      assert.equal(installedVersion(), INSTALLED_VERSION, "the new version is in place");
+      assert.deepEqual(readdirSync(target).sort(), ["Unvibe.app", "Unvibe.app.old"], "the part of the old app it could not delete stays aside as .old");
+
+      const second = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { installed: "keep" });
+      assert.equal(second.status, 0, `installs again with an undeletable .old present: ${second.output}`);
+      assert.equal(installedVersion(), INSTALLED_VERSION, "the new version is in place");
+      const leftovers = readdirSync(target).filter((name) => name !== "Unvibe.app");
+      assert.equal(leftovers.length, 1, `one leftover: ${leftovers.join(", ")}`);
+      assert.match(leftovers[0], /^Unvibe\.app\.old\.\d+$/, "the undeletable .old was renamed, so the app was never moved inside it");
+    },
+  );
+
+  it("puts the old app back and stops when the new copy can't be moved in", () => {
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { mvFail: ".new" });
+    assert.notEqual(r.status, 0, r.output);
+    assert.equal(installedVersion(), OLD_VERSION, `the old app is back in place: ${show(r.calls)}`);
+    assert.match(r.output, /Nothing was installed, and any Unvibe you already have is unchanged\./);
+    assert.ok(r.output.includes(HELP_URL), r.output);
+    assert.deepEqual(named(r.calls, "mv"), [["mv", DEST, OLD], ["mv", STAGED, DEST], ["mv", OLD, DEST]], "moved aside, the move in failed, moved back");
+    assert.deepEqual(readdirSync(target), ["Unvibe.app"], "the copy that could not be moved in is removed");
+    assert.equal(named(r.calls, "open").length, 0, "does not open anything");
+    assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   });
 
   it("stops after the signature check, before anything is removed, when the app is not the version it installs", () => {
@@ -269,13 +369,15 @@ describe("Mac install script, run with bash against stubs", () => {
     const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, { dittoExit: 1 });
     assert.notEqual(r.status, 0, r.output);
     assert.ok(!r.calls.some(removesInstall), `the installed app is never removed: ${show(r.calls)}`);
+    assert.equal(installedVersion(), OLD_VERSION, "the installed app is unchanged");
     assert.match(r.output, /Could not copy Unvibe into Applications\. Nothing was installed, and any Unvibe you already have is unchanged\./);
     assert.ok(r.output.includes(HELP_URL), r.output);
     assert.deepEqual(
-      named(r.calls, "rm").filter(touchesApplications),
+      named(r.calls, "rm").filter(touchesTarget),
       [["rm", "-rf", STAGED], ["rm", "-rf", STAGED]],
-      "the partial copy is removed, and nothing else in /Applications",
+      "the partial copy is removed, and nothing else in Applications",
     );
+    assert.deepEqual(readdirSync(target), ["Unvibe.app"], "no partial copy is left behind");
     for (const cmd of ["mv", "osascript", "pkill", "open"]) {
       assert.equal(named(r.calls, cmd).length, 0, `${cmd} must not run after a failed copy: ${show(r.calls)}`);
     }
@@ -324,7 +426,11 @@ describe("Mac install script text", () => {
     assert.ok(lines.includes(`if [ "$appVersion" != "$VERSION" ]; then`), "stops unless it is exactly VERSION");
   });
 
-  it("checks the signature, then copies next to the installed app, and only then removes it and moves the copy in", () => {
+  it("installs into /Applications/Unvibe.app", () => {
+    assert.ok(script.split("\n").includes(`DEST="/Applications/Unvibe.app"`));
+  });
+
+  it("checks the signature and version, copies next to the installed app, moves it aside, moves the copy in, then deletes the old one", () => {
     const at = (text: string) => {
       const index = script.indexOf(text);
       assert.ok(index > 0, `the script contains ${text}`);
@@ -335,13 +441,20 @@ describe("Mac install script text", () => {
     const clearAt = at(`rm -rf "$DEST.new"\nif ! ditto`);
     const copyAt = at(`if ! ditto "$mountPoint/Unvibe.app" "$DEST.new"; then`);
     const quitAt = at("osascript -e");
-    const swapAt = at(`if ! { rm -rf "$DEST" && mv "$DEST.new" "$DEST"; }; then`);
+    const clearOldAt = at(`rm -rf "$DEST.old" 2>/dev/null || true\nif [ -e "$DEST.old" ]`);
+    const renameOldAt = at(`mv "$DEST.old" "$DEST.old.$$" 2>/dev/null || true`);
+    const asideAt = at(`if ! mv "$DEST" "$DEST.old"; then`);
+    const inAt = at(`if ! mv "$DEST.new" "$DEST"; then`);
+    const backAt = at(`if ! mv "$DEST.old" "$DEST"; then`);
+    const deleteOldAt = script.lastIndexOf(`rm -rf "$DEST.old" 2>/dev/null || true`);
     assert.ok(verifyAt < versionAt, "the version is checked after the signature");
     assert.ok(versionAt < clearAt, "the version is checked before anything in /Applications is removed");
     assert.ok(clearAt < copyAt, "a leftover copy is cleared before copying");
     assert.ok(copyAt < quitAt, "the copy is complete before the running app is closed");
-    assert.ok(quitAt < swapAt, "the installed app is removed only for the swap, after the copy");
-    assert.equal(script.split(`rm -rf "$DEST"`).length, 2, `exactly one rm of the installed app`);
+    assert.ok(quitAt < clearOldAt && clearOldAt < renameOldAt && renameOldAt < asideAt, "a leftover .old is cleared or renamed before the app is moved aside");
+    assert.ok(asideAt < inAt && inAt < backAt, "moved aside, then the copy moved in, with a move back if that fails");
+    assert.ok(backAt < deleteOldAt, "the old app is deleted last");
+    assert.doesNotMatch(script, /rm -rf "\$DEST"(?!\.)/, "the installed app is never deleted in place");
   });
 
   it("discloses the installed count near the top and still sends it", () => {

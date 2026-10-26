@@ -120,10 +120,35 @@ sleep 1
 pkill -x Unvibe >/dev/null 2>&1 || true
 
 echo "Installing to Applications…"
-if ! { rm -rf "$DEST" && mv "$DEST.new" "$DEST"; }; then
-  rm -rf "$DEST.new"
-  stop "Could not replace the Unvibe in Applications. Run this installer again."
+# Move the installed app aside rather than deleting it first: a delete that fails halfway (files another
+# admin's install left owned by root, say) would leave half an app and no new one. A leftover .old that
+# can't be deleted is renamed, so the installed app is never moved inside it.
+rm -rf "$DEST.old" 2>/dev/null || true
+if [ -e "$DEST.old" ] || [ -L "$DEST.old" ]; then
+  mv "$DEST.old" "$DEST.old.$$" 2>/dev/null || true
 fi
+if [ -e "$DEST.old" ] || [ -L "$DEST.old" ]; then
+  rm -rf "$DEST.new" 2>/dev/null || true
+  stop "Could not clear $DEST.old. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+if [ -e "$DEST" ] || [ -L "$DEST" ]; then
+  if ! mv "$DEST" "$DEST.old"; then
+    rm -rf "$DEST.new" 2>/dev/null || true
+    stop "Could not move the installed Unvibe aside. Nothing was installed, and any Unvibe you already have is unchanged."
+  fi
+fi
+if ! mv "$DEST.new" "$DEST"; then
+  if [ -e "$DEST.old" ] || [ -L "$DEST.old" ]; then
+    if ! mv "$DEST.old" "$DEST"; then
+      rm -rf "$DEST.new" 2>/dev/null || true
+      stop "Could not move the new Unvibe into place or put the old one back. Your previous Unvibe is at $DEST.old."
+    fi
+  fi
+  rm -rf "$DEST.new" 2>/dev/null || true
+  stop "Could not move the new Unvibe into place. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+# The old copy goes last. If it can't be deleted, the new app is already in place, and the next run renames it.
+rm -rf "$DEST.old" 2>/dev/null || true
 
 echo "Opening Unvibe…"
 open "$DEST"
