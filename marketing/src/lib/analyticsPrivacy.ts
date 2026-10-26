@@ -120,16 +120,42 @@ function sentFromPrivatePage(properties: PropertyBag | undefined): boolean {
   return typeof url === "string" && !analyticsAllowedOnPath(pagePath(url));
 }
 
-/** PostHog `before_send`: every event, pageview, person update and replay snapshot. */
+/**
+ * PostHog heatmaps buffer clicks and mouse moves under the raw page URL whatever the capture
+ * state, and flush them every few seconds as one `$$heatmap` event from whatever page is open
+ * then. So a flush from a public page can carry the last moments on an admin or sign-in page,
+ * and URLs with codes. Keeps only public-page keys, sanitized (keys that sanitize alike are
+ * merged); null when none is left.
+ */
+function cleanHeatmapData(data: unknown): Record<string, unknown[]> | null {
+  if (!isPlainObject(data)) return null;
+  const out: Record<string, unknown[]> = {};
+  let kept = false;
+  for (const [url, points] of Object.entries(data)) {
+    if (!analyticsAllowedOnPath(pagePath(url)) || !Array.isArray(points)) continue;
+    const key = sanitizeUrl(url);
+    out[key] = [...(out[key] ?? []), ...points];
+    kept = true;
+  }
+  return kept ? out : null;
+}
+
+/** PostHog `before_send`: every event, pageview, person update, heatmap flush and replay snapshot. */
 export const posthogBeforeSend: BeforeSendFn = (event: CaptureResult | null) => {
   if (!event) return event;
   // An opt-out after the SDK started.
   if (browserTrackingDisabled()) return null;
   // Pageviews, autocapture, heatmaps and exceptions after a client navigation into an admin page.
   if (sentFromPrivatePage(event.properties)) return null;
+  const properties = sanitizeProperties(event.properties);
+  if (event.event === "$$heatmap") {
+    const heatmapData = cleanHeatmapData(properties.$heatmap_data);
+    if (!heatmapData) return null;
+    properties.$heatmap_data = heatmapData;
+  }
   return {
     ...event,
-    properties: sanitizeProperties(event.properties),
+    properties,
     ...(event.$set ? { $set: sanitizeProperties(event.$set) } : {}),
     ...(event.$set_once ? { $set_once: sanitizeProperties(event.$set_once) } : {}),
   };

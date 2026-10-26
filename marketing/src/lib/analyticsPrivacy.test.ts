@@ -146,6 +146,40 @@ describe("analytics SDK hooks", () => {
     assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: "https://unvibe.site/pricing" } }));
   });
 
+  it("a PostHog heatmap flush from a public page keeps only public-page keys, sanitized", () => {
+    // Security's PoC event: the buffer still holds the last moments on /activate and /redeem.
+    const heatmap: CaptureResult = {
+      uuid: "u7",
+      event: "$$heatmap",
+      properties: {
+        $current_url: "https://unvibe.site/",
+        $heatmap_data: {
+          "https://unvibe.site/activate?code=WXYZ-1234": [{ x: 10, y: 20, type: "click" }],
+          "https://unvibe.site/redeem?code=ABCD-EFGH-JKLM-NPQR": [{ x: 5, y: 6, type: "click" }],
+          "https://unvibe.site/?ref=REFCODE123": [{ x: 1, y: 2, type: "mousemove" }],
+          "https://unvibe.site/?ref=OTHERCODE9": [{ x: 3, y: 4, type: "click" }],
+        },
+      },
+    };
+    const sent = posthogBeforeSend(heatmap);
+    assert.ok(sent, "public-page points still go out");
+    assert.deepEqual(sent.properties.$heatmap_data, {
+      "https://unvibe.site/?ref=redacted": [{ x: 1, y: 2, type: "mousemove" }, { x: 3, y: 4, type: "click" }],
+    });
+    for (const secret of ["activate", "redeem", "code=", "REFCODE123", "OTHERCODE9"]) {
+      assert.ok(!JSON.stringify(sent).includes(secret), `heatmap still contains ${secret}`);
+    }
+    const privateOnly: CaptureResult = {
+      uuid: "u8",
+      event: "$$heatmap",
+      properties: {
+        $current_url: "https://unvibe.site/",
+        $heatmap_data: { "https://unvibe.site/activate?user_code=ABCD1234": [{ x: 1, y: 1, type: "click" }] },
+      },
+    };
+    assert.equal(posthogBeforeSend(privateOnly), null, "a flush with only private-page points is dropped");
+  });
+
   it("PostHog replay keeps no URL secrets, headers or bodies", () => {
     const entry = maskReplayNetworkEntry({
       name: `https://unvibe.site/api/unsubscribe?e=${encodeURIComponent(EMAIL)}&t=${TOKEN}`,
