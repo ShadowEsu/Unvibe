@@ -3,12 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { mock, test } from 'node:test';
 import Stripe from 'stripe';
 import { DELETE as deleteAccount } from '../app/api/v1/account/route';
-import { GET as sweepRoute } from '../app/api/v1/internal/account-deletions/sweep/route';
+import { GET as sweepRoute, maxDuration } from '../app/api/v1/internal/account-deletions/sweep/route';
 import { getBillingStore } from '../src/billing/store';
 import { getStripe } from '../src/billing/stripe';
 import { getStore } from '../src/data/store';
 import { accountDeletionServices } from '../src/lib/accountDeletionServices';
-import { SWEEP_LIMIT, sweepAccountDeletions, type SweepCounts } from '../src/lib/accountDeletionSweep';
+import { SWEEP_LIMIT, SWEEP_TIME_BUDGET_MS, sweepAccountDeletions, type SweepCounts } from '../src/lib/accountDeletionSweep';
 
 // The daily sweep with the memory store, a fake Supabase Auth admin API and a fake Blob store.
 delete process.env.SUPABASE_URL;
@@ -519,4 +519,8 @@ test('a missing Stripe subscription logs a fixed warning without its id', async 
   } finally {
     warning.mock.restore();
   }
+});
+
+test('the sweep budget leaves at least 15 seconds inside the cron route duration', () => {
+  assert.ok(SWEEP_TIME_BUDGET_MS + 15_000 <= maxDuration * 1_000);
 });
