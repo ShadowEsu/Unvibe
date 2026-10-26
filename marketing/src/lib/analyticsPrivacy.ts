@@ -258,6 +258,11 @@ export const MIXPANEL_REPLAY_MIN_MS = 3000;
  * events left from a closed tab are sent on a later load without `before_send_events`, so with
  * their URLs unsanitized. Unbatched, every event passes the hook when it is tracked. With
  * batching off the SDK never reads a queue stored by an earlier visit, so none is sent.
+ *
+ * Profile (`/engage`) and group updates go through their own hooks, not `before_send_events`.
+ * The site keeps no Mixpanel profiles, and the SDK's own profile updates carry the first referrer
+ * unsanitized, so both hooks drop every update. (`analytics.ts` never calls `identify`, which
+ * would send them, and its `$identify` event, past every hook.)
  */
 export function mixpanelPrivacyConfig() {
   return {
@@ -269,7 +274,7 @@ export function mixpanelPrivacyConfig() {
     record_mask_all_inputs: true,
     // Mixpanel's default classes plus ours.
     record_block_class: new RegExp(`^(${REPLAY_BLOCK_CLASS}|mp-block|fs-exclude|amp-block|rr-block)$`),
-    hooks: { before_send_events: mixpanelBeforeSend },
+    hooks: { before_send_events: mixpanelBeforeSend, before_send_people: () => null, before_send_groups: () => null },
   };
 }
 

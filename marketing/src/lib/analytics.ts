@@ -40,7 +40,7 @@ export type { AnalyticsEvent };
 type Props = Record<string, string | number | boolean | undefined>;
 type MixpanelClient = MixpanelReplay & MixpanelTracking & {
   init: (token: string, config: Record<string, unknown>) => void;
-  identify: (id: string) => void;
+  register: (props: Record<string, unknown>) => void;
   track: (event: string, props?: Record<string, unknown>) => void;
 };
 type PosthogClient = PosthogReplay & PosthogCapture & {
@@ -303,16 +303,22 @@ function startMixpanel(): void {
     });
 }
 
-function initMixpanel(mixpanel: MixpanelClient): void {
-  if (!MIXPANEL_BROWSER_TOKEN) return;
+/**
+ * Exported for tests (the token argument too). The distinct id is set as a super property, not
+ * with `identify`: Mixpanel sends `identify`'s `$identify` event, and the profile updates it
+ * flushes, without `before_send_events`, so the landing URL (an email link's address and token,
+ * an invite code) would go out unsanitized.
+ */
+export function initMixpanel(mixpanel: MixpanelClient, token = MIXPANEL_BROWSER_TOKEN): void {
+  if (!token) return;
   // Mixpanel for Startups Pro credits: autocapture + session replay are included.
-  mixpanel.init(MIXPANEL_BROWSER_TOKEN, {
+  mixpanel.init(token, {
     ...mixpanelPrivacyConfig(),
     persistence: "localStorage",
     track_pageview: true,
     ip: true,
   });
-  mixpanel.identify(anonId());
+  mixpanel.register({ distinct_id: anonId() });
   mixpanelClient = mixpanel;
 }
 
