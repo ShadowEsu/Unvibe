@@ -241,17 +241,32 @@ export type AccountDeletionStatus = 'deleted' | 'already_deleted';
 /**
  * DELETE /api/v1/account. Resolves only when the service says the account is gone: `deleted`, or
  * `already_deleted` when an earlier request finished but its answer was lost. Older services answer
- * `{ ok: true }` without a status, which also means deleted.
+ * `{ ok: true }` without a status, which also means deleted. Anything else throws a message for the
+ * person and the caller keeps every local file: a 409 refusal carries the service's reason, a 503 or
+ * a network failure means retry.
  */
 export async function deleteAccount(token: string): Promise<AccountDeletionStatus> {
-  const res = await request(`${BACKEND}/api/v1/account`, {
-    method: 'DELETE',
-    headers: { authorization: `Bearer ${token}` },
-  });
-  const body = await json<{ ok?: unknown; status?: unknown }>(res);
-  if (body.ok === true && (body.status === undefined || body.status === 'deleted')) return 'deleted';
-  if (body.ok === true && body.status === 'already_deleted') return 'already_deleted';
-  throw new Error('The service gave an answer Unvibe did not expect, so nothing was removed from this Mac. Try again in a minute.');
+  let res: Response;
+  try {
+    res = await request(`${BACKEND}/api/v1/account`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // The request may have reached the service; only this computer is known to be untouched.
+    throw new Error('Unvibe could not reach the service. Nothing was deleted on this computer. Try again in a minute.');
+  }
+  if (res.status === 409 || res.status === 503) {
+    const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
+    const message = typeof body?.message === 'string' ? body.message.trim() : '';
+    if (message) throw new Error(message);
+    throw new Error(res.status === 409 ? 'The service refused to delete this account. Nothing was deleted.' : 'Nothing was deleted. Try again in a minute.');
+  }
+  if (!res.ok) await json(res); // throws the usual message for 401, other 4xx and 5xx
+  const body = (await res.json().catch(() => null)) as { ok?: unknown; status?: unknown } | null;
+  if (body?.ok === true && (body.status === undefined || body.status === 'deleted')) return 'deleted';
+  if (body?.ok === true && body.status === 'already_deleted') return 'already_deleted';
+  throw new Error('The service gave an answer Unvibe did not expect, so nothing was removed from this computer. Try again in a minute.');
 }
 
 export async function signOut(token: string): Promise<void> {
