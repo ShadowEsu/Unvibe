@@ -81,13 +81,18 @@ echo "Checksum verified."
 mkdir -p "$mountPoint"
 attachOut="$(hdiutil attach -nobrowse -readonly -mountpoint "$mountPoint" "$work/Unvibe.dmg")"
 device="$(printf '%s\\n' "$attachOut" | awk '/^\\/dev\\/disk/ { print $1; exit }')"
-if [ ! -d "$mountPoint/Unvibe.app" ]; then
-  stop "The disk image did not contain Unvibe.app. Nothing was installed."
+# A symlink named Unvibe.app passes -d and the signature check (codesign checks its target, which could be
+# the installed copy), and the rm -rf below would then delete the real install. Only a real folder goes on.
+if [ ! -d "$mountPoint/Unvibe.app" ] || [ -L "$mountPoint/Unvibe.app" ]; then
+  stop "The disk image did not contain Unvibe.app as a real folder. Nothing was installed."
 fi
 # The release is self-signed ("Unvibe Self Signed", not an Apple Developer ID), and only an app signed
 # with that certificate passes: a copy re-signed by anyone else fails. If the check fails, stop rather
 # than re-sign it here: a local re-sign changes the app's identity and macOS drops its Accessibility permission.
 if ! codesign --verify --deep --strict -R='${BETA_MAC_SIGNING_REQUIREMENT}' "$mountPoint/Unvibe.app" >/dev/null 2>&1; then
+  # Who signed the copy that failed, so support can tell a certificate change from tampering.
+  echo "Signature on the downloaded app (for support):" >&2
+  codesign -dvv "$mountPoint/Unvibe.app" 2>&1 | grep Authority >&2 || true
   stop "The downloaded app failed its signature check. Nothing was installed, and any Unvibe you already have is unchanged."
 fi
 

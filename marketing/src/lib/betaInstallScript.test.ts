@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   BETA_INSTALL_ASSET,
+  BETA_MAC_SIGNING_REQUIREMENT,
   BETA_WINDOWS_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
@@ -21,8 +22,9 @@ const PINNED_REQUIREMENT = 'identifier "com.unvibe.app" and certificate leaf = H
 
 /**
  * Every external command the Mac script could use to change the machine is replaced by a stub
- * that only logs its arguments. `rm` forwards to the real one except for anything under
- * /Applications, so a regression can never delete an installed copy while the test runs.
+ * that only logs its arguments, one log line per call: the command name, then each argument after a
+ * \x1f separator, so argument boundaries survive. `rm` forwards to the real one except for anything
+ * under /Applications, so a regression can never delete an installed copy while the test runs.
  */
 const STUBS: Record<string, string> = {
   uname: `[ "$1" = "-m" ] && echo arm64 || echo Darwin`,
@@ -39,14 +41,29 @@ case "$url" in
   *SHA256SUMS-mac.txt) [ -f "$FIXTURE_SUMS" ] || exit 22; cp "$FIXTURE_SUMS" "$out" ;;
 esac
 exit 0`,
+  // FIXTURE_APP_LINK=1 mounts a disk image whose Unvibe.app is a symlink to a folder (Security F5).
   hdiutil: `if [ "$1" = "attach" ]; then
   mp=""; prev=""
   for a in "$@"; do [ "$prev" = "-mountpoint" ] && mp="$a"; prev="$a"; done
-  mkdir -p "$mp/Unvibe.app"
+  if [ "$FIXTURE_APP_LINK" = "1" ]; then
+    mkdir -p "$mp/elsewhere.app"
+    ln -s "$mp/elsewhere.app" "$mp/Unvibe.app"
+  else
+    mkdir -p "$mp/Unvibe.app"
+  fi
   echo "/dev/disk99	Apple_HFS	$mp"
 fi
 exit 0`,
-  codesign: `exit "\${FIXTURE_CODESIGN_EXIT:-0}"`,
+  // A verify passes only with the exact pinned requirement as one argument (and FIXTURE_CODESIGN_EXIT 0), so
+  // a script that gates on a plain --verify can't pass. -dvv answers like codesign's own display.
+  codesign: `if [ "$1" = "-dvv" ]; then
+  echo "Authority=Fixture Signer" >&2
+  exit 0
+fi
+pinned=1
+for a in "$@"; do [ "$a" = "-R=$FIXTURE_PIN" ] && pinned=0; done
+[ "$pinned" = 0 ] || exit 1
+exit "\${FIXTURE_CODESIGN_EXIT:-0}"`,
   rm: `for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
 exec /bin/rm "$@"`,
   ditto: "exit 0",
@@ -57,7 +74,12 @@ exec /bin/rm "$@"`,
   xattr: "exit 0",
 };
 
-type Run = { status: number | null; output: string; calls: string[] };
+/** One stub call: the command name, then its arguments exactly as the script passed them. */
+type Call = string[];
+type Run = { status: number | null; output: string; calls: Call[] };
+
+const named = (calls: Call[], cmd: string) => calls.filter((c) => c[0] === cmd);
+const show = (calls: Call[]) => calls.map((c) => c.join(" ")).join(" | ");
 
 describe("Mac install script, run with bash against stubs", () => {
   let dir = "";
@@ -70,7 +92,7 @@ describe("Mac install script, run with bash against stubs", () => {
     spawnSync("mkdir", ["-p", bin]);
     for (const [name, body] of Object.entries(STUBS)) {
       const file = path.join(bin, name);
-      writeFileSync(file, `#!/bin/bash\necho "${name} $*" >> "$STUB_LOG"\n${body}\n`);
+      writeFileSync(file, `#!/bin/bash\n{ printf '%s' "${name}"; for a in "$@"; do printf '\\x1f%s' "$a"; done; printf '\\n'; } >> "$STUB_LOG"\n${body}\n`);
       chmodSync(file, 0o755);
     }
     writeFileSync(path.join(dir, "install.sh"), betaInstallScript());
@@ -81,7 +103,7 @@ describe("Mac install script, run with bash against stubs", () => {
 
   after(() => rmSync(dir, { recursive: true, force: true }));
 
-  function run(sums: string | null, codesignExit = 0): Run {
+  function run(sums: string | null, codesignExit = 0, appLink = false): Run {
     const log = path.join(dir, `calls-${Math.random().toString(36).slice(2)}.log`);
     const sumsFile = path.join(dir, "SHA256SUMS-mac.txt");
     rmSync(sumsFile, { force: true });
@@ -97,27 +119,46 @@ describe("Mac install script, run with bash against stubs", () => {
         FIXTURE_DMG: dmg,
         FIXTURE_SUMS: sumsFile,
         FIXTURE_CODESIGN_EXIT: String(codesignExit),
+        FIXTURE_PIN: PINNED_REQUIREMENT,
+        FIXTURE_APP_LINK: appLink ? "1" : "0",
       },
     });
-    const calls = readFileSync(log, "utf8").split("\n").filter(Boolean);
+    const calls = readFileSync(log, "utf8").split("\n").filter(Boolean).map((line) => line.split("\x1f"));
     return { status: result.status, output: `${result.stdout}${result.stderr}`, calls };
   }
 
+  const removesInstall = (c: Call) => c[0] === "rm" && c.slice(1).some((a) => a.startsWith("/Applications"));
+
   function assertNothingInstalled(r: Run) {
     for (const cmd of ["ditto", "osascript", "pkill", "open", "xattr"]) {
-      assert.ok(!r.calls.some((c) => c.startsWith(`${cmd} `)), `${cmd} must not run: ${r.calls.join(" | ")}`);
+      assert.equal(named(r.calls, cmd).length, 0, `${cmd} must not run: ${show(r.calls)}`);
     }
-    assert.ok(!r.calls.some((c) => c.startsWith("rm ") && c.includes("/Applications")), "must not remove the installed app");
-    assert.ok(!r.calls.some((c) => c.startsWith("codesign ") && c.includes("--sign")), "must not re-sign");
-    assert.ok(!r.calls.some((c) => c.startsWith("curl ") && c.includes("/api/install/event")), "must not count an install");
+    assert.ok(!r.calls.some(removesInstall), "must not remove the installed app");
+    assert.ok(!named(r.calls, "codesign").some((c) => c.includes("--sign")), "must not re-sign");
+    assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   }
+
+  /** The one pinned signature check: exactly one codesign --verify, with `-R=<pin>` as one whole argument. */
+  function assertOnePinnedVerify(r: Run): Call {
+    const verifies = named(r.calls, "codesign").filter((c) => c.includes("--verify"));
+    assert.equal(verifies.length, 1, `exactly one codesign --verify: ${show(r.calls)}`);
+    const requirement = verifies[0].filter((a) => a.startsWith("-R"));
+    assert.deepEqual(requirement, [`-R=${PINNED_REQUIREMENT}`], "the -R argument is exactly the pinned requirement");
+    return verifies[0];
+  }
+
+  const mountPointOf = (r: Run) => {
+    const attach = named(r.calls, "hdiutil").find((c) => c[1] === "attach");
+    assert.ok(attach, show(r.calls));
+    return attach[attach.indexOf("-mountpoint") + 1];
+  };
 
   it("stops when the checksum file is missing", () => {
     const r = run(null);
     assert.notEqual(r.status, 0, r.output);
     assert.match(r.output, /checksum/i);
     assert.ok(r.output.includes(HELP_URL), r.output);
-    assert.ok(!r.calls.some((c) => c.startsWith("hdiutil attach")), "must stop before mounting");
+    assert.equal(named(r.calls, "hdiutil").length, 0, "must stop before mounting");
     assertNothingInstalled(r);
   });
 
@@ -126,7 +167,7 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.notEqual(r.status, 0, r.output);
     assert.match(r.output, new RegExp(BETA_INSTALL_ASSET.replace(/\./g, "\\.")));
     assert.ok(r.output.includes(HELP_URL), r.output);
-    assert.ok(!r.calls.some((c) => c.startsWith("hdiutil attach")), "must stop before mounting");
+    assert.equal(named(r.calls, "hdiutil").length, 0, "must stop before mounting");
     assertNothingInstalled(r);
   });
 
@@ -135,19 +176,45 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.notEqual(r.status, 0, r.output);
     assert.match(r.output, /does not match/);
     assert.ok(r.output.includes(HELP_URL), r.output);
-    assert.ok(!r.calls.some((c) => c.startsWith("hdiutil attach")), "must stop before mounting");
+    assert.equal(named(r.calls, "hdiutil").length, 0, "must stop before mounting");
     assertNothingInstalled(r);
   });
 
   it("passes a matching checksum, then stops without re-signing when the signature fails", () => {
     const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 1);
     assert.match(r.output, /Checksum verified\./);
-    assert.ok(r.calls.some((c) => c.startsWith("hdiutil attach")), "a matching checksum continues to mount");
+    assert.ok(named(r.calls, "hdiutil").some((c) => c[1] === "attach"), "a matching checksum continues to mount");
     // Only the release's own signature passes: a plain --verify also accepts an ad-hoc re-signed copy.
-    assert.ok(r.calls.some((c) => c.startsWith("codesign --verify") && c.includes(`-R=${PINNED_REQUIREMENT}`)), r.calls.join(" | "));
+    assertOnePinnedVerify(r);
     assert.notEqual(r.status, 0, r.output);
-    assert.match(r.output, /signature/i);
+    assert.match(r.output, /failed its signature check/);
+    assert.match(r.output, /Authority=Fixture Signer/, "prints who signed the failed copy, for support");
     assert.ok(r.output.includes(HELP_URL), r.output);
+    assertNothingInstalled(r);
+  });
+
+  it("installs exactly the checked app, and only after the signature check passes", () => {
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 0);
+    assert.equal(r.status, 0, r.output);
+    const app = `${mountPointOf(r)}/Unvibe.app`;
+    assert.equal(named(r.calls, "codesign").length, 1, `exactly one codesign call: ${show(r.calls)}`);
+    const verify = assertOnePinnedVerify(r);
+    assert.equal(verify[verify.length - 1], app, "codesign checks the app on the mounted image");
+    const dittos = named(r.calls, "ditto");
+    assert.deepEqual(dittos, [["ditto", app, "/Applications/Unvibe.app"]], "ditto copies exactly the checked app");
+    const checkedAt = r.calls.indexOf(verify);
+    assert.ok(r.calls.indexOf(dittos[0]) > checkedAt, "ditto runs after codesign");
+    // rm only runs when an Unvibe is already installed on the test machine; if it does, it comes after codesign.
+    r.calls.forEach((c, i) => {
+      if (removesInstall(c)) assert.ok(i > checkedAt, `rm of the installed app runs after codesign: ${show(r.calls)}`);
+    });
+  });
+
+  it("stops when the disk image's Unvibe.app is a symlink, before the signature check", () => {
+    const r = run(`${dmgSha}  ${BETA_INSTALL_ASSET}\n`, 0, true);
+    assert.match(r.output, /did not contain Unvibe\.app as a real folder/, r.output);
+    assert.notEqual(r.status, 0, r.output);
+    assert.equal(named(r.calls, "codesign").length, 0, "must stop before codesign");
     assertNothingInstalled(r);
   });
 });
@@ -162,6 +229,21 @@ describe("Mac install script text", () => {
   it("never re-signs the app", () => {
     assert.doesNotMatch(script, /codesign[^\n]*--sign/);
     assert.doesNotMatch(script, /codesign[^\n]*--force/);
+  });
+
+  it("puts the pinned requirement in single quotes it can't break out of", () => {
+    assert.ok(!BETA_MAC_SIGNING_REQUIREMENT.includes("'"), BETA_MAC_SIGNING_REQUIREMENT);
+    assert.ok(script.includes(`-R='${BETA_MAC_SIGNING_REQUIREMENT}'`));
+  });
+
+  it("checks the signature before it removes the installed app or copies the new one", () => {
+    // Text order, because the run above only reaches rm when an Unvibe is already installed on the test machine.
+    const verifyAt = script.indexOf("codesign --verify");
+    const rmAt = script.indexOf(`rm -rf "$DEST"`);
+    const dittoAt = script.indexOf(`ditto "$mountPoint/Unvibe.app" "$DEST"`);
+    assert.ok(verifyAt > 0 && rmAt > 0 && dittoAt > 0, "all three are in the script");
+    assert.ok(verifyAt < rmAt, "codesign comes before rm");
+    assert.ok(verifyAt < dittoAt, "codesign comes before ditto");
   });
 
   it("discloses the installed count near the top and still sends it", () => {
