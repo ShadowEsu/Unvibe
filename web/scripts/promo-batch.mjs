@@ -13,10 +13,11 @@
 //       Marks the next unused code as given to <who> (with the time) and prints it. A lock file
 //       next to the CSV makes sure two senders never get the same code.
 //   node scripts/promo-batch.mjs verify <batch> --expect-sha <sha256> [--csv path] [--sql path]
-//       Run right before the SQL goes to production: refuses unless the SQL's sha256 is the one
-//       generate printed (recorded off this Mac), then checks that the SQL is exactly the insert
-//       generate writes for the codes in the CSV (nothing added, removed or swapped) and prints the
-//       batch settings.
+//       Run right before the SQL goes to production: refuses an SQL or CSV that is a symlink, has
+//       a second hard link, belongs to another user or can be written by other users, and refuses
+//       unless the SQL's sha256 is the one generate printed (recorded off this Mac). Then checks
+//       that the SQL is exactly the insert generate writes for the codes in the CSV (nothing added,
+//       removed or swapped) and prints the batch settings.
 //   node scripts/promo-batch.mjs list
 //   node scripts/promo-batch.mjs revoke <code>
 //       Call the API's admin endpoint: UNVIBE_APP_BACKEND_URL (e.g. https://api.unvibe.site) and
