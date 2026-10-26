@@ -295,7 +295,13 @@ export async function prepareUpdate(
 
   if (platform !== 'darwin') return { ok: true, file };
   const script = path.join(dir, 'update.sh');
-  await writeFile(script, macUpdateScript({ pid, file, dir, mount: path.join(dir, 'mnt'), target: macTarget, version: info.latest }), { mode: 0o700 });
+  try {
+    await writeFile(script, macUpdateScript({ pid, file, dir, mount: path.join(dir, 'mnt'), target: macTarget, version: info.latest }), { mode: 0o700 });
+  } catch (error) {
+    // A helper that can't be written can't install the download, so it isn't kept either.
+    await discard();
+    return { ok: false, error: `Could not prepare the update (${error instanceof Error ? error.message : String(error)}). The update was not installed, and your Unvibe is unchanged.` };
+  }
   return { ok: true, file, script };
 }
 

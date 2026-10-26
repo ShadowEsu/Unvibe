@@ -430,6 +430,25 @@ test('a download that cannot be checked is refused and deleted', async () => {
   }
 });
 
+test('a helper that cannot be written is refused, and the download folder and installer are deleted', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
+  const asset = 'Unvibe-0.1.45-mac-arm64.dmg';
+  const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/${asset}` };
+  try {
+    const release = fakeRelease('the real disk image', (sha) => {
+      // While the checksum is fetched, put a folder where update.sh goes, so writing it fails.
+      for (const work of readdirSync(root)) mkdirSync(path.join(root, work, 'update.sh'));
+      return `${sha}  ${asset}\n`;
+    });
+    const refused = await prepareUpdate(info, { platform: 'darwin', fetchImpl: release.fetchImpl, pid: 4242, macTarget: path.join(tmpdir(), 'Unvibe.app'), workRoot: root });
+    assert.ok(!refused.ok, 'a helper that cannot be written is a refusal');
+    assert.match(refused.error, /Could not prepare the update .*your Unvibe is unchanged/);
+    assert.deepEqual(readdirSync(root), [], 'the download folder and the installer in it are deleted');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('an app running from App Translocation is told to move to Applications, before anything is downloaded', async () => {
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
   const info = { available: true, current: '0.1.44', latest: '0.1.45', url: `${RELEASE}/Unvibe-0.1.45-mac-arm64.dmg` };
