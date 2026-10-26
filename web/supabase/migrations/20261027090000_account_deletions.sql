@@ -165,8 +165,12 @@ begin
   end if;
   -- The promo record stays (the code stays used and counts against its cap) without the account or email.
   update public.promo_redemptions set user_id = null, email = null where user_id = p_user_id;
-  -- Invitations this account sent in someone else's team stay valid, now sent by that team's owner.
-  update public.workspace_invitations i set invited_by = w.owner_user_id
+  -- Invitations this account sent in someone else's team: a pending one is revoked (nobody joins on
+  -- the word of an account that no longer exists); every one keeps its row, now under the team's
+  -- owner, because invited_by cascades on the users row.
+  update public.workspace_invitations i
+    set invited_by = w.owner_user_id,
+        status = case when i.status = 'pending' then 'revoked' else i.status end
     from public.workspaces w
     where i.workspace_id = w.id and i.invited_by = p_user_id and w.owner_user_id <> p_user_id;
 
