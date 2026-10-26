@@ -145,12 +145,11 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   // Only Stripe's live status starts a grace period: a failed-payment event that lands after the
   // subscription was canceled, went unpaid, or expired grants nothing.
   const shouldGrace = subscription.status === 'past_due';
-  const graceDays = Math.max(1, Math.min(30, Number(process.env.BILLING_GRACE_PERIOD_DAYS ?? 7) || 7));
   // Stripe sends an event on every failed retry; the grace period runs from the first failure only.
   const prior = stored?.stripeSubscriptionId === subscription.id ? stored : null;
   const graceEnds = prior?.status === 'grace_period' && prior.gracePeriodEndsAt
     ? prior.gracePeriodEndsAt
-    : new Date(Date.now() + graceDays * 86_400_000).toISOString();
+    : graceEndsFromNow();
   await store.syncSubscription({
     workspaceId: metadata.workspaceId,
     plan: metadata.plan,
@@ -165,6 +164,52 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     gracePeriodEndsAt: shouldGrace ? graceEnds : undefined,
     cancelAtPeriodEnd: endsWithoutRenewing(subscription, item.current_period_end),
   });
+}
+
+/** When a grace period that starts now ends: BILLING_GRACE_PERIOD_DAYS (1 to 30, default 7) from now. */
+function graceEndsFromNow(): string {
+  const graceDays = Math.max(1, Math.min(30, Number(process.env.BILLING_GRACE_PERIOD_DAYS ?? 7) || 7));
+  return new Date(Date.now() + graceDays * 86_400_000).toISOString();
+}
+
+const WITHOUT_ACCESS: readonly SubscriptionStatus[] = ['canceled', 'unpaid', 'inactive'];
+
+/**
+ * While purchases are locked: applies only what takes paid access away from a subscription already
+ * on record. Its plan, seats and period stay as stored and only the status moves down: to canceled,
+ * unpaid or inactive when Stripe says so, or into the bounded grace period when a renewal fails from
+ * paid standing. A grace period already running is left alone, so repeated failures never restart
+ * it. Nothing is created, extended, refunded or canceled here.
+ */
+async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Subscription): Promise<void> {
+  const stored = await store.subscriptionByProviderId(subscription.id);
+  if (!stored || stored.plan === 'free' || !stored.interval || stored.interval === 'lifetime' || !stored.stripeCustomerId || !stored.stripePriceId) return;
+  if (WITHOUT_ACCESS.includes(stored.status)) return;
+  let status: SubscriptionStatus;
+  let gracePeriodEndsAt: string | undefined;
+  if (subscription.status === 'past_due') {
+    if (stored.status !== 'active' && stored.status !== 'trialing') return;
+    status = 'grace_period';
+    gracePeriodEndsAt = graceEndsFromNow();
+  } else {
+    status = mappedStatus(subscription.status);
+    if (!WITHOUT_ACCESS.includes(status)) return;
+  }
+  await store.syncSubscription({
+    workspaceId: stored.workspaceId,
+    plan: stored.plan,
+    interval: stored.interval,
+    status,
+    seats: stored.seats,
+    stripeCustomerId: stored.stripeCustomerId,
+    stripeSubscriptionId: subscription.id,
+    stripePriceId: stored.stripePriceId,
+    currentPeriodStart: stored.currentPeriodStart,
+    currentPeriodEnd: stored.currentPeriodEnd,
+    gracePeriodEndsAt,
+    cancelAtPeriodEnd: stored.cancelAtPeriodEnd,
+  });
+  await store.recordAudit(null, stored.workspaceId, 'subscription.revoked_while_locked', { stripeSubscriptionId: subscription.id, status });
 }
 
 async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Checkout.Session): Promise<void> {
@@ -319,10 +364,15 @@ async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCre
   });
 }
 
-export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies): Promise<void> {
+/**
+ * `revokeOnly` (purchases locked): checkout grants nothing, and subscription and invoice events
+ * may only take access away from a subscription already on record (`applyRevocationOnly`).
+ */
+export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies, options: { revokeOnly?: boolean } = {}): Promise<void> {
   switch (event.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded': {
+      if (options.revokeOnly) return;
       const session = event.data.object;
       // Stripe may deliver the webhook before the Checkout API response has been attached
       // to the intent. The server-created intent ID in session metadata closes that race.
@@ -344,11 +394,13 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       return;
     }
     case 'customer.subscription.created':
-    case 'customer.subscription.updated':
+    case 'customer.subscription.updated': {
       // Stripe does not deliver events in order. Sync the subscription as it is now, never the
       // event's snapshot, so a late older event cannot roll back or resurrect a subscription.
-      await syncStripeSubscription(store, await deps.retrieveSubscription(event.data.object.id), deps);
+      const live = await deps.retrieveSubscription(event.data.object.id);
+      await (options.revokeOnly ? applyRevocationOnly(store, live) : syncStripeSubscription(store, live, deps));
       return;
+    }
     case 'customer.subscription.deleted':
       {
       const prior = await store.subscriptionByProviderId(event.data.object.id);
@@ -360,7 +412,9 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
     case 'invoice.paid': {
       // The live subscription decides: a failure only starts a grace period if Stripe says past_due.
       const id = subscriptionIdFromInvoice(event.data.object);
-      if (id) await syncStripeSubscription(store, await deps.retrieveSubscription(id), deps);
+      if (!id) return;
+      const live = await deps.retrieveSubscription(id);
+      await (options.revokeOnly ? applyRevocationOnly(store, live) : syncStripeSubscription(store, live, deps));
       return;
     }
     case 'charge.refunded': {

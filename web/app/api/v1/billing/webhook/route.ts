@@ -8,8 +8,11 @@ export const runtime = 'nodejs';
 // delivery never overlaps a still-running original (Vercel's default duration is 300 s).
 export const maxDuration = 60;
 
-// While payments are locked only events that take access away are processed: a refund or a dispute
-// must still end access. Anything that could grant a plan is acknowledged and dropped, so a sandbox
+// While payments are locked, events that take access away are processed in full: a refund or a
+// dispute must still end access. A live key whose purchase approval is off still has subscribers,
+// so their subscription and invoice events are applied revoke-only: cancellations, unpaid
+// subscriptions and failed renewals still downgrade, and nothing is granted or extended. Everything
+// else is acknowledged and dropped, as is every such event on a locked test key, so a sandbox
 // delivered to the production API (or a test card on a locked deployment) never grants Pro.
 function revokesAccess(type: string): boolean {
   return type === 'customer.subscription.deleted' || type === 'charge.refunded' || type.startsWith('charge.dispute.');
@@ -30,7 +33,12 @@ export async function POST(req: Request): Promise<Response> {
   }
   // A 200 so Stripe stops retrying: an event from the other mode than this key is never ours to apply.
   if (event.livemode !== stripeKeyIsLive()) return Response.json({ ignored: 'livemode_mismatch' });
-  if (paymentsLocked() && !revokesAccess(event.type)) return Response.json({ ignored: 'payments_locked' });
+  let revokeOnly = false;
+  if (paymentsLocked() && !revokesAccess(event.type)) {
+    const downgrades = event.type === 'customer.subscription.updated' || event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';
+    if (!event.livemode || !downgrades) return Response.json({ ignored: 'payments_locked' });
+    revokeOnly = true;
+  }
   const store = getBillingStore();
   const claim = await store.claimWebhook(event.id, event.type);
   if (claim === 'completed') return Response.json({ received: true, duplicate: true });
@@ -54,7 +62,7 @@ export async function POST(req: Request): Promise<Response> {
         return (await stripe.invoicePayments.list({ invoice: invoice.id, status: 'paid' })).data;
       },
       refundPayment: async (target, idempotencyKey) => (await stripe.refunds.create(target, { idempotencyKey })).id,
-    });
+    }, { revokeOnly });
     await store.completeWebhook(event.id);
     return Response.json({ received: true });
   } catch (error) {
