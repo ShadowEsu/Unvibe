@@ -29,12 +29,23 @@ const sans = Inter({
 
 // Only the two faces the first phone viewport sets in (Inter body, Bricolage headings) are preloaded,
 // so they and the CSS don't share the opening bandwidth with faces the fold doesn't need yet.
+// JetBrains Mono goes further: no font variable on <html>, so no first-layout text asks for it (any laid-out
+// text would, even far below the fold, and Lighthouse then counts it before the first paint). The script
+// at the end of <body> sets the variable on the first scroll, tap or key press, or 4 s after load,
+// whichever comes first. Setting it right at load was not late enough: in some Lighthouse runs the
+// observed first paint came after load, the font landed before it and the simulated FCP grew 450 ms.
+// Until then mono text uses the metric-matched system faces in globals.css, which is also why
+// next/font's Arial fallback is off.
 const mono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-mono-face",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
+
+const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown","keydown"];function use(){if(done)return;done=true;events.forEach(function(e){removeEventListener(e,use)});var s=document.createElement("style");s.textContent=${JSON.stringify(
+  `:root{--font-mono-face:${mono.style.fontFamily}}`,
+)};document.head.appendChild(s)}events.forEach(function(e){addEventListener(e,use,{passive:true})});addEventListener("load",function(){setTimeout(use,4000)})})()`;
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -140,7 +151,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} ${display.variable} ${serif.variable}`}
+      className={`${sans.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
         {/* Before first paint: the `js` class (motion start states) and the theme class (no light flash). */}
@@ -170,6 +181,7 @@ export default function RootLayout({
           <FeedbackWidget />
           <ReminderToast />
         </Providers>
+        <script dangerouslySetInnerHTML={{ __html: monoWhenWanted }} />
       </body>
     </html>
   );

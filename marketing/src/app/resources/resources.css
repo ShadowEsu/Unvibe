@@ -499,6 +499,25 @@
   }
 }
 
+/* Phones: three fixed columns don't fit (the action was cut off at the card edge at 390 px), so the
+   two keys share a row and the action reads underneath them. */
+@media (max-width: 520px) {
+  .resources-shortcuts-table {
+    padding-inline: 1.1rem;
+  }
+  .resources-table-header,
+  .resources-table-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 0.5rem;
+  }
+  .resources-table-header span:nth-child(3) {
+    display: none;
+  }
+  .resources-table-row .resources-action-text {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ── Brand Swatches & Typography Guide ── */
 
 .resources-swatches {

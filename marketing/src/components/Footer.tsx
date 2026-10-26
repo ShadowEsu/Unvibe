@@ -33,6 +33,9 @@ export function Footer() {
   const statusRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => (statusRef.current ? observeMotion(statusRef.current) : undefined), []);
 
+  // /activate is a full-screen card over the page; a footer under it would only add hidden Tab stops.
+  if (pathname?.startsWith("/activate")) return null;
+
   return (
     <footer className="paper-footer">
       <div className="paper-wrap grid gap-10 py-14 sm:grid-cols-[1fr_auto_auto]">

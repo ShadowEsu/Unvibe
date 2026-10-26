@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Vibe } from "@/components/paper/Vibe";
 import { DownloadRow } from "@/components/paper/DownloadLink";
+import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { detectVisitorDevice } from "@/lib/shortcuts";
+import { answerTimeLine } from "@/lib/tryTiming";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
 const LEVELS = [
@@ -50,7 +52,7 @@ function render(text: string): string {
   return out.join("");
 }
 
-/** Desktop gets the download buttons; a phone can't run the app, so it gets the email link. */
+/** After a failed request: desktop gets the download buttons; a phone can't run the app, so it gets the email link. */
 function GetIt({ phone }: { phone: boolean }) {
   if (!phone) return <DownloadRow surface="try_it" />;
   return (
@@ -73,6 +75,8 @@ export function TryIt() {
   const [error, setError] = useState("");
   const [note, setNote] = useState(0);
   const [phone, setPhone] = useState(false);
+  // Request start to the whole answer received, for the last explanation that succeeded.
+  const [tookMs, setTookMs] = useState(0);
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -107,6 +111,8 @@ export function TryIt() {
     setState("thinking");
     setError("");
     setAnswer("");
+    setTookMs(0);
+    const started = performance.now();
     try {
       const response = await fetch(`${API}/api/v1/try`, {
         method: "POST",
@@ -115,6 +121,8 @@ export function TryIt() {
       });
       const body = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
       if (!response.ok || !body.text) throw new Error(body.error || FALLBACK_ERROR);
+      // The body is read in full above, so this is the moment the last of the answer arrived.
+      setTookMs(performance.now() - started);
       setAnswer(body.text);
       setState("done");
       delight();
@@ -144,6 +152,7 @@ export function TryIt() {
   const status =
     state === "thinking" ? "Vibe is thinking." : state === "error" ? error : state === "done" && !writing ? "Explanation ready." : "";
   const depthLabel = LEVELS.find(([id]) => id === level)?.[1] ?? "";
+  const timeLine = answerTimeLine(tookMs);
 
   return (
     <div className="try">
@@ -212,8 +221,9 @@ export function TryIt() {
               <div dangerouslySetInnerHTML={{ __html: render(shown) }} />
               {writing ? null : (
                 <div className="try__after">
-                  <p>Pick another depth above to explain it again. The app does this beside your editor, free.</p>
-                  <GetIt phone={phone} />
+                  {timeLine ? <p className="try__took">{timeLine}</p> : null}
+                  <GetUnvibe surface="try_it_answer" />
+                  <p className="try__again">Pick another depth above to explain it again. The app does this beside your editor, free.</p>
                 </div>
               )}
             </div>

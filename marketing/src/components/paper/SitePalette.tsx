@@ -14,6 +14,9 @@ interface Command {
   run: () => void;
 }
 
+/** Keyboard stops the dialog keeps Tab cycling through. */
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /** Substring match first, then a loose in-order letter match so near-misses still land. */
 function matches(haystack: string, query: string): boolean {
   if (haystack.includes(query)) return true;
@@ -93,9 +96,14 @@ export function SitePalette() {
 
   useEffect(() => {
     if (!open) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setQuery("");
     setActive(0);
-    window.setTimeout(() => inputRef.current?.focus(), 10);
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 10);
+    return () => {
+      window.clearTimeout(timer);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
   }, [open]);
 
   useEffect(() => setActive(0), [query]);
@@ -111,7 +119,31 @@ export function SitePalette() {
 
   return (
     <div className="palette" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <div className="palette__panel" role="dialog" aria-modal="true" aria-label="Search Unvibe">
+      {/* tabIndex -1 keeps focus on the panel when its text is clicked, so Tab and Escape still land here. */}
+      <div
+        className="palette__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search Unvibe"
+        tabIndex={-1}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setOpen(false);
+            return;
+          }
+          if (event.key !== "Tab") return;
+          const stops = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE));
+          const first = stops[0];
+          const last = stops[stops.length - 1];
+          const current = document.activeElement;
+          const atEdge = current === event.currentTarget || current === (event.shiftKey ? first : last);
+          if (!first || !last || atEdge) {
+            event.preventDefault();
+            (event.shiftKey ? last : first)?.focus();
+          }
+        }}
+      >
         <input
           ref={inputRef}
           className="palette__input"
@@ -119,8 +151,7 @@ export function SitePalette() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Escape") setOpen(false);
-            else if (event.key === "ArrowDown") { event.preventDefault(); setActive((i) => Math.min(results.length - 1, i + 1)); }
+            if (event.key === "ArrowDown") { event.preventDefault(); setActive((i) => Math.min(results.length - 1, i + 1)); }
             else if (event.key === "ArrowUp") { event.preventDefault(); setActive((i) => Math.max(0, i - 1)); }
             else if (event.key === "Enter") { event.preventDefault(); runAt(active); }
           }}

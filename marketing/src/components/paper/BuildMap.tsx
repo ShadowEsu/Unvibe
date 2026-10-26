@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { prefersLiteExperience } from "@/lib/performanceMode";
 import { readResponseJson } from "@/lib/readResponseJson";
 import {
   BUILD_MAP_HEIGHT,
@@ -11,17 +12,22 @@ import {
 
 export function BuildMap() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [armed, setArmed] = useState(false);
   const [drawn, setDrawn] = useState(false);
   const [live, setLive] = useState(false);
 
+  // The map is drawn in the server HTML, so the milestones show without JS, with reduced motion and on
+  // lite devices. Otherwise, when the map starts below the fold, it is armed (lane undrawn, milestones
+  // hidden) and draws in once as it scrolls into view.
   useEffect(() => {
     const node = rootRef.current;
     if (!node) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
+    if (reduce || prefersLiteExperience() || node.getBoundingClientRect().top < window.innerHeight) {
       setDrawn(true);
       return;
     }
+    setArmed(true);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting) return;
@@ -55,7 +61,7 @@ export function BuildMap() {
   }, []);
 
   return (
-    <div ref={rootRef} className={drawn ? "paper-map is-drawn" : "paper-map"} aria-label="Product roadmap">
+    <div ref={rootRef} className={`paper-map${armed ? " is-armed" : ""}${drawn ? " is-drawn" : ""}`} aria-label="Product roadmap">
       <svg
         viewBox={`0 0 ${BUILD_MAP_WIDTH} ${BUILD_MAP_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"

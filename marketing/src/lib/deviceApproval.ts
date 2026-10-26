@@ -8,6 +8,8 @@
 const CODE_KEY = "unvibe_device_user_code";
 const FROM_LINK_KEY = "unvibe_device_code_from_link";
 const URL_PARAMS = ["user_code", "device", "device_code"] as const;
+/** Also part of a sign-in: Supabase's return from Google or the email link (`code`, or `error`). */
+const SIGN_IN_PARAMS = [...URL_PARAMS, "code", "error"] as const;
 
 type SessionStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -25,6 +27,18 @@ function store(storage: SessionStore | null, action: (s: SessionStore) => void):
   } catch {
     // Storage blocked (private mode, policies): the code lives in page state only.
   }
+}
+
+/**
+ * True when /activate opened as part of a sign-in (the app's link with a device code, or the
+ * return from Google or the email link), so the page shows today's sign-in steps straight away.
+ * False for a visitor who arrived without the app: they see the download first.
+ */
+export function opensForSignIn(searchParams: Record<string, string | string[] | undefined>): boolean {
+  return SIGN_IN_PARAMS.some((name) => {
+    const value = searchParams[name];
+    return (Array.isArray(value) ? value : [value]).some((v) => Boolean(v?.trim()));
+  });
 }
 
 /** Reads the code from the /activate URL, or the one saved before a sign-in redirect. */

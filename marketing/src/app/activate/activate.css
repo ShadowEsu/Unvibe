@@ -112,11 +112,37 @@
   line-height: 1.55;
 }
 
+/* First visit without a code: the download leads, the sign-in steps wait behind a disclosure. */
+.activate-later {
+  margin-top: 1.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+/* Stays a list item so the open/closed triangle shows. */
+.activate-later > summary {
+  padding: 0.75rem 0;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.activate-later > summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.activate-later__body {
+  margin-top: 0.8rem;
+}
+
 .activate-label {
   display: block;
   margin: 0 0 0.45rem;
   color: var(--ink-muted);
-  font-size: 0.75rem;
+  font-size: max(13px, 0.75rem);
   font-weight: 700;
 }
 
@@ -143,7 +169,7 @@
 }
 
 .activate-field--code {
-  font-family: var(--font-mono-face), ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -183,7 +209,7 @@
   gap: 0.7rem;
   margin: 1.2rem 0;
   color: var(--ink-faint);
-  font-size: 0.65rem;
+  font-size: max(13px, 0.65rem);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -200,7 +226,7 @@
 .activate-note {
   margin: 0.8rem 0 0;
   color: var(--ink-muted);
-  font-size: 0.78rem;
+  font-size: max(13px, 0.78rem);
   line-height: 1.45;
 }
 
@@ -209,6 +235,11 @@
   border-left: 3px solid #b3261e;
   color: #8c1d18;
   font-weight: 600;
+}
+
+/* Between the email field and its button. */
+.activate-note--field {
+  margin: -0.25rem 0 0.75rem;
 }
 
 .activate-success {
@@ -230,7 +261,7 @@
 .activate-foot {
   margin-top: 1.1rem;
   color: var(--ink-faint);
-  font-size: 0.7rem;
+  font-size: max(13px, 0.7rem);
   text-align: center;
 }
 

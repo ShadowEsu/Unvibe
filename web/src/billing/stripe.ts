@@ -35,18 +35,25 @@ export function stripeIsConfigured(): boolean {
 
 /**
  * Checkout stays closed until Preston opens it:
- * - a live (or restricted live) key never opens checkout unless BILLING_LIVE_PAYMENTS_APPROVED=true;
+ * - a live (or restricted live) key opens checkout only on the production deployment, and only with
+ *   BILLING_LIVE_PAYMENTS_APPROVED set to exactly `true` (no trimming, so a stray " true " stays shut);
+ *   a preview or a local server with a live key is always closed;
  * - a test key on the production deployment is closed too (it would grant real Pro for card 4242
- *   and refuse every real card) unless BILLING_TEST_CHECKOUT_IN_PRODUCTION=true.
+ *   and refuse every real card) unless BILLING_TEST_CHECKOUT_IN_PRODUCTION is exactly `true` (no trimming).
  * Test keys on previews and local servers stay open, so sandbox checkout keeps working.
  */
 export function paymentsLocked(): boolean {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) return false;
   if (key.startsWith('sk_test_') || key.startsWith('rk_test_')) {
-    return process.env.VERCEL_ENV === 'production' && process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION?.trim() !== 'true';
+    return process.env.VERCEL_ENV === 'production' && process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION !== 'true';
   }
-  return process.env.BILLING_LIVE_PAYMENTS_APPROVED?.trim() !== 'true';
+  return !(process.env.VERCEL_ENV === 'production' && process.env.BILLING_LIVE_PAYMENTS_APPROVED === 'true');
+}
+
+/** Whether the configured key is a live one. Only sk_test_/rk_test_ keys count as test mode. */
+export function stripeKeyIsLive(): boolean {
+  return !/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY?.trim() ?? '');
 }
 
 export const PAYMENTS_NOT_OPEN = {

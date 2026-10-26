@@ -5,7 +5,7 @@ import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
 import { CHECKOUT_SESSION_TTL_MS, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
 import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
-import type { BillingInterval, BillingStore, WorkspaceAccess } from '@/billing/types';
+import type { BillingInterval, BillingStore, SubscriptionStatus, WorkspaceAccess } from '@/billing/types';
 
 export const runtime = 'nodejs';
 
@@ -72,7 +72,10 @@ export async function POST(req: Request): Promise<Response> {
     if (current.subscription.interval === 'lifetime' && current.subscription.status === 'active') {
       return Response.json({ error: 'lifetime_active', message: 'This account already has Pro Lifetime.' }, { status: 409 });
     }
-    if (current.subscription.stripeSubscriptionId && current.subscription.status !== 'canceled') {
+    // Only a subscription that can still charge or entitle blocks a new checkout; an inactive or
+    // canceled row that still carries its old Stripe id must not lock the workspace out for good.
+    const blocking: readonly SubscriptionStatus[] = ['active', 'trialing', 'past_due', 'grace_period', 'unpaid'];
+    if (current.subscription.stripeSubscriptionId && blocking.includes(current.subscription.status)) {
       return Response.json({ error: 'subscription_exists', message: 'Use Manage billing to change an existing subscription.' }, { status: 409 });
     }
     const stripe = getStripe();
