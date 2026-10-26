@@ -113,7 +113,9 @@
   & .nav--spaces button:nth-child(6).on svg { background: var(--lilac); }
   & .nav button.on svg { color: var(--v-ink); }
 
-  & .sync-state { color: var(--v-muted); font-size: 12px; padding: 4px 8px; }
+  /* "Saved on this Mac" is small text: #5c565c is 6.21:1 on the sidebar; the disabled fade would drop it under 4.5:1. */
+  & .sync-state { color: #5c565c; font-size: 12px; padding: 4px 8px; }
+  & .sync-state:disabled { opacity: 1; }
   & .side-usage { padding: 10px; border: 1.5px solid var(--v-line); background: var(--v-surface); backdrop-filter: none; border-radius: var(--v-radius-sm); box-shadow: none; }
   & .side-usage:hover { border-color: var(--v-ink); }
   & .side-usage__row { font-size: 12px; color: var(--v-muted); }
