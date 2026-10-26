@@ -312,6 +312,7 @@ function startMixpanel(): void {
  */
 export function initMixpanel(mixpanel: MixpanelClient, token = MIXPANEL_BROWSER_TOKEN): void {
   if (!token) return;
+  removeStoredMixpanelBatches();
   // Mixpanel for Startups Pro credits: autocapture + session replay are included.
   mixpanel.init(token, {
     ...mixpanelPrivacyConfig(),
@@ -321,6 +322,25 @@ export function initMixpanel(mixpanel: MixpanelClient, token = MIXPANEL_BROWSER_
   });
   mixpanel.register({ distinct_id: anonId() });
   mixpanelClient = mixpanel;
+}
+
+/**
+ * Mixpanel's batch queues (`__mpq_<token>_ev`, `_pp`, `_gr`) from visits made while batching was
+ * on. Batching is off and never reads them, but they hold events stored before any hook ran, so
+ * they are removed in case batching is ever turned back on.
+ */
+function removeStoredMixpanelBatches(): void {
+  try {
+    const storage = window.localStorage;
+    const keys: string[] = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (key?.startsWith("__mpq_")) keys.push(key);
+    }
+    for (const key of keys) storage.removeItem(key);
+  } catch {
+    // Storage blocked: nothing was stored either.
+  }
 }
 
 /** Load Mixpanel + PostHog browser SDKs when tokens are present. */

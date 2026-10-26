@@ -47,6 +47,32 @@ describe("Mixpanel init", () => {
     assert.equal(hooks.before_send_people(), null);
     assert.equal(hooks.before_send_groups(), null);
   });
+
+  it("removes Mixpanel batch queues stored by earlier visits, and nothing else", () => {
+    const stored = new Map([
+      ["unvibe_anon_id", "anon-test-0002"],
+      ["__mpq_oldtoken_ev", '[{"payload":{"properties":{"$current_url":"https://unvibe.site/?ref=TESTREF1234"}}}]'],
+      ["__mpq_oldtoken_pp", "[]"],
+      ["__mpq_oldtoken_gr", "[]"],
+      ["mp_oldtoken_mixpanel", "{}"],
+    ]);
+    Reflect.set(globalThis, "window", {
+      navigator: { webdriver: false },
+      location: { href: "https://unvibe.site/", pathname: "/", search: "" },
+      localStorage: {
+        get length() {
+          return stored.size;
+        },
+        key: (index: number) => Array.from(stored.keys())[index] ?? null,
+        getItem: (key: string) => stored.get(key) ?? null,
+        setItem: (key: string, value: string) => void stored.set(key, value),
+        removeItem: (key: string) => void stored.delete(key),
+      },
+    });
+    const fake = { init: () => undefined, register: () => undefined, track: () => undefined };
+    initMixpanel(fake as unknown as Parameters<typeof initMixpanel>[0], "test-token");
+    assert.deepEqual(Array.from(stored.keys()), ["unvibe_anon_id", "mp_oldtoken_mixpanel"]);
+  });
 });
 
 describe("PostHog init", () => {
