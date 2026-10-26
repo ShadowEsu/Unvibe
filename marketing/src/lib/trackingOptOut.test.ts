@@ -1,7 +1,16 @@
-import { afterEach, beforeEach, describe, it } from "node:test";
+// First import: unsets the analytics keys before analytics.ts reads them at load.
+import { ANALYTICS_KEYS, restoreAnalyticsKeys } from "./testWithoutAnalyticsKeys";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { recordBetaSiteEvent, track } from "./analytics";
+import { analyticsEnabled, recordBetaSiteEvent, track } from "./analytics";
 import { NOTRACK_STORAGE_KEY, trackingDisabled, type OptOutStorage } from "./trackingOptOut";
+
+after(restoreAnalyticsKeys);
+
+it("loads analytics with every analytics key unset, so nothing real is sent and no vendor SDK starts", () => {
+  for (const name of ANALYTICS_KEYS) assert.equal(process.env[name], undefined, `${name} is unset during these tests`);
+  assert.equal(analyticsEnabled, false, "analytics.ts loaded with no key");
+});
 
 type FakeStorage = OptOutStorage & { data: Map<string, string> };
 

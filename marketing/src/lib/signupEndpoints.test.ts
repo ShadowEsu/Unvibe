@@ -1,3 +1,5 @@
+// First import: unsets the analytics keys a developer shell may export, so a signup can't send a real event.
+import { ANALYTICS_KEYS, restoreAnalyticsKeys } from "./testWithoutAnalyticsKeys";
 import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
@@ -83,10 +85,13 @@ before(async () => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_KEY;
   delete process.env.RESEND_API_KEY;
   delete process.env.VERCEL_ENV;
+  // With a real Blob token the download store would write test records to the real Blob store.
+  delete process.env.BLOB_READ_WRITE_TOKEN;
   process.env.RATE_LIMIT_KEY_SECRET = KEY_SECRET;
 });
 
 after(async () => {
+  restoreAnalyticsKeys();
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
@@ -110,6 +115,10 @@ function post(path: string, body: unknown, init: { origin?: string | null; conte
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
+
+it("runs with every analytics key unset, so a successful signup sends no real event", () => {
+  for (const name of ANALYTICS_KEYS) assert.equal(process.env[name], undefined, `${name} is unset during these tests`);
+});
 
 describe("waitlist and beta-download reject cross-site posts", () => {
   it("rejects another site's Origin with 403", async () => {
@@ -154,50 +163,50 @@ describe("waitlist and beta-download reject cross-site posts", () => {
 });
 
 describe("beta-download hands out the pinned release", () => {
+  // The old override names are set the way production still has them; withEnv puts back whatever
+  // values they had before, so no other test sees a change.
+  const OLD_OVERRIDES = {
+    NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL: "https://example.com/old-beta.dmg",
+    NEXT_PUBLIC_INVESTOR_DMG_URL: "https://example.com/old-investor.dmg",
+  };
+
   it("returns this release's Mac build even when the old override variables are set", async () => {
-    // Production still has both names set from months ago; they must not decide what people get.
-    process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL = "https://example.com/old-beta.dmg";
-    process.env.NEXT_PUBLIC_INVESTOR_DMG_URL = "https://example.com/old-investor.dmg";
-    try {
+    await withEnv(OLD_OVERRIDES, async () => {
       const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: "pinned-build@example.com" }));
       assert.equal(response.status, 200);
       const body = (await response.json()) as { downloadUrl?: string };
       assert.equal(body.downloadUrl, BETA_MAC_DOWNLOAD_URL);
-    } finally {
-      delete process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL;
-      delete process.env.NEXT_PUBLIC_INVESTOR_DMG_URL;
-    }
+    });
   });
 
   it("emails this release's Mac build under a send key that names the release", async () => {
-    process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL = "https://example.com/old-beta.dmg";
-    process.env.NEXT_PUBLIC_INVESTOR_DMG_URL = "https://example.com/old-investor.dmg";
-    process.env.RESEND_API_KEY = "resend-test-key";
-    // Capture what would go to Resend; everything else (the fake Supabase) goes through as usual.
+    // Capture what would go to Resend. Only the fake Supabase is reachable; any other host fails the test.
     const emails: { key: string | null; html: string; text: string }[] = [];
     const realFetch = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
-      if (url !== "https://api.resend.com/emails") return realFetch(input, init);
-      const body = JSON.parse(String(init?.body)) as { html: string; text: string };
-      emails.push({ key: new Headers(init?.headers).get("idempotency-key"), html: body.html, text: body.text });
-      return Response.json({ id: `email-${emails.length}` });
+      if (url === "https://api.resend.com/emails") {
+        const body = JSON.parse(String(init?.body)) as { html: string; text: string };
+        emails.push({ key: new Headers(init?.headers).get("idempotency-key"), html: body.html, text: body.text });
+        return Response.json({ id: `email-${emails.length}` });
+      }
+      if (process.env.SUPABASE_URL && url.startsWith(process.env.SUPABASE_URL)) return realFetch(input, init);
+      throw new Error(`unexpected network call from the test: ${url}`);
     }) as typeof fetch;
     try {
-      // A fresh address each run: the local download store (.data) remembers who was already emailed.
-      const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `pinned-email-${randomUUID()}@example.com` }));
-      assert.equal(response.status, 200);
-      const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
-      assert.ok(welcome, "the welcome email was sent");
-      assert.ok(welcome.html.includes(BETA_MAC_DOWNLOAD_URL), "the HTML email links the pinned build");
-      assert.ok(welcome.text.includes(BETA_MAC_DOWNLOAD_URL), "the text email links the pinned build");
-      assert.ok(!`${welcome.html}${welcome.text}`.includes("example.com/old-"), "no override URL in the email");
-      assert.ok(welcome.key?.startsWith(`unvibe-welcome-${BETA_INSTALL_TAG.replace(/^v/, "")}-`), `send key names the release: ${welcome.key}`);
+      await withEnv({ ...OLD_OVERRIDES, RESEND_API_KEY: "resend-test-key" }, async () => {
+        // A fresh address each run: the local download store (.data) remembers who was already emailed.
+        const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `pinned-email-${randomUUID()}@example.com` }));
+        assert.equal(response.status, 200);
+        const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
+        assert.ok(welcome, "the welcome email was sent");
+        assert.ok(welcome.html.includes(BETA_MAC_DOWNLOAD_URL), "the HTML email links the pinned build");
+        assert.ok(welcome.text.includes(BETA_MAC_DOWNLOAD_URL), "the text email links the pinned build");
+        assert.ok(!`${welcome.html}${welcome.text}`.includes("example.com/old-"), "no override URL in the email");
+        assert.ok(welcome.key?.startsWith(`unvibe-welcome-${BETA_INSTALL_TAG.replace(/^v/, "")}-`), `send key names the release: ${welcome.key}`);
+      });
     } finally {
       globalThis.fetch = realFetch;
-      delete process.env.RESEND_API_KEY;
-      delete process.env.NEXT_PUBLIC_BETA_MAC_DOWNLOAD_URL;
-      delete process.env.NEXT_PUBLIC_INVESTOR_DMG_URL;
     }
   });
 });

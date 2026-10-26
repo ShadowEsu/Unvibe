@@ -27,6 +27,7 @@ export function betaInstallScript(): string {
 set -euo pipefail
 
 TAG="\${UNVIBE_BETA_TAG:-${BETA_INSTALL_TAG}}"
+VERSION="\${TAG#v}"
 ASSET="\${UNVIBE_BETA_ASSET:-${BETA_INSTALL_ASSET}}"
 URL="https://github.com/ShadowEsu/Unvibe/releases/download/\${TAG}/\${ASSET}"
 DEST="/Applications/Unvibe.app"
@@ -81,14 +82,36 @@ echo "Checksum verified."
 mkdir -p "$mountPoint"
 attachOut="$(hdiutil attach -nobrowse -readonly -mountpoint "$mountPoint" "$work/Unvibe.dmg")"
 device="$(printf '%s\\n' "$attachOut" | awk '/^\\/dev\\/disk/ { print $1; exit }')"
-if [ ! -d "$mountPoint/Unvibe.app" ]; then
-  stop "The disk image did not contain Unvibe.app. Nothing was installed."
+# A symlink named Unvibe.app passes -d and the signature check (codesign checks its target, which could be
+# the installed copy), and the rm -rf below would then delete the real install. Only a real folder goes on.
+if [ ! -d "$mountPoint/Unvibe.app" ] || [ -L "$mountPoint/Unvibe.app" ]; then
+  stop "The disk image did not contain Unvibe.app as a real folder. Nothing was installed."
 fi
 # The release is self-signed ("Unvibe Self Signed", not an Apple Developer ID), and only an app signed
 # with that certificate passes: a copy re-signed by anyone else fails. If the check fails, stop rather
 # than re-sign it here: a local re-sign changes the app's identity and macOS drops its Accessibility permission.
 if ! codesign --verify --deep --strict -R='${BETA_MAC_SIGNING_REQUIREMENT}' "$mountPoint/Unvibe.app" >/dev/null 2>&1; then
+  # Who signed the copy that failed, so support can tell a certificate change from tampering. The names
+  # come from that copy's own certificate, so only printable characters go to the terminal.
+  echo "Signature on the downloaded app (for support):" >&2
+  codesign -dvv "$mountPoint/Unvibe.app" 2>&1 | grep '^Authority=' | LC_ALL=C tr -cd '[:print:]\\n' | head -n 3 >&2 || true
   stop "The downloaded app failed its signature check. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+
+# The pin says who signed the app, not which release it is. Only the version this script installs goes on,
+# so an older signed build can't be installed in its place.
+appVersion="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$mountPoint/Unvibe.app/Contents/Info.plist" 2>/dev/null || true)"
+if [ "$appVersion" != "$VERSION" ]; then
+  stop "The downloaded app is not version $VERSION. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+
+# Copy next to the installed app first and swap only once the copy is complete, so a failed copy (a full
+# disk, say) leaves any installed Unvibe as it was. A leftover copy from an interrupted run goes first.
+echo "Copying Unvibe…"
+rm -rf "$DEST.new"
+if ! ditto "$mountPoint/Unvibe.app" "$DEST.new"; then
+  rm -rf "$DEST.new"
+  stop "Could not copy Unvibe into Applications. Nothing was installed, and any Unvibe you already have is unchanged."
 fi
 
 echo "Closing any running Unvibe…"
@@ -97,10 +120,35 @@ sleep 1
 pkill -x Unvibe >/dev/null 2>&1 || true
 
 echo "Installing to Applications…"
-if [ -d "$DEST" ]; then
-  rm -rf "$DEST"
+# Move the installed app aside rather than deleting it first: a delete that fails halfway (files another
+# admin's install left owned by root, say) would leave half an app and no new one. A leftover .old that
+# can't be deleted is renamed, so the installed app is never moved inside it.
+rm -rf "$DEST.old" 2>/dev/null || true
+if [ -e "$DEST.old" ] || [ -L "$DEST.old" ]; then
+  mv "$DEST.old" "$DEST.old.$$" 2>/dev/null || true
 fi
-ditto "$mountPoint/Unvibe.app" "$DEST"
+if [ -e "$DEST.old" ] || [ -L "$DEST.old" ]; then
+  rm -rf "$DEST.new" 2>/dev/null || true
+  stop "Could not clear $DEST.old. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+if [ -e "$DEST" ] || [ -L "$DEST" ]; then
+  if ! mv "$DEST" "$DEST.old"; then
+    rm -rf "$DEST.new" 2>/dev/null || true
+    stop "Could not move the installed Unvibe aside. Nothing was installed, and any Unvibe you already have is unchanged."
+  fi
+fi
+if ! mv "$DEST.new" "$DEST"; then
+  if [ -e "$DEST.old" ] || [ -L "$DEST.old" ]; then
+    if ! mv "$DEST.old" "$DEST"; then
+      rm -rf "$DEST.new" 2>/dev/null || true
+      stop "Could not move the new Unvibe into place or put the old one back. Your previous Unvibe is at $DEST.old."
+    fi
+  fi
+  rm -rf "$DEST.new" 2>/dev/null || true
+  stop "Could not move the new Unvibe into place. Nothing was installed, and any Unvibe you already have is unchanged."
+fi
+# The old copy goes last. If it can't be deleted, the new app is already in place, and the next run renames it.
+rm -rf "$DEST.old" 2>/dev/null || true
 
 echo "Opening Unvibe…"
 open "$DEST"
