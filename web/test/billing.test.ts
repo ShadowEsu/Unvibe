@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import type Stripe from 'stripe';
+import { format } from 'node:util';
+import Stripe from 'stripe';
+import { billingError, errorSummary } from '../src/billing/http';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import {
   canManageBilling,
@@ -222,6 +224,29 @@ test('Stripe subscription sync validates trusted price and quantities', async ()
   await assert.rejects(syncStripeSubscription(store, tampered, noStripe), /exactly one/i);
 });
 
+test('a live subscription event for a workspace with Pro Lifetime leaves Lifetime in place and is audited', async () => {
+  process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  // How grantLifetimeFromCheckout stores it: the one-time payment id stands in for a subscription id.
+  await store.syncSubscription({
+    workspaceId: workspace.id, plan: 'pro', interval: 'lifetime', status: 'active', seats: 1,
+    stripeCustomerId: 'cus_lifetime_kept', stripeSubscriptionId: 'pi_lifetime_kept', stripePriceId: 'price_pro_lifetime', cancelAtPeriodEnd: false,
+  });
+  const audits: string[] = [];
+  store.recordAudit = async (_userId, _workspaceId, action, metadata = {}) => { audits.push(`${action} ${String(metadata.stripeSubscriptionId)}`); };
+  const subscription = {
+    id: 'sub_over_lifetime', status: 'active', customer: 'cus_lifetime_kept', cancel_at_period_end: false, created: 1_797_000_000,
+    metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
+    items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
+  } as unknown as Stripe.Subscription;
+  await syncStripeSubscription(store, subscription, noStripe);
+  const overview = await store.overview(workspace.ownerUserId);
+  assert.equal(overview.subscription.interval, 'lifetime');
+  assert.equal(overview.subscription.status, 'active');
+  assert.deepEqual(audits, ['subscription.ignored_lifetime sub_over_lifetime']);
+});
+
 test('a cancel scheduled with cancel_at (how the Stripe portal cancels on dahlia) counts as ending at period end', async () => {
   process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
   const store = new MemoryBillingStore();
@@ -329,4 +354,25 @@ test('lifetime checkout does not grant Pro until an asynchronous payment succeed
   session.payment_status = 'paid';
   await processStripeEvent(store, { type: 'checkout.session.async_payment_succeeded', data: { object: session } } as Stripe.Event, deps);
   assert.equal((await store.overview(userId)).subscription.plan, 'pro');
+});
+
+test('a Stripe error is logged and stored as its type and code only, never its message', () => {
+  const error = new Stripe.errors.StripeInvalidRequestError({
+    message: 'No such customer: cus_PrivateCustomer123; price price_live_abc', type: 'invalid_request_error', code: 'resource_missing',
+  });
+  assert.equal(errorSummary(error), 'StripeInvalidRequestError invalid_request_error resource_missing');
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  try {
+    const response = billingError(error, 502);
+    assert.equal(response.status, 502);
+  } finally {
+    console.error = original;
+  }
+  assert.equal(logged.length, 1);
+  // As the console prints it (an Error argument prints its message and stack).
+  assert.doesNotMatch(format(...logged[0]), /cus_PrivateCustomer123|price_live_abc/);
+  // Our own errors keep their fixed text, so a failed webhook still says what broke.
+  assert.equal(errorSummary(new Error('Stripe subscription has no billable item.')), 'Error: Stripe subscription has no billable item.');
 });

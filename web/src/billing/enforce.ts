@@ -1,18 +1,27 @@
 import type { TokenUsage } from '@/ai/provider';
 import { getBillingStore } from './store';
-import type { UsageKind } from './types';
+import type { PlanId, UsageKind } from './types';
 
 /**
- * The workspace whose allowance pays for this call. A workspace named in the request is used only
- * while it is on a paid Teams plan; anything else spends the caller's personal allowance, so
- * creating free team workspaces cannot multiply the Free allowance. Throws for a workspace the
- * caller does not belong to.
+ * The workspace whose allowance pays for this call, with its plan when that was already loaded. A
+ * workspace named in the request is used only while it is on a paid Teams plan; anything else
+ * spends the caller's personal allowance, so creating free team workspaces cannot multiply the Free
+ * allowance. Throws for a workspace the caller does not belong to.
  */
-async function meteredWorkspace(userId: string, req: Request): Promise<string | undefined> {
+async function meteredWorkspace(userId: string, req: Request): Promise<{ workspaceId: string | undefined; plan?: PlanId }> {
   const requested = req.headers.get('x-uncode-workspace-id')?.trim();
-  if (!requested) return undefined;
+  if (!requested) return { workspaceId: undefined };
   const overview = await getBillingStore().overview(userId, requested);
-  return overview.subscription.plan === 'teams' ? overview.workspace.id : undefined;
+  return overview.subscription.plan === 'teams' ? { workspaceId: overview.workspace.id, plan: 'teams' } : { workspaceId: undefined };
+}
+
+/** The refusal for a Pro feature on Free or the trial, shaped like the 429 so clients show `message` and `upgradePath`. */
+export function proRequired(): Response {
+  return Response.json({
+    error: 'pro_required',
+    message: 'Git diff explanations, change briefs and since last understood compares are included with Unvibe Pro.',
+    upgradePath: '/plan',
+  }, { status: 402 });
 }
 
 /** A granted reservation: the workspace whose allowance paid for it, or undefined for the caller's personal allowance. */
@@ -20,10 +29,20 @@ export interface MeteredReservation {
   workspaceId: string | undefined;
 }
 
-/** Takes one unit of the caller's allowance, or returns the response that refuses the call (429, or 503 when the plan cannot be checked). */
-export async function reserveMeteredAction(userId: string, kind: UsageKind, req: Request): Promise<Response | MeteredReservation> {
+/**
+ * Takes one unit of the caller's allowance, or returns the response that refuses the call (429, 402
+ * for a Pro feature the paying plan does not include, or 503 when the plan cannot be checked). The
+ * plan of the workspace that would pay decides, and is checked before anything is reserved.
+ */
+export async function reserveMeteredAction(
+  userId: string,
+  kind: UsageKind,
+  req: Request,
+  options: { proOnly?: boolean } = {},
+): Promise<Response | MeteredReservation> {
   try {
-    const workspaceId = await meteredWorkspace(userId, req);
+    const { workspaceId, plan } = await meteredWorkspace(userId, req);
+    if (options.proOnly && (plan ?? (await getBillingStore().overview(userId)).subscription.plan) === 'free') return proRequired();
     const reservation = await getBillingStore().reserveUsage(userId, kind, workspaceId);
     if (reservation.allowed) return { workspaceId };
     await getBillingStore().recordAudit(userId, workspaceId ?? null, 'upgrade_prompt.impression', { kind, used: reservation.line.used, limit: reservation.line.limit });

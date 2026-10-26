@@ -22,7 +22,7 @@ export default function InstallHelpPage() {
         </div>
       </header>
       <h2 className="sr-only">First-open steps for Mac and Windows</h2>
-      <FirstOpenSteps />
+      <FirstOpenSteps surface="install_help" />
       <section className="verify" aria-labelledby="verify-title">
         <h2 id="verify-title">Read the script first</h2>
         <p>Read anything before it touches your computer. Everything is public:</p>

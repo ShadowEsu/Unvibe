@@ -3,7 +3,7 @@ import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
-import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
+import { proRequired, recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
 import { clientIp } from '@/lib/tryDemo';
@@ -29,6 +29,15 @@ export async function POST(req: Request): Promise<Response> {
     return unauthorized();
   }
 
+  // Pro features, as in the desktop app: Git diff explanations and Change briefs send scope 'diff'
+  // with the hunks, Since last understood sends scope 'file', and 'project' is the architecture
+  // overview. Follow-ups and "Explain differently" on them keep that scope. Selection explanations,
+  // their follow-ups and "Explain differently" stay on every plan. Refused before anything is
+  // reserved. The mock provider (local development) has no allowance and no Pro gate; its
+  // placeholder text is not the Pro feature.
+  const proOnly = payload.scope === 'diff' || payload.scope === 'file' || payload.scope === 'project'
+    || Boolean(payload.context.diffHunks?.length);
+
   // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows).
   // Follow-ups and "Explain differently" are follow-up questions; anything else is an explanation.
   // The sealed trial keeps one explanation budget for both.
@@ -37,11 +46,12 @@ export async function POST(req: Request): Promise<Response> {
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   if (!provider.mock && userId) {
     const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
-    const reserved = await reserveMeteredAction(userId, kind, req);
+    const reserved = await reserveMeteredAction(userId, kind, req, { proOnly });
     if (reserved instanceof Response) return reserved;
     release = () => releaseMeteredAction(userId, kind, reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, kind, usage);
   } else if (!provider.mock && trialInstall) {
+    if (proOnly) return proRequired();
     const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req));
     if (trial.denied) return trial.denied;
     release = trial.release;

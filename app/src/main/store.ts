@@ -69,6 +69,25 @@ export const QUIZ_DAILY_LIMIT = 30;
 export const BETA_SELECTED_CODE_PROMPT_LIMIT = 50;
 export const BETA_TRIAL_DURATION_DAYS = 30;
 
+const learningListeners = new Set<() => void>();
+
+/** Runs `listener` after every saved change to what the companion lists. Returns an unsubscribe. */
+export function onLearningChanged(listener: () => void): () => void {
+  learningListeners.add(listener);
+  return () => learningListeners.delete(listener);
+}
+
+/** The change is already saved; a listener failure (e.g. a closed window) must not report it as unsaved. */
+function learningChanged(): void {
+  for (const listener of learningListeners) {
+    try {
+      listener();
+    } catch {
+      // Ignored on purpose: the next refresh (focus or change) shows the saved state anyway.
+    }
+  }
+}
+
 class Store {
   private data: Data = { events: [], outbox: [] };
   private file: string;
@@ -114,6 +133,7 @@ class Store {
     else this.data.events.push(ev);
     this.queue(ev.id);
     this.save();
+    learningChanged();
   }
 
   /** Persist on this Mac only. Used for streak days that should not sync or use AI quota. */
@@ -122,6 +142,7 @@ class Store {
     if (idx >= 0) this.data.events[idx] = ev;
     else this.data.events.push(ev);
     this.save();
+    learningChanged();
   }
 
   ensureDayActive(): void {
@@ -150,6 +171,7 @@ class Store {
     if (conceptLabel) ev.conceptLabel = conceptLabel;
     this.queue(id);
     this.save();
+    learningChanged();
   }
 
   /** Update on-device lesson body without forcing a cloud re-upload of code. */
@@ -165,6 +187,7 @@ class Store {
       else delete ev.note;
     }
     this.save();
+    learningChanged();
     return true;
   }
 
@@ -182,6 +205,7 @@ class Store {
     hidden.add(id);
     this.data.deletedIds = [...hidden].slice(-2000);
     this.save();
+    learningChanged();
     return existed || hidden.has(id);
   }
 
@@ -290,6 +314,7 @@ class Store {
     const hidden = new Set(this.data.deletedIds ?? []);
     this.data.events = hidden.size === 0 ? result.events : result.events.filter((event) => !hidden.has(event.id));
     this.save();
+    if (result.merged > 0) learningChanged();
     return result.merged;
   }
 
@@ -347,6 +372,7 @@ class Store {
   wipeEverything(): void {
     this.data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
     this.save();
+    learningChanged();
   }
 
   // ---- saved Ask conversations ----
