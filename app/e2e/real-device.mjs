@@ -3,7 +3,9 @@
 // support, saves a screenshot after every step, and writes a plain report of what passed.
 //
 // Env: UNVIBE_EXE (path to the installed app executable), SHOTS_DIR (output folder),
-//      UNVIBE_OS ("mac" | "windows"), AXE_PATH (optional axe.min.js for the a11y check).
+//      UNVIBE_OS ("mac" | "windows"), AXE_PATH (optional axe.min.js for the a11y check),
+//      UNVIBE_E2E_PROFILE (optional profile folder; default a new temp folder).
+// CI flags the run's install as QA in a later step, so this script never holds the admin token.
 import { _electron as electron, chromium } from 'playwright';
 import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -94,12 +96,17 @@ const FIRST_RUN_SAMPLE = [
 // The promise to a new user: from opening the app to their first explanation within a minute.
 const FIRST_EXPLANATION_BUDGET_S = 60;
 
-const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-e2e-'));
+// CI sets UNVIBE_E2E_PROFILE so its QA-flag step can read this run's install ID afterwards.
+const userData = process.env.UNVIBE_E2E_PROFILE || mkdtempSync(path.join(tmpdir(), 'unvibe-e2e-'));
+mkdirSync(userData, { recursive: true });
 // Shell-launched protocol handlers must use the same isolated profile as the driven app.
 process.env.UNVIBE_USER_DATA = userData;
 const launchedAt = Date.now();
 // UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
-const app = await electron.launch({ executablePath: exe, args: process.env.UNVIBE_APP_DIR ? [process.env.UNVIBE_APP_DIR] : [], env: { ...process.env, UNVIBE_USER_DATA: userData }, timeout: 90000 });
+// The app under test never gets the founder stats token, even if this process has it.
+const appEnv = { ...process.env, UNVIBE_USER_DATA: userData };
+delete appEnv.UNVIBE_ADMIN_STATS_TOKEN;
+const app = await electron.launch({ executablePath: exe, args: process.env.UNVIBE_APP_DIR ? [process.env.UNVIBE_APP_DIR] : [], env: appEnv, timeout: 90000 });
 // Zero runtime errors is part of the gate: console errors and uncaught errors in Unvibe's own
 // windows fail the run. Google's account page is not ours. Main-process output is kept for review.
 const runtimeErrors = [];
@@ -369,17 +376,4 @@ for (const line of runtimeErrors) report.push(`      ${line}`);
 writeFileSync(path.join(out, 'main-process.log'), mainLog.join(''));
 writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
 await app.close().catch(() => {});
-
-// Leave this CI install out of founder stats (needs the UNVIBE_ADMIN_STATS_TOKEN secret).
-if (process.env.UNVIBE_ADMIN_STATS_TOKEN) {
-  try {
-    const { installId } = JSON.parse(readFileSync(path.join(userData, 'unvibe-store.json'), 'utf8'));
-    const res = await fetch('https://api.unvibe.site/api/v1/admin/qa-install', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${process.env.UNVIBE_ADMIN_STATS_TOKEN}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ installId }),
-    });
-    console.log(`QA install flag: ${res.status}`);
-  } catch (e) { console.log('QA install flag failed', e.message); }
-}
 process.exit(report.some((line) => line.startsWith('FAIL')) ? 1 : 0);
