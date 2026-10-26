@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -113,6 +113,16 @@ test('take: two senders at once get different codes, each marked with who and wh
   await script(['take', 'takes', 'Last one', '--csv', csv]);
   await assert.rejects(script(['take', 'takes', 'Too late', '--csv', csv]), /no unused codes left/);
   assert.throws(() => statSync(`${csv}.lock`), 'the lock is released, even after a failure');
+});
+
+test('take: refuses a promo folder other users can write, and hands nothing out', async () => {
+  const open = join(dir, 'shared-folder');
+  mkdirSync(open);
+  chmodSync(open, 0o777);
+  const csv = join(open, 'open.csv');
+  await script(['generate', 'opens', '2', '--csv', csv, '--sql', join(open, 'open.sql')]);
+  await assert.rejects(script(['take', 'opens', 'Ada', '--csv', csv]), /can be written by other users/);
+  assert.ok(!readFileSync(csv, 'utf8').includes('Ada'), 'no code was handed out');
 });
 
 test('list and revoke go through the admin API with the token from the environment', async () => {

@@ -210,6 +210,9 @@ function take(batch, who, options) {
   const recipient = safeCell(who ?? '');
   if (!recipient) fail('say who the code is for, e.g. take calhacks13 "Ada L. (ada@school.edu)"');
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
+  // Another user who can write the folder could swap the CSV or plant files beside it.
+  const folder = dirname(csvPath);
+  if (existsSync(folder) && (statSync(folder).mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
   const code = withLock(`${csvPath}.lock`, () => {
     const rows = readCodes(csvPath);
     const next = rows.find((row) => !row.givenTo);
@@ -217,7 +220,7 @@ function take(batch, who, options) {
     next.givenTo = recipient.slice(0, 200);
     next.givenAt = new Date().toISOString();
     const tmp = `${csvPath}.tmp-${process.pid}`;
-    writeCsv(tmp, rows, 'w');
+    writeCsv(tmp, rows, 'wx');
     renameSync(tmp, csvPath);
     return next.code;
   });
