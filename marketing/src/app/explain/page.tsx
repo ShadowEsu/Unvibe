@@ -9,12 +9,14 @@ const title = "Explain code in plain English, free";
 const description =
   "Paste up to 60 lines of code and Vibe explains what it does in plain English, at the depth you pick. Free in your browser, no account.";
 
+const image = "/unvibe-social-preview-v6.png";
+
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/explain" },
-  openGraph: { type: "website", url: "/explain", title, description, siteName: "Unvibe", locale: "en_US" },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: { type: "website", url: "/explain", title, description, siteName: "Unvibe", locale: "en_US", images: [{ url: image, width: 1200, height: 630, alt: title }] },
+  twitter: { card: "summary_large_image", title, description, images: [image] },
 };
 
 export default function ExplainIndexPage() {

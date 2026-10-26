@@ -87,7 +87,7 @@ export function TryIt({
   answerSurface = "try_it_answer",
   errorSurface = "try_it",
   emailHref = "#email-link",
-}: TryItProps = {}) {
+}: TryItProps) {
   const [code, setCode] = useState(sample);
   const [level, setLevel] = useState<Level>("intermediate");
   const [state, setState] = useState<"idle" | "thinking" | "done" | "error">("idle");

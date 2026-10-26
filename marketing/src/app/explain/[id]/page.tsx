@@ -21,12 +21,13 @@ export function generateMetadata({ params }: Params): Metadata {
   if (!page) return {};
   const title = `Explain ${explainLanguage(page).name} code in plain English`;
   const url = `/explain/${page.id}`;
+  const image = "/unvibe-social-preview-v6.png";
   return {
     title,
     description: page.description,
     alternates: { canonical: url },
-    openGraph: { type: "website", url, title, description: page.description, siteName: "Unvibe", locale: "en_US" },
-    twitter: { card: "summary_large_image", title, description: page.description },
+    openGraph: { type: "website", url, title, description: page.description, siteName: "Unvibe", locale: "en_US", images: [{ url: image, width: 1200, height: 630, alt: title }] },
+    twitter: { card: "summary_large_image", title, description: page.description, images: [image] },
   };
 }
 
