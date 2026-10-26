@@ -1,5 +1,6 @@
 import type Stripe from 'stripe';
 import type { BillingStore, BillingInterval, PlanId, SubscriptionRecord, SubscriptionStatus } from './types';
+import { complimentaryPaidEnd } from './plans';
 import { stripePriceId } from './stripe';
 
 /** Far-future end date used for Pro Lifetime grants (effectively permanent). */
@@ -108,6 +109,16 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
       stripeSubscriptionId: subscription.id,
       status: subscription.status,
     });
+    return;
+  }
+  // Checkout refuses a paid subscription while complimentary access runs, but a session opened
+  // before a promo code was redeemed can still complete after it. The complimentary row stays; the
+  // incoming subscription is refunded and canceled like any duplicate (one set to end at period end
+  // was still paid for), with keys from its id, so a replay or a later event for it never refunds or
+  // cancels twice. Once it has ended there is nothing left to stop.
+  if (stored && complimentaryPaidEnd(stored)) {
+    const ended = subscription.status === 'canceled' || subscription.status === 'incomplete_expired';
+    if (!ended) await stopDuplicate(store, deps, metadata.workspaceId, 'complimentary', subscription.id);
     return;
   }
   const storedId = stored?.stripeSubscriptionId;
