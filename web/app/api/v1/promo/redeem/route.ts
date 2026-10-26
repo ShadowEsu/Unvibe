@@ -5,19 +5,25 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const NO_STORE = { 'cache-control': 'no-store' };
-const RATE_LIMIT = { windowMs: 60_000, max: 20 };
+const WINDOW_MS = 60_000;
+/**
+ * Per-instance backstops like gifts/claim. Site redemptions arrive from the site's servers, so the
+ * address limit is loose (it is the site's shared Supabase limiter that counts each visitor's
+ * network); the account limit is the tight one.
+ */
+const LIMITS = { ip: 120, user: 10 };
 const hits = new Map<string, { count: number; resetAt: number }>();
 
-/** Per-instance backstop like gifts/claim. The site's /api/redeem adds the shared Supabase limiter. */
-function rateLimited(key: string): boolean {
+function rateLimited(kind: keyof typeof LIMITS, key: string): boolean {
   const now = Date.now();
-  const prior = hits.get(key);
+  const bucket = `${kind}:${key}`;
+  const prior = hits.get(bucket);
   if (!prior || prior.resetAt < now) {
-    hits.set(key, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    hits.set(bucket, { count: 1, resetAt: now + WINDOW_MS });
     return false;
   }
   prior.count += 1;
-  return prior.count > RATE_LIMIT.max;
+  return prior.count > LIMITS[kind];
 }
 
 function failure(error: string, status: number, message: string): Response {
@@ -31,7 +37,7 @@ function failure(error: string, status: number, message: string): Response {
  */
 export async function POST(req: Request): Promise<Response> {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'local';
-  if (rateLimited(`ip:${ip}`)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
+  if (rateLimited('ip', ip)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
 
   const body = (await req.json().catch(() => ({}))) as { accessToken?: unknown; code?: unknown };
   const accessToken = typeof body.accessToken === 'string' ? body.accessToken.trim() : '';
@@ -43,7 +49,7 @@ export async function POST(req: Request): Promise<Response> {
     const backend = promoBackend();
     const account = await backend.verifyAccessToken(accessToken);
     if (!account) return failure('unauthorized', 401, 'Your sign-in has expired. Sign in again.');
-    if (rateLimited(`user:${account.id}`)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
+    if (rateLimited('user', account.id)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
     await backend.upsertUser(account);
     const result = await backend.redeem(account.id, promoCodeHash(code));
     const { http, message } = PROMO_RESPONSES[result.status];

@@ -227,14 +227,22 @@ test('stacks on running complimentary Pro', async () => {
   assert.equal(new Date(res.body.proUntil ?? 0).getTime(), before + 90 * DAY_MS);
 });
 
-test('429 after 20 tries a minute from one address', async () => {
+test('429 after 10 tries a minute from one account, whatever the address', async () => {
   resetStores();
   const p = await person('spam');
-  const ip = freshIp();
-  for (let i = 0; i < 20; i += 1) assert.equal((await redeem({ accessToken: p.token, code: newCode() }, ip)).http, 404);
-  const limited = await redeem({ accessToken: p.token, code: newCode() }, ip);
+  for (let i = 0; i < 10; i += 1) assert.equal((await redeem({ accessToken: p.token, code: newCode() })).http, 404);
+  const limited = await redeem({ accessToken: p.token, code: newCode() });
   assert.equal(limited.http, 429);
   assert.equal(limited.body.error, 'rate_limited');
+  assert.equal((await redeem({ accessToken: (await person('neighbour')).token, code: newCode() })).http, 404, 'other accounts are not affected');
+});
+
+test('429 after 120 calls a minute from one address (the site proxy is one address)', async () => {
+  resetStores();
+  const ip = freshIp();
+  for (let i = 0; i < 120; i += 1) assert.equal((await redeem({ code: newCode() }, ip)).http, 401);
+  const limited = await redeem({ accessToken: (await person('late')).token, code: newCode() }, ip);
+  assert.equal(limited.http, 429);
 });
 
 test('503 on a production build without Supabase (memory is never used in production)', async () => {

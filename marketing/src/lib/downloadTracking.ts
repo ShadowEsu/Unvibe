@@ -5,7 +5,7 @@
  * `download_cta_clicked {surface, platform}`, platform mac | windows | other:
  * - Downloads the installer: hero, hero_other_os, palette, beta, home_install, investors,
  *   home_cta, try_it (after a failed try), try_it_answer (under a finished try-it answer),
- *   activate (the /activate first-visit download).
+ *   activate (the /activate first-visit download), redeem (after a promo code on /redeem).
  * - Opens the download page (/beta) instead: nav, mobile_bar, pricing, footer, releases, build,
  *   resources. Of these, only the DownloadLink buttons (nav, releases, build, resources) also
  *   fire DOWNLOADED_EVENT, as they always have.
@@ -40,7 +40,8 @@ export type DownloadSurface =
   | "footer"
   | "releases"
   | "build"
-  | "resources";
+  | "resources"
+  | "redeem";
 
 /** A click on a download button or link. */
 export function trackDownloadClick(surface: DownloadSurface, platform: DownloadPlatform): void {
