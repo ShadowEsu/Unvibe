@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -559,5 +559,32 @@ test('account deletion aborts a Chat reply still streaming from the person\'s ow
     assertClearedAndPreferencesKept();
   } finally {
     provider.restore();
+  }
+});
+
+test('knowledge and learning are wiped together after renderer cleanup with no async gap', async () => {
+  signedInWithData();
+  const generation = store().wipeGeneration();
+  const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
+  const wipe = knowledgeStore().wipe.bind(knowledgeStore());
+  let cleanupCallsAtWipe: string[] = [];
+  let generationAtWipe = -1;
+  let generationAtNextTurn = -1;
+  const watched = mock.method(knowledgeStore(), 'wipe', () => {
+    cleanupCallsAtWipe = sessionCalls.map((entry) => entry.call);
+    generationAtWipe = store().wipeGeneration();
+    wipe();
+    queueMicrotask(() => { generationAtNextTurn = store().wipeGeneration(); });
+  });
+  try {
+    const result = await deleteAccountAndLocalData(stopReviews);
+    assert.equal(result.ok, true);
+    assert.deepEqual(cleanupCallsAtWipe, ['clearStorageData', 'clearCache']);
+    assert.equal(generationAtWipe, generation, 'knowledge clears immediately before learning');
+    assert.equal(generationAtNextTurn, generation + 1, 'no await leaves the old generation visible after knowledge clears');
+    assertClearedAndPreferencesKept();
+  } finally {
+    watched.mock.restore();
+    service.restore();
   }
 });

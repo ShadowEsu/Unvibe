@@ -41,9 +41,9 @@ async function clearAccountData(): Promise<void> {
   clearAiKey();
   if (hasAiKey()) throw new Error('The API key saved in Unvibe could not be removed.');
   settings().forgetPerson();
-  knowledgeStore().wipe();
   await session.defaultSession.clearStorageData({ storages: RENDERER_STORAGES });
   await session.defaultSession.clearCache();
+  knowledgeStore().wipe();
   store().wipeEverything();
 }
 
