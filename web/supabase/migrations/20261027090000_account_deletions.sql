@@ -12,12 +12,12 @@
 --     data; it locks the owned workspaces first, so a concurrent join either is seen here or is
 --     refused by the membership trigger.
 --   * erase_account_data: the public side in one transaction. Repeats the Teams refusal. Then
---     deletes or anonymises the email-keyed rows
---     (waitlist, gift claims and redemptions, feedback bonus grants, site feedback, invitations
---     to the address), keeps promo redemptions without the account or the email, deletes owned
---     workspaces and memberships, then the users row. tokens, device codes, events and the rest
---     go with users by their on delete cascade, so until this commits the app token still works
---     for a retry.
+--     deletes or anonymises the email-keyed rows (waitlist, gift claims and redemptions, feedback
+--     bonus grants, site feedback, invitations to the address), unless another account holds the
+--     address now; keeps promo redemptions without the account or the email; revokes the pending
+--     invitations the account sent in other teams; deletes owned workspaces and memberships, then
+--     the users row. tokens, device codes, events and the rest go with users by their on delete
+--     cascade, so until this commits the app token still works for a retry.
 --   * users_refuse_deleted_account: no users row can be created (insert or upsert) for an id with
 --     a deletion row, so a session that outlives the deletion cannot re-create the account.
 --   * workspace_members_refuse_deleted_account: nobody joins a workspace owned by an account
@@ -25,7 +25,7 @@
 --   * stale_account_deletions: how many deletions are still started after an hour (alerting).
 --
 -- RLS is on with no policies; public, anon and authenticated have no table or function rights.
--- Only the service role (the API) calls the functions.
+-- Only the service role (the API) reads the table and calls the functions, by explicit grants.
 --
 -- Rollback (forgets every deletion record; re-opens the re-creation path):
 --   begin;
