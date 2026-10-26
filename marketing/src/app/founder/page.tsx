@@ -4,7 +4,7 @@ import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 import { FounderConsole } from "@/components/build/FounderConsole";
 
 export const metadata: Metadata = {
-  title: "Founder analytics",
+  title: "Analytics",
   description: "Live aggregate traffic, waitlist, and beta-request numbers for Unvibe.",
   robots: { index: false, follow: false },
 };

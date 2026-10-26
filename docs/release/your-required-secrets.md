@@ -20,7 +20,7 @@ currently intended to be `https://api.unvibe.site`).
 | `WEB_BASE_URL` | The backend's public HTTPS URL, for example `https://api.unvibe.site`. | Yes |
 | `PUBLIC_APP_URL` | The trusted HTTPS return URL for Billing Checkout/Portal. Use the public web app origin that hosts `/plan`. | Yes for billing |
 | `ENABLE_MOCK_AI` | `false` for real explanations. | Yes |
-| `OPENROUTER_API_KEY` | Preferred launch path: server-only OpenRouter key for included free models. | Yes (or Anthropic/Gemini below) |
+| `OPENROUTER_API_KEY` | Optional server-only OpenRouter key. Production uses Gemini (`GEMINI_API_KEY` below). If set, the app's AI routes prefer it; the website's Try it uses only Gemini and never this key. | No |
 | `ANTHROPIC_API_KEY` **or** `GEMINI_API_KEY` | Fallback server-only AI-provider key. Start with a restricted key and a spend limit. | If not using OpenRouter |
 | `UNCODE_MODEL` or `GEMINI_MODEL` / `OPENROUTER_MODEL` | The approved model name for the selected provider. | Yes |
 | `SUPABASE_URL` | Your production Supabase project URL. | Yes |

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 
 /**
  * Public "try it" explanations from unvibe.site. No account, so the limits are strict:
@@ -51,9 +51,19 @@ export function clientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip')?.trim() || 'local';
 }
 
-export function hashVisitor(ip: string): string {
-  const salt = process.env.TRY_IP_SALT?.trim() || 'unvibe-try';
-  return createHash('sha256').update(`${salt}:${ip}`).digest('hex').slice(0, 32);
+let localKey: string | undefined;
+
+/**
+ * The stored form of a visitor's address: an HMAC keyed by a server secret (TRY_IP_SALT, else the
+ * Supabase service-role key, as `trialIpKey` does), so the hashes in `try_requests` can't be
+ * brute-forced back to addresses without the key. Production with neither secret returns null
+ * (the route answers 503); outside production a random per-process key stands in. Never a public constant.
+ */
+export function hashVisitor(ip: string): string | null {
+  const secret = process.env.TRY_IP_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!secret && process.env.NODE_ENV === 'production') return null;
+  const key = secret || (localKey ??= randomBytes(32).toString('hex'));
+  return createHmac('sha256', key).update(`unvibe-try:${ip}`).digest('hex').slice(0, 32);
 }
 
 const LEVEL_GUIDE: Record<TryLevel, string> = {
