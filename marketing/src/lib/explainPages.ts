@@ -619,6 +619,65 @@ class Reports {
     watchOut:
       "The browser only checks the format, and only when a person submits. `ana@example` passes even without a dot, and a script that calls `form.submit()` sends the form with the field empty. Check the address again on the server.",
   },
+  {
+    id: "css",
+    fileName: "cards.css",
+    lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
+    description:
+      "Paste CSS and get a plain English explanation, free online. The sample lays out product cards with grid, flexbox and a custom property for the accent color.",
+    sampleSummary: "A grid of product cards, a flexbox column inside each card and a custom property for the sale color.",
+    sample: `.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.card.sale {
+  --accent: #dc2626;
+}
+
+.card .buy {
+  margin-top: auto;
+  background: var(--accent, #2563eb);
+}
+
+.buy {
+  background: gray;
+}`,
+    shows: [
+      {
+        concept: "grid",
+        text: "`repeat(auto-fill, minmax(220px, 1fr))` makes as many columns at least 220px wide as fit, then shares out the leftover space. A 960px container gets 4 columns of 228px, and one narrower than 456px gets a single column, with no media query.",
+      },
+      {
+        concept: "flexbox",
+        text: "Each `.card` is a flex column, and `margin-top: auto` on its `.buy` button takes all the free space above it. The grid stretches the cards in a row to one height, so the buttons in that row line up along the bottom, however long the text above them.",
+      },
+      {
+        concept: "custom properties",
+        text: "`.card.sale` sets `--accent`, and the button inside inherits it, so a sale card's button is red. Other cards don't set `--accent`, so `var(--accent, #2563eb)` falls back to blue.",
+      },
+      {
+        concept: "the cascade",
+        text: "Inside a card, `.card .buy` beats the `.buy` rule even though `.buy` comes later, because two classes are more specific than one. Source order only decides between equally specific selectors: a later `.card .buy { background: gray; }` would win.",
+      },
+    ],
+    notes: [
+      "A `.buy` button outside any card matches only the last rule, so it is gray and has no auto margin.",
+      "`gap: 16px` adds space between the cards only, never around the outside of the grid.",
+      "With `auto-fit` in place of `auto-fill`, empty columns collapse: two cards in a 960px container stretch to 472px each, where `auto-fill` keeps them at 228px.",
+      "Items in a flex column stretch across by default, so each `.buy` button fills its card's width. Add `align-self: start` to the button to keep it its natural size.",
+      "`margin-top: auto` pushes only because `.card` is a flex container. Make `.card` a plain block and it computes to 0, and the buttons no longer line up.",
+    ],
+    watchOut:
+      "The fallback in `var(--accent, #2563eb)` is used only when `--accent` isn't set at all. A card that sets `--accent: 12px` gets a button with no background: not red, not blue and not the gray from `.buy`, because the browser can't tell the value is wrong until it uses it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
