@@ -16,7 +16,7 @@ function daysLeft(iso: string, now: number): string {
 export function resetLabel(iso: string, plan: string, now = Date.now()): string {
   // The public beta is a 30-day window that ends; it does not reset.
   return plan === 'trial'
-    ? `Free beta ends on ${shortDate(iso)} (${daysLeft(iso, now)})`
+    ? `Free explanations on this computer end on ${shortDate(iso)} (${daysLeft(iso, now)})`
     : `Usage limits reset on ${shortDate(iso)} (${daysLeft(iso, now)})`;
 }
 

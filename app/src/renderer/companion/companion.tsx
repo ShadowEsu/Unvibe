@@ -103,13 +103,12 @@ interface AppUsageLine {
 
 type PlanId = 'free' | 'pro' | 'teams' | 'local' | 'trial' | 'full';
 
+/** The free plan has one name everywhere, "Free": signed in, the public-beta trial, or counted locally. */
 function planLabel(plan: string | undefined): string {
   switch (plan) {
     case 'pro': return 'Pro';
     case 'teams': return 'Teams';
-    case 'trial': return 'Free beta';
     case 'full': return 'Full access';
-    case 'local': return 'Local';
     default: return 'Free';
   }
 }
@@ -119,11 +118,12 @@ function asPlanId(value: string | undefined): PlanId {
   return 'free';
 }
 
-function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string {
+/** Shown after the plan name; the free plan has none. */
+function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string | null {
   if (plan === 'full') return 'Included';
   if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
   if (plan === 'teams') return interval === 'annual' ? '$72/seat/yr' : '$8/seat';
-  return '$0';
+  return null;
 }
 
 function percentLeft(remaining: number, limit: number): number {
@@ -1065,7 +1065,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       <div className="plan-pick">
         <article className="plan-pick__card is-current">
           <span>Current plan</span>
-          <h2>{planLabel(currentPlan)} {planPriceLabel(currentPlan, currentInterval)}</h2>
+          <h2>{[planLabel(currentPlan), planPriceLabel(currentPlan, currentInterval)].filter(Boolean).join(' ')}</h2>
           <p>
             {gifted && overview ? giftStatusLine(overview.subscription.currentPeriodEnd)
               : unlimited ? 'This build is not metered locally.'

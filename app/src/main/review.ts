@@ -344,16 +344,12 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
     if (usage.remaining <= 0 && !localKey) {
       const resets = new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-      const planName =
-        usage.plan === 'pro' ? 'Pro'
-          : usage.plan === 'teams' ? 'Teams'
-            : usage.plan === 'trial' ? 'Trial'
-              : 'Free';
+      const planName = usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
       send(win, session, {
         type: 'error',
         code: 'plan_limit_reached',
         upgradePath: '/plan',
-        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'The beta access period ends' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
+        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'Free explanations on this computer end' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
       });
       raiseLimitPause(win);
       return;

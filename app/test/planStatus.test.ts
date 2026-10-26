@@ -28,8 +28,8 @@ test('a renewing paid plan has no special status line', () => {
   assert.equal(paidStatusLine({ status: 'active', cancelAtPeriodEnd: true }, 'Pro', NOW), null);
 });
 
-test('free beta ends while paid and free plans reset', () => {
-  assert.match(resetLabel(END, 'trial', NOW), /^Free beta ends on .+ \(30 days left\)$/);
+test('the public-beta trial ends while paid and free plans reset', () => {
+  assert.match(resetLabel(END, 'trial', NOW), / end on .+ \(30 days left\)$/);
   assert.match(resetLabel(END, 'free', NOW), /^Usage limits reset on .+ \(30 days left\)$/);
   assert.match(resetLabel('2026-10-23T12:00:00.000Z', 'pro', NOW), /\(1 day left\)$/);
 });
