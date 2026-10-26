@@ -27,6 +27,9 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   deletion removes server records and sessions, then clears local learning and closes widgets.
 - `.env`, private keys, build output, dependencies, and common credential files are excluded from
   version control. The committed secret-filter tests contain fake key patterns only.
+- Feedback (`marketing/src/app/feedback/route.ts`) stores the rating, the message (control
+  characters stripped), the source, an optional email, page and app version, and a salted SHA-256
+  of the client IP used for rate limiting (`FEEDBACK_IP_SALT`, with a built-in fallback salt).
 
 ## Not implemented or not verified
 

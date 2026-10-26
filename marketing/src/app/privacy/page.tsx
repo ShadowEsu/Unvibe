@@ -35,6 +35,12 @@ export default function PrivacyPage() {
             <strong>Account data:</strong> your email for sign-in and an
             authentication token.
           </li>
+          <li>
+            <strong>Feedback you send:</strong> your star rating and message, where it
+            came from (the site or the app, with the page or app version), your email
+            only if you add it, and a hashed form of your IP address to limit repeated
+            sends.
+          </li>
         </ul>
       </LegalSection>
 
