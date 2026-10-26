@@ -148,9 +148,11 @@ function shellQuote(value: string): string {
  * between the check and the swap. The installed app is not deleted to make room: it is moved aside
  * to `<target>.old`, the new app is moved into its place, and only then is the old one deleted. If
  * the new app can't be moved in, the old one is moved back. On any failure the installed app stays
- * as it is, the copy is removed, the old app is reopened, and the script exits 1. A leftover `.old`
- * that can't be deleted doesn't fail the update. It never re-signs: a re-signed copy would run
- * with a different identity, and macOS drops the Accessibility permission for it.
+ * as it is, the copy is removed, the old app is reopened, and the script exits 1. The one exception:
+ * if the old app can't be moved back either, nothing is left at the target, so the verified copy
+ * is kept at `<target>.new` beside `<target>.old`, nothing is opened, and the script exits 1. A
+ * leftover `.old` that can't be deleted doesn't fail the update. It never re-signs: a re-signed
+ * copy would run with a different identity, and macOS drops the Accessibility permission for it.
  * The copy takes no ACLs, extended attributes (quarantine included) or resource forks, which the
  * signature doesn't seal, and only its owner can write to it. Unvibe.app in the image must be a
  * real folder, not a symlink: a link to a validly signed bundle elsewhere (even the installed app
@@ -178,6 +180,12 @@ export function macUpdateScript(opts: { pid: number; file: string; dir: string; 
     `  rm -rf ${shellQuote(dir)}`,
     '  exit 1',
     '}',
+    // Neither the new nor the old app is at the target: keep both, delete nothing, open nothing.
+    'stranded() {',
+    `  hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
+    `  rm -rf ${shellQuote(dir)}`,
+    '  exit 1',
+    '}',
     `mkdir -p ${shellQuote(mount)}`,
     `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || refuse`,
     `[ -d ${mounted} ] && [ ! -L ${mounted} ] || refuse`,
@@ -194,7 +202,7 @@ export function macUpdateScript(opts: { pid: number; file: string; dir: string; 
     `if [ -e ${old} ] || [ -L ${old} ]; then mv ${old} ${old}."$$" || refuse; fi`,
     // An app running from elsewhere (e.g. ~/Downloads) updates into a target that doesn't exist yet.
     `if [ -e ${installed} ] || [ -L ${installed} ]; then mv ${installed} ${old} || refuse; fi`,
-    `mv ${staged} ${installed} || { if [ -e ${old} ] || [ -L ${old} ]; then mv ${old} ${installed}; fi; refuse; }`,
+    `mv ${staged} ${installed} || { if [ -e ${old} ] || [ -L ${old} ]; then mv ${old} ${installed} || stranded; fi; refuse; }`,
     `rm -rf ${old} 2>/dev/null`,
     `hdiutil detach ${shellQuote(mount)} -force >/dev/null 2>&1`,
     `open ${installed}`,

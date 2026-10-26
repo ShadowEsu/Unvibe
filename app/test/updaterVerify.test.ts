@@ -117,7 +117,7 @@ test('the macOS helper copies the app beside the installed one and checks the co
   const stagedVerify = script.indexOf(`codesign --verify --deep --strict -R='${PINNED_REQUIREMENT}' '/Applications/Unvibe.app.new' >/dev/null 2>&1 || refuse`);
   const stagedVersion = script.indexOf(`[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/Applications/Unvibe.app.new/Contents/Info.plist' 2>/dev/null)" = '0.1.45' ] || refuse`);
   const moveAside = script.indexOf(`if [ -e '/Applications/Unvibe.app' ] || [ -L '/Applications/Unvibe.app' ]; then mv '/Applications/Unvibe.app' '/Applications/Unvibe.app.old' || refuse; fi`);
-  const moveIn = script.indexOf(`mv '/Applications/Unvibe.app.new' '/Applications/Unvibe.app' || { if [ -e '/Applications/Unvibe.app.old' ] || [ -L '/Applications/Unvibe.app.old' ]; then mv '/Applications/Unvibe.app.old' '/Applications/Unvibe.app'; fi; refuse; }`);
+  const moveIn = script.indexOf(`mv '/Applications/Unvibe.app.new' '/Applications/Unvibe.app' || { if [ -e '/Applications/Unvibe.app.old' ] || [ -L '/Applications/Unvibe.app.old' ]; then mv '/Applications/Unvibe.app.old' '/Applications/Unvibe.app' || stranded; fi; refuse; }`);
   const removeOld = script.lastIndexOf(`rm -rf '/Applications/Unvibe.app.old' 2>/dev/null`);
   assert.ok(mountVersion >= 0 && copy > mountVersion, 'the mounted app passes both checks before it is copied, without ACLs, extended attributes or resource forks');
   assert.ok(permissions > copy && stagedVerify > permissions, 'only the owner can write to the copy, and that is set before it is checked');
@@ -134,10 +134,10 @@ test('the macOS helper copies the app beside the installed one and checks the co
  * path, so the script's /usr/libexec/PlistBuddy is pointed at a stub that prints the version file.
  * `installed: 'locked'` gives the installed app a read-only folder with a file in it, which rm can't
  * fully delete; `'none'` means there is no installed app yet. `newMoveFails` makes `mv` fail when it
- * moves the `.new` copy.
+ * moves the `.new` copy; `oldMoveBackFails` makes it fail when it moves the `.old` app back.
  */
-function runHelper(opts: { codesignFails?: 'mount' | 'staged'; dittoFails?: boolean; mountedApp?: 'folder' | 'symlink'; mountedVersion?: string; installed?: 'app' | 'locked' | 'none'; newMoveFails?: boolean } = {}) {
-  const { codesignFails = '', dittoFails = false, mountedApp = 'folder', mountedVersion = '0.1.45', installed = 'app', newMoveFails = false } = opts;
+function runHelper(opts: { codesignFails?: 'mount' | 'staged'; dittoFails?: boolean; mountedApp?: 'folder' | 'symlink'; mountedVersion?: string; installed?: 'app' | 'locked' | 'none'; newMoveFails?: boolean; oldMoveBackFails?: boolean } = {}) {
+  const { codesignFails = '', dittoFails = false, mountedApp = 'folder', mountedVersion = '0.1.45', installed = 'app', newMoveFails = false, oldMoveBackFails = false } = opts;
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
   const bin = path.join(root, 'bin');
   const dir = path.join(root, 'work');
@@ -178,7 +178,7 @@ exec cp -Rp "$src" "$dst"`,
     rm: `for a in "$@"; do case "$a" in /Applications*) exit 0 ;; esac; done
 exec /bin/rm "$@"`,
     mv: `echo "mv $*" >> "$LOG"
-case "$1" in *.new) [ "$MV_NEW_FAILS" = 1 ] && exit 1 ;; esac
+case "$1" in *.new) [ "$MV_NEW_FAILS" = 1 ] && exit 1 ;; *.old) [ "$MV_OLD_FAILS" = 1 ] && exit 1 ;; esac
 exec /bin/mv "$@"`,
   };
   for (const [name, body] of Object.entries(stubs)) {
@@ -197,6 +197,7 @@ exec /bin/mv "$@"`,
     CODESIGN_FAILS: codesignFails,
     DITTO_FAILS: dittoFails ? '1' : '',
     MV_NEW_FAILS: newMoveFails ? '1' : '',
+    MV_OLD_FAILS: oldMoveBackFails ? '1' : '',
     MOUNTED_APP: mountedApp,
     MOUNTED_VERSION: mountedVersion,
     ELSEWHERE: path.join(root, 'elsewhere', 'Unvibe.app'),
@@ -209,10 +210,13 @@ exec /bin/mv "$@"`,
   const installedVersion = read(path.join(target, 'Contents', 'Info.plist'));
   const oldResource = read(path.join(target, 'Contents', 'Resources', 'locked', 'file'));
   const stagedLeft = existsSync(`${target}.new`);
+  const stagedMarker = read(path.join(`${target}.new`, 'marker'));
+  const oldMarker = read(path.join(`${target}.old`, 'marker'));
+  const workLeft = existsSync(dir);
   // The read-only folder has to be writable again before the scratch directory can be removed.
   spawnSync('chmod', ['-R', 'u+w', root]);
   rmSync(root, { recursive: true, force: true });
-  return { status: result.status, calls, marker, markerMode, installedVersion, oldResource, stagedLeft, target, dir };
+  return { status: result.status, calls, marker, markerMode, installedVersion, oldResource, stagedLeft, stagedMarker, oldMarker, workLeft, target, dir };
 }
 
 test('a mounted app that fails the signature check leaves the installed app untouched and reopens it', { skip: process.platform === 'win32' }, () => {
@@ -263,6 +267,17 @@ test('if the new app cannot be moved into place, the old app is moved back intac
   assert.equal(run.oldResource, 'OLD RESOURCE', 'the old app is intact, nested files included');
   assert.ok(!run.stagedLeft, 'no .new is left behind');
   assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
+});
+
+test('if neither the new app can be moved in nor the old one back, the verified copy is kept and nothing is opened', { skip: process.platform === 'win32' }, () => {
+  const run = runHelper({ newMoveFails: true, oldMoveBackFails: true });
+  assert.equal(run.status, 1, 'the failed swap exits 1');
+  assert.equal(run.stagedMarker, 'NEW', 'the verified copy is kept at .new');
+  assert.equal(run.oldMarker, 'OLD', 'the old app is kept at .old');
+  assert.equal(run.marker, '(missing)', 'nothing is at the target');
+  assert.ok(!run.calls.some((c) => c.startsWith('open ')), 'no missing path is opened');
+  assert.ok(run.calls.some((c) => c.startsWith('hdiutil detach')), 'the image is detached');
+  assert.ok(!run.workLeft, 'the download folder is removed');
 });
 
 test('an app with no installed copy at the target is installed there', { skip: process.platform === 'win32' }, () => {
