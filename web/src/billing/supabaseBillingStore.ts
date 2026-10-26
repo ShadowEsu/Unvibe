@@ -98,6 +98,10 @@ export class SupabaseBillingStore implements BillingStore {
 
   async listWorkspaces(userId: string): Promise<WorkspaceAccess[]> {
     await this.ensurePersonalWorkspace(userId);
+    return this.existingWorkspaces(userId);
+  }
+
+  async existingWorkspaces(userId: string): Promise<WorkspaceAccess[]> {
     const { data, error } = await this.db.rpc('list_user_workspaces', { p_user_id: userId });
     this.require(error, 'list workspaces');
     return (Array.isArray(data) ? data : []).map((row) => this.mapAccess(asObject(row)));
@@ -375,10 +379,5 @@ export class SupabaseBillingStore implements BillingStore {
   async recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
     const { error } = await this.db.from('billing_audit_log').insert({ user_id: userId, workspace_id: workspaceId, action, metadata });
     this.require(error, 'record audit');
-  }
-
-  async deleteUserBilling(userId: string): Promise<void> {
-    const { error } = await this.db.rpc('delete_user_billing_data', { p_user_id: userId });
-    this.require(error, 'delete user billing data');
   }
 }

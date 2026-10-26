@@ -1,6 +1,6 @@
 import { getStore } from '@/data/store';
 import { getBillingStore } from '@/billing/store';
-import { userFromRequest, unauthorized } from '@/lib/auth';
+import { userOrRefusal } from '@/lib/auth';
 import type { IncomingEvent } from '@/data/types';
 import { isIncomingEvent } from '@/data/eventValidation';
 import { EventOwnershipError } from '@/data/eventOwnership';
@@ -8,10 +8,8 @@ import { EventOwnershipError } from '@/data/eventOwnership';
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
-  const userId = await userFromRequest(req);
-  if (!userId) {
-    return unauthorized();
-  }
+  const userId = await userOrRefusal(req);
+  if (typeof userId !== 'string') return userId;
   const body = (await req.json().catch(() => null)) as { events?: IncomingEvent[]; workspaceId?: unknown } | null;
   if (!body || !Array.isArray(body.events)) {
     return Response.json({ error: 'missing events[]' }, { status: 400 });

@@ -16,7 +16,7 @@ const GOOD_TOKEN = 'supabase-access-token-good';
 
 interface Seen { method: string; path: string; auth: string | null; apikey: string | null; body: unknown }
 
-function fakeSupabase(rpcRow: Record<string, unknown>): { seen: Seen[]; restore: () => void } {
+function fakeSupabase(rpcRow: Record<string, unknown>, deletion?: Record<string, unknown>): { seen: Seen[]; restore: () => void } {
   const seen: Seen[] = [];
   const original = globalThis.fetch;
   globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
@@ -32,6 +32,8 @@ function fakeSupabase(rpcRow: Record<string, unknown>): { seen: Seen[]; restore:
         ? Response.json({ id: USER_ID, email: 'hacker@school.edu', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() })
         : Response.json({ code: 401, msg: 'invalid JWT' }, { status: 401 });
     }
+    // An account being deleted has an account_deletions row; none here unless the test sets one.
+    if (url.pathname === '/rest/v1/account_deletions') return Response.json(deletion ? [deletion] : []);
     if (url.pathname === '/rest/v1/users') return new Response(null, { status: 201 });
     if (url.pathname === '/rest/v1/rpc/redeem_promo_code') return Response.json([rpcRow]);
     return Response.json({ message: 'unexpected' }, { status: 500 });
@@ -54,9 +56,9 @@ test('supabase: token checked with Supabase Auth, users upserted, RPC gets only 
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { ok: true, status: 'redeemed', months: 3, proUntil, message: 'Pro months added.' });
     assert.deepEqual(fake.seen.map((s) => `${s.method} ${s.path.split('?')[0]}`), [
-      'GET /auth/v1/user', 'POST /rest/v1/users', 'POST /rest/v1/rpc/redeem_promo_code',
+      'GET /auth/v1/user', 'GET /rest/v1/account_deletions', 'POST /rest/v1/users', 'POST /rest/v1/rpc/redeem_promo_code',
     ]);
-    const [auth, users, rpc] = fake.seen;
+    const [auth, , users, rpc] = fake.seen;
     assert.equal(auth.auth, `Bearer ${GOOD_TOKEN}`);
     assert.ok(users.path.includes('on_conflict=id'));
     assert.deepEqual(users.body, { id: USER_ID, email: 'hacker@school.edu' });
@@ -76,6 +78,18 @@ test('supabase: a token Supabase Auth rejects is 401 and nothing else is called'
     const res = await redeem({ accessToken: 'forged', code: 'ABCD-EFGH-JKMN-PQRS' });
     assert.equal(res.status, 401);
     assert.deepEqual(fake.seen.map((s) => s.path), ['/auth/v1/user']);
+  } finally {
+    fake.restore();
+  }
+});
+
+test('supabase: while the account is being deleted, redeem answers 410 and never upserts the user', async () => {
+  const fake = fakeSupabase({ status: 'redeemed', months: 3, pro_until: null }, { user_id: USER_ID, state: 'started', step: 'auth_identity', email: 'leaving@account.test' });
+  try {
+    const res = await redeem({ accessToken: GOOD_TOKEN, code: 'ABCD-EFGH-JKMN-PQRS' });
+    assert.equal(res.status, 410);
+    assert.equal((await res.json() as { error?: string }).error, 'account_deleted');
+    assert.deepEqual(fake.seen.map((s) => `${s.method} ${s.path.split('?')[0]}`), ['GET /auth/v1/user', 'GET /rest/v1/account_deletions']);
   } finally {
     fake.restore();
   }

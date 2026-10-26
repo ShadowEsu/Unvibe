@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": false
+  },
+  "crons": [
+    { "path": "/api/v1/internal/account-deletions/sweep", "schedule": "17 4 * * *" }
+  ]
+}
