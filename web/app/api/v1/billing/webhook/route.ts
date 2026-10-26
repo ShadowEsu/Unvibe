@@ -1,6 +1,7 @@
 import { errorSummary } from '@/billing/http';
 import { getBillingStore } from '@/billing/store';
-import { getStripe, paymentsLocked, stripeKeyIsLive } from '@/billing/stripe';
+import { getStripe, paymentsLocked } from '@/billing/stripe';
+import { stripeKeyMode } from '@/billing/stripeKey';
 import { processStripeEvent } from '@/billing/webhooks';
 
 export const runtime = 'nodejs';
@@ -21,7 +22,8 @@ function revokesAccess(type: string): boolean {
 export async function POST(req: Request): Promise<Response> {
   const signature = req.headers.get('stripe-signature');
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  if (!secret || !process.env.STRIPE_SECRET_KEY?.trim()) return Response.json({ error: 'webhook_not_configured' }, { status: 503 });
+  const keyMode = stripeKeyMode(process.env.STRIPE_SECRET_KEY);
+  if (!secret || keyMode === null) return Response.json({ error: 'webhook_not_configured' }, { status: 503 });
   // A request without Stripe's signature header is a bad request, not a server problem.
   if (!signature) return Response.json({ error: 'missing_signature' }, { status: 400 });
   const stripe = getStripe();
@@ -32,7 +34,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'invalid_signature' }, { status: 400 });
   }
   // A 200 so Stripe stops retrying: an event from the other mode than this key is never ours to apply.
-  if (event.livemode !== stripeKeyIsLive()) return Response.json({ ignored: 'livemode_mismatch' });
+  if (event.livemode !== (keyMode === 'live')) return Response.json({ ignored: 'livemode_mismatch' });
   let revokeOnly = false;
   if (paymentsLocked() && !revokesAccess(event.type)) {
     const downgrades = event.type === 'customer.subscription.updated' || event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';

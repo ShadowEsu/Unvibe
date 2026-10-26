@@ -10,7 +10,7 @@ import { getStore } from '../src/data/store';
 
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-process.env.STRIPE_SECRET_KEY = 'sk_test_local_only_never_sent';
+process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 
 const PERIOD_END = 1_800_000_000;
 
