@@ -766,3 +766,33 @@ test('Chat refuses a conversation stamped before a wipe before any network call,
     globalThis.fetch = original;
   }
 });
+
+test('Chat refuses a string or null stamp before any network call, and a missing stamp still answers', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    calls += 1;
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A reply.' }] } }] })}\n\n`);
+    }
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    // IPC carries whatever the renderer sends, so the stamp's type is not guaranteed.
+    for (const stamp of [String(store().wipeGeneration()), null, Number.NaN] as unknown as number[]) {
+      const refused = await askChat({ question: 'What does map do?', wipeGeneration: stamp });
+      assert.deepEqual(refused, { ok: false, error: 'The learning on this computer was erased while this was running, so nothing was saved.' }, String(stamp));
+    }
+    assert.equal(calls, 0, 'nothing was sent for a refused stamp');
+    assert.equal(store().events().length, 1, 'only the lesson from setup');
+    const missing = await askChat({ question: 'What does map do?' });
+    assert.equal(missing.ok, true, 'no stamp: answers as before');
+    assert.ok(calls > 0);
+    assert.equal(store().events().length, 2);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
