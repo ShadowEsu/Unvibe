@@ -18,7 +18,7 @@
  * Durable counters live in Supabase (trial_installs / trial_counters, atomic trial_reserve RPC).
  * Process memory is used only when Supabase is not configured (dev/tests).
  */
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { isIPv6 } from 'node:net';
 import { serviceSupabase } from '@/lib/serviceSupabase';
 import type { UsageKind } from '@/billing/types';
@@ -132,15 +132,21 @@ function ipNetwork(raw: string): string {
   return `${groups.slice(0, 4).map((group) => group.toString(16)).join(':')}::/64`;
 }
 
+let localIpKey: string | undefined;
+
 /**
  * Per-network counter for this UTC day (see `ipNetwork`). The address is never stored: it is an HMAC
  * keyed by a server secret (TRY_IP_SALT, else the Supabase service-role key) over the day and the
- * network, so the same network has an unrelated key each day.
+ * network, so the same network has an unrelated key each day. Production with neither secret returns
+ * null (callers answer 503); outside production a random per-process key stands in. Never a public
+ * constant: with a known key the hashes could be brute-forced back to addresses.
  */
-export function trialIpKey(ip: string, now = new Date()): string {
+export function trialIpKey(ip: string, now = new Date()): string | null {
   const day = now.toISOString().slice(0, 10);
-  const secret = process.env.TRY_IP_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || 'unvibe-trial-ip';
-  const hash = createHmac('sha256', secret).update(`unvibe-trial-ip:${day}:${ipNetwork(ip)}`).digest('hex').slice(0, 32);
+  const secret = process.env.TRY_IP_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!secret && process.env.NODE_ENV === 'production') return null;
+  const key = secret || (localIpKey ??= randomBytes(32).toString('hex'));
+  const hash = createHmac('sha256', key).update(`unvibe-trial-ip:${day}:${ipNetwork(ip)}`).digest('hex').slice(0, 32);
   return `__ip__:${day}:${hash}`;
 }
 
@@ -389,7 +395,8 @@ const STORE_UNAVAILABLE = {
 /**
  * Consume one trial unit for `installKey`, then one each from the caller's per-IP daily counter and
  * the global monthly and daily counters. On refusal (429 over a limit, 503 when a counter could not
- * be reserved) every unit already taken is given back: no AI call was made. Otherwise `release`, for
+ * be reserved, or in production without a secret for the per-IP key) every unit already taken is
+ * given back: no AI call was made. Otherwise `release`, for
  * when the AI produced nothing, gives back only the install unit. The per-IP and global counters are
  * spend meters: the provider call has started and is billed, so failed, empty, blocked or aborted
  * answers stay on them, or retrying such requests would make every cap free.
@@ -413,6 +420,13 @@ export async function reserveTrialAction(
     }, { status: 429 }) };
   }
 
+  // The per-IP key needs a server secret; without one, production refuses before any unit is taken.
+  const ipKey = trialIpKey(ip, now);
+  if (!ipKey) {
+    console.error('TRIAL_IP_KEY_UNCONFIGURED: set TRY_IP_SALT or SUPABASE_SERVICE_ROLE_KEY; trial requests answer 503');
+    return { denied: Response.json({ error: STORE_UNAVAILABLE.error, message: STORE_UNAVAILABLE.message }, { status: 503 }) };
+  }
+
   const reserved = await reserveUnit(installKey, kind, limit);
   if (reserved === null) {
     return { denied: Response.json({ error: STORE_UNAVAILABLE.error, message: STORE_UNAVAILABLE.message }, { status: 503 }) };
@@ -428,7 +442,7 @@ export async function reserveTrialAction(
 
   const shared = [
     {
-      key: trialIpKey(ip, now),
+      key: ipKey,
       limit: limitFromEnv('UNVIBE_TRIAL_IP_DAILY_LIMIT', 150),
       error: 'trial_network_limit',
       message: 'This network has used today\'s free beta explanations. Try again tomorrow, sign in, or add your own API key in Settings.',
@@ -464,10 +478,13 @@ export async function reserveTrialAction(
  * Rate limit for `POST /api/v1/trial/progress`, built like the per-IP cap on trial AI requests: one
  * shared counter per network per UTC day, `__progress_ip__:YYYY-MM-DD:<hmac>` (UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT,
  * default 500; a classroom NAT setting up 30 installs sends at most about 300 pings). The address is
- * never stored. Returns 'ok', 'limited' (429) or 'unavailable' (storage failed; 503).
+ * never stored. Returns 'ok', 'limited' (429) or 'unavailable' (storage failed, or production has no
+ * secret for the per-IP key; 503).
  */
 export async function reserveTrialProgressPing(ip: string, now = new Date()): Promise<'ok' | 'limited' | 'unavailable'> {
-  const key = trialIpKey(ip, now).replace(/^__ip__:/, '__progress_ip__:');
+  const ipKey = trialIpKey(ip, now);
+  if (!ipKey) return 'unavailable';
+  const key = ipKey.replace(/^__ip__:/, '__progress_ip__:');
   const reserved = await reserveUnit(key, SHARED_COUNTER_KIND, limitFromEnv('UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT', 500));
   if (reserved === null) return 'unavailable';
   return reserved === -1 ? 'limited' : 'ok';
