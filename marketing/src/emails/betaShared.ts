@@ -56,7 +56,6 @@ export function betaSignOffText(): string {
 AI writes the code. Unvibe helps you understand it.
 
 Best,
-Preston Susanto
-Founder, Unvibe
+The Unvibe team
 https://unvibe.site`;
 }
