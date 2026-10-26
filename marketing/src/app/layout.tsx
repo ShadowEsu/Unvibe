@@ -26,6 +26,7 @@ const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans-face",
   display: "swap",
+  preload: false,
 });
 
 // Only the two faces the first phone viewport sets in (Inter body, Bricolage headings) are preloaded,
@@ -53,6 +54,9 @@ const display = Bricolage_Grotesque({
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-display-face",
   display: "swap",
+  preload: false,
+  // The hand-fitted "Unvibe Display Arial" faces in globals.css replace next/font's generated fallback.
+  adjustFontFallback: false,
 });
 
 // The italic accent is not one of the two preloaded fold faces; swap shows it as soon as it loads.

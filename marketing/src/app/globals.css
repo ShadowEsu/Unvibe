@@ -292,6 +292,11 @@
 @font-face { font-family: "Unvibe Mono Consolas"; src: local("Consolas Bold"), local("Consolas-Bold"); font-weight: 550 900; size-adjust: 109.13%; ascent-override: 93.47%; descent-override: 27.49%; line-gap-override: 0%; }
 @font-face { font-family: "Unvibe Mono Courier"; src: local("Courier New"), local("CourierNewPSMT"); font-weight: 100 549; size-adjust: 100%; ascent-override: 102%; descent-override: 30%; line-gap-override: 0%; }
 @font-face { font-family: "Unvibe Mono Courier"; src: local("Courier New Bold"), local("CourierNewPS-BoldMT"); font-weight: 550 900; size-adjust: 100%; ascent-override: 102%; descent-override: 30%; line-gap-override: 0%; }
+/* Bricolage Grotesque is not preloaded, so the first paint can use this fallback. Arial, scaled so the hero
+   headline's advance widths match Bricolage's at 36.66 px (weight 750 for 550-900, 400 for 100-549), with
+   Bricolage's font-box ascent and descent, so the swap keeps the same line breaks. */
+@font-face { font-family: "Unvibe Display Arial"; src: local("Arial"), local("ArialMT"); font-weight: 100 549; size-adjust: 106.6%; ascent-override: 87%; descent-override: 25.59%; line-gap-override: 0%; }
+@font-face { font-family: "Unvibe Display Arial"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 550 900; size-adjust: 104.52%; ascent-override: 88.74%; descent-override: 26.1%; line-gap-override: 0%; }
 
 :root {
   --paper: #f3eef8;
@@ -387,7 +392,7 @@
   --deep-field: linear-gradient(135deg, #1a1028, #30194e 54%, #552d27);
   --final-field-bg: linear-gradient(135deg, #4c279b, #7851d4 50%, #c46c43);
 
-  --font-display: var(--font-display-face), "Newsreader", Georgia, serif;
+  --font-display: var(--font-display-face), "Unvibe Display Arial", "Newsreader", Georgia, serif;
   --font-sans: var(--font-sans-face), Inter, system-ui, sans-serif;
   /* --font-mono-face is set once JetBrains Mono is wanted (layout.tsx); before that the first entry falls
      back to the metric-matched system faces above. */
