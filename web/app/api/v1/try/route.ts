@@ -36,9 +36,26 @@ function tryProvider(): Provider | null {
   return gemini ? new GeminiProvider(gemini) : null;
 }
 
-const memory = new Map<string, number[]>();
+type Refusal = { status: 429 | 503; error: string };
 
-async function overLimit(visitor: string): Promise<string | null> {
+const UNAVAILABLE: Refusal = { status: 503, error: 'The live demo is resting right now. Download Unvibe to try it on your code.' };
+const HOUR_CAP: Refusal = { status: 429, error: 'You have used the demo a lot this hour. Download Unvibe to keep going, it is free.' };
+const DAY_CAP: Refusal = { status: 429, error: 'The demo is busy today. Download Unvibe to try it on your own code, it is free.' };
+
+/** Dev and test only: request times per visitor, and for everyone, kept in process memory. */
+function memory(): { visitors: Map<string, number[]>; all: number[] } {
+  const g = globalThis as unknown as { __unvibeTryMemory?: { visitors: Map<string, number[]>; all: number[] } };
+  g.__unvibeTryMemory ??= { visitors: new Map(), all: [] };
+  return g.__unvibeTryMemory;
+}
+
+/**
+ * Counts this visitor's requests in the last hour and everyone's in the last day, then records this one.
+ * Returns null only when the request is under both caps and was recorded. Any store error, a count the
+ * store didn't return (a missing table answers a head count with no count), or a failed insert is a 503,
+ * so a broken store never means no limit. Production never falls back to process memory.
+ */
+async function reserveTry(visitor: string): Promise<Refusal | null> {
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (url && key) {
@@ -49,16 +66,22 @@ async function overLimit(visitor: string): Promise<string | null> {
       db.from('try_requests').select('id', { count: 'exact', head: true }).eq('ip_hash', visitor).gte('created_at', hourAgo),
       db.from('try_requests').select('id', { count: 'exact', head: true }).gte('created_at', dayAgo),
     ]);
-    if ((mine.count ?? 0) >= TRY_PER_IP_PER_HOUR) return 'You have used the demo a lot this hour. Download Unvibe to keep going, it is free.';
-    if ((all.count ?? 0) >= TRY_GLOBAL_PER_DAY) return 'The demo is busy today. Download Unvibe to try it on your own code, it is free.';
-    await db.from('try_requests').insert({ ip_hash: visitor });
-    return null;
+    if (mine.error || all.error || typeof mine.count !== 'number' || typeof all.count !== 'number') return UNAVAILABLE;
+    if (mine.count >= TRY_PER_IP_PER_HOUR) return HOUR_CAP;
+    if (all.count >= TRY_GLOBAL_PER_DAY) return DAY_CAP;
+    const { error } = await db.from('try_requests').insert({ ip_hash: visitor });
+    return error ? UNAVAILABLE : null;
   }
+  if (process.env.NODE_ENV === 'production') return UNAVAILABLE;
   const now = Date.now();
-  const times = (memory.get(visitor) ?? []).filter((t) => now - t < 3_600_000);
-  if (times.length >= TRY_PER_IP_PER_HOUR) return 'You have used the demo a lot this hour. Download Unvibe to keep going, it is free.';
+  const store = memory();
+  const times = (store.visitors.get(visitor) ?? []).filter((t) => now - t < 3_600_000);
+  store.all = store.all.filter((t) => now - t < 86_400_000);
+  if (times.length >= TRY_PER_IP_PER_HOUR) return HOUR_CAP;
+  if (store.all.length >= TRY_GLOBAL_PER_DAY) return DAY_CAP;
   times.push(now);
-  memory.set(visitor, times);
+  store.visitors.set(visitor, times);
+  store.all.push(now);
   return null;
 }
 
@@ -75,17 +98,18 @@ export async function POST(req: Request): Promise<Response> {
   const checked = validateTry(await req.json().catch(() => null));
   if (!checked.ok) return Response.json({ error: checked.error }, { status: 400, headers });
 
-  const resting = () => Response.json({ error: 'The live demo is resting right now. Download Unvibe to try it on your code.' }, { status: 503, headers });
+  const refuse = ({ status, error }: Refusal) => Response.json({ error }, { status, headers });
   const provider = tryProvider();
   // Never pass off mock output as a real explanation.
-  if (!provider || provider.mock) return resting();
+  if (!provider || provider.mock) return refuse(UNAVAILABLE);
 
   // No server secret to key the IP hash with (production): don't store an address hash anyone can reverse.
   const visitor = hashVisitor(clientIp(req));
-  if (!visitor) return resting();
+  if (!visitor) return refuse(UNAVAILABLE);
 
-  const limited = await overLimit(visitor).catch(() => null);
-  if (limited) return Response.json({ error: limited }, { status: 429, headers });
+  // A limiter that throws is a limiter that didn't count: refuse before any model call.
+  const refusal = await reserveTry(visitor).catch(() => UNAVAILABLE);
+  if (refusal) return refuse(refusal);
 
   try {
     // The website demo has its own caps and no account or install to attach counts to.

@@ -11,6 +11,8 @@ type Row = { ip_hash: string; created_at: string };
 const calls = { gemini: 0, openrouter: 0, anthropic: 0 };
 let rows: Row[] = [];
 let inserted: unknown[] = [];
+/** `count`: counts answer 500; `missing`: no table (PostgREST answers a head request 404, no body); `insert`: inserts answer 500. */
+let fault: 'count' | 'missing' | 'insert' | null = null;
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
@@ -34,12 +36,15 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 async function store(url: URL, init?: RequestInit): Promise<Response> {
   const method = init?.method ?? 'GET';
   if (method === 'POST') {
+    if (fault === 'insert') return Response.json({ code: 'XX000', message: 'insert failed' }, { status: 500 });
     const body: unknown = JSON.parse(String(init?.body));
     inserted.push(body);
     const ipHash = body && typeof body === 'object' && 'ip_hash' in body ? String(body.ip_hash) : '';
     rows.push({ ip_hash: ipHash, created_at: new Date().toISOString() });
     return new Response(null, { status: 201 });
   }
+  if (fault === 'count') return Response.json({ code: 'XX000', message: 'count failed' }, { status: 500 });
+  if (fault === 'missing') return new Response(null, { status: 404 });
   const ip = url.searchParams.get('ip_hash')?.replace(/^eq\./, '');
   const since = url.searchParams.get('created_at')?.replace(/^gte\./, '') ?? '';
   const count = rows.filter((row) => (!ip || row.ip_hash === ip) && row.created_at >= since).length;
@@ -92,6 +97,8 @@ beforeEach(() => {
   calls.anthropic = 0;
   rows = [];
   inserted = [];
+  fault = null;
+  delete (globalThis as { __unvibeTryMemory?: unknown }).__unvibeTryMemory;
 });
 
 test('Try uses Gemini even when OpenRouter and Anthropic keys are set too', async () => {
@@ -156,4 +163,63 @@ test('production with neither TRY_IP_SALT nor the service-role key answers 503 a
   assert.equal(res.status, 503);
   assert.equal(calls.gemini, 0);
   assert.equal(inserted.length, 0);
+});
+
+test('a store count error answers 503 with zero model calls', async () => {
+  production();
+  fault = 'count';
+  assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(calls.gemini, 0);
+  assert.equal(inserted.length, 0);
+});
+
+test('a missing try_requests table (head count with no count) answers 503 with zero model calls', async () => {
+  production();
+  fault = 'missing';
+  assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(calls.gemini, 0);
+});
+
+test('a store insert error answers 503 with zero model calls', async () => {
+  production();
+  fault = 'insert';
+  assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(calls.gemini, 0);
+});
+
+test('a limiter that throws (malformed SUPABASE_URL) answers 503 with zero model calls', async () => {
+  production({ SUPABASE_URL: 'not a url' });
+  assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(calls.gemini, 0);
+});
+
+test('the store caps one IP at 6 an hour and everyone at 500 a day', async () => {
+  production();
+  const ip = '203.0.113.9';
+  for (let i = 0; i < 6; i += 1) assert.equal((await POST(tryRequest(ip))).status, 200);
+  assert.equal((await POST(tryRequest(ip))).status, 429);
+  const now = new Date().toISOString();
+  while (rows.length < 500) rows.push({ ip_hash: `other-${rows.length}`, created_at: now });
+  assert.equal((await POST(tryRequest())).status, 429);
+  assert.equal(calls.gemini, 6);
+});
+
+test('production without a store answers 503 instead of using process memory', async () => {
+  production({ SUPABASE_URL: undefined });
+  assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(calls.gemini, 0);
+});
+
+test('outside production the memory fallback stops one IP at 6 an hour and everyone at 500 a day', async () => {
+  setEnv({ GEMINI_API_KEY: 'local-gemini-key' });
+  const ip = '203.0.113.10';
+  for (let i = 0; i < 6; i += 1) assert.equal((await POST(tryRequest(ip))).status, 200);
+  assert.equal((await POST(tryRequest(ip))).status, 429);
+  for (let i = 6; i < 500; i += 1) {
+    assert.equal((await POST(tryRequest(`10.0.${i >> 8}.${i & 255}`))).status, 200);
+  }
+  const res = await POST(tryRequest('10.9.9.9'));
+  assert.equal(res.status, 429);
+  assert.match(await res.text(), /busy today/);
+  assert.equal(calls.gemini, 500);
 });
