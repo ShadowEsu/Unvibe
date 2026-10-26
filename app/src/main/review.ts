@@ -27,10 +27,6 @@ import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
 import { productEvent } from '../core/productEvents';
 
-// The explanation service streams only these (web/app/api/v1/reviews/route.ts). Every other panel
-// event (init, usage, consent and the rest) comes from the app, so a stream can't send one.
-const SERVICE_STREAM_EVENTS = new Set<string>(['token', 'done', 'error']);
-
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
   | { type: 'status'; tabId: string; message: string }
@@ -465,13 +461,18 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       if (done) break;
       stillStreaming();
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
-        if (!SERVICE_STREAM_EVENTS.has(ev.type)) continue;
-        if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
-        // The service's error text reaches the panel only as a capped string.
-        send(win, session, ev.type === 'error'
-          ? { ...ev, message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' }
-          : ev);
-        if (ev.type === 'done') {
+        // The service streams only token, done and error (web/app/api/v1/reviews/route.ts). Each is
+        // rebuilt from the checked fields the panel reads, so nothing else the service sends reaches
+        // it; any other type is dropped (init, usage, consent and the rest come from the app).
+        if (ev.type === 'token') {
+          if (typeof ev.text !== 'string') continue;
+          appendExplanation(session, ev.text);
+          send(win, session, { type: 'token', text: ev.text });
+        } else if (ev.type === 'error') {
+          // The service's error text reaches the panel only as a capped string.
+          send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
+        } else if (ev.type === 'done') {
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model : undefined, mock: ev.mock === true });
           completed = true;
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
