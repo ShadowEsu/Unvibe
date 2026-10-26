@@ -5,6 +5,7 @@ import { TeamHasMembersError } from '@/data/teamHasMembers';
 import { bearerToken, sessionTokenHash, sessionUser, userFromRequest, unauthorized } from '@/lib/auth';
 import { accountDeletionServices } from '@/lib/accountDeletionServices';
 import { getBillingStore } from '@/billing/store';
+import { errorSummary } from '@/billing/http';
 import { getStripe } from '@/billing/stripe';
 import type { BillingOverview, SubscriptionRecord, WorkspaceAccess, WorkspaceMember } from '@/billing/types';
 import { liveSubscriptionStillCharges } from '@/billing/webhooks';
@@ -42,8 +43,9 @@ export async function GET(req: Request): Promise<Response> {
 const NOT_STARTED = 'Nothing was deleted. Try again in a minute.';
 const NOT_FINISHED = 'Your account is not fully deleted yet. Try again in a minute to finish.';
 
+/** Provider errors (Stripe, Supabase, Blob) can quote account details: only errorSummary reaches the log. */
 function unavailable(step: string, error: unknown, message: string): Response {
-  console.error(`account delete: ${step} failed`, error instanceof Error ? error.message : error);
+  console.error(`account delete: ${step} failed`, errorSummary(error));
   return Response.json({ error: 'deletion_unavailable', message }, { status: 503 });
 }
 
@@ -107,7 +109,7 @@ export async function DELETE(req: Request): Promise<Response> {
       charges = await stillCharges(overview.subscription);
     } catch (error) {
       // Unknown billing state: never delete an account Stripe might keep charging.
-      console.error('account delete: subscription check failed', error instanceof Error ? error.message : error);
+      console.error('account delete: subscription check failed', errorSummary(error));
       return Response.json({ error: 'billing_unavailable', message: `We could not check your subscription. ${notDone}` }, { status: 503 });
     }
     if (charges) {
