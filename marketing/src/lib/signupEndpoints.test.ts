@@ -25,6 +25,9 @@ const limiterHits = new Map<string, number>();
 const limiterBuckets: string[] = [];
 let limiterFails = false;
 let server: Server;
+/** Analytics keys a developer shell may export. Unset for these tests so a signup can't send a real event; put back after. */
+const ANALYTICS_KEYS = ["POSTHOG_PROJECT_API_KEY", "NEXT_PUBLIC_POSTHOG_KEY", "MIXPANEL_TOKEN", "NEXT_PUBLIC_MIXPANEL_TOKEN"];
+const savedAnalyticsKeys: Record<string, string | undefined> = {};
 
 async function readBody(request: IncomingMessage): Promise<string> {
   let body = "";
@@ -86,9 +89,16 @@ before(async () => {
   // With a real Blob token the download store would write test records to the real Blob store.
   delete process.env.BLOB_READ_WRITE_TOKEN;
   process.env.RATE_LIMIT_KEY_SECRET = KEY_SECRET;
+  for (const name of ANALYTICS_KEYS) {
+    savedAnalyticsKeys[name] = process.env[name];
+    delete process.env[name];
+  }
 });
 
 after(async () => {
+  for (const [name, value] of Object.entries(savedAnalyticsKeys)) {
+    if (value !== undefined) process.env[name] = value;
+  }
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
@@ -112,6 +122,10 @@ function post(path: string, body: unknown, init: { origin?: string | null; conte
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
+
+it("runs with every analytics key unset, so a successful signup sends no real event", () => {
+  for (const name of ANALYTICS_KEYS) assert.equal(process.env[name], undefined, `${name} is unset during these tests`);
+});
 
 describe("waitlist and beta-download reject cross-site posts", () => {
   it("rejects another site's Origin with 403", async () => {
