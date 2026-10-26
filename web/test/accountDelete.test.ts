@@ -124,3 +124,24 @@ test('any other Stripe request error still blocks deletion', async () => {
   assert.deepEqual(await remove(me.token), { status: 503, error: 'billing_unavailable' });
   assert.equal(await stillSignedIn(me.token), true);
 });
+
+test('a failed subscription check logs only the Stripe error type and code, never Stripe\'s message', async () => {
+  const raw = 'No such subscription for cus_PrivateCustomer123 on price_live_abc with key sk_live_****1234';
+  const failure = new Stripe.errors.StripePermissionError({ type: 'invalid_request_error', code: 'secret_key_required', message: raw });
+  const me = await userWith({}, failure);
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  let response;
+  try {
+    response = await deleteAccount(new Request('http://localhost/api/v1/account', { method: 'DELETE', headers: { authorization: `Bearer ${me.token}` } }));
+  } finally {
+    console.error = original;
+  }
+  assert.equal(response.status, 503);
+  const body = await response.json() as { message: string };
+  assert.equal(body.message, 'We could not check your subscription. Nothing was deleted. Try again in a minute.');
+  assert.deepEqual(logged, [['account delete: subscription check failed', 'StripePermissionError invalid_request_error secret_key_required']]);
+  const text = JSON.stringify(logged);
+  for (const fragment of ['cus_PrivateCustomer123', 'price_live_abc', 'sk_live_', 'No such subscription']) assert.equal(text.includes(fragment), false, fragment);
+});
