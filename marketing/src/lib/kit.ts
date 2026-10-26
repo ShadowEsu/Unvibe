@@ -145,10 +145,10 @@ export function kitSections(): KitSection[] {
         `Windows direct download: ${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
         `Pricing: ${SITE}/pricing`,
         `Investors: ${SITE}/investors`,
-        `Founder page: ${SITE}/about`,
+        `About: ${SITE}/about`,
         `Changelog: ${SITE}/releases`,
         `Gift link format, from app 0.1.44: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in). App 0.1.43 and older show an 8 character invite link code instead, which counts who joined and grants no Pro.`,
-        "Founder email: preston@unvibe.site",
+        "Email: preston@unvibe.site",
       ],
     },
     {

@@ -273,7 +273,7 @@ export const milestones: Milestone[] = [
     date: "24 AUG 2026",
     category: "COMPANY",
     title: "Startup support total",
-    summary: `Program credits plus founder-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
+    summary: `Program credits plus self-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
     figure: compensationTotalLabel(),
     pinned: true,
   },
@@ -404,7 +404,7 @@ export const milestones: Milestone[] = [
     date: "3 AUG 2026",
     category: "INFRA",
     title: "Waitlist attribution scorecard",
-    summary: "Founder analytics now show where waitlist signups came from. Pushed as the attribution scorecard commit.",
+    summary: "Private analytics now show where waitlist signups came from. Pushed as the attribution scorecard commit.",
   },
   {
     date: "30 JUL 2026",
@@ -416,7 +416,7 @@ export const milestones: Milestone[] = [
     date: "29 JUL 2026",
     category: "PRODUCT",
     title: "Build in public",
-    summary: "A live founder signal, public roadmap, and a compact development record went live on /build.",
+    summary: "A live build signal, public roadmap, and a compact development record went live on /build.",
   },
   {
     date: "28 JUL 2026",
@@ -490,7 +490,7 @@ export const milestones: Milestone[] = [
     date: "20 JUL 2026",
     category: "COMPANY",
     title: "Investor outreach began",
-    summary: "The first investor materials and founder outreach moved Unvibe beyond a private product experiment.",
+    summary: "The first investor materials and outreach moved Unvibe beyond a private product experiment.",
   },
   {
     date: "16 JUL 2026",

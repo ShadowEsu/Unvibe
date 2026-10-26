@@ -81,7 +81,7 @@ export const compensationLines: CompensationLine[] = [
     state: "Secured",
   },
   {
-    name: "Founder capital",
+    name: "Own capital",
     amountUsd: 500,
     detail: "Committed cash",
     kind: "cash",
@@ -90,9 +90,9 @@ export const compensationLines: CompensationLine[] = [
   {
     name: "Early angel support",
     amountUsd: 300,
-    detail: "Founder-reported committed cash",
+    detail: "Self-reported committed cash",
     kind: "cash",
-    state: "Founder-reported",
+    state: "Self-reported",
   },
 ];
 
