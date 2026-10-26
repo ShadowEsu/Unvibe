@@ -30,9 +30,10 @@ function clearAccountData(): void {
   store().wipeEverything();
 }
 
+export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${process.platform === 'win32' ? 'PC' : 'Mac'}. Sign in again, then delete.`;
+
 export async function deleteAccountAndLocalData(): Promise<AccountDeletionResult> {
-  const token = store().token();
-  if (!token) {
+  if (!store().account()) {
     // Signed out: no account to delete. Erase the learning on this computer, as before.
     try {
       store().wipeEverything();
@@ -42,6 +43,10 @@ export async function deleteAccountAndLocalData(): Promise<AccountDeletionResult
     }
     return { ok: true, status: 'erased_locally' };
   }
+  // An account whose token can't be decrypted (keychain locked, denied or reset, app re-signed) still
+  // exists on the server. Never erase anything here as if it were deleted.
+  const token = store().token();
+  if (!token) return { ok: false, error: UNREADABLE_SIGN_IN };
   let status: AccountDeletionStatus;
   try {
     status = await deleteAccount(token);

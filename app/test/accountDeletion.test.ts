@@ -11,7 +11,7 @@ const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-account-deletion-'));
 app.getPath = (): string => userData;
 safeStorage.isEncryptionAvailable = (): boolean => true;
 
-import { deleteAccountAndLocalData } from '../src/main/accountDeletion';
+import { deleteAccountAndLocalData, UNREADABLE_SIGN_IN } from '../src/main/accountDeletion';
 import { hasAiKey, writeAiKey } from '../src/main/aiKey';
 import { knowledgeStore } from '../src/main/knowledgeStore';
 import { settings } from '../src/main/settings';
@@ -176,6 +176,41 @@ test('a 200 with an unknown status is not treated as deleted', async () => {
   const result = await deleteWith({ status: 200, body: { ok: true, status: 'queued' } });
   assert.equal(result.ok, false);
   assertNothingCleared();
+});
+
+test('an account whose sign-in can\'t be decrypted sends no request, clears nothing and says to sign in again', async () => {
+  signedInWithData();
+  const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
+  const decrypt = safeStorage.decryptString;
+  safeStorage.decryptString = (): string => { throw new Error('keychain locked'); };
+  let result;
+  try {
+    assert.equal(store().token(), null);
+    assert.ok(store().account(), 'the account is still shown, so the panel offers Delete');
+    result = await deleteAccountAndLocalData();
+  } finally {
+    safeStorage.decryptString = decrypt;
+    service.restore();
+  }
+  assert.equal(service.deletes(), 0, 'no DELETE is sent');
+  assert.deepEqual(result, { ok: false, error: UNREADABLE_SIGN_IN });
+  assertNothingCleared();
+});
+
+test('with no account at all, Erase everything clears the learning without asking the service', async () => {
+  signedInWithData();
+  store().signOut();
+  const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
+  let result;
+  try {
+    result = await deleteAccountAndLocalData();
+  } finally {
+    service.restore();
+  }
+  assert.equal(service.deletes(), 0);
+  assert.deepEqual(result, { ok: true, status: 'erased_locally' });
+  assert.deepEqual(store().events(), []);
+  assert.deepEqual(knowledgeStore().teachBacks(), []);
 });
 
 test('after-agent review checklists are removed and other renderer keys stay', () => {
