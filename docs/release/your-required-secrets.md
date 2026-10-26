@@ -5,9 +5,9 @@ Git, the marketing browser bundle, or the desktop app. Fill the values in the
 hosting dashboards / secret manager only. Do **not** paste them into this file,
 commit them, or send them to testers.
 
-**Fast path to charge money:** use `docs/release/founder-paste-list.md` and reply
-with the Stripe / OpenRouter / support blanks. Checkout stays disabled until
-those env vars exist on the API.
+**Turning on charging:** follow the page titled "Owner checklist: turn on charging" in `docs/release/`. Enter every value in the
+hosting dashboard yourself and never paste one into a chat; report only which variables are set.
+Checkout stays disabled until those env vars exist on the API and payments are approved.
 
 ## 1. Backend and desktop API (`web/`)
 
@@ -20,8 +20,8 @@ currently intended to be `https://api.unvibe.site`).
 | `WEB_BASE_URL` | The backend's public HTTPS URL, for example `https://api.unvibe.site`. | Yes |
 | `PUBLIC_APP_URL` | The trusted HTTPS return URL for Billing Checkout/Portal. Use the public web app origin that hosts `/plan`. | Yes for billing |
 | `ENABLE_MOCK_AI` | `false` for real explanations. | Yes |
-| `OPENROUTER_API_KEY` | Optional server-only OpenRouter key. Production uses Gemini (`GEMINI_API_KEY` below). If set, the app's AI routes prefer it; the website's Try it uses only Gemini and never this key. | No |
-| `ANTHROPIC_API_KEY` **or** `GEMINI_API_KEY` | Fallback server-only AI-provider key. Start with a restricted key and a spend limit. | If not using OpenRouter |
+| `GEMINI_API_KEY` | Production AI key: production runs on Gemini. Start with a restricted key and a spend limit. | Yes |
+| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY` | Leave unset on production: when set, either is chosen before Gemini for the app's AI routes (`selectProvider` in `web/src/ai/index.ts`). The website's Try it uses only Gemini and never these keys. | No |
 | `UNCODE_MODEL` or `GEMINI_MODEL` / `OPENROUTER_MODEL` | The approved model name for the selected provider. | Yes |
 | `SUPABASE_URL` | Your production Supabase project URL. | Yes |
 | `SUPABASE_ANON_KEY` | The Supabase publishable/anon key. | Yes |
@@ -64,8 +64,8 @@ the customer portal, and explicitly approved the live prices. The UI price
 switch is implemented, but it is not authorization to make live charges.
 
 Teams self-serve checkout stays paused; Plan UI collects company email + seat
-interest via mailto until you create Teams prices and flip
-`TEAMS_CHECKOUT_ENABLED`.
+interest via mailto. There is no separate Teams switch: setting both Teams
+prices opens Teams checkout.
 
 ## 3. Marketing website (`marketing/`)
 
