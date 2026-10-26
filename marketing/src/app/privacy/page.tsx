@@ -101,8 +101,9 @@ export default function PrivacyPage() {
         </p>
         <p>
           The app also sends anonymous setup progress, one message per step the first time it
-          happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, and
-          the explanation level question answered. Each message carries the step name with the same
+          happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, the
+          explanation level question answered, and the question about opening Unvibe when you log in
+          shown and answered yes. Each message carries the step name with the same
           random install ID, system and app version as above, never your sign-in token. We keep only
           the step and the time it arrived (for signing in, only the day), never your code, file
           names, email or IP address. A step that does not get through is sent
