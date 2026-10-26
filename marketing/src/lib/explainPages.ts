@@ -782,6 +782,47 @@ pub fn reserve(stock: &mut Stock) -> bool {
     watchOut:
       "The `if stock.quantity == 0` check matters because `quantity` is a `u32`, which can't go below 0. Without it, `stock.quantity -= 1` on 0 panics with `attempt to subtract with overflow` in a debug build, and in a build with `-O`, where overflow checks are off by default, it quietly wraps to `4294967295`.",
   },
+  {
+    id: "csharp",
+    fileName: "Batches.cs",
+    lead: "Paste C#, LINQ queries and records included, and Vibe explains what each line returns and when the query actually runs.",
+    description:
+      "Paste C# code and get a plain English explanation, free online. The sample filters task batches with LINQ and copies a record with a with expression.",
+    sampleSummary: "A record for task batches, a LINQ query that keeps the long ones in name order and a with expression that renames a copy.",
+    sample: `using System.Collections.Generic;
+using System.Linq;
+
+sealed record TaskBatch(string Name, List<int> Minutes);
+
+static class Batches
+{
+    public static IEnumerable<TaskBatch> LongBatches(IEnumerable<TaskBatch> batches, int minimum)
+    {
+        return batches.Where(batch => batch.Minutes.Sum() >= minimum)
+                      .OrderBy(batch => batch.Name);
+    }
+
+    public static TaskBatch Rename(TaskBatch batch, string name) =>
+        batch with { Name = name };
+}`,
+    shows: [
+      {
+        concept: "LINQ",
+        text: "`Where` keeps the batches whose minutes add up to at least `minimum`, and `OrderBy` sorts what is left by name. With `beta` (20 minutes), `alpha` (10 and 5) and `tiny` (2) and a minimum of 15, the result is `alpha, beta`: `>=` keeps `alpha` at exactly 15.",
+      },
+      {
+        concept: "records",
+        text: "`sealed record TaskBatch(string Name, List<int> Minutes)` declares a class from its two values. C# writes the `Name` and `Minutes` properties, value equality and a `ToString` that lists each property, though for the list it prints only the type name, not the numbers.",
+      },
+    ],
+    notes: [
+      "`batch with { Name = name }` returns a new record and leaves the old one alone: renaming `alpha` to `copy` gives a second batch, and the original is still named `alpha`.",
+      "`with` copies the reference to the list, not the list. Add 7 minutes to the copy's `Minutes` and the original changes too: both now total 22.",
+      "Record equality compares each property with that property's own `Equals`. Two batches named `a` that share one list are equal, but with a new list of the same numbers they are not, because a `List<int>` is only equal to itself.",
+    ],
+    watchOut:
+      "`LongBatches` returns a query, not a list, and the query runs again every time you loop over it. Add a `delta` batch of 30 minutes to the source list after calling it and the same result now gives `alpha, beta, delta`, while a `ToList()` taken before still holds `alpha, beta`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
