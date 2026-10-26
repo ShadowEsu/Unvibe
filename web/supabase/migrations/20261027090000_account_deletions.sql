@@ -64,8 +64,10 @@ set search_path = public, pg_temp
 as $$
 begin
   if p_token_hash !~ '^[0-9a-f]{64}$' then raise exception 'token hash must be sha256 hex'; end if;
+  -- No email from the caller (its users read can fail): capture the users row's, in this insert.
   insert into public.account_deletions as d (user_id, email, token_hashes)
-    values (p_user_id, nullif(lower(trim(coalesce(p_email, ''))), ''), array[p_token_hash])
+    values (p_user_id, coalesce(nullif(lower(trim(coalesce(p_email, ''))), ''),
+      (select nullif(lower(trim(u.email)), '') from public.users u where u.id = p_user_id)), array[p_token_hash])
   on conflict (user_id) do update
     set token_hashes = case when p_token_hash = any(d.token_hashes) then d.token_hashes else d.token_hashes || p_token_hash end,
         email = coalesce(d.email, excluded.email),

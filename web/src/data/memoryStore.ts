@@ -169,11 +169,14 @@ export class MemoryStore implements Store {
     let deletion = this.data.deletions.get(userId);
     if (!deletion) {
       deletion = { userId, state: 'started', step: 'started', tokenHashes: new Set() };
-      const normalized = email?.trim().toLowerCase();
-      if (normalized) deletion.email = normalized;
       this.data.deletions.set(userId, deletion);
     }
-    if (deletion.state === 'started') deletion.tokenHashes.add(tokenHash);
+    if (deletion.state === 'started') {
+      // Mirrors begin_account_deletion: without an email from the caller, the users row's is captured.
+      const normalized = email?.trim().toLowerCase() || this.data.users.get(userId)?.email?.trim().toLowerCase();
+      if (!deletion.email && normalized) deletion.email = normalized;
+      deletion.tokenHashes.add(tokenHash);
+    }
     return publicDeletion(deletion);
   }
 

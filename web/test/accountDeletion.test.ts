@@ -173,6 +173,19 @@ test('an identity Supabase Auth no longer has (user_not_found) counts as deleted
   await assertGone(me);
 });
 
+test('a users read that returns no email at step 3 still deletes the beta-download records for the account\'s email', async () => {
+  const me = await person();
+  const accountInfo = store.accountInfo.bind(store);
+  // SupabaseStore.accountInfo ignores a read error and returns no email.
+  store.accountInfo = async (userId) => ({ userId });
+  try {
+    assert.deepEqual((await remove(me.token)).body, { ok: true, status: 'deleted' });
+  } finally {
+    store.accountInfo = accountInfo;
+  }
+  await assertGone(me);
+});
+
 test('an account that never had a workspace is deleted without one being created', async () => {
   const me = await person({ personalWorkspace: false });
   failOnce = 'finish';
