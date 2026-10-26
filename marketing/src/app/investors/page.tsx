@@ -26,7 +26,7 @@ const pipeline = [
 
 const roadmap: Array<[string, string, "shipped" | "next" | "later"]> = [
   ["After-Agent Review", "When Cursor or Claude Code edits many files, rank the real diff and give a review checklist.", "shipped"],
-  ["Knowledge freshness", "Saved explanations are flagged when the code under them changes.", "shipped"],
+  ["Knowledge freshness", "Saved explanations remember the code they explained. Refresh one in Briefs to see if it changed.", "shipped"],
   ["Instant Selection Bubble", "Highlight code anywhere and Unvibe offers Explain, Why, Trace, What breaks.", "next"],
   ["Ask the codebase", "Questions answered from the current repo: where is this used, what calls this.", "next"],
   ["Impact trace", "Select a function and see callers, dependencies and what might break.", "next"],
