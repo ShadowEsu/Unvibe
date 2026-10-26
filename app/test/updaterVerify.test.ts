@@ -31,8 +31,9 @@ test('the macOS helper verifies the mounted app with the pinned requirement befo
 /**
  * Runs the generated helper with every command that could change the machine replaced by a stub
  * that logs its arguments. The installed app is a folder with a marker file in a scratch directory.
+ * With `mountedApp: 'symlink'`, the image's Unvibe.app is a symlink to a bundle elsewhere.
  */
-function runHelper(codesignExit: number) {
+function runHelper(codesignExit: number, mountedApp: 'folder' | 'symlink' = 'folder') {
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-updater-test-'));
   const bin = path.join(root, 'bin');
   const dir = path.join(root, 'work');
@@ -47,7 +48,11 @@ function runHelper(codesignExit: number) {
 if [ "$1" = "attach" ]; then
   mp=""; prev=""
   for a in "$@"; do [ "$prev" = "-mountpoint" ] && mp="$a"; prev="$a"; done
-  mkdir -p "$mp/Unvibe.app"; echo NEW > "$mp/Unvibe.app/marker"
+  if [ "$MOUNTED_APP" = symlink ]; then
+    mkdir -p "$ELSEWHERE"; echo NEW > "$ELSEWHERE/marker"; ln -s "$ELSEWHERE" "$mp/Unvibe.app"
+  else
+    mkdir -p "$mp/Unvibe.app"; echo NEW > "$mp/Unvibe.app/marker"
+  fi
 fi
 exit 0`,
     codesign: `echo "codesign $*" >> "$LOG"; exit ${codesignExit}`,
@@ -65,7 +70,8 @@ exec /bin/rm "$@"`,
   const pid = spawnSync(process.execPath, ['-e', '0']).pid;
   const script = path.join(dir, 'update.sh');
   writeFileSync(script, macUpdateScript({ pid, file: path.join(dir, 'Unvibe.dmg'), dir, mount: path.join(dir, 'mnt'), target }));
-  const result = spawnSync('/bin/bash', [script], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, LOG: log }, encoding: 'utf8' });
+  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, LOG: log, MOUNTED_APP: mountedApp, ELSEWHERE: path.join(root, 'elsewhere', 'Unvibe.app') };
+  const result = spawnSync('/bin/bash', [script], { env, encoding: 'utf8' });
   const calls = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [];
   const marker = readFileSync(path.join(target, 'marker'), 'utf8').trim();
   rmSync(root, { recursive: true, force: true });
@@ -85,6 +91,15 @@ test('a mounted app that fails the signature check leaves the installed app unto
   assert.equal(ok.status, 0);
   assert.ok(ok.calls.includes(`codesign --verify --deep --strict -R=${PINNED_REQUIREMENT} ${ok.dir}/mnt/Unvibe.app`), 'the mounted app, not the installed one, is verified');
   assert.ok(ok.calls.includes(`open ${ok.target}`));
+});
+
+test('a symlinked Unvibe.app in the image is refused, even when what it points at is validly signed', { skip: process.platform === 'win32' }, () => {
+  // codesign passes (exit 0): the link points at a correctly signed bundle somewhere else.
+  const run = runHelper(0, 'symlink');
+  assert.equal(run.marker, 'OLD', 'a symlinked Unvibe.app leaves the installed app untouched');
+  assert.ok(run.calls.includes(`open ${run.target}`), 'the old app is opened again');
+  assert.equal(run.status, 1);
+  assert.ok(!run.calls.some((c) => c.startsWith('ditto') || c.startsWith('xattr')), 'nothing is copied in');
 });
 
 function fakeFetch(body: string | null, status = 200) {

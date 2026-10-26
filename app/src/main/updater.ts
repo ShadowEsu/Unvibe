@@ -142,7 +142,9 @@ function shellQuote(value: string): string {
  * check before the installed app is touched. If it doesn't, the installed app stays as it is and is
  * reopened, and the script exits 1 like its other failures. It never re-signs: a re-signed copy
  * would run with a different identity, and macOS drops the Accessibility permission for it.
- * Quarantine is cleared only on a copy that passed.
+ * Quarantine is cleared only on a copy that passed. Unvibe.app in the image must be a real folder,
+ * not a symlink: a link to a validly signed bundle elsewhere (even the installed app itself) would
+ * pass codesign and then be deleted and copied over.
  */
 export function macUpdateScript(opts: { pid: number; file: string; dir: string; mount: string; target: string }): string {
   const { pid, file, dir, mount, target } = opts;
@@ -152,7 +154,7 @@ export function macUpdateScript(opts: { pid: number; file: string; dir: string; 
     `while kill -0 ${pid} 2>/dev/null; do sleep 0.3; done`,
     `mkdir -p ${shellQuote(mount)}`,
     `hdiutil attach -nobrowse -readonly -mountpoint ${shellQuote(mount)} ${shellQuote(file)} >/dev/null || { open ${shellQuote(target)}; exit 1; }`,
-    `if [ -d ${mounted} ] && codesign --verify --deep --strict -R=${shellQuote(MAC_SIGNING_REQUIREMENT)} ${mounted} >/dev/null 2>&1; then`,
+    `if [ -d ${mounted} ] && [ ! -L ${mounted} ] && codesign --verify --deep --strict -R=${shellQuote(MAC_SIGNING_REQUIREMENT)} ${mounted} >/dev/null 2>&1; then`,
     `  rm -rf ${shellQuote(target)}`,
     `  ditto ${mounted} ${shellQuote(target)}`,
     `  xattr -cr ${shellQuote(target)} 2>/dev/null`,
