@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { giftStatusLine, paidStatusLine, resetLabel } from '../src/renderer/shared/planStatus';
+import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../src/renderer/shared/planStatus';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');
 const END = '2026-11-21T12:00:00.000Z';
@@ -28,8 +28,8 @@ test('a renewing paid plan has no special status line', () => {
   assert.equal(paidStatusLine({ status: 'active', cancelAtPeriodEnd: true }, 'Pro', NOW), null);
 });
 
-test('free beta ends while paid and free plans reset', () => {
-  assert.match(resetLabel(END, 'trial', NOW), /^Free beta ends on .+ \(30 days left\)$/);
+test('the public-beta trial ends while paid and free plans reset', () => {
+  assert.match(resetLabel(END, 'trial', NOW), / end on .+ \(30 days left\)$/);
   assert.match(resetLabel(END, 'free', NOW), /^Usage limits reset on .+ \(30 days left\)$/);
   assert.match(resetLabel('2026-10-23T12:00:00.000Z', 'pro', NOW), /\(1 day left\)$/);
 });
@@ -46,4 +46,27 @@ test('a gifted Pro with no usable end date shows no date', () => {
     assert.equal(line, 'Pro from a gift. When it ends you move to Free, and nothing is charged.');
     assert.doesNotMatch(line, /Invalid Date|NaN/);
   }
+});
+
+test('while Pro is closed the card has no price or terms, only the Free plan\'s real allowance', () => {
+  const free = { plan: 'free', limit: 50, remaining: 12, resetsAt: END };
+  for (const interval of ['monthly', 'annual'] as const) {
+    const card = proCard(false, interval, free, NOW);
+    assert.equal(card.open, false);
+    if (card.open) continue;
+    assert.doesNotMatch(card.line, /\$|renews|Stripe|Sign in to upgrade/);
+    assert.match(card.line, /12 of 50/);
+    assert.ok(card.line.includes(new Date(END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })), 'the refill date');
+  }
+  const trial = proCard(false, 'monthly', { plan: 'trial', limit: 50, remaining: 49, resetsAt: END }, NOW);
+  assert.equal(trial.open, false);
+  if (!trial.open) assert.match(trial.line, /49 of 50/);
+  const unknown = proCard(false, 'monthly', null, NOW);
+  assert.equal(unknown.open, false);
+  if (!unknown.open) assert.doesNotMatch(unknown.line, /\$|undefined|NaN/);
+});
+
+test('once Pro is open the card keeps the price and renewal terms for the chosen interval', () => {
+  assert.deepEqual(proCard(true, 'monthly', null, NOW), { open: true, price: '$9/mo', terms: 'Pro renews at $9 per month until canceled.' });
+  assert.deepEqual(proCard(true, 'annual', null, NOW), { open: true, price: '$81/yr', terms: 'Pro renews at $81 per year until canceled.' });
 });

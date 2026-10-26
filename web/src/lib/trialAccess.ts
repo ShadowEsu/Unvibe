@@ -38,6 +38,29 @@ interface TrialInstallRecord {
   startedAt: string;
 }
 
+/**
+ * What an install reports about itself on its first online launch (A-spec A1): OS family and the app
+ * version it started on. Stored on insert only, so a later update never rewrites them. Each is null
+ * unless it is exactly `mac`/`win` or a plain `x.y.z` version.
+ */
+export interface TrialInstallMeta {
+  platform: 'mac' | 'win' | null;
+  firstVersion: string | null;
+}
+
+const NO_META: TrialInstallMeta = { platform: null, firstVersion: null };
+const VERSION_RE = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,4}$/;
+
+/** Parse `x-unvibe-platform` and `x-unvibe-version`; anything else becomes null. */
+export function trialInstallMeta(req: Request): TrialInstallMeta {
+  const platform = req.headers.get('x-unvibe-platform')?.trim() ?? '';
+  const version = req.headers.get('x-unvibe-version')?.trim() ?? '';
+  return {
+    platform: platform === 'mac' || platform === 'win' ? platform : null,
+    firstVersion: VERSION_RE.test(version) ? version : null,
+  };
+}
+
 interface TrialCounter {
   used: number;
 }
@@ -167,8 +190,8 @@ function memoryKey(installKey: string, kind: TrialKind): string {
   return `${installKey}:${kind}`;
 }
 
-/** Create the install record on first use (write-once), then return its start time. */
-async function readInstall(installKey: string, now = new Date()): Promise<TrialInstallRecord> {
+/** Create the install record on first use (write-once, with `meta`), then return its start time. */
+async function readInstall(installKey: string, now = new Date(), meta: TrialInstallMeta = NO_META): Promise<TrialInstallRecord> {
   const db = serviceSupabase();
   if (!db) {
     const bucket = installMemoryBucket();
@@ -179,10 +202,17 @@ async function readInstall(installKey: string, now = new Date()): Promise<TrialI
     }
     return record;
   }
-  const { error: writeError } = await db
-    .from('trial_installs')
-    .upsert({ install_key: installKey, started_at: now.toISOString() }, { onConflict: 'install_key', ignoreDuplicates: true });
-  if (writeError) console.error('trial install record write failed', writeError.message);
+  const row = { install_key: installKey, started_at: now.toISOString() };
+  // Until 20261025120000_trial_funnel.sql is applied, platform and first_version do not exist and an
+  // insert naming them fails. The install row itself (the trial clock) must still be created.
+  const attempts = meta.platform !== null || meta.firstVersion !== null
+    ? [{ ...row, platform: meta.platform, first_version: meta.firstVersion }, row]
+    : [row];
+  for (const values of attempts) {
+    const { error: writeError } = await db.from('trial_installs').upsert(values, { onConflict: 'install_key', ignoreDuplicates: true });
+    if (!writeError) break;
+    console.error('trial install record write failed', writeError.message);
+  }
   const { data, error } = await db.from('trial_installs').select('started_at').eq('install_key', installKey).maybeSingle();
   if (error) console.error('trial install record read failed', error.message);
   const startedAt = typeof data?.started_at === 'string' ? data.started_at : now.toISOString();
@@ -312,20 +342,20 @@ export async function trialDailyTokens(
   return { inputTokens, outputTokens };
 }
 
-export async function trialUsageLine(installKey: string, kind: TrialKind, now = new Date()): Promise<TrialUsageLine> {
-  const record = await readInstall(installKey, now);
+export async function trialUsageLine(installKey: string, kind: TrialKind, now = new Date(), meta: TrialInstallMeta = NO_META): Promise<TrialUsageLine> {
+  const record = await readInstall(installKey, now, meta);
   const { expiresAt, expired } = trialWindow(record.startedAt, now);
   const limit = limitFor(kind);
   const used = await readUsed(installKey, kind);
   return { kind, used, limit, remaining: expired ? 0 : Math.max(0, limit - used), resetsAt: expiresAt };
 }
 
-export async function trialUsageOverview(installKey: string, now = new Date()): Promise<{
+export async function trialUsageOverview(installKey: string, now = new Date(), meta: TrialInstallMeta = NO_META): Promise<{
   plan: 'trial';
   usage: TrialUsageLine[];
 }> {
   const kinds: TrialKind[] = ['ai_explanation', 'project_question'];
-  return { plan: 'trial', usage: await Promise.all(kinds.map((kind) => trialUsageLine(installKey, kind, now))) };
+  return { plan: 'trial', usage: await Promise.all(kinds.map((kind) => trialUsageLine(installKey, kind, now, meta))) };
 }
 
 /** Read one shared per-IP or global counter (see the key helpers above). */
@@ -333,9 +363,10 @@ export async function trialCounterUsed(key: string): Promise<number> {
   return readUsed(key, SHARED_COUNTER_KIND);
 }
 
+/** `startedAt` is the install's first online launch, for the `return` marker (see activation.ts). */
 export type TrialReservation =
-  | { denied: Response; release?: undefined }
-  | { denied: null; release: () => Promise<void> };
+  | { denied: Response; release?: undefined; startedAt?: undefined }
+  | { denied: null; release: () => Promise<void>; startedAt: string };
 
 interface TrialUnit {
   key: string;
@@ -368,8 +399,9 @@ export async function reserveTrialAction(
   kind: TrialKind,
   ip: string,
   now = new Date(),
+  meta: TrialInstallMeta = NO_META,
 ): Promise<TrialReservation> {
-  const record = await readInstall(installKey, now);
+  const record = await readInstall(installKey, now, meta);
   const { expiresAt, expired } = trialWindow(record.startedAt, now);
   const limit = limitFor(kind);
   if (expired) {
@@ -425,5 +457,18 @@ export async function reserveTrialAction(
     await releaseUnits(taken);
     return { denied: Response.json({ error: refusal.error, message: refusal.message }, { status: refusal.status }) };
   }
-  return { denied: null, release: () => releaseUnits([{ key: installKey, kind }]) };
+  return { denied: null, release: () => releaseUnits([{ key: installKey, kind }]), startedAt: record.startedAt };
+}
+
+/**
+ * Rate limit for `POST /api/v1/trial/progress`, built like the per-IP cap on trial AI requests: one
+ * shared counter per network per UTC day, `__progress_ip__:YYYY-MM-DD:<hmac>` (UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT,
+ * default 500; a classroom NAT setting up 30 installs sends at most about 300 pings). The address is
+ * never stored. Returns 'ok', 'limited' (429) or 'unavailable' (storage failed; 503).
+ */
+export async function reserveTrialProgressPing(ip: string, now = new Date()): Promise<'ok' | 'limited' | 'unavailable'> {
+  const key = trialIpKey(ip, now).replace(/^__ip__:/, '__progress_ip__:');
+  const reserved = await reserveUnit(key, SHARED_COUNTER_KIND, limitFromEnv('UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT', 500));
+  if (reserved === null) return 'unavailable';
+  return reserved === -1 ? 'limited' : 'ok';
 }

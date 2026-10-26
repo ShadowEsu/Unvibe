@@ -1491,6 +1491,8 @@ code.inline {
 :root[data-panel="light"] .card .body strong { color: #141414; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%); }
 :root[data-panel="light"] .card .body :not(pre) > code { background: #f1eee6; color: #9a3412; }
 :root[data-panel="light"] .card .body a { color: #1d6fa5; }
+/* List numbers and bullets are text: lime on cream was 1.29:1; #4d5c00 is 7.08:1 on the light panel. */
+:root[data-panel="light"] .card .body li::marker { color: #4d5c00; }
 :root[data-panel="light"] .card .code-context pre, :root[data-panel="light"] .card .cb pre { color: #f4f2ea; }
 :root[data-panel="light"] .card .code-context__head, :root[data-panel="light"] .card .cb-head { color: #aeaba2; border-color: #2f2f2c; }
 :root[data-panel="light"] .card .code-context, :root[data-panel="light"] .card .cb { border-color: #141414; }

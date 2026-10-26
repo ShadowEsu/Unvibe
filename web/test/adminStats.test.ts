@@ -43,6 +43,18 @@ test('daily activation counts each install once per marker and splits sample fro
   ]);
 });
 
+test('daily activation ignores the funnel kinds, so its output is unchanged by them', () => {
+  const now = new Date('2026-10-18T12:00:00Z');
+  const at = (iso: string) => new Date(iso);
+  const base = [{ kind: 'sample', at: at('2026-10-18T01:00:05Z') }, { kind: 'code', at: at('2026-10-18T02:00:00Z') }];
+  const funnel = ['onboarded', 'accessibility', 'signed_in', 'return', 'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted']
+    .map((kind) => ({ kind, at: at('2026-10-18T03:00:00Z') }));
+  const installs = [at('2026-10-18T01:00:00Z')];
+  const withFunnel = dailyActivation(installs, [...base, ...funnel], now, 2);
+  assert.deepEqual(withFunnel, dailyActivation(installs, base, now, 2));
+  for (const row of withFunnel) assert.deepEqual(Object.keys(row), ['day', 'installs', 'sample', 'code']);
+});
+
 test('only the built-in first-run sample counts as the sample, whatever its line endings', () => {
   assert.equal(activationKind(FIRST_RUN_SAMPLE.replace(/\n/g, '\r\n') + '\n'), 'sample');
   assert.equal(activationKind(FIRST_RUN_SAMPLE.replace('wait);', 'wait * 2);')), 'code');

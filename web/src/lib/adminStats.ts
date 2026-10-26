@@ -9,7 +9,7 @@ import { serviceSupabase } from '@/lib/serviceSupabase';
 import { isInstallCounterKey } from '@/lib/trialAccess';
 
 export interface InstallStats {
-  /** Installs that have made at least one trial AI request, all time. */
+  /** Installs that have launched online at least once (trial_installs rows), all time. */
   installs: number;
   newToday: number;
   new7d: number;
@@ -18,8 +18,9 @@ export interface InstallStats {
   active7d: number;
   active30d: number;
   /**
-   * Last 14 UTC days, oldest first. `installs`: first trial AI request; `sample`: first-run sample
+   * Last 14 UTC days, oldest first. `installs`: first online launch; `sample`: first-run sample
    * explained; `code`: first explanation of the user's own code (the activation number).
+   * Funnel progress kinds and `return` are not counted here.
    */
   daily: DailyActivation[];
   /** CI/QA installs left out of every number above (flagged by the real-device test). */
@@ -60,9 +61,13 @@ export interface DailyActivation {
 }
 
 export interface ActivationMarker {
-  kind: ActivationKind;
+  /** Any trial_activation kind; only `sample` and `code` are counted in `daily`. */
+  kind: string;
   at: Date;
 }
+
+const DAILY_KINDS: readonly ActivationKind[] = ['sample', 'code'];
+const isDailyKind = (kind: string): kind is ActivationKind => (DAILY_KINDS as readonly string[]).includes(kind);
 
 const GLOBAL_INSTALL_KEY = '__global__';
 const DAY_MS = 86_400_000;
@@ -117,7 +122,7 @@ export function dailyActivation(installStarts: Date[], activation: ActivationMar
   }
   for (const marker of activation) {
     const row = byDay.get(marker.at.toISOString().slice(0, 10));
-    if (row) row[marker.kind] += 1;
+    if (row && isDailyKind(marker.kind)) row[marker.kind] += 1;
   }
   return rows;
 }
@@ -180,9 +185,10 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
       .gte('updated_at', since30d)
       .order('install_key')
       .range(from, to), 'trial_counters'),
-    fetchAll<{ install_key: string; kind: ActivationKind; at: string }>((from, to) => db
+    fetchAll<{ install_key: string; kind: string; at: string }>((from, to) => db
       .from('trial_activation')
       .select('install_key, kind, at')
+      .in('kind', DAILY_KINDS)
       .gte('at', firstDay.toISOString())
       .order('install_key')
       .order('kind')

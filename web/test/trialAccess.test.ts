@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { reserveTrialAction, trialGlobalDayKey, trialGlobalMonthKey, trialInstallFromRequest, trialInstallKey, trialIpKey, trialUsageOverview } from '../src/lib/trialAccess';
+import { reserveTrialAction, trialGlobalDayKey, trialGlobalMonthKey, trialInstallFromRequest, trialInstallKey, trialIpKey, trialInstallMeta, trialUsageOverview } from '../src/lib/trialAccess';
 
 const IP = '203.0.113.5';
 
@@ -121,5 +121,80 @@ test('with Supabase, reserveTrialAction uses trial_reserve for the install, per-
     globalThis.fetch = original;
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});
+
+test('install meta keeps only mac/win and a plain x.y.z version', () => {
+  const meta = (platform?: string, version?: string) => trialInstallMeta(new Request('http://localhost/api', {
+    headers: { ...(platform === undefined ? {} : { 'x-unvibe-platform': platform }), ...(version === undefined ? {} : { 'x-unvibe-version': version }) },
+  }));
+  assert.deepEqual(meta('mac', '0.1.44'), { platform: 'mac', firstVersion: '0.1.44' });
+  assert.deepEqual(meta('win', '1.2.3'), { platform: 'win', firstVersion: '1.2.3' });
+  assert.deepEqual(meta('linux', '0.1.44-beta'), { platform: null, firstVersion: null });
+  assert.deepEqual(meta('Darwin 25.2.0', '0.1'), { platform: null, firstVersion: null });
+  assert.deepEqual(meta(), { platform: null, firstVersion: null });
+});
+
+test('the first online launch stores platform and first version on insert only', async () => {
+  process.env.SUPABASE_URL = 'https://meta.supabase.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'local-service-key';
+  const previousFetch = globalThis.fetch;
+  const inserts: Array<{ body: Record<string, unknown>; prefer: string }> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/rest/v1/trial_installs') {
+      if (init?.method === 'POST') {
+        inserts.push({ body: JSON.parse(String(init.body)) as Record<string, unknown>, prefer: new Headers(init.headers).get('prefer') ?? '' });
+        return new Response(null, { status: 201 });
+      }
+      return Response.json([{ started_at: '2026-10-20T00:00:00.000Z' }]);
+    }
+    if (url.pathname === '/rest/v1/trial_counters') return Response.json([]);
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  }) as typeof fetch;
+  try {
+    const key = trialInstallKey('meta-install-0001');
+    await trialUsageOverview(key, new Date('2026-10-20T00:00:00.000Z'), { platform: 'win', firstVersion: '0.1.44' });
+    assert.ok(inserts.length > 0);
+    for (const insert of inserts) {
+      assert.deepEqual(insert.body, { install_key: key, started_at: '2026-10-20T00:00:00.000Z', platform: 'win', first_version: '0.1.44' });
+      assert.match(insert.prefer, /resolution=ignore-duplicates/, 'an existing row is never overwritten');
+    }
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('before the funnel migration, the first trial explanation still creates the install and starts its 30 days', async () => {
+  process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT = '50';
+  process.env.SUPABASE_URL = 'https://premigration.supabase.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'local-service-key';
+  const previousFetch = globalThis.fetch;
+  let startedAt: string | null = null;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/rest/v1/rpc/trial_reserve') return Response.json(1);
+    if (url.pathname === '/rest/v1/trial_installs') {
+      if (init?.method !== 'POST') return Response.json(startedAt ? [{ started_at: startedAt }] : []);
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      if ('platform' in body || 'first_version' in body) {
+        return Response.json({ code: 'PGRST204', message: "Could not find the 'first_version' column of 'trial_installs' in the schema cache" }, { status: 400 });
+      }
+      startedAt ??= String(body.started_at);
+      return new Response(null, { status: 201 });
+    }
+    if (url.pathname === '/rest/v1/trial_counters') return Response.json([]);
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  }) as typeof fetch;
+  try {
+    const key = trialInstallKey('premigration-install-0001');
+    const meta = { platform: 'mac' as const, firstVersion: '0.1.44' };
+    const first = await reserveTrialAction(key, 'ai_explanation', IP, new Date('2026-10-01T00:00:00.000Z'), meta);
+    assert.equal(first.denied, null);
+    assert.equal(startedAt, '2026-10-01T00:00:00.000Z');
+    const later = await reserveTrialAction(key, 'ai_explanation', IP, new Date('2026-11-02T00:00:00.000Z'), meta);
+    assert.equal(later.denied?.status, 429, 'the trial clock started on the first launch');
+  } finally {
+    globalThis.fetch = previousFetch;
   }
 });

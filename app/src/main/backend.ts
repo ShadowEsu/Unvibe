@@ -1,6 +1,6 @@
 /** Thin HTTP client for the Unvibe backend. Main process only. */
 import { readFileSync, existsSync } from 'node:fs';
-import { net } from 'electron';
+import { app, net } from 'electron';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
@@ -43,15 +43,38 @@ loadAppEnv();
 export const BACKEND = resolveBackendUrl();
 const REQUEST_TIMEOUT_MS = 20_000;
 
-/** Session bearer when signed in; otherwise sealed trial token + install id. */
+/**
+ * Trial headers: token, install ID, and (instrumentation spec 7.1) the OS family and app version,
+ * which the server stores once, on the install's first online launch. Exported for tests.
+ */
+export function trialAuthHeaders(trial: string, installId: string, platform: NodeJS.Platform, version: string): Record<string, string> {
+  const os = platform === 'darwin' ? 'mac' : platform === 'win32' ? 'win' : null;
+  return {
+    authorization: `Bearer ${trial}`,
+    'x-unvibe-install-id': installId,
+    ...(os ? { 'x-unvibe-platform': os } : {}),
+    'x-unvibe-version': version,
+  };
+}
+
+/** Session bearer when signed in (nothing else); otherwise sealed trial token + install id. */
 export function aiAuthHeaders(sessionToken?: string | null): Record<string, string> {
   if (sessionToken) return { authorization: `Bearer ${sessionToken}` };
   const trial = bakedTrialToken();
   if (!trial) return {};
-  return {
-    authorization: `Bearer ${trial}`,
-    'x-unvibe-install-id': store().installId(),
-  };
+  return trialAuthHeaders(trial, store().installId(), process.platform, app.getVersion());
+}
+
+/** One setup-progress ping (see progress.ts). Returns the HTTP status, or null when nothing came back. */
+export async function postTrialProgress(step: string, headers: Record<string, string>): Promise<number | null> {
+  if (!headers.authorization) return null;
+  const res = await request(`${BACKEND}/api/v1/trial/progress`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify({ step }),
+  }).catch(() => null);
+  await res?.body?.cancel().catch(() => undefined);
+  return res?.status ?? null;
 }
 
 /**
@@ -139,6 +162,21 @@ export async function claimGiftCode(token: string, code: string): Promise<{ mont
     throw new Error(body.message ?? 'That gift code could not be used.');
   }
   return json(res);
+}
+
+/**
+ * Whether Pro checkout works right now (public GET /api/v1/billing/status, no sign-in, one boolean).
+ * Unknown (offline, older server) counts as closed, so the app never promises an upgrade it can't sell.
+ */
+export async function billingStatus(): Promise<{ paymentsOpen: boolean }> {
+  try {
+    const res = await request(`${BACKEND}/api/v1/billing/status`, { method: 'GET' });
+    if (!res.ok) return { paymentsOpen: false };
+    const body = (await res.json().catch(() => ({}))) as { paymentsOpen?: unknown };
+    return { paymentsOpen: body.paymentsOpen === true };
+  } catch {
+    return { paymentsOpen: false };
+  }
 }
 
 export async function startBillingCheckout(token: string, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }): Promise<string> {

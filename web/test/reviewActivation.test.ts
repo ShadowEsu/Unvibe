@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { POST } from '../app/api/v1/reviews/route';
+import { recordActivation } from '../src/lib/activation';
 
 // Exercise the real review stream; only the remote AI and database HTTP boundaries are local.
 test('activation requires a completed, non-empty selection explanation', async () => {
@@ -72,6 +73,52 @@ test('activation requires a completed, non-empty selection explanation', async (
 
     await explain('activation-followup-install', { question: 'Why?' });
     assert.equal(markers.length, 1, 'a follow-up is not a first selection explanation');
+  } finally {
+    globalThis.fetch = previousFetch;
+    process.env = previousEnv;
+  }
+});
+
+// `return` (instrumentation spec 6.3 and 11.1 item 3), with started_at = T.
+test('return marker needs an earlier first explanation in an earlier 24 h block of the first week', async () => {
+  const previousEnv = { ...process.env };
+  const previousFetch = globalThis.fetch;
+  process.env.SUPABASE_URL = 'https://return.supabase.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'local-service-key';
+  const T = Date.parse('2026-10-20T08:00:00.000Z');
+  const hours = (h: number) => new Date(T + h * 3_600_000);
+  let firstMarkerAt: Date | null = null;
+  const written: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname !== '/rest/v1/trial_activation') throw new Error(`Unexpected request: ${url.pathname}`);
+    if (init?.method === 'POST') {
+      written.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      return new Response(null, { status: 201 });
+    }
+    assert.equal(url.searchParams.get('kind'), 'in.(sample,code)');
+    return Response.json(firstMarkerAt ? [{ at: firstMarkerAt.toISOString() }] : []);
+  }) as typeof fetch;
+  const cases: Array<{ name: string; first: number; now: number; expected: boolean }> = [
+    { name: 'sample at T+5 min, explanation at T+30 h', first: 5 / 60, now: 30, expected: true },
+    { name: 'sample at T+5 min, explanation at T+3 h', first: 5 / 60, now: 3, expected: false },
+    { name: 'code at T+26 h, explanation at T+27 h (same block)', first: 26, now: 27, expected: false },
+    { name: 'code at T+26 h, explanation at T+50 h', first: 26, now: 50, expected: true },
+    { name: 'explanation at T+8 d', first: 5 / 60, now: 8 * 24, expected: false },
+  ];
+  try {
+    for (const [i, c] of cases.entries()) {
+      written.length = 0;
+      firstMarkerAt = hours(c.first);
+      await recordActivation(`return-install-${i}`, 'const own = 1;', { now: hours(c.now), startedAt: new Date(T).toISOString() });
+      const returns = written.filter((row) => row.kind === 'return');
+      assert.equal(returns.length, c.expected ? 1 : 0, c.name);
+      if (c.expected) assert.deepEqual(Object.keys(returns[0]!).sort(), ['at', 'install_key', 'kind'], 'timestamp only');
+    }
+    written.length = 0;
+    firstMarkerAt = hours(1);
+    await recordActivation('return-install-0', 'const own = 1;', { now: hours(40), startedAt: new Date(T).toISOString() });
+    assert.equal(written.length, 0, 'write-once: a later return in the same instance skips the round trip');
   } finally {
     globalThis.fetch = previousFetch;
     process.env = previousEnv;

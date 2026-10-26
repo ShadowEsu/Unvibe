@@ -5,7 +5,7 @@ import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
-import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest } from '@/lib/trialAccess';
+import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
 import { clientIp } from '@/lib/tryDemo';
 
@@ -32,7 +32,7 @@ export async function POST(req: Request): Promise<Response> {
     release = () => releaseMeteredAction(userId, 'project_question', reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, 'project_question', usage);
   } else if (!provider.mock && trialInstall) {
-    const trial = await reserveTrialAction(trialInstall, 'project_question', clientIp(req));
+    const trial = await reserveTrialAction(trialInstall, 'project_question', clientIp(req), new Date(), trialInstallMeta(req));
     if (trial.denied) return trial.denied;
     release = trial.release;
     recordTokens = (usage) => recordTrialTokens('project_question', usage);

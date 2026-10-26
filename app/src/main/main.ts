@@ -52,10 +52,15 @@ import {
   type RequestOpts,
 } from './review';
 import { onLearningChanged, store, type ChatThread } from './store';
-import { applyLoginItem, settings, type Settings } from './settings';
+import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
+import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
+import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
+import { grantReturnApp, type PendingGrant } from '../core/grantReturn';
+import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
+import { reportProgress, syncProgress } from './progress';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
   signIn,
@@ -66,6 +71,7 @@ import {
   redeemDeviceAuth,
   accountInfo,
   billingOverview,
+  billingStatus,
   startBillingCheckout,
   startBillingPortal,
   giftProgress,
@@ -181,7 +187,7 @@ function makeSession(
   sourceApp: string | null,
   level: ExplanationLevel = settings().all().defaultExplanationLevel,
 ): ReviewSession {
-  return {
+  const session: ReviewSession = {
     reviewId: randomUUID(),
     tabId,
     code,
@@ -189,9 +195,46 @@ function makeSession(
     abort: null,
     recorded: false,
     level,
-    onRecorded: () => notify('Added to your learning history'),
+    isSample: () => session.code === FIRST_RUN_SAMPLE,
+    onRecorded: () => {
+      notify('Added to your learning history');
+      // First run step 2 asks its one level question once the sample answer has finished.
+      if (session.isSample?.() && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+      void askLaunchAtLogin(!session.isSample?.());
+    },
     onUnderstood: () => notify('Nice — concept understood'),
   };
+  return session;
+}
+
+/** Launch at login, asked once after the user's first explanation of their own code (first-run spec). */
+async function askLaunchAtLogin(ownCode: boolean): Promise<void> {
+  const step = loginPromptStep({
+    ownCode,
+    asked: store().loginPromptAsked(),
+    launchAtLogin: () => settings().all().launchAtLogin || loginItemState().openAtLogin,
+  });
+  if (step === 'none') return;
+  store().markLoginPromptAsked();
+  if (step === 'settle') return;
+  reportProgress('login_prompt_shown');
+  const question: Electron.MessageBoxOptions = {
+    type: 'question',
+    buttons: ['Yes', 'No'],
+    defaultId: 0,
+    cancelId: 1,
+    message: 'Open Unvibe when you log in, so the shortcut is ready?',
+    detail: 'You can turn this off in Settings.',
+  };
+  const panel = currentWidget();
+  const { response } = panel && !panel.isDestroyed()
+    ? await dialog.showMessageBox(panel, question)
+    : await dialog.showMessageBox(question);
+  if (response !== 0) return;
+  settings().set({ launchAtLogin: true });
+  reportProgress('login_prompt_accepted');
+  const fallback = loginItemFallback(process.platform, loginItemState());
+  if (fallback) await dialog.showMessageBox({ type: 'info', buttons: ['OK'], message: fallback });
 }
 
 function sessionFor(tabId = activeTabId): ReviewSession | undefined {
@@ -315,6 +358,7 @@ async function persistAccount(account: BackendAccount): Promise<void> {
   invalidateAppUsage();
   try {
     store().setAccount(account.userId, account.email, account.token);
+    reportProgress('signed_in');
   } catch (error) {
     try {
       await revokeSession(account.token);
@@ -326,16 +370,21 @@ async function persistAccount(account: BackendAccount): Promise<void> {
   }
 }
 
+/** True when macOS lets Unvibe read selections. The first true is reported as setup progress. */
 function accessibilityGranted(prompt = false): boolean {
   if (!isMac) return true;
-  return systemPreferences.isTrustedAccessibilityClient(prompt);
+  const granted = systemPreferences.isTrustedAccessibilityClient(prompt);
+  if (granted) reportProgress('accessibility');
+  return granted;
 }
 
 /**
- * Builds without a stable signing identity get a new signature every release, and macOS then
- * treats the updated app as a stranger: the Accessibility switch still looks on but no longer
- * applies, so the shortcut cannot read a selection. After an update, if access was lost, clear
- * the stale entry and ask again once, with a clear note instead of a silent failure.
+ * Release builds are signed with the same certificate every time, so the designated requirement
+ * stays the same across updates (identical in v0.1.42 and v0.1.43, unsigned-install research
+ * 2026-10-22) and macOS should keep the Accessibility grant. Local ad-hoc builds still change
+ * identity, and macOS can then keep an entry that looks on but no longer applies. So, as a
+ * fallback: after an update, if access was lost, clear the stale entry and ask again once, with a
+ * clear note instead of a silent failure.
  */
 function repairAccessibilityAfterUpdate(): void {
   if (!isMac) return;
@@ -421,7 +470,14 @@ const FIRST_RUN_SAMPLE = [
   '}',
 ].join('\n');
 
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean } = {}): Promise<void> {
+/**
+ * The app a shortcut press came from while macOS had not allowed Accessibility yet, and when. Once
+ * the grant shows up, the panel asks main to go back there and explain the selection already made;
+ * `grantReturnApp` drops presses older than five minutes (Security L2).
+ */
+let pendingGrant: PendingGrant | null = null;
+
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -456,7 +512,9 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
-  const capture = options.sample ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' } : await captureSelection(options);
+  const capture = options.sample
+    ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' }
+    : options.captured ?? await captureSelection(options);
   const code = capture.code;
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
@@ -465,6 +523,11 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
+  }
+  if (!code && isMac && !options.preferClipboard && !accessibilityGranted(false)) {
+    // The panel shows the one-button pre-permission screen (first-run spec, change 2).
+    reportProgress('accessibility_asked');
+    pendingGrant = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? { app: sourceApp, at: Date.now() } : null;
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
@@ -563,14 +626,18 @@ app.whenReady().then(() => {
   // Open the backend connection and fetch usage early so the first explanation starts faster.
   setTimeout(() => {
     warmBackend();
-    void refreshAppUsage().catch(() => undefined);
+    // The usage check creates the server's install row, so setup progress goes after it.
+    void refreshAppUsage().catch(() => undefined).finally(() => void syncProgress({
+      onboarded: settings().all().onboarded,
+      accessibilityGranted: isMac && accessibilityGranted(false),
+      signedIn: Boolean(store().token()),
+    }));
   }, 1200);
   powerMonitor.on('resume', warmBackend);
   powerMonitor.on('unlock-screen', warmBackend);
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
-  store().ensureDayActive();
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
@@ -626,8 +693,10 @@ app.whenReady().then(() => {
   if (!registerShortcut(s.shortcut)) {
     notify('That shortcut is in use by another app. Pick a different one in Settings.');
   }
-  // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
-  openCompanion();
+  // Companion home keeps the app visible in Dock / Cmd-Tab on launch. A login launch after setup
+  // starts quietly in the tray instead, so the shortcut is ready with no window.
+  const loginLaunch = isLoginLaunch(process.platform, process.argv, isMac && loginItemState().wasOpenedAtLogin);
+  if (launchOpensWindow(loginLaunch, s.onboarded)) openCompanion();
   repairAccessibilityAfterUpdate();
   if (pendingExternalReview) {
     const request = pendingExternalReview;
@@ -658,7 +727,6 @@ app.whenReady().then(() => {
     ]).popup({ window: bar });
   });
   ipcMain.handle('bar:snapshot', async () => {
-    store().ensureDayActive();
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
     let quota = { used: 0, limit: 30, remaining: 30 };
@@ -910,13 +978,12 @@ app.whenReady().then(() => {
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
     version: app.getVersion(),
+    // Only sealed trial builds send setup progress, so only they show its setting.
+    sendsSetupProgress: trialBuildEnabled() && !fullProductBuildEnabled(),
     user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
   }));
-  ipcMain.handle('learning:profile', () => {
-    store().ensureDayActive();
-    return computeProfile(store().events(), todayKey());
-  });
+  ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
@@ -1218,13 +1285,12 @@ app.whenReady().then(() => {
     } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
-    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.rotateIslandStats !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
         barSize: next.barSize,
         barHoverPreview: next.barHoverPreview,
         barHoverDelayMs: next.barHoverDelayMs,
-        rotateIslandStats: next.rotateIslandStats,
         soundEffects: next.soundEffects,
         soundVolume: next.soundVolume,
         soundStyle: next.soundStyle,
@@ -1288,14 +1354,14 @@ app.whenReady().then(() => {
       '',
       'Optional: attach a screenshot if it makes the issue easier to see.',
     ].join('\n'));
-    void shell.openExternal(`mailto:support@unvibe.site?subject=${subject}&body=${body}`);
+    void shell.openExternal(`mailto:hello@unvibe.site?subject=${subject}&body=${body}`);
     return { ok: true };
   });
 
   // --- permissions ---
   ipcMain.handle('perms:accessibility', () => ({ granted: accessibilityGranted(false), platform: process.platform }));
-  // Each new build has a new ad-hoc signature, so macOS can keep a stale Accessibility entry that
-  // looks switched on but no longer matches. Clear it for this app and ask again.
+  // macOS can keep a stale Accessibility entry that looks switched on but no longer matches this
+  // copy of Unvibe (for example after an ad-hoc local build). Clear it and ask again.
   ipcMain.handle('perms:resetAccessibility', async () => {
     if (!isMac) return { ok: true };
     await new Promise<void>((resolve) => execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => resolve()));
@@ -1309,6 +1375,24 @@ app.whenReady().then(() => {
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
     return { ok: true };
   });
+  /**
+   * The panel saw the grant arrive: go back to the app the shortcut was pressed in and explain the
+   * selection already made. `explained: false` when there is nothing to go back to or nothing was
+   * selected any more; the panel then says in one line what to do.
+   */
+  ipcMain.handle('perms:explainAfterGrant', async () => {
+    const fromApp = grantReturnApp(pendingGrant, Date.now());
+    if (!fromApp) {
+      pendingGrant = null;
+      return { explained: false };
+    }
+    if (!accessibilityGranted(false)) return { explained: false };
+    pendingGrant = null;
+    const capture = await captureSelection({ fromApp });
+    if (!capture.code) return { explained: false };
+    await startReview({ captured: { code: capture.code, sourceApp: fromApp } });
+    return { explained: true };
+  });
   // Voice questions use macOS Dictation; this opens the Keyboard pane where it is switched on.
   ipcMain.handle('perms:openDictation', () => {
     if (isMac) void shell.openExternal('x-apple.systempreferences:com.apple.Keyboard-Settings.extension');
@@ -1317,14 +1401,33 @@ app.whenReady().then(() => {
 
   // --- onboarding ---
   ipcMain.on('onboarding:explainSample', () => void startReview({ sample: true }));
+  // Step 3's second option: works without Accessibility, on Mac and Windows.
+  ipcMain.on('onboarding:explainClipboard', () => void startReview({ preferClipboard: true }));
+  /** The one skippable level question after the sample (first-run spec, change 3). */
+  ipcMain.handle('onboarding:levelAnswer', (_e, answer: unknown) => {
+    if (!isLevelAnswer(answer)) return { ok: false as const };
+    const level = levelAfterAnswer(settings().all().defaultExplanationLevel, answer);
+    settings().set({ defaultExplanationLevel: level });
+    reportProgress('level_answered');
+    return { ok: true as const, level };
+  });
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
+    reportProgress('onboarded');
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
+  // Plan card and panel copy: "Pro opens soon" while checkout is closed. The server caches 5 minutes too.
+  let billingStatusCache: { at: number; value: { paymentsOpen: boolean } } | null = null;
+  ipcMain.handle('billing:status', async () => {
+    if (billingStatusCache && Date.now() - billingStatusCache.at < 300_000) return billingStatusCache.value;
+    const value = await billingStatus();
+    billingStatusCache = { at: Date.now(), value };
+    return value;
+  });
   ipcMain.handle('billing:overview', async () => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in to view your plan and cloud usage.' };
@@ -1419,13 +1522,23 @@ app.whenReady().then(() => {
   ipcMain.handle('billing:checkout', async (_e, input: { plan: 'pro' | 'teams'; interval: 'monthly' | 'annual'; seats: number; workspaceId?: string; workspaceName?: string }) => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in before starting checkout.' };
-    try { const url = await startBillingCheckout(token, input); await shell.openExternal(url); return { ok: true }; }
+    try {
+      const url = await startBillingCheckout(token, input);
+      if (!isBillingUrl(url)) return { ok: false, error: 'Checkout returned a link Unvibe does not open. Try again from unvibe.site.' };
+      await shell.openExternal(url);
+      return { ok: true };
+    }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Checkout could not start.' }; }
   });
   ipcMain.handle('billing:portal', async (_e, workspaceId: string) => {
     const token = store().token();
     if (!token) return { ok: false, error: 'Sign in before managing billing.' };
-    try { const url = await startBillingPortal(token, workspaceId); await shell.openExternal(url); return { ok: true }; }
+    try {
+      const url = await startBillingPortal(token, workspaceId);
+      if (!isBillingUrl(url)) return { ok: false, error: 'Billing returned a link Unvibe does not open. Try again from unvibe.site.' };
+      await shell.openExternal(url);
+      return { ok: true };
+    }
     catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Billing could not open.' }; }
   });
   ipcMain.handle('account:signIn', async (_e, email: string) => {

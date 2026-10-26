@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
 import type { ExplanationLevel } from '../core/protocol';
+import { LOGIN_LAUNCH_ARG } from '../core/loginItem';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
@@ -81,8 +82,6 @@ export interface Settings {
   barHoverPreview: boolean;
   /** Intent delay before a pointer opens the Island (120–600ms). */
   barHoverDelayMs: number;
-  /** Cycle compact Island learning stats automatically. */
-  rotateIslandStats: boolean;
   /** Compact Island scale. Medium matches a Mac notch. */
   barSize: BarSize;
   /** Follow the display under the pointer when positioning the learning strip. */
@@ -125,6 +124,11 @@ export interface Settings {
   features: FeatureFlags;
   /** ISO timestamp while Live mode is snoozed. */
   liveSnoozeUntil?: string;
+  /**
+   * Send anonymous setup progress (instrumentation spec 5 and 10): one date each for setup
+   * finished, Accessibility allowed, signed in and similar steps, tied to the random install ID.
+   */
+  shareSetupProgress: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -142,7 +146,6 @@ const DEFAULTS: Settings = {
   barVisibility: 'always',
   barHoverPreview: true,
   barHoverDelayMs: 160,
-  rotateIslandStats: true,
   barSize: 'medium',
   followActiveDisplay: true,
   soundEffects: true,
@@ -164,6 +167,7 @@ const DEFAULTS: Settings = {
   sidebarHidden: false,
   giftCode: '',
   features: DEFAULT_FEATURES,
+  shareSetupProgress: true,
 };
 
 class SettingsStore {
@@ -320,15 +324,26 @@ class SettingsStore {
   }
 }
 
+/**
+ * Where the OS login item points. Windows passes LOGIN_LAUNCH_ARG so a login launch starts quietly;
+ * reading the item back needs the same path and args.
+ */
+function loginItemTarget(): { path?: string; args?: string[] } {
+  if (!IS_WIN) return {};
+  // The portable build runs from a temp extraction; the login item must start the .exe itself.
+  const portable = process.env.PORTABLE_EXECUTABLE_FILE;
+  return portable ? { path: portable, args: [LOGIN_LAUNCH_ARG] } : { args: [LOGIN_LAUNCH_ARG] };
+}
+
 /** Registers (or removes) the OS login item. macOS and Windows only. */
 export function applyLoginItem(openAtLogin: boolean): void {
-  if (process.platform === 'darwin') {
-    app.setLoginItemSettings({ openAtLogin });
-  } else if (IS_WIN) {
-    // The portable build runs from a temp extraction; the login item must start the .exe itself.
-    const portable = process.env.PORTABLE_EXECUTABLE_FILE;
-    app.setLoginItemSettings(portable ? { openAtLogin, path: portable } : { openAtLogin });
-  }
+  if (process.platform !== 'darwin' && !IS_WIN) return;
+  app.setLoginItemSettings({ openAtLogin, ...loginItemTarget() });
+}
+
+/** The OS's own view of the login item, which may differ from the setting. */
+export function loginItemState(): Electron.LoginItemSettings {
+  return app.getLoginItemSettings(loginItemTarget());
 }
 
 let singleton: SettingsStore | null = null;

@@ -63,6 +63,8 @@ export interface ReviewSession {
   snapshotText?: string;
   mode?: ReviewMode;
   pendingAnswer?: { answerIndex: number; concept: string; conceptLabel: string; rationale: string };
+  /** True while the session holds the built-in first-run sample rather than the user's own code. */
+  isSample?: () => boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
 }
@@ -235,6 +237,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
     project: session.project,
     code: session.code.slice(0, 40_000),
     explanation: explanation?.slice(0, 60_000),
+    ...(session.isSample?.() ? { sample: true as const } : {}),
   };
   try {
     store().recordReview(ev);
@@ -344,16 +347,12 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
     if (usage.remaining <= 0 && !localKey) {
       const resets = new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-      const planName =
-        usage.plan === 'pro' ? 'Pro'
-          : usage.plan === 'teams' ? 'Teams'
-            : usage.plan === 'trial' ? 'Trial'
-              : 'Free';
+      const planName = usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
       send(win, session, {
         type: 'error',
         code: 'plan_limit_reached',
         upgradePath: '/plan',
-        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'The beta access period ends' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
+        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'Free explanations on this computer end' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
       });
       raiseLimitPause(win);
       return;
@@ -431,8 +430,9 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       send(win, session, {
         type: 'error',
         message: failure.message,
-        code: failure.planLimit ? 'plan_limit_reached' : undefined,
-        upgradePath: body.upgradePath ?? (failure.planLimit ? '/plan' : undefined),
+        // 402 pro_required opens the Pro upgrade panel; only a used-up allowance is plan_limit_reached.
+        code: failure.proRequired ? 'pro_required' : failure.planLimit ? 'plan_limit_reached' : undefined,
+        upgradePath: body.upgradePath ?? (failure.planLimit || failure.proRequired ? '/plan' : undefined),
       });
       return;
     }
