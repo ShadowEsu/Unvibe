@@ -207,6 +207,33 @@ test('beta-download records: reads run 8 at a time, and a page\'s matches are de
   assert.deepEqual(blob.seen.filter((s) => s.path === '/api/blob/delete').map((s) => s.body), [{ urls: [`${base}p1-3.enc`] }]);
 });
 
+test('beta-download records: once one read fails, no new read starts and nothing is deleted', async () => {
+  const base = 'https://store123.private.blob.vercel-storage.com/beta-downloads/item/';
+  const names = Array.from({ length: 20 }, (_, index) => `r-${index}`);
+  // Every read but the failing one waits here until the failure has surfaced.
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const blob = fakeFetch(async (_request, url) => {
+    if (url.host === 'vercel.com' && url.pathname === '/api/blob') {
+      return Response.json({ blobs: names.map((name) => ({ url: `${base}${name}.enc`, pathname: `beta-downloads/item/${name}.enc` })), hasMore: false });
+    }
+    if (url.host === 'vercel.com' && url.pathname === '/api/blob/delete') return Response.json({});
+    const name = url.pathname.split('/').pop()?.replace('.enc', '') ?? '';
+    if (name === 'r-0') return new Response('unavailable', { status: 503 });
+    await gate;
+    return new Response(encryptRecord({ email: 'leaving@account.test', release: '1.0.0' }, BLOB_ENV.WAITLIST_ADMIN_TOKEN as string));
+  });
+  await assert.rejects(vercelBlobBetaDownloads(BLOB_ENV, blob.fetcher).deleteForEmail('leaving@account.test'), /Blob read failed: 503/);
+  release();
+  // Let the workers still holding a read finish; without the stop they would go on to read the rest.
+  // setImmediate drains the event loop (no wall-clock wait): the reads settle through I/O callbacks.
+  for (let turn = 0; turn < 20; turn += 1) await new Promise((resolve) => setImmediate(resolve));
+  const reads = blob.seen.filter((s) => !s.path.startsWith('/api/blob'));
+  assert.ok(reads.length <= 8, `reads: ${reads.length}`);
+  assert.equal(blob.seen.filter((s) => s.path.startsWith('/api/blob?')).length, 1, 'one list call');
+  assert.equal(blob.seen.filter((s) => s.path === '/api/blob/delete').length, 0, 'fails closed: nothing deleted');
+});
+
 test('beta-download records: no credentials is not_configured outside production (and no request); any failure throws', async () => {
   const none = fakeFetch(() => { throw new Error('no request expected'); });
   for (const nodeEnv of [undefined, 'development', 'test']) {

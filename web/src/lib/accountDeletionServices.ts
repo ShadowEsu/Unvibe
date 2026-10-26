@@ -90,16 +90,24 @@ export function vercelBlobBetaDownloads(env: NodeJS.ProcessEnv = process.env, fe
         const records = (page.blobs ?? []).filter((blob) => blob.pathname.endsWith('.enc'));
         const matched: boolean[] = [];
         let next = 0;
+        // Set by the first failed read: the other workers start no new read, and the page's delete
+        // never runs because Promise.all rejects.
+        let stopped = false;
         const readRecords = async (): Promise<void> => {
-          while (next < records.length) {
-            const index = next;
-            next += 1;
-            const location = new URL(records[index].url);
-            location.searchParams.set('cache', '0');
-            const read = await fetcher(location, { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' });
-            if (!read.ok) throw new Error(`Blob read failed: ${read.status}`);
-            const record = decryptRecord(await read.text(), secret) as { email?: unknown };
-            matched[index] = typeof record.email === 'string' && record.email.trim().toLowerCase() === target;
+          try {
+            while (!stopped && next < records.length) {
+              const index = next;
+              next += 1;
+              const location = new URL(records[index].url);
+              location.searchParams.set('cache', '0');
+              const read = await fetcher(location, { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' });
+              if (!read.ok) throw new Error(`Blob read failed: ${read.status}`);
+              const record = decryptRecord(await read.text(), secret) as { email?: unknown };
+              matched[index] = typeof record.email === 'string' && record.email.trim().toLowerCase() === target;
+            }
+          } catch (error) {
+            stopped = true;
+            throw error;
           }
         };
         await Promise.all(Array.from({ length: Math.min(BLOB_READ_CONCURRENCY, records.length) }, readRecords));
