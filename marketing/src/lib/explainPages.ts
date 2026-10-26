@@ -678,6 +678,59 @@ class Reports {
     watchOut:
       "The fallback in `var(--accent, #2563eb)` is used only when `--accent` isn't set at all. A card that sets `--accent: 12px` gets a button with no background: not red, not blue and not the gray from `.buy`, because the browser can't tell the value is wrong until it uses it.",
   },
+  {
+    id: "go",
+    fileName: "counts.go",
+    lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",
+    description:
+      "Paste Go code and get a plain English explanation, free online. The sample parses lines in goroutines and collects their errors over a buffered channel.",
+    sampleSummary: "A function that parses each line in its own goroutine and returns the first error it receives over a buffered channel.",
+    sample: `package main
+
+import (
+	"fmt"
+	"strconv"
+)
+
+func parseCounts(raw []string) ([]int, error) {
+	counts := make([]int, len(raw))
+	errs := make(chan error, len(raw))
+	for i, text := range raw {
+		go func() {
+			n, err := strconv.Atoi(text)
+			counts[i] = n
+			errs <- err
+		}()
+	}
+	for range raw {
+		if err := <-errs; err != nil {
+			return nil, fmt.Errorf("parse counts: %w", err)
+		}
+	}
+	return counts, nil
+}`,
+    shows: [
+      {
+        concept: "goroutines",
+        text: "`go func() { ... }()` starts one goroutine per line, and each one writes only its own slot, `counts[i]`. Since Go 1.22 every loop iteration gets its own `i` and `text`, so each goroutine parses its own line. In a module that declares `go 1.21`, `go vet` reports `loop variable text captured by func literal`.",
+      },
+      {
+        concept: "channels",
+        text: "`errs` carries one result per line, `nil` or an error. The `for range raw` loop receives exactly that many, so by `return counts, nil` every goroutine has written its number; the race detector (`go build -race`) finds no race. `[\"3\", \"5\", \"8\"]` gives `[3 5 8]`.",
+      },
+      {
+        concept: "error values",
+        text: "`strconv.Atoi` returns its error as an ordinary value next to the number, and the function checks it with `err != nil`. `fmt.Errorf` with `%w` wraps it, so `\"7 \"` gives `parse counts: strconv.Atoi: parsing \"7 \": invalid syntax` and `errors.Is(err, strconv.ErrSyntax)` is still `true`.",
+      },
+    ],
+    notes: [
+      "One bad line means no counts at all: the function returns `nil` and the first error it receives. With no lines it returns an empty slice, not `nil`.",
+      "When several lines are bad, which error you get depends on the scheduler, not on line order. In 200 calls with `[\"3\", \"x\", \"y\"]`, a normal build returned the `\"y\"` error all 200 times; a build with the race detector returned `\"x\"` 91 times and `\"y\"` 109 times.",
+      "`Atoi` accepts a sign, so `\"+7\"` gives 7, but not a trailing space: `\"7 \"` is an error.",
+    ],
+    watchOut:
+      "The buffer in `make(chan error, len(raw))` is what makes the early `return` safe. With `make(chan error)`, the goroutines that haven't sent yet wait for a receiver that never comes: after a call with `[\"x\", \"y\", \"z\", \"4\"]`, 2 of them were still stuck 200 ms later, and nothing reports it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
