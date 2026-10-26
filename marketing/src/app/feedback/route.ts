@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { BETA_SURVEY_URL } from "@/lib/betaOffer";
 import { recordBetaInstallEvent } from "@/lib/betaInstallStats";
 import { captureServerEvent } from "@/lib/posthogServer";
@@ -67,7 +68,8 @@ export async function POST(request: Request) {
     console.error("feedback insert failed", error.message);
     return Response.json({ error: "Could not save that. Try again in a moment." }, { status: 500, headers: noStore });
   }
-  await captureServerEvent("feedback_submitted", ipHash, { rating: input.rating, source: input.source }).catch(() => undefined);
+  // A fresh random ID per send, so the analytics event can't be joined to the stored IP hash or to other sends.
+  await captureServerEvent("feedback_submitted", randomUUID(), { rating: input.rating, source: input.source }).catch(() => undefined);
 
   // From the welcome email: a signed link plus a real message earns one more month of Pro.
   let bonus: "granted" | "already" | "too_short" | undefined;

@@ -53,7 +53,7 @@ To turn this off, open Settings › Privacy & Data and switch off **Send anonymo
 
 ## Feedback
 
-When you send feedback from the app or the website, Unvibe stores your star rating and message, where it came from (the app version or the page), your email only if you add it, and a hashed form of your IP address to limit repeated sends.
+When you send feedback from the app or the website, Unvibe stores your star rating and message, where it came from (the app version or the page), your email only if you add it, and a hash of your IP address. The same hash is used to limit repeated sends. Each send is also counted as one PostHog event that carries only the star rating and where it came from, under a random ID that is new each time.
 
 ## Third-party services
 

@@ -28,8 +28,14 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
 - `.env`, private keys, build output, dependencies, and common credential files are excluded from
   version control. The committed secret-filter tests contain fake key patterns only.
 - Feedback (`marketing/src/app/feedback/route.ts`) stores the rating, the message (control
-  characters stripped), the source, an optional email, page and app version, and a salted SHA-256
-  of the client IP used for rate limiting (`FEEDBACK_IP_SALT`, with a built-in fallback salt).
+  characters stripped), the source, an optional email, page and app version, and `ip_hash`: the
+  first 32 hex characters of a SHA-256 over `FEEDBACK_IP_SALT` (or the public default
+  `unvibe-feedback` when it is unset) and the client IP. With the default salt, the hash of an IPv4
+  address can be reversed by trying every address. No code reads `ip_hash` back: the rate limit
+  (5 sends per 10 minutes) keys an in-memory map in each server instance on the same hash. The
+  `feedback_submitted` PostHog event carries only the rating and source, under a random UUID per
+  send. `site_feedback` has no migration in this repo, so whether `ip_hash` may be null is
+  unverified, and the route still writes it.
 
 ## Not implemented or not verified
 
