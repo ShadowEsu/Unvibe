@@ -9,8 +9,12 @@ import { getSiteStats, type SiteStatsSummary } from "@/lib/siteStatsStore";
 
 export function statsKeyMatches(candidate: string): boolean {
   const key = process.env.STATS_PAGE_KEY?.trim() ?? "";
-  if (key.length < 16 || candidate.length !== key.length) return false;
-  return timingSafeEqual(Buffer.from(candidate), Buffer.from(key));
+  if (key.length < 16) return false;
+  // Compare bytes, not characters: a guess with as many characters but some non-ASCII ones has more
+  // bytes, and timingSafeEqual would throw (a 500 instead of a 404, which gives away the key length).
+  const expected = Buffer.from(key);
+  const supplied = Buffer.from(candidate);
+  return expected.length === supplied.length && timingSafeEqual(expected, supplied);
 }
 
 export interface ReleaseDownloads {
@@ -84,7 +88,9 @@ export async function getPrivateStats(): Promise<PrivateStats> {
   const errors: string[] = [];
   const attempt = async <T>(label: string, run: () => Promise<T>): Promise<T | null> => {
     try { return await run(); } catch (error) {
-      errors.push(`${label}: ${error instanceof Error ? error.message : "failed"}`);
+      // The page shows only which source failed; the upstream message stays in the server log.
+      console.error(`[private-stats] ${label} failed`, error);
+      errors.push(`${label}: not available right now.`);
       return null;
     }
   };
