@@ -857,12 +857,12 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
       },
     ],
     notes: [
-      "`packingLabels` turns a 500 g `BOX` without a note and a 100 g `BAG` with the note `\"  fragile  \"` into `BOX: 500 g (no note)` and `BAG: 100 g (fragile)`.",
+      "`packingLabels` turns a 500 g `BOX` without a note and a 100 g `BAG` whose note is `fragile` with two spaces on each side into `BOX: 500 g (no note)` and `BAG: 100 g (fragile)`.",
       "`withExtra` changes only `grams`: the copy keeps the original's `code` and `note`, and the two parcels are not equal.",
       "An empty list of parcels gives an empty list of labels.",
     ],
     watchOut:
-      "`?:` only steps in for `null`. A note of three spaces trims to an empty string, which isn't null, so `Parcel(\"ENV\", 20, \"   \")` gets the label `ENV: 20 g ()`. `note?.trim()?.ifBlank { null } ?: \"no note\"` gives `no note` for it.",
+      "`?:` only steps in for `null`. A note of three spaces trims to an empty string, which isn't null, so a 20 g `ENV` parcel with that note gets the label `ENV: 20 g ()`. `note?.trim()?.ifBlank { null } ?: \"no note\"` gives `no note` for it.",
   },
 ];
 
