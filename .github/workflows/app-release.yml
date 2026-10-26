@@ -91,8 +91,9 @@ jobs:
             echo "MAC_CSC_LINK is set, so this Mac build would be signed with a Developer ID instead of the certificate the app's updater and install.sh pin. They would refuse it, so this release is not published. Remove the MAC_CSC_LINK secret to publish."
             exit 1
           fi
-          # Only a publishing run imports the signing identity, so a manual run on any branch can't
-          # produce a build signed with the pinned certificate. Follow-up, the owner's decision: move
+          # Only a publishing run imports the signing identity: a tag push, or a manual run with
+          # publish set to true. A manual run can start from any branch, so any branch can produce and
+          # publish a build signed with the pinned certificate. Follow-up, the owner's decision: move
           # MAC_SELF_SIGN_P12 and MAC_SELF_SIGN_PASSWORD into a protected environment so only an
           # approved release run can read them.
           if [ "$PUBLISH" != "true" ]; then
