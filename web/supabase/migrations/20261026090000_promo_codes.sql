@@ -15,9 +15,12 @@
 --     months ahead, and never on a live Stripe subscription. When add_pro_months returns false
 --     nothing is written and the code stays usable (status has_paid_plan).
 --   * revoke_promo_code: switches a code off. If it was redeemed and the account has no live Stripe
---     subscription, the end date moves back by the stored `granted` (never before now), and the
---     redemption is marked revoked, so a second revoke changes nothing. Other Pro time (welcome,
---     gift months) stays. A paid subscription is never touched.
+--     subscription, it takes back only the promo time not used yet: add_pro_months stacks, so the
+--     redemption occupies [period_end_after - granted, period_end_after], and only the part still
+--     ahead of now() comes off the end date (never before now). Used-up promo time and later Pro
+--     time (gift, welcome months) stay. The redemption is marked revoked, so a second revoke changes
+--     nothing. months_taken_back is true only when the end date moved. A paid subscription is never
+--     touched.
 --
 -- Locking: every redemption and revocation in a batch first takes that batch's row lock
 -- (select ... for update), so the cap, one-per-account and used checks always see every committed
@@ -216,8 +219,9 @@ revoke all on function public.redeem_promo_code(uuid, text) from public, anon, a
 grant execute on function public.redeem_promo_code(uuid, text) to service_role;
 
 -- Admin revoke. One row: (status, months_taken_back, pro_until). status is revoked,
--- already_revoked or not_found. months_taken_back is false when the code was never redeemed,
--- its redemption was already revoked, or the account has a live Stripe subscription (never touched).
+-- already_revoked or not_found. months_taken_back is true only when the Pro end date moved; it is
+-- false when the code was never redeemed, its redemption was already revoked, the promo time is
+-- used up, the account is gone, or the account has a live Stripe subscription (never touched).
 create or replace function public.revoke_promo_code(p_code_hash text)
 returns table (status text, months_taken_back boolean, pro_until timestamptz)
 language plpgsql
@@ -231,6 +235,8 @@ declare
   v_sub public.subscriptions%rowtype;
   v_status text;
   v_end timestamptz;
+  v_remaining interval;
+  v_moved boolean := false;
 begin
   if p_code_hash is null or p_code_hash !~ '^[0-9a-f]{64}$' then
     return query select 'not_found'::text, false, null::timestamptz;
@@ -266,16 +272,22 @@ begin
     return;
   end if;
 
+  -- add_pro_months stacks, so this redemption occupies [period_end_after - granted, period_end_after].
+  -- Only the part of it still ahead of now() is unused; later grants (gifts, welcome) sit after it.
+  v_remaining := greatest(least(v_redemption.granted, v_redemption.period_end_after - now()), interval '0');
   v_end := v_sub.current_period_end;
-  if v_sub.plan = 'pro' and v_sub.status = 'trialing' and v_sub.current_period_end > now() then
-    v_end := greatest(now(), v_sub.current_period_end - v_redemption.granted);
-    update public.subscriptions s
-      set current_period_end = v_end, updated_at = now()
-      where s.workspace_id = v_sub.workspace_id;
+  if v_remaining > interval '0' and v_sub.plan = 'pro' and v_sub.status = 'trialing' and v_sub.current_period_end > now() then
+    v_end := greatest(now(), v_sub.current_period_end - v_remaining);
+    v_moved := v_end <> v_sub.current_period_end;
+    if v_moved then
+      update public.subscriptions s
+        set current_period_end = v_end, updated_at = now()
+        where s.workspace_id = v_sub.workspace_id;
+    end if;
   end if;
   update public.promo_redemptions r set revoked_at = now() where r.code_hash = p_code_hash;
 
-  return query select v_status, true, v_end;
+  return query select v_status, v_moved, v_end;
 end;
 $$;
 revoke all on function public.revoke_promo_code(text) from public, anon, authenticated;

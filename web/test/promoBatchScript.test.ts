@@ -126,7 +126,7 @@ test('list and revoke go through the admin API with the token from the environme
   assert.match(listed.stdout, /adminbatch \(adminbatch\): 3 months/);
   assert.match(listed.stdout, /codes 3, redeemed 0, redemptions revoked 0, codes revoked 0, cap left 300 of 300/);
   const revoked = await script(['revoke', codes[0].toLowerCase()], env);
-  assert.match(revoked.stdout, /^revoked: [0-9a-f]{8}, no months taken back/);
+  assert.match(revoked.stdout, /^revoked: [0-9a-f]{8}, nothing taken back/);
   assert.match((await script(['list'], env)).stdout, /codes revoked 1/);
   await assert.rejects(script(['revoke', 'ZZZZ-ZZZZ-ZZZZ-ZZZZ'], env), /no such code/);
   await assert.rejects(script(['list'], { ...env, UNVIBE_ADMIN_STATS_TOKEN: 'wrong-token-wrong-token-wrong' }), /refused the admin token/);

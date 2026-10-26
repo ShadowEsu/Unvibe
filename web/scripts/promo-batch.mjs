@@ -265,7 +265,9 @@ async function revoke(raw) {
   const { status, data } = await callAdmin('POST', { action: 'revoke_code', code });
   if (status === 404) fail(`no such code (hash ${hashOf(code).slice(0, 8)})`);
   if (status !== 200) fail(`revoke failed (${status}): ${JSON.stringify(data)}`);
-  const months = data.monthsTakenBack ? `months taken back, Pro now until ${day(data.proUntil)}` : 'no months taken back (not redeemed, already revoked, or a paid plan)';
+  const months = data.monthsTakenBack
+    ? `unused promo time taken back, Pro now until ${day(data.proUntil)}`
+    : 'nothing taken back (not redeemed, already revoked, promo time used up, account gone, or a paid plan)';
   console.log(`${data.status}: ${hashOf(code).slice(0, 8)}, ${months}`);
 }
 

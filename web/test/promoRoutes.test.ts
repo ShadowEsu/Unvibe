@@ -368,3 +368,46 @@ test('admin revoke_code at the 12-month ceiling takes back only what the capped 
   await admin('POST', { action: 'revoke_code', code });
   assert.ok(near((await plan(p.userId)).end, before, 1_000), 'a second revoke changes nothing');
 });
+
+/** As if the redemption happened `days` ago: shifts its stored end and the account's Pro end back. */
+async function age(userId: string, codeHash: string, days: number): Promise<void> {
+  const shift = days * DAY_MS;
+  const promo: { redemptions: Map<string, { periodEndAfter: string; redeemedAt: string }> } | undefined =
+    Reflect.get(globalThis, '__unvibePromo');
+  const row = promo?.redemptions.get(codeHash);
+  assert.ok(row, 'redemption to age');
+  row.periodEndAfter = new Date(new Date(row.periodEndAfter).getTime() - shift).toISOString();
+  row.redeemedAt = new Date(new Date(row.redeemedAt).getTime() - shift).toISOString();
+  const workspace = await getBillingStore().ensurePersonalWorkspace(userId);
+  const current = await getBillingStore().subscriptionByWorkspaceId(workspace.id);
+  assert.ok(current?.currentPeriodEnd);
+  const billing: { subscriptions: Map<string, typeof current> } | undefined = Reflect.get(globalThis, '__uncodeBillingData');
+  billing?.subscriptions.set(workspace.id, { ...current, currentPeriodEnd: new Date(new Date(current.currentPeriodEnd).getTime() - shift).toISOString() });
+}
+
+test('admin revoke_code after the promo time is used up leaves a later gift month alone', async () => {
+  resetStores();
+  const [code] = batch('calhacks13', 1);
+  const p = await person('used-up');
+  await redeem({ accessToken: p.token, code });
+  await age(p.userId, promoCodeHash(code), 120);
+  await new MemoryBillingStore().addProMonths(p.userId, 1);
+  const giftEnd = (await plan(p.userId)).end;
+  const body = await (await admin('POST', { action: 'revoke_code', code })).json() as { status: string; monthsTakenBack: boolean };
+  assert.deepEqual([body.status, body.monthsTakenBack], ['revoked', false]);
+  assert.equal((await plan(p.userId)).end, giftEnd);
+});
+
+test('admin revoke_code takes back only the unused promo days, a later gift month stays', async () => {
+  resetStores();
+  const [code] = batch('calhacks13', 1);
+  const p = await person('half-used');
+  await redeem({ accessToken: p.token, code });
+  await age(p.userId, promoCodeHash(code), 60);
+  await new MemoryBillingStore().addProMonths(p.userId, 1);
+  const giftEnd = (await plan(p.userId)).end ?? 0;
+  const body = await (await admin('POST', { action: 'revoke_code', code })).json() as { monthsTakenBack: boolean };
+  assert.equal(body.monthsTakenBack, true);
+  assert.ok(near((await plan(p.userId)).end, giftEnd - 30 * DAY_MS), 'only the 30 unused days come off');
+  assert.ok(near((await plan(p.userId)).end, Date.now() + 30 * DAY_MS), 'the gift month is left');
+});

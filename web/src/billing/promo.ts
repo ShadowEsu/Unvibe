@@ -37,7 +37,7 @@ export type PromoRevokeStatus = 'revoked' | 'already_revoked' | 'not_found';
 
 export interface PromoRevokeResult {
   status: PromoRevokeStatus;
-  /** True when the redemption was reversed (its months came off any running complimentary Pro). */
+  /** True only when the Pro end date moved (the unused part of the promo time came off). */
   monthsTakenBack: boolean;
   proUntil: string | null;
 }
@@ -233,10 +233,10 @@ const memoryBackend: PromoBackend = {
       code.revokedAt ??= new Date().toISOString();
       const redemption = data.redemptions.get(codeHash);
       if (!redemption || redemption.revokedAt) return { status, monthsTakenBack: false, proUntil: null };
-      const taken = await new MemoryBillingStore().takeBackProTime(redemption.userId, redemption.grantedMs);
+      const taken = await new MemoryBillingStore().takeBackProTime(redemption.userId, redemption.grantedMs, redemption.periodEndAfter);
       if (taken.paidUntouched) return { status, monthsTakenBack: false, proUntil: null };
       redemption.revokedAt = new Date().toISOString();
-      return { status, monthsTakenBack: true, proUntil: taken.proUntil };
+      return { status, monthsTakenBack: taken.moved, proUntil: taken.proUntil };
     });
   },
   revokeBatch(batchId) {

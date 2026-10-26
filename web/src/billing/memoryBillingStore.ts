@@ -401,25 +401,27 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   /**
-   * Dev mirror of the take-back in the SQL `revoke_promo_code`: ends running complimentary Pro
-   * `grantedMs` earlier (what the redemption recorded it added; never before now). A live Stripe
-   * subscription is never touched (`paidUntouched`). `proUntil` is the end date after the change.
+   * Dev mirror of the take-back in the SQL `revoke_promo_code`. A redemption occupies
+   * [periodEndAfter - grantedMs, periodEndAfter] (grants stack); only the part still ahead of now
+   * comes off running complimentary Pro (never before now). A live Stripe subscription is never
+   * touched (`paidUntouched`). `moved` says whether the end date changed; `proUntil` is the end after.
    */
-  async takeBackProTime(userId: string, grantedMs: number): Promise<{ paidUntouched: boolean; proUntil: string | null }> {
+  async takeBackProTime(userId: string, grantedMs: number, periodEndAfter: string): Promise<{ paidUntouched: boolean; moved: boolean; proUntil: string | null }> {
     const workspace = [...this.data.workspaces.values()].find((item) => item.type === 'personal' && item.ownerUserId === userId);
     const current = workspace ? this.data.subscriptions.get(workspace.id) : undefined;
-    if (!workspace || !current) return { paidUntouched: false, proUntil: null };
+    if (!workspace || !current) return { paidUntouched: false, moved: false, proUntil: null };
     if (current.stripeSubscriptionId && current.status !== 'canceled' && current.status !== 'inactive') {
-      return { paidUntouched: true, proUntil: null };
+      return { paidUntouched: true, moved: false, proUntil: null };
     }
     const now = this.now();
+    const remainingMs = Math.max(0, Math.min(grantedMs, new Date(periodEndAfter).getTime() - now.getTime()));
     const end = current.currentPeriodEnd ? new Date(current.currentPeriodEnd) : null;
-    if (current.plan !== 'pro' || current.status !== 'trialing' || !end || end <= now) {
-      return { paidUntouched: false, proUntil: current.currentPeriodEnd ?? null };
+    if (remainingMs === 0 || current.plan !== 'pro' || current.status !== 'trialing' || !end || end <= now) {
+      return { paidUntouched: false, moved: false, proUntil: current.currentPeriodEnd ?? null };
     }
-    const earlier = new Date(end.getTime() - grantedMs);
+    const earlier = new Date(end.getTime() - remainingMs);
     const proUntil = (earlier > now ? earlier : now).toISOString();
     this.data.subscriptions.set(workspace.id, { ...current, currentPeriodEnd: proUntil });
-    return { paidUntouched: false, proUntil };
+    return { paidUntouched: false, moved: proUntil !== end.toISOString(), proUntil };
   }
 }
