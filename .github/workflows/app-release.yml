@@ -90,13 +90,17 @@ jobs:
             echo "MAC_CSC_LINK is set, so this Mac build would be signed with a Developer ID instead of the certificate the app's updater and install.sh pin. They would refuse it, so this release is not published. Remove the MAC_CSC_LINK secret to publish."
             exit 1
           fi
-          if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
-            if [ "$PUBLISH" = "true" ]; then
-              echo "No stable signing identity configured. The app's updater and install.sh refuse builds not signed with it, so this release is not published."
-              exit 1
-            fi
-            echo "No stable signing identity configured; builds use ad-hoc signing."
+          # Only a publishing run imports the signing identity, so a manual run on any branch can't
+          # produce a build signed with the pinned certificate. Follow-up, the owner's decision: move
+          # MAC_SELF_SIGN_P12 and MAC_SELF_SIGN_PASSWORD into a protected environment so only an
+          # approved release run can read them.
+          if [ "$PUBLISH" != "true" ]; then
+            echo "Not publishing, so the stable signing identity is not imported; builds use ad-hoc signing."
             exit 0
+          fi
+          if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
+            echo "No stable signing identity configured. The app's updater and install.sh refuse builds not signed with it, so this release is not published."
+            exit 1
           fi
           kc="$RUNNER_TEMP/unvibe-sign.keychain-db"
           kcpass="$(uuidgen)"

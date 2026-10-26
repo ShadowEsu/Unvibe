@@ -43,6 +43,14 @@ test('a Mac release with a Developer ID configured stops before packaging', () =
   assert.match(prepare, /if \[ "\$PUBLISH" = "true" \] && \[ -n "\$MAC_CSC_LINK" \]; then\n\s+echo "[^"\n]+"\n\s+exit 1\n/, 'publishing with MAC_CSC_LINK set exits 1');
 });
 
+test('only a publishing run imports the signing identity', () => {
+  const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
+  const prepare = workflow.slice(workflow.indexOf('- name: Prepare stable Mac signing identity'), workflow.indexOf('- name: Build app bundle'));
+  const notPublishing = /if \[ "\$PUBLISH" != "true" \]; then\n\s+echo "[^"\n]+"\n\s+exit 0\n/.exec(prepare);
+  const firstUse = prepare.search(/base64 --decode|security import/);
+  assert.ok(notPublishing && firstUse > notPublishing.index, 'a run that does not publish stops before the identity is decoded or imported');
+});
+
 test('the packaging hook checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-afterpack-test-'));
   const bin = path.join(root, 'bin');
