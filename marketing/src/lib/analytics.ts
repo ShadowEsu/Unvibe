@@ -269,7 +269,14 @@ function startPosthog(): void {
     });
 }
 
-/** Exported for tests (the token argument too), which check the config `posthog.init` receives. */
+/**
+ * Exported for tests (the token argument too), which check the config `posthog.init` receives.
+ *
+ * Ops: PostHog's project-level console log capture (project settings, not this config) must stay
+ * off. When on, the SDK sends each log with the raw page address (`location.href`) and no hook
+ * (`posthog-js` `posthog-logs.js`, the log context's `currentUrl`), so email-link tokens and
+ * codes would go out unsanitized.
+ */
 export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
   if (!token) return;
   posthog.init(token, {
