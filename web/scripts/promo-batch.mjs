@@ -6,10 +6,18 @@
 //       Writes the codes to a private CSV (mode 600; columns code, given_to, given_at; default
 //       ~/.config/unvibe-promo/unvibe-promo-<batch>.csv) and a hash-only SQL insert (the batch
 //       row plus sha256("unvibe-promo:" + code) per code; default next to the CSV). Never
-//       overwrites either file. The SQL is run once, by hand, with the owner's yes.
+//       overwrites either file. The SQL is run once, by hand, with the owner's yes. Prints the SQL's
+//       sha256, which the owner records somewhere off this Mac. A label with control characters,
+//       including invisible ones such as zero-width spaces and text-direction marks, is refused.
 //   node scripts/promo-batch.mjs take <batch> <who> [--csv path]
 //       Marks the next unused code as given to <who> (with the time) and prints it. A lock file
 //       next to the CSV makes sure two senders never get the same code.
+//   node scripts/promo-batch.mjs verify <batch> --expect-sha <sha256> [--csv path] [--sql path]
+//       Run right before the SQL goes to production: refuses an SQL or CSV that is a symlink, has
+//       a second hard link, belongs to another user or can be written by other users, and refuses
+//       unless the SQL's sha256 is the one generate printed (recorded off this Mac). Then checks
+//       that the SQL is exactly the insert generate writes for the codes in the CSV (nothing added,
+//       removed or swapped) and prints the batch settings.
 //   node scripts/promo-batch.mjs list
 //   node scripts/promo-batch.mjs revoke <code>
 //       Call the API's admin endpoint: UNVIBE_APP_BACKEND_URL (e.g. https://api.unvibe.site) and
@@ -18,7 +26,7 @@
 // Codes: 16 characters of Crockford base32, 80 bits from crypto.randomInt, shown XXXX-XXXX-XXXX-XXXX.
 // Normalising and hashing match web/src/lib/promoCode.ts (test/promoBatchScript.test.ts checks).
 import { createHash, randomInt } from 'node:crypto';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +36,9 @@ const CODE_RE = /^[0-9A-HJKMNP-TV-Z]{16}$/;
 const BATCH_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const HEADER = 'code,given_to,given_at';
 const DEFAULTS = { months: 3, cap: 300, redeemBy: '2026-11-30 23:59:59 America/Los_Angeles' };
+const REDEEM_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})? [A-Za-z_]+\/[A-Za-z_]+$/;
+const CONTROL_RE = /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
+const SHA_RE = /^[0-9a-f]{64}$/;
 const LABELS = { calhacks13: 'Cal Hacks 13.0' };
 const LOCK_WAIT_MS = 10_000;
 
@@ -144,9 +155,47 @@ export function insertSql({ batch, label, months, cap, redeemBy, hashes, generat
   ].join('\n');
 }
 
-/** Another user who can write the folder could swap the CSV or the SQL, or plant files beside them. */
+/**
+ * Another user who can change the folder, or any folder above it, could swap the CSV or the SQL or
+ * plant files beside them. The folder must be a real folder (not a symlink), yours, and not group-
+ * or world-writable. Every folder above it, both as written and as reached through symlinks, must
+ * belong to you or root and must not be group- or world-writable unless it has the sticky bit (like
+ * /tmp, where others can't rename or delete what is yours).
+ */
 function assertPrivateFolder(folder) {
-  if (existsSync(folder) && (statSync(folder).mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
+  const own = lstatSync(folder, { throwIfNoEntry: false });
+  if (!own) return;
+  if (own.isSymbolicLink()) fail(`${folder} is a symlink; pass the real folder path instead`);
+  const uid = typeof process.getuid === 'function' ? process.getuid() : undefined;
+  if (!own.isDirectory()) fail(`${folder} is not a folder`);
+  if (uid !== undefined && own.uid !== uid) fail(`${folder} belongs to another user; use a folder of your own`);
+  if ((own.mode & 0o022) !== 0) fail(`${folder} can be written by other users; run chmod 700 on it first`);
+  for (const start of new Set([resolve(folder), realpathSync(folder)])) {
+    for (let dir = dirname(start); ; dir = dirname(dir)) {
+      const parent = lstatSync(dir);
+      const shared = !parent.isSymbolicLink() && (parent.mode & 0o022) !== 0 && (parent.mode & 0o1000) === 0;
+      if (shared || (uid !== undefined && parent.uid !== uid && parent.uid !== 0)) {
+        fail(`${dir}, a folder above ${folder}, can be changed by other users; keep the promo files in a folder only you control`);
+      }
+      if (dir === dirname(dir)) break;
+    }
+  }
+}
+
+/**
+ * verify reads the CSV and the SQL by path, and `psql -f` later reads the SQL the same way. Each must
+ * be a regular file of yours, with no other hard link and no group or world write. A symlink or a
+ * second link could point at a file someone else can change between verify and the run.
+ */
+function assertPrivateFile(path, kind) {
+  const own = lstatSync(path, { throwIfNoEntry: false });
+  if (!own) fail(`no ${kind} at ${path}`);
+  if (own.isSymbolicLink()) fail(`${path} is a symlink; pass the real file path instead`);
+  if (!own.isFile()) fail(`${path} is not a regular file`);
+  const uid = typeof process.getuid === 'function' ? process.getuid() : undefined;
+  if (uid !== undefined && own.uid !== uid) fail(`${path} belongs to another user; do not run it`);
+  if (own.nlink !== 1) fail(`${path} has ${own.nlink} hard links; do not run it`);
+  if ((own.mode & 0o022) !== 0) fail(`${path} can be written by other users; run chmod 600 on it first`);
 }
 
 function generate(batch, countText, options) {
@@ -158,10 +207,12 @@ function generate(batch, countText, options) {
   const cap = Number(options.cap ?? DEFAULTS.cap);
   if (!Number.isInteger(cap) || cap < 1) fail('--cap must be a whole number above 0');
   const redeemBy = options['redeem-by'] ?? DEFAULTS.redeemBy;
-  if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})? [A-Za-z_]+\/[A-Za-z_]+$/.test(redeemBy)) {
+  if (!REDEEM_RE.test(redeemBy)) {
     fail('--redeem-by must look like "2026-11-30 23:59:59 America/Los_Angeles"');
   }
-  const label = (options.label ?? LABELS[batch] ?? batch).slice(0, 120);
+  const fullLabel = options.label ?? LABELS[batch] ?? batch;
+  if (CONTROL_RE.test(fullLabel)) fail('--label must not contain control characters such as tabs, line breaks, zero-width spaces or text-direction marks');
+  const label = fullLabel.slice(0, 120);
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
   for (const path of [csvPath, sqlPath]) if (existsSync(path)) fail(`${path} already exists; nothing written`);
@@ -180,6 +231,13 @@ function generate(batch, countText, options) {
   console.log(`${count} codes for ${batch} (${months} months, cap ${cap}, redeem by ${redeemBy})`);
   console.log(`codes (private, mode 600): ${csvPath}`);
   console.log(`hash-only SQL: ${sqlPath}`);
+  const sha = sha256Hex(sql);
+  console.log(`SQL sha256: ${sha}`);
+  console.log('record this sha256 somewhere off this Mac (a note on your phone, for example); verify needs it');
+  const paths = `${options.csv ? ` --csv ${JSON.stringify(csvPath)}` : ''}${options.sql ? ` --sql ${JSON.stringify(sqlPath)}` : ''}`;
+  // A placeholder, not the sha: a command with the sha filled in gets copied from Terminal scrollback or
+  // shell history on this Mac, and then the record kept off this Mac is never used.
+  console.log(`right before running it on production: node scripts/promo-batch.mjs verify ${batch} --expect-sha <the sha256 you recorded>${paths}`);
 }
 
 // ------------------------------------------------------------------------------ take
@@ -219,6 +277,7 @@ function take(batch, who, options) {
   if (!recipient) fail('say who the code is for, e.g. take calhacks13 "Ada L. (ada@school.edu)"');
   const csvPath = resolve(options.csv ?? defaultCsv(batch));
   assertPrivateFolder(dirname(csvPath));
+  if (!existsSync(csvPath)) fail(`no CSV at ${csvPath}`);
   const code = withLock(`${csvPath}.lock`, () => {
     const rows = readCodes(csvPath);
     const next = rows.find((row) => !row.givenTo);
@@ -231,6 +290,69 @@ function take(batch, who, options) {
     return next.code;
   });
   console.log(code);
+}
+
+// ------------------------------------------------------------------------------ verify
+
+const GENERATED_RE = /^-- Generated (\S+) by web\/scripts\/promo-batch\.mjs\./;
+const BATCH_ROW_RE = /^ {2}values \('((?:[^']|'')*)', '((?:[^']|'')*)', (\d+), timestamptz '((?:[^']|'')*)', (\d+)\);$/;
+const unquote = (value) => value.replace(/''/g, "'");
+
+function sha256Hex(data) {
+  return createHash('sha256').update(data).digest('hex');
+}
+
+/**
+ * Nothing in the SQL is trusted until its sha256 matches the one generate printed, which the owner
+ * recorded off this Mac: anyone who could edit the SQL here could edit a sha stored beside it. Then
+ * the SQL must be exactly what generate writes for the codes in the private CSV: rebuilt here from
+ * the CSV and compared byte for byte, so an added statement, a swapped hash or a dropped code all
+ * fail. The batch settings are printed for the owner to confirm.
+ */
+function verify(batch, options) {
+  if (!BATCH_RE.test(batch ?? '')) fail('batch must be lower case letters, digits, - or _');
+  const expected = options['expect-sha'];
+  if (!SHA_RE.test(expected ?? '')) {
+    fail('verify needs --expect-sha <sha256>: the 64 lowercase hex characters generate printed, as you recorded them off this Mac');
+  }
+  const csvPath = resolve(options.csv ?? defaultCsv(batch));
+  const sqlPath = resolve(options.sql ?? join(dirname(csvPath), `unvibe-promo-${batch}-insert.sql`));
+  for (const folder of new Set([dirname(csvPath), dirname(sqlPath)])) assertPrivateFolder(folder);
+  assertPrivateFile(sqlPath, 'SQL');
+  assertPrivateFile(csvPath, 'CSV');
+  const bytes = readFileSync(sqlPath);
+  const actual = sha256Hex(bytes);
+  if (actual !== expected) {
+    fail(`${sqlPath} has sha256 ${actual}, not the ${expected} you recorded; it changed after generate, do not run it`);
+  }
+  const sql = bytes.toString('utf8');
+  const lines = sql.split('\n');
+  const generatedAt = GENERATED_RE.exec(lines[1] ?? '')?.[1];
+  const row = BATCH_ROW_RE.exec(lines[5] ?? '');
+  if (!generatedAt || !row) fail(`${sqlPath} is not a promo insert written by generate; do not run it`);
+  const [, id, label, monthsText, redeemBy, capText] = row;
+  if (unquote(id) !== batch) fail(`${sqlPath} is for batch ${unquote(id)}, not ${batch}`);
+  const months = Number(monthsText);
+  const cap = Number(capText);
+  const hashes = readCodes(csvPath).map(({ code: raw }) => {
+    const code = normalise(raw);
+    if (!code) fail(`${csvPath} has a row that is not a promo code`);
+    return hashOf(code);
+  });
+  const want = insertSql({ batch, label: unquote(label), months, cap, redeemBy: unquote(redeemBy), hashes, generatedAt });
+  if (!Buffer.from(want, 'utf8').equals(bytes)) {
+    const wantLines = want.split('\n');
+    let at = 0;
+    while (at < wantLines.length && at < lines.length && wantLines[at] === lines[at]) at += 1;
+    fail(`${sqlPath} does not match the codes in ${csvPath} (first difference on line ${at + 1}); do not run it`);
+  }
+  if (CONTROL_RE.test(unquote(label))) fail(`${sqlPath} has a control character in its label; do not run it`);
+  if (months < 1 || months > 12) fail(`${sqlPath} gives ${months} months; generate allows 1 to 12`);
+  if (cap < 1) fail(`${sqlPath} has a cap of ${cap}`);
+  if (!REDEEM_RE.test(unquote(redeemBy))) fail(`${sqlPath} has an unexpected redeem-by date`);
+  console.log(`OK: ${sqlPath} has the sha256 you recorded and is exactly the insert for the ${hashes.length} codes in ${csvPath}.`);
+  console.log(`batch ${batch} (${unquote(label)}): ${months} months, cap ${cap}, redeem by ${unquote(redeemBy)}`);
+  console.log(`SQL sha256: ${actual}`);
 }
 
 // ------------------------------------------------------------------------------ admin API
@@ -289,7 +411,8 @@ async function main() {
   if (command === 'take') return take(positional[0], positional.slice(1).join(' '), options);
   if (command === 'list') return list();
   if (command === 'revoke') return revoke(positional[0]);
-  fail('usage: generate <batch> <count> [--csv path] [--sql path] | take <batch> <who> [--csv path] | list | revoke <code>');
+  if (command === 'verify') return verify(positional[0], options);
+  fail('usage: generate <batch> <count> [--csv path] [--sql path] | take <batch> <who> [--csv path] | verify <batch> --expect-sha <sha256> [--csv path] [--sql path] | list | revoke <code>');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
