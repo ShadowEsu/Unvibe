@@ -38,35 +38,33 @@ export interface PendingPromo {
   code: string;
   /** A Supabase sign-in code (Google or email link, PKCE) to exchange for a session, or null. */
   authCode: string | null;
-  /** The query string without either code, for history.replaceState. Null when unchanged. */
+  /** The query string without `promo` and `code`, for history.replaceState. Null when unchanged. */
   cleanSearch: string | null;
 }
 
 /**
- * Reads /redeem's `?code=`. It carries either a promo code (from a shared link) or, after the
- * sign-in redirect, Supabase's sign-in code. A value that reads as a promo code is a promo code;
- * anything longer than 16 characters is the sign-in code. The promo code is kept in session
- * storage so it survives the redirect.
+ * Reads /redeem's query: `?promo=` is a prefilled promo code (from a shared link); `?code=` is
+ * only ever Supabase's sign-in code after the Google or email-link redirect. A promo code is kept
+ * in session storage so it survives that redirect. Both leave the address bar.
  */
 export function pendingPromoCode(search: string, storage: SessionStore | null): PendingPromo {
   const params = new URLSearchParams(search);
-  const value = params.get("code")?.trim() ?? "";
-  const promo = value ? normalisePromoCode(value) : null;
-  let authCode: string | null = null;
-  if (promo) {
-    store(storage, (s) => s.setItem(STORAGE_KEY, promo));
-  } else if (value.length > 16) {
-    authCode = value;
-  }
+  const fromLink = params.get("promo")?.trim() ?? "";
+  const promo = fromLink ? normalisePromoCode(fromLink) : null;
+  if (promo) store(storage, (s) => s.setItem(STORAGE_KEY, promo));
+  const authCode = params.get("code")?.trim() || null;
   let saved = "";
   store(storage, (s) => {
     saved = s.getItem(STORAGE_KEY) ?? "";
   });
-  const code = promo ?? normalisePromoCode(saved);
-  if (!value) return { code: code ? formatCodeInput(code) : "", authCode, cleanSearch: null };
+  const known = promo ?? normalisePromoCode(saved);
+  // A malformed link code is still shown, so the person can see and fix it.
+  const code = known ? formatCodeInput(known) : formatCodeInput(fromLink);
+  if (!params.has("promo") && !params.has("code")) return { code, authCode, cleanSearch: null };
+  params.delete("promo");
   params.delete("code");
   const rest = params.toString();
-  return { code: code ? formatCodeInput(code) : "", authCode, cleanSearch: rest ? `?${rest}` : "" };
+  return { code, authCode, cleanSearch: rest ? `?${rest}` : "" };
 }
 
 /** Keeps a typed code before leaving for Google or the email link. */

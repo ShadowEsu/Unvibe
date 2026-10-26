@@ -42,25 +42,37 @@ describe("promo code input on /redeem", () => {
 });
 
 describe("the code across the sign-in redirect", () => {
-  it("takes a promo code from ?code=, keeps it, and clears it from the address bar", () => {
+  it("takes a promo code from ?promo=, keeps it, and clears it from the address bar", () => {
     const storage = memoryStorage();
-    assert.deepEqual(pendingPromoCode("?code=abcd-efgh-jkmn-pqrs&utm_source=calhacks", storage), {
+    assert.deepEqual(pendingPromoCode("?promo=abcd-efgh-jkmn-pqrs&utm_source=calhacks", storage), {
       code: "ABCD-EFGH-JKMN-PQRS", authCode: null, cleanSearch: "?utm_source=calhacks",
     });
     assert.equal(storage.items.get("unvibe_promo_code"), "ABCDEFGHJKMNPQRS");
   });
 
-  it("treats a long ?code= after the redirect as the sign-in code and restores the saved promo code", () => {
+  it("?code= is only ever the sign-in code, even when it looks like a promo code", () => {
     const storage = memoryStorage();
-    savePromoCode("abcd efgh jkmn pqrs", storage);
+    assert.deepEqual(pendingPromoCode("?code=ABCD-EFGH-JKMN-PQRS", storage), { code: "", authCode: "ABCD-EFGH-JKMN-PQRS", cleanSearch: "" });
+    assert.equal(storage.items.size, 0, "nothing from ?code= is kept as a promo code");
+  });
+
+  it("after the sign-in redirect, exchanges ?code= and restores the saved promo code", () => {
+    const storage = memoryStorage();
+    pendingPromoCode("?promo=abcd efgh jkmn pqrs", storage);
     const oauth = "6b2f8a62-9c47-4e0e-8d0e-2f2d7f6a9c11";
     assert.deepEqual(pendingPromoCode(`?code=${oauth}`, storage), { code: "ABCD-EFGH-JKMN-PQRS", authCode: oauth, cleanSearch: "" });
   });
 
-  it("leaves the URL alone without ?code= and forgets the code when told to", () => {
+  it("shows a malformed ?promo= so it can be fixed, without keeping it", () => {
+    const storage = memoryStorage();
+    assert.deepEqual(pendingPromoCode("?promo=abcd-efgh", storage), { code: "ABCD-EFGH", authCode: null, cleanSearch: "" });
+    assert.equal(storage.items.size, 0);
+  });
+
+  it("leaves the URL alone without ?promo= or ?code= and forgets the code when told to", () => {
     const storage = memoryStorage();
     savePromoCode("ABCD-EFGH-JKMN-PQRS", storage);
-    assert.deepEqual(pendingPromoCode("", storage), { code: "ABCD-EFGH-JKMN-PQRS", authCode: null, cleanSearch: null });
+    assert.deepEqual(pendingPromoCode("?utm_source=x", storage), { code: "ABCD-EFGH-JKMN-PQRS", authCode: null, cleanSearch: null });
     clearPromoCode(storage);
     assert.deepEqual(pendingPromoCode("", storage), { code: "", authCode: null, cleanSearch: null });
     savePromoCode("not a code", storage);
@@ -73,7 +85,7 @@ describe("the code across the sign-in redirect", () => {
       setItem: () => { throw new Error("blocked"); },
       removeItem: () => { throw new Error("blocked"); },
     };
-    assert.deepEqual(pendingPromoCode("?code=ABCD-EFGH-JKMN-PQRS", blocked), { code: "ABCD-EFGH-JKMN-PQRS", authCode: null, cleanSearch: "" });
+    assert.deepEqual(pendingPromoCode("?promo=ABCD-EFGH-JKMN-PQRS", blocked), { code: "ABCD-EFGH-JKMN-PQRS", authCode: null, cleanSearch: "" });
     assert.doesNotThrow(() => clearPromoCode(blocked));
   });
 });

@@ -61,7 +61,7 @@ export default function RedeemPage() {
     return createClient(supabaseUrl, supabaseKey, {
       auth: {
         flowType: "pkce",
-        // ?code= is this page's to read: a promo code from a link, or the sign-in code after the redirect.
+        // The page reads ?code= (sign-in code only) itself and exchanges it once; ?promo= is the promo code.
         detectSessionInUrl: false,
         persistSession: true,
         autoRefreshToken: true,

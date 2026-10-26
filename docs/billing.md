@@ -88,8 +88,9 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
 - Redeeming goes through `add_pro_months`, like gifts and the welcome month: 30-day months stacked
   on running complimentary Pro, at most 12 months ahead, never on a live Stripe subscription (then
   the code is not used up). One code per account per batch; each code once.
-- People redeem at `unvibe.site/redeem` (Supabase sign-in, then `/api/redeem`, which forwards to
-  `POST /api/v1/promo/redeem`). The API answers 200 `redeemed`/`already_yours`, 400 `bad_code`, 401,
+- People redeem at `unvibe.site/redeem` (a link can prefill the code: `/redeem?promo=XXXX-XXXX-XXXX-XXXX`;
+  `?code=` belongs to Supabase sign-in). Supabase sign-in, then `/api/redeem`, which forwards to
+  `POST /api/v1/promo/redeem`. The API answers 200 `redeemed`/`already_yours`, 400 `bad_code`, 401,
   404 `invalid` (unknown or revoked, same answer), 409 `used`/`one_per_account`/`has_paid_plan`, 410
   `expired`/`cap_reached`, 429, 503.
 - No minting over the API. `web/scripts/promo-batch.mjs generate <batch> <count>` writes the codes to
@@ -97,8 +98,11 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
   insert that is run once by hand. `take <batch> <who>` hands out the next code under a file lock.
 - `GET /api/v1/admin/promo` lists batches and redemptions; `POST` with `revoke_code` or
   `revoke_batch` switches codes off (`UNVIBE_ADMIN_STATS_TOKEN`; the script's `list` and `revoke`
-  use it). Revoking a redeemed code takes its months back unless the account now pays through
-  Stripe; revoking a batch stops new redemptions and leaves granted months alone.
+  use it). Revoking a redeemed code takes back exactly the Pro time that redemption added (stored as
+  `granted`, after the 12-month ceiling; never below now), unless the account now pays through
+  Stripe; other Pro time stays. Revoking a batch stops new redemptions and leaves granted months
+  alone. Deleting an account keeps its redemption row (no user link, no email), so the code stays
+  used and counts against the cap.
 
 ## Credential-free verification
 
