@@ -236,6 +236,12 @@ export class MemoryStore implements Store {
     return this.staleDeletions(olderThanMs).length;
   }
 
+  async touchAccountDeletion(userId: string): Promise<void> {
+    const deletion = this.data.deletions.get(userId);
+    if (deletion?.state !== 'started') return;
+    deletion.updatedAt = this.now();
+  }
+
   private staleDeletions(olderThanMs: number): MemoryDeletion[] {
     const cutoff = this.now() - olderThanMs;
     return [...this.data.deletions.values()].filter((d) => d.state === 'started' && Date.parse(d.startedAt) < cutoff);

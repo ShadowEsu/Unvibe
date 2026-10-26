@@ -156,6 +156,11 @@ export interface Store {
   staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]>;
   /** How many started deletions began more than `olderThanMs` ago (stale_account_deletions). Read errors throw. */
   staleAccountDeletionCount(olderThanMs: number): Promise<number>;
+  /**
+   * Moves a started deletion to the back of the sweep's list (updated_at only, where state is
+   * started). The 1 h and 7-day clocks count from started_at, so they do not move. Write errors throw.
+   */
+  touchAccountDeletion(userId: string): Promise<void>;
 
   // Data
   upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void>;

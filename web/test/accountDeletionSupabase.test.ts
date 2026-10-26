@@ -78,6 +78,20 @@ test('SupabaseStore sweep reads: started rows past the cutoff, least recently up
   await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).staleAccountDeletionCount(3_600_000), /Could not count stale account deletions/);
 });
 
+test('SupabaseStore.touchAccountDeletion writes updated_at only, and only on a started row', async () => {
+  const { fetcher, seen } = fakeFetch(() => new Response(null, { status: 204 }));
+  await new SupabaseStore(URL_BASE, 'key', fetcher).touchAccountDeletion(USER_ID);
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].method, 'PATCH');
+  const url = new URL(`${URL_BASE}${seen[0].path}`);
+  assert.equal(url.pathname, '/rest/v1/account_deletions');
+  assert.equal(url.searchParams.get('user_id'), `eq.${USER_ID}`);
+  assert.equal(url.searchParams.get('state'), 'eq.started');
+  assert.deepEqual(Object.keys(seen[0].body as Record<string, unknown>), ['updated_at'], 'started_at, the clocks\' column, is not written');
+  const failed = fakeFetch(() => Response.json({ code: '57014', message: 'canceling statement due to statement timeout' }, { status: 500 }));
+  await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).touchAccountDeletion(USER_ID), /Could not touch account deletion/);
+});
+
 test('SupabaseStore deletion state: begin, lookup by token hash, done', async () => {
   const hash = createHash('sha256').update('app-token').digest('hex');
   const STARTED = '2026-10-27T09:00:00+00:00';

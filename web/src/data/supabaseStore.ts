@@ -231,6 +231,13 @@ export class SupabaseStore implements Store {
     return data;
   }
 
+  async touchAccountDeletion(userId: string): Promise<void> {
+    const { error } = await this.db.from('account_deletions')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('user_id', userId).eq('state', 'started');
+    if (error) throw new Error(`Could not touch account deletion: ${error.message}`);
+  }
+
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
     // events.id is a global primary key chosen by the client. Find which ids already exist so an id
     // owned by another account is refused (never re-assigned), and new ids are plain inserts: a

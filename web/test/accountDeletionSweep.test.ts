@@ -18,10 +18,12 @@ const SECRET = `cron-${randomUUID()}`;
 
 const identities = new Set<string>();
 let authDown = false;
+/** Accounts whose Auth delete keeps failing (a deletion stuck at the Auth step). */
+const authStuck = new Set<string>();
 const services = accountDeletionServices();
 services.auth = {
   async deleteUser(userId) {
-    if (authDown) throw new Error('Supabase Auth delete failed: 503 no status');
+    if (authDown || authStuck.has(userId)) throw new Error('Supabase Auth delete failed: 503 no status');
     return identities.delete(userId) ? 'deleted' : 'not_found';
   },
 };
@@ -208,11 +210,11 @@ test('a row left after an Auth failure is finished too: identity, account rows, 
 });
 
 /**
- * A person with a personal workspace whose deletion, 2 hours ago, stopped at the Auth step: the
- * account data is not erased. With `subscribed`, a Pro subscription set to cancel at period end
- * (so DELETE's preflight let it through) is stored and live at Stripe.
+ * A person with a personal workspace whose deletion, `ageMs` ago (2 hours by default), stopped at
+ * the Auth step: the account data is not erased. With `subscribed`, a Pro subscription set to cancel
+ * at period end (so DELETE's preflight let it through) is stored and live at Stripe.
  */
-async function stoppedBeforeErase(subscribed: boolean) {
+async function stoppedBeforeErase(subscribed: boolean, ageMs = 2 * 3_600_000) {
   const me = await store.signIn(`sweep-billing-${randomUUID()}@account.test`);
   identities.add(me.userId);
   const workspace = await getBillingStore().ensurePersonalWorkspace(me.userId);
@@ -224,7 +226,7 @@ async function stoppedBeforeErase(subscribed: boolean) {
     });
     live.set(subscriptionId, liveSubscription(subscriptionId, { cancel_at_period_end: true }));
   }
-  await agoBy(2 * 3_600_000, async () => {
+  await agoBy(ageMs, async () => {
     authDown = true;
     try {
       assert.equal((await remove(me.token)).status, 503);
@@ -404,4 +406,33 @@ test('a run the time budget stops still logs its counts line, with the overdue r
   await sweep(`Bearer ${SECRET}`);
   await sweep(`Bearer ${SECRET}`);
   assert.equal((await store.accountDeletion(overdue.userId))?.state, 'done');
+});
+
+test('rows stuck before the erase move to the back of the list: a good row behind 10 of them finishes within 2 runs', async () => {
+  process.env.CRON_SECRET = SECRET;
+  const eightDays = 8 * 24 * 3_600_000;
+  // 11 stuck rows, all older than the good one: 5 skipped (Stripe would charge again), 6 failing at Auth.
+  const stuck = [];
+  for (let i = 0; i < 11; i += 1) {
+    const me = await stoppedBeforeErase(i < 5, eightDays);
+    if (i < 5) live.set(me.subscriptionId, liveSubscription(me.subscriptionId, { cancel_at_period_end: false }));
+    else authStuck.add(me.userId);
+    stuck.push(me);
+  }
+  const good = await stoppedBeforeErase(false, eightDays);
+  const first = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, number>;
+  assert.equal(first.checked, 10);
+  assert.equal((await store.accountDeletion(good.userId))?.state, 'started', 'the 10 oldest stuck rows filled the first run');
+  let second: Record<string, number> = {};
+  const logged = await capturingLogs(async () => { second = await (await sweep(`Bearer ${SECRET}`)).json() as Record<string, number>; });
+  assert.equal((await store.accountDeletion(good.userId))?.state, 'done', 'the second run reached the good row');
+  for (const me of stuck) {
+    const deletion = await store.accountDeletion(me.userId);
+    assert.equal(deletion?.state, 'started');
+    assert.equal(deletion.step, 'started');
+    assert.equal(deletion.email, me.email, 'the email stays for the cleanup');
+  }
+  // The touch moves only the list order: the 1 h and 7-day clocks still count from the start.
+  assert.ok(second.stale >= 11 && second.overdue >= 11, JSON.stringify(second));
+  assert.equal(logged.filter((line) => line.includes('ACCOUNT_DELETION_OVERDUE')).length, 1, logged.join('\n'));
 });

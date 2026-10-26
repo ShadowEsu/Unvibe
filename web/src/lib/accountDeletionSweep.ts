@@ -71,14 +71,22 @@ type SweepRun = DeletionRun | { result: 'skipped'; preflight: Exclude<BillingPre
 
 /**
  * One row. Before its account data is erased, the same Stripe preflight as DELETE: a workspace
- * Stripe may still charge (or whose billing cannot be read) is never erased here. Never throws.
+ * Stripe may still charge (or whose billing cannot be read) is never erased here. A row left stuck
+ * (skipped, or failed at Auth or erase) moves to the back of the list, so stuck rows cannot fill
+ * every run's slots; only updated_at changes, and the stale and overdue clocks count from
+ * started_at. Never throws.
  */
 async function retryDeletion(store: Store, deletion: AccountDeletion): Promise<SweepRun> {
-  if (!accountErased(deletion)) {
-    const preflight = await billingPreflight(deletion.userId);
-    if (preflight.result !== 'clear') return { result: 'skipped', preflight };
+  const preflight = accountErased(deletion) ? undefined : await billingPreflight(deletion.userId);
+  const run: SweepRun = preflight && preflight.result !== 'clear'
+    ? { result: 'skipped', preflight }
+    : await runRemainingDeletionSteps(store, deletion);
+  if (run.result === 'skipped' || (run.result === 'step_failed' && (run.step === 'auth identity' || run.step === 'account data'))) {
+    await store.touchAccountDeletion(deletion.userId).catch((error: unknown) => {
+      console.error('account deletion sweep: moving a stuck row back failed', errorSummary(error));
+    });
   }
-  return runRemainingDeletionSteps(store, deletion);
+  return run;
 }
 
 /**
