@@ -55,8 +55,10 @@ export default function PrivacyPage() {
           <code className="font-mono">KEY=</code> assignments, and high-entropy strings. A
           known credential blocks the request and shows you the rule and line so you can
           remove it. A string that only looks random is shown to you first, and nothing is
-          sent unless you choose Send anyway. In the current app (v0.1.43), the questions you
-          type, follow-ups, and Chat messages are not scanned yet, so keep keys out of them.
+          sent unless you choose Send anyway. From version 0.1.44, follow-up questions, lesson
+          questions and Chat messages are scanned too, and a Chat message or lesson question with
+          any finding is not sent. Version 0.1.43 and older do not scan what you type, so keep keys
+          out of it there.
           There is no file exclusion list: a file you select or open is sent once it passes
           the scan. In a Brief, untracked files that{" "}
           <code className="font-mono">.gitignore</code> covers are left out, because the app

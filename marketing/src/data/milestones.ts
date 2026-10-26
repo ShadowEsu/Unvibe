@@ -13,6 +13,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "25 OCT 2026",
+    category: "PRODUCT",
+    title: "Your own code in the first minute, and typed questions filtered for secrets",
+    summary: "The first run now ends on your own code: select a few lines in any app and press the shortcut. On a Mac, Accessibility is asked the first time you press it, and after Unvibe explains your own code once, it asks whether to open when you log in. While payments are closed, the upgrade offer says Pro isn't open yet instead of showing prices. The setup sample no longer counts as a streak day on the computer where you ran it. Follow-up questions, lesson questions and Chat messages go through the same secret filter as selected code. Signed-in friends can enter your gift code on their Share page, and you each get a month of Pro. The app now sends setup progress tied to a random install ID (never your code or email), with a switch in Settings to turn it off.",
+    figure: "v0.1.44",
+  },
+  {
     date: "19 OCT 2026",
     category: "PRODUCT",
     title: "Ask Vibe works before you sign in, and a design pass everywhere",
@@ -141,7 +148,7 @@ export const milestones: Milestone[] = [
     date: "06 OCT 2026",
     category: "PRODUCT",
     title: "Sign in with Google fills you in, and invites really pay out",
-    summary: "On the setup screen, tap Fill this in with Google, pick one of your saved Google accounts, and your name and email are filled in for you. Invite links now actually work: when a friend joins with yours, you both get a month of Pro, up to five friends, and it stacks. Everyone with the app is on the list automatically and starts with a welcome month of Pro. Changed 22 Oct 2026: joining with a link no longer grants Pro. Gift months come from a code entered in the app, starting with the next app update.",
+    summary: "On the setup screen, tap Fill this in with Google, pick one of your saved Google accounts, and your name and email are filled in for you. Invite links now actually work: when a friend joins with yours, you both get a month of Pro, up to five friends, and it stacks. Everyone with the app is on the list automatically and starts with a welcome month of Pro. Changed 22 Oct 2026: joining with a link no longer grants Pro. Gift months come from a code entered in the app, from version 0.1.44 (25 Oct 2026).",
     figure: "v0.1.27",
   },
   {
@@ -369,7 +376,7 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "DISTRIBUTION",
     title: "Gift Unvibe",
-    summary: "Share an 8 character gift code from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts. Changed 22 Oct 2026: joining the waitlist no longer grants Pro. Gift months come from a code entered in the app, starting with the next app update.",
+    summary: "Share an 8 character gift code from the Mac app. A friend joins the waitlist with your email and that code. Both of you get 1 month of Pro, up to five gifts. Changed 22 Oct 2026: joining the waitlist no longer grants Pro. Gift months come from a code entered in the app, from version 0.1.44 (25 Oct 2026).",
     figure: "5 gifts",
   },
   {

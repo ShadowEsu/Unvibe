@@ -55,7 +55,7 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
     </form>
     {state === "error" && <p className="reward-error" role="alert">{message}</p>}
     {progress && <div className="reward-progress" aria-live="polite">
-      <div className="reward-review"><Gift size={18} /><span><strong>{progress.joinedReferrals} friend{progress.joinedReferrals === 1 ? "" : "s"} joined with your link</strong><small>Joining with a link does not add Pro by itself. The month comes when your friend enters your gift code in the app, from the next app update on.</small></span></div>
+      <div className="reward-review"><Gift size={18} /><span><strong>{progress.joinedReferrals} friend{progress.joinedReferrals === 1 ? "" : "s"} joined with your link</strong><small>Joining with a link does not add Pro by itself. The month comes when your friend enters your gift code in the app (version 0.1.44 or later).</small></span></div>
       <button className="reward-copy" type="button" onClick={copyLink}>{copied ? <><Check size={16} /> Link copied</> : <><Copy size={16} /> Copy my invite link</>}</button>
     </div>}
     <p className="reward-note">No names or emails are shown here. Questions about eligibility? <a href="mailto:support@unvibe.site?subject=Unvibe%20referral%20rewards">Contact support</a>.</p>
