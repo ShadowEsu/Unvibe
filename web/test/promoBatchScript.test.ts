@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -254,6 +254,32 @@ test('generate, take and verify refuse a promo folder that is itself a symlink, 
   await assert.rejects(script(['take', 'entrylink', 'Ada', '--csv', join(link, 'c.csv')]), /is a symlink; pass the real folder path/, 'take');
   assert.ok(!readFileSync(join(real, 'c.csv'), 'utf8').includes('Ada'), 'no code was handed out');
   await assert.rejects(script(['verify', 'entrylink', '--expect-sha', shaOf(join(real, 'c.sql')), '--csv', join(link, 'c.csv'), '--sql', join(link, 'c.sql')]), /is a symlink; pass the real folder path/, 'verify');
+});
+
+test('take refuses a promo folder that belongs to another user', { skip: process.getuid?.() === 0 ? 'root owns /usr' : false }, async () => {
+  // /usr exists, is root's and is not writable by others, so only the owner check can refuse it.
+  await assert.rejects(script(['take', 'x', 'Ada', '--csv', '/usr/x.csv']), /\/usr belongs to another user; use a folder of your own/);
+  assert.throws(() => statSync('/usr/x.csv'), 'nothing was created in /usr');
+});
+
+test('take and verify refuse a regular file passed as the promo folder, and write nothing', async () => {
+  const afile = join(dir, 'afile');
+  writeFileSync(afile, 'not a folder\n', { mode: 0o600 });
+  await assert.rejects(script(['take', 'x', 'Ada', '--csv', join(afile, 'x.csv')]), /afile is not a folder/, 'take');
+  await assert.rejects(script(['verify', 'x', '--expect-sha', '0'.repeat(64), '--csv', join(afile, 'x.csv'), '--sql', join(afile, 'x.sql')]), /afile is not a folder/, 'verify');
+  assert.equal(readFileSync(afile, 'utf8'), 'not a folder\n', 'the file is unchanged');
+});
+
+test('generate refuses a symlink in a sticky folder used as the promo folder, and writes nothing', async () => {
+  const sticky = join(dir, 'sticky-links');
+  mkdirSync(sticky);
+  chmodSync(sticky, 0o1777);
+  const real = join(dir, 'sticky-link-target');
+  mkdirSync(real, { mode: 0o700 });
+  const link = join(sticky, 'promo');
+  symlinkSync(real, link);
+  await assert.rejects(script(['generate', 'stickylink', '2', '--csv', join(link, 'c.csv'), '--sql', join(link, 'c.sql')]), /sticky-links\/promo is a symlink; pass the real folder path instead/);
+  assert.deepEqual(readdirSync(real), [], 'nothing was written through the link');
 });
 
 test('take: a missing CSV says so', async () => {
