@@ -3,7 +3,7 @@ import { getStore } from '@/data/store';
 import type { AccountDeletion } from '@/data/types';
 import { TeamHasMembersError } from '@/data/teamHasMembers';
 import { bearerToken, sessionTokenHash, sessionUser, userFromRequest, unauthorized } from '@/lib/auth';
-import { accountDeletionServices } from '@/lib/accountDeletionServices';
+import { runRemainingDeletionSteps } from '@/lib/accountDeletionSteps';
 import { getBillingStore } from '@/billing/store';
 import { errorSummary } from '@/billing/http';
 import { getStripe } from '@/billing/stripe';
@@ -65,11 +65,11 @@ function teamHasMembers(): Response {
 /**
  * App Store requirement: an authenticated user can delete their account and all their data.
  *
- * Order: Stripe preflight, the Teams rule, record started (email and token hash), the Supabase
- * Auth identity, the public rows in one transaction (tokens go last, by cascade, so every earlier
- * failure can be retried with the same token), the site's Blob beta-download records, record done.
- * Every step can run again; a retry skips the steps the deletion row says are finished. Nothing
- * here creates a workspace or a users row.
+ * Order: Stripe preflight, the Teams rule, record started (email and token hash), then the steps
+ * in runRemainingDeletionSteps: the Supabase Auth identity, the public rows in one transaction
+ * (tokens go last, by cascade, so every earlier failure can be retried with the same token), the
+ * site's Blob beta-download records, record done. Every step can run again; a retry skips the
+ * steps the deletion row says are finished. Nothing here creates a workspace or a users row.
  */
 export async function DELETE(req: Request): Promise<Response> {
   const token = bearerToken(req);
@@ -154,49 +154,18 @@ export async function DELETE(req: Request): Promise<Response> {
     console.error('account delete: stale deletion resumed', JSON.stringify({ code: 'ACCOUNT_DELETION_STALE', ageMinutes, step: deletion.step }));
   }
 
-  const services = accountDeletionServices();
-  const erased = deletion.step === 'app_data' || deletion.step === 'beta_downloads';
-  // 4. The sign-in identity. Only Supabase Auth's own user_not_found counts as already gone.
-  try {
-    await services.auth.deleteUser(userId);
-    if (!erased) await store.recordAccountDeletionStep(userId, 'auth_identity');
-  } catch (error) {
-    return unavailable('auth identity', error, NOT_FINISHED);
-  }
-  // 5. The public rows, in one transaction; the app token goes with the users row.
-  if (!erased) {
-    try {
-      await store.eraseAccount(userId);
-    } catch (error) {
-      return unavailable('account data', error, NOT_FINISHED);
-    }
-  }
-  // 6. The site's beta-download records for the email captured at the start, unless another account
-  // holds that address now (signed up again): then they are that account's. The account is gone
-  // by now, so a record that cannot be read or deleted holds up only this cleanup: one retry gets
-  // a 503, a second failure answers deleted and leaves the row started, with the email, for the
-  // stale-row follow-up.
-  if (deletion.step !== 'beta_downloads') {
-    try {
-      const outcome = deletion.email && (await store.addressReusedSinceDeletion(userId, deletion.email))
-        ? 'email_reused'
-        : await services.betaDownloads.deleteForEmail(deletion.email);
-      await store.recordAccountDeletionStep(userId, 'beta_downloads', outcome);
-    } catch (error) {
-      const failedBefore = deletion.betaDownloads === 'failed';
-      await store.recordAccountDeletionStep(userId, 'app_data', 'failed').catch(() => undefined);
-      if (!failedBefore) return unavailable('beta-download records', error, BLOB_PENDING);
-      console.error('account delete: beta-download cleanup left for follow-up', JSON.stringify({ code: 'ACCOUNT_DELETION_BLOB_PENDING', error: errorSummary(error) }));
-      // Still status deleted (the account is gone, and the app clears its local data only on
-      // deleted); the message says what is left and by when the daily sweep or the runbook removes it.
-      return deleted('deleted', CLEANUP_PENDING);
-    }
-  }
-  // 7. Done: the captured email is forgotten.
-  try {
-    await store.finishAccountDeletion(userId);
-  } catch (error) {
-    return unavailable('record done', error, NOT_FINISHED);
+  // 4-7. Auth identity, the public rows, the Blob beta-download records, done.
+  const run = await runRemainingDeletionSteps(store, deletion);
+  if (run.result === 'step_failed') return unavailable(run.step, run.error, NOT_FINISHED);
+  if (run.result === 'cleanup_failed') {
+    // The account is gone, so a Blob record that cannot be read holds up only this cleanup: the
+    // first failure gets a 503 the same token retries; a second answers deleted and leaves the row
+    // started, with the email, for the daily sweep (and the runbook after 7 days).
+    if (deletion.betaDownloads !== 'failed') return unavailable('beta-download records', run.error, BLOB_PENDING);
+    console.error('account delete: beta-download cleanup left for follow-up', JSON.stringify({ code: 'ACCOUNT_DELETION_BLOB_PENDING', error: errorSummary(run.error) }));
+    // Still status deleted (the account is gone, and the app clears its local data only on
+    // deleted); the message says what is left and by when it is removed.
+    return deleted('deleted', CLEANUP_PENDING);
   }
   return deleted('deleted');
 }

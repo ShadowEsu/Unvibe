@@ -56,6 +56,28 @@ test('SupabaseStore.addressReusedSinceDeletion asks account_deletion_address_reu
   await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).addressReusedSinceDeletion(USER_ID, 'again@account.test'), /Could not check the address/);
 });
 
+test('SupabaseStore sweep reads: started rows past the cutoff, least recently updated first, capped; the count is stale_account_deletions', async () => {
+  const STARTED = '2026-10-27T09:00:00+00:00';
+  const listed = fakeFetch(() => Response.json([{ user_id: USER_ID, state: 'started', step: 'app_data', email: 'leaving@account.test', beta_downloads: 'failed', started_at: STARTED }]));
+  const before = Date.now();
+  assert.deepEqual(await new SupabaseStore(URL_BASE, 'key', listed.fetcher).staleAccountDeletions(3_600_000, 10), [
+    { userId: USER_ID, state: 'started', step: 'app_data', email: 'leaving@account.test', betaDownloads: 'failed', startedAt: STARTED },
+  ]);
+  const url = new URL(`${URL_BASE}${listed.seen[0].path}`);
+  assert.equal(url.pathname, '/rest/v1/account_deletions');
+  assert.equal(url.searchParams.get('state'), 'eq.started');
+  assert.equal(url.searchParams.get('order'), 'updated_at.asc');
+  assert.equal(url.searchParams.get('limit'), '10');
+  const cutoff = Date.parse(String(url.searchParams.get('started_at')).replace(/^lt\./, ''));
+  assert.ok(cutoff <= before - 3_600_000 + 1000 && cutoff >= before - 3_600_000 - 1000, url.search);
+  const counted = fakeFetch(() => Response.json(3));
+  assert.equal(await new SupabaseStore(URL_BASE, 'key', counted.fetcher).staleAccountDeletionCount(7 * 86_400_000), 3);
+  assert.deepEqual(counted.seen, [{ method: 'POST', path: '/rest/v1/rpc/stale_account_deletions', body: { p_older_than: '604800 seconds' } }]);
+  const failed = fakeFetch(() => Response.json({ code: '57014', message: 'canceling statement due to statement timeout' }, { status: 500 }));
+  await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).staleAccountDeletions(3_600_000, 10), /Could not list stale account deletions/);
+  await assert.rejects(new SupabaseStore(URL_BASE, 'key', failed.fetcher).staleAccountDeletionCount(3_600_000), /Could not count stale account deletions/);
+});
+
 test('SupabaseStore deletion state: begin, lookup by token hash, done', async () => {
   const hash = createHash('sha256').update('app-token').digest('hex');
   const STARTED = '2026-10-27T09:00:00+00:00';

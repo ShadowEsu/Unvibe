@@ -15,6 +15,8 @@ import { computeProfile, computeProjects } from './progress';
 import { EventOwnershipError } from './eventOwnership';
 import { TeamHasMembersError } from './teamHasMembers';
 
+const DELETION_COLUMNS = 'user_id, state, step, email, beta_downloads, started_at';
+
 function deletionFromRow(row: Record<string, unknown>): AccountDeletion {
   return {
     userId: String(row.user_id),
@@ -167,7 +169,7 @@ export class SupabaseStore implements Store {
    * one needs the table), so a missing table reads as "no deletion", and every other error throws.
    */
   private async deletionWhere(column: 'user_id' | 'token_hashes', value: string): Promise<AccountDeletion | null> {
-    const query = this.db.from('account_deletions').select('user_id, state, step, email, beta_downloads, started_at');
+    const query = this.db.from('account_deletions').select(DELETION_COLUMNS);
     const { data, error } = await (column === 'user_id' ? query.eq('user_id', value) : query.contains('token_hashes', [value])).maybeSingle();
     if (error?.code === 'PGRST205' || error?.code === '42P01') return null;
     if (error) throw new Error(`Could not read account deletion: ${error.message}`);
@@ -212,6 +214,21 @@ export class SupabaseStore implements Store {
       .update({ state: 'done', step: 'done', email: null, done_at: now, updated_at: now })
       .eq('user_id', userId).eq('state', 'started');
     if (error) throw new Error(`Could not finish account deletion: ${error.message}`);
+  }
+
+  async staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]> {
+    const { data, error } = await this.db.from('account_deletions').select(DELETION_COLUMNS)
+      .eq('state', 'started').lt('started_at', new Date(Date.now() - olderThanMs).toISOString())
+      .order('updated_at', { ascending: true }).limit(limit);
+    if (error) throw new Error(`Could not list stale account deletions: ${error.message}`);
+    return (data ?? []).map((row) => deletionFromRow(row as Record<string, unknown>));
+  }
+
+  async staleAccountDeletionCount(olderThanMs: number): Promise<number> {
+    const { data, error } = await this.db.rpc('stale_account_deletions', { p_older_than: `${Math.floor(olderThanMs / 1000)} seconds` });
+    if (error) throw new Error(`Could not count stale account deletions: ${error.message}`);
+    if (typeof data !== 'number') throw new Error('Could not count stale account deletions: no answer.');
+    return data;
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {

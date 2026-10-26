@@ -124,7 +124,7 @@ export interface Store {
   userIdForEmail(email: string): Promise<string | null>;
 
   // Account deletion (App Store requirement). State lives in account_deletions; DELETE
-  // /api/v1/account runs the steps.
+  // /api/v1/account runs the steps, and the daily sweep finishes the ones left started.
   accountDeletion(userId: string): Promise<AccountDeletion | null>;
   /**
    * Whether another account, created after this deletion started, holds `email` (account_deletion_address_reused).
@@ -149,6 +149,13 @@ export interface Store {
   eraseAccount(userId: string): Promise<void>;
   /** Marks the deletion done and forgets the captured email. */
   finishAccountDeletion(userId: string): Promise<void>;
+  /**
+   * Started deletions that began more than `olderThanMs` ago, least recently updated first, at most
+   * `limit` (the daily sweep). Read errors throw.
+   */
+  staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]>;
+  /** How many started deletions began more than `olderThanMs` ago (stale_account_deletions). Read errors throw. */
+  staleAccountDeletionCount(olderThanMs: number): Promise<number>;
 
   // Data
   upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void>;

@@ -27,8 +27,10 @@ interface TokenRecord {
   createdAt: number;
 }
 
+/** account_deletions as stored: plus the token hashes and updated_at, which never leave the store. */
 interface MemoryDeletion extends AccountDeletion {
   tokenHashes: Set<string>;
+  updatedAt: number;
 }
 
 interface MemoryData {
@@ -39,7 +41,7 @@ interface MemoryData {
   deletions: Map<string, MemoryDeletion>;
 }
 
-function publicDeletion({ tokenHashes: _tokenHashes, ...deletion }: MemoryDeletion): AccountDeletion {
+function publicDeletion({ tokenHashes: _tokenHashes, updatedAt: _updatedAt, ...deletion }: MemoryDeletion): AccountDeletion {
   return deletion;
 }
 
@@ -171,7 +173,7 @@ export class MemoryStore implements Store {
     new MemoryBillingStore().refuseTeamWithMembers(userId);
     let deletion = this.data.deletions.get(userId);
     if (!deletion) {
-      deletion = { userId, state: 'started', step: 'started', startedAt: new Date(this.now()).toISOString(), tokenHashes: new Set() };
+      deletion = { userId, state: 'started', step: 'started', startedAt: new Date(this.now()).toISOString(), updatedAt: this.now(), tokenHashes: new Set() };
       this.data.deletions.set(userId, deletion);
     }
     if (deletion.state === 'started') {
@@ -179,6 +181,7 @@ export class MemoryStore implements Store {
       const normalized = email?.trim().toLowerCase() || this.data.users.get(userId)?.email?.trim().toLowerCase();
       if (!deletion.email && normalized) deletion.email = normalized;
       deletion.tokenHashes.add(tokenHash);
+      deletion.updatedAt = this.now();
     }
     return publicDeletion(deletion);
   }
@@ -188,6 +191,7 @@ export class MemoryStore implements Store {
     if (deletion?.state !== 'started') return;
     deletion.step = step;
     if (betaDownloads) deletion.betaDownloads = betaDownloads;
+    deletion.updatedAt = this.now();
   }
 
   /** Mirrors erase_account_data: the Teams check comes before anything is deleted; tokens go with the user. */
@@ -209,6 +213,7 @@ export class MemoryStore implements Store {
       }
     }
     deletion.step = 'app_data';
+    deletion.updatedAt = this.now();
   }
 
   async finishAccountDeletion(userId: string): Promise<void> {
@@ -217,6 +222,23 @@ export class MemoryStore implements Store {
     deletion.state = 'done';
     deletion.step = 'done';
     delete deletion.email;
+    deletion.updatedAt = this.now();
+  }
+
+  async staleAccountDeletions(olderThanMs: number, limit: number): Promise<AccountDeletion[]> {
+    return this.staleDeletions(olderThanMs)
+      .sort((a, b) => a.updatedAt - b.updatedAt)
+      .slice(0, limit)
+      .map(publicDeletion);
+  }
+
+  async staleAccountDeletionCount(olderThanMs: number): Promise<number> {
+    return this.staleDeletions(olderThanMs).length;
+  }
+
+  private staleDeletions(olderThanMs: number): MemoryDeletion[] {
+    const cutoff = this.now() - olderThanMs;
+    return [...this.data.deletions.values()].filter((d) => d.state === 'started' && Date.parse(d.startedAt) < cutoff);
   }
 
   async userIdForEmail(email: string): Promise<string | null> {
