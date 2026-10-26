@@ -155,7 +155,8 @@ test('generate prints the SQL sha256, and verify accepts the untouched files, al
   const printed = /^SQL sha256: ([0-9a-f]{64})$/m.exec(stdout)?.[1] ?? '';
   assert.equal(printed, shaOf(sql), 'the printed sha256 is the file\'s');
   assert.match(stdout, /^record this sha256 somewhere off this Mac \(a note on your phone, for example\); verify needs it$/m);
-  assert.ok(stdout.includes(`verify verbatch --expect-sha ${printed} --csv `), 'it says how to verify, with the sha and the paths it used');
+  assert.ok(stdout.includes(`verify verbatch --expect-sha <the sha256 you recorded> --csv `), 'it says how to verify, with the paths it used');
+  assert.equal(stdout.split(printed).length - 1, 1, 'the sha256 appears once, on its own line, and never inside a command to copy');
   const ok = await script(['verify', 'verbatch', '--expect-sha', printed, '--csv', csv, '--sql', sql]);
   assert.match(ok.stdout, /^OK: .* has the sha256 you recorded and is exactly the insert for the 4 codes in /m);
   assert.match(ok.stdout, /^batch verbatch \(verbatch\): 3 months, cap 300, redeem by 2026-11-30 23:59:59 America\/Los_Angeles$/m);

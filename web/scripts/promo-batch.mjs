@@ -218,7 +218,9 @@ function generate(batch, countText, options) {
   console.log(`SQL sha256: ${sha}`);
   console.log('record this sha256 somewhere off this Mac (a note on your phone, for example); verify needs it');
   const paths = `${options.csv ? ` --csv ${JSON.stringify(csvPath)}` : ''}${options.sql ? ` --sql ${JSON.stringify(sqlPath)}` : ''}`;
-  console.log(`right before running it on production: node scripts/promo-batch.mjs verify ${batch} --expect-sha ${sha}${paths}`);
+  // A placeholder, not the sha: a command with the sha filled in gets copied from Terminal scrollback or
+  // shell history on this Mac, and then the record kept off this Mac is never used.
+  console.log(`right before running it on production: node scripts/promo-batch.mjs verify ${batch} --expect-sha <the sha256 you recorded>${paths}`);
 }
 
 // ------------------------------------------------------------------------------ take
