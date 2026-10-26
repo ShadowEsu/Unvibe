@@ -64,8 +64,7 @@ Internal audit line before send:
 
 ```
 Sincerely,
-Preston Susanto
-Founder, Unvibe
+The Unvibe team
 https://unvibe.site
 ```
 
@@ -91,8 +90,7 @@ Thank you for your time. 💜
 Reply stop and I will not email again.
 
 Sincerely,  
-Preston Susanto  
-Founder, Unvibe  
+The Unvibe team  
 https://unvibe.site
 
 ---
@@ -113,8 +111,7 @@ I appreciate your consideration. 💜
 Reply stop and I will not email again.
 
 Sincerely,  
-Preston Susanto  
-Founder, Unvibe  
+The Unvibe team  
 https://unvibe.site
 
 ---
@@ -135,8 +132,7 @@ Thank you again for all that you are building. 💜
 Reply stop and I will not email again.
 
 Sincerely,  
-Preston Susanto  
-Founder, Unvibe  
+The Unvibe team  
 https://unvibe.site
 
 ---
@@ -155,8 +151,7 @@ Wishing you well with `[specific project]`. 💜
 Reply stop and I will not email again.
 
 Sincerely,  
-Preston Susanto  
-Founder, Unvibe  
+The Unvibe team  
 https://unvibe.site
 
 ---

@@ -11,7 +11,7 @@ Intermediate, Advanced, Expert). It quizzes you ("Prove it" asks what breaks if 
 saves lessons to a Library, and its Briefs review the git diff after an AI agent edits many files.
 Free to use. Pro is $9/month or $81/year. Teams is $8 per seat.
 
-Founder: Preston Susanto, preston@unvibe.site. Public founder page: https://unvibe.site/about
+Contact: preston@unvibe.site. About page: https://unvibe.site/about
 
 ## 2. Where things live
 
@@ -32,7 +32,7 @@ Founder: Preston Susanto, preston@unvibe.site. Public founder page: https://unvi
 
 ## 3. Rules that always apply
 
-- Commits are authored as Preston only: `git -c user.name="Preston Susanto" -c user.email="prestonjaysusanto@gmail.com" commit ...`. No co-author or session trailers. Never show Claude as a collaborator on GitHub.
+- Commits are authored as the owner only: `git -c user.name="<owner name>" -c user.email="<owner email>" commit ...` (the values are in the owner's private handoff notes, not in this public repo). No co-author or session trailers. Never show Claude as a collaborator on GitHub.
 - No pull requests or GitHub comments unless Preston asks.
 - Every app version change gets an entry in `marketing/src/data/milestones.ts` (the public changelog at /releases).
 - Never present mock output as real. Never disable TLS checks. Never paste secrets (Supabase keys, REWARD_LINK_SECRET, the signing certificate) into chat or commits.
