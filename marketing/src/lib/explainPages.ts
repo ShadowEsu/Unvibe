@@ -572,6 +572,53 @@ class Reports {
     watchOut:
       "`summingInt` adds in an `int`, so a customer's total silently wraps around once it passes 2,147,483,647 cents, about 21.5 million dollars. Two paid orders of 2,000,000,000 cents add up to `-294967296`. Use `summingLong` for totals that can grow that large.",
   },
+  {
+    id: "html",
+    fileName: "signup.html",
+    lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
+    description:
+      "Paste HTML and get a plain English explanation, free online. The sample is a sign-up form with labels, a required email field and radio buttons.",
+    sampleSummary: "A sign-up form with a labelled email field, a hint, a group of radio buttons and two buttons.",
+    sample: `<form action="/subscribe" method="post">
+  <h2>Get the weekly digest</h2>
+
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="email"
+         required aria-describedby="email-hint">
+  <p id="email-hint">One email a week. Unsubscribe any time.</p>
+
+  <fieldset>
+    <legend>Format</legend>
+    <label><input type="radio" name="format" value="html" checked> Full</label>
+    <label><input type="radio" name="format" value="text"> Plain text</label>
+  </fieldset>
+
+  <button>Subscribe</button>
+  <button type="button">Preview an issue</button>
+</form>`,
+    shows: [
+      {
+        concept: "forms",
+        text: "`required` and `type=\"email\"` make the browser check the field before anything is sent. With the field empty, or holding `ana@`, Subscribe sends nothing: the browser moves focus to the field and shows a message such as `Please fill out this field.`",
+      },
+      {
+        concept: "accessibility",
+        text: "`<label for=\"email\">` ties the word Email to the input whose `id` is `email`. That makes Email the field's accessible name, the one a screen reader announces, and clicking the word puts the cursor in the field. `aria-describedby` makes the hint below the field's description.",
+      },
+      {
+        concept: "semantics",
+        text: "`<fieldset>` and `<legend>` group the two radio buttons under the name Format, so a screen reader can say which question Full and Plain text answer. Wrapping each radio in its own `<label>` names it without a `for` or an `id`, and makes the words clickable too.",
+      },
+    ],
+    notes: [
+      "Only fields with a `name` are sent. Submitting `ana@example.com` posts `email=ana%40example.com&format=html` to `/subscribe`. The buttons have no `name`, so they add nothing.",
+      "A `<button>` inside a form submits it unless its `type` says otherwise. Preview an issue has `type=\"button\"`, so clicking it sends nothing until a script gives it a job.",
+      "Pressing Enter in the email field submits the form too, through the same check. Real `<button>` elements also work from the keyboard with no script: Tab to Subscribe and press Enter or Space.",
+      "The radio group is one Tab stop, on the checked option, and the arrow keys move between the options. Both share `name=\"format\"`, so checking Plain text unchecks Full.",
+    ],
+    watchOut:
+      "The browser only checks the format, and only when a person submits. `ana@example` passes even without a dot, and a script that calls `form.submit()` sends the form with the field empty. Check the address again on the server.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
