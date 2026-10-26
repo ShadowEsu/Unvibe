@@ -68,12 +68,13 @@ jobs:
           npm run package < /dev/null
           test -f release/unvibe-desktop-bridge-0.1.2.vsix
 
-      # Optional stable signing identity (self-signed, not Apple-issued). With it every Mac
-      # build has the same signature, so macOS keeps the Accessibility permission and the
-      # keychain stops asking for the login password after each update. Without the secrets
-      # the build falls back to ad-hoc signing in scripts/afterPackHook.cjs. A release must be
-      # signed with the certificate the app and install.sh pin (MAC_SIGNING_REQUIREMENT in
-      # app/src/main/updater.ts), so publishing stops here before anything is uploaded without it.
+      # Stable signing identity (self-signed, not Apple-issued). With it every Mac build has the
+      # same signature, so macOS keeps the Accessibility permission and the keychain stops asking
+      # for the login password after each update. A release must be signed with the certificate the
+      # app and install.sh pin (MAC_SIGNING_REQUIREMENT in app/src/main/updater.ts), so publishing
+      # stops here, before anything is uploaded, without it. A run that doesn't publish never
+      # imports it: scripts/afterPackHook.cjs signs that build ad-hoc, its installers are verified
+      # without the pin, and the app's updater and install.sh would refuse them.
       - name: Prepare stable Mac signing identity
         if: matrix.os == 'macos-latest'
         shell: bash
@@ -186,6 +187,8 @@ jobs:
       - name: Verify Mac installers open on Apple silicon and Intel
         if: matrix.os == 'macos-latest'
         shell: bash
+        env:
+          PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
         run: |
           set -euo pipefail
           for dmg in release/*.dmg; do
@@ -193,8 +196,13 @@ jobs:
             hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" >/dev/null
             app="$mnt/Unvibe.app"
             echo "== $dmg"
-            # The same requirement the app's updater and install.sh check (MAC_SIGNING_REQUIREMENT).
-            codesign --verify --deep --strict --verbose=2 -R='identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"' "$app"
+            if [ -n "${UNVIBE_SIGN_IDENTITY:-}" ] || [ "$PUBLISH" = "true" ]; then
+              # The same requirement the app's updater and install.sh check (MAC_SIGNING_REQUIREMENT).
+              codesign --verify --deep --strict --verbose=2 -R='identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"' "$app"
+            else
+              # Built ad-hoc for testing (no identity imported), so only the seal is checked.
+              codesign --verify --deep --strict --verbose=2 "$app"
+            fi
             ls "$mnt/.background" >/dev/null
             arch="$(lipo -archs "$app/Contents/MacOS/Unvibe")"
             echo "arch: $arch"

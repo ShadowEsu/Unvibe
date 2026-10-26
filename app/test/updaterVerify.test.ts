@@ -51,6 +51,22 @@ test('only a publishing run imports the signing identity', () => {
   assert.ok(notPublishing && firstUse > notPublishing.index, 'a run that does not publish stops before the identity is decoded or imported');
 });
 
+test('built installers are checked with the pin when the identity signed them or the run publishes, and without it otherwise', () => {
+  const workflow = readFileSync(path.resolve(__dirname, '..', '..', '.github', 'workflows', 'app-release.yml'), 'utf8');
+  const publish = "PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}";
+  const verify = workflow.slice(workflow.indexOf('- name: Verify Mac installers'), workflow.indexOf('- name: Upload build artifacts'));
+  assert.ok(verify.includes(publish), 'the step knows whether the run publishes, the same way the Prepare step does');
+  assert.match(verify, new RegExp([
+    String.raw`if \[ -n "\$\{UNVIBE_SIGN_IDENTITY:-\}" \] \|\| \[ "\$PUBLISH" = "true" \]; then`,
+    String.raw`\s+#[^\n]*`,
+    String.raw`\s+codesign --verify --deep --strict --verbose=2 -R='[^']+' "\$app"`,
+    String.raw`\s+else`,
+    String.raw`\s+#[^\n]*`,
+    String.raw`\s+codesign --verify --deep --strict --verbose=2 "\$app"`,
+    String.raw`\s+fi\n`,
+  ].join('\n')), 'a signed or publishing build must pass the pin; an ad-hoc test build keeps its artifacts');
+});
+
 test('the packaging hook checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-afterpack-test-'));
   const bin = path.join(root, 'bin');
