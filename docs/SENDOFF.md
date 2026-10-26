@@ -343,7 +343,7 @@ Full detail per version: `marketing/src/data/milestones.ts` and `git log` (272+ 
 6. **Supabase cleanup (approved by Preston):** deleted only the two test `site_feedback` rows
    ("short", "deploy check please delete"), kept the one real feedback row. With an all-orgs token,
    found orgs ShadowEsu's Org (jaymini-prod, kept), CauliformAI (one paused project, **deleted**),
-   Unvibe (kept), DVC Stuff (empty). No Cauliform/DVC data existed in the Unvibe database.
+   Unvibe (kept), a second, empty org. No data from those orgs existed in the Unvibe database.
 7. **The real device test was lying.** The original v0.1.39 run reported Home and page passes
    while every screenshot still showed onboarding step 4. Root causes, all in the test:
    `getByRole('button', {name: 'Continue'})` matched "Continue with Google" (substring match);
@@ -441,7 +441,7 @@ When you finish one, move it to the session log with the evidence.
 - [ ] **[Preston]** X/Twitter: create `@unvibe_app` (matches Instagram/TikTok), then the agent
       un-hides the X link (`marketing/src/lib/contact.ts` `X_URL`,
       `marketing/src/components/paper/SocialFollow.tsx`). Deferred by Preston on 17 Oct.
-- [ ] **[Preston]** Delete the now-empty Supabase orgs CauliformAI and DVC Stuff in the dashboard
+- [ ] **[owner]** Delete the now-empty Supabase orgs CauliformAI and a second, empty org in the dashboard
       if wanted (API cannot). Optional, they cost nothing.
 - [ ] **[Preston]** Two Supabase management tokens were pasted into a chat on 17 Oct. Revoke and
       reissue them at https://supabase.com/dashboard/account/tokens when convenient, then update
