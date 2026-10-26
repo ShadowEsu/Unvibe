@@ -11,6 +11,8 @@ export async function sendWelcomeEmail(input: {
   email: string;
   referralCode: string;
   downloadUrl?: string;
+  /** The app release a download email links. It is part of the send key, so a later release's email is not refused as a repeat. */
+  release?: string;
   /** The caller schedules a setup reminder after this, so the footer says so. */
   setupTipFollows?: boolean;
 }): Promise<{ sent: boolean; messageId?: string; error?: string }> {
@@ -33,7 +35,7 @@ export async function sendWelcomeEmail(input: {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "Idempotency-Key": `unvibe-welcome-${input.referralCode.toLowerCase()}`,
+        "Idempotency-Key": `unvibe-welcome-${input.release ? `${input.release}-` : ""}${input.referralCode.toLowerCase()}`,
       },
       body: JSON.stringify({
         from,

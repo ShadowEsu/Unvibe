@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const code = existing?.referralCode || referralCode(email);
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
-    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, setupTipFollows: true });
+    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, release, setupTipFollows: true });
   if (!existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {
