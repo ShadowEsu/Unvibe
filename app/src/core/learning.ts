@@ -30,6 +30,8 @@ export interface LocalEvent {
   explanation?: string;
   /** Optional personal note attached to this lesson. Local only — never synced. */
   note?: string;
+  /** The built-in first-run sample, not the user's own code. Never a streak day. */
+  sample?: true;
 }
 
 export interface Usage {
@@ -160,8 +162,11 @@ function bucket(app?: string): string {
 }
 
 export function computeProfile(events: LocalEvent[], todayKey: string): Profile {
-  const days = new Set(events.map(eventDay));
   const learning = events.filter(isLearningEvent);
+  // A streak day is a local calendar day with at least one finished explanation of the user's own
+  // code (marking one understood also records it). App opens, login launches, Ask chats and the
+  // first-run sample don't count.
+  const days = new Set(learning.filter((e) => e.scope !== 'chat' && !e.sample).map(eventDay));
 
   const conceptEvents = new Map<string, LocalEvent[]>();
   for (const e of learning) {

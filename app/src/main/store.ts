@@ -9,7 +9,6 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { LocalEvent, Outcome } from '../core/learning';
 import type { ProgressStep } from './progress';
-import { localDayKey } from '../core/learning';
 import { openToken, sealToken } from '../core/tokenVault';
 import { mergeRemoteEvents } from '../core/syncModel';
 
@@ -62,6 +61,8 @@ interface Data {
   chatThreads?: ChatThread[];
   /** Setup-progress steps the server has acknowledged (progress.ts), so a step is sent once. */
   progressSent?: Partial<Record<ProgressStep, true>>;
+  /** The launch-at-login question was shown (either answer), so it is never asked again. */
+  loginPromptAsked?: true;
 }
 
 const CHAT_THREAD_CAP = 30;
@@ -117,32 +118,6 @@ class Store {
     else this.data.events.push(ev);
     this.queue(ev.id);
     this.save();
-  }
-
-  /** Persist on this Mac only. Used for streak days that should not sync or use AI quota. */
-  recordLocal(ev: LocalEvent): void {
-    const idx = this.data.events.findIndex((e) => e.id === ev.id);
-    if (idx >= 0) this.data.events[idx] = ev;
-    else this.data.events.push(ev);
-    this.save();
-  }
-
-  ensureDayActive(): void {
-    const today = localDayKey(new Date());
-    const already = this.data.events.some((event) => (event.localDate ?? event.ts.slice(0, 10)) === today);
-    if (already) return;
-    const now = new Date();
-    this.recordLocal({
-      id: `active-${today}`,
-      ts: now.toISOString(),
-      eventType: 'day_active',
-      localDate: today,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      scope: 'app',
-      level: 'intermediate',
-      outcome: 'reviewed',
-      lines: 0,
-    });
   }
 
   setOutcome(id: string, outcome: Outcome, concept?: string, conceptLabel?: string): void {
@@ -347,6 +322,15 @@ class Store {
 
   markProgressSent(step: ProgressStep): void {
     this.data.progressSent = { ...this.data.progressSent, [step]: true };
+    this.save();
+  }
+
+  loginPromptAsked(): boolean {
+    return this.data.loginPromptAsked === true;
+  }
+
+  markLoginPromptAsked(): void {
+    this.data.loginPromptAsked = true;
     this.save();
   }
 

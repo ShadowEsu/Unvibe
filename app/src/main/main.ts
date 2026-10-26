@@ -52,10 +52,11 @@ import {
   type RequestOpts,
 } from './review';
 import { store, type ChatThread } from './store';
-import { applyLoginItem, settings, type Settings } from './settings';
+import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
+import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { reportProgress, syncProgress } from './progress';
@@ -193,14 +194,46 @@ function makeSession(
     abort: null,
     recorded: false,
     level,
+    isSample: () => session.code === FIRST_RUN_SAMPLE,
     onRecorded: () => {
       notify('Added to your learning history');
       // First run step 2 asks its one level question once the sample answer has finished.
-      if (session.code === FIRST_RUN_SAMPLE && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+      if (session.isSample?.() && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+      void askLaunchAtLogin(!session.isSample?.());
     },
     onUnderstood: () => notify('Nice — concept understood'),
   };
   return session;
+}
+
+/** Launch at login, asked once after the user's first explanation of their own code (first-run spec). */
+async function askLaunchAtLogin(ownCode: boolean): Promise<void> {
+  const step = loginPromptStep({
+    ownCode,
+    asked: store().loginPromptAsked(),
+    launchAtLogin: () => settings().all().launchAtLogin || loginItemState().openAtLogin,
+  });
+  if (step === 'none') return;
+  store().markLoginPromptAsked();
+  if (step === 'settle') return;
+  reportProgress('login_prompt_shown');
+  const question: Electron.MessageBoxOptions = {
+    type: 'question',
+    buttons: ['Yes', 'No'],
+    defaultId: 0,
+    cancelId: 1,
+    message: 'Open Unvibe when you log in, so the shortcut is ready?',
+    detail: 'You can turn this off in Settings.',
+  };
+  const panel = currentWidget();
+  const { response } = panel && !panel.isDestroyed()
+    ? await dialog.showMessageBox(panel, question)
+    : await dialog.showMessageBox(question);
+  if (response !== 0) return;
+  settings().set({ launchAtLogin: true });
+  reportProgress('login_prompt_accepted');
+  const fallback = loginItemFallback(process.platform, loginItemState());
+  if (fallback) await dialog.showMessageBox({ type: 'info', buttons: ['OK'], message: fallback });
 }
 
 function sessionFor(tabId = activeTabId): ReviewSession | undefined {
@@ -598,7 +631,6 @@ app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
-  store().ensureDayActive();
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
@@ -654,8 +686,10 @@ app.whenReady().then(() => {
   if (!registerShortcut(s.shortcut)) {
     notify('That shortcut is in use by another app. Pick a different one in Settings.');
   }
-  // Companion home keeps the app visible in Dock / Cmd-Tab on launch.
-  openCompanion();
+  // Companion home keeps the app visible in Dock / Cmd-Tab on launch. A login launch after setup
+  // starts quietly in the tray instead, so the shortcut is ready with no window.
+  const loginLaunch = isLoginLaunch(process.platform, process.argv, isMac && loginItemState().wasOpenedAtLogin);
+  if (launchOpensWindow(loginLaunch, s.onboarded)) openCompanion();
   repairAccessibilityAfterUpdate();
   if (pendingExternalReview) {
     const request = pendingExternalReview;
@@ -686,7 +720,6 @@ app.whenReady().then(() => {
     ]).popup({ window: bar });
   });
   ipcMain.handle('bar:snapshot', async () => {
-    store().ensureDayActive();
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
     let quota = { used: 0, limit: 30, remaining: 30 };
@@ -943,10 +976,7 @@ app.whenReady().then(() => {
     user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
   }));
-  ipcMain.handle('learning:profile', () => {
-    store().ensureDayActive();
-    return computeProfile(store().events(), todayKey());
-  });
+  ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));

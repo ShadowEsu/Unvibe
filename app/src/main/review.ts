@@ -63,6 +63,8 @@ export interface ReviewSession {
   snapshotText?: string;
   mode?: ReviewMode;
   pendingAnswer?: { answerIndex: number; concept: string; conceptLabel: string; rationale: string };
+  /** True while the session holds the built-in first-run sample rather than the user's own code. */
+  isSample?: () => boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
 }
@@ -235,6 +237,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
     project: session.project,
     code: session.code.slice(0, 40_000),
     explanation: explanation?.slice(0, 60_000),
+    ...(session.isSample?.() ? { sample: true as const } : {}),
   };
   try {
     store().recordReview(ev);
