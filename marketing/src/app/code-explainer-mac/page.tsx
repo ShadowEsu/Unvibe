@@ -76,8 +76,8 @@ export default function CodeExplainerMacPage() {
         <h2 id="mac-first-open">The first open</h2>
         <p>
           Unvibe is not notarized by Apple yet, so the first time you open it macOS says &ldquo;Unvibe Not Opened&rdquo;.
-          You allow it once with Open Anyway in System Settings, under Privacy &amp; Security, and later versions update
-          themselves. The one-line Terminal install skips this step.
+          You allow it once with Open Anyway in System Settings, under Privacy &amp; Security, and later versions install
+          from inside the app with one click. The one-line Terminal install skips this step.
         </p>
         <p>
           <Link className="paper-text-link" href="/install-help">Every first-open step, for both installs</Link>

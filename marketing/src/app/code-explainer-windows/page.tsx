@@ -105,9 +105,9 @@ export default function CodeExplainerWindowsPage() {
         <h2 id="win-sent">What leaves your PC</h2>
         <p>
           Only the request you make: the highlighted code with its file name and language (on Pro, some code around it
-          for context), or the git changes in a Brief, and any question you type. Keys and tokens are filtered out on your PC
-          before anything is sent, and since version 0.1.44 the same goes for your questions and Chat messages. Your
-          repository is never uploaded.
+          for context), or, on Pro, the git changes you ask the AI to explain, and any question you type. A request with
+          a key or token in it is stopped on your PC, and a possible one asks you first; since version 0.1.44 that check
+          covers your questions and Chat messages too. Your repository is never uploaded.
         </p>
       </section>
 
