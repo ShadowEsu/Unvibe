@@ -11,6 +11,8 @@ const nextConfig = {
       { source: "/app/:path*", destination: "/#try-it", permanent: false },
       // A guessed download URL (404 until 27 Oct): the download page. Permanent (308).
       { source: "/download", destination: "/beta", permanent: true },
+      // Legacy admin path: a real redirect, so no page (and no inherited "index, follow") is ever served.
+      { source: "/waitlist-admin", destination: "/waitlist", permanent: false },
     ];
   },
   async rewrites() {
