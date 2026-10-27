@@ -2,7 +2,6 @@ import {
   INSTAGRAM_URL,
   LINKEDIN_URL,
   SUPPORT_EMAIL,
-  TIKTOK_URL,
   X_URL,
   supportMailto,
 } from "@/lib/contact";
@@ -40,17 +39,6 @@ function InstagramMark() {
       />
       <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <circle cx="17.2" cy="6.8" r="0.85" fill="currentColor" />
-    </svg>
-  );
-}
-
-function TikTokMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M16.2 3.2c.7 2.4 2.4 4.3 4.8 5v3.05a8.2 8.2 0 0 1-4.8-1.5v6.55A6.7 6.7 0 1 1 9.4 9.6c.4 0 .8.04 1.2.12v3.2A3.55 3.55 0 1 0 13.9 16V3.2h2.3Z"
-      />
     </svg>
   );
 }
@@ -104,17 +92,6 @@ function ColorInstagramMark() {
       <rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5.2" fill="url(#unvibeIgFill)" />
       <circle cx="12" cy="12" r="4.1" fill="none" stroke="var(--snow)" strokeWidth="1.7" />
       <circle cx="16.7" cy="7.3" r="1" fill="var(--snow)" />
-    </svg>
-  );
-}
-
-function ColorTikTokMark() {
-  const note = "M16.2 3.2c.7 2.4 2.4 4.3 4.8 5v3.05a8.2 8.2 0 0 1-4.8-1.5v6.55A6.7 6.7 0 1 1 9.4 9.6c.4 0 .8.04 1.2.12v3.2A3.55 3.55 0 1 0 13.9 16V3.2h2.3Z";
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="var(--logo-tiktok-cyan)" transform="translate(-1.15 0.55)" d={note} />
-      <path fill="var(--logo-tiktok-pink)" transform="translate(1.15 -0.45)" d={note} />
-      <path fill="var(--logo-tiktok)" d={note} />
     </svg>
   );
 }
