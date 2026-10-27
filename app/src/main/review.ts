@@ -7,9 +7,9 @@ import { scanReviewPayload, hasBlocking, type SecretFinding } from '../core/secr
 import { SseParser } from '../core/sse';
 import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
-import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
+import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
+import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch, PlanLimitError } from './backend';
 import { store } from './store';
 
 /** Longest wait for the first words of an explanation. */
@@ -29,15 +29,15 @@ import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
-  | { type: 'status'; tabId: string; message: string }
+  | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
   | { type: 'token'; tabId: string; text: string }
   | { type: 'done'; tabId: string; model: string; mock: boolean }
   | { type: 'error'; tabId: string; message: string; code?: string; upgradePath?: string }
   | { type: 'cancelled'; tabId: string }
-  | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string }
-  | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string }
+  | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string; index: number; total: number; mode: QuizMode }
+  | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string; hasMissed: boolean }
   | { type: 'usage'; tabId: string; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
   | { type: 'understood'; tabId: string }
   /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
@@ -63,6 +63,8 @@ export interface ReviewSession {
   snapshotText?: string;
   mode?: ReviewMode;
   pendingAnswer?: { answerIndex: number; concept: string; conceptLabel: string; rationale: string };
+  /** Per-explanation progress, kept in main so renderer clicks cannot choose angles or exceed three. */
+  comprehension?: { asked: number; hasMissed: boolean; understood: boolean; loading: boolean };
   /** True while the session holds the built-in first-run sample rather than the user's own code. */
   isSample?: () => boolean;
   onRecorded?: () => void;
@@ -145,6 +147,8 @@ export function applyBuiltReview(session: ReviewSession, built: {
   session.mode = built.mode;
   session.level = built.payload.level;
   session.recorded = false;
+  session.comprehension = undefined;
+  session.pendingAnswer = undefined;
 }
 
 function persistUnderstoodSnapshot(session: ReviewSession): void {
@@ -295,6 +299,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     return;
   }
   session.level = opts.level;
+  if (!opts.question) {
+    session.comprehension = undefined;
+    session.pendingAnswer = undefined;
+  }
   session.explanationText = '';
   session.islandStreaming = false;
   // A lesson this panel saved before a wipe went with it: this run saves a new one.
@@ -345,7 +353,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, STREAM_IDLE_MS);
   };
 
-  send(win, session, { type: 'status', message: 'thinking' });
+  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question });
   try {
     const token = store().token();
     const usage = await cachedAppUsage();
@@ -508,12 +516,22 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
 }
 
+const QUESTION_MODES: readonly QuizMode[] = ['quick-check', 'scenario', 'recall'];
+
 export async function startComprehension(win: BrowserWindow, session: ReviewSession): Promise<void> {
   if (!session.code && !session.payload) return;
+  const progress = session.comprehension ??= { asked: 0, hasMissed: false, understood: false, loading: false };
+  if (progress.loading || progress.asked >= QUESTION_MODES.length) return;
+  const mode = QUESTION_MODES[progress.asked];
+  progress.loading = true;
+  session.pendingAnswer = undefined;
   try {
     pulseBar({ phase: 'thinking', label: 'Thinking' });
     const payload = await ensurePayload(session, { level: session.level });
-    const q = await fetchQuestion(payload, store().token());
+    if (session.comprehension !== progress) return;
+    const q = await fetchQuestion({ ...payload, quizMode: mode }, store().token());
+    if (session.comprehension !== progress) return;
+    progress.asked++;
     session.pendingAnswer = {
       answerIndex: q.answerIndex,
       concept: q.concept,
@@ -525,21 +543,32 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
       question: q.question,
       options: q.options,
       conceptLabel: q.conceptLabel,
+      index: progress.asked,
+      total: QUESTION_MODES.length,
+      mode,
     });
     pulseBar({ phase: 'ready', label: 'Ready' });
-  } catch {
-    send(win, session, { type: 'quizError', message: 'Could not write a question for this one. Your explanation is still here.' });
+  } catch (error) {
+    if (session.comprehension !== progress) return;
+    send(win, session, { type: 'quizError', message: error instanceof PlanLimitError
+      ? error.message
+      : 'Could not write a question for this one. Your explanation is still here.' });
+  } finally {
+    progress.loading = false;
   }
 }
 
 export function gradeComprehension(win: BrowserWindow, session: ReviewSession, choice: number): void {
   if (wipedSinceRun(session)) return;
   const a = session.pendingAnswer;
-  if (!a) return;
+  const progress = session.comprehension;
+  if (!a || !progress) return;
   const correct = choice === a.answerIndex;
+  const hasMissed = progress.hasMissed || !correct;
+  const firstRight = correct && !progress.understood;
   try {
-    store().setOutcome(session.reviewId, correct ? 'understood' : 'needs_review', a.concept, a.conceptLabel);
-    if (correct) persistUnderstoodSnapshot(session);
+    store().setOutcome(session.reviewId, hasMissed ? 'needs_review' : 'understood', a.concept, a.conceptLabel);
+    if (firstRight) persistUnderstoodSnapshot(session);
   } catch (error) {
     send(win, session, {
       type: 'error',
@@ -547,12 +576,18 @@ export function gradeComprehension(win: BrowserWindow, session: ReviewSession, c
     });
     return;
   }
-  if (correct) session.onUnderstood?.();
+  progress.hasMissed = hasMissed;
+  if (firstRight) {
+    progress.understood = true;
+    session.onUnderstood?.();
+  }
+  session.pendingAnswer = undefined;
   void flush();
   send(win, session, {
     type: 'graded',
     correct,
     answerIndex: a.answerIndex,
     rationale: a.rationale,
+    hasMissed,
   });
 }

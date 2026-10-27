@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
-import type { ExplanationLevel } from '../../core/protocol';
+import type { ExplanationLevel, QuizMode } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
@@ -26,6 +26,10 @@ interface Quiz {
   correct?: boolean;
   answerIndex?: number;
   rationale?: string;
+  index?: number;
+  total?: number;
+  mode?: QuizMode;
+  hasMissed?: boolean;
 }
 
 interface EntryMeta {
@@ -56,6 +60,7 @@ interface TabState {
   mock: boolean;
   ask: string;
   quiz: Quiz | null;
+  quizHidden?: boolean;
   history: HistoryEntry[];
   originOpen: boolean;
   originError: string;
@@ -498,7 +503,7 @@ function Widget() {
             return prev;
           case 'status':
             playTone('think');
-            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: null });
+            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
           case 'consent':
             return patchTab(prev, tabId, { findings: ev.findings ?? [], phase: 'consent' });
           case 'blocked':
@@ -530,6 +535,9 @@ function Widget() {
                 question: ev.question,
                 options: ev.options,
                 conceptLabel: ev.conceptLabel,
+                index: ev.index,
+                total: ev.total,
+                mode: ev.mode,
               },
             });
           case 'graded':
@@ -542,6 +550,7 @@ function Widget() {
                     correct: ev.correct,
                     answerIndex: ev.answerIndex,
                     rationale: ev.rationale,
+                    hasMissed: ev.hasMissed,
                   }
                 : tab.quiz,
             });
@@ -620,6 +629,16 @@ function Widget() {
     window.unvibe.request({ level: active.level, ...opts });
   };
 
+  const openQuiz = (another = false) => {
+    setActiveTool('quiz');
+    if (!another && active.quiz && active.quiz.phase !== 'failed') {
+      setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: false }));
+      return;
+    }
+    setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' }, quizHidden: false }));
+    window.unvibe.testMe();
+  };
+
   const pick = (l: ExplanationLevel) => {
     if (outOfExplanations) return;
     setTabs((prev) => patchTab(prev, activeRef.current, { level: l }));
@@ -695,7 +714,7 @@ function Widget() {
   };
 
   return (
-    <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
@@ -743,11 +762,7 @@ function Widget() {
               setActiveTool('depth');
               document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }}><ToolIcon name="depth" /><b>Depth</b></button>
-            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => {
-              setActiveTool('quiz');
-              setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
-              window.unvibe.testMe();
-            }}><ToolIcon name="quiz" /><b>Quiz</b></button>
+            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => openQuiz()}><ToolIcon name="quiz" /><b>Quiz</b></button>
             <button className={`tool--ask${activeTool === 'ask' ? ' on' : ''}`} type="button" title="Ask a follow-up" onClick={() => {
               setActiveTool('ask');
               requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
@@ -957,7 +972,7 @@ function Widget() {
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
             </div>
-            {active.quiz && (
+            {active.quiz && !active.quizHidden && (
               <aside className="quiz-rail" aria-label="Test me">
                 {active.quiz.phase === 'loading' && (
                   <div className="quiz-rail__wait" role="status">
@@ -972,16 +987,13 @@ function Widget() {
                     <div className="quiz__actions">
                       <button
                         className="btn"
-                        onClick={() => {
-                          setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
-                          window.unvibe.testMe();
-                        }}
+                        onClick={() => openQuiz()}
                       >
                         Try again
                       </button>
                       <button
                         className="btn ghost"
-                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
                       >
                         Hide
                       </button>
@@ -990,7 +1002,12 @@ function Widget() {
                 )}
                 {active.quiz.phase !== 'loading' && active.quiz.phase !== 'failed' && (
                   <div className="quiz">
-                    <div className="quiz__kicker">Test me</div>
+                    <div className="quiz__kicker">
+                      Test me{(active.quiz.index ?? 1) > 1 ? ` · ${active.quiz.index} of ${active.quiz.total}` : ''}
+                    </div>
+                    {active.quiz.mode !== 'quick-check' && active.quiz.mode && (
+                      <div className="quiz__concept">{active.quiz.mode === 'scenario' ? 'Prove it' : 'Recall'}</div>
+                    )}
                     {active.quiz.conceptLabel && (
                       <div className="quiz__concept">{active.quiz.conceptLabel}</div>
                     )}
@@ -1029,17 +1046,33 @@ function Widget() {
                     {active.quiz.phase === 'graded' ? (
                       <>
                         <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`} role="status">
-                          {active.quiz.correct ? 'Correct. That one is understood.' : 'Not quite. Saved to revisit.'}
+                          {active.quiz.correct
+                            ? active.quiz.hasMissed ? 'Correct. Earlier misses are saved to revisit.' : 'Correct. That one is understood.'
+                            : 'Not quite. Saved to revisit.'}
                         </div>
                         {active.quiz.rationale && (
                           <div className="quiz__why">{active.quiz.rationale}</div>
                         )}
-                        <button
-                          className="btn ghost"
-                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
-                        >
-                          Hide question
-                        </button>
+                        {(active.quiz.index ?? 1) >= (active.quiz.total ?? 3) && (
+                          <div className="quiz__why">
+                            {active.quiz.hasMissed
+                              ? "That's all three for this code. Missed ones come back in your review queue."
+                              : 'All three right.'}
+                          </div>
+                        )}
+                        <div className="quiz__actions">
+                          {(active.quiz.index ?? 1) < (active.quiz.total ?? 3) && (
+                            <button className="btn" onClick={() => openQuiz(true)}>
+                              Another question
+                            </button>
+                          )}
+                          <button
+                            className="btn ghost"
+                            onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
+                          >
+                            Hide question
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <div className="quiz__actions">
@@ -1059,7 +1092,7 @@ function Widget() {
                         </button>
                         <button
                           className="btn ghost"
-                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
                         >
                           Cancel
                         </button>
@@ -1113,12 +1146,7 @@ function Widget() {
                 <button
                   className="chip chip--test"
                   disabled={stillTyping}
-                  onClick={() => {
-                    setTabs((prev) =>
-                      patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }),
-                    );
-                    window.unvibe.testMe();
-                  }}
+                  onClick={() => openQuiz()}
                 >
                   Test me
                 </button>

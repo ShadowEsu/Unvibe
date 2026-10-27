@@ -121,11 +121,14 @@ async function request(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
+/** Allowance refusals retain their existing wording without treating every service error as a limit. */
+export class PlanLimitError extends Error {}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => ({}));
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
-    if (res.status === 429 || res.status === 402) throw new Error(serviceMessage(body) || 'Your plan limit has been reached. Open Plan & usage to review options.');
+    if (res.status === 429 || res.status === 402) throw new PlanLimitError(serviceMessage(body) || 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
     throw new Error(`The service could not complete that request (${res.status}).`);
