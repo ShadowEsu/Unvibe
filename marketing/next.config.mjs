@@ -9,6 +9,8 @@ const nextConfig = {
     return [
       { source: "/app", destination: "/#try-it", permanent: false },
       { source: "/app/:path*", destination: "/#try-it", permanent: false },
+      // A guessed download URL (404 until 27 Oct): the download page. Permanent (308).
+      { source: "/download", destination: "/beta", permanent: true },
     ];
   },
   async rewrites() {

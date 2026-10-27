@@ -21,6 +21,7 @@ import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { BOOT_SCRIPT } from "@/lib/theme";
 import { jsonLdScript } from "@/lib/jsonLd";
+import { SITE_URL } from "@/lib/siteUrl";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -65,12 +66,7 @@ const serif = Instrument_Serif({
   preload: false,
 });
 
-const siteUrlRaw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-const siteUrl =
-  siteUrlRaw && /^https?:\/\//i.test(siteUrlRaw) && !siteUrlRaw.includes("[SENSITIVE]")
-    ? siteUrlRaw
-    : "https://unvibe.site";
-
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -114,7 +110,8 @@ const softwareJsonLd = {
   name: "Unvibe",
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS, Windows",
-  softwareVersion: BETA_INSTALL_VERSION,
+  // The release the site installs (betaInstallScript.test pins it to the install tag), without the tag's "v".
+  softwareVersion: BETA_INSTALL_VERSION.replace(/^v/, ""),
   downloadUrl: `${siteUrl}/beta`,
   description:
     "A desktop overlay for Mac and Windows that explains selected AI-generated code in place.",

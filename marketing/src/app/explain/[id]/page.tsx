@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainMono } from "../mono";
 import "../explain.css";
 
@@ -45,6 +46,12 @@ export default function ExplainLanguagePage({ params }: Params) {
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Explain code", path: "/explain" }, { name, path: `/explain/${page.id}` }])),
+        }}
+      />
       <header className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}

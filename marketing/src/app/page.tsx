@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
 import { TryIt } from "@/components/paper/TryIt";
@@ -11,6 +12,8 @@ import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
+import { explainLanguage, explainPages } from "@/lib/explainPages";
 
 export const metadata: Metadata = {
   title: { absolute: "Unvibe: understand the code AI writes for you" },
@@ -18,6 +21,10 @@ export const metadata: Metadata = {
 };
 
 const homeFaq = faqItems.filter((item) => ["what-is-it", "which-shortcut", "editors", "sent", "beta", "accuracy"].includes(item.id));
+
+/** The language pages linked from the Try it section, so search engines reach them from the homepage. */
+const HOME_LANGUAGES = ["python", "javascript", "typescript", "sql", "bash"];
+const homeLanguagePages = HOME_LANGUAGES.map((id) => explainPages.find((page) => page.id === id)).filter((page) => page !== undefined);
 
 export const revalidate = 300;
 
@@ -28,6 +35,7 @@ export const revalidate = 300;
 export default function HomePage() {
   return (
     <div className="home-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteJsonLd) }} />
       <PhotoHero />
 
       <AppTour />
@@ -54,6 +62,17 @@ export default function HomePage() {
             </p>
           </div>
           <TryIt />
+          <p className="home-langs">
+            Explain a language:{" "}
+            {homeLanguagePages.map((page, index) => (
+              <span key={page.id}>
+                {index > 0 ? ", " : null}
+                <Link className="paper-text-link" href={`/explain/${page.id}`}>
+                  Explain {explainLanguage(page).name} code
+                </Link>
+              </span>
+            ))}
+          </p>
         </div>
       </section>
 
