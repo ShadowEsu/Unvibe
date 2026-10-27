@@ -1,6 +1,6 @@
 import { BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { formatUsd } from "@/data/compensation";
-import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
+import { BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, BUSINESS_UNLIMITED, EXPLANATIONS_PER_MONTH, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 /**
@@ -8,8 +8,8 @@ import { SHORTCUTS } from "@/lib/shortcuts";
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
  * keys and tokens in code and diffs filtered on the device (typed questions and Chat too from
  * v0.1.44, not in v0.1.43); no local-only mode yet; AI explanations can be wrong.
- * Plans, prices and allowances come from lib/pricing. Plain text only: Big Business names its written cap
- * ("5,000 explanations a month (fair use)") and points to the Fair use section in words.
+ * Plans, prices and allowances come from lib/pricing. Plain text only: Big Business names its named seats,
+ * its use with no monthly cap and its fair-use rate limit, and points to the Fair use section in words.
  */
 
 export interface FaqItem {
@@ -118,7 +118,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "plans",
     question: "What plans are there?",
-    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations a month (fair use) and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month, as written in Fair use on the pricing page. Payments for Pro, Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
+    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, up to ${BUSINESS_SEATS} people on ${BUSINESS_SEATS} named seats, ${BUSINESS_UNLIMITED}, under the ${BUSINESS_RATE_LIMIT_LINE}, as written in Fair use on the pricing page. Payments for Pro, Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
     category: "pricing",
   },
   {
@@ -149,7 +149,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "groups",
     question: "Can a class or a group use it?",
-    answer: "Everyone can use Unvibe free with their own account. Paid plans are one account each, with no shared seats. For a class or a group, email hello@unvibe.site.",
+    answer: `Everyone can use Unvibe free with their own account. Pro and Enterprise are one account each. Big Business covers up to ${BUSINESS_SEATS} people, each on a named seat. For a class or a group, email hello@unvibe.site.`,
     category: "platform",
   },
   {

@@ -7,8 +7,8 @@ import { faqItems } from "../data/faq";
 import { FREE_USE_NOTE } from "../emails/betaShared";
 import { betaWindowsInstallScript } from "./betaInstallScript";
 import { kitMarkdown } from "./kit";
-import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING } from "./pricing";
-import { FAIR_USE, FAIR_USE_LABEL, PAYMENTS_OPEN_SOON, TERMS_NEW_TIERS, pricingCopy, type PlanCopy, type PricingCopy } from "./pricingCopy";
+import { BUSINESS_RATE_LIMIT, BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FAIR_USE_LABEL, FREE_LINE, PRICING } from "./pricing";
+import { FAIR_USE, PAYMENTS_OPEN_SOON, TERMS_NEW_TIERS, pricingCopy, type PlanCopy, type PricingCopy } from "./pricingCopy";
 
 const srcRoot = fileURLToPath(new URL("..", import.meta.url));
 const source = (...parts: string[]) => readFileSync(join(srcRoot, ...parts), "utf8");
@@ -37,6 +37,16 @@ const PUBLIC_COPY = [
   ...faqItems.flatMap((item) => [item.question, item.answer]),
 ].join("\n");
 
+/** Splits copy into sentences. */
+const SENTENCE_BREAK = /(?<=\.)\s+/;
+
+/** Every Big Business string: the card in both states, the fair-use section, the Terms, and the FAQ and kit sentences that name it. */
+const BUSINESS_COPY = [
+  ...STATES.flatMap((paymentsOpen) => planText(plan(pricingCopy(paymentsOpen), "business"))),
+  FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS,
+  ...[kitMarkdown(), ...faqItems.map((item) => item.answer)].flatMap((text) => text.split(SENTENCE_BREAK)).filter((sentence) => /Big Business/.test(sentence)),
+];
+
 describe("the plan lineup", () => {
   it("is Free, Pro, Enterprise and Big Business at the settled prices", () => {
     assert.deepEqual(PRICING, { proMonthly: 9, proAnnual: 81, annualDiscountPercent: 25, enterpriseMonthly: 50, businessOnce: 5000 });
@@ -58,7 +68,7 @@ describe("the plan lineup", () => {
       assert.equal(plan(copy, "free").allowance, "Free: 50 explanations a month with a free account (50 in your first 30 days without one)");
       assert.equal(plan(copy, "pro").allowance, "200 explanations a month");
       assert.equal(plan(copy, "enterprise").allowance, "1,000 explanations a month, one account");
-      assert.equal(plan(copy, "business").allowance, "5,000 explanations a month (fair use)");
+      assert.equal(plan(copy, "business").allowance, "Up to 10 named seats, unlimited explanations and questions, under a fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour");
     }
   });
 
@@ -81,7 +91,8 @@ describe("Enterprise and Big Business", () => {
       it(`${tier.name} reads Payments open soon and only links to an application email (${label(paymentsOpen)})`, () => {
         assert.equal(tier.badge, PAYMENTS_OPEN_SOON);
         assert.equal(PAYMENTS_OPEN_SOON, "Payments open soon");
-        assert.equal(tier.detail, "One account, no shared seats. Email us to apply and we write back when it opens.", "the badge says Payments open soon; the body doesn't repeat it");
+        const detail = id === "business" ? "One named account for each of up to 10 people." : "One account, no shared seats.";
+        assert.equal(tier.detail, `${detail} Email us to apply and we write back when it opens.`, "the badge says Payments open soon; the body doesn't repeat it");
         assert.match(tier.href, /^mailto:hello@unvibe\.site\?subject=Unvibe%20(Enterprise|Big%20Business)%20application$/);
         assert.equal(tier.cta, "Apply by email");
         assert.equal(tier.primary, false);
@@ -104,7 +115,8 @@ describe("Enterprise and Big Business", () => {
     assert.ok(plan(copy, "business").features.includes("One payment, not a subscription"));
     assert.ok(plan(copy, "enterprise").features.includes("Monthly only, no annual plan"));
     assert.match(TERMS_NEW_TIERS, /^Enterprise \(\$50 a month\) and Big Business \(\$5,000 once\) payments are not open yet\./);
-    assert.match(TERMS_NEW_TIERS, /Big Business is a one-time payment for one account that does not renew\./);
+    assert.match(TERMS_NEW_TIERS, /Big Business is a one-time payment that does not renew, for up to 10 people on 10 named seats\./);
+    assert.match(TERMS_NEW_TIERS, /A seat is one person's named account and frees only when that person is removed from the workspace; seats do not rotate automatically\./);
   });
 
   it("never mentions a call anywhere in tier, fair-use, terms or FAQ copy", () => {
@@ -117,20 +129,50 @@ describe("Enterprise and Big Business", () => {
     for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /\bcall with\b/i, text);
   });
 
-  it("promises no early access, no unlimited use and no contact that nothing sends", () => {
+  it("promises no early access, no unlimited use outside Big Business and no contact that nothing sends", () => {
     assert.equal(plan(pricingCopy(false), "business").eyebrow, "The most room of any plan.");
     assert.deepEqual(plan(pricingCopy(false), "business").features, ["Everything in Pro", "One payment, not a subscription"]);
-    for (const paymentsOpen of STATES) assert.doesNotMatch(PUBLIC_COPY + pricingCopy(paymentsOpen).description, /latest features|newest features|unlimited|contact you/i);
-    for (const text of [FAIR_USE.limit, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /latest features|unlimited|contact you/i, text);
+    for (const paymentsOpen of STATES) assert.doesNotMatch(PUBLIC_COPY + pricingCopy(paymentsOpen).description, /latest features|newest features|contact you/i);
+    for (const text of [FAIR_USE.limit, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /latest features|contact you/i, text);
+  });
+
+  it("says unlimited only for Big Business", () => {
+    for (const paymentsOpen of STATES) {
+      const copy = pricingCopy(paymentsOpen);
+      assert.match(plan(copy, "business").allowance, /unlimited explanations and questions/);
+      for (const item of copy.plans) if (item.id !== "business") assert.doesNotMatch(planText(item).join("\n"), /unlimited/i, item.id);
+      for (const text of [copy.heading.lead, copy.heading.emphasis, copy.heading.tail, copy.description, copy.disclosure, copy.termsNote ?? ""]) assert.doesNotMatch(text, /unlimited/i, text);
+    }
+    for (const text of [FAIR_USE.heading, FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.flatMap((item) => [item.question, item.answer])]) {
+      for (const sentence of text.split(SENTENCE_BREAK)) if (/unlimited/i.test(sentence)) assert.match(sentence, /^Big Business\b/, sentence);
+    }
+  });
+
+  it("no Big Business string names a monthly number", () => {
+    assert.ok(BUSINESS_COPY.length > 10);
+    for (const text of BUSINESS_COPY) {
+      assert.doesNotMatch(text, /\d[\d,]*\s+(explanations|questions)[^.]*\b(a|per|this|each)\s+month/i, text);
+      assert.doesNotMatch(text, /5,?000 explanations|10,?000 questions|pause until|next month/i, text);
+    }
   });
 });
 
 describe("fair use", () => {
-  it("is one constant, and the written section is built from it", () => {
-    assert.deepEqual(BUSINESS_FAIR_USE, { explanations: 5000, questions: 10000 });
-    assert.equal(FAIR_USE.limit, "Big Business includes up to 5,000 explanations and 10,000 questions a month, for one person's normal use. Past that, explanations pause until the next month.");
-    assert.equal(FAIR_USE.enforcement, "The app enforces this limit exactly like any other plan limit. No hidden throttling.");
+  it("is one constant each, and the written section is built from them", () => {
+    assert.deepEqual(BUSINESS_RATE_LIMIT, { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 });
+    assert.equal(BUSINESS_SEATS, 10);
+    assert.equal(BUSINESS_RATE_LIMIT_LINE, "fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour");
+    assert.equal(FAIR_USE.limit, "Big Business covers up to 10 people, each on a named seat, with no monthly cap on explanations or questions. Its only limit is a fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour, with explanations and questions counted together. It is sized so one person working normally never reaches it.");
+    assert.equal(FAIR_USE.enforcement, "When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. No hidden throttling. Refunds and abuse follow the rest of the Terms.");
     assert.equal(FAIR_USE_HREF, "/pricing#fair-use");
+  });
+
+  it("names 10 requests a minute, 60 an hour, per person, and up to 10 people wherever Big Business is described", () => {
+    const card = plan(pricingCopy(false), "business");
+    for (const text of [FAIR_USE.limit, card.allowance]) assert.match(text, /per person, 10 requests a minute, 60 an hour and 1 million characters an hour/, text);
+    for (const text of [FAIR_USE.limit, TERMS_NEW_TIERS, card.detail]) assert.match(text, /up to 10 people/, text);
+    const plansAnswer = faqItems.find((item) => item.id === "plans")?.answer ?? "";
+    for (const text of [card.allowance, TERMS_NEW_TIERS, plansAnswer, kitMarkdown()]) assert.match(text, /10 named seats/i, text);
   });
 
   it("is a section with id fair-use on /pricing and a linked paragraph in the Terms", () => {
@@ -144,20 +186,19 @@ describe("fair use", () => {
     assert.match(terms, /\{TERMS_NEW_TIERS\}/);
   });
 
-  it("Big Business names its written cap, and \"(fair use)\" links to the fair-use section", () => {
+  it("Big Business names its fair-use rate limit, which links to the fair-use section", () => {
     for (const paymentsOpen of STATES) {
       const copy = pricingCopy(paymentsOpen);
       const business = plan(copy, "business");
-      assert.equal(FAIR_USE_LABEL, "(fair use)");
-      assert.ok(business.allowance.endsWith(` ${FAIR_USE_LABEL}`));
+      assert.equal(FAIR_USE_LABEL, "fair-use rate limit against automated abuse");
+      assert.equal(business.allowance.split(FAIR_USE_LABEL).length, 2, "the label appears once, so the card links it once");
       assert.equal(business.allowanceHref, FAIR_USE_HREF);
       for (const item of copy.plans) if (item.id !== "business") assert.equal(item.allowanceHref, null, item.id);
     }
     assert.match(source("components", "redesign", "PricingPlans.tsx"), /<a href=\{plan\.allowanceHref\}>\{FAIR_USE_LABEL\}<\/a>/);
-    for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, ...faqItems.flatMap((item) => [item.question, item.answer])]) assert.doesNotMatch(text, /unlimited/i, text);
   });
 
-  it("says unlimited and latest features nowhere in the site source", () => {
+  it("says unlimited only in BUSINESS_UNLIMITED, and latest features nowhere in the site source", () => {
     const hits: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -165,7 +206,8 @@ describe("fair use", () => {
         if (entry.isDirectory()) walk(full);
         else if (/\.(tsx?|md|mdx|json)$/.test(entry.name) && !/\.test\.ts$/.test(entry.name)) {
           readFileSync(full, "utf8").split("\n").forEach((line, index) => {
-            if (/unlimited|latest features/i.test(line)) hits.push(`${full.slice(srcRoot.length)}:${index + 1}`);
+            const unlimited = /unlimited/i.test(line.split("BUSINESS_UNLIMITED").join("")) && !(full.endsWith(join("lib", "pricing.ts")) && line.startsWith("export const BUSINESS_UNLIMITED = "));
+            if (/latest features/i.test(line) || unlimited) hits.push(`${full.slice(srcRoot.length)}:${index + 1}`);
           });
         }
       }
@@ -177,7 +219,7 @@ describe("fair use", () => {
 
 describe("copy rules for pricing, FAQ and Terms", () => {
   it("says explanations, never calls or requests, and names no person", () => {
-    assert.doesNotMatch(PUBLIC_COPY, /\bcalls\b|\brequests\b/i);
+    assert.doesNotMatch(PUBLIC_COPY.split(BUSINESS_RATE_LIMIT_LINE).join(""), /\bcalls\b|\brequests\b/i, "requests appears only in the rate limit's own words");
     assert.doesNotMatch(PUBLIC_COPY, /founder|\bCEO\b|preston|I built/i);
     assert.doesNotMatch(PUBLIC_COPY, /\d+\s*\/\s*month/i);
     assert.doesNotMatch(PUBLIC_COPY, /50\/month/);
@@ -188,9 +230,9 @@ describe("copy rules for pricing, FAQ and Terms", () => {
     assert.ok(betaWindowsInstallScript().startsWith(`# Unvibe private beta installer for Windows. ${FREE_LINE}. Unsigned.\n`));
     const kit = kitMarkdown();
     assert.ok(kit.includes(`${FREE_LINE}. Every new app account starts with a free month of Pro.`));
-    assert.match(kit, /Pro: \$9\/month or \$81\/year, 200 explanations a month\. Enterprise: \$50 a month, 1,000 explanations a month, one account\. Big Business: \$5,000 as one payment, one account, 5,000 explanations a month \(fair use\) and 10,000 questions a month, under the written fair-use limit \(https:\/\/unvibe\.site\/pricing#fair-use\)\./);
+    assert.match(kit, /Pro: \$9\/month or \$81\/year, 200 explanations a month\. Enterprise: \$50 a month, 1,000 explanations a month, one account\. Big Business: \$5,000 as one payment, up to 10 people on 10 named seats, unlimited explanations and questions, under the fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour \(https:\/\/unvibe\.site\/pricing#fair-use\)\./);
     assert.match(kit, /Pro, Enterprise and Big Business payments open soon; nobody can buy them yet\./);
-    assert.doesNotMatch(kit, /\bTeams\b|per seat|\bcalls\b|\brequests\b|unlimited/i);
+    assert.doesNotMatch(kit.split(BUSINESS_RATE_LIMIT_LINE).join(""), /\bTeams\b|per seat|\bcalls\b|\brequests\b/i);
     assert.match(source("app", "beta", "page.tsx"), /\{FREE_LINE\}\. Skip sign-in/);
     assert.match(source("app", "layout.tsx"), /description: `\$\{FREE_LINE\}\. No API key or credit card required\.`/);
   });
@@ -206,7 +248,7 @@ describe("copy rules for pricing, FAQ and Terms", () => {
     assert.match(answer("free"), /A new account's first month is Pro\./);
     assert.match(answer("plans"), /Pro: \$9 a month or \$81 a year, 200 explanations a month\./);
     assert.match(answer("plans"), /Enterprise: \$50 a month, 1,000 explanations a month, one account\./);
-    assert.match(answer("plans"), /Big Business: \$5,000 as one payment, one account, 5,000 explanations a month \(fair use\) and 10,000 questions a month, as written in Fair use on the pricing page\./);
+    assert.match(answer("plans"), /Big Business: \$5,000 as one payment, up to 10 people on 10 named seats, unlimited explanations and questions, under the fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour, as written in Fair use on the pricing page\./);
     assert.match(answer("plans"), /Payments for Pro, Enterprise and Big Business open soon\./);
   });
 });

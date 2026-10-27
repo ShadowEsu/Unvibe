@@ -1,5 +1,5 @@
 import { formatUsd } from "@/data/compensation";
-import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
+import { BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, BUSINESS_UNLIMITED, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
@@ -17,7 +17,7 @@ export type PlanCopy = {
   eyebrow: string;
   /** Shown for Free and Big Business; Pro and Enterprise prices come from PRICING per interval. */
   price: string;
-  /** Explanations a month. When `allowanceHref` is set, the line ends with FAIR_USE_LABEL, which links there. */
+  /** The allowance: explanations a month, or for Big Business its seats, use with no monthly cap and the rate limit. When `allowanceHref` is set, FAIR_USE_LABEL in the line links there. */
   allowance: string;
   allowanceHref: string | null;
   detail: string;
@@ -41,9 +41,6 @@ export type PricingCopy = {
   termsNote: string | null;
 };
 
-/** The written cap's marker: on /pricing it links to the fair-use section. */
-export const FAIR_USE_LABEL = "(fair use)";
-
 export const PAYMENTS_OPEN_SOON = "Payments open soon";
 
 const PRO_MAILTO = "mailto:hello@unvibe.site?subject=Unvibe%20Pro%20application";
@@ -56,12 +53,12 @@ const BUSINESS_PRICE = `${formatUsd(PRICING.businessOnce)} once`;
 /** The written fair-use limit, shown on /pricing (id `fair-use`) and in the Terms. */
 export const FAIR_USE = {
   heading: "Fair use",
-  limit: `Big Business includes up to ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month, for one person's normal use. Past that, explanations pause until the next month.`,
-  enforcement: "The app enforces this limit exactly like any other plan limit. No hidden throttling.",
+  limit: `Big Business covers up to ${BUSINESS_SEATS} people, each on a named seat, with no monthly cap on explanations or questions. Its only limit is a ${BUSINESS_RATE_LIMIT_LINE}, with explanations and questions counted together. It is sized so one person working normally never reaches it.`,
+  enforcement: "When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. No hidden throttling. Refunds and abuse follow the rest of the Terms.",
 } as const;
 
 /** Terms payments section, after the Pro sentences. Both tiers stay closed on the site until payments open. */
-export const TERMS_NEW_TIERS = `Enterprise (${ENTERPRISE_PRICE}) and Big Business (${BUSINESS_PRICE}) payments are not open yet. Once they open, Enterprise is billed monthly and renews until you cancel, and Big Business is a one-time payment for one account that does not renew.`;
+export const TERMS_NEW_TIERS = `Enterprise (${ENTERPRISE_PRICE}) and Big Business (${BUSINESS_PRICE}) payments are not open yet. Once they open, Enterprise is billed monthly and renews until you cancel, and Big Business is a one-time payment that does not renew, for up to ${BUSINESS_SEATS} people on ${BUSINESS_SEATS} named seats. A seat is one person's named account and frees only when that person is removed from the workspace; seats do not rotate automatically.`;
 
 const FEATURES = {
   free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Briefs of your Git changes, made on your computer", "“Why does this exist?” from your Git history", "Keys and tokens in your code filtered on your device"],
@@ -112,9 +109,9 @@ const business: PlanCopy = {
   badge: PAYMENTS_OPEN_SOON,
   eyebrow: "The most room of any plan.",
   price: formatUsd(PRICING.businessOnce),
-  allowance: `${formatCount(BUSINESS_FAIR_USE.explanations)} explanations a month ${FAIR_USE_LABEL}`,
+  allowance: `Up to ${BUSINESS_SEATS} named seats, ${BUSINESS_UNLIMITED}, under a ${BUSINESS_RATE_LIMIT_LINE}`,
   allowanceHref: FAIR_USE_HREF,
-  detail: "One account, no shared seats. Email us to apply and we write back when it opens.",
+  detail: `One named account for each of up to ${BUSINESS_SEATS} people. Email us to apply and we write back when it opens.`,
   features: FEATURES.business,
   note: null,
   cta: "Apply by email",

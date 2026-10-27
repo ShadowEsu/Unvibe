@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { track } from '@/lib/analytics';
-import { PRICING } from '@/lib/pricing';
-import { FAIR_USE_LABEL, pricingCopy } from '@/lib/pricingCopy';
+import { FAIR_USE_LABEL, PRICING } from '@/lib/pricing';
+import { pricingCopy } from '@/lib/pricingCopy';
 import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
 type Interval = 'monthly' | 'annual';
@@ -78,7 +78,10 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
             <small>{plan.detail}</small>
             <p className="marketing-plan-allowance">
               {plan.allowanceHref
-                ? <>{plan.allowance.slice(0, -FAIR_USE_LABEL.length)}<a href={plan.allowanceHref}>{FAIR_USE_LABEL}</a></>
+                ? (() => {
+                    const [before, after] = plan.allowance.split(FAIR_USE_LABEL);
+                    return <>{before}<a href={plan.allowanceHref}>{FAIR_USE_LABEL}</a>{after}</>;
+                  })()
                 : plan.allowance}
             </p>
             <ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>

@@ -24,10 +24,25 @@ export const EXPLANATIONS_PER_MONTH = {
 /** Without an account: explanations in the first 30 days (web/src/lib/trialAccess.ts). */
 export const TRIAL_EXPLANATIONS = 50;
 
-/** The written Big Business fair-use limit, a month. The app enforces it like any plan limit. */
-export const BUSINESS_FAIR_USE = { explanations: 5000, questions: 10000 } as const;
+/** Big Business: people per purchase, each on a named seat (one named account). */
+export const BUSINESS_SEATS = 10;
 
-/** The fair-use section on /pricing. Every "(fair use)" on the site links here. */
+/**
+ * Big Business has no monthly cap. Its only limit is this fair-use rate limit against automated
+ * abuse, per person, explanations and questions counted together (web/src/billing/plans.ts).
+ */
+export const BUSINESS_RATE_LIMIT = { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 } as const;
+
+/** Big Business only: the one line in the site source with this word. */
+export const BUSINESS_UNLIMITED = "unlimited explanations and questions";
+
+/** The rate limit's name. On the Big Business card it links to the fair-use section. */
+export const FAIR_USE_LABEL = "fair-use rate limit against automated abuse";
+
+/** The rate limit in words, built from BUSINESS_RATE_LIMIT. */
+export const BUSINESS_RATE_LIMIT_LINE = `${FAIR_USE_LABEL}: per person, ${BUSINESS_RATE_LIMIT.perMinute} requests a minute, ${BUSINESS_RATE_LIMIT.perHour} an hour and ${BUSINESS_RATE_LIMIT.charactersPerHour / 1_000_000} million characters an hour`;
+
+/** The fair-use section on /pricing. The rate limit's name on the Big Business card links here. */
 export const FAIR_USE_HREF = "/pricing#fair-use";
 
 /** 1000 → "1,000". */
