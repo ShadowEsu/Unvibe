@@ -83,7 +83,7 @@ body::after {
 body::before {
   inset: -20%;
   z-index: -2;
-  background: url("./golden-gate.png") 62% 40% / cover no-repeat;
+  background: url("./dusk-field.webp") 62% 40% / cover no-repeat;
   transform: scale(1.22);
   filter: blur(38px) saturate(1.7) contrast(1.1) brightness(0.78);
 }
@@ -120,7 +120,7 @@ body::after {
   content: "";
   position: absolute;
   inset: -22%;
-  background: url("./golden-gate.png") 62% 40% / cover no-repeat;
+  background: url("./dusk-field.webp") 62% 40% / cover no-repeat;
   filter: blur(36px) saturate(1.45) contrast(1.06) brightness(0.72);
   transform: scale(1.18);
   animation: duskDrift 36s ease-in-out alternate infinite;

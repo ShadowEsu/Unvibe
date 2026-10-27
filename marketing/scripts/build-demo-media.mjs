@@ -60,13 +60,13 @@ const length = Object.values(segments).reduce((sum, [a, b]) => sum + (b - a), 0)
 const out = join(site, "public/videos/unvibe-real-demo.mp4");
 const poster = join(site, "public/videos/unvibe-real-demo-poster.webp");
 const posterPhone = join(site, "public/videos/unvibe-real-demo-poster-720.webp");
-const dusk = join(site, "public/hero/golden-gate-dusk.webp");
+const dusk = join(site, "public/hero/dusk-field.webp");
 const W = 1280;
 const H = 800;
 const fmt = `fps=30,format=yuv420p,setsar=1`;
 const trim = ([a, b]) => `trim=start=${a.toFixed(2)}:end=${b.toFixed(2)},setpts=PTS-STARTPTS`;
 
-// The panel recording sits in the top-left of a 1280x800 frame; show it over the blurred dusk photo.
+// The panel recording sits in the top-left of a 1280x800 frame; show it over the dusk colour field.
 const filter = [
   `[0:v]${trim(segments.onboarding)},scale=${W}:${H},${fmt}[a]`,
   `[2:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},gblur=sigma=18,eq=brightness=-0.06,loop=-1:1,${fmt}[bg]`,
