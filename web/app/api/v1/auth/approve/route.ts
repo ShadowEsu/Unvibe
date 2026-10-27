@@ -27,14 +27,17 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'unknown code' }, { status: 404 });
   }
   // The desktop app is the only sign-in, so this is where an invited teammate's seat attaches.
-  // A failure here never blocks the sign-in; the invitation stays pending for the next one.
-  try {
-    const billing = getBillingStore();
-    for (const workspaceId of await billing.acceptPendingInvitations(data.user.id, data.user.email)) {
-      await billing.recordAudit(data.user.id, workspaceId, 'invitation.accepted', { via: 'sign_in' });
+  // The email match alone grants the seat, so only a confirmed address counts (Google and magic-link
+  // sign-ins always are). A failure here never blocks the sign-in; the invitation stays pending.
+  if (data.user.email_confirmed_at) {
+    try {
+      const billing = getBillingStore();
+      for (const workspaceId of await billing.acceptPendingInvitations(data.user.id, data.user.email)) {
+        await billing.recordAudit(data.user.id, workspaceId, 'invitation.accepted', { via: 'sign_in' });
+      }
+    } catch (err) {
+      console.error('accept pending invitations failed:', err instanceof Error ? err.message : 'unknown error');
     }
-  } catch (err) {
-    console.error('accept pending invitations failed:', err instanceof Error ? err.message : 'unknown error');
   }
   // Keep the Google profile name so the app can greet people without asking again.
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;

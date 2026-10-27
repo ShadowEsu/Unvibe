@@ -9,9 +9,9 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key-for-tests-only';
 
 const USER_ID = '2f6c9a1e-3b4d-4e5f-8a9b-0c1d2e3f4a5b';
 const WORKSPACE_ID = '9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d';
-const signedInUser = { id: USER_ID, email: 'member@team.test', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
+const signedInUser = { id: USER_ID, email: 'member@team.test', email_confirmed_at: '2026-10-27T12:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
 
-function fakeSupabase(acceptPending: () => Response): { calls: Array<{ path: string; body: unknown }>; restore: () => void } {
+function fakeSupabase(acceptPending: () => Response, user: Record<string, unknown> = signedInUser): { calls: Array<{ path: string; body: unknown }>; restore: () => void } {
   const calls: Array<{ path: string; body: unknown }> = [];
   const original = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -19,7 +19,7 @@ function fakeSupabase(acceptPending: () => Response): { calls: Array<{ path: str
     const path = new URL(request.url).pathname;
     const text = request.method === 'GET' ? '' : await request.text();
     calls.push({ path: `${request.method} ${path}`, body: text ? JSON.parse(text) : null });
-    if (path === '/auth/v1/user') return Response.json(signedInUser);
+    if (path === '/auth/v1/user') return Response.json(user);
     if (path === '/rest/v1/account_deletions') return Response.json([]);
     if (path === '/rest/v1/rpc/approve_device_code') return Response.json('session-token-for-tests');
     if (path === '/rest/v1/rpc/accept_pending_invitations') return acceptPending();
@@ -64,6 +64,19 @@ test('a failure while accepting invitations never blocks the sign-in', async () 
     assert.equal(fake.calls.some((call) => call.path === 'POST /rest/v1/billing_audit_log'), false);
   } finally {
     console.error = quiet;
+    fake.restore();
+  }
+});
+
+test('an address that was never confirmed joins nothing: the email match alone would hand over the seat', async () => {
+  const { email_confirmed_at: _confirmed, ...unconfirmed } = signedInUser;
+  const fake = fakeSupabase(() => Response.json([WORKSPACE_ID]), unconfirmed);
+  try {
+    const res = await approve();
+    assert.equal(res.status, 200);
+    assert.equal(fake.calls.some((call) => call.path === 'POST /rest/v1/rpc/accept_pending_invitations'), false);
+    assert.equal(fake.calls.some((call) => call.path === 'POST /rest/v1/billing_audit_log'), false);
+  } finally {
     fake.restore();
   }
 });
