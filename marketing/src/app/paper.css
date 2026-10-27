@@ -1959,7 +1959,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   display: block;
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: max(12px, 0.72rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
