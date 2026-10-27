@@ -178,7 +178,8 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   const status = shouldGrace ? 'grace_period' : mappedStatus(subscription.status);
   // A grant (no access on record for this subscription, or none any more) needs a payment that was
   // neither refunded nor disputed: a refund processed before this event had nothing to revoke yet.
-  if (ENTITLING.includes(status) && !(prior && ENTITLING.includes(prior.status))) {
+  const enteringAccess = ENTITLING.includes(status) && !(prior && ENTITLING.includes(prior.status));
+  if (enteringAccess) {
     const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
     if (reason) {
       await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason });
@@ -202,7 +203,36 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     stripeEventAt: laterEventTime(prior, eventAt),
     cancelAtPeriodEnd: endsWithoutRenewing(subscription, item.current_period_end),
   });
-  if (!applied) await store.recordAudit(null, metadata.workspaceId, 'subscription.ignored_stale_event', { stripeSubscriptionId: subscription.id, eventAt, atWrite: true });
+  if (!applied) {
+    await store.recordAudit(null, metadata.workspaceId, 'subscription.ignored_stale_event', { stripeSubscriptionId: subscription.id, eventAt, atWrite: true });
+    return;
+  }
+  if (!ENTITLING.includes(status)) return;
+  // A deleted delivered before this subscription had a row canceled nothing. Once the grant is
+  // written, read Stripe again: either that deleted now finds the row, or this read sees it ended.
+  const live = await retrieveIfExists(deps, subscription.id);
+  if (!live || live.status === 'canceled' || live.status === 'incomplete_expired') {
+    await store.markSubscriptionCanceled(subscription.id, eventAt);
+    return;
+  }
+  if (live.status !== 'active' && live.status !== 'trialing') {
+    await applyRevocationOnly(store, live, eventAt);
+    if (live.status !== 'past_due') return;
+  }
+  // A first-invoice refund may likewise have matched no row between the payment check and write.
+  // Check again, including on a retry of an event whose grant/check/cancel failed after the write.
+  const retryingGrant = prior && (prior.stripeEventAt === undefined || eventAt === undefined
+    ? prior.stripeEventAt === eventAt : Date.parse(prior.stripeEventAt) === Date.parse(eventAt));
+  if (enteringAccess || retryingGrant) {
+    const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
+    if (reason) {
+      if (!deps.cancelSubscription) throw new Error('Revoking a subscription grant needs cancelSubscription.');
+      // Cancel Stripe first: if it fails, the event fails and its retry must still stop the charges.
+      await deps.cancelSubscription(subscription.id, `uncode-revoke-${subscription.id}`);
+      await store.markSubscriptionCanceled(subscription.id, eventAt);
+      await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason, afterWrite: true });
+    }
+  }
 }
 
 /** When a grace period that starts now ends: BILLING_GRACE_PERIOD_DAYS (1 to 30, default 7) from now. */

@@ -219,7 +219,7 @@ test('failed Stripe payments enter a bounded grace period', async () => {
     metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
     items: { data: [{ quantity: 1, price: { id: 'price_grace' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
   } as unknown as Stripe.Subscription;
-  await syncStripeSubscription(store, subscription, noStripe);
+  await syncStripeSubscription(store, subscription, { ...noStripe, retrieveSubscription: async () => subscription });
   const overview = await store.overview(userId);
   assert.equal(overview.subscription.status, 'grace_period');
   assert.ok(overview.subscription.gracePeriodEndsAt);
@@ -247,7 +247,7 @@ test('Stripe subscription sync validates trusted price and quantities', async ()
     metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
     items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
   } as unknown as Stripe.Subscription;
-  await syncStripeSubscription(store, subscription, noStripe);
+  await syncStripeSubscription(store, subscription, { ...noStripe, retrieveSubscription: async () => subscription });
   assert.equal((await store.overview(workspace.ownerUserId)).subscription.plan, 'pro');
 
   const tampered = { ...subscription, id: 'sub_bad', items: { data: [{ quantity: 2, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] } } as unknown as Stripe.Subscription;
@@ -288,25 +288,26 @@ test('a cancel scheduled with cancel_at (how the Stripe portal cancels on dahlia
     items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: periodEnd }] },
   };
   const cancelAtOf = async () => (await store.overview(workspace.ownerUserId)).subscription.cancelAtPeriodEnd;
+  const stripe = { ...noStripe, retrieveSubscription: async () => ({ ...base, id: 'sub_cancel_at' }) as unknown as Stripe.Subscription };
 
   // Portal cancel: cancel_at is the period end and cancel_at_period_end stays false.
-  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd } as unknown as Stripe.Subscription, noStripe);
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd } as unknown as Stripe.Subscription, stripe);
   assert.equal(await cancelAtOf(), true);
 
   // A cancel date inside the current period also means no further renewal.
-  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd - 86_400 } as unknown as Stripe.Subscription, noStripe);
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd - 86_400 } as unknown as Stripe.Subscription, stripe);
   assert.equal(await cancelAtOf(), true);
 
   // A cancel date after this period still renews (and charges) at least once more.
-  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd + 30 * 86_400 } as unknown as Stripe.Subscription, noStripe);
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: periodEnd + 30 * 86_400 } as unknown as Stripe.Subscription, stripe);
   assert.equal(await cancelAtOf(), false);
 
   // "Don't cancel" in the portal clears cancel_at.
-  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: null } as unknown as Stripe.Subscription, noStripe);
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: null } as unknown as Stripe.Subscription, stripe);
   assert.equal(await cancelAtOf(), false);
 
   // The legacy flag still works.
-  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: null, cancel_at_period_end: true } as unknown as Stripe.Subscription, noStripe);
+  await syncStripeSubscription(store, { ...base, id: 'sub_cancel_at', cancel_at: null, cancel_at_period_end: true } as unknown as Stripe.Subscription, stripe);
   assert.equal(await cancelAtOf(), true);
 });
 

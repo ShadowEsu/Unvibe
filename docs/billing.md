@@ -76,12 +76,22 @@ keeps the Stripe `created` time of the last event applied (`stripe_event_at`), a
 for the same subscription or payment changes nothing, so a retried or late checkout event cannot
 restore access a newer refund took away. The comparison is part of the write
 (`sync_subscription_if_not_older`: one `insert ... on conflict do update ... where`), so two deliveries
-processed at once cannot let an older event overwrite a newer one either; a cancel always applies
-and never moves `stripe_event_at` back (`cancel_subscription_by_provider_id`). After a Lifetime or
+of the same subscription processed at once cannot let an older event overwrite a newer one either; a
+cancel always applies and never moves `stripe_event_at` back (`cancel_subscription_by_provider_id`). After a Lifetime or
 Big Business grant writes its row, the payment is checked again (recorded refunds, then Stripe), so a
 refund or dispute handled while the grant was in flight still ends access; a failure of that check
 fails the event, and its retry takes the row back if the payment is refused by then. A paid checkout
 session without a PaymentIntent grants nothing (`checkout.refused_payment`, reason `no_payment_intent`).
+
+After every subscription write that grants access, the webhook also re-reads the subscription from
+Stripe. If it ended (or no longer exists), the row is canceled; a non-entitling state or failed
+payment applies the revoke-only downgrade/grace rules. This closes the window where a `deleted`
+arrived before there was a row for that subscription and so canceled nothing. After a subscription
+first grants access, its payments are checked again too: a refusal cancels the Stripe subscription
+with `uncode-revoke-<subscription id>`, then cancels the row. If the Stripe cancel fails, the event
+fails and its retry checks the payment and retries that same cancellation key, even though the row
+has already been written. Stripe is canceled first so a failed attempt cannot leave a subscription
+charging while a canceled local row causes its retry to skip the payment check.
 
 The `refund.full` rows in `billing_audit_log` are security state, not just history: they are what
 refuses a grant of a payment whose refund arrived before (or during) its checkout event. Never prune,
