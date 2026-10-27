@@ -24,10 +24,11 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Every signup alert is intentionally delivered to the monitored owner inbox. Internal only: it is the
- * alert's recipient, never shown to visitors, so it is not a public contact (those use SUPPORT_EMAIL).
+ * Every signup alert is intentionally delivered to the monitored team inbox, locked in code so a
+ * deployment can't redirect signup details. Internal only: it is the alert's recipient, never shown
+ * to visitors.
  */
-const ALERT_INBOX = "preston@unvibe.site";
+const ALERT_INBOX = "support@unvibe.site";
 
 function notifyTo(): string {
   return ALERT_INBOX;
