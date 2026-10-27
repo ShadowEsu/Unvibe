@@ -8,7 +8,7 @@ import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
-import type { DownloadSurface } from "@/lib/downloadTracking";
+import type { DownloadSurface } from "@/lib/siteEvents";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
 const LEVELS = [

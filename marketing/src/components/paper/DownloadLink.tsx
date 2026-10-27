@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
+import { trackDownloadClick } from "@/lib/downloadTracking";
+import type { DownloadSurface } from "@/lib/siteEvents";
 // clsx, not cn(): these classes are BEM names, so tailwind-merge (27 KB, on every page's first load) has nothing to resolve.
 import { clsx } from "clsx";
 import { delight } from "@/lib/delight";

@@ -144,7 +144,10 @@ export default function PrivacyPage() {
           recording stops, no analytics events from that page are sent, and the page&apos;s
           content is left out of any replay. Automated browsers send no
           analytics, and neither does a browser where you have opened any page with ?notrack=1
-          added to the address; ?notrack=0 turns analytics back on. We
+          added to the address; ?notrack=0 turns analytics back on. Under the same rules, the site
+          also keeps its own daily totals, with no visitor ID, IP address or invite code in them:
+          visitors by the campaign tag (utm_source and utm_campaign) of the first tagged link they
+          arrived from, and clicks on download buttons by button and platform. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The

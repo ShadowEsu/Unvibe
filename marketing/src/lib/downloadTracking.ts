@@ -1,6 +1,8 @@
 /**
  * Download measurement for the marketing site. Every event goes through `track`, so nothing is
  * sent for `?notrack=1`, automated browsers or private pages, and props are fixed short values.
+ * Download clicks are also counted first-party per day (`countSiteEvent`, same rules), so they
+ * survive ad blockers.
  *
  * `download_cta_clicked {surface, platform}`, platform mac | windows | other:
  * - Downloads the installer: hero, hero_other_os, palette, beta, home_install, investors,
@@ -12,51 +14,38 @@
  *   resources. Of these, only the DownloadLink buttons (nav, releases, build, resources) also
  *   fire DOWNLOADED_EVENT, as they always have.
  *
+ * `release_download_clicked {os, surface: tone}`: the BetaInstall box's direct download button;
+ * its first-party count uses the box's DownloadSurface and the os as platform.
+ *
  * `download_cta_viewed {surface: "hero", platform}`: once per page view, hero CTA half visible.
  * `install_help_viewed {from, os_default}`: once per /install-help view, from home | beta | pricing |
  * installer | other; os_default (mac | windows) is the tab the first-open steps opened on.
  */
 
-import { track } from "@/lib/analytics";
+import { countSiteEvent, track } from "@/lib/analytics";
+import type { DownloadPlatform, DownloadSurface } from "@/lib/siteEvents";
 import { visitorInstallOs } from "@/lib/shortcuts";
 
 /** Window event after a download click; ReminderToast offers the setup email on it. */
 export const DOWNLOADED_EVENT = "unvibe:downloaded";
 
-export type DownloadPlatform = "mac" | "windows" | "other";
-
-export type DownloadSurface =
-  | "hero"
-  | "hero_other_os"
-  | "nav"
-  | "mobile_bar"
-  | "palette"
-  | "beta"
-  | "home_install"
-  | "investors"
-  | "home_cta"
-  | "try_it"
-  | "try_it_answer"
-  | "activate"
-  | "explain"
-  | "explain_answer"
-  | "explain_try"
-  | "pricing"
-  | "footer"
-  | "releases"
-  | "build"
-  | "resources"
-  | "redeem";
-
 /** A click on a download button or link. */
 export function trackDownloadClick(surface: DownloadSurface, platform: DownloadPlatform): void {
   track("download_cta_clicked", { surface, platform });
+  countSiteEvent("download_cta_clicked", surface, platform);
   window.dispatchEvent(new Event(DOWNLOADED_EVENT));
 }
 
 /** A download call to action that opens the download page (/beta), so nothing downloads yet. */
 export function trackDownloadPageClick(surface: DownloadSurface): void {
   track("download_cta_clicked", { surface, platform: "other" });
+  countSiteEvent("download_cta_clicked", surface, "other");
+}
+
+/** The BetaInstall box's direct download button; `tone` is the Mixpanel `surface` it has always sent. */
+export function trackReleaseDownload(surface: DownloadSurface, platform: DownloadPlatform, tone: string): void {
+  track("release_download_clicked", { os: platform, surface: tone });
+  countSiteEvent("release_download_clicked", surface, platform);
 }
 
 /** Browsers can report a ratio a hair under the threshold they just crossed. */

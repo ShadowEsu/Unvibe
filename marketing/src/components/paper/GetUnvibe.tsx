@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 import { track } from "@/lib/analytics";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
-import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
+import { trackDownloadClick } from "@/lib/downloadTracking";
+import type { DownloadSurface } from "@/lib/siteEvents";
 import { detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
 const DIRECT_DOWNLOAD = { mac: BETA_MAC_DIRECT_DOWNLOAD, windows: BETA_WINDOWS_DIRECT_DOWNLOAD } as const;

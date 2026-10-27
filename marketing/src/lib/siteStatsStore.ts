@@ -1,7 +1,8 @@
 /**
- * Lightweight site traffic counters (page views + unique visitors).
- * Stored in Vercel Blob when configured, otherwise .data/site-stats.json locally.
- * Visitor ids are hashed before persistence — no emails or code.
+ * Lightweight site traffic counters (page views + unique visitors), and the daily channel counts
+ * of `site_events_daily` (download clicks; visitors by first-touch utm, see siteEvents.ts).
+ * Stored in Supabase when configured, else Vercel Blob, otherwise .data/site-stats.json locally.
+ * Visitor ids are hashed before persistence — no emails or code. Channel counts hold no visitor id.
  * Day buckets use America/Los_Angeles calendar dates (reset at midnight PT).
  */
 import { promises as fs } from "node:fs";
@@ -9,6 +10,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { get, list, put } from "@vercel/blob";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SiteEventCount } from "@/lib/siteEvents";
 
 interface DayBucket {
   views: number;
@@ -21,6 +23,8 @@ interface StatsFile {
   totalUniques: number;
   seenIds: string[];
   days: Record<string, DayBucket>;
+  /** Channel counts without Supabase, keyed `day|event|dim1|dim2`. */
+  events: Record<string, number>;
 }
 
 export interface SiteStatsSummary {
@@ -98,7 +102,7 @@ export function dayKey(now = new Date()): string {
 }
 
 function emptyStats(): StatsFile {
-  return { totalViews: 0, totalUniques: 0, seenIds: [], days: {} };
+  return { totalViews: 0, totalUniques: 0, seenIds: [], days: {}, events: {} };
 }
 
 function hashVisitor(visitorId: string): string {
@@ -131,6 +135,7 @@ function normalize(parsed: Partial<StatsFile> | null | undefined): StatsFile {
     totalUniques: Number(parsed?.totalUniques) || 0,
     seenIds: Array.isArray(parsed?.seenIds) ? parsed.seenIds.filter((id): id is string => typeof id === "string") : [],
     days: parsed?.days && typeof parsed.days === "object" ? parsed.days : {},
+    events: parsed?.events && typeof parsed.events === "object" ? parsed.events : {},
   };
 }
 
@@ -267,21 +272,30 @@ function summarize(data: StatsFile): SiteStatsSummary {
   };
 }
 
-/** Record one page view for an anonymous visitor id. */
-export async function recordSiteHit(visitorId: string): Promise<void> {
+function countEventLocally(data: StatsFile, day: string, { event, dim1, dim2 }: SiteEventCount): void {
+  const key = `${day}|${event}|${dim1}|${dim2}`;
+  data.events[key] = (Number(data.events[key]) || 0) + 1;
+}
+
+/**
+ * Record one page view for an anonymous visitor id. `channel` (the visit's first-touch utm, from
+ * parseVisitSource) is counted only on the visitor's first view of the day; null counts nothing.
+ */
+export async function recordSiteHit(visitorId: string, channel: SiteEventCount | null = null): Promise<void> {
   const raw = visitorId.trim().slice(0, 128);
   if (!raw) return;
   const id = hashVisitor(raw);
+  const key = dayKey();
   if (supabaseConfigured()) {
-    const { error } = await supabaseClient().rpc("record_site_hit", {
+    const { data: firstToday, error } = await supabaseClient().rpc("record_site_hit", {
       p_visitor_hash: id,
-      p_visit_date: dayKey(),
+      p_visit_date: key,
     });
     if (error) throw new Error(`Supabase traffic write failed: ${error.message}`);
+    if (channel && firstToday === true) await recordSiteEvent(channel, key);
     return;
   }
   const data = await load();
-  const key = dayKey();
   const day = ensureDay(data, key);
 
   day.views += 1;
@@ -290,6 +304,7 @@ export async function recordSiteHit(visitorId: string): Promise<void> {
   if (!day.ids.includes(id)) {
     if (day.ids.length < MAX_DAY_IDS) day.ids.push(id);
     day.uniques += 1;
+    if (channel) countEventLocally(data, key, channel);
   }
 
   if (!data.seenIds.includes(id)) {
@@ -297,6 +312,23 @@ export async function recordSiteHit(visitorId: string): Promise<void> {
     data.totalUniques += 1;
   }
 
+  await save(data);
+}
+
+/** Add one to a daily channel count (`record_site_event`). */
+export async function recordSiteEvent(count: SiteEventCount, day = dayKey()): Promise<void> {
+  if (supabaseConfigured()) {
+    const { error } = await supabaseClient().rpc("record_site_event", {
+      p_day: day,
+      p_event: count.event,
+      p_dim1: count.dim1,
+      p_dim2: count.dim2,
+    });
+    if (error) throw new Error(`Supabase site event write failed: ${error.message}`);
+    return;
+  }
+  const data = await load();
+  countEventLocally(data, day, count);
   await save(data);
 }
 

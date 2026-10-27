@@ -34,6 +34,7 @@ import {
   type ReplayState,
 } from "@/lib/analyticsPrivacy";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
+import type { DownloadPlatform, DownloadSurface, SiteCountEvent } from "@/lib/siteEvents";
 
 export type { AnalyticsEvent };
 
@@ -237,6 +238,20 @@ export function track(event: AnalyticsEvent, props?: Props): void {
   recordFunnelEvent(event);
   sendPosthog(event, cleaned);
   sendMixpanel(event, cleaned);
+}
+
+/**
+ * Adds one to today's first-party count of a download click (`site_events_daily`): event,
+ * surface and platform only, no anonymous id. Sent under the same rules as `track`.
+ */
+export function countSiteEvent(event: SiteCountEvent, surface: DownloadSurface, platform: DownloadPlatform): void {
+  if (analyticsOff()) return;
+  void fetch("/api/stats/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, surface, platform }),
+    keepalive: true,
+  }).catch(() => undefined);
 }
 
 /** Manual exception capture for handled errors (uncaught still autocaptured). */

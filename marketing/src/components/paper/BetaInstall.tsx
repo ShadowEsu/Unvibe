@@ -5,7 +5,8 @@ import { useCopyToast } from "@/components/paper/CopyToast";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { delight } from "@/lib/delight";
-import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
+import { trackDownloadClick, trackReleaseDownload } from "@/lib/downloadTracking";
+import type { DownloadSurface } from "@/lib/siteEvents";
 import { SHORTCUTS, detectVisitorDevice } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
@@ -134,7 +135,7 @@ export function BetaInstall({
           href={directHref}
           rel="noreferrer"
           onClick={() => {
-            track("release_download_clicked", { os, surface: tone });
+            trackReleaseDownload(surface, os, tone);
             trackDownloadClick(surface, os);
             delight();
             setClicked(true);
