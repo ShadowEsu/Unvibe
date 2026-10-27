@@ -9,7 +9,7 @@
 .paste-target__box:focus, .paste-target__box:focus-visible { border-style: solid; border-color: #141414; box-shadow: 0 0 0 4px rgb(214 244 90 / 0.65); }
 .paste-target__box.is-compact { min-height: 150px; padding: 18px; }
 /* The compact preview keeps its first 4 lines, so the panel's empty state still fits. */
-.paste-target__box.is-compact pre { max-height: 6.4em; }
+.paste-target__box.is-compact pre { max-height: calc(6.4em + 26px); }
 .paste-target__keys { display: flex; gap: 8px; }
 .paste-target__key {
   display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 10px; box-sizing: border-box;

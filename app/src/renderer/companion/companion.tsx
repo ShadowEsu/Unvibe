@@ -466,6 +466,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [ownCodeDone, setOwnCodeDone] = useState(false);
   // Mac step 4: the offer, the guide while System Settings is open, then the shortcut is on.
   const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
+  const shortcutHeading = useRef<HTMLHeadingElement>(null);
   const paste = useOwnCodePaste();
   const steps = isWindows ? ['Hello', 'Try it', 'Anywhere'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
   const macPaste = !isWindows && step === 2;
@@ -485,6 +486,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       setStep((current) => (current === 2 ? 3 : current));
     });
   }, []);
+  // Announce the card, without making Enter trigger the permission prompt.
+  useEffect(() => {
+    if (macShortcut) shortcutHeading.current?.focus();
+  }, [macShortcut, offer]);
   // Already allowed (an earlier install, say): nothing to offer, the shortcut is on.
   useEffect(() => {
     if (!macShortcut) return undefined;
@@ -531,6 +536,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   };
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
+    // Navigation remounts the paste target without a preview; its speech must reset with it.
+    if (!isWindows) paste.setStarted(false);
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
   const explainSample = () => {
@@ -704,7 +711,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <div className="ob2__offer">
                 <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
                 <div>
-                  <h3>Turn on the shortcut</h3>
+                  <h3 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h3>
                   <p>Select code in any app and press Control U. No copying, no pasting.</p>
                 </div>
                 <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U. It never reads your keystrokes or your screen.</span></p>
@@ -721,7 +728,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
               <div>
                 <span className="shortcut-pill shortcut-pill--on" role="status"><i aria-hidden="true" />Shortcut is on</span>
-                <h3>Select code in any app, press Control U.</h3>
+                <h3 ref={shortcutHeading} tabIndex={-1}>Select code in any app, press Control U.</h3>
                 <p>Pasting into the panel still works, too.</p>
               </div>
             </div>
@@ -759,7 +766,7 @@ function useOwnCodePaste() {
     if (result.ok) setStarted(true);
     else if (result.error) setFileError(result.error);
   };
-  return { started, fileError, explainPaste, chooseFile };
+  return { started, setStarted, fileError, explainPaste, chooseFile };
 }
 
 function LockGlyph() {
