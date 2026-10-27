@@ -8,13 +8,14 @@ import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { prettyShortcut } from '../shared/prettyShortcut';
-import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../shared/planStatus';
+import { giftStatusLine, paidStatusLine, PRO_PITCH, proCard, resetLabel, tierStatusLine } from '../shared/planStatus';
 import { deviceName, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
 import type { ChangeBrief } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
+import { asPlanId, FAIR_USE_URL, isPaidPlan, planLabel, type PlanId } from '../../core/plans';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
@@ -87,7 +88,7 @@ interface Settings {
 }
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
-  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean };
+  subscription: { plan: 'free' | 'pro' | 'teams' | 'enterprise' | 'business'; interval: 'monthly' | 'annual' | 'lifetime' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean };
   usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
   canManageBilling: boolean;
   hasBillingAccount: boolean;
@@ -102,27 +103,10 @@ interface AppUsageLine {
   selections?: { used: number; limit: number; remaining: number; resetsAt: string };
 }
 
-type PlanId = 'free' | 'pro' | 'teams' | 'local' | 'trial' | 'full';
-
-/** The free plan has one name everywhere, "Free": signed in, the public-beta trial, or counted locally. */
-function planLabel(plan: string | undefined): string {
-  switch (plan) {
-    case 'pro': return 'Pro';
-    case 'teams': return 'Teams';
-    case 'full': return 'Full access';
-    default: return 'Free';
-  }
-}
-
-function asPlanId(value: string | undefined): PlanId {
-  if (value === 'pro' || value === 'teams' || value === 'full' || value === 'trial' || value === 'local') return value;
-  return 'free';
-}
-
-/** Shown after the plan name; the free plan has none. */
-function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | null): string | null {
+/** Shown after the plan name; the free plan has none. Enterprise and Big Business are never sold in the app, so they show no price. */
+function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | 'lifetime' | null): string | null {
   if (plan === 'full') return 'Included';
-  if (plan === 'pro') return interval === 'annual' ? '$81/yr' : '$9/mo';
+  if (plan === 'pro') return interval === 'lifetime' ? 'Lifetime' : interval === 'annual' ? '$81/yr' : '$9/mo';
   if (plan === 'teams') return interval === 'annual' ? '$72/seat/yr' : '$8/seat';
   return null;
 }
@@ -973,7 +957,8 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     setAvailable(result.data.checkoutAvailable);
     setPaymentsOpen(result.data.paymentsOpen !== false);
     setTeamsAvailable(Boolean(result.data.teamsAvailable));
-    if (result.data.overview.subscription.interval) setInterval(result.data.overview.subscription.interval);
+    const subscriptionInterval = result.data.overview.subscription.interval;
+    if (subscriptionInterval === 'monthly' || subscriptionInterval === 'annual') setInterval(subscriptionInterval);
     setMessage('');
   };
   useEffect(() => {
@@ -1047,9 +1032,11 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const currentPlan = asPlanId(overview?.subscription.plan ?? localUsage?.plan);
   const currentInterval = overview?.subscription.interval ?? null;
   const gifted = currentPlan === 'pro' && overview && !overview.hasBillingAccount;
-  const paid = Boolean(overview?.hasBillingAccount && (currentPlan === 'pro' || currentPlan === 'teams'));
+  const paid = Boolean(overview?.hasBillingAccount && isPaidPlan(currentPlan));
   const canPortal = Boolean(overview?.canManageBilling && overview.hasBillingAccount);
   const showUpgrade = currentPlan !== 'teams';
+  // Teams is offered only below it; Enterprise, Big Business and unknown paid plans see no purchase.
+  const showTeams = currentPlan !== 'teams' && currentPlan !== 'enterprise' && currentPlan !== 'business' && currentPlan !== 'paid';
   const upgradeIsPro = currentPlan === 'free' || currentPlan === 'local' || currentPlan === 'trial';
   const meters = collectUsageMeters(overview, localUsage);
   const resetIso = meters[0]?.resetsAt ?? localUsage?.resetsAt;
@@ -1078,9 +1065,13 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             {gifted && overview ? giftStatusLine(overview.subscription.currentPeriodEnd)
               : unlimited ? 'This build is not metered locally.'
                 : (paid && overview && paidStatusLine(overview.subscription, planLabel(currentPlan)))
+                  || tierStatusLine(currentPlan, localUsage)
                   || (resetIso ? resetLabel(resetIso, currentPlan)
                     : `Monthly explanation limits apply to this ${deviceName}.`)}
           </p>
+          {currentPlan === 'business' && (
+            <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(FAIR_USE_URL)}>Read the fair-use limit</button>
+          )}
           {canPortal
             ? <button type="button" className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>
             : <button type="button" className="soft-btn" disabled>{gifted ? 'Included with a gift' : paid ? 'Active' : 'Included'}</button>}
@@ -1092,7 +1083,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             {pro.open ? (
               <>
                 <h2>Pro {pro.price}</h2>
-                <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
+                <p>{PRO_PITCH}</p>
                 <div className="plan-toggle" aria-label="Billing interval">
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
                   <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
@@ -1114,13 +1105,13 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             ) : (
               <>
                 <h2>Pro</h2>
-                <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
+                <p>{PRO_PITCH}</p>
                 <p>{pro.line}</p>
               </>
             )}
           </article>
         )}
-        {currentPlan !== 'teams' && !compact ? teamsCard : null}
+        {showTeams && !compact ? teamsCard : null}
       </div>
 
       {!signedIn && (
@@ -1925,7 +1916,7 @@ function App() {
           </button>
           {usageLine ? (
             <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
-              <span className="side-usage__row"><span>{planLabel(usageLine.plan)} plan</span><b>{usageLine.remaining} left</b></span>
+              <span className="side-usage__row"><span>{asPlanId(usageLine.plan) === 'paid' ? planLabel(usageLine.plan) : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
               <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
             </button>
           ) : null}

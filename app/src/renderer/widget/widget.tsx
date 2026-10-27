@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
+import { isProPlan } from '../../core/plans';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
@@ -819,7 +820,7 @@ function Widget() {
         <div className="levels" role="group" aria-label="Explanation depth">
           <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
-            const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
+            const expertLocked = l.id === 'expert' && !isProPlan(usage?.plan);
             return (
               <button
                 key={l.id}

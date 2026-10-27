@@ -136,7 +136,7 @@ async function json<T>(res: Response): Promise<T> {
 export interface BillingUsageLine { kind: string; used: number; limit: number; remaining: number; resetsAt: string }
 export interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: 'owner' | 'admin' | 'member' };
-  subscription: { plan: 'free' | 'pro' | 'teams'; interval: 'monthly' | 'annual' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };
+  subscription: { plan: 'free' | 'pro' | 'teams' | 'enterprise' | 'business'; interval: 'monthly' | 'annual' | 'lifetime' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };
   usage: BillingUsageLine[];
   occupiedSeats: number;
   pendingInvitations: number;

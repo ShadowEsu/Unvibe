@@ -19,7 +19,7 @@ export interface AppUsage {
   limit: number;
   remaining: number;
   resetsAt: string;
-  plan: 'free' | 'pro' | 'teams' | 'local' | 'trial' | 'full';
+  plan: 'free' | 'pro' | 'teams' | 'enterprise' | 'business' | 'local' | 'trial' | 'full';
   source: 'cloud' | 'local' | 'trial';
 }
 

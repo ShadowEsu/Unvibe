@@ -96,9 +96,9 @@ import {
   buildComparePayload,
   buildDiffPayload,
   buildSelectionPayload,
-  isProPlan,
   resolveRepoRoot,
 } from './contextBuilder';
+import { isProPlan } from '../core/plans';
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';

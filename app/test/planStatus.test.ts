@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../src/renderer/shared/planStatus';
+import { FREE_LINE, freePlanLine, giftStatusLine, paidStatusLine, PRO_PITCH, proCard, resetLabel, tierStatusLine } from '../src/renderer/shared/planStatus';
+import { limitOfferCopy } from '../src/renderer/shared/limitOffer';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');
 const END = '2026-11-21T12:00:00.000Z';
@@ -69,4 +70,37 @@ test('while Pro is closed the card has no price or terms, only the Free plan\'s 
 test('once Pro is open the card keeps the price and renewal terms for the chosen interval', () => {
   assert.deepEqual(proCard(true, 'monthly', null, NOW), { open: true, price: '$9/mo', terms: 'Pro renews at $9 per month until canceled.' });
   assert.deepEqual(proCard(true, 'annual', null, NOW), { open: true, price: '$81/yr', terms: 'Pro renews at $81 per year until canceled.' });
+});
+
+test('the Pro card promises 200 explanations each month', () => {
+  assert.equal(PRO_PITCH, 'Unlock git diffs, nearby files, and 200 explanations each month.');
+});
+
+test('Enterprise and Big Business holders get a status line with no price, upgrade, calls or bare unlimited', () => {
+  const enterprise = tierStatusLine('enterprise', { plan: 'enterprise', limit: 1000, remaining: 400, resetsAt: END });
+  const refill = new Date(END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  assert.equal(enterprise, `Enterprise includes 1,000 explanations a month. They refill on ${refill}.`);
+  const business = tierStatusLine('business', { plan: 'business', limit: 5000, remaining: 5000, resetsAt: END });
+  assert.ok(business);
+  assert.match(business, /^Big Business is paid once and doesn't renew\./);
+  assert.match(business, /written fair-use limit of 5,000 explanations a month/);
+  assert.match(business, /we contact you first/);
+  for (const line of [enterprise, business, tierStatusLine('business', null), tierStatusLine('enterprise', null)]) {
+    assert.ok(line);
+    assert.doesNotMatch(line, /\$|upgrade|buy|subscribe|calls?\b|unlimited|undefined|NaN/i);
+  }
+  for (const plan of ['free', 'pro', 'teams', 'trial', 'local', 'full', 'mystery']) {
+    assert.equal(tierStatusLine(plan, null), null, plan);
+  }
+});
+
+test('where Free is described it is the settled sentence, after the welcome month', () => {
+  assert.equal(FREE_LINE, 'Free: 50 explanations a month with a free account (50 in your first 30 days without one)');
+  assert.equal(freePlanLine(null, NOW), `Pro isn't open yet. ${FREE_LINE}.`);
+  const ended = freePlanLine({ plan: 'trial', limit: 50, remaining: 0, resetsAt: '2026-10-01T12:00:00.000Z' }, NOW);
+  const trialOffer = limitOfferCopy('trial', { used: 50, limit: 50, resetsAt: END }, false);
+  for (const line of [ended, trialOffer.body]) {
+    assert.ok(line.includes(`Sign in to keep going: a new account's first month is Pro. ${FREE_LINE}.`), line);
+    assert.doesNotMatch(line, /refills every month|50\/month|requests?\b|calls?\b/);
+  }
 });

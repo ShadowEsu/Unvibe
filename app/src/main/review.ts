@@ -21,7 +21,8 @@ import { cachedAppUsage, refreshAppUsage } from './usage';
 import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
-import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { buildSelectionPayload, type ReviewMode } from './contextBuilder';
+import { isProPlan, limitReachedMessage } from '../core/plans';
 import { raiseLimitPause } from './windows';
 import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
@@ -362,13 +363,11 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const localKey = readAiKey();
     const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
     if (usage.remaining <= 0 && !localKey) {
-      const resets = new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-      const planName = usage.plan === 'pro' ? 'Pro' : usage.plan === 'teams' ? 'Teams' : 'Free';
       send(win, session, {
         type: 'error',
         code: 'plan_limit_reached',
         upgradePath: '/plan',
-        message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'Free explanations on this computer end' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
+        message: limitReachedMessage(usage),
       });
       raiseLimitPause(win);
       return;

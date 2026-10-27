@@ -1,5 +1,11 @@
 /** Plan-card status copy. Pure so the wording for each billing state is testable. */
 
+/** The settled Free sentence, word for word, wherever the app describes Free. */
+export const FREE_LINE = 'Free: 50 explanations a month with a free account (50 in your first 30 days without one)';
+
+/** Where a signed-out allowance points: sign in, and the welcome month comes before Free. */
+export const SIGN_IN_FREE_LINE = `Sign in to keep going: a new account's first month is Pro. ${FREE_LINE}.`;
+
 export function daysUntil(iso: string, now = Date.now()): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 86_400_000));
 }
@@ -74,7 +80,7 @@ export function refillDate(plan: string | undefined, resetsAt: string): string |
 
 /** While Pro is closed: Pro isn't open yet, and the Free plan keeps working with its real allowance. */
 export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): string {
-  if (!usage || usage.limit <= 0) return "Pro isn't open yet. Your Free plan keeps working.";
+  if (!usage || usage.limit <= 0) return `Pro isn't open yet. ${FREE_LINE}.`;
   const left = `${usage.remaining} of ${usage.limit} explanations left`;
   const refill = refillDate(usage.plan, usage.resetsAt);
   if (refill) return `Pro isn't open yet. Your Free plan keeps working: ${left}, refilling on ${refill}.`;
@@ -83,9 +89,28 @@ export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): str
     return `Pro isn't open yet. Your Free plan keeps working: ${left} until ${shortDate(usage.resetsAt)}.`;
   }
   if (usage.plan === 'trial' && !Number.isNaN(end)) {
-    return `Pro isn't open yet. The free explanations on this computer ended on ${shortDate(usage.resetsAt)}. Sign in to keep going on the Free plan, which refills every month.`;
+    return `Pro isn't open yet. The free explanations on this computer ended on ${shortDate(usage.resetsAt)}. ${SIGN_IN_FREE_LINE}`;
   }
   return `Pro isn't open yet. Your Free plan keeps working: ${left}.`;
+}
+
+/** What Pro adds, on the Plan screen's Pro card. */
+export const PRO_PITCH = 'Unlock git diffs, nearby files, and 200 explanations each month.';
+
+/**
+ * The current-plan line for Enterprise and Big Business holders. Neither is sold in the app, so the
+ * line has no price, renewal offer or upgrade: only the monthly allowance and when it refills.
+ * Null for every other plan.
+ */
+export function tierStatusLine(plan: string, usage: AllowanceLine | null): string | null {
+  const refill = usage ? refillDate(plan, usage.resetsAt) : null;
+  const refills = refill ? ` They refill on ${refill}.` : '';
+  if (plan === 'enterprise') return `Enterprise includes 1,000 explanations a month.${refills}`;
+  if (plan === 'business') {
+    const limit = usage && usage.limit > 0 ? ` of ${usage.limit.toLocaleString('en-US')} explanations a month` : '';
+    return `Big Business is paid once and doesn't renew. It has a written fair-use limit${limit}; past it, explanations pause until the next month and we contact you first.${refills}`;
+  }
+  return null;
 }
 
 /**
