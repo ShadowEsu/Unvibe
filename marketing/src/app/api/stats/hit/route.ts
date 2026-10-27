@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseVisitSource } from "@/lib/siteEvents";
 import { recordSiteEvent, recordSiteHit } from "@/lib/siteStatsStore";
+import { statsRequestRefusal } from "@/lib/statsRequestGuard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ let channelFailureLogged = false;
  * the site_events_daily migration is applied, never fails the hit; it is logged once per process.
  */
 export async function POST(req: Request) {
+  const refusal = statsRequestRefusal(req);
+  if (refusal) return NextResponse.json({ ok: false }, { status: refusal });
   try {
     const body = (await req.json().catch(() => null)) as { visitorId?: unknown; channel?: unknown } | null;
     const visitorId = typeof body?.visitorId === "string" ? body.visitorId : "";

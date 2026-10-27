@@ -20,6 +20,7 @@ after(restoreAnalyticsKeys);
 interface Request {
   url: string;
   body: unknown;
+  contentType: string | null;
 }
 
 function fakeStorage(entries: Record<string, string> = {}): OptOutStorage & { data: Map<string, string> } {
@@ -58,7 +59,7 @@ function sentTo(url: string): unknown[] {
 beforeEach(() => {
   requests = [];
   const recordingFetch: typeof fetch = async (input, init) => {
-    requests.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+    requests.push({ url: String(input), body: JSON.parse(String(init?.body)), contentType: new Headers(init?.headers).get("content-type") });
     return new Response(null, { status: 204 });
   };
   globalThis.fetch = recordingFetch;
@@ -235,5 +236,14 @@ describe("download counts", () => {
     ]);
     const release = sentTo("/api/analytics").find((body) => Reflect.get(Object(body), "event") === "release_download_clicked");
     assert.deepEqual(Reflect.get(Object(release), "properties"), { os: "mac", surface: "hero", path: "/" }, "Mixpanel props are unchanged");
+  });
+
+  it("posts the hit and the download counts as application/json, as the routes require", () => {
+    sendVisitHit();
+    trackDownloadClick("hero", "mac");
+    trackReleaseDownload("beta", "mac", "page");
+    const stats = requests.filter((request) => request.url.startsWith("/api/stats/"));
+    assert.equal(stats.length, 3, "one hit and two download counts");
+    for (const request of stats) assert.equal(request.contentType, "application/json", request.url);
   });
 });

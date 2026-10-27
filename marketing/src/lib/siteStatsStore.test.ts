@@ -87,10 +87,10 @@ async function todaysCounts(): Promise<Record<string, number>> {
   );
 }
 
-function post(body: unknown): Request {
+function post(body: unknown, headers: Record<string, string> = { "content-type": "application/json" }): Request {
   return new Request("https://unvibe.site/api/stats", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
 }
@@ -209,4 +209,49 @@ describe("site channel counts (site_events_daily, local store)", () => {
       }
     }
   });
+});
+
+describe("stats routes take same-site JSON posts only", () => {
+  const routes = [
+    ["/api/stats/hit", postHit, { visitorId: "visitor-a", channel: { source: "x", campaign: "profile" } }],
+    ["/api/stats/event", postEvent, { event: "download_cta_clicked", surface: "hero", platform: "mac" }],
+  ] as const;
+
+  for (const [name, handler, body] of routes) {
+    it(`${name}: a text/plain body gets 415 and counts nothing`, async () => {
+      await withLocalStore(async () => {
+        for (const type of ["text/plain", "text/plain;charset=UTF-8", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x"]) {
+          assert.equal((await handler(post(body, { "content-type": type }))).status, 415, type);
+        }
+        assert.equal((await handler(new Request("https://unvibe.site/api/stats", { method: "POST", body: JSON.stringify(body) }))).status, 415, "no content-type");
+        assert.equal(await fs.access(dataFile).then(() => true, () => false), false, "nothing was stored");
+      });
+    });
+
+    it(`${name}: Sec-Fetch-Site cross-site gets 403 and counts nothing`, async () => {
+      await withLocalStore(async () => {
+        for (const site of ["cross-site", "none"]) {
+          const response = await handler(post(body, { "content-type": "application/json", "sec-fetch-site": site }));
+          assert.equal(response.status, 403, site);
+        }
+        assert.equal(await fs.access(dataFile).then(() => true, () => false), false, "nothing was stored");
+      });
+    });
+
+    it(`${name}: same-origin JSON still counts (also same-site, and without the header)`, async () => {
+      await withLocalStore(async () => {
+        const accepted: Array<Record<string, string>> = [
+          { "content-type": "application/json", "sec-fetch-site": "same-origin" },
+          { "content-type": "application/json; charset=utf-8", "sec-fetch-site": "same-site" },
+          { "content-type": "Application/JSON" },
+        ];
+        for (const headers of accepted) {
+          assert.equal((await handler(post(body, headers))).status, 200, JSON.stringify(headers));
+        }
+        const counts = await todaysCounts();
+        const key = name === "/api/stats/hit" ? "visit_source|x|profile" : "download_cta_clicked|hero|mac";
+        assert.equal(counts[key], 3);
+      });
+    });
+  }
 });
