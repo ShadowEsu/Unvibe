@@ -142,7 +142,7 @@ const organizationJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "var(--paper)",
+  themeColor: "#f3eef8",
 };
 
 export default function RootLayout({
@@ -155,7 +155,7 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
-        {/* Before first paint: the `js` class (motion start states) and the theme class (no light flash). */}
+        {/* Before first paint: the `js` class, which scopes the motion start states. */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
           type="application/ld+json"

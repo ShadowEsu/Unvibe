@@ -116,24 +116,14 @@ html[data-performance="lite"] .try__bob { animation: none; }
 a.paper-alt-link { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 1rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414; font: 700 0.95rem var(--font-sans); line-height: 1.2; text-decoration: none; box-shadow: 0 2px 0 #141414; }
 a.paper-alt-link:hover { background: #f4f1ea; }
 a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
-/* Dark: the theme's night sticker (night card, paper-coloured outline and offset), so the pill stays secondary next to
-   the light primary button. Inside a Try it answer the panel re-scopes these tokens to light, so the pill stays white. */
-.dark a.paper-alt-link { border-color: var(--v-ink); background: var(--u-card); color: var(--u-text); box-shadow: 0 2px 0 var(--v-ink); }
-.dark a.paper-alt-link:hover { background: var(--u-raise); }
-.dark .try__panel a.paper-alt-link:hover { background: #f4f1ea; }
-.dark a.paper-alt-link:focus-visible { outline-color: #c4b5fd; }
-.dark .try__panel a.paper-alt-link:focus-visible { outline-color: #3c2fb8; }
 /* "Older Intel Mac?" and its pill on one centred row that wraps on narrow screens. */
 .paper-beta__builds { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem 0.6rem; }
 /* The home hero's other-system download ("Get it for Windows" on a Mac) gets the same 32 px+ pill. Styled
    here, not in hero.css or PhotoHero.tsx, so the hero's own files stay untouched. */
 .vhero__trust a { display: inline-flex; align-items: center; min-height: 2rem; margin-block: 0.15rem; padding: 0 0.8rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font-weight: 700; text-decoration: none; box-shadow: 0 2px 0 var(--v-ink); }
 .vhero__trust a:hover { background: #f4f1ea; }
-.dark .vhero__trust a { background: var(--v-card); }
-.dark .vhero__trust a:hover { background: var(--u-raise); }
 
 /* ── Demo video: its native controls are several Tab stops inside the video. Each one shows the same ring,
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
 .vtour__window:focus-within { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 .vtour__window video:focus-within { outline: 3px solid #3c2fb8; outline-offset: -3px; }
-.dark .vtour__window:focus-within, .dark .vtour__window video:focus-within { outline-color: #c4b5fd; }

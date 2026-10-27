@@ -14,8 +14,7 @@ body {
   color: var(--ink);
 }
 
-html body,
-html.dark body {
+html body {
   background: transparent;
   color: var(--ink);
 }

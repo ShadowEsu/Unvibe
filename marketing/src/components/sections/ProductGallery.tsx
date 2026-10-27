@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X, ZoomIn, Sun, Moon } from "lucide-react";
 import { Section } from "../Section";
 import { cn } from "@/lib/utils";
-import { useTheme } from "../providers/ThemeProvider";
 
 type Variant = "light" | "dark";
 
@@ -36,14 +35,9 @@ const shots: Shot[] = [
 ];
 
 export function ProductGallery() {
-  const { resolved } = useTheme();
   const [variant, setVariant] = useState<Variant>("light");
   const [zoom, setZoom] = useState<Shot | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setVariant(resolved);
-  }, [resolved]);
 
   const scrollBy = (dir: 1 | -1) => {
     const el = scrollerRef.current;
