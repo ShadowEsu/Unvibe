@@ -17,8 +17,9 @@ export default function DataControlsPage() {
       <LegalSection heading="What is stored and where">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong>Learning events</strong> (when each explanation happened, its depth and outcome,
-            the line count, language, source app, file and project name, and the concept) live on
+            <strong>Learning events</strong> (when each explanation happened, whether it covered a
+            selection, a file or a Git diff, its depth and outcome, the line count, language, source
+            app, file and project name, and the concept, under a random record ID) live on
             your device and, if you are signed in, sync to our backend. Your code, the explanation
             text and your notes never sync. A successful account deletion removes the associated
             primary database rows.

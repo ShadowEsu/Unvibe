@@ -91,9 +91,10 @@ export default function PrivacyPage() {
       <LegalSection heading="Storage, security, and your rights">
         <p>
           Your code, the explanation text and any notes you add stay on your computer. When you are
-          signed in, the app also syncs a record of each explanation to our backend: when it
-          happened and in which time zone, the depth and outcome, how many lines, the language, the
-          app you selected the code in, the file and project name, and the concept it covered.
+          signed in, the app also syncs a record of each explanation to our backend, under a random
+          record ID: when it happened and in which time zone, whether it covered a selection, a file
+          or a Git diff, the depth and outcome, how many lines, the language, the app you selected the
+          code in, the file and project name, and the concept it covered.
           Row-level security is designed to restrict direct reads of those records to your account. Your auth
           token is encrypted at rest using the operating system keychain, and data is
           encrypted in transit. Backend at-rest and backup settings must be verified for
