@@ -96,9 +96,14 @@
 
 /* ── Pricing: one heading, then the tier cards inside the first viewport at 1440 and 390 ── */
 
-/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important. */
+/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important. Pricing keeps one
+   step, top and bottom, and the Fair use section follows the plans with that single step between them. */
 .paper-pricing > .paper-section {
-  padding-top: clamp(1.5rem, 4vw, 3rem) !important;
+  padding-block: clamp(1.5rem, 4vw, 3rem) !important;
+}
+
+.paper-pricing > .paper-section.pricing-fair-use {
+  padding-top: 0 !important;
 }
 
 .paper-pricing .pricing-plans__intro {
@@ -198,6 +203,15 @@
 @media (min-width: 1120px) {
   .paper-pricing .marketing-plan-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* Four in a row: every kicker holds two lines, so the prices start on one line whichever kicker wraps.
+     calc instead of 2lh: the site's default browser targets predate the lh unit. 1.6 is the line-height the
+     kicker already inherits from body, pinned here so the reserved height and the text agree. */
+  .paper-pricing .plan-kicker {
+    --kicker-leading: 1.6;
+    line-height: var(--kicker-leading);
+    min-height: calc(2em * var(--kicker-leading));
   }
 }
 

@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { track } from '@/lib/analytics';
 import { PRICING } from '@/lib/pricing';
-import { pricingCopy } from '@/lib/pricingCopy';
+import { FAIR_USE_LABEL, pricingCopy } from '@/lib/pricingCopy';
 import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
 type Interval = 'monthly' | 'annual';
@@ -13,7 +13,7 @@ type Interval = 'monthly' | 'annual';
 /** Enterprise is monthly only, so it keeps its monthly price under the Annual toggle. */
 function priceFor(id: string, interval: Interval, fallback: string): { price: string; per: string } {
   if (id === 'pro') return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
-  if (id === 'enterprise') return { price: `$${PRICING.enterpriseMonthly}`, per: ' a month' };
+  if (id === 'enterprise') return { price: `$${PRICING.enterpriseMonthly}`, per: '/month' };
   if (id === 'business') return { price: fallback, per: ' once' };
   return { price: fallback, per: '' };
 }
@@ -77,7 +77,9 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
             })()}
             <small>{plan.detail}</small>
             <p className="marketing-plan-allowance">
-              {plan.allowanceHref ? <a href={plan.allowanceHref}>{plan.allowance}</a> : plan.allowance}
+              {plan.allowanceHref
+                ? <>{plan.allowance.slice(0, -FAIR_USE_LABEL.length)}<a href={plan.allowanceHref}>{FAIR_USE_LABEL}</a></>
+                : plan.allowance}
             </p>
             <ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
             {plan.note ? <p className="marketing-plan-note">{plan.note}</p> : null}

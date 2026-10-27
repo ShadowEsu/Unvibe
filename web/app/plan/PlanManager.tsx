@@ -227,7 +227,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
             <p>Enterprise · {money.format(priceFor('enterprise', 'monthly', 1) / 100)} a month</p>
             <small>{count.format(planLimit('enterprise', 'ai_explanation', 1))} explanations a month and every Pro feature, one account. Payments open soon.</small>
             <p>Big Business · {money.format(priceFor('business', 'lifetime', 1) / 100)} once</p>
-            <small><a href={FAIR_USE_URL}>Unlimited explanations under fair use</a>: up to {count.format(planLimit('business', 'ai_explanation', 1))} explanations and {count.format(planLimit('business', 'project_question', 1))} questions a month, the latest features, one account. Payments open soon.</small>
+            <small>{count.format(planLimit('business', 'ai_explanation', 1))} explanations a month <a href={FAIR_USE_URL}>(fair use)</a> and {count.format(planLimit('business', 'project_question', 1))} questions a month, one account. Payments open soon.</small>
           </div>
           <a className="btn btn--secondary" href={NEW_TIERS_APPLY_MAIL}>Contact us to apply</a>
         </section>

@@ -60,6 +60,6 @@ test('the new tiers are never sold here and the call is never mentioned', async 
   const html = await plan('free', { checkoutAvailable: true, paymentsOpen: true });
   assert.match(html, /Enterprise · \$50 a month/);
   assert.match(html, /1,000 explanations a month/);
-  assert.match(html, /up to 5,000 explanations and 10,000 questions a month, the latest features, one account/);
-  assert.doesNotMatch(html, /latest features first|call with|contact you first|\bcalls\b/i);
+  assert.match(html, /5,000 explanations a month <a href="https:\/\/unvibe\.site\/pricing#fair-use">\(fair use\)<\/a> and 10,000 questions a month, one account/);
+  assert.doesNotMatch(html, /unlimited|latest features|call with|contact you first|\bcalls\b/i);
 });

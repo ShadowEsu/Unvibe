@@ -17,7 +17,7 @@ export type PlanCopy = {
   eyebrow: string;
   /** Shown for Free and Big Business; Pro and Enterprise prices come from PRICING per interval. */
   price: string;
-  /** Explanations a month. Links to the fair-use section when `allowanceHref` is set. */
+  /** Explanations a month. When `allowanceHref` is set, the line ends with FAIR_USE_LABEL, which links there. */
   allowance: string;
   allowanceHref: string | null;
   detail: string;
@@ -40,6 +40,9 @@ export type PricingCopy = {
   /** Extra Pro sentence for the Terms payments section; null once payments open. Enterprise and Big Business: TERMS_NEW_TIERS. */
   termsNote: string | null;
 };
+
+/** The written cap's marker: on /pricing it links to the fair-use section. */
+export const FAIR_USE_LABEL = "(fair use)";
 
 export const PAYMENTS_OPEN_SOON = "Payments open soon";
 
@@ -64,7 +67,7 @@ const FEATURES = {
   free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Briefs of your Git changes, made on your computer", "“Why does this exist?” from your Git history", "Keys and tokens in your code filtered on your device"],
   pro: ["Everything in Free", "Expert depth", "AI explanations of Git diffs and change Briefs", "Answers that use nearby files"],
   enterprise: ["Everything in Pro", "Monthly only, no annual plan"],
-  business: ["Everything in Pro", "The latest features", "One payment, not a subscription"],
+  business: ["Everything in Pro", "One payment, not a subscription"],
 } as const;
 
 const free: PlanCopy = {
@@ -94,7 +97,7 @@ const enterprise: PlanCopy = {
   price: "",
   allowance: `${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account`,
   allowanceHref: null,
-  detail: `${PAYMENTS_OPEN_SOON}. One account, no shared seats. Email us to apply and we write back when it opens.`,
+  detail: "One account, no shared seats. Email us to apply and we write back when it opens.",
   features: FEATURES.enterprise,
   note: null,
   cta: "Apply by email",
@@ -107,11 +110,11 @@ const business: PlanCopy = {
   id: "business",
   name: "Big Business",
   badge: PAYMENTS_OPEN_SOON,
-  eyebrow: "The most room and the latest features.",
+  eyebrow: "The most room of any plan.",
   price: formatUsd(PRICING.businessOnce),
-  allowance: "Unlimited explanations, under the written fair-use limit",
+  allowance: `${formatCount(BUSINESS_FAIR_USE.explanations)} explanations a month ${FAIR_USE_LABEL}`,
   allowanceHref: FAIR_USE_HREF,
-  detail: `${PAYMENTS_OPEN_SOON}. One account, no shared seats. Email us to apply and we write back when it opens.`,
+  detail: "One account, no shared seats. Email us to apply and we write back when it opens.",
   features: FEATURES.business,
   note: null,
   cta: "Apply by email",
@@ -140,7 +143,7 @@ const CLOSED: PricingCopy = {
   description: `Download Unvibe free today. ${PAYMENTS_OPEN_SOON}. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. ${NEW_TIERS} are not on sale yet either.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: PAYMENTS_OPEN_SOON, eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, detail: `${PAYMENTS_OPEN_SOON}. One developer account. Your Free plan keeps working until then.`, features: FEATURES.pro, note: null, cta: "Apply by email", href: PRO_MAILTO, featured: true, primary: false },
+    { id: "pro", name: "Pro", badge: PAYMENTS_OPEN_SOON, eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, detail: "One developer account. Your Free plan keeps working until payments open.", features: FEATURES.pro, note: null, cta: "Apply by email", href: PRO_MAILTO, featured: true, primary: false },
     enterprise,
     business,
   ],

@@ -27,7 +27,7 @@ export const TRIAL_EXPLANATIONS = 50;
 /** The written Big Business fair-use limit, a month. The app enforces it like any plan limit. */
 export const BUSINESS_FAIR_USE = { explanations: 5000, questions: 10000 } as const;
 
-/** The fair-use section on /pricing. Every "unlimited" on the site links here. */
+/** The fair-use section on /pricing. Every "(fair use)" on the site links here. */
 export const FAIR_USE_HREF = "/pricing#fair-use";
 
 /** 1000 → "1,000". */

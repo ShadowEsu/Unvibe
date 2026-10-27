@@ -8,8 +8,8 @@ import { SHORTCUTS } from "@/lib/shortcuts";
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
  * keys and tokens in code and diffs filtered on the device (typed questions and Chat too from
  * v0.1.44, not in v0.1.43); no local-only mode yet; AI explanations can be wrong.
- * Plans, prices and allowances come from lib/pricing. Plain text only, so no "unlimited" here:
- * that word must link to the fair-use section (FAIR_USE_HREF).
+ * Plans, prices and allowances come from lib/pricing. Plain text only: Big Business names its written cap
+ * ("5,000 explanations a month (fair use)") and points to the Fair use section in words.
  */
 
 export interface FaqItem {
@@ -118,7 +118,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "plans",
     question: "What plans are there?",
-    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, the latest features, and a written fair-use limit of ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month (Fair use, on the pricing page). Payments for Pro, Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
+    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations a month (fair use) and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month, as written in Fair use on the pricing page. Payments for Pro, Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
     category: "pricing",
   },
   {

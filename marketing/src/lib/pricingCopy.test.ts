@@ -8,7 +8,7 @@ import { FREE_USE_NOTE } from "../emails/betaShared";
 import { betaWindowsInstallScript } from "./betaInstallScript";
 import { kitMarkdown } from "./kit";
 import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING } from "./pricing";
-import { FAIR_USE, PAYMENTS_OPEN_SOON, TERMS_NEW_TIERS, pricingCopy, type PlanCopy, type PricingCopy } from "./pricingCopy";
+import { FAIR_USE, FAIR_USE_LABEL, PAYMENTS_OPEN_SOON, TERMS_NEW_TIERS, pricingCopy, type PlanCopy, type PricingCopy } from "./pricingCopy";
 
 const srcRoot = fileURLToPath(new URL("..", import.meta.url));
 const source = (...parts: string[]) => readFileSync(join(srcRoot, ...parts), "utf8");
@@ -58,7 +58,7 @@ describe("the plan lineup", () => {
       assert.equal(plan(copy, "free").allowance, "Free: 50 explanations a month with a free account (50 in your first 30 days without one)");
       assert.equal(plan(copy, "pro").allowance, "200 explanations a month");
       assert.equal(plan(copy, "enterprise").allowance, "1,000 explanations a month, one account");
-      assert.match(plan(copy, "business").allowance, /^Unlimited explanations/);
+      assert.equal(plan(copy, "business").allowance, "5,000 explanations a month (fair use)");
     }
   });
 
@@ -81,7 +81,7 @@ describe("Enterprise and Big Business", () => {
       it(`${tier.name} reads Payments open soon and only links to an application email (${label(paymentsOpen)})`, () => {
         assert.equal(tier.badge, PAYMENTS_OPEN_SOON);
         assert.equal(PAYMENTS_OPEN_SOON, "Payments open soon");
-        assert.match(tier.detail, /^Payments open soon\. One account, no shared seats\./);
+        assert.equal(tier.detail, "One account, no shared seats. Email us to apply and we write back when it opens.", "the badge says Payments open soon; the body doesn't repeat it");
         assert.match(tier.href, /^mailto:hello@unvibe\.site\?subject=Unvibe%20(Enterprise|Big%20Business)%20application$/);
         assert.equal(tier.cta, "Apply by email");
         assert.equal(tier.primary, false);
@@ -117,10 +117,11 @@ describe("Enterprise and Big Business", () => {
     for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /\bcall with\b/i, text);
   });
 
-  it("promises no early access and no contact that nothing sends", () => {
-    assert.ok(plan(pricingCopy(false), "business").features.includes("The latest features"));
-    for (const paymentsOpen of STATES) assert.doesNotMatch(PUBLIC_COPY + pricingCopy(paymentsOpen).description, /latest features first|newest features|contact you/i);
-    for (const text of [FAIR_USE.limit, TERMS_NEW_TIERS, ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /latest features first|contact you/i, text);
+  it("promises no early access, no unlimited use and no contact that nothing sends", () => {
+    assert.equal(plan(pricingCopy(false), "business").eyebrow, "The most room of any plan.");
+    assert.deepEqual(plan(pricingCopy(false), "business").features, ["Everything in Pro", "One payment, not a subscription"]);
+    for (const paymentsOpen of STATES) assert.doesNotMatch(PUBLIC_COPY + pricingCopy(paymentsOpen).description, /latest features|newest features|unlimited|contact you/i);
+    for (const text of [FAIR_USE.limit, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /latest features|unlimited|contact you/i, text);
   });
 });
 
@@ -143,18 +144,20 @@ describe("fair use", () => {
     assert.match(terms, /\{TERMS_NEW_TIERS\}/);
   });
 
-  it("links every unlimited in the pricing copy to the fair-use section", () => {
+  it("Big Business names its written cap, and \"(fair use)\" links to the fair-use section", () => {
     for (const paymentsOpen of STATES) {
       const copy = pricingCopy(paymentsOpen);
-      const unlinked = [copy.heading.lead, copy.heading.emphasis, copy.heading.tail, copy.description, copy.disclosure, copy.termsNote ?? "", ...copy.plans.flatMap((item) => planText(item).filter((text) => text !== item.allowance))];
-      for (const text of unlinked) assert.doesNotMatch(text, /unlimited/i, text);
-      for (const item of copy.plans) if (/unlimited/i.test(item.allowance)) assert.equal(item.allowanceHref, FAIR_USE_HREF, item.id);
-      assert.equal(plan(copy, "business").allowanceHref, FAIR_USE_HREF);
+      const business = plan(copy, "business");
+      assert.equal(FAIR_USE_LABEL, "(fair use)");
+      assert.ok(business.allowance.endsWith(` ${FAIR_USE_LABEL}`));
+      assert.equal(business.allowanceHref, FAIR_USE_HREF);
+      for (const item of copy.plans) if (item.id !== "business") assert.equal(item.allowanceHref, null, item.id);
     }
+    assert.match(source("components", "redesign", "PricingPlans.tsx"), /<a href=\{plan\.allowanceHref\}>\{FAIR_USE_LABEL\}<\/a>/);
     for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, ...faqItems.flatMap((item) => [item.question, item.answer])]) assert.doesNotMatch(text, /unlimited/i, text);
   });
 
-  it("has no other reader-visible unlimited anywhere in the site source", () => {
+  it("says unlimited and latest features nowhere in the site source", () => {
     const hits: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -162,15 +165,13 @@ describe("fair use", () => {
         if (entry.isDirectory()) walk(full);
         else if (/\.(tsx?|md|mdx|json)$/.test(entry.name) && !/\.test\.ts$/.test(entry.name)) {
           readFileSync(full, "utf8").split("\n").forEach((line, index) => {
-            const code = line.trim();
-            if (/unlimited/i.test(code) && !/^(\*|\/\/|\/\*)/.test(code)) hits.push(`${full.slice(srcRoot.length)}:${index + 1}`);
+            if (/unlimited|latest features/i.test(line)) hits.push(`${full.slice(srcRoot.length)}:${index + 1}`);
           });
         }
       }
     };
     walk(srcRoot);
-    assert.equal(hits.length, 1, hits.join(", "));
-    assert.match(hits[0], /^lib\/pricingCopy\.ts:/);
+    assert.deepEqual(hits, []);
   });
 });
 
@@ -187,7 +188,7 @@ describe("copy rules for pricing, FAQ and Terms", () => {
     assert.ok(betaWindowsInstallScript().startsWith(`# Unvibe private beta installer for Windows. ${FREE_LINE}. Unsigned.\n`));
     const kit = kitMarkdown();
     assert.ok(kit.includes(`${FREE_LINE}. Every new app account starts with a free month of Pro.`));
-    assert.match(kit, /Pro: \$9\/month or \$81\/year, 200 explanations a month\. Enterprise: \$50 a month, 1,000 explanations a month, one account\. Big Business: \$5,000 as one payment, one account, the latest features, under a written fair-use limit/);
+    assert.match(kit, /Pro: \$9\/month or \$81\/year, 200 explanations a month\. Enterprise: \$50 a month, 1,000 explanations a month, one account\. Big Business: \$5,000 as one payment, one account, 5,000 explanations a month \(fair use\) and 10,000 questions a month, under the written fair-use limit \(https:\/\/unvibe\.site\/pricing#fair-use\)\./);
     assert.match(kit, /Pro, Enterprise and Big Business payments open soon; nobody can buy them yet\./);
     assert.doesNotMatch(kit, /\bTeams\b|per seat|\bcalls\b|\brequests\b|unlimited/i);
     assert.match(source("app", "beta", "page.tsx"), /\{FREE_LINE\}\. Skip sign-in/);
@@ -205,7 +206,7 @@ describe("copy rules for pricing, FAQ and Terms", () => {
     assert.match(answer("free"), /A new account's first month is Pro\./);
     assert.match(answer("plans"), /Pro: \$9 a month or \$81 a year, 200 explanations a month\./);
     assert.match(answer("plans"), /Enterprise: \$50 a month, 1,000 explanations a month, one account\./);
-    assert.match(answer("plans"), /Big Business: \$5,000 as one payment, one account, the latest features, and a written fair-use limit of 5,000 explanations and 10,000 questions a month/);
+    assert.match(answer("plans"), /Big Business: \$5,000 as one payment, one account, 5,000 explanations a month \(fair use\) and 10,000 questions a month, as written in Fair use on the pricing page\./);
     assert.match(answer("plans"), /Payments for Pro, Enterprise and Big Business open soon\./);
   });
 });
@@ -222,14 +223,20 @@ describe("pricing copy while payments are closed", () => {
     assert.equal(closed.heading.lead + closed.heading.emphasis + closed.heading.tail, "Start free today. Paid plans open soon.");
     for (const id of ["pro", "enterprise", "business"] as const) {
       assert.equal(plan(closed, id).badge, PAYMENTS_OPEN_SOON, id);
-      assert.match(plan(closed, id).detail, /^Payments open soon\. /, id);
+      assert.doesNotMatch(plan(closed, id).detail, /Payments open soon/, `${id}: the badge and the disclosure say it once`);
       assert.equal(plan(closed, id).cta, "Apply by email", id);
       assert.match(plan(closed, id).href, /^mailto:hello@unvibe\.site\?subject=Unvibe%20/, id);
     }
-    assert.equal(plan(closed, "pro").detail, "Payments open soon. One developer account. Your Free plan keeps working until then.");
+    assert.equal(plan(closed, "pro").detail, "One developer account. Your Free plan keeps working until payments open.");
     assert.match(closed.disclosure, /^Prices in USD\. Pro, Enterprise and Big Business are not on sale yet, so nothing is billed today\./);
     assert.equal(closed.termsNote, "Pro is not on sale yet. Until it opens, nothing is billed and your Free plan keeps working.");
     assert.doesNotMatch(text, /available (now|today)|on sale now|get pro/i);
+  });
+
+  it("prices Pro and Enterprise in one unit on the cards (/month), Big Business once", () => {
+    const cards = source("components", "redesign", "PricingPlans.tsx");
+    assert.match(cards, /per: '\/month' \};\n\s+if \(id === 'enterprise'\) return \{ price: `\$\$\{PRICING\.enterpriseMonthly\}`, per: '\/month' \};/);
+    assert.match(cards, /if \(id === 'business'\) return \{ price: fallback, per: ' once' \};/);
   });
 
   it("has no button that leads to a dead end", () => {
