@@ -144,6 +144,18 @@ const api = {
     return () => { ipcRenderer.removeListener('onboarding:sampleDone', listener); };
   },
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
+  /** Whether this open leads with the paste step, before Today. */
+  ownCodeStep: (): Promise<boolean> => ipcRenderer.invoke('ownCode:step'),
+  /** The paste step's "Choose a file…": explains the chosen file in the panel. */
+  companionPickFile: (): Promise<{ ok: boolean; cancelled?: boolean; error?: string }> => ipcRenderer.invoke('companion:pickFile'),
+  /** "Not now": hides the step until the next open. */
+  ownCodeNotNow: (): Promise<void> => ipcRenderer.invoke('ownCode:notNow'),
+  /** The companion was brought back from minimized, a new open; returns an unsubscribe. */
+  onOwnCodeChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('ownCode:changed', listener);
+    return () => { ipcRenderer.removeListener('ownCode:changed', listener); };
+  },
 
   // account
   account: () => ipcRenderer.invoke('account:get'),

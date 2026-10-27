@@ -25,6 +25,7 @@ import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuil
 import { raiseLimitPause } from './windows';
 import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
+import { noteOwnCodeExplained } from './ownCodeStep';
 import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
@@ -266,6 +267,8 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
     });
     return false;
   }
+  // Every explanation path saves here, so the companion's own-code step ends after whichever came first.
+  if (!ev.sample) noteOwnCodeExplained();
   try {
     if (explanation && session.file) {
       knowledgeStore().upsert({

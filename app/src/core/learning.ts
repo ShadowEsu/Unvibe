@@ -106,6 +106,20 @@ function isLearningEvent(event: LocalEvent): boolean {
   return event.eventType !== 'day_active' && event.scope !== 'app';
 }
 
+/** A saved explanation of the user's own code: not the first-run sample, an Ask chat or an app open. */
+export function isOwnCodeLesson(event: LocalEvent): boolean {
+  return isLearningEvent(event) && event.scope !== 'chat' && !event.sample;
+}
+
+/**
+ * The companion's own-code paste step is due once setup is done while no saved lesson is the user's
+ * own code (only the first-run sample, or nothing). `ownCodeExplained` keeps it gone for good after
+ * the first one, even if that lesson is deleted later.
+ */
+export function ownCodeStepDue(state: { onboarded: boolean; ownCodeExplained: boolean; events: readonly LocalEvent[] }): boolean {
+  return state.onboarded && !state.ownCodeExplained && !state.events.some(isOwnCodeLesson);
+}
+
 function dayKey(iso: string): string {
   return iso.slice(0, 10);
 }
@@ -173,7 +187,7 @@ export interface TodayGoal {
  * The two can come from different lessons. Chats and the first-run sample count for neither.
  */
 export function computeToday(events: LocalEvent[], now: Date): TodayGoal {
-  const own = events.filter((e) => isLearningEvent(e) && e.scope !== 'chat' && !e.sample);
+  const own = events.filter(isOwnCodeLesson);
   const explainedDays = new Set(own.map(eventDay));
   const answeredDays = new Set(own.flatMap((e) => e.answeredOn ?? []));
   const goalDays = new Set([...explainedDays].filter((day) => answeredDays.has(day)));

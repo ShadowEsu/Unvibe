@@ -21,6 +21,7 @@ import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
+import { PasteTarget } from '../shared/pasteTarget';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -632,6 +633,50 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
         <div className="ob__actions">
           <button className="ob__skip" disabled={step === 0 || saving} onClick={() => go(step - 1)}>Back</button>
           <button className="field-btn inline" disabled={saving} onClick={advance}>{continueLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The next open after a first session that explained only the sample: the same paste step as setup,
+ * before Today. Pasting or choosing a file explains in the panel, with no permission needed. Windows
+ * also names its shortcut. "Not now" goes to Today until the next open (ownCodeStep.ts).
+ */
+function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: boolean; shortcut: string; onNotNow: () => void }) {
+  const [started, setStarted] = useState(false);
+  const [fileError, setFileError] = useState('');
+  const said = useVibeSays(started
+    ? 'Got it. Your explanation is opening in the panel.'
+    : 'Welcome back. Try it on your own code: copy a few lines, then paste them here.', soundEffects);
+  const explainPaste = () => {
+    setFileError('');
+    setStarted(true);
+    // The clipboard holds what was just pasted; main reads it there, as Explain my clipboard does.
+    window.unvibe.explainClipboard();
+  };
+  const chooseFile = async () => {
+    setFileError('');
+    const result = await window.unvibe.companionPickFile();
+    if (result.ok) setStarted(true);
+    else if (result.error) setFileError(result.error);
+  };
+  return (
+    <div className="ob ob2">
+      <div className="ob__card ob2__card">
+        <div className="ob2__vibe">
+          <span className="ob2__blob"><Buddy mood={started ? 'reading' : 'wave'} size={72} follow label="Vibe" /></span>
+          <p className="ob2__speech" aria-live="polite">{said}</p>
+        </div>
+        <div className="ob__step ob2__body ob2__paste">
+          <PasteTarget hint="Copy a few lines from a file you didn't write. Pasting explains it in the panel and uses one free explanation."
+            onPaste={explainPaste} onChooseFile={() => void chooseFile()} />
+          {fileError ? <p className="field-err" role="alert">{fileError}</p> : null}
+          {isWindows ? <p className="ob__sub ob2__shortcut">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
+        </div>
+        <div className="ob__actions ob2__actions--end">
+          <button type="button" className="act" onClick={onNotNow}>Not now</button>
         </div>
       </div>
     </div>
@@ -1696,10 +1741,11 @@ function App() {
   const [lessonSeedId, setLessonSeedId] = useState<string | null>(null);
   const [lessonSeedRevision, setLessonSeedRevision] = useState(0);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [ownCodeStep, setOwnCodeStep] = useState(false);
 
   const refresh = async () => {
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo] = await Promise.all([
+      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.feed(8) as Promise<FeedItem[]>,
@@ -1710,8 +1756,10 @@ function App() {
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
         window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
+        window.unvibe.ownCodeStep(),
       ]);
       setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
+      setOwnCodeStep(ownCode);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
         setSideWidth(st.sidebarWidth);
@@ -1742,8 +1790,12 @@ function App() {
     })();
     const onFocus = () => void refresh();
     const offLearning = window.unvibe.onLearningChanged(() => void refresh());
+    const offOwnCode = window.unvibe.onOwnCodeChanged(() => void refresh());
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
     window.unvibe.onShowPage((next) => {
+      // A page asked for by name (Island Settings, Plan) wins over the paste step, as Not now does.
+      setOwnCodeStep(false);
+      void window.unvibe.ownCodeNotNow();
       if (next === 'Settings') {
         setSettingsTab('Island');
         setSettingsOpen(true);
@@ -1776,6 +1828,7 @@ function App() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('focus', onFocus);
       offLearning();
+      offOwnCode();
     };
   }, []);
 
@@ -1899,6 +1952,11 @@ function App() {
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} notice={deletionNotice} onSignedIn={async () => { setDeletionNotice(''); await refresh(); setGate('app'); }} onSkip={() => { setDeletionNotice(''); setGate('app'); }} /></>);
+  }
+  if (ownCodeStep) {
+    // Hidden at once, and again once main has it, so a refresh already under way can't bring it back.
+    const notNow = () => { setOwnCodeStep(false); void window.unvibe.ownCodeNotNow().then(() => setOwnCodeStep(false)); };
+    return (<><div className="titlebar" /><OwnCodeWelcome soundEffects={settings?.soundEffects ?? true} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onNotNow={notNow} /></>);
   }
 
   return (

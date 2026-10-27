@@ -57,6 +57,7 @@ import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
+import { noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
 import { grantReturnApp, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
@@ -416,7 +417,13 @@ function openCompanion(): void {
     return;
   }
   companion = createCompanion();
+  noteCompanionOpen();
   const win = companion;
+  // Brought back from minimized (the Windows close button minimizes) is an open the user started too.
+  win.on('restore', () => {
+    noteCompanionOpen();
+    win.webContents.send('ownCode:changed');
+  });
   // On Windows and Linux the taskbar button belongs to the window, so closing it would make
   // Unvibe vanish into the tray. Minimize instead so it always stays clickable in the taskbar.
   if (!isMac) {
@@ -438,6 +445,40 @@ function openCompanionPage(page: string): void {
   };
   if (companion && companion.webContents.isLoading()) companion.webContents.once('did-finish-load', send);
   else send();
+}
+
+/** The open dialog for one source file, read and checked; shared by the panel and the companion. */
+async function chooseCodeFile(parent: BrowserWindow): Promise<{ ok: true; filePath: string; text: string } | { ok: false; cancelled?: true; error?: string }> {
+  const picked = await dialog.showOpenDialog(parent, {
+    title: 'Choose a file to explain',
+    message: 'Pick a source file from your project',
+    properties: ['openFile'],
+    filters: [
+      {
+        name: 'Code',
+        extensions: [
+          'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'kt', 'swift',
+          'c', 'cc', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'md', 'json', 'css', 'scss',
+          'html', 'sql', 'sh', 'zsh', 'yml', 'yaml', 'toml',
+        ],
+      },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  });
+  if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+  const filePath = picked.filePaths[0];
+  let text: string;
+  try {
+    const buf = await readFile(filePath);
+    if (buf.byteLength > MAX_PICK_BYTES) {
+      return { ok: false, error: 'That file is a bit large — pick a smaller source file (under ~200KB).' };
+    }
+    text = buf.toString('utf8').trim();
+  } catch {
+    return { ok: false, error: 'Could not read that file.' };
+  }
+  if (!text) return { ok: false, error: 'That file looks empty.' };
+  return { ok: true, filePath, text };
 }
 
 function allowedExternalUrl(url: string): boolean {
@@ -818,35 +859,9 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     const session = sessionFor(activeTabId);
     if (!win || !session) return { ok: false as const };
-    const picked = await dialog.showOpenDialog(win, {
-      title: 'Choose a file to explain',
-      message: 'Pick a source file from your project',
-      properties: ['openFile'],
-      filters: [
-        {
-          name: 'Code',
-          extensions: [
-            'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'kt', 'swift',
-            'c', 'cc', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'md', 'json', 'css', 'scss',
-            'html', 'sql', 'sh', 'zsh', 'yml', 'yaml', 'toml',
-          ],
-        },
-        { name: 'All files', extensions: ['*'] },
-      ],
-    });
-    if (picked.canceled || !picked.filePaths[0]) return { ok: false as const, cancelled: true as const };
-    const filePath = picked.filePaths[0];
-    let text: string;
-    try {
-      const buf = await readFile(filePath);
-      if (buf.byteLength > MAX_PICK_BYTES) {
-        return { ok: false as const, error: 'That file is a bit large — pick a smaller source file (under ~200KB).' };
-      }
-      text = buf.toString('utf8').trim();
-    } catch {
-      return { ok: false as const, error: 'Could not read that file.' };
-    }
-    if (!text) return { ok: false as const, error: 'That file looks empty.' };
+    const picked = await chooseCodeFile(win);
+    if (!picked.ok) return picked;
+    const { filePath, text } = picked;
     const root = await resolveRepoRoot(path.dirname(filePath));
     const rel = root ? path.relative(root, filePath) : path.basename(filePath);
     const usage = await cachedAppUsage();
@@ -873,6 +888,14 @@ app.whenReady().then(() => {
         sourceFilePath: filePath,
       });
     }
+    return { ok: true as const };
+  });
+  // The companion's paste step offers a file too; it explains in the panel like a shortcut press.
+  ipcMain.handle('companion:pickFile', async () => {
+    if (!companion || companion.isDestroyed()) return { ok: false as const };
+    const picked = await chooseCodeFile(companion);
+    if (!picked.ok) return picked;
+    void startReview({ captured: { code: picked.text, sourceApp: path.basename(picked.filePath) } });
     return { ok: true as const };
   });
   ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {
@@ -1401,6 +1424,8 @@ app.whenReady().then(() => {
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });
+  ipcMain.handle('ownCode:step', () => ownCodeStepShown());
+  ipcMain.handle('ownCode:notNow', () => ownCodeStepNotNow());
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());

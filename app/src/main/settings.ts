@@ -129,6 +129,8 @@ export interface Settings {
    * finished, Accessibility allowed, signed in and similar steps, tied to the random install ID.
    */
   shareSetupProgress: boolean;
+  /** The first explanation of the user's own code is saved, so the companion's paste step is gone for good. */
+  ownCodeExplained?: true;
 }
 
 const DEFAULTS: Settings = {
@@ -285,10 +287,14 @@ class SettingsStore {
     this.data = next;
   }
 
-  /** Erase everything while signed out: forget the project folder. Throws when the file can't be saved. */
-  forgetProjectRoot(): void {
+  /**
+   * Erase everything (and account deletion): forget the project folder and that the user's own code
+   * was explained. Throws when the file can't be saved.
+   */
+  forgetLocalWork(): void {
     const next: Settings = { ...this.data };
     delete next.lastProjectRoot;
+    delete next.ownCodeExplained;
     this.write(next);
     this.data = next;
   }
