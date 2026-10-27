@@ -31,6 +31,7 @@ import {
   createBar,
   createCompanion,
   currentWidget,
+  focusPanelForPaste,
   getOrCreateWidget,
   hideBar,
   positionBar,
@@ -57,7 +58,7 @@ import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
-import { noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
+import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
 import { grantReturnApp, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
@@ -200,8 +201,10 @@ function makeSession(
     isSample: () => session.code === FIRST_RUN_SAMPLE,
     onRecorded: () => {
       notify('Added to your learning history');
-      // First run step 2 asks its one level question once the sample answer has finished.
-      if (session.isSample?.() && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+      // First run: step 2 asks its one level question once the sample answer has finished, and
+      // the Mac setup offers the shortcut once the user's own code has been explained.
+      const event = firstRunEvent(session.isSample?.() === true);
+      if (event && companion && !companion.isDestroyed()) companion.webContents.send(event);
       void askLaunchAtLogin(!session.isSample?.());
     },
     onUnderstood: () => notify('Nice — concept understood'),
@@ -569,8 +572,9 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
   }
-  if (!code && isMac && !options.preferClipboard && !accessibilityGranted(false)) {
-    // The panel shows the pre-permission screen (Continue asks; clipboard and file work without it).
+  const needsGrant = !code && isMac && !options.preferClipboard && !accessibilityGranted(false);
+  if (needsGrant) {
+    // The panel leads with its paste box; Turn on the shortcut asks for the grant.
     reportProgress('accessibility_asked');
     pendingGrant = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? { app: sourceApp, at: Date.now() } : null;
   }
@@ -584,6 +588,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     }
   }
   const { win, fresh } = openPanel();
+  // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
+  if (needsGrant) focusPanelForPaste(win, fresh);
   if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
     tabSessions.set(activeTabId, makeSession(activeTabId, code, sourceApp));

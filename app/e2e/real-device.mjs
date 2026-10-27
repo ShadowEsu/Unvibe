@@ -143,15 +143,17 @@ if (os === 'windows') {
 }
 desktopShot('first-launch');
 
-// --- First run, timed: hello → explain the sample for real → shortcut and permission ------------
+// --- First run, timed: hello → explain the sample for real → your own code ------------------------
 // The walkthrough acts at a brisk human pace (no sleeps beyond what the UI needs), so the time is
-// close to what a new user who reads and clicks straight through would see.
+// close to what a new user who reads and clicks straight through would see. A Mac's setup has 4
+// steps (step 3 pastes your own code, step 4 offers the shortcut once that worked); Windows has 3.
+const setupSteps = os === 'windows' ? 3 : 4;
 try {
-  await companion.locator('.ob2__count').filter({ hasText: '1 / 3' }).waitFor({ timeout: 20000 });
+  await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
   await companion.getByPlaceholder('Your name').fill('Preston Test');
   await clickText(companion, "Let's go");
-  await companion.locator('.ob2__count').filter({ hasText: '2 / 3' }).waitFor({ timeout: 8000 });
+  await companion.locator('.ob2__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
   await clickText(companion, 'Explain this code');
   log(true, 'Onboarding: hello and sample');
@@ -165,14 +167,15 @@ writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
 
 try {
   await clickText(companion, 'Next');
-  await companion.locator('.ob2__count').filter({ hasText: '3 / 3' }).waitFor({ timeout: 8000 });
-  await companion.locator('.ob2__task').waitFor({ timeout: 8000 });
+  await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+  await companion.locator(os === 'windows' ? '.ob2__task' : '.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
-  await clickText(companion, 'Start using Unvibe');
+  // Nothing is pasted here, so a Mac's step 3 finishes with Skip for now (no step 4).
+  await clickText(companion, os === 'windows' ? 'Start using Unvibe' : 'Skip for now');
   await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
   await shot(companion, 'after-onboarding');
-  log(true, 'Onboarding: all three steps');
-} catch (e) { log(false, 'Onboarding: all three steps', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
+  log(true, 'Onboarding: every step');
+} catch (e) { log(false, 'Onboarding: every step', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
 // Local mode is the default: no sign-in wall after onboarding.
 try {

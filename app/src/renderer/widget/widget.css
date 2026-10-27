@@ -1589,3 +1589,18 @@ code.inline {
 
 /* Long explanations fade into the action row instead of being sliced by it. */
 .card .stage > .body { padding-bottom: 26px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }
+
+/* Mac without Accessibility: the paste box leads, the shortcut offer sits under an "or" rule, and
+   its guide is the access note, as a numbered list. Colours follow the panel's paper or ink. */
+/* The panel's main area clips, so this state scrolls itself when the guide makes it taller. */
+.card .empty-picker--paste { gap: 12px; padding-top: 12px; min-height: 0; overflow-y: auto; }
+.card .empty-picker--paste .state__vibe { margin: 0; }
+.card .empty-picker--paste .paste-target { max-width: 420px; }
+.card .empty-picker--paste .paste-target__box { border-color: var(--p-faint); background: var(--p-surface); color: var(--p-ink); }
+.card .empty-picker--paste .paste-target__box:focus { border-color: var(--p-ink); }
+.card .empty-picker--paste .paste-target__hint { color: var(--p-muted); }
+.card .empty-picker--paste .sub { max-width: 380px; font-size: 13.5px; line-height: 1.5; }
+.card .empty-or { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; color: var(--p-muted); font: 500 12.5px/1 var(--font-sans); }
+.card .empty-or::before, .card .empty-or::after { content: ""; flex: 1; height: 1px; background: var(--p-line); }
+.card .empty-picker--paste .access-note { width: 100%; max-width: 420px; box-sizing: border-box; margin: 0; padding: 14px; }
+.card .access-note .shortcut-guide__steps li { font-size: 13.5px; }

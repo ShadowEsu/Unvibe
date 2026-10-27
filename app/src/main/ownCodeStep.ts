@@ -33,6 +33,16 @@ export function noteOwnCodeExplained(): void {
   if (!settings().all().ownCodeExplained) settings().set({ ownCodeExplained: true });
 }
 
+/**
+ * What a finished explanation tells the companion's setup: the sample's answer is in (step 2 asks its
+ * level question), or, while setup is still open, the user's own code was explained (the Mac setup
+ * then offers the shortcut as step 4).
+ */
+export function firstRunEvent(sample: boolean): 'onboarding:sampleDone' | 'onboarding:ownCodeDone' | null {
+  if (sample) return 'onboarding:sampleDone';
+  return settings().all().onboarded ? null : 'onboarding:ownCodeDone';
+}
+
 export function ownCodeStepShown(): boolean {
   return offered && due();
 }

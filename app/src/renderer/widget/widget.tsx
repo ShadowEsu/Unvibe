@@ -11,6 +11,8 @@ import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { UsageRings } from '../shared/usageRings';
+import { PasteTarget } from '../shared/pasteTarget';
+import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import '../shared/tokens.css';
 
 type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
@@ -180,8 +182,8 @@ function ResizeGrips() {
 
 /**
  * Calm fallback when ⌘U finds no selection: pick a source, never hard-error. On a Mac without
- * Accessibility it is the pre-permission screen instead: Continue asks for the grant, and the
- * clipboard and file buttons still work without it.
+ * Accessibility it leads with a focused paste box (⌘V explains right away) and a file, then offers
+ * the shortcut, whose guide shows here while System Settings is open.
  */
 function EmptyPicker({
   shortcut,
@@ -196,7 +198,7 @@ function EmptyPicker({
   const [picking, setPicking] = useState(false);
   // On macOS the shortcut copies your selection through Accessibility. Without it the shortcut lands here.
   const [needsAccess, setNeedsAccess] = useState(false);
-  const [asked, setAsked] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [grantNote, setGrantNote] = useState('');
   useEffect(() => {
     let alive = true;
@@ -219,10 +221,9 @@ function EmptyPicker({
     const timer = window.setInterval(() => { if (missing) check(); }, 2000);
     return () => { alive = false; window.clearInterval(timer); };
   }, [shortcut]);
-  const allowAccess = async () => {
-    setAsked(true);
-    await window.unvibe.promptAccessibility();
-    await window.unvibe.openAccessibility();
+  const openGuide = async () => {
+    setGuideOpen(true);
+    await turnOnShortcut(window.unvibe);
   };
 
   const chooseFile = async () => {
@@ -239,35 +240,26 @@ function EmptyPicker({
 
   if (needsAccess) {
     return (
-      <div className="state empty-picker">
+      <div className="state empty-picker empty-picker--paste">
         <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
-        <div className="big">{shortcut} can’t read your selection yet.</div>
-        <div className="sub">Unvibe needs Accessibility to copy what you selected. macOS asks once, and Unvibe never reads your keystrokes or your screen.</div>
+        <div className="big">Paste the code here.</div>
+        <PasteTarget compact hint="Copy a few lines (⌘C) in your editor, then paste here. It explains right away."
+          onPaste={(text) => window.unvibe.usePaste({ text, level })} />
         <div className="empty-actions">
-          <button className="btn" onClick={() => void allowAccess()}>Continue</button>
-        </div>
-        {asked ? (
-          <div className="access-note" role="status">
-            In the list that opened, switch <b>Unvibe</b> on. This panel then explains your selection.
-            <div><b>Switched it on and nothing happened?</b> macOS may hold an old Unvibe entry from a previous version. Press Fix it, switch Unvibe on again, restart Unvibe, then press {shortcut} again.</div>
-            <div className="empty-actions">
-              <button className="btn ghost" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
-              <button className="btn ghost" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
-            </div>
-          </div>
-        ) : null}
-        {/* Many first-run Macs never grant Accessibility, so the screen also offers the two ways in
-            that need no permission. */}
-        <div className="sub">Or skip this: copy some code (⌘C) and explain your clipboard, or choose a file.</div>
-        <div className="empty-actions">
-          <button className="btn ghost" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
-            Explain my clipboard
-          </button>
           <button className="btn ghost" disabled={picking} onClick={() => void chooseFile()}>
             {picking ? 'Opening…' : 'Choose a file…'}
           </button>
         </div>
         {hint ? <div className="sub empty-hint">{hint}</div> : null}
+        <div className="empty-or">or</div>
+        <div className="sub">To explain a selection straight from any app, turn on the shortcut. macOS asks once.</div>
+        {guideOpen ? (
+          <div className="access-note"><ShortcutGuide buttonClass="btn ghost" /></div>
+        ) : (
+          <div className="empty-actions">
+            <button className="btn ghost" onClick={() => void openGuide()}>Turn on the shortcut</button>
+          </div>
+        )}
       </div>
     );
   }

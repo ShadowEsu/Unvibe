@@ -143,6 +143,12 @@ const api = {
     ipcRenderer.on('onboarding:sampleDone', listener);
     return () => { ipcRenderer.removeListener('onboarding:sampleDone', listener); };
   },
+  /** Setup is still open and the user's own code was just explained; returns an unsubscribe. */
+  onOwnCodeDone: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('onboarding:ownCodeDone', listener);
+    return () => { ipcRenderer.removeListener('onboarding:ownCodeDone', listener); };
+  },
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
   /** Whether this open leads with the paste step, before Today. */
   ownCodeStep: (): Promise<boolean> => ipcRenderer.invoke('ownCode:step'),

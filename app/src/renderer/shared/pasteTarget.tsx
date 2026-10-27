@@ -8,13 +8,15 @@ const PREVIEW_LINES = 6;
  * One focused paste target: the user copies code anywhere and pastes it here, with no permission
  * needed. `onPaste` gets the pasted text (never empty); the target then shows its first lines with
  * "Explaining in the panel", and another paste replaces it. An empty paste shows the clipboard-empty
- * message instead. `onChooseFile` adds "or Choose a file…" under the target.
+ * message instead. `onChooseFile` adds "or Choose a file…" under the target. `compact` (the review
+ * panel, which already heads it with "Paste the code here.") drops the bold title and is shorter.
  */
-export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true }: {
+export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, compact = false }: {
   hint: string;
   onPaste: (text: string) => void;
   onChooseFile?: () => void;
   autoFocus?: boolean;
+  compact?: boolean;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const handler = useRef(onPaste);
@@ -45,7 +47,7 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true }: {
   }, []);
   return (
     <div className="paste-target">
-      <div ref={target} className={`paste-target__box${preview ? ' has-code' : ''}`} role="textbox" tabIndex={0}
+      <div ref={target} className={`paste-target__box${preview ? ' has-code' : ''}${compact ? ' is-compact' : ''}`} role="textbox" tabIndex={0}
         aria-label="Paste code here" aria-describedby={preview ? undefined : 'paste-target-hint'}>
         {preview ? (
           <>
@@ -57,7 +59,7 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true }: {
             <span className="paste-target__keys" aria-hidden="true">
               {(isWindows ? ['Ctrl', 'V'] : ['⌘', 'V']).map((key) => <span key={key} className="paste-target__key">{key}</span>)}
             </span>
-            <b>Paste code here</b>
+            {compact ? null : <b>Paste code here</b>}
             <span id="paste-target-hint" className="paste-target__hint">{hint}</span>
           </>
         )}

@@ -643,9 +643,29 @@
   & .ob2__level p { margin: 0; font-size: 14.5px; color: var(--v-ink); text-align: center; }
   & .ob2__choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   & .ob2__task { margin: 0; font-size: 16px; font-weight: 650; color: var(--v-ink); text-align: center; }
-  /* The next open's paste step (OwnCodeWelcome): a fixed width keeps the card 720 px in every state
-     (the onboarding grid sizes its card to the content), Not now alone on the right. */
+  /* The paste step (setup's Mac step 3, the next open's OwnCodeWelcome) and the Mac shortcut step: a
+     fixed width keeps the card 720 px in every state (the onboarding grid sizes its card to the
+     content), Not now alone on the right. */
   & .ob2__paste { width: 652px; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
+  & .ob2__offer {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px 22px; align-items: center; padding: 22px 24px;
+    border: 2px solid var(--v-ink); border-radius: 18px; background: var(--v-surface); box-shadow: 4px 4px 0 var(--v-ink); text-align: left;
+  }
+  & .ob2__offer h3 { margin: 0; font: 700 21px/1.2 var(--font-sans); letter-spacing: -0.015em; color: var(--v-ink); }
+  & .ob2__offer .shortcut-pill + h3 { margin-top: 10px; }
+  & .ob2__offer p { margin: 4px 0 0; font: 500 14.5px/1.45 var(--font-sans); color: var(--v-muted); }
+  & .ob2__offer .ob2__keys { justify-content: flex-start; }
+  & .ob2__offer .ob2__why {
+    grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 12px;
+    background: var(--v-sunken); color: var(--v-ink); font-size: 13.5px;
+  }
+  & .ob2__why svg { flex: none; margin-top: 1px; }
+  & .ob2__offer-acts { grid-column: 1 / -1; display: flex; }
+  & .ob2 .ob2__lime { height: 42px; padding: 0 18px; background: var(--lime); border: 2px solid var(--v-ink); color: var(--v-ink); font-size: 14.5px; box-shadow: 3px 3px 0 var(--v-ink); }
+  & .ob2 .ob2__lime:hover:not(:disabled) { background: var(--lime); box-shadow: 4px 4px 0 var(--v-ink); }
+  & .ob2 .ob2__note { justify-self: center; text-align: center; font-size: 13.5px; }
+  & .ob2 .shortcut-guide { color: var(--v-ink); }
+  & .ob2 .shortcut-guide__fix p, & .ob2 .shortcut-art figcaption { color: var(--v-muted); }
   & .ob2 .ob2__actions--end { justify-content: flex-end; }
   & .ob2__shortcut { justify-self: center; text-align: center; }
   & .ob2__alt { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
