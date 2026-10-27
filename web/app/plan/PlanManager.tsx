@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BillingInterval, WorkspaceAccess, WorkspaceInvitation, WorkspaceMember } from '@/billing/types';
 import type { PublicBillingOverview as BillingOverview } from '@/billing/presentation';
-import { BUSINESS_SEATS, FAIR_USE_RATE_LIMIT_TEXT, planDisplayName, planLimit, priceFor, TEAMS_MAX_SEATS } from '@/billing/plans';
+import { BUSINESS_SEATS, FAIR_USE_RATE_LIMIT_TEXT, planDisplayName, planLimit, priceFor, REQUEST_SIZE_LIMIT_TEXT, TEAMS_MAX_SEATS } from '@/billing/plans';
 
 interface Props {
   initialOverview: BillingOverview;
@@ -234,7 +234,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
             <p>Enterprise · {money.format(priceFor('enterprise', 'monthly', 1) / 100)} a month</p>
             <small>{capText('enterprise')} explanations a month and every Pro feature, one account. Payments open soon.</small>
             <p>Big Business · {money.format(priceFor('business', 'lifetime', 1) / 100)} once</p>
-            <small>Unlimited explanations and questions and every feature, for up to {BUSINESS_SEATS} named seats, paid once. Its only limit is the <a href={FAIR_USE_URL}>{FAIR_USE_RATE_LIMIT_TEXT}</a>. Payments open soon.</small>
+            <small>Unlimited explanations and questions and every feature, for up to {BUSINESS_SEATS} named seats, paid once. Its only usage limit is the <a href={FAIR_USE_URL}>{FAIR_USE_RATE_LIMIT_TEXT}</a>. {REQUEST_SIZE_LIMIT_TEXT} Payments open soon.</small>
           </div>
           <a className="btn btn--secondary" href={NEW_TIERS_APPLY_MAIL}>Contact us to apply</a>
         </section>

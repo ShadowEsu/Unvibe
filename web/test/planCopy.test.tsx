@@ -5,6 +5,7 @@ import { PlanManager } from '../app/plan/PlanManager';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { publicBillingOverview } from '../src/billing/presentation';
 import type { PlanId } from '../src/billing/types';
+import { MAX_CONTEXT_CHARS, MAX_QUESTION_CHARS } from '../src/lib/reviewLimits';
 
 // The real web Plan page component, rendered for each kind of account on a real (memory) billing overview.
 async function plan(planId: PlanId, opts: { checkoutAvailable: boolean; paymentsOpen: boolean }): Promise<string> {
@@ -63,7 +64,9 @@ test('the new tiers are never sold here and the call is never mentioned', async 
   const html = await plan('free', { checkoutAvailable: true, paymentsOpen: true });
   assert.match(html, /Enterprise · \$50 a month/);
   assert.match(html, /1,000 explanations a month/);
-  assert.match(html, /Unlimited explanations and questions and every feature, for up to 10 named seats, paid once\. Its only limit is the <a href="https:\/\/unvibe\.site\/pricing#fair-use">fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour<\/a>\. Payments open soon\./);
+  assert.match(html, /Unlimited explanations and questions and every feature, for up to 10 named seats, paid once\. Its only usage limit is the <a href="https:\/\/unvibe\.site\/pricing#fair-use">fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour<\/a>\. Each request has the same size limit as every plan: up to 120,000 characters of code and 4,000 characters per question\. Payments open soon\./);
+  assert.ok(html.includes(`up to ${MAX_CONTEXT_CHARS.toLocaleString('en-US')} characters of code and ${MAX_QUESTION_CHARS.toLocaleString('en-US')} characters per question.`), 'the size limit is the one the AI routes enforce');
+  assert.doesNotMatch(html, /\bonly limit\b/i);
   assert.doesNotMatch(html, /latest features|call with|contact you first|\bcalls\b/i);
   assert.doesNotMatch(html, /5,000 explanations|10,000 questions|fair-use limit|pause until/, 'no Big Business monthly cap is written anywhere');
 });

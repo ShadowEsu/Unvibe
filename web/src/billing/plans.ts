@@ -1,3 +1,4 @@
+import { MAX_CONTEXT_CHARS, MAX_QUESTION_CHARS } from '../lib/reviewLimits';
 import type { BillingInterval, PlanId, SubscriptionRecord, SubscriptionStatus, UsageKind, WorkspaceRole } from './types';
 
 /** How long after its reservation a request's usage row can still receive token counts. */
@@ -31,7 +32,8 @@ export const BUSINESS_SEATS = 10;
 export const BUSINESS_SEATS_FULL = 'Big Business includes up to 10 named seats. Remove someone from the workspace to free a seat.';
 
 /**
- * The only limit on an unlimited allowance, per person (account), counting explanations and
+ * The only usage limit on an unlimited allowance (besides the size limit of one request every plan
+ * has), per person (account), counting explanations and
  * questions together: requests a minute and an hour, and the characters sent an hour (fixed
  * windows). An explanation streams for about 3 to 14 seconds and a person reads it before the next,
  * so one person working normally stays far below it; a script does not.
@@ -40,6 +42,9 @@ export const FAIR_USE_RATE_LIMIT = { perMinute: 10, perHour: 60, charactersPerHo
 
 /** The rate limit in words, as on the pricing card and in the Terms. */
 export const FAIR_USE_RATE_LIMIT_TEXT = 'fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour';
+
+/** One request's size limit, the same on every plan, in words (MAX_CONTEXT_CHARS and MAX_QUESTION_CHARS). */
+export const REQUEST_SIZE_LIMIT_TEXT = `Each request has the same size limit as every plan: up to ${MAX_CONTEXT_CHARS.toLocaleString('en-US')} characters of code and ${MAX_QUESTION_CHARS.toLocaleString('en-US')} characters per question.`;
 
 /** Enterprise and Big Business: sold only while BILLING_NEW_TIERS_ENABLED is exactly `true`. */
 export type NewTierPlan = 'enterprise' | 'business';

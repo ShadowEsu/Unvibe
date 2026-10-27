@@ -21,7 +21,8 @@ const PLAN_LABELS: Record<PlanId, string> = {
 
 /**
  * The written fair-use section Big Business points to. Big Business explanations and questions are
- * unlimited; the only limit is a fair-use rate limit against automated abuse, never a monthly cap.
+ * unlimited; the only usage limit is a fair-use rate limit against automated abuse, never a monthly
+ * cap (each request also has the size limit every plan has).
  */
 export const FAIR_USE_URL = 'https://unvibe.site/pricing#fair-use';
 
