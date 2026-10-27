@@ -8,6 +8,7 @@
 // Env: UNVIBE_EXE (installed app executable), MEDIA_DIR (output folder), MEDIA_INSTALL_ID (reused
 //      so repeated captures count as one install in founder stats).
 import { _electron as electron } from 'playwright';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -154,6 +155,61 @@ if (explained) {
     await panel.locator('.verdict').waitFor({ timeout: 60000 });
     await sleep(1500);
     await shot(panel, 'panel-test-checked');
+  });
+  // "Why does this exist?" reads git history, so it needs a file inside a repo. The repo is made
+  // here with a neutral author, because the answer shows who last changed the lines.
+  await step('why exists', async () => {
+    const repo = mkdtempSync(path.join(tmpdir(), 'unvibe-why-'));
+    const git = (...args) => execFileSync('git', args, {
+      cwd: repo,
+      env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
+    });
+    const file = path.join(repo, 'upload.js');
+    git('init', '-q');
+    writeFileSync(file, [
+      'export async function upload(file, send) {',
+      '  for (let attempt = 1; ; attempt++) {',
+      '    try {',
+      '      return await send(file);',
+      '    } catch (error) {',
+      '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
+      '    }',
+      '  }',
+      '}',
+      '',
+    ].join('\n'));
+    git('add', '.');
+    git('commit', '-q', '-m', 'Retry uploads with backoff so a dropped connection does not lose the file');
+    writeFileSync(file, [
+      '// The storage API rate-limits after five quick failures, so stop there.',
+      'const MAX_ATTEMPTS = 5;',
+      '',
+      'export async function upload(file, send) {',
+      '  for (let attempt = 1; ; attempt++) {',
+      '    try {',
+      '      return await send(file);',
+      '    } catch (error) {',
+      '      if (attempt >= MAX_ATTEMPTS) throw error;',
+      '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
+      '    }',
+      '  }',
+      '}',
+      '',
+    ].join('\n'));
+    git('commit', '-q', '-am', 'Stop after 5 attempts: the storage API rate-limits after that');
+    await app.evaluate(({ dialog }, picked) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+    }, file);
+    const picked = await (await windowWith('widget.html')).evaluate(() => window.unvibe.pickFile());
+    if (!picked?.ok) throw new Error(`file pick failed: ${picked?.error ?? 'cancelled'}`);
+    // Wait for the picked file's preview first, so the earlier finished card can't pass for this one.
+    await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: 'MAX_ATTEMPTS' }).first().waitFor({ timeout: 30000 });
+    const panel = await settledPanel();
+    await panel.locator('.tool--why').click();
+    await panel.locator('.origin-panel').getByText('Reason documented').waitFor({ timeout: 20000 });
+    await panel.locator('.origin-panel').scrollIntoViewIfNeeded();
+    await sleep(800);
+    await shot(panel, 'panel-why');
   });
 }
 
