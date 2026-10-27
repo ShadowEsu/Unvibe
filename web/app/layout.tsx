@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { currentUserId } from '@/lib/session';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Uncode',
-  description: 'Understand, verify, and retain AI-generated code.',
+  title: 'Unvibe',
+  description: 'Your Unvibe plan, usage and workspace invitations.',
 };
 
 async function SignOutBtn() {
@@ -19,27 +18,18 @@ async function SignOutBtn() {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const userId = await currentUserId();
 
+  // Plain links, not next/link: the retired dashboard routes redirect to unvibe.site, and a prefetch of
+  // a cross-origin redirect fails in the console (CORS). Only the site and /plan are linked.
   return (
     <html lang="en">
       <body>
         <nav className="nav">
-          <Link href="/" className="nav__brand">
-            Uncode
-          </Link>
-          <Link href="/">Home</Link>
-          <Link href="/history" className="nav__secondary">History</Link>
-          <Link href="/projects" className="nav__secondary">Projects</Link>
-          <Link href="/plan">Plan</Link>
-          <Link href="/profile" className="nav__secondary">Profile</Link>
+          <a href="https://unvibe.site" className="nav__brand">
+            Unvibe
+          </a>
+          <a href="/plan">Plan</a>
           <span className="nav__spacer" />
-          {userId ? (
-            <SignOutBtn />
-          ) : (
-            <>
-              <Link href="/login">Sign in</Link>
-              <Link href="/signup" className="nav__signup">Sign up</Link>
-            </>
-          )}
+          {userId ? <SignOutBtn /> : null}
         </nav>
         <main className="shell">{children}</main>
       </body>

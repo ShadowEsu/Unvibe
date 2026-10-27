@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 
 export function InviteAccept({ token }: { token: string }) {
   const [status, setStatus] = useState('Sign in with the invited email address, then accept this invitation.');
@@ -13,5 +12,5 @@ export function InviteAccept({ token }: { token: string }) {
     setStatus(response.ok ? `You joined ${data.workspace?.name ?? 'the workspace'}.` : data.message ?? 'Sign in first or ask for a new invitation.');
     setBusy(false);
   };
-  return <div className="auth-page"><p className="eyebrow">Workspace invitation</p><h1>Join your team in Uncode</h1><p>{status}</p><button className="btn btn--primary" onClick={() => void accept()} disabled={busy}>{busy ? 'Accepting…' : 'Accept invitation'}</button><p className="auth-alt"><Link href="/login">Sign in</Link> · <Link href="/plan">Open Plan & usage</Link></p></div>;
+  return <div className="auth-page"><p className="eyebrow">Workspace invitation</p><h1>Join your team in Unvibe</h1><p>{status}</p><button className="btn btn--primary" onClick={() => void accept()} disabled={busy}>{busy ? 'Accepting…' : 'Accept invitation'}</button><p className="auth-alt"><a href="/plan">Open Plan &amp; usage</a></p></div>;
 }

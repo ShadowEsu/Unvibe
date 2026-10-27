@@ -71,11 +71,11 @@
 .activate-progress span {
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1px solid var(--a-line-strong);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 .activate-progress li.is-current { border-top-color: var(--a-ink); color: var(--a-ink); }
