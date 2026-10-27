@@ -32,8 +32,8 @@ function files(dir: string): string[] {
 }
 
 describe("public contact", () => {
-  it("names no personal inbox in site source, public files, scripts or user email", () => {
-    const offenders = [...files("src"), ...files("public"), ...files("scripts")]
+  it("names no personal inbox in site source, public files, scripts, docs or the env example", () => {
+    const offenders = [...files("src"), ...files("public"), ...files("scripts"), ".env.example", "README.md"]
       .filter((path) => /preston@/i.test(readFileSync(join(process.cwd(), path), "utf8")));
     assert.deepEqual(offenders, []);
   });
