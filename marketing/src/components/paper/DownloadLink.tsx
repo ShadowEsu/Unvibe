@@ -16,6 +16,11 @@ interface DownloadLinkProps {
   surface: DownloadSurface;
   size?: "hero" | "nav";
   className?: string;
+  /**
+   * The Mac/Windows pair (/beta, home) is light for Mac and dark for Windows, the default. A page whose
+   * only download is this button uses dark (Design), so it isn't the weakest thing on the page.
+   */
+  tone?: "light" | "dark";
   onClick?: () => void;
 }
 
@@ -47,11 +52,12 @@ export function DownloadLink({
   surface,
   size = "hero",
   className,
+  tone: toneChoice,
   onClick,
 }: DownloadLinkProps) {
   const [phone, setPhone] = useState(false);
   useEffect(() => setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone"), []);
-  const tone = platform === "windows" ? "win" : "mac";
+  const tone = toneChoice ?? (platform === "windows" ? "dark" : "light");
   const label = phone ? "Email me the link" :
     platform === "mac"
       ? "Download free for Mac"
@@ -70,7 +76,7 @@ export function DownloadLink({
       }}
       className={clsx(
         "paper-join",
-        tone === "win" ? "paper-join--win" : "paper-join--mac",
+        tone === "dark" ? "paper-join--win" : "paper-join--mac",
         size === "nav" && "paper-join--nav",
         className,
       )}

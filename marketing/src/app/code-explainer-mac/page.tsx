@@ -39,7 +39,7 @@ export default function CodeExplainerMacPage() {
           panel beside your editor.
         </p>
         <div className="os-get">
-          <DownloadLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface="seo_mac" />
+          <DownloadLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface="seo_mac" tone="dark" />
         </div>
       </header>
 
@@ -58,7 +58,7 @@ export default function CodeExplainerMacPage() {
             src="/product/os/mac-panel-v0.1.44.webp"
             width={880}
             height={1132}
-            sizes="(min-width: 860px) 22rem, 100vw"
+            sizes="(min-width: 860px) 400px, 100vw"
             alt="The Unvibe panel on a Mac explaining a JavaScript debounce function at the Intermediate depth"
           />
           <figcaption>Unvibe 0.1.44 on a Mac, explaining a JavaScript debounce function.</figcaption>
@@ -112,7 +112,7 @@ export default function CodeExplainerMacPage() {
         <h2 id="mac-get">Get Unvibe for Mac</h2>
         <p>Free, with no card and no API key.</p>
         <div className="os-get">
-          <DownloadLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface="seo_mac" />
+          <DownloadLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface="seo_mac" tone="dark" />
         </div>
         <p>
           On Windows? <Link className="paper-text-link" href="/code-explainer-windows">Unvibe for Windows</Link>.

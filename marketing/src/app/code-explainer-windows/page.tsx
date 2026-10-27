@@ -56,7 +56,7 @@ export default function CodeExplainerWindowsPage() {
             src="/product/os/windows-panel-v0.1.44.webp"
             width={560}
             height={640}
-            sizes="(min-width: 860px) 22rem, 100vw"
+            sizes="(min-width: 860px) 400px, 100vw"
             alt="The Unvibe panel on Windows explaining JavaScript selected in Notepad, with what to check next"
           />
           <figcaption>Unvibe 0.1.44 on Windows, explaining JavaScript selected in Notepad.</figcaption>
