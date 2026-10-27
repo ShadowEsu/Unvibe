@@ -63,7 +63,7 @@ export default function HomePage() {
           </div>
           <TryIt />
           <p className="home-langs">
-            In your language:{" "}
+            By programming language:{" "}
             {homeLanguagePages.map((page, index) => (
               <span key={page.id}>
                 {index > 0 ? ", " : null}

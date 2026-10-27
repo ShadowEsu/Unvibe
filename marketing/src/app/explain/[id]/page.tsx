@@ -49,7 +49,7 @@ export default function ExplainLanguagePage({ params }: Params) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: jsonLdScript(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Explain code", path: "/explain" }, { name, path: `/explain/${page.id}` }])),
+          __html: jsonLdScript(breadcrumbJsonLd([{ name: "Explain code", path: "/explain" }, { name, path: `/explain/${page.id}` }])),
         }}
       />
       <header className="explain-head">

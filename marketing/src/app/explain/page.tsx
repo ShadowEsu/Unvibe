@@ -3,7 +3,6 @@ import Link from "next/link";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
-import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainMono } from "./mono";
 import "./explain.css";
 
@@ -24,10 +23,6 @@ export const metadata: Metadata = {
 export default function ExplainIndexPage() {
   return (
     <article className={`explain-page ${explainMono.variable}`}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Explain code", path: "/explain" }])) }}
-      />
       <header className="explain-head">
         <h1>Explain code in plain English</h1>
         <p>Paste a snippet, pick a depth and Vibe tells you what the code does. Free, no account.</p>
