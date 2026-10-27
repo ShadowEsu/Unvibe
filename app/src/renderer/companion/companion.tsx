@@ -472,7 +472,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     explained
       ? "That's me, explaining it in the panel. Real answer, not a demo."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    `Now try it on code of your own. Select some in any app and press ${spoken}.`,
+    isWindows
+      ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
+      : 'Now try it on code of your own. Copy a few lines from any file, then press Explain my clipboard.',
   ];
   const said = useVibeSays(lines[step] ?? '', soundEffects);
 
@@ -609,10 +611,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 {(isWindows ? keys.split('+') : Array.from(keys)).map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
               </div>
               <p className="ob2__task">Open a file you didn't write, select a few lines, press {keys}.</p>
+              {/* On a Mac the shortcut needs Accessibility, which many first-run users never grant, so the
+                  clipboard (no permission) is the main way in there; Windows needs no permission. */}
               <div className="ob2__alt">
-                <span className="ob__sub">Or copy some code first:</span>
-                <button type="button" className="act" onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
+                <span className="ob__sub">{isWindows ? 'Or copy some code first:' : 'No permission needed: copy some code (⌘C), then'}</span>
+                <button type="button" className={isWindows ? 'act' : 'field-btn'} onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
               </div>
+              {isWindows ? null : <p className="ob__sub">The shortcut needs Accessibility. macOS asks the first time you press it.</p>}
               <details className="ob2__more">
                 <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
                 <div className="ob__integrations"><IntegrationsPanel /></div>
