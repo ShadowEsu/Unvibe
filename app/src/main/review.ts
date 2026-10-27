@@ -22,7 +22,7 @@ import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
 import { buildSelectionPayload, type ReviewMode } from './contextBuilder';
-import { isProPlan, limitReachedMessage } from '../core/plans';
+import { allowanceUsedUp, isProPlan, limitReachedMessage } from '../core/plans';
 import { raiseLimitPause } from './windows';
 import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
@@ -39,7 +39,8 @@ export type WidgetEvent =
   | { type: 'cancelled'; tabId: string }
   | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string }
   | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string }
-  | { type: 'usage'; tabId: string; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
+  /** `limit`/`remaining` null: an unlimited allowance (no monthly cap), never "0 left". */
+  | { type: 'usage'; tabId: string; used: number; limit: number | null; remaining: number | null; resetsAt: string; plan: string }
   | { type: 'understood'; tabId: string }
   /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
   | { type: 'quizError'; tabId: string; message: string };
@@ -361,8 +362,9 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
 
     const prefs = settings().all();
     const localKey = readAiKey();
-    const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
-    if (usage.remaining <= 0 && !localKey) {
+    const usedUp = allowanceUsedUp(usage);
+    const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usedUp);
+    if (usedUp && !localKey) {
       send(win, session, {
         type: 'error',
         code: 'plan_limit_reached',
@@ -401,7 +403,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
             resetsAt: next.resetsAt,
             plan: next.plan,
           });
-          if (next.remaining <= 0) raiseLimitPause(win);
+          if (allowanceUsedUp(next)) raiseLimitPause(win);
         }).catch(() => undefined);
       } catch (err) {
         if (abort.signal.aborted) {
@@ -428,7 +430,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     if (!res.ok || !res.body) {
       const body = (await res.json().catch(() => ({}))) as {
         error?: string; message?: string; upgradePath?: string;
-        usage?: { used: number; limit: number; remaining: number; resetsAt: string };
+        usage?: { used: number; limit: number | null; remaining: number | null; resetsAt: string };
       };
       if (body.usage) {
         send(win, session, {
@@ -439,7 +441,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           resetsAt: body.usage.resetsAt,
           plan: usage.plan,
         });
-        if (body.usage.remaining <= 0) raiseLimitPause(win);
+        if (allowanceUsedUp(body.usage)) raiseLimitPause(win);
       }
       const failure = explanationFailure(res.status, body);
       send(win, session, {
@@ -483,7 +485,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
               resetsAt: next.resetsAt,
               plan: next.plan,
             });
-            if (next.remaining <= 0) raiseLimitPause(win);
+            if (allowanceUsedUp(next)) raiseLimitPause(win);
           }).catch(() => undefined);
         }
       }

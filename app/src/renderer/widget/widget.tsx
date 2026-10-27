@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
-import { formatCount, isProPlan } from '../../core/plans';
+import { allowanceUsedUp, formatCount, isProPlan } from '../../core/plans';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
@@ -356,8 +356,9 @@ function archiveCurrent(tab: TabState): HistoryEntry[] {
 
 interface UsageState {
   used: number;
-  limit: number;
-  remaining: number;
+  /** Null is an unlimited allowance (no monthly cap): never "0 left", never paused. */
+  limit: number | null;
+  remaining: number | null;
   resetsAt: string;
   plan: string;
   selections?: { used: number; limit: number; remaining: number; resetsAt: string };
@@ -408,7 +409,7 @@ function Widget() {
   activeRef.current = activeTabId;
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
-  const outOfExplanations = usage ? usage.remaining <= 0 : false;
+  const outOfExplanations = usage ? allowanceUsedUp(usage) : false;
   const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
   const [revealedText, setRevealedText] = useState('');
@@ -709,8 +710,8 @@ function Widget() {
         <span className={`head__status head__status--${phase}`} role="status"><i aria-hidden="true" />{phaseLabel}</span>
         <div className="head__actions">
           {usage && (
-            <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
-              {formatCount(usage.remaining)} left
+            <span className="head__usage" title={usage.remaining === null ? 'No monthly limit' : `Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
+              {usage.remaining === null ? 'Unlimited' : `${formatCount(usage.remaining)} left`}
             </span>
           )}
           <button
@@ -762,7 +763,9 @@ function Widget() {
             <div className="widget-tools__spacer" />
             <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
             {usage && (
-              <div className="widget-tools__usage" title={`${formatCount(usage.used)} of ${formatCount(usage.limit)} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
+              <div className="widget-tools__usage" title={usage.limit === null
+                ? `${formatCount(usage.used)} explanations used this month. Unlimited, with no monthly limit.`
+                : `${formatCount(usage.used)} of ${formatCount(usage.limit)} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
                 <span>Available</span>
                 <UsageRings ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }} selections={usage.selections} size={26} tiny />
               </div>

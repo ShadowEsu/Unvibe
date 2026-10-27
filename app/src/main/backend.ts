@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
-import { serviceMessage } from '../core/serviceError';
+import { FAIR_USE_RATE_LIMITED_FALLBACK, serviceMessage } from '../core/serviceError';
 import { store } from './store';
 import { bakedTrialToken } from './trial';
 import { resolveBackendUrl } from './backendUrl';
@@ -125,6 +125,9 @@ async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => ({}));
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
+    if (res.status === 429 && body && typeof body === 'object' && 'error' in body && body.error === 'fair_use_rate_limited') {
+      throw new Error(serviceMessage(body) || FAIR_USE_RATE_LIMITED_FALLBACK);
+    }
     if (res.status === 429 || res.status === 402) throw new Error(serviceMessage(body) || 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
@@ -133,7 +136,8 @@ async function json<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export interface BillingUsageLine { kind: string; used: number; limit: number; remaining: number; resetsAt: string }
+/** One allowance line from the billing overview. `limit: null` is unlimited (no monthly cap); `remaining` is null exactly then. */
+export interface BillingUsageLine { kind: string; used: number; limit: number | null; remaining: number | null; resetsAt: string }
 export interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: 'owner' | 'admin' | 'member' };
   subscription: { plan: 'free' | 'pro' | 'teams' | 'enterprise' | 'business'; interval: 'monthly' | 'annual' | 'lifetime' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd: boolean };

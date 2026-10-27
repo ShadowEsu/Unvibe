@@ -15,7 +15,7 @@ import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
 import type { ChangeBrief } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
-import { asPlanId, FAIR_USE_URL, formatCount, isPaidPlan, planLabel, type PlanId } from '../../core/plans';
+import { allowanceUsedUp, asPlanId, FAIR_USE_URL, formatCount, isPaidPlan, planLabel, type PlanId } from '../../core/plans';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
@@ -89,15 +89,17 @@ interface Settings {
 interface BillingOverview {
   workspace: { id: string; name: string; type: 'personal' | 'team'; role: string };
   subscription: { plan: 'free' | 'pro' | 'teams' | 'enterprise' | 'business'; interval: 'monthly' | 'annual' | 'lifetime' | null; status: string; seats: number; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean };
-  usage: Array<{ kind: string; used: number; limit: number; remaining: number; resetsAt: string }>;
+  /** `limit: null` is unlimited (no monthly cap); `remaining` is null exactly then. */
+  usage: Array<{ kind: string; used: number; limit: number | null; remaining: number | null; resetsAt: string }>;
   canManageBilling: boolean;
   hasBillingAccount: boolean;
 }
 
 interface AppUsageLine {
   used: number;
-  limit: number;
-  remaining: number;
+  /** Null is an unlimited allowance (no monthly cap): never "0 left", never disables Explain. */
+  limit: number | null;
+  remaining: number | null;
   resetsAt: string;
   plan?: string;
   selections?: { used: number; limit: number; remaining: number; resetsAt: string };
@@ -129,7 +131,7 @@ function usageKindLabel(kind: string): string {
   return kind.replaceAll('_', ' ');
 }
 
-type UsageMeter = { kind: string; used: number; limit: number; remaining: number; resetsAt: string };
+type UsageMeter = { kind: string; used: number; limit: number | null; remaining: number | null; resetsAt: string };
 
 function collectUsageMeters(
   overview: BillingOverview | null,
@@ -735,7 +737,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
     void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen));
   }, []);
   const first = greetFirst(userName);
-  const explainDisabled = !!usage && usage.remaining <= 0;
+  const explainDisabled = !!usage && allowanceUsedUp(usage);
   const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const startReview = () => window.unvibe.companionReview();
   const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 5);
@@ -1022,7 +1024,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
                     : `Monthly explanation limits apply to this ${deviceName}.`)}
           </p>
           {currentPlan === 'business' && (
-            <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(FAIR_USE_URL)}>Read the fair-use limit</button>
+            <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(FAIR_USE_URL)}>Read the fair-use rate limit</button>
           )}
           {canPortal
             ? <button type="button" className="soft-btn" onClick={() => void portal()} disabled={busy}>Manage billing</button>
@@ -1078,21 +1080,24 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
         <div className="plan-usage-card">
           {meters.length === 0 && <p className="plan-usage-empty">Usage appears after the first explanation on this {deviceName}.</p>}
           {meters.map((line) => {
-            const open = line.limit >= 100_000;
-            const left = percentLeft(line.remaining, line.limit);
-            const usedPct = percentUsed(line.used, line.limit);
+            const { limit, remaining } = line;
+            // Null: an unlimited allowance (Big Business), with no fraction to draw.
+            const unlimitedLine = limit === null || remaining === null;
+            const open = unlimitedLine || limit >= 100_000;
             return (
               <div className="plan-usage-row" key={line.kind}>
                 <div>
                   <strong>{usageKindLabel(line.kind)}</strong>
                   <small>
-                    {open
-                      ? 'Unlimited on this build'
-                      : `${formatCount(line.used)} of ${formatCount(line.limit)} used · ${formatCount(line.remaining)} left`}
+                    {unlimitedLine
+                      ? `${formatCount(line.used)} used · Unlimited`
+                      : open
+                        ? 'Unlimited on this build'
+                        : `${formatCount(line.used)} of ${formatCount(limit)} used · ${formatCount(remaining)} left`}
                   </small>
                 </div>
-                <b>{open ? 'Open' : `${left}% left`}</b>
-                <i aria-hidden="true"><em style={{ width: open ? '8%' : `${usedPct}%` }} /></i>
+                <b>{unlimitedLine ? 'Unlimited' : open ? 'Open' : `${percentLeft(remaining, limit)}% left`}</b>
+                <i aria-hidden="true"><em style={{ width: unlimitedLine || open ? '8%' : `${percentUsed(line.used, limit)}%` }} /></i>
               </div>
             );
           })}
@@ -1867,7 +1872,7 @@ function App() {
           </button>
           {usageLine ? (
             <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
-              <span className="side-usage__row"><span>{asPlanId(usageLine.plan) === 'paid' ? planLabel(usageLine.plan) : `${planLabel(usageLine.plan)} plan`}</span><b>{formatCount(usageLine.remaining)} left</b></span>
+              <span className="side-usage__row"><span>{asPlanId(usageLine.plan) === 'paid' ? planLabel(usageLine.plan) : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining === null ? 'Unlimited' : `${formatCount(usageLine.remaining)} left`}</b></span>
               <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
             </button>
           ) : null}
@@ -1909,7 +1914,7 @@ function App() {
             <button type="button" className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
               <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>{modKey}K</kbd>
             </button>
-            <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
+            <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && allowanceUsedUp(usageLine)}>
               <kbd>{shortcutLabel}</kbd><span>Explain</span>
             </button>
           </header>

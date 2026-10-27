@@ -7,6 +7,7 @@ import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
+import { allowanceUsedUp } from '../core/plans';
 import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
 import { store, type ChatThread } from './store';
 import { flush } from './sync';
@@ -19,10 +20,11 @@ import { scanTypedText } from '../core/secretFilter';
 /** Typed text has no consent step, so any secret finding stops it before anything leaves the Mac. */
 const SECRET_IN_MESSAGE = 'That looks like it contains a key, token, or password, so nothing was sent. Remove it and try again.';
 
-type AskFailure = { ok: false; error: string; remaining?: number; code?: 'secret' };
+/** `remaining` null on chat: an unlimited allowance (no monthly cap), never "0 left". */
+type AskFailure = { ok: false; error: string; remaining?: number | null; code?: 'secret' };
 type AskResult = { ok: true; answer: string; remaining: number } | AskFailure;
 /** `wipeGeneration`: store().wipeGeneration() when this reply's request started. Saving its thread needs it. */
-type ChatResult = { ok: true; answer: string; remaining: number; wipeGeneration: number } | AskFailure;
+type ChatResult = { ok: true; answer: string; remaining: number | null; wipeGeneration: number } | AskFailure;
 
 interface PendingQuiz {
   eventId: string;
@@ -89,7 +91,8 @@ async function collectReviewText(payload: ReviewRequestPayload, signal: AbortSig
   const prefs = settings().all();
   const localKey = readAiKey();
   const usage = await cachedAppUsage();
-  const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usage.remaining <= 0);
+  const usedUp = allowanceUsedUp(usage);
+  const wantLocal = Boolean(localKey) && (prefs.useOwnAi || usedUp);
 
   if (wantLocal && localKey) {
     let text = '';
@@ -104,7 +107,7 @@ async function collectReviewText(payload: ReviewRequestPayload, signal: AbortSig
     return { text: text.trim(), model, mock: false };
   }
 
-  if (usage.remaining <= 0 && !localKey) {
+  if (usedUp && !localKey) {
     throw new Error('Monthly explanation limit reached. Add your own API key in Settings → AI, or upgrade.');
   }
 
@@ -354,13 +357,13 @@ export async function askChat(input: {
 
   // Tracked before the first await: a wipe during the usage check must stop this reply too.
   const request = trackRequest();
-  let remaining: number | undefined;
+  let remaining: number | null | undefined;
   try {
     const usage = await cachedAppUsage();
     remaining = usage.remaining;
     if (request.signal.aborted) return { ok: false, error: 'The request was cancelled.', remaining };
     const localKey = readAiKey();
-    if (usage.remaining <= 0 && !localKey) {
+    if (allowanceUsedUp(usage) && !localKey) {
       return { ok: false, error: 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.', remaining: 0 };
     }
 

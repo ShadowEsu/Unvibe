@@ -6,6 +6,7 @@
  */
 import { billingOverview, trialUsageOverview, type BillingUsageLine } from './backend';
 import { store } from './store';
+import { allowanceUsedUp } from '../core/plans';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 
 export const LOCAL_FREE_LIMIT = 30;
@@ -16,8 +17,9 @@ export const FULL_PRODUCT_LIMIT = 1_000_000;
 
 export interface AppUsage {
   used: number;
-  limit: number;
-  remaining: number;
+  /** Null is an unlimited allowance (Big Business): no monthly cap. `remaining` is null exactly then. */
+  limit: number | null;
+  remaining: number | null;
   resetsAt: string;
   plan: 'free' | 'pro' | 'teams' | 'enterprise' | 'business' | 'local' | 'trial' | 'full';
   source: 'cloud' | 'local' | 'trial';
@@ -123,7 +125,7 @@ export function refreshAppUsage(): Promise<AppUsage> {
 export function cachedAppUsage(now = Date.now()): Promise<AppUsage> {
   const account = store().token() ?? '';
   const snap = usageSnapshot;
-  if (snap && snap.account === account && now - snap.at < USAGE_TTL_MS && snap.value.remaining > 0) {
+  if (snap && snap.account === account && now - snap.at < USAGE_TTL_MS && !allowanceUsedUp(snap.value)) {
     return Promise.resolve(snap.value);
   }
   return refreshAppUsage();

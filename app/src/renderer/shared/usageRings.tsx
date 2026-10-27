@@ -4,10 +4,11 @@ import './usageRings.css';
 import { LogoMark } from './logo';
 import { isMac } from './platform';
 
+/** `limit`/`remaining` null: an unlimited allowance (no monthly cap), drawn as "Unlimited" with no fraction. */
 export type UsageSlice = {
   used: number;
-  limit: number;
-  remaining: number;
+  limit: number | null;
+  remaining: number | null;
 };
 
 function tone(pct: number): 'ok' | 'low' | 'out' {
@@ -24,9 +25,10 @@ function Ring({
   size,
   tiny,
 }: UsageSlice & { label: string; size: number; tiny: boolean }) {
-  const safeLimit = Math.max(1, limit);
-  const left = Math.max(0, remaining);
-  const pct = Math.min(100, Math.round((left / safeLimit) * 100));
+  const unlimited = limit === null || remaining === null;
+  const safeLimit = Math.max(1, limit ?? 1);
+  const left = Math.max(0, remaining ?? 0);
+  const pct = unlimited ? 100 : Math.min(100, Math.round((left / safeLimit) * 100));
   const radius = 15;
   const circ = 2 * Math.PI * radius;
   const dash = (pct / 100) * circ;
@@ -36,7 +38,9 @@ function Ring({
       className={`usage-ring${tiny ? ' usage-ring--tiny' : ''}`}
       data-tone={tone(pct)}
       tabIndex={0}
-      aria-label={`${label}: ${formatCount(left)} of ${formatCount(safeLimit)} remaining, ${formatCount(used)} used`}
+      aria-label={unlimited
+        ? `${label}: unlimited, ${formatCount(used)} used`
+        : `${label}: ${formatCount(left)} of ${formatCount(safeLimit)} remaining, ${formatCount(used)} used`}
       aria-describedby={detailId}
     >
       <span className="usage-ring__dial" style={{ width: size, height: size }}>
@@ -55,14 +59,14 @@ function Ring({
           />
         </svg>
         <span className="usage-ring__brand"><LogoMark size={tiny ? 13 : 21} /></span>
-        <b>{pct}%</b>
+        <b>{unlimited ? '∞' : `${pct}%`}</b>
       </span>
-      <small>{label} · {formatCount(left)} left</small>
+      <small>{label} · {unlimited ? 'Unlimited' : `${formatCount(left)} left`}</small>
       <span className="usage-ring__detail" role="tooltip" id={detailId}>
         <strong>{label === 'AI' ? '✨ AI explanations' : `${isMac ? '⌘' : '⌨'} Code selections`}</strong>
-        <span>{formatCount(Math.max(0, used))} used · {formatCount(left)} remaining</span>
+        <span>{formatCount(Math.max(0, used))} used · {unlimited ? 'Unlimited' : `${formatCount(left)} remaining`}</span>
         <span className="usage-ring__bar"><i style={{ width: `${pct}%` }} /></span>
-        <span>{pct}% of your {formatCount(safeLimit)} allowance left</span>
+        <span>{unlimited ? 'Unlimited, with no monthly limit' : `${pct}% of your ${formatCount(safeLimit)} allowance left`}</span>
       </span>
     </span>
   );

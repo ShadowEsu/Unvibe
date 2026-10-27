@@ -17,7 +17,8 @@ type Snapshot = {
   conceptsSeen: number;
   conceptsStrong: number;
   usage: { label: string; pct: number } | null;
-  quota?: { used: number; limit: number; remaining: number };
+  /** `limit`/`remaining` null: an unlimited allowance (no monthly cap). */
+  quota?: { used: number; limit: number | null; remaining: number | null };
   selections?: { used: number; limit: number; remaining: number };
   heat: number[];
 };
@@ -266,7 +267,7 @@ function Bar() {
             <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> used</span>
           </div>
           <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
-          <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
+          <div className="island__allowance">{aiLeft === null ? <span title="Unlimited AI, no monthly limit"><b>∞</b> AI</span> : <span><b>{value(aiLeft)}</b> AI</span>}<i /><span><b>{value(selectLeft)}</b> Select</span></div>
           <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
           {note ? <p className="island__note" role="status">{note}</p> : null}
           <div className="island__actions">

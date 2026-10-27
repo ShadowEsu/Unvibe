@@ -65,18 +65,21 @@ test('Enterprise, Big Business and unknown plans are paid: no survey, no Free co
       assert.equal(copy.primaryKind, 'plan', plan);
       assert.equal(copy.showPlan, false, plan);
       assert.doesNotMatch(copy.body, /Free|upgrade|survey|calls?\b/i, plan);
-      assert.ok(copy.body.includes(localDate(usage.resetsAt)), plan);
+      // Big Business has no monthly cap, so it never names a monthly reset date.
+      assert.equal(copy.body.includes(localDate(usage.resetsAt)), plan !== 'business', plan);
     }
   }
   assert.equal(limitOfferCopy('enterprise', usage, false).title, 'Monthly limit reached');
 });
 
-test('Big Business names the fair-use limit with formatted counts, links it, and promises no contact', () => {
-  const copy = limitOfferCopy('business', { used: 5000, limit: 5000, resetsAt: usage.resetsAt }, false);
-  assert.equal(copy.title, 'Fair-use limit reached');
-  assert.match(copy.body, /^You used 5,000 of 5,000 explanations, the Big Business fair-use limit for this month\. Explanations pause until /);
-  assert.doesNotMatch(copy.body, /contact you/);
-  assert.ok(copy.body.includes('https://unvibe.site/pricing#fair-use'));
+test('Big Business names only the fair-use rate limit, never a monthly cap, links it, and promises no contact', () => {
+  for (const limit of [null, 5000]) {
+    const copy = limitOfferCopy('business', { used: 1_000_000, limit, resetsAt: usage.resetsAt }, false);
+    assert.equal(copy.title, 'Paused for a moment');
+    assert.match(copy.body, /^Big Business explanations are unlimited for up to 10 named seats\. The fair-use rate limit against automated abuse /);
+    assert.doesNotMatch(copy.body, /contact you|5,000|1,000,000|\bmonth\b|pause until/i);
+    assert.ok(copy.body.includes('https://unvibe.site/pricing#fair-use'));
+  }
 });
 
 test('paid plans point to Plan & usage for details, never to managing billing they may not have', () => {

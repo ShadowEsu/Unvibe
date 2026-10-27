@@ -145,7 +145,8 @@ export function Chat({
   usingOwnAi: boolean;
   providerId: string;
   userName?: string;
-  usage: { used: number; limit: number; remaining: number; resetsAt: string } | null;
+  /** `limit`/`remaining` null: an unlimited allowance (no monthly cap). */
+  usage: { used: number; limit: number | null; remaining: number | null; resetsAt: string } | null;
   onRefresh: () => void | Promise<void>;
   onOpenAiSettings: () => void;
 }) {
@@ -173,8 +174,18 @@ export function Chat({
 
   const used = usage?.used ?? 0;
   const limit = Math.max(1, usage?.limit ?? 1);
-  const pct = Math.min(100, Math.round((used / limit) * 100));
+  const unlimited = usage?.limit === null;
+  const pct = unlimited ? 0 : Math.min(100, Math.round((used / limit) * 100));
   const remaining = left ?? usage?.remaining ?? null;
+  // An unlimited allowance reads "Unlimited", with no fraction and no "left".
+  const meter = !usage ? null
+    : usage.limit === null || remaining === null
+      ? { label: `Unlimited AI. ${formatCount(used)} used this month.`, title: `Unlimited, with no monthly limit. ${formatCount(used)} used this month.`, text: 'Unlimited' }
+      : {
+        label: `${pct} percent of monthly AI used. ${formatCount(remaining)} of ${formatCount(usage.limit)} left.`,
+        title: `${formatCount(remaining)} of ${formatCount(usage.limit)} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`,
+        text: `${pct}% used this month`,
+      };
   const aiLabel = usingOwnAi
     ? (modelName ? `${providerLabel}, ${modelName}` : providerLabel)
     : `${providerLabel} (default)`;
@@ -271,7 +282,7 @@ export function Chat({
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question, ts: new Date().toISOString() }];
     setMessages(nextMessages);
     const result = await window.unvibe.chatAsk(chatAskRequest(nextMessages.slice(0, -1), question, threadGenRef.current)) as {
-      ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number;
+      ok: boolean; answer?: string; error?: string; remaining?: number | null; code?: string; wipeGeneration?: number;
     };
     window.clearTimeout(thinkTimer);
     setBusy(false);
@@ -426,15 +437,15 @@ export function Chat({
             </div>
           </div>
           {empty && error ? <p className="form-error" role="alert">{error}</p> : null}
-          {usage ? (
+          {meter ? (
             <button
               type="button"
               className={`chat-meter chat-meter--${tone}`}
-              aria-label={`${pct} percent of monthly AI used. ${formatCount(remaining ?? usage.remaining)} of ${formatCount(usage.limit)} left.`}
-              title={`${formatCount(remaining ?? usage.remaining)} of ${formatCount(usage.limit)} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
+              aria-label={meter.label}
+              title={meter.title}
               onClick={() => void onRefresh()}
             >
-              <span>{pct}% used this month</span>
+              <span>{meter.text}</span>
             </button>
           ) : null}
           {empty ? (

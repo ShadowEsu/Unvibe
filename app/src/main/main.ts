@@ -98,7 +98,7 @@ import {
   buildSelectionPayload,
   resolveRepoRoot,
 } from './contextBuilder';
-import { isProPlan } from '../core/plans';
+import { allowanceUsedUp, isProPlan } from '../core/plans';
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
@@ -483,7 +483,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
   const usage = await cachedAppUsage();
-  if (usage.remaining <= 0) {
+  if (allowanceUsedUp(usage)) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);
     const win = getOrCreateWidget();
@@ -733,7 +733,8 @@ app.whenReady().then(() => {
   ipcMain.handle('bar:snapshot', async () => {
     const recent = computeLearningItems(store().events(), 1)[0];
     const profile = computeProfile(store().events(), todayKey());
-    let quota = { used: 0, limit: 30, remaining: 30 };
+    // `limit`/`remaining` null: an unlimited allowance (no monthly cap).
+    let quota: { used: number; limit: number | null; remaining: number | null } = { used: 0, limit: 30, remaining: 30 };
     let selections = { used: 0, limit: 30, remaining: 30 };
     try {
       const appUsage = await cachedAppUsage();

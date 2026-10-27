@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { asPlanId, isPaidPlan, isProPlan, limitReachedMessage, planLabel } from '../src/core/plans';
+import { allowanceUsedUp, asPlanId, isPaidPlan, isProPlan, limitReachedMessage, planLabel } from '../src/core/plans';
 
 const RESETS = '2026-11-01T00:00:00.000Z';
 
@@ -49,11 +49,18 @@ test('the limit message names the plan and never offers a purchase', () => {
   assert.equal(enterprise, `You have reached your monthly Enterprise explanation limit (1,000). Resets on ${resets}. Add your own API key in Settings → AI to keep going.`);
   const unknown = limitReachedMessage({ plan: 'platinum', limit: 300, resetsAt: RESETS });
   assert.doesNotMatch(unknown, /Free/);
-  const business = limitReachedMessage({ plan: 'business', limit: 5000, resetsAt: RESETS });
-  assert.match(business, /Big Business fair-use limit of 5,000 explanations this month\. Explanations pause until /);
-  assert.doesNotMatch(business, /contact you/);
-  assert.ok(business.includes('https://unvibe.site/pricing#fair-use'));
+  const business = limitReachedMessage({ plan: 'business', limit: null, resetsAt: RESETS });
+  assert.equal(business, 'Explanations are paused for a moment by the fair-use rate limit against automated abuse. Try again in a few minutes. The fair-use rate limit is at https://unvibe.site/pricing#fair-use.');
+  assert.equal(limitReachedMessage({ plan: 'business', limit: 5000, resetsAt: RESETS }), business, 'never a monthly cap, even from an older server');
+  assert.doesNotMatch(business, /contact you|month|5,000/);
   for (const message of [pro, free, trial, enterprise, unknown, business]) {
     assert.doesNotMatch(message, /upgrade|buy|subscribe|requests?\b|calls?\b|unlimited/i);
   }
+});
+
+test('only a numeric allowance can be used up; an unlimited one (remaining null) never reads as 0', () => {
+  assert.equal(allowanceUsedUp({ remaining: null }), false);
+  assert.equal(allowanceUsedUp({ remaining: 0 }), true);
+  assert.equal(allowanceUsedUp({ remaining: -1 }), true);
+  assert.equal(allowanceUsedUp({ remaining: 3 }), false);
 });

@@ -19,7 +19,10 @@ const PLAN_LABELS: Record<PlanId, string> = {
   paid: 'Paid plan',
 };
 
-/** The written fair-use section every Big Business limit points to. */
+/**
+ * The written fair-use section Big Business points to. Big Business explanations and questions are
+ * unlimited; the only limit is a fair-use rate limit against automated abuse, never a monthly cap.
+ */
 export const FAIR_USE_URL = 'https://unvibe.site/pricing#fair-use';
 
 /** No plan yet (nothing loaded) counts as Free; an id this build doesn't know is a paid plan. */
@@ -45,19 +48,28 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 }
 
 /**
+ * True when a usage line's allowance is used up. `remaining: null` is an unlimited allowance (no
+ * monthly cap), which is never used up: null must never read as 0.
+ */
+export function allowanceUsedUp(usage: { remaining: number | null }): boolean {
+  return usage.remaining !== null && usage.remaining <= 0;
+}
+
+/**
  * The panel's message when the explanation allowance is used up and no own API key is set.
  * It never offers an upgrade: the main process doesn't know whether checkout is open, and no tier may read as
- * available to buy until it is.
+ * available to buy until it is. Big Business (and any unlimited line) has no monthly cap to reach, so
+ * its message is only the fair-use rate limit against automated abuse.
  */
-export function limitReachedMessage(usage: { plan: string; limit: number; resetsAt: string }): string {
+export function limitReachedMessage(usage: { plan: string; limit: number | null; resetsAt: string }): string {
   const id = asPlanId(usage.plan);
+  if (id === 'business' || usage.limit === null) {
+    return `Explanations are paused for a moment by the fair-use rate limit against automated abuse. Try again in a few minutes. The fair-use rate limit is at ${FAIR_USE_URL}.`;
+  }
   const resets = new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
   const limit = formatCount(usage.limit);
   if (id === 'trial') {
     return `You have reached your 30-day Free explanation limit (${limit}). Free explanations on this computer end on ${resets}. Sign in to keep going (a new account's first month is Pro), or add your own API key in Settings → AI.`;
-  }
-  if (id === 'business') {
-    return `You have reached the Big Business fair-use limit of ${limit} explanations this month. Explanations pause until ${resets}. The written fair-use limit is at ${FAIR_USE_URL}. Add your own API key in Settings → AI to keep going.`;
   }
   const name = id === 'paid' ? '' : `${planLabel(id)} `;
   return `You have reached your monthly ${name}explanation limit (${limit}). Resets on ${resets}. Add your own API key in Settings → AI to keep going.`;

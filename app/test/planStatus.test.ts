@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { FREE_LINE, freePlanLine, giftStatusLine, paidStatusLine, PRO_PITCH, proCard, resetLabel, tierStatusLine } from '../src/renderer/shared/planStatus';
 import { limitOfferCopy } from '../src/renderer/shared/limitOffer';
+import { allowanceUsedUp, limitReachedMessage } from '../src/core/plans';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');
 const END = '2026-11-21T12:00:00.000Z';
@@ -76,22 +77,51 @@ test('the Pro card promises 200 explanations each month', () => {
   assert.equal(PRO_PITCH, 'Unlock git diffs, nearby files, and 200 explanations each month.');
 });
 
-test('Enterprise and Big Business holders get a status line with no price, upgrade, calls or bare unlimited', () => {
+test('Enterprise and Big Business holders get a status line with no price, upgrade or calls; only Big Business is unlimited', () => {
   const enterprise = tierStatusLine('enterprise', { plan: 'enterprise', limit: 1000, remaining: 400, resetsAt: END });
   const refill = new Date(END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
   assert.equal(enterprise, `Enterprise includes 1,000 explanations a month. They refill on ${refill}.`);
-  const business = tierStatusLine('business', { plan: 'business', limit: 5000, remaining: 5000, resetsAt: END });
-  assert.ok(business);
-  assert.match(business, /^Big Business is paid once and doesn't renew\./);
-  assert.match(business, /written fair-use limit of 5,000 explanations a month/);
-  assert.match(business, /past it, explanations pause until the next month\. They refill on /);
-  assert.doesNotMatch(business, /contact you/);
+  const business = tierStatusLine('business', { plan: 'business', limit: null, remaining: null, resetsAt: END });
+  assert.equal(business, 'Big Business is paid once and doesn\'t renew. Explanations and questions are unlimited for up to 10 named seats, with a fair-use rate limit against automated abuse.');
+  assert.equal(tierStatusLine('business', null), business);
+  assert.doesNotMatch(business, /contact you|refill/);
   for (const line of [enterprise, business, tierStatusLine('business', null), tierStatusLine('enterprise', null)]) {
     assert.ok(line);
-    assert.doesNotMatch(line, /\$|upgrade|buy|subscribe|calls?\b|unlimited|undefined|NaN/i);
+    assert.doesNotMatch(line, /\$|upgrade|buy|subscribe|calls?\b|undefined|NaN|null/i);
   }
+  for (const line of [enterprise, tierStatusLine('enterprise', null)]) assert.doesNotMatch(line ?? '', /unlimited/i);
   for (const plan of ['free', 'pro', 'teams', 'trial', 'local', 'full', 'mystery']) {
     assert.equal(tierStatusLine(plan, null), null, plan);
+  }
+});
+
+test('an unlimited allowance used 1,000,000 times is never used up, paused, or "0 left"', () => {
+  const unlimited = { plan: 'business', used: 1_000_000, limit: null, remaining: null, resetsAt: END };
+  assert.equal(allowanceUsedUp(unlimited), false);
+  const offer = limitOfferCopy('business', unlimited, false);
+  assert.notEqual(offer.primaryKind, 'survey', 'never the paused session');
+  const lines = [offer.title, offer.body, freePlanLine(unlimited, NOW), tierStatusLine('business', unlimited) ?? '', limitReachedMessage(unlimited)];
+  for (const line of lines) {
+    assert.doesNotMatch(line, /\b0 left|\b0 of\b|null|NaN|undefined|limit reached|upgrade/i, line);
+  }
+});
+
+test('no Big Business copy names a monthly number', () => {
+  const lines: string[] = [];
+  for (const usage of [
+    { plan: 'business', used: 1_000_000, limit: null, remaining: null, resetsAt: END },
+    { plan: 'business', used: 5000, limit: 5000, remaining: 0, resetsAt: END },
+  ]) {
+    lines.push(tierStatusLine('business', usage) ?? '', limitReachedMessage(usage));
+    for (const proOpen of [true, false]) {
+      const offer = limitOfferCopy('business', usage, proOpen);
+      lines.push(offer.title, offer.body, offer.primary);
+    }
+  }
+  lines.push(tierStatusLine('business', null) ?? '');
+  for (const line of lines) {
+    assert.doesNotMatch(line, /\d[\d,]*( (explanations|questions))? (a|per|this|each) month/i, line);
+    assert.ok(!line.includes('5,000') && !line.includes('5000'), line);
   }
 });
 

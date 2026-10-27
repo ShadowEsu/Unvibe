@@ -61,11 +61,11 @@ export function giftStatusLine(currentPeriodEnd: string | undefined, now = Date.
   return `Pro from a gift until ${shortDate(currentPeriodEnd)}. Then you move to Free, and nothing is charged.`;
 }
 
-/** One usage line, as the app's usage check returns it. */
+/** One usage line, as the app's usage check returns it. `limit: null` is unlimited (no monthly cap); `remaining` is null exactly then. */
 export interface AllowanceLine {
   plan?: string;
-  limit: number;
-  remaining: number;
+  limit: number | null;
+  remaining: number | null;
   resetsAt: string;
 }
 
@@ -82,7 +82,7 @@ export function refillDate(plan: string | undefined, resetsAt: string): string |
 
 /** While Pro is closed: Pro isn't open yet, and the Free plan keeps working with its real allowance. */
 export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): string {
-  if (!usage || usage.limit <= 0) return `Pro isn't open yet. ${FREE_LINE}.`;
+  if (!usage || usage.limit === null || usage.remaining === null || usage.limit <= 0) return `Pro isn't open yet. ${FREE_LINE}.`;
   const left = `${formatCount(usage.remaining)} of ${formatCount(usage.limit)} explanations left`;
   const refill = refillDate(usage.plan, usage.resetsAt);
   if (refill) return `Pro isn't open yet. Your Free plan keeps working: ${left}, refilling on ${refill}.`;
@@ -101,16 +101,17 @@ export const PRO_PITCH = 'Unlock git diffs, nearby files, and 200 explanations e
 
 /**
  * The current-plan line for Enterprise and Big Business holders. Neither is sold in the app, so the
- * line has no price, renewal offer or upgrade: only the monthly allowance and when it refills.
- * Null for every other plan.
+ * line has no price, renewal offer or upgrade. Enterprise: its monthly allowance and when it refills.
+ * Big Business: paid once, unlimited, with only the fair-use rate limit against automated abuse; it
+ * never names a monthly number. Null for every other plan.
  */
 export function tierStatusLine(plan: string, usage: AllowanceLine | null): string | null {
-  const refill = usage ? refillDate(plan, usage.resetsAt) : null;
-  const refills = refill ? ` They refill on ${refill}.` : '';
-  if (plan === 'enterprise') return `Enterprise includes 1,000 explanations a month.${refills}`;
+  if (plan === 'enterprise') {
+    const refill = usage ? refillDate(plan, usage.resetsAt) : null;
+    return `Enterprise includes 1,000 explanations a month.${refill ? ` They refill on ${refill}.` : ''}`;
+  }
   if (plan === 'business') {
-    const limit = usage && usage.limit > 0 ? ` of ${formatCount(usage.limit)} explanations a month` : '';
-    return `Big Business is paid once and doesn't renew. It has a written fair-use limit${limit}; past it, explanations pause until the next month.${refills}`;
+    return 'Big Business is paid once and doesn\'t renew. Explanations and questions are unlimited for up to 10 named seats, with a fair-use rate limit against automated abuse.';
   }
   return null;
 }

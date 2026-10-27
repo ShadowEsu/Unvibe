@@ -43,6 +43,17 @@ test('trial network and capacity limits (429) show the server\'s message with th
   assert.deepEqual(network, { message: 'This network has used today\'s free beta explanations.', planLimit: true, proRequired: false });
 });
 
+test('a 429 fair_use_rate_limited shows the server\'s message with no Plan page, limit pause or upgrade', () => {
+  const message = 'You\'ve reached the fair-use rate limit against automated abuse (per person, 10 requests a minute, 60 an hour and 1 million characters an hour). Try again in 2 minutes.';
+  const refusal = { error: 'fair_use_rate_limited', message, retryAfterSeconds: 120 };
+  assert.deepEqual(explanationFailure(429, refusal), { message, planLimit: false, proRequired: false });
+  assert.deepEqual(explanationFailure(429, { error: 'fair_use_rate_limited' }), {
+    message: 'You\'ve reached the fair-use rate limit against automated abuse. Try again in a few minutes.',
+    planLimit: false,
+    proRequired: false,
+  });
+});
+
 test('a 402 pro_required is the Pro upgrade, not a used-up allowance', () => {
   const failure = explanationFailure(402, { error: 'pro_required', message: 'Git diff explanations, change briefs and since last understood compares are included with Unvibe Pro.' });
   assert.deepEqual(failure, {
@@ -70,6 +81,7 @@ test('every explanation failure shows the service\'s message only as a capped st
   const cases: Array<[number, { error?: string }]> = [
     [402, { error: 'pro_required' }],
     [429, { error: 'plan_limit_reached' }],
+    [429, { error: 'fair_use_rate_limited' }],
     [413, {}],
     [503, {}],
     [400, {}],
