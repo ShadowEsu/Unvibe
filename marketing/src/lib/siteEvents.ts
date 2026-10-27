@@ -78,6 +78,7 @@ const UTM_SOURCES: ReadonlySet<string> = new Set([
   "startupbase",
   "devhunt",
   "whatlaunchedtoday",
+  "devpost",
 ]);
 
 /** Fixed utm_campaign values; `carousel-<slug>`, `x-<post id>` and `short-<id>` follow the pattern. */
