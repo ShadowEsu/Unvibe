@@ -140,7 +140,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   content: "";
   position: absolute;
   inset: -22%;
-  background: url("./golden-gate.png") 62% 40% / cover no-repeat;
+  background: url("./dusk-field.webp") 62% 40% / cover no-repeat;
   filter: blur(28px) saturate(1.85) contrast(1.1) brightness(0.92);
   transform: scale(1.18);
   animation: duskDrift 28s ease-in-out alternate infinite;

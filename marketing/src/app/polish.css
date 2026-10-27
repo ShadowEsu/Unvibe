@@ -223,20 +223,13 @@
   background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.18) 50%, transparent 70%);
 }
 
-/* ── Startup credits: a glass panel instead of a flat band ── */
+/* ── Behind Unvibe ── */
 
 .paper-backing {
   border-bottom: 0;
   background: transparent;
 }
-
-.paper-partners {
-  padding: clamp(1.5rem, 4vw, 2.5rem) 0;
-  border: 1.5px solid var(--v-ink);
-  border-radius: 24px;
-  background: #fff;
-  box-shadow: 6px 6px 0 var(--v-ink);
-}
+.paper-backing .sec-head { margin-bottom: 0; }
 
 /* ── Closing download card ── */
 

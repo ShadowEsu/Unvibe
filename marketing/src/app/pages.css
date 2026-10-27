@@ -272,6 +272,14 @@
   margin-top: 0.6rem;
 }
 
+/* The fixed Vibe button (vibe.css .svibe: 52px + 4px shadow at right: clamp(10px, 2vw, 28px), shown from 821px)
+   must never sit on the rightmost plan card: reserve its footprint plus 12px (Design, 27 Oct). */
+@media (min-width: 821px) {
+  .paper-pricing .pricing-plans {
+    margin-right: max(0px, calc(clamp(10px, 2vw, 28px) + 68px - (100vw - 100%) / 2));
+  }
+}
+
 .pricing-plans .pricing-toggle {
   border: 1.5px solid var(--v-ink);
   background: var(--u-card);
