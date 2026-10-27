@@ -12,7 +12,7 @@ import { getStripe, newTierCheckoutOpen } from '../src/billing/stripe';
 import { LIFETIME_PERIOD_END, newTiersEnabled, planDisplayName, planLimit } from '../src/billing/plans';
 import type { PlanId, UsageKind } from '../src/billing/types';
 import { processStripeEvent, type StripeWebhookDependencies } from '../src/billing/webhooks';
-import { paymentIntent } from './stripeFakes';
+import { paidPayment, paymentIntent, periodInvoice } from './stripeFakes';
 
 // Enterprise and Big Business behind BILLING_NEW_TIERS_ENABLED. Real checkout route and webhook
 // handler on the memory stores; the cached Stripe client's Checkout methods are replaced, so no
@@ -254,7 +254,7 @@ function deps(subscription?: Stripe.Subscription, intent: (id: string) => Stripe
     retrieveSubscription: async () => { if (!subscription) throw new Error('not used'); return subscription; },
     invoicesForPaymentIntent: async () => [],
     cancelSubscription: async () => { throw new Error('a one-time payment has no subscription to cancel'); },
-    latestPaidInvoicePayments: async () => paid.map((pi) => ({ payment: { type: 'payment_intent', payment_intent: pi } }) as Stripe.InvoicePayment),
+    latestPaidInvoicePayments: async (id) => paid.map((pi) => paidPayment(pi, periodInvoice(id, subscription?.items.data[0]?.current_period_start ?? 0))),
     retrievePaymentIntent: async (id) => intent(id),
   };
 }

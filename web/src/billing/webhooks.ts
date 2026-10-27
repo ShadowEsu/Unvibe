@@ -180,12 +180,14 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   // neither refunded nor disputed: a refund processed before this event had nothing to revoke yet.
   const enteringAccess = ENTITLING.includes(status) && !(prior && ENTITLING.includes(prior.status));
   if (enteringAccess) {
-    const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
-    if (reason) {
-      // A fully refunded subscription would keep charging with no access: stop it at Stripe too.
-      // This is also how a refund whose revoke failed (below) ends the charges on the next event.
-      if (FULL_REFUND.includes(reason)) await cancelAtStripe(deps, subscription.id);
-      await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason });
+    const refusal = await subscriptionPaymentRefusal(store, deps, subscription.id);
+    if (refusal) {
+      // A subscription whose current period was fully refunded would keep charging with no access:
+      // stop it at Stripe too. This is also how a refund whose revoke failed (below) ends the
+      // charges on the next event. A full refund of another invoice (a proration) refuses the grant
+      // but cancels nothing, as the refund event itself would not.
+      if (cancelsSubscription(refusal, subscription)) await cancelAtStripe(deps, subscription.id);
+      await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason: refusal.reason });
       return;
     }
   }
@@ -224,13 +226,14 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   }
   // A first-invoice refund may likewise have matched no row between the payment check and write.
   // Check again, including on a retry of an event whose grant/check/cancel failed after the write.
-  // Only a full refund takes the grant back and cancels at Stripe: a partial refund keeps access,
-  // and an open dispute only flags (it is handled by the dispute events).
+  // Only a full refund of the current period's invoice takes the grant back and cancels at Stripe: a
+  // partial refund keeps access, an open dispute only flags (it is handled by the dispute events),
+  // and a full refund of another invoice keeps access like its refund event did (Security A-b).
   const retryingGrant = prior && (prior.stripeEventAt === undefined || eventAt === undefined
     ? prior.stripeEventAt === eventAt : Date.parse(prior.stripeEventAt) === Date.parse(eventAt));
   if (enteringAccess || retryingGrant) {
-    const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
-    if (reason && FULL_REFUND.includes(reason)) {
+    const refusal = await subscriptionPaymentRefusal(store, deps, subscription.id);
+    if (refusal && cancelsSubscription(refusal, live)) {
       // Access ends even when the Stripe cancel fails. The event then fails, and its retry or any
       // later event for this subscription is refused before the write (above), which cancels again.
       try {
@@ -238,7 +241,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
       } finally {
         await store.markSubscriptionCanceled(subscription.id, eventAt);
       }
-      await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason, afterWrite: true });
+      await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason: refusal.reason, afterWrite: true });
     }
   }
 }
@@ -300,8 +303,22 @@ async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Sub
 /** Why a payment must not grant access, or null when it may. */
 type PaymentRefusal = 'refund_recorded' | 'not_succeeded' | 'refunded' | 'partly_refunded' | 'disputed';
 
-/** The refusals that are a full refund: the only ones that take a grant back and cancel at Stripe. */
+/** The refusals that are a full refund: the only ones that can take a grant back and cancel at Stripe. */
 const FULL_REFUND: readonly PaymentRefusal[] = ['refund_recorded', 'refunded'];
+
+/** A refused payment of the subscription's latest paid invoice, and that invoice. */
+type SubscriptionRefusal = { reason: PaymentRefusal; invoice: Stripe.InvoicePayment['invoice'] };
+
+/**
+ * True when the refusal is a full refund of the invoice that pays the subscription's current period:
+ * the only refusal that cancels at Stripe or takes a written grant back, the same rule the refund
+ * event applies (`revokeAccess` with `currentPeriodOnly`).
+ */
+function cancelsSubscription(refusal: SubscriptionRefusal, live: Stripe.Subscription): boolean {
+  if (!FULL_REFUND.includes(refusal.reason)) return false;
+  if (typeof refusal.invoice === 'string') throw new Error('latestPaidInvoicePayments must return each payment with its invoice expanded.');
+  return !refusal.invoice.deleted && paysCurrentPeriod(refusal.invoice, live);
+}
 
 /**
  * Checked before every grant: the recorded full refunds first (charge.refunded writes one even when
@@ -322,12 +339,12 @@ async function paymentRefusal(store: BillingStore, deps: StripeWebhookDependenci
 }
 
 /** The refusal for the payments of the subscription's latest paid invoice; null when none was paid yet (a trial). */
-async function subscriptionPaymentRefusal(store: BillingStore, deps: StripeWebhookDependencies, subscriptionId: string): Promise<PaymentRefusal | null> {
+async function subscriptionPaymentRefusal(store: BillingStore, deps: StripeWebhookDependencies, subscriptionId: string): Promise<SubscriptionRefusal | null> {
   if (!deps.latestPaidInvoicePayments) throw new Error('Granting a subscription needs latestPaidInvoicePayments.');
-  for (const { payment } of await deps.latestPaidInvoicePayments(subscriptionId)) {
+  for (const { payment, invoice } of await deps.latestPaidInvoicePayments(subscriptionId)) {
     if (!payment.payment_intent) continue;
     const reason = await paymentRefusal(store, deps, providerId(payment.payment_intent));
-    if (reason) return reason;
+    if (reason) return { reason, invoice };
   }
   return null;
 }
@@ -434,7 +451,10 @@ export interface StripeWebhookDependencies {
   invoicesForPaymentIntent?(paymentIntentId: string): Promise<Stripe.Invoice[]>;
   /** Cancels a subscription now, not at period end, with no proration credit. A reused key makes a retry a no-op. */
   cancelSubscription?(id: string, idempotencyKey: string): Promise<void>;
-  /** The paid payments of the subscription's most recent paid invoice; empty when nothing was paid yet. */
+  /**
+   * The paid payments of the subscription's most recent paid invoice, each with that invoice expanded
+   * (`invoice` an object: a refund cancels only when it pays the current period); empty when nothing was paid yet.
+   */
   latestPaidInvoicePayments?(subscriptionId: string): Promise<Stripe.InvoicePayment[]>;
   /** Refunds the whole payment and returns the refund's id. A reused key returns the first refund. */
   refundPayment?(target: RefundTarget, idempotencyKey: string): Promise<string>;

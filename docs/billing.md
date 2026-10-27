@@ -73,8 +73,12 @@ subscription moving into paid access), the webhook refuses, with a `checkout.ref
 records its PaymentIntent even when nothing matched yet) or one that Stripe reports (PaymentIntent
 with `latest_charge`) as not succeeded, refunded (`refunded`: the whole amount; `partly_refunded`:
 part of it), or disputed. A subscription refused before the write because of a full refund
-(`refund_recorded` or `refunded`) is also canceled at Stripe with `uncode-revoke-<subscription id>`,
-so it never keeps charging without access; the other refusals cancel nothing. A one-time payment
+(`refund_recorded` or `refunded`) of the invoice that pays its current period (`subscription_create`
+or `subscription_cycle`, line period starting at the current period, the same test as the refund
+event) is also canceled at Stripe with `uncode-revoke-<subscription id>`, so it never keeps charging
+without access; the other refusals, a full refund of any other invoice (a proration) included,
+cancel nothing. The route returns each payment of the latest paid invoice with that invoice, and a
+full refund without it fails the event rather than guess the period. A one-time payment
 whose row a refund or lost dispute already canceled is never granted again. Each subscription row
 keeps the Stripe `created` time of the last event applied (`stripe_event_at`), and an older event
 for the same subscription or payment changes nothing, so a retried or late checkout event cannot
@@ -92,9 +96,10 @@ Stripe. If it ended (or no longer exists), the row is canceled; a non-entitling 
 payment applies the revoke-only downgrade/grace rules. This closes the window where a `deleted`
 arrived before there was a row for that subscription and so canceled nothing. After a subscription
 first grants access (or on a delivery of the event that wrote the row), its payments are checked
-again too. Only a full refund takes the grant back there: it cancels the Stripe subscription with
-`uncode-revoke-<subscription id>`, and the row is canceled whether or not that cancel succeeded. A
-partial refund or an open dispute never cancels and never takes away access already granted (see
+again too. Only a full refund of the current period's invoice takes the grant back there: it cancels
+the Stripe subscription with `uncode-revoke-<subscription id>`, and the row is canceled whether or not
+that cancel succeeded. A partial refund, an open dispute, or a full refund of another invoice never
+cancels and never takes away access already granted (see
 the refund and dispute policy below). If the Stripe cancel fails, the event fails; its retry, or any
 later event for that subscription, finds the row without access and the full refund, refuses the
 grant before the write and retries the same cancellation key.

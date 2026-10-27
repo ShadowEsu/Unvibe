@@ -301,3 +301,38 @@ test('N3 (D23): the route expands latest_charge, so a refunded payment is seen a
   assert.equal((await send()).status, 200);
   assert.equal((await store.overview(userId)).subscription.plan, 'free');
 });
+
+test('A-b: the route hands the grant check the latest paid invoice itself: a fully refunded proration refuses the grant and cancels nothing; a refunded current-period invoice cancels once', async () => {
+  const stripe = getStripe();
+  const cases = [['subscription_update', 1_797_400_000, 0], ['subscription_create', 1_797_321_600, 1]] as const;
+  for (const [billingReason, periodStart, cancelCount] of cases) {
+    const store = getBillingStore();
+    const userId = randomUUID();
+    const workspace = await store.ensurePersonalWorkspace(userId);
+    const subscriptionId = `sub_${randomUUID()}`;
+    const customer = `cus_${randomUUID()}`;
+    const paymentIntent = `pi_${randomUUID()}`;
+    const cancels: unknown[] = [];
+    stripe.subscriptions.retrieve = (async (id: string) => ({
+      id, status: 'active', customer, cancel_at_period_end: false, cancel_at: null, created: 1_797_000_000,
+      metadata: { workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
+      items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
+    })) as unknown as typeof stripe.subscriptions.retrieve;
+    stripe.invoices.list = (async () => ({
+      data: [{ id: `in_${randomUUID()}`, object: 'invoice', status: 'paid', billing_reason: billingReason, parent: { subscription_details: { subscription: subscriptionId } }, lines: { data: [{ period: { start: periodStart } }] } }],
+    })) as unknown as typeof stripe.invoices.list;
+    stripe.invoicePayments.list = (async () => ({ data: [{ status: 'paid', payment: { type: 'payment_intent', payment_intent: paymentIntent } }] })) as unknown as typeof stripe.invoicePayments.list;
+    stripe.paymentIntents.retrieve = (async (id: string) => ({
+      id, object: 'payment_intent', status: 'succeeded',
+      latest_charge: { id: `ch_${id}`, object: 'charge', amount: 20_000, amount_refunded: 20_000, refunded: true, disputed: false },
+    })) as unknown as typeof stripe.paymentIntents.retrieve;
+    stripe.subscriptions.cancel = (async (id: string, _params: unknown, options: Stripe.RequestOptions) => {
+      cancels.push(options.idempotencyKey);
+      return { id, status: 'canceled' };
+    }) as unknown as typeof stripe.subscriptions.cancel;
+    const response = await post({ id: `evt_${randomUUID()}`, type: 'customer.subscription.created', data: { object: { id: subscriptionId, object: 'subscription' } } });
+    assert.equal(response.status, 200, billingReason);
+    assert.equal((await store.overview(userId)).subscription.plan, 'free', billingReason);
+    assert.deepEqual(cancels, Array.from({ length: cancelCount }, () => `uncode-revoke-${subscriptionId}`), billingReason);
+  }
+});

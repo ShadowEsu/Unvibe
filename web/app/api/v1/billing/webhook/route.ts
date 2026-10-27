@@ -61,7 +61,8 @@ export async function POST(req: Request): Promise<Response> {
       latestPaidInvoicePayments: async (subscription) => {
         const [invoice] = (await stripe.invoices.list({ subscription, status: 'paid', limit: 1 })).data;
         if (!invoice?.id) return [];
-        return (await stripe.invoicePayments.list({ invoice: invoice.id, status: 'paid' })).data;
+        // Each payment carries the invoice itself, so a refund cancels only when it pays the current period.
+        return (await stripe.invoicePayments.list({ invoice: invoice.id, status: 'paid' })).data.map((payment) => ({ ...payment, invoice }));
       },
       refundPayment: async (target, idempotencyKey) => (await stripe.refunds.create(target, { idempotencyKey })).id,
       retrievePaymentIntent: (id) => stripe.paymentIntents.retrieve(id, { expand: ['latest_charge'] }),

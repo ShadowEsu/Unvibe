@@ -4,7 +4,7 @@ import test, { afterEach, mock } from 'node:test';
 import type Stripe from 'stripe';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { processStripeEvent, type RefundTarget, type StripeWebhookDependencies } from '../src/billing/webhooks';
-import { goodPayments } from './stripeFakes';
+import { goodPayments, paidPayment, periodInvoice } from './stripeFakes';
 
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 
@@ -181,7 +181,7 @@ function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscriptio
       if (!live) throw Object.assign(new Error(`No such subscription: '${id}'`), { code: 'resource_missing' });
       return live;
     },
-    latestPaidInvoicePayments: async (id) => (paid[id] ?? []).map((paymentIntent) => ({ payment: { type: 'payment_intent', payment_intent: paymentIntent } }) as Stripe.InvoicePayment),
+    latestPaidInvoicePayments: async (id) => (paid[id] ?? []).map((paymentIntent) => paidPayment(paymentIntent, periodInvoice(id, subscriptions[id]?.items.data[0]?.current_period_start ?? 0))),
     retrievePaymentIntent: goodPayments.retrievePaymentIntent,
     refundPayment: async (target, key) => {
       refunds.push({ target, key });
