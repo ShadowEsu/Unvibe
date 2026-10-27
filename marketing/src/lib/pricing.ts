@@ -28,10 +28,17 @@ export const TRIAL_EXPLANATIONS = 50;
 export const BUSINESS_SEATS = 10;
 
 /**
- * Big Business has no monthly cap. Its only limit is this fair-use rate limit against automated
+ * Big Business has no monthly cap. Its only usage limit is this fair-use rate limit against automated
  * abuse, per person, explanations and questions counted together (web/src/billing/plans.ts).
  */
 export const BUSINESS_RATE_LIMIT = { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 } as const;
+
+/**
+ * Size limit of one request, the same on every plan: web/src/lib/reviewLimits.ts MAX_CONTEXT_CHARS
+ * (serialized code context) and MAX_QUESTION_CHARS. The site cannot import the API's code, so
+ * pricingCopy.test.ts reads that file and fails when these differ from it.
+ */
+export const REQUEST_SIZE_LIMIT = { codeCharacters: 120_000, questionCharacters: 4_000 } as const;
 
 /** Big Business only: the one line in the site source with this word. */
 export const BUSINESS_UNLIMITED = "unlimited explanations and questions";

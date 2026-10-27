@@ -1,5 +1,5 @@
 import { formatUsd } from "@/data/compensation";
-import { BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, BUSINESS_UNLIMITED, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
+import { BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, BUSINESS_UNLIMITED, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING, REQUEST_SIZE_LIMIT, formatCount } from "@/lib/pricing";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
@@ -53,8 +53,8 @@ const BUSINESS_PRICE = `${formatUsd(PRICING.businessOnce)} once`;
 /** The written fair-use limit, shown on /pricing (id `fair-use`) and in the Terms. */
 export const FAIR_USE = {
   heading: "Fair use",
-  limit: `Big Business covers up to ${BUSINESS_SEATS} people, each on a named seat, with no monthly cap on explanations or questions. Its only limit is a ${BUSINESS_RATE_LIMIT_LINE}, with explanations and questions counted together. It is sized so one person working normally never reaches it.`,
-  enforcement: "When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. No hidden throttling. Refunds and abuse follow the rest of the Terms.",
+  limit: `Big Business covers up to ${BUSINESS_SEATS} people, each on a named seat, with no monthly cap on explanations or questions. Its only usage limit is a ${BUSINESS_RATE_LIMIT_LINE}, with explanations and questions counted together. It is sized so one person working normally never reaches it.`,
+  enforcement: `When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. Each request has the same size limit as every plan: up to ${formatCount(REQUEST_SIZE_LIMIT.codeCharacters)} characters of code and ${formatCount(REQUEST_SIZE_LIMIT.questionCharacters)} characters per question. No hidden throttling. Refunds and abuse follow the rest of the Terms.`,
 } as const;
 
 /** Terms payments section, after the Pro sentences. Both tiers stay closed on the site until payments open. */

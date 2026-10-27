@@ -7,7 +7,7 @@ import { faqItems } from "../data/faq";
 import { FREE_USE_NOTE } from "../emails/betaShared";
 import { betaWindowsInstallScript } from "./betaInstallScript";
 import { kitMarkdown } from "./kit";
-import { BUSINESS_RATE_LIMIT, BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FAIR_USE_LABEL, FREE_LINE, PRICING } from "./pricing";
+import { BUSINESS_RATE_LIMIT, BUSINESS_RATE_LIMIT_LINE, BUSINESS_SEATS, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FAIR_USE_LABEL, FREE_LINE, PRICING, REQUEST_SIZE_LIMIT, formatCount } from "./pricing";
 import { FAIR_USE, PAYMENTS_OPEN_SOON, TERMS_NEW_TIERS, pricingCopy, type PlanCopy, type PricingCopy } from "./pricingCopy";
 
 const srcRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -162,9 +162,21 @@ describe("fair use", () => {
     assert.deepEqual(BUSINESS_RATE_LIMIT, { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 });
     assert.equal(BUSINESS_SEATS, 10);
     assert.equal(BUSINESS_RATE_LIMIT_LINE, "fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour");
-    assert.equal(FAIR_USE.limit, "Big Business covers up to 10 people, each on a named seat, with no monthly cap on explanations or questions. Its only limit is a fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour, with explanations and questions counted together. It is sized so one person working normally never reaches it.");
-    assert.equal(FAIR_USE.enforcement, "When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. No hidden throttling. Refunds and abuse follow the rest of the Terms.");
+    assert.equal(FAIR_USE.limit, "Big Business covers up to 10 people, each on a named seat, with no monthly cap on explanations or questions. Its only usage limit is a fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour, with explanations and questions counted together. It is sized so one person working normally never reaches it.");
+    assert.equal(FAIR_USE.enforcement, "When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. Each request has the same size limit as every plan: up to 120,000 characters of code and 4,000 characters per question. No hidden throttling. Refunds and abuse follow the rest of the Terms.");
     assert.equal(FAIR_USE_HREF, "/pricing#fair-use");
+  });
+
+  it("states the request size limit the AI routes enforce (web/src/lib/reviewLimits.ts), and never says only limit", () => {
+    const reviewLimits = readFileSync(fileURLToPath(new URL("../../../web/src/lib/reviewLimits.ts", import.meta.url)), "utf8");
+    const apiConstant = (name: string) => {
+      const match = new RegExp(`^export const ${name} = ([\\d_]+);$`, "m").exec(reviewLimits);
+      assert.ok(match, `${name} in web/src/lib/reviewLimits.ts`);
+      return Number(match[1].replaceAll("_", ""));
+    };
+    assert.deepEqual(REQUEST_SIZE_LIMIT, { codeCharacters: apiConstant("MAX_CONTEXT_CHARS"), questionCharacters: apiConstant("MAX_QUESTION_CHARS") });
+    assert.ok(FAIR_USE.enforcement.includes(`Each request has the same size limit as every plan: up to ${formatCount(REQUEST_SIZE_LIMIT.codeCharacters)} characters of code and ${formatCount(REQUEST_SIZE_LIMIT.questionCharacters)} characters per question.`));
+    for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /\bonly limit\b/i, text);
   });
 
   it("names 10 requests a minute, 60 an hour, per person, and up to 10 people wherever Big Business is described", () => {
