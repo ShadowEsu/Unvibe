@@ -223,3 +223,19 @@ test('a failed delivery stores only the Stripe error type and code as last_error
   }
   assert.deepEqual(stored, ['StripeInvalidRequestError invalid_request_error resource_missing']);
 });
+
+test('GAP-M12: a delivery signed with any other secret is refused 400 invalid_signature and grants nothing', async () => {
+  const store = getBillingStore();
+  const stripe = getStripe();
+  const userId = randomUUID();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  // Were it applied, this event would grant Pro: Stripe's read is an active Pro subscription and no invoice was paid yet.
+  stripe.subscriptions.retrieve = activeProSubscription(workspace.id);
+  stripe.invoices.list = (async () => ({ data: [] })) as unknown as typeof stripe.invoices.list;
+  const payload = JSON.stringify({ id: `evt_${randomUUID()}`, object: 'event', type: 'customer.subscription.updated', livemode: false, data: { object: { id: `sub_${randomUUID()}`, object: 'subscription' } } });
+  const forged = stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_attacker_guess' });
+  const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', { method: 'POST', headers: { 'stripe-signature': forged }, body: payload }));
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: 'invalid_signature' });
+  assert.equal((await store.overview(userId)).subscription.plan, 'free');
+});

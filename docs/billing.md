@@ -14,6 +14,8 @@ usage reservations; the migration seeds it to the same initial values:
 - Enterprise: $50/month (`ENTERPRISE_MONTHLY_CENTS`), monthly only, one account (personal workspace, one seat); 1,000 explanations, 2,500 questions, 25 projects, 5,000 dictionary and 5,000 saved items a month; every Pro feature. Stripe price `STRIPE_PRICE_ENTERPRISE_MONTHLY`.
 - Big Business: $5,000 one-time (`BUSINESS_ONE_TIME_CENTS`), stored as interval `lifetime` with period end 2099-12-31 and the PaymentIntent id, exactly like Pro Lifetime (paid sessions only, trusted line-item price; a full refund or a lost dispute revokes it). One account. The site states the real cap, "5,000 explanations a month (fair use)", under a written fair-use limit: 5,000 explanations and 10,000 questions a month (also 100 projects, 20,000 dictionary and 20,000 saved items), enforced like any cap, no hidden throttling. These numbers are a placeholder pending the owner's choice; they live only in `BILLING_LIMITS` (`web/src/billing/plans.ts`) and the migration (the site copies them in `marketing/src/lib/pricing.ts`). Stripe price `STRIPE_PRICE_BUSINESS_LIFETIME`.
 - Enterprise and Big Business are sold only while `BILLING_NEW_TIERS_ENABLED` is exactly `true` (`newTiersEnabled()`), on top of the payment locks below. Off (the default, and production): checkout answers 400 `plan_unavailable` for `enterprise`/`business`, and the webhook never grants either (it can still revoke one already on record). The site and the Plan pages show both as "Payments open soon" with an apply-by-email link and no Buy button, whatever the flag, until live payments are cleared.
+- Runbook, before ever turning `BILLING_NEW_TIERS_ENABLED` off: first expire every open Enterprise and Big Business Checkout Session (a session lives about 31 minutes and can still be paid after the switch), then switch it off. Every `checkout.refused_plan_unavailable` or `subscription.refused_plan_unavailable` audit row afterwards is a payment taken with nothing granted: refund it, and cancel the Enterprise subscription, within one business day.
+- Deploy order: apply `20261031090000_enterprise_business_tiers.sql` and `20261031091000_subscriptions_stripe_event_at.sql`, then merge. The server writes `subscriptions.stripe_event_at` on every Stripe subscription write, Pro included, so code deployed before that column exists fails every such write. `web/test/newTiers.test.ts` fails if the store writes the column while its migration is missing. Rollback of the column (after rolling the code back): `alter table public.subscriptions drop column if exists stripe_event_at;`.
 - Pro Lifetime: $80 one-time (`PRO_LIFETIME_CENTS`), offered only while checkout is open, `STRIPE_PRICE_PRO_LIFETIME` is set and `BILLING_LIFETIME_ENABLED=true`.
 - Teams ($8/seat/month or $72/seat/year) is no longer offered: the site, the web Plan page and the app have no Teams purchase or seat-request path, and existing Teams workspaces keep their seats and Manage billing. Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
 - Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
@@ -63,6 +65,15 @@ privileges are also restricted to `service_role`.
 Checkout redirects do not grant access. The webhook is authoritative; the success-page refresh
 waits for the completed checkout intent and paid entitlement written by the signed webhook.
 Webhook claims are idempotent, completed events cannot replay, and failed processing can retry.
+Grants are refund-aware and ordered. Before any grant (a Lifetime or Big Business checkout, or a
+subscription moving into paid access), the webhook refuses, with a `checkout.refused_payment` or
+`subscription.refused_payment` audit row, a payment with a recorded full refund (`charge.refunded`
+records its PaymentIntent even when nothing matched yet) or one that Stripe reports (PaymentIntent
+with `latest_charge`) as not succeeded, refunded in whole or part, or disputed. A one-time payment
+whose row a refund or lost dispute already canceled is never granted again. Each subscription row
+keeps the Stripe `created` time of the last event applied (`stripe_event_at`), and an older event
+for the same subscription or payment changes nothing, so a retried or late checkout event cannot
+restore access a newer refund took away.
 
 ## Lifecycle behavior
 

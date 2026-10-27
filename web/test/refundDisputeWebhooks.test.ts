@@ -70,6 +70,7 @@ function fakeStripe(links: Record<string, InvoiceLink>, statuses: Record<string,
     cancelSubscription: async (id) => { cancels.push(id); statuses[id] = 'canceled'; },
     latestPaidInvoicePayments: async () => { throw new Error('not used'); },
     refundPayment: async () => { throw new Error('not used'); },
+    retrievePaymentIntent: async () => { throw new Error('not used'); },
   };
   return { deps, cancels };
 }

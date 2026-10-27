@@ -20,9 +20,10 @@ import {
 import { processStripeEvent, syncStripeSubscription, type StripeWebhookDependencies } from '../src/billing/webhooks';
 import { publicBillingOverview } from '../src/billing/presentation';
 import { stripePriceId } from '../src/billing/stripe';
+import { goodPayments } from './stripeFakes';
 
-/** These syncs never replace another subscription, so nothing reaches Stripe. */
-const noStripe: StripeWebhookDependencies = { retrieveSubscription: async () => { throw new Error('unexpected Stripe call'); } };
+/** These syncs never replace another subscription, and no invoice was paid yet, so only the grant check's list call answers. */
+const noStripe: StripeWebhookDependencies = { retrieveSubscription: async () => { throw new Error('unexpected Stripe call'); }, latestPaidInvoicePayments: goodPayments.latestPaidInvoicePayments };
 
 test('pricing math matches every published total', () => {
   assert.equal(priceFor('free', 'monthly', 1), 0);
@@ -333,6 +334,7 @@ test('lifetime checkout grants permanent Pro', async () => {
   } as Stripe.Event, {
     retrieveSubscription: async () => { throw new Error('subscription should not be retrieved for lifetime'); },
     retrieveCheckoutSession: async () => session,
+    retrievePaymentIntent: goodPayments.retrievePaymentIntent,
   });
   const overview = await store.overview(userId);
   assert.equal(overview.subscription.plan, 'pro');

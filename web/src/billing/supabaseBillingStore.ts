@@ -58,6 +58,7 @@ export class SupabaseBillingStore implements BillingStore {
       currentPeriodStart: typeof row.current_period_start === 'string' ? row.current_period_start : undefined,
       currentPeriodEnd: typeof row.current_period_end === 'string' ? row.current_period_end : undefined,
       gracePeriodEndsAt: typeof row.grace_period_ends_at === 'string' ? row.grace_period_ends_at : undefined,
+      stripeEventAt: typeof row.stripe_event_at === 'string' ? row.stripe_event_at : undefined,
       cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
     };
   }
@@ -321,14 +322,21 @@ export class SupabaseBillingStore implements BillingStore {
       stripe_customer_id: input.stripeCustomerId, stripe_subscription_id: input.stripeSubscriptionId, stripe_price_id: input.stripePriceId,
       current_period_start: input.currentPeriodStart ?? null,
       current_period_end: input.currentPeriodEnd ?? null, grace_period_ends_at: input.gracePeriodEndsAt ?? null,
+      stripe_event_at: input.stripeEventAt ?? null,
       cancel_at_period_end: input.cancelAtPeriodEnd, updated_at: new Date().toISOString(),
     }, { onConflict: 'workspace_id' });
     this.require(error, 'sync subscription');
   }
 
-  async markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void> {
-    const { error } = await this.db.from('subscriptions').update({ status: 'canceled', updated_at: new Date().toISOString() }).eq('stripe_subscription_id', stripeSubscriptionId);
+  async markSubscriptionCanceled(stripeSubscriptionId: string, stripeEventAt?: string): Promise<void> {
+    const { error } = await this.db.from('subscriptions').update({ status: 'canceled', updated_at: new Date().toISOString(), ...(stripeEventAt ? { stripe_event_at: stripeEventAt } : {}) }).eq('stripe_subscription_id', stripeSubscriptionId);
     this.require(error, 'cancel subscription');
+  }
+
+  async paymentRefunded(paymentIntentId: string): Promise<boolean> {
+    const { data, error } = await this.db.from('billing_audit_log').select('id').eq('action', 'refund.full').eq('metadata->>paymentIntentId', paymentIntentId).limit(1);
+    this.require(error, 'find recorded refund');
+    return (data ?? []).length > 0;
   }
 
   async subscriptionByProviderId(stripeSubscriptionId: string): Promise<SubscriptionRecord | null> {

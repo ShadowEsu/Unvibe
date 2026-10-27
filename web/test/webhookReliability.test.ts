@@ -4,6 +4,7 @@ import test, { afterEach, mock } from 'node:test';
 import type Stripe from 'stripe';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { processStripeEvent, type RefundTarget, type StripeWebhookDependencies } from '../src/billing/webhooks';
+import { goodPayments } from './stripeFakes';
 
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 
@@ -25,7 +26,7 @@ test('a late, stale subscription.updated cannot resurrect a canceled subscriptio
   const store = new MemoryBillingStore();
   const workspace = await store.ensurePersonalWorkspace(userId);
   let current = proSubscription(workspace.id, 'active');
-  const deps = { retrieveSubscription: async () => current };
+  const deps = { retrieveSubscription: async () => current, ...goodPayments };
 
   await processStripeEvent(store, subscriptionEvent('customer.subscription.created', current), deps);
   assert.equal((await store.overview(userId)).subscription.plan, 'pro');
@@ -46,6 +47,7 @@ test('an out-of-order past_due update cannot override a newer paid state', async
   const current = proSubscription(workspace.id, 'active');
   await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', proSubscription(workspace.id, 'past_due')), {
     retrieveSubscription: async () => current,
+    ...goodPayments,
   });
   const overview = await store.overview(userId);
   assert.equal(overview.subscription.status, 'active');
@@ -77,7 +79,7 @@ test('the grace period after a failed payment ends on time; later failed retries
     // Memory billing data is shared across tests; use this test's own Stripe subscription id.
     const id = `sub_${randomUUID()}`;
     const pastDue = { ...proSubscription(workspace.id, 'past_due'), id };
-    const deps = { retrieveSubscription: async () => pastDue };
+    const deps = { retrieveSubscription: async () => pastDue, ...goodPayments };
     await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', pastDue), deps);
     const firstEnd = (await store.overview(userId)).subscription.gracePeriodEndsAt;
     assert.equal(firstEnd, '2026-10-08T00:00:00.000Z');
@@ -92,7 +94,7 @@ test('the grace period after a failed payment ends on time; later failed retries
 
     // A later, separate payment failure after recovery starts a fresh grace period.
     const active = { ...proSubscription(workspace.id, 'active'), id };
-    await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', active), { retrieveSubscription: async () => active });
+    await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', active), { retrieveSubscription: async () => active, ...goodPayments });
     await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', pastDue), deps);
     assert.equal((await store.overview(userId)).subscription.gracePeriodEndsAt, '2026-10-16T00:00:00.000Z');
   } finally {
@@ -115,7 +117,7 @@ test('events for an ended old subscription cannot replace the workspace\'s curre
   const newId = `sub_${randomUUID()}`;
   let old = { ...proSubscription(workspace.id, 'active'), id: oldId };
   const current = { ...proSubscription(workspace.id, 'active'), id: newId };
-  const deps = { retrieveSubscription: async (id: string) => (id === oldId ? old : current) };
+  const deps = { retrieveSubscription: async (id: string) => (id === oldId ? old : current), ...goodPayments };
 
   await processStripeEvent(store, subscriptionEvent('customer.subscription.created', old), deps);
   old = { ...old, status: 'canceled' };
@@ -146,7 +148,7 @@ test('a late failed payment on a canceled subscription does not start a grace pe
   const store = new MemoryBillingStore();
   const workspace = await store.ensurePersonalWorkspace(userId);
   let current = { ...proSubscription(workspace.id, 'active'), id: `sub_${randomUUID()}` };
-  const deps = { retrieveSubscription: async () => current };
+  const deps = { retrieveSubscription: async () => current, ...goodPayments };
   await processStripeEvent(store, subscriptionEvent('customer.subscription.created', current), deps);
 
   current = { ...current, status: 'canceled' };
@@ -180,6 +182,7 @@ function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscriptio
       return live;
     },
     latestPaidInvoicePayments: async (id) => (paid[id] ?? []).map((paymentIntent) => ({ payment: { type: 'payment_intent', payment_intent: paymentIntent } }) as Stripe.InvoicePayment),
+    retrievePaymentIntent: goodPayments.retrievePaymentIntent,
     refundPayment: async (target, key) => {
       refunds.push({ target, key });
       if (refundErrorCode) throw Object.assign(new Error('Stripe refused the refund'), { code: refundErrorCode });

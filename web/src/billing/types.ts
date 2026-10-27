@@ -61,6 +61,8 @@ export interface SubscriptionRecord {
   currentPeriodEnd?: string;
   gracePeriodEndsAt?: string;
   cancelAtPeriodEnd: boolean;
+  /** Stripe `created` time of the last webhook event applied to this row; an older event is ignored. */
+  stripeEventAt?: string;
 }
 
 export interface UsageLine {
@@ -130,6 +132,8 @@ export interface SubscriptionSyncInput {
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   gracePeriodEndsAt?: string;
+  /** Stripe `created` time of the event this write applies; stored as is (none clears it). */
+  stripeEventAt?: string;
   cancelAtPeriodEnd: boolean;
 }
 
@@ -176,7 +180,10 @@ export interface BillingStore {
   completeCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null>;
   findCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null>;
   syncSubscription(input: SubscriptionSyncInput): Promise<void>;
-  markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void>;
+  /** Ends access for the row stored under this Stripe id; `stripeEventAt` replaces the stored event time when given. */
+  markSubscriptionCanceled(stripeSubscriptionId: string, stripeEventAt?: string): Promise<void>;
+  /** True when a full refund of this PaymentIntent was recorded (`refund.full` audit row), matched to a row or not. */
+  paymentRefunded(paymentIntentId: string): Promise<boolean>;
   subscriptionByProviderId(stripeSubscriptionId: string): Promise<SubscriptionRecord | null>;
   /** The subscription row stored for a workspace (one row per workspace), whatever its status. */
   subscriptionByWorkspaceId(workspaceId: string): Promise<SubscriptionRecord | null>;

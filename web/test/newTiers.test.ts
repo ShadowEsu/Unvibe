@@ -9,8 +9,10 @@ import { getStore } from '../src/data/store';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { getBillingStore } from '../src/billing/store';
 import { getStripe, newTierCheckoutOpen } from '../src/billing/stripe';
-import { LIFETIME_PERIOD_END, newTiersEnabled, planDisplayName } from '../src/billing/plans';
+import { LIFETIME_PERIOD_END, newTiersEnabled, planDisplayName, planLimit } from '../src/billing/plans';
+import type { PlanId, UsageKind } from '../src/billing/types';
 import { processStripeEvent, type StripeWebhookDependencies } from '../src/billing/webhooks';
+import { paymentIntent } from './stripeFakes';
 
 // Enterprise and Big Business behind BILLING_NEW_TIERS_ENABLED. Real checkout route and webhook
 // handler on the memory stores; the cached Stripe client's Checkout methods are replaced, so no
@@ -237,12 +239,18 @@ function enterpriseSubscription(workspaceId: string, price = 'price_enterprise_m
   } as unknown as Stripe.Subscription;
 }
 
-/** Stripe as the handlers see it. Without retrieveCheckoutSession the event's own session (with its line items) is used. */
-function deps(subscription?: Stripe.Subscription): StripeWebhookDependencies {
+/**
+ * Stripe as the handlers see it. Without retrieveCheckoutSession the event's own session (with its
+ * line items) is used. `intent` is Stripe's PaymentIntent read (good by default); `paid` are the
+ * PaymentIntents of the subscription's latest paid invoice.
+ */
+function deps(subscription?: Stripe.Subscription, intent: (id: string) => Stripe.PaymentIntent = paymentIntent, paid: string[] = []): StripeWebhookDependencies {
   return {
     retrieveSubscription: async () => { if (!subscription) throw new Error('not used'); return subscription; },
     invoicesForPaymentIntent: async () => [],
     cancelSubscription: async () => { throw new Error('a one-time payment has no subscription to cancel'); },
+    latestPaidInvoicePayments: async () => paid.map((pi) => ({ payment: { type: 'payment_intent', payment_intent: pi } }) as Stripe.InvoicePayment),
+    retrievePaymentIntent: async (id) => intent(id),
   };
 }
 
@@ -353,6 +361,174 @@ for (const [name, revoke] of [['a full refund', refund], ['a lost dispute', (pi:
   });
 }
 
+// ------------------------------------------------- refund-aware, ordered grants (security F1)
+
+/** The event as Stripe stamps it: `created` in seconds. */
+function at<T extends Stripe.Event>(event: T, created: number): T {
+  return { ...event, created };
+}
+
+function retried(event: Stripe.Event, type: 'checkout.session.completed' | 'checkout.session.async_payment_succeeded'): Stripe.Event {
+  return { ...event, id: `evt_${randomUUID()}`, type } as Stripe.Event;
+}
+
+const refundedIntent = (id: string) => paymentIntent(id, { refunded: true, amount_refunded: 500_000 });
+
+function refusals(audits: Audit[], action: string): unknown[] {
+  return audits.filter((a) => a.action === action).map((a) => a.metadata.reason);
+}
+
+test('P1: a full refund processed before checkout.session.completed leaves the account Free', async () => {
+  await withFlag('true', async () => {
+    // Stripe already reports the payment refunded, and so does the refund the webhook recorded.
+    for (const intent of [refundedIntent, paymentIntent]) {
+      const b = await customer();
+      const pi = `pi_${randomUUID()}`;
+      const cus = `cus_${randomUUID()}`;
+      await processStripeEvent(b.store, refund(pi, cus), deps());
+      await processStripeEvent(b.store, businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, cus), deps(undefined, intent));
+      assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+      // The refund matched nothing when it arrived; its PaymentIntent is still on record and refuses the grant.
+      assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), ['refund_recorded']);
+    }
+  });
+});
+
+test('P2: grant, a full refund revokes, then a retried completed or async_payment_succeeded does not grant again', async () => {
+  await withFlag('true', async () => {
+    const b = await customer();
+    const pi = `pi_${randomUUID()}`;
+    const cus = `cus_${randomUUID()}`;
+    const paid = businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, cus);
+    await processStripeEvent(b.store, paid, deps());
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'business');
+    await processStripeEvent(b.store, refund(pi, cus), deps(undefined, refundedIntent));
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    for (const type of ['checkout.session.completed', 'checkout.session.async_payment_succeeded'] as const) {
+      await processStripeEvent(b.store, retried(paid, type), deps(undefined, refundedIntent));
+      assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free', type);
+    }
+  });
+});
+
+test('a checkout event whose payment Stripe reports refunded, partly refunded, disputed or not succeeded grants nothing', async () => {
+  await withFlag('true', async () => {
+    const cases: Array<[string, (id: string) => Stripe.PaymentIntent]> = [
+      ['refunded', refundedIntent],
+      ['refunded', (id) => paymentIntent(id, { amount_refunded: 1_000 })],
+      ['disputed', (id) => paymentIntent(id, { disputed: true })],
+      ['not_succeeded', (id) => paymentIntent(id, {}, 'processing')],
+    ];
+    for (const [reason, intent] of cases) {
+      const b = await customer();
+      await processStripeEvent(b.store, businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', `pi_${randomUUID()}`, `cus_${randomUUID()}`), deps(undefined, intent));
+      assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free', reason);
+      assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), [reason]);
+
+      const e = await customer();
+      const subscription = enterpriseSubscription(e.workspaceId);
+      await processStripeEvent(e.store, enterpriseCheckoutCompleted(e.workspaceId, subscription.id), deps(subscription, intent, [`pi_${randomUUID()}`]));
+      assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free', `enterprise ${reason}`);
+      assert.deepEqual(refusals(e.audits, 'subscription.refused_payment'), [reason]);
+    }
+  });
+});
+
+test('after a lost dispute revoked Big Business, a retried checkout event grants nothing even when Stripe still reads the payment as good', async () => {
+  await withFlag('true', async () => {
+    const b = await customer();
+    const pi = `pi_${randomUUID()}`;
+    const paid = businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, `cus_${randomUUID()}`);
+    await processStripeEvent(b.store, paid, deps());
+    await processStripeEvent(b.store, lostDispute(pi), deps());
+    await processStripeEvent(b.store, retried(paid, 'checkout.session.completed'), deps());
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), ['revoked']);
+  });
+});
+
+test('out of order: an event older than a newer refund leaves the account Free (Big Business and Enterprise)', async () => {
+  await withFlag('true', async () => {
+    // Big Business: paid at t1, refunded at t3, then the t1 checkout event is delivered again.
+    const b = await customer();
+    const pi = `pi_${randomUUID()}`;
+    const cus = `cus_${randomUUID()}`;
+    const paid = at(businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, cus), 1_797_000_100);
+    await processStripeEvent(b.store, paid, deps());
+    await processStripeEvent(b.store, at(refund(pi, cus), 1_797_000_300), deps());
+    await processStripeEvent(b.store, retried(paid, 'checkout.session.async_payment_succeeded'), deps());
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), ['stale_event']);
+
+    // Enterprise: granted at t1, its current-period invoice refunded in full at t3 (canceled at
+    // Stripe), then an invoice.paid from t2 arrives while Stripe's read still shows it active.
+    const e = await customer();
+    const subscription = enterpriseSubscription(e.workspaceId);
+    const enterprisePi = `pi_${randomUUID()}`;
+    const invoice = { id: `in_${randomUUID()}`, billing_reason: 'subscription_create', parent: { subscription_details: { subscription: subscription.id } }, lines: { data: [{ period: { start: 1_797_321_600 } }] } } as unknown as Stripe.Invoice;
+    const canceled: string[] = [];
+    const stripe: StripeWebhookDependencies = {
+      ...deps(subscription),
+      invoicesForPaymentIntent: async (id) => (id === enterprisePi ? [invoice] : []),
+      cancelSubscription: async (id) => { canceled.push(id); },
+    };
+    await processStripeEvent(e.store, at(enterpriseCheckoutCompleted(e.workspaceId, subscription.id), 1_797_000_100), stripe);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'enterprise');
+    await processStripeEvent(e.store, at(refund(enterprisePi, String(subscription.customer)), 1_797_000_300), stripe);
+    assert.deepEqual(canceled, [subscription.id]);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+    const late = { id: `evt_${randomUUID()}`, type: 'invoice.paid', created: 1_797_000_200, data: { object: invoice } } as unknown as Stripe.Event;
+    await processStripeEvent(e.store, late, stripe);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+    assert.ok(e.audits.some((a) => a.action === 'subscription.ignored_stale_event'));
+  });
+});
+
+// ------------------------------------------------- checkout guards (security F3, F4) and F11
+
+test('GAP-M19: Enterprise and Big Business checkout always bind to the caller\'s personal workspace, never a team workspace', async () => {
+  await withFlag('true', async () => {
+    for (const [plan, interval] of [['enterprise', 'monthly'], ['business', 'lifetime']] as const) {
+      const me = await buyer();
+      const personal = await getBillingStore().ensurePersonalWorkspace(me.userId);
+      const team = await getBillingStore().createTeamWorkspace(me.userId, 'Mine');
+      sessions.length = 0;
+      const response = await checkout(new Request('http://localhost/api/v1/billing/checkout', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${me.token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ plan, interval, workspaceId: team.id }),
+      }));
+      assert.equal(response.status, 201, plan);
+      assert.equal(sessions[0]?.metadata?.workspace_id, personal.id, `${plan} is bought for the personal workspace`);
+    }
+  });
+});
+
+test('GAP-M27: an account with Big Business cannot start another Big Business, Enterprise or Pro checkout', async () => {
+  await withFlag('true', async () => {
+    const me = await buyer();
+    const workspace = await getBillingStore().ensurePersonalWorkspace(me.userId);
+    await getBillingStore().syncSubscription({
+      workspaceId: workspace.id, plan: 'business', interval: 'lifetime', status: 'active', seats: 1,
+      stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: `pi_${randomUUID()}`, stripePriceId: 'price_business_lifetime',
+      currentPeriodStart: new Date().toISOString(), currentPeriodEnd: LIFETIME_PERIOD_END, cancelAtPeriodEnd: false,
+    });
+    for (const [plan, interval] of [['business', 'lifetime'], ['enterprise', 'monthly'], ['pro', 'monthly']] as const) {
+      sessions.length = 0;
+      const { status, body } = await start(me.token, plan, interval);
+      assert.equal(status, 409, `${plan} ${interval}`);
+      assert.equal(body.error, 'lifetime_active');
+      assert.equal(sessions.length, 0);
+    }
+  });
+});
+
+test('F11: an unknown plan has no limits at all (never Pro\'s), so metering refuses instead of granting', () => {
+  for (const kind of ['ai_explanation', 'project_question', 'indexed_project', 'dictionary_item', 'saved_item'] as const satisfies readonly UsageKind[]) {
+    assert.throws(() => planLimit('gold' as PlanId, kind, 1), TypeError, kind);
+  }
+});
+
 test('an unknown plan id shows "Paid plan", never Free', () => {
   assert.equal(planDisplayName('gold'), 'Paid plan');
   assert.equal(planDisplayName('constructor'), 'Paid plan');
@@ -369,4 +545,19 @@ test('the welcome month (on_app_account) is untouched: no migration after it red
   assert.equal(defining.at(-1), '20261022051500_gifts_require_signed_in_accounts.sql');
   const tiers = readFileSync(join(dir, '20261031090000_enterprise_business_tiers.sql'), 'utf8');
   assert.doesNotMatch(tiers, /on_app_account|welcome_pro_grants|add_pro_months|app_account_joined/);
+});
+
+test('the Supabase store writes stripe_event_at only with its own migration in the repo, after the tiers migration', () => {
+  const storeSource = readFileSync(join(process.cwd(), 'src/billing/supabaseBillingStore.ts'), 'utf8');
+  const dir = join(process.cwd(), 'supabase/migrations');
+  const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
+  const adding = files.filter((f) => /alter\s+table\s+public\.subscriptions\s+add\s+column\s+if\s+not\s+exists\s+stripe_event_at\s+timestamptz\s*;/i.test(readFileSync(join(dir, f), 'utf8')));
+  if (!storeSource.includes('stripe_event_at')) return;
+  // Deploying the store without this column fails every subscription write, Pro included.
+  assert.deepEqual(adding, ['20261031091000_subscriptions_stripe_event_at.sql']);
+  assert.ok(files.indexOf(adding[0]) > files.indexOf('20261031090000_enterprise_business_tiers.sql'));
+  const migration = readFileSync(join(dir, adding[0]), 'utf8');
+  assert.match(migration, /^-- Rollback: alter table public\.subscriptions drop column if exists stripe_event_at;$/m);
+  // The column is the only schema change in it.
+  assert.deepEqual(migration.split('\n').filter((line) => line.trim() && !line.startsWith('--')), ['alter table public.subscriptions add column if not exists stripe_event_at timestamptz;']);
 });

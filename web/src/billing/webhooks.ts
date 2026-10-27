@@ -23,6 +23,22 @@ function providerId(value: string | { id: string } | null): string {
   return typeof value === 'string' ? value : value.id;
 }
 
+/** The event's Stripe `created` time as ISO, or undefined when the event carries none. */
+function eventTime(event: Stripe.Event): string | undefined {
+  return typeof event.created === 'number' ? new Date(event.created * 1_000).toISOString() : undefined;
+}
+
+/** True when the event is older than the last event already applied to the stored row. */
+function olderThanStored(stored: SubscriptionRecord | null, eventAt: string | undefined): boolean {
+  return Boolean(stored?.stripeEventAt && eventAt && Date.parse(eventAt) < Date.parse(stored.stripeEventAt));
+}
+
+/** The event time to store: the later of the row's and the event's, so a revocation applied out of order never moves it back. */
+function laterEventTime(stored: SubscriptionRecord | null, eventAt: string | undefined): string | undefined {
+  if (!stored?.stripeEventAt || !eventAt) return eventAt ?? stored?.stripeEventAt;
+  return Date.parse(eventAt) < Date.parse(stored.stripeEventAt) ? stored.stripeEventAt : eventAt;
+}
+
 /**
  * True when the subscription will not renew again. The Stripe customer portal (API 2026-06-24.dahlia)
  * schedules a cancel by setting `cancel_at` to the period end and leaves `cancel_at_period_end` false,
@@ -91,11 +107,11 @@ async function stopDuplicate(store: BillingStore, deps: StripeWebhookDependencie
   console.error(`[billing] duplicate subscription stopped: workspace=${workspaceId} kept=${kept} stopped=${stopped} refunds=${refunded.join(',') || 'none'}`);
 }
 
-export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, deps: StripeWebhookDependencies): Promise<void> {
+export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, deps: StripeWebhookDependencies, eventAt?: string): Promise<void> {
   const metadata = requiredMetadata(subscription);
   // Flag off: an Enterprise subscription is never granted or extended; Stripe can still only take away.
   if (isNewTierPlan(metadata.plan) && !newTiersEnabled()) {
-    await applyRevocationOnly(store, subscription);
+    await applyRevocationOnly(store, subscription, eventAt);
     await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_plan_unavailable', { stripeSubscriptionId: subscription.id, plan: metadata.plan });
     return;
   }
@@ -105,6 +121,12 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   if (metadata.plan !== 'teams' && (item.quantity ?? 1) !== 1) throw new Error(`${metadata.plan === 'pro' ? 'Pro' : 'Enterprise'} subscriptions must have exactly one account seat.`);
   if (metadata.plan === 'teams' && (item.quantity ?? 0) < 2) throw new Error('Teams subscriptions require at least two seats.');
   const stored = await store.subscriptionByWorkspaceId(metadata.workspaceId);
+  // Stripe does not deliver in order: an event older than the last one applied to this subscription
+  // (say a retried invoice.paid after a newer refund ended it) changes nothing.
+  if (stored?.stripeSubscriptionId === subscription.id && olderThanStored(stored, eventAt)) {
+    await store.recordAudit(null, metadata.workspaceId, 'subscription.ignored_stale_event', { stripeSubscriptionId: subscription.id, eventAt, storedEventAt: stored.stripeEventAt });
+    return;
+  }
   // Lifetime is paid once and never ends here: a subscription event for the same workspace (say one
   // started from the portal or a stale checkout) is recorded for a person to sort out, never applied.
   if (stored?.interval === 'lifetime' && stored.status === 'active') {
@@ -153,11 +175,21 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   const graceEnds = prior?.status === 'grace_period' && prior.gracePeriodEndsAt
     ? prior.gracePeriodEndsAt
     : graceEndsFromNow();
+  const status = shouldGrace ? 'grace_period' : mappedStatus(subscription.status);
+  // A grant (no access on record for this subscription, or none any more) needs a payment that was
+  // neither refunded nor disputed: a refund processed before this event had nothing to revoke yet.
+  if (ENTITLING.includes(status) && !(prior && ENTITLING.includes(prior.status))) {
+    const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
+    if (reason) {
+      await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason });
+      return;
+    }
+  }
   await store.syncSubscription({
     workspaceId: metadata.workspaceId,
     plan: metadata.plan,
     interval: metadata.interval,
-    status: shouldGrace ? 'grace_period' : mappedStatus(subscription.status),
+    status,
     seats: metadata.plan === 'teams' ? Math.max(2, item.quantity ?? 2) : 1,
     stripeCustomerId: providerId(subscription.customer),
     stripeSubscriptionId: subscription.id,
@@ -165,6 +197,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     currentPeriodStart: new Date(item.current_period_start * 1_000).toISOString(),
     currentPeriodEnd: new Date(item.current_period_end * 1_000).toISOString(),
     gracePeriodEndsAt: shouldGrace ? graceEnds : undefined,
+    stripeEventAt: laterEventTime(prior, eventAt),
     cancelAtPeriodEnd: endsWithoutRenewing(subscription, item.current_period_end),
   });
 }
@@ -176,6 +209,7 @@ function graceEndsFromNow(): string {
 }
 
 const WITHOUT_ACCESS: readonly SubscriptionStatus[] = ['canceled', 'unpaid', 'inactive'];
+const ENTITLING: readonly SubscriptionStatus[] = ['active', 'trialing', 'grace_period'];
 
 /**
  * While purchases are locked: applies only what takes paid access away from a subscription already
@@ -184,7 +218,7 @@ const WITHOUT_ACCESS: readonly SubscriptionStatus[] = ['canceled', 'unpaid', 'in
  * paid standing. A grace period already running is left alone, so repeated failures never restart
  * it. Nothing is created, extended, refunded or canceled here.
  */
-async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Subscription): Promise<void> {
+async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Subscription, eventAt: string | undefined): Promise<void> {
   const stored = await store.subscriptionByProviderId(subscription.id);
   if (!stored || stored.plan === 'free' || !stored.interval || stored.interval === 'lifetime' || !stored.stripeCustomerId || !stored.stripePriceId) return;
   if (WITHOUT_ACCESS.includes(stored.status)) return;
@@ -211,11 +245,43 @@ async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Sub
     currentPeriodEnd: stored.currentPeriodEnd,
     gracePeriodEndsAt,
     cancelAtPeriodEnd: stored.cancelAtPeriodEnd,
+    stripeEventAt: laterEventTime(stored, eventAt),
   });
   await store.recordAudit(null, stored.workspaceId, 'subscription.revoked_while_locked', { stripeSubscriptionId: subscription.id, status });
 }
 
-async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Checkout.Session): Promise<void> {
+/** Why a payment must not grant access, or null when it may. */
+type PaymentRefusal = 'refund_recorded' | 'not_succeeded' | 'refunded' | 'disputed';
+
+/**
+ * Checked before every grant: the recorded full refunds first (charge.refunded writes one even when
+ * no row matched yet), then the PaymentIntent as Stripe has it now. A Checkout Session stays `paid`
+ * after its payment is refunded or disputed, so the session alone is never trusted.
+ */
+async function paymentRefusal(store: BillingStore, deps: StripeWebhookDependencies, paymentIntentId: string): Promise<PaymentRefusal | null> {
+  if (await store.paymentRefunded(paymentIntentId)) return 'refund_recorded';
+  if (!deps.retrievePaymentIntent) throw new Error('Granting paid access needs retrievePaymentIntent.');
+  const intent = await deps.retrievePaymentIntent(paymentIntentId);
+  if (intent.status !== 'succeeded') return 'not_succeeded';
+  const charge = intent.latest_charge;
+  if (!charge || typeof charge === 'string') throw new Error('The PaymentIntent was retrieved without its latest charge.');
+  if (charge.refunded || charge.amount_refunded > 0) return 'refunded';
+  if (charge.disputed) return 'disputed';
+  return null;
+}
+
+/** The refusal for the payments of the subscription's latest paid invoice; null when none was paid yet (a trial). */
+async function subscriptionPaymentRefusal(store: BillingStore, deps: StripeWebhookDependencies, subscriptionId: string): Promise<PaymentRefusal | null> {
+  if (!deps.latestPaidInvoicePayments) throw new Error('Granting a subscription needs latestPaidInvoicePayments.');
+  for (const { payment } of await deps.latestPaidInvoicePayments(subscriptionId)) {
+    if (!payment.payment_intent) continue;
+    const reason = await paymentRefusal(store, deps, providerId(payment.payment_intent));
+    if (reason) return reason;
+  }
+  return null;
+}
+
+async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Checkout.Session, deps: StripeWebhookDependencies, eventAt: string | undefined): Promise<void> {
   // Delayed payment methods can complete Checkout before funds settle.
   if (session.payment_status !== 'paid') return;
   const workspaceId = session.metadata?.workspace_id;
@@ -239,6 +305,18 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
   const paymentId = session.payment_intent
     ? providerId(session.payment_intent)
     : `lifetime_${session.id}`;
+  // A checkout event can be retried or arrive late. An event older than the last one applied to this
+  // payment, a payment whose access was revoked (a refund or a lost dispute leaves its row canceled),
+  // and a payment that was refunded or disputed all grant nothing. Without a PaymentIntent nothing was paid.
+  const stored = await store.subscriptionByProviderId(paymentId);
+  let reason: PaymentRefusal | 'revoked' | 'stale_event' | null = null;
+  if (olderThanStored(stored, eventAt)) reason = 'stale_event';
+  else if (stored?.status === 'canceled') reason = 'revoked';
+  else if (session.payment_intent) reason = await paymentRefusal(store, deps, paymentId);
+  if (reason) {
+    await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_payment', { plan, checkoutSessionId: session.id, paymentIntentId: paymentId, reason });
+    return;
+  }
   const now = new Date().toISOString();
   await store.syncSubscription({
     workspaceId,
@@ -252,6 +330,7 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
     currentPeriodStart: now,
     currentPeriodEnd: LIFETIME_PERIOD_END,
     cancelAtPeriodEnd: false,
+    stripeEventAt: laterEventTime(stored, eventAt),
   });
   await store.completeCheckoutIntent(session.id);
   await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.completed', {
@@ -280,6 +359,8 @@ export interface StripeWebhookDependencies {
   latestPaidInvoicePayments?(subscriptionId: string): Promise<Stripe.InvoicePayment[]>;
   /** Refunds the whole payment and returns the refund's id. A reused key returns the first refund. */
   refundPayment?(target: RefundTarget, idempotencyKey: string): Promise<string>;
+  /** The PaymentIntent with `latest_charge` expanded: whether it succeeded, and whether its charge was refunded or disputed. */
+  retrievePaymentIntent?(id: string): Promise<Stripe.PaymentIntent>;
 }
 
 type ChargeEventDependencies = Required<Pick<StripeWebhookDependencies, 'invoicesForPaymentIntent' | 'cancelSubscription'>> & StripeWebhookDependencies;
@@ -338,7 +419,7 @@ function paysCurrentPeriod(invoice: Stripe.Invoice, live: Stripe.Subscription): 
  * it already ended. With `currentPeriodOnly`, an invoice match must be the current period's invoice.
  * A customer-fallback match never ends access. Returns whether access was ended.
  */
-async function revokeAccess(store: BillingStore, deps: ChargeEventDependencies, match: PaymentMatch, currentPeriodOnly: boolean): Promise<boolean> {
+async function revokeAccess(store: BillingStore, deps: ChargeEventDependencies, match: PaymentMatch, currentPeriodOnly: boolean, eventAt: string | undefined): Promise<boolean> {
   if (!match || match.via === 'customer' || !match.subscription.stripeSubscriptionId) return false;
   if (match.via === 'invoice') {
     const live = await deps.retrieveSubscription(match.subscription.stripeSubscriptionId);
@@ -346,7 +427,7 @@ async function revokeAccess(store: BillingStore, deps: ChargeEventDependencies, 
     if (live.status !== 'canceled' && live.status !== 'incomplete_expired') await deps.cancelSubscription(live.id, `uncode-revoke-${live.id}`);
   }
   // Free at once; the customer.subscription.deleted that follows is then a no-op.
-  await store.markSubscriptionCanceled(match.subscription.stripeSubscriptionId);
+  await store.markSubscriptionCanceled(match.subscription.stripeSubscriptionId, laterEventTime(match.subscription, eventAt));
   return true;
 }
 
@@ -357,7 +438,7 @@ async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCre
   const match = await subscriptionForPayment(store, charge, dispute.payment_intent, disputeCharge?.customer ?? null);
   const lost = event.type === 'charge.dispute.closed' && dispute.status === 'lost';
   // A lost dispute is a forced reversal of what that payment bought, whatever period it paid for.
-  const revoked = lost && (await revokeAccess(store, charge, match, false));
+  const revoked = lost && (await revokeAccess(store, charge, match, false, eventTime(event)));
   await store.recordAudit(null, match?.subscription.workspaceId ?? null, event.type === 'charge.dispute.created' ? 'dispute.opened' : 'dispute.closed', {
     eventId: event.id,
     disputeId: dispute.id,
@@ -378,6 +459,7 @@ async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCre
  * may only take access away from a subscription already on record (`applyRevocationOnly`).
  */
 export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies, options: { revokeOnly?: boolean } = {}): Promise<void> {
+  const eventAt = eventTime(event);
   switch (event.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded': {
@@ -392,7 +474,7 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
         const full = deps.retrieveCheckoutSession
           ? await deps.retrieveCheckoutSession(session.id)
           : session;
-        await grantLifetimeFromCheckout(store, full);
+        await grantLifetimeFromCheckout(store, full, deps, eventAt);
         return;
       }
       if (session.mode !== 'subscription' || !session.subscription) return;
@@ -402,7 +484,7 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
         await store.recordAudit(null, subscription.metadata.workspace_id ?? null, 'checkout.refused_plan_unavailable', { eventId: event.id, plan: subscription.metadata.plan });
         return;
       }
-      await syncStripeSubscription(store, subscription, deps);
+      await syncStripeSubscription(store, subscription, deps, eventAt);
       await store.completeCheckoutIntent(session.id);
       await store.recordAudit(null, subscription.metadata.workspace_id ?? null, 'checkout.completed', { eventId: event.id });
       return;
@@ -412,13 +494,13 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       // Stripe does not deliver events in order. Sync the subscription as it is now, never the
       // event's snapshot, so a late older event cannot roll back or resurrect a subscription.
       const live = await deps.retrieveSubscription(event.data.object.id);
-      await (options.revokeOnly ? applyRevocationOnly(store, live) : syncStripeSubscription(store, live, deps));
+      await (options.revokeOnly ? applyRevocationOnly(store, live, eventAt) : syncStripeSubscription(store, live, deps, eventAt));
       return;
     }
     case 'customer.subscription.deleted':
       {
       const prior = await store.subscriptionByProviderId(event.data.object.id);
-      await store.markSubscriptionCanceled(event.data.object.id);
+      await store.markSubscriptionCanceled(event.data.object.id, laterEventTime(prior, eventAt));
       await store.recordAudit(null, prior?.workspaceId ?? null, 'subscription.canceled', { eventId: event.id });
       return;
       }
@@ -428,7 +510,7 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       const id = subscriptionIdFromInvoice(event.data.object);
       if (!id) return;
       const live = await deps.retrieveSubscription(id);
-      await (options.revokeOnly ? applyRevocationOnly(store, live) : syncStripeSubscription(store, live, deps));
+      await (options.revokeOnly ? applyRevocationOnly(store, live, eventAt) : syncStripeSubscription(store, live, deps, eventAt));
       return;
     }
     case 'charge.refunded': {
@@ -438,10 +520,11 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       const chargeDeps = chargeEventDependencies(deps);
       const full = charge.refunded || charge.amount_refunded >= charge.amount;
       const match = await subscriptionForPayment(store, chargeDeps, charge.payment_intent, charge.customer);
-      const revoked = full && (await revokeAccess(store, chargeDeps, match, true));
+      const revoked = full && (await revokeAccess(store, chargeDeps, match, true, eventAt));
       await store.recordAudit(null, match?.subscription.workspaceId ?? null, full ? 'refund.full' : 'refund.partial', {
         eventId: event.id,
         chargeId: charge.id,
+        paymentIntentId: charge.payment_intent ? providerId(charge.payment_intent) : null,
         amount: charge.amount,
         amountRefunded: charge.amount_refunded,
         currency: charge.currency,

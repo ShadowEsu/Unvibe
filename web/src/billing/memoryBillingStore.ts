@@ -345,9 +345,13 @@ export class MemoryBillingStore implements BillingStore {
     this.data.subscriptions.set(input.workspaceId, { ...input });
   }
 
-  async markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void> {
+  async markSubscriptionCanceled(stripeSubscriptionId: string, stripeEventAt?: string): Promise<void> {
     const subscription = await this.subscriptionByProviderId(stripeSubscriptionId);
-    if (subscription) this.data.subscriptions.set(subscription.workspaceId, { ...subscription, status: 'canceled' });
+    if (subscription) this.data.subscriptions.set(subscription.workspaceId, { ...subscription, status: 'canceled', ...(stripeEventAt ? { stripeEventAt } : {}) });
+  }
+
+  async paymentRefunded(paymentIntentId: string): Promise<boolean> {
+    return this.data.audits.some((audit) => audit.action === 'refund.full' && audit.metadata.paymentIntentId === paymentIntentId);
   }
 
   async subscriptionByProviderId(stripeSubscriptionId: string): Promise<SubscriptionRecord | null> {

@@ -64,6 +64,7 @@ export async function POST(req: Request): Promise<Response> {
         return (await stripe.invoicePayments.list({ invoice: invoice.id, status: 'paid' })).data;
       },
       refundPayment: async (target, idempotencyKey) => (await stripe.refunds.create(target, { idempotencyKey })).id,
+      retrievePaymentIntent: (id) => stripe.paymentIntents.retrieve(id, { expand: ['latest_charge'] }),
     }, { revokeOnly });
     await store.completeWebhook(event.id);
     return Response.json({ received: true });
