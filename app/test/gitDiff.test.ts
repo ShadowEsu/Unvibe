@@ -68,29 +68,49 @@ test('a file opened through a linked folder keeps only its path inside the repo'
   }
 });
 
-test('a git repo at the home folder is never the project, but a repo inside home is', async () => {
-  const home = mkdtempSync(path.join(tmpdir(), 'unvibe-home-'));
+/** Runs `fn` with the home folder set to `home` (HOME on macOS and Linux, USERPROFILE on Windows). */
+async function withHome(home: string, fn: () => Promise<void>): Promise<void> {
   const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
   process.env.HOME = home;
   process.env.USERPROFILE = home;
   try {
-    execFileSync('git', ['init', '-q'], { cwd: home });
-    const code = path.join(home, 'code');
-    mkdirSync(code);
-    writeFileSync(path.join(code, 'a.js'), '\n');
-    // A dotfiles repo at ~ would make the project name the OS username.
-    assert.equal(await findGitRoot(code), null);
-    const shop = path.join(code, 'shop');
-    mkdirSync(shop);
-    execFileSync('git', ['init', '-q'], { cwd: shop });
-    const root = await findGitRoot(shop);
-    assert.ok(root);
-    assert.equal(path.basename(root), 'shop');
+    await fn();
   } finally {
     for (const [key, value] of Object.entries(saved)) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
-    rmSync(home, { recursive: true, force: true });
+  }
+}
+
+test('a git repo at or above the home folder is never the project, but a repo inside home is', async () => {
+  const base = mkdtempSync(path.join(tmpdir(), 'unvibe-home-'));
+  try {
+    // Home is reached through a link, as when /Users or /home is linked to another volume: git
+    // reports the resolved root, so a home check without realpath would miss it on any OS.
+    const realHome = path.join(base, 'volume', 'sam');
+    mkdirSync(path.join(realHome, 'code', 'shop'), { recursive: true });
+    const home = path.join(base, 'home-link');
+    symlinkSync(realHome, home, 'junction');
+    await withHome(home, async () => {
+      // A dotfiles repo at ~ would make the project name the OS username.
+      execFileSync('git', ['init', '-q'], { cwd: realHome });
+      assert.equal(await findGitRoot(path.join(home, 'code')), null);
+      // A repo inside home is still a project.
+      execFileSync('git', ['init', '-q'], { cwd: path.join(realHome, 'code', 'shop') });
+      const shop = await findGitRoot(path.join(home, 'code', 'shop'));
+      assert.ok(shop);
+      assert.equal(path.basename(shop), 'shop');
+    });
+    // A repo above home (a `git init /` or a whole-volume repo) is not a project either.
+    const above = path.join(base, 'above');
+    const homeBelow = path.join(above, 'users', 'sam');
+    mkdirSync(path.join(homeBelow, 'code'), { recursive: true });
+    execFileSync('git', ['init', '-q'], { cwd: above });
+    await withHome(homeBelow, async () => {
+      assert.equal(await findGitRoot(path.join(homeBelow, 'code')), null);
+    });
+  } finally {
+    rmSync(base, { recursive: true, force: true });
   }
 });
