@@ -2559,7 +2559,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   padding-inline: 1rem;
 }
 
-/* Download free on the Free card is the only filled pricing button; Pro and Teams use this outline. */
+/* Download free on the Free card is the only filled pricing button; the paid cards use this outline. */
 .pricing-button.pricing-button--quiet {
   border: 1px solid var(--purple);
   background: transparent !important;

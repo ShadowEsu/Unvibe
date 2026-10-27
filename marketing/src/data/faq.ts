@@ -1,5 +1,6 @@
 import { BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
-import { PRICING } from "@/lib/pricing";
+import { formatUsd } from "@/data/compensation";
+import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 /**
@@ -7,7 +8,8 @@ import { SHORTCUTS } from "@/lib/shortcuts";
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
  * keys and tokens in code and diffs filtered on the device (typed questions and Chat too from
  * v0.1.44, not in v0.1.43); no local-only mode yet; AI explanations can be wrong.
- * No allowance numbers here until the live trial configuration is confirmed.
+ * Plans, prices and allowances come from lib/pricing. Plain text only, so no "unlimited" here:
+ * that word must link to the fair-use section (FAIR_USE_HREF).
  */
 
 export interface FaqItem {
@@ -110,14 +112,19 @@ export const faqItems: FaqItem[] = [
   {
     id: "free",
     question: "Is Free actually usable?",
-    answer:
-      "Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library, within a usage allowance. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. No card and no API key.",
+    answer: `Yes. ${FREE_LINE}. It covers explanations at New through Advanced, follow-ups, Test me and your Library. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. A new account's first month is Pro. No card and no API key.`,
+    category: "pricing",
+  },
+  {
+    id: "plans",
+    question: "What plans are there?",
+    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, the latest features first, and a written fair-use limit of ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month (Fair use, on the pricing page). Payments for Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
     category: "pricing",
   },
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year.`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Enterprise is monthly only, and Big Business is one payment.`,
     category: "pricing",
   },
   {
@@ -140,9 +147,9 @@ export const faqItems: FaqItem[] = [
     category: "platform",
   },
   {
-    id: "teams",
-    question: "Can educators or teams use it?",
-    answer: `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, for ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email preston@unvibe.site for seats, or about Enterprise if you need more than ${PRICING.teamsMaxSeats}.`,
+    id: "groups",
+    question: "Can a class or a group use it?",
+    answer: "Everyone can use Unvibe free with their own account. Paid plans are one account each, with no shared seats. For a class or a group, email hello@unvibe.site.",
     category: "platform",
   },
   {

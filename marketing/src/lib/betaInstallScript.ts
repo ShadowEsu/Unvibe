@@ -1,3 +1,5 @@
+import { FREE_LINE } from "./pricing";
+
 export const BETA_INSTALL_TAG = "v0.1.44";
 export const BETA_INSTALL_ASSET = "Unvibe-0.1.44-mac-arm64.dmg";
 export const BETA_WINDOWS_ASSET = "Unvibe-0.1.44-win-x64-portable.exe";
@@ -166,7 +168,7 @@ export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-ar
 
 /** Private beta installer. Downloads the portable Windows exe, which uses the free plan. */
 export function betaWindowsInstallScript(): string {
-  return `# Unvibe private beta installer for Windows. Free AI explanations: 30 days without an account, monthly with one. Unsigned.
+  return `# Unvibe private beta installer for Windows. ${FREE_LINE}. Unsigned.
 # Source: ${BETA_INSTALL_SCRIPT_SOURCE_URL}
 # Sends one anonymous 'installed' count to unvibe.site when it finishes. No code or personal data.
 # Paste this in Windows PowerShell or pwsh (not Command Prompt, not Git Bash):

@@ -1,21 +1,30 @@
-import { PRICING } from "@/lib/pricing";
+import { formatUsd } from "@/data/compensation";
+import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
- * stay visible but nothing promises an upgrade, checkout or renewal. Once payments open, the
- * shipped copy returns. In both states Download free is the only filled button, and no plan
- * states an allowance number (Pro gets more explanations than Free; see web/src/billing/plans.ts).
+ * stay visible, nothing promises an upgrade, checkout or renewal, and Pro reads "Payments open
+ * soon" with an application email. Enterprise and Big Business are never purchasable from the
+ * site, whatever the payments status or the web flag (BILLING_NEW_TIERS_ENABLED): they always read
+ * "Payments open soon" and link to an application email.
+ * Download free is the only filled button. Allowances come from lib/pricing.
  */
 
 export type PlanCopy = {
-  id: "free" | "pro" | "teams";
+  id: "free" | "pro" | "enterprise" | "business";
   name: string;
   badge: string;
   eyebrow: string;
-  /** Shown for Free; Pro and Teams prices come from PRICING per interval. */
+  /** Shown for Free and Big Business; Pro and Enterprise prices come from PRICING per interval. */
   price: string;
+  /** Explanations a month. Links to the fair-use section when `allowanceHref` is set. */
+  allowance: string;
+  allowanceHref: string | null;
   detail: string;
+  /** What the price includes. */
   features: readonly string[];
+  /** Shown below the inclusions; never part of what is sold. */
+  note: string | null;
   cta: string;
   href: string;
   featured: boolean;
@@ -28,19 +37,34 @@ export type PricingCopy = {
   description: string;
   plans: readonly PlanCopy[];
   disclosure: string;
-  /** Extra sentence for the Terms payments section; null once payments open. */
+  /** Extra Pro sentence for the Terms payments section; null once payments open. Enterprise and Big Business: TERMS_NEW_TIERS. */
   termsNote: string | null;
 };
 
-const TEAMS_MAILTO =
-  "mailto:hello@unvibe.site?subject=Unvibe%20Teams%20founding%20pilot&body=Company%20email%3A%20%0ASeats%20wanted%20(2%E2%80%9320)%3A%20%0A%0AWe%20want%20the%20Teams%20founding%20pilot%20(workspace%20%2B%20who%20reviewed%20what).";
+export const PAYMENTS_OPEN_SOON = "Payments open soon";
 
-const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
+const PRO_MAILTO = "mailto:hello@unvibe.site?subject=Unvibe%20Pro%20application";
+const ENTERPRISE_MAILTO = "mailto:hello@unvibe.site?subject=Unvibe%20Enterprise%20application";
+const BUSINESS_MAILTO = "mailto:hello@unvibe.site?subject=Unvibe%20Big%20Business%20application";
+
+const ENTERPRISE_PRICE = `$${PRICING.enterpriseMonthly} a month`;
+const BUSINESS_PRICE = `${formatUsd(PRICING.businessOnce)} once`;
+
+/** The written fair-use limit, shown on /pricing (id `fair-use`) and in the Terms. */
+export const FAIR_USE = {
+  heading: "Fair use",
+  limit: `Big Business includes up to ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month, for one person's normal use. Past that, explanations pause until the next month, and we contact you first.`,
+  enforcement: "The app enforces this limit exactly like any other plan limit. No hidden throttling.",
+} as const;
+
+/** Terms payments section, after the Pro sentences. Both tiers stay closed on the site until payments open. */
+export const TERMS_NEW_TIERS = `Enterprise (${ENTERPRISE_PRICE}) and Big Business (${BUSINESS_PRICE}) payments are not open yet. Once they open, Enterprise is billed monthly and renews until you cancel, and Big Business is a one-time payment for one account that does not renew.`;
 
 const FEATURES = {
   free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Briefs of your Git changes, made on your computer", "“Why does this exist?” from your Git history", "Keys and tokens in your code filtered on your device"],
-  pro: ["Everything in Free", "Expert depth", "AI explanations of Git diffs and change Briefs", "Answers that use nearby files", "More explanations each month than Free"],
-  teams: ["One shared workspace", "Invites for your team", "Who reviewed what (metadata only)", SEATS],
+  pro: ["Everything in Free", "Expert depth", "AI explanations of Git diffs and change Briefs", "Answers that use nearby files"],
+  enterprise: ["Everything in Pro", "Monthly only, no annual plan"],
+  business: ["Everything in Pro", "The latest features first", "One payment, not a subscription"],
 } as const;
 
 const free: PlanCopy = {
@@ -49,36 +73,79 @@ const free: PlanCopy = {
   badge: "No card needed",
   eyebrow: "Understand the code in front of you.",
   price: "$0",
-  detail: "Included AI explanations with a usage limit. No card and no separate API key.",
+  allowance: FREE_LINE,
+  allowanceHref: null,
+  detail: "No card and no separate API key. A new account's first month is Pro.",
   features: FEATURES.free,
+  note: null,
   cta: "Download free",
   href: "/beta",
   featured: false,
   primary: true,
 };
 
+const proAllowance = `${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month`;
+
+const enterprise: PlanCopy = {
+  id: "enterprise",
+  name: "Enterprise",
+  badge: PAYMENTS_OPEN_SOON,
+  eyebrow: "Room for heavy daily use.",
+  price: "",
+  allowance: `${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account`,
+  allowanceHref: null,
+  detail: `${PAYMENTS_OPEN_SOON}. One account, no shared seats. Email us to apply and we write back when it opens.`,
+  features: FEATURES.enterprise,
+  note: null,
+  cta: "Apply by email",
+  href: ENTERPRISE_MAILTO,
+  featured: false,
+  primary: false,
+};
+
+const business: PlanCopy = {
+  id: "business",
+  name: "Big Business",
+  badge: PAYMENTS_OPEN_SOON,
+  eyebrow: "The most room and the newest features.",
+  price: formatUsd(PRICING.businessOnce),
+  allowance: "Unlimited explanations, under the written fair-use limit",
+  allowanceHref: FAIR_USE_HREF,
+  detail: `${PAYMENTS_OPEN_SOON}. One account, no shared seats. Email us to apply and we write back when it opens.`,
+  features: FEATURES.business,
+  note: "Ask us about a call with the team; it is not part of the purchase.",
+  cta: "Apply by email",
+  href: BUSINESS_MAILTO,
+  featured: false,
+  primary: false,
+};
+
+const NEW_TIERS = `Enterprise (${ENTERPRISE_PRICE}) and Big Business (${BUSINESS_PRICE})`;
+
 const OPEN: PricingCopy = {
   heading: { lead: "Start free. Upgrade when it ", emphasis: "earns a place", tail: " in your day." },
-  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
+  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. ${NEW_TIERS} open soon.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
-    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Request Teams seats", href: TEAMS_MAILTO, featured: false, primary: false },
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, note: null, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
+    enterprise,
+    business,
   ],
-  disclosure: "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
+  disclosure: "Prices in USD. Pro renews until you cancel. Enterprise and Big Business are not on sale yet, so nothing is billed for them today. Big Business will be one payment, not a subscription.",
   termsNote: null,
 };
 
 const CLOSED: PricingCopy = {
-  heading: { lead: "Start free today. Pro and Teams ", emphasis: "open soon", tail: "." },
-  description: `Download Unvibe free today. Pro opens soon at $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
+  heading: { lead: "Start free today. Paid plans ", emphasis: "open soon", tail: "." },
+  description: `Download Unvibe free today. Pro opens soon at $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. ${NEW_TIERS} open soon too.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: "Opens soon", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Pro opens soon. Your Free plan keeps working until then.", features: FEATURES.pro, cta: "Download free", href: "/beta", featured: true, primary: false },
-    { id: "teams", name: "Teams", badge: "Opens soon", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Teams opens soon. Until then, founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
+    { id: "pro", name: "Pro", badge: PAYMENTS_OPEN_SOON, eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, detail: `${PAYMENTS_OPEN_SOON}. One developer account. Your Free plan keeps working until then.`, features: FEATURES.pro, note: null, cta: "Apply by email", href: PRO_MAILTO, featured: true, primary: false },
+    enterprise,
+    business,
   ],
-  disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
-  termsNote: "Pro and Teams are not on sale yet. Until they open, nothing is billed and your Free plan keeps working.",
+  disclosure: "Prices in USD. Pro, Enterprise and Big Business are not on sale yet, so nothing is billed today. Big Business will be one payment, not a subscription.",
+  termsNote: "Pro is not on sale yet. Until it opens, nothing is billed and your Free plan keeps working.",
 };
 
 export function pricingCopy(paymentsOpen: boolean): PricingCopy {

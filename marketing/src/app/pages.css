@@ -197,8 +197,48 @@
 
 @media (min-width: 1120px) {
   .paper-pricing .marketing-plan-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* Explanations a month: the one number per card. Big Business links it to the fair-use section. */
+.paper-pricing .marketing-plan-allowance {
+  margin: 0.75rem 0 0;
+  font-size: max(13px, 0.8rem);
+  font-weight: 650;
+  color: var(--v-ink);
+}
+
+.paper-pricing .marketing-plan-allowance a,
+.paper-pricing .pricing-fair-use a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Sits below the inclusions on purpose: nothing in it is part of the price. */
+.paper-pricing .marketing-plan-note {
+  margin: 0 0 1rem;
+  font-size: max(13px, 0.75rem);
+  color: var(--u-text-2);
+}
+
+.paper-pricing .pricing-fair-use .paper-wrap {
+  max-width: 46rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  background: var(--u-sheet);
+  color: var(--u-text);
+  line-height: 1.6;
+}
+
+.paper-pricing .pricing-fair-use h2 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  font-weight: 750;
+}
+
+.paper-pricing .pricing-fair-use p + p {
+  margin-top: 0.6rem;
 }
 
 .pricing-plans .pricing-toggle {

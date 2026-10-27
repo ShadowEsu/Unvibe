@@ -10,9 +10,11 @@ import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
 type Interval = 'monthly' | 'annual';
 
+/** Enterprise is monthly only, so it keeps its monthly price under the Annual toggle. */
 function priceFor(id: string, interval: Interval, fallback: string): { price: string; per: string } {
   if (id === 'pro') return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
-  if (id === 'teams') return interval === 'annual' ? { price: `$${PRICING.teamsSeatAnnual}`, per: '/seat/year' } : { price: `$${PRICING.teamsSeatMonthly}`, per: '/seat/month' };
+  if (id === 'enterprise') return { price: `$${PRICING.enterpriseMonthly}`, per: '/month' };
+  if (id === 'business') return { price: fallback, per: ' once' };
   return { price: fallback, per: '' };
 }
 
@@ -74,7 +76,11 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
               );
             })()}
             <small>{plan.detail}</small>
+            <p className="marketing-plan-allowance">
+              {plan.allowanceHref ? <a href={plan.allowanceHref}>{plan.allowance}</a> : plan.allowance}
+            </p>
             <ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
+            {plan.note ? <p className="marketing-plan-note">{plan.note}</p> : null}
             <Button
               href={plan.href}
               size="lg"

@@ -37,7 +37,7 @@ export function siteCommands(push: (href: string) => void): Command[] {
     { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
     { id: "home", label: "Home", hint: "/", run: go("/") },
     { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },
-    { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
+    { id: "pricing", label: "Pricing", hint: "Free, Pro, Enterprise, Big Business", keywords: "price cost plans pay subscription fair use", run: go("/pricing") },
     { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
     { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },
     { id: "changelog", label: "Change log", hint: "What shipped", run: go("/releases") },

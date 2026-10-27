@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
-import { pricingCopy } from "@/lib/pricingCopy";
+import { FAIR_USE, TERMS_NEW_TIERS, pricingCopy } from "@/lib/pricingCopy";
+import { FAIR_USE_HREF } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Terms",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
     "The terms of using Unvibe during its beta, including AI limitations and the absence of any security guarantee.",
 };
 
-/** The payments section says whether Pro is on sale; re-read every 5 minutes like /pricing. */
+/** The payments section says whether Pro is on sale; re-read every 5 minutes like /pricing. Enterprise and Big Business are never on sale from the site yet. */
 export const revalidate = 300;
 
 export default async function TermsPage() {
@@ -17,7 +18,7 @@ export default async function TermsPage() {
   return (
     <LegalLayout
       title="Terms of use"
-      updated="September 2026"
+      updated="October 2026"
       intro="Plain-language terms for using Unvibe during its beta. Using the product means you agree to these. This is a summary and may be superseded by a full agreement as the product matures."
     >
       <LegalSection heading="The service">
@@ -73,7 +74,14 @@ export default async function TermsPage() {
           renews until you cancel. You can cancel a
           subscription at any time from the Plan page in the app. Paid access continues
           until the end of the period you already paid for, then your account returns to
-          the Free plan. Prices are shown in USD before checkout.
+          the Free plan. Prices are shown in USD before checkout. {TERMS_NEW_TIERS}
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="Fair use">
+        <p>
+          {FAIR_USE.limit} {FAIR_USE.enforcement} The same limit is written in the{" "}
+          <a href={FAIR_USE_HREF}>fair-use section of the pricing page</a>.
         </p>
       </LegalSection>
 

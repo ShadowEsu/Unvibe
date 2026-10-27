@@ -1,7 +1,7 @@
 import { compensationCashUsd, compensationCreditsUsd, compensationLines, compensationProgramCount, compensationTotalLabel, formatUsd } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
-import { PRICING } from "@/lib/pricing";
+import { BUSINESS_FAIR_USE, EXPLANATIONS_PER_MONTH, FAIR_USE_HREF, FREE_LINE, PRICING, formatCount } from "@/lib/pricing";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
 /**
@@ -79,7 +79,8 @@ export function kitSections(): KitSection[] {
         "Test me: one quick question to check you understood. Lessons are saved to a library.",
         "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
         "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
-        `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
+        `${FREE_LINE}. Every new app account starts with a free month of Pro.`,
+        `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, the latest features first, under a written fair-use limit of ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month (${SITE}${FAIR_USE_HREF}). Enterprise and Big Business payments open soon; nobody can buy them yet.`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, partner perks worth about $21.5K to $23K).",
       ],

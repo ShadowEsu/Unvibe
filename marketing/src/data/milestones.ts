@@ -458,7 +458,7 @@ export const milestones: Milestone[] = [
     date: "24 JUL 2026",
     category: "PRODUCT",
     title: "Selected-code capture on Mac",
-    summary: "Command U capture was made reliable on macOS, then an unlimited full-product desktop build was pushed.",
+    summary: "Command U capture was made reliable on macOS, then an unmetered full-product desktop build was pushed.",
   },
   {
     date: "23 JUL 2026",

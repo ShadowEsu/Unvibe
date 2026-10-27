@@ -19,6 +19,7 @@ import { ReminderToast } from "@/components/paper/ReminderToast";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
+import { FREE_LINE } from "@/lib/pricing";
 import { BOOT_SCRIPT } from "@/lib/theme";
 import { jsonLdScript } from "@/lib/jsonLd";
 
@@ -127,7 +128,7 @@ const softwareJsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "Free at $0 per month. No API key or credit card required.",
+    description: `${FREE_LINE}. No API key or credit card required.`,
   },
 };
 

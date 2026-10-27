@@ -190,7 +190,7 @@ describe("download clicks", () => {
   }
 
   for (const paymentsOpen of [false, true]) {
-    it(`pricing download CTAs send surface pricing (payments ${paymentsOpen ? "open" : "closed"}); Teams email does not`, () => {
+    it(`pricing download CTAs send surface pricing (payments ${paymentsOpen ? "open" : "closed"}); apply emails do not`, () => {
       for (const plan of pricingCopy(paymentsOpen).plans) trackPlanCta(plan);
       const downloads = sent.filter((item) => item.event === "download_cta_clicked");
       const toDownloadPage = pricingCopy(paymentsOpen).plans.filter((plan) => plan.href === "/beta").length;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { Reveal } from "@/components/redesign/Reveal";
+import { FREE_LINE } from "@/lib/pricing";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 export const metadata: Metadata = {
@@ -139,7 +140,7 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>You can start without signing in</summary>
               <p>
-                Skip sign-in on the first screen and you get 50 free explanations in your first 30 days. Signing in gives you a free allowance every month, syncs your history across devices, and starts a new account with a free month of Pro.
+                {FREE_LINE}. Skip sign-in on the first screen to start without an account. Signing in syncs your history across devices and starts a new account with a free month of Pro.
               </p>
             </details>
           </div>
