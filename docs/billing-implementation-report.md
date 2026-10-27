@@ -14,8 +14,9 @@ remote project, or approve legal language.
 
 - Central plan definitions and limits (current values; this report first shipped Free 30 and Pro
   1,000 at $8/$72, since changed): Free 50 explanations/1 project/25 dictionary/20 saved; Pro 200
-  explanations/10 projects; Enterprise 1,000; Big Business a written fair-use limit of 5,000
-  explanations and 10,000 questions; Teams usage scales by purchased seats. See `docs/billing.md`.
+  explanations/10 projects; Enterprise 1,000; Big Business unlimited explanations and questions for
+  up to 10 named seats, with a per-person fair-use rate limit (10 requests a minute, 60 an hour,
+  1 million characters an hour); Teams usage scales by purchased seats. See `docs/billing.md`.
 - Exact price math: Pro $9/month or $81/year with 25% annual savings, Pro Lifetime $80, Enterprise
   $50/month, Big Business $5,000 once; Teams plan math retained server-side but not offered in
   current product surfaces.

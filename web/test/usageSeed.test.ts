@@ -61,33 +61,29 @@ for (const [seed, plan, last] of [['pro:199', 'Pro', 200], ['enterprise:999', 'E
   });
 }
 
-test('seed business:4999: explanation #5,000 is allowed and #5,001 names the fair-use limit', async () => {
+test('seed business:1000000: Big Business explanations are unlimited, far above any old cap, and the usage line says so with null', async () => {
   try {
-    const headers = await seededAccount('business:4999');
+    const headers = await seededAccount('business:1000000');
     assert.equal((await explain(headers)).status, 200);
-    const refused = await explain(headers);
-    assert.equal(refused.status, 429);
-    assert.match(refused.message, /Big Business fair-use limit of 5,000 explanations/);
-    assert.match(refused.message, /pricing#fair-use/);
-    assert.doesNotMatch(refused.message, /contact you/, 'nothing sends that contact, so the message never promises it');
+    assert.equal((await explain(headers)).status, 200);
+    const userId = await getStore().userForToken(headers.authorization.replace('Bearer ', ''));
+    assert.ok(userId);
+    const line = (await getBillingStore().overview(userId)).usage.find((entry) => entry.kind === 'ai_explanation');
+    assert.deepEqual({ used: line?.used, limit: line?.limit, remaining: line?.remaining }, { used: 1_000_002, limit: null, remaining: null });
   } finally {
     delete process.env.UNVIBE_TEST_USAGE_SEED;
     resetBillingStoreCacheForTests();
   }
 });
 
-test('seed business: the questions cap names 10,000 questions, formatted', async () => {
+test('seed business: 20,000 questions this month (twice the old cap) still leave the next one allowed', async () => {
   try {
     process.env.UNVIBE_TEST_USAGE_SEED = 'business:0';
     resetBillingStoreCacheForTests();
     const account = await getStore().signIn(`seed-q-${crypto.randomUUID()}@seed.test`);
-    for (let i = 0; i < 10_000; i += 1) await getBillingStore().reserveUsage(account.userId, 'project_question');
-    const refused = await reserveMeteredAction(account.userId, 'project_question', new Request('http://localhost/api/v1/comprehension'));
-    assert.ok(refused instanceof Response);
-    assert.equal(refused.status, 429);
-    const body: unknown = await refused.json();
-    assert.ok(body !== null && typeof body === 'object' && 'message' in body);
-    assert.match(String(body.message), /Big Business fair-use limit of 10,000 questions this month/);
+    for (let i = 0; i < 20_000; i += 1) assert.equal((await getBillingStore().reserveUsage(account.userId, 'project_question')).allowed, true);
+    const allowed = await reserveMeteredAction(account.userId, 'project_question', new Request('http://localhost/api/v1/comprehension'), { characters: 100 });
+    assert.ok(!(allowed instanceof Response), 'an unlimited allowance never refuses');
   } finally {
     delete process.env.UNVIBE_TEST_USAGE_SEED;
     resetBillingStoreCacheForTests();

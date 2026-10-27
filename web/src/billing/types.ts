@@ -68,10 +68,24 @@ export interface SubscriptionRecord {
 export interface UsageLine {
   kind: UsageKind;
   used: number;
-  limit: number;
-  remaining: number;
+  /** The monthly cap, or null for unlimited (no monthly cap; see FAIR_USE_RATE_LIMIT). */
+  limit: number | null;
+  /** What is left this month; null exactly when `limit` is null. */
+  remaining: number | null;
   resetsAt: string;
 }
+
+/** One request against the fair-use rate limit: allowed and counted, or refused (nothing counted). */
+export type FairUseVerdict =
+  | { allowed: true }
+  | {
+    allowed: false;
+    /** Seconds until the window that refused ends. */
+    retryAfterSeconds: number;
+    window: 'minute' | 'hour';
+    /** True for the first hourly refusal of this person in this hour: raise the alert once. */
+    alert: boolean;
+  };
 
 export interface BillingOverview {
   workspace: WorkspaceAccess;
@@ -158,6 +172,12 @@ export interface BillingStore {
    * land on the sibling row; per-user and per-kind totals stay exact. No matching row: nothing happens.
    */
   recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void>;
+  /**
+   * Counts one request of `characters` input against the fair-use rate limit of the person behind
+   * `bucket` (fixed minute and hour windows), only when every limit allows it. Shares the
+   * request_rate_limits table with the public form limits (consume_fair_use_rate_limit in SQL).
+   */
+  consumeFairUseRate(bucket: string, characters: number, limits: { perMinute: number; perHour: number; charactersPerHour: number }): Promise<FairUseVerdict>;
   createTeamWorkspace(userId: string, name: string): Promise<WorkspaceAccess>;
   listMembers(userId: string, workspaceId: string): Promise<WorkspaceMember[]>;
   changeMemberRole(userId: string, workspaceId: string, memberUserId: string, role: Exclude<WorkspaceRole, 'owner'>): Promise<void>;

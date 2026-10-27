@@ -5,6 +5,11 @@ export const MAX_CONTEXT_CHARS = 120_000;
 /** Largest follow-up question the AI routes accept. */
 export const MAX_QUESTION_CHARS = 4_000;
 
+/** The characters a request sends to the AI (its serialized context and question), as the fair-use rate limit counts them. */
+export function payloadCharacters(payload: ReviewRequestPayload): number {
+  return JSON.stringify(payload.context).length + (typeof payload.question === 'string' ? payload.question.length : 0);
+}
+
 /**
  * Size checks shared by every route that sends a review payload to the AI. Returns the refusal
  * (400 for a non-text question, 413 when too long), or null when the payload may go ahead.

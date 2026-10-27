@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, LIFETIME_PERIOD_END, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
+import { BUSINESS_SEATS_FULL, canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, LIFETIME_PERIOD_END, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
 import { MAX_TEAM_WORKSPACES_PER_OWNER, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
 import { TeamHasMembersError } from '@/data/teamHasMembers';
@@ -8,6 +8,7 @@ import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  FairUseVerdict,
   PlanId,
   SubscriptionRecord,
   SubscriptionSyncInput,
@@ -43,6 +44,8 @@ interface MemoryBillingData {
   webhooks: Map<string, { status: 'processing' | 'completed' | 'failed'; claimedAt: number }>;
   audits: Array<{ userId: string | null; workspaceId: string | null; action: string; metadata: Record<string, unknown>; at: string }>;
   usageEvents: MemoryUsageEvent[];
+  /** request_rate_limits: `<bucket>:<minute|hour|characters|alerted>:<window start ms>` to its count. */
+  rateLimits: Map<string, number>;
 }
 
 function membershipKey(workspaceId: string, userId: string): string {
@@ -93,6 +96,7 @@ export class MemoryBillingStore implements BillingStore {
       webhooks: new Map(),
       audits: [],
       usageEvents: [],
+      rateLimits: new Map(),
     };
     this.data = global.__uncodeBillingData;
   }
@@ -146,8 +150,16 @@ export class MemoryBillingStore implements BillingStore {
     return workspace && role ? { ...workspace, role } : null;
   }
 
+  /**
+   * The workspace a call without one is billed to, as billing_overview does in SQL: an active Big
+   * Business workspace the user is a member of (owner or a named seat), else the personal one.
+   */
   private async requireAccess(userId: string, workspaceId?: string): Promise<WorkspaceAccess> {
-    if (!workspaceId) return this.ensurePersonalWorkspace(userId);
+    if (!workspaceId) {
+      const business = [...this.data.subscriptions.values()].find((row) => row.plan === 'business' && row.status === 'active'
+        && this.data.memberships.has(membershipKey(row.workspaceId, userId)));
+      return business ? this.requireAccess(userId, business.workspaceId) : this.ensurePersonalWorkspace(userId);
+    }
     const access = await this.getWorkspaceAccess(userId, workspaceId);
     if (!access) throw new Error('Workspace not found or access denied.');
     return access;
@@ -173,7 +185,7 @@ export class MemoryBillingStore implements BillingStore {
       usage: kinds.map((kind) => {
         const used = this.data.usage.get(usageKey(workspace.id, kind, startsAt)) ?? 0;
         const limit = planLimit(plan, kind, subscription.seats);
-        return { kind, used, limit, remaining: Math.max(0, limit - used), resetsAt };
+        return { kind, used, limit, remaining: limit === null ? null : Math.max(0, limit - used), resetsAt };
       }),
       occupiedSeats,
       pendingInvitations,
@@ -187,7 +199,7 @@ export class MemoryBillingStore implements BillingStore {
     const overview = await this.overview(userId, workspaceId);
     const line = overview.usage.find((entry) => entry.kind === kind);
     if (!line) throw new Error('Unknown usage kind.');
-    if (line.used >= line.limit) return { allowed: false, line, reason: 'limit_reached' };
+    if (line.limit !== null && line.used >= line.limit) return { allowed: false, line, reason: 'limit_reached' };
     const { startsAt } = monthWindow(this.now());
     const key = usageKey(overview.workspace.id, kind, startsAt);
     this.data.usage.set(key, line.used + 1);
@@ -196,7 +208,7 @@ export class MemoryBillingStore implements BillingStore {
       id: lastId + 1, workspaceId: overview.workspace.id, userId, kind,
       estimatedInputTokens: null, estimatedOutputTokens: null, tokensEstimated: false, createdAt: this.now().getTime(),
     });
-    return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining - 1 } };
+    return { allowed: true, line: { ...line, used: line.used + 1, remaining: line.remaining === null ? null : line.remaining - 1 } };
   }
 
   async recordUsageTokens(userId: string, kind: UsageKind, usage: TokenUsage): Promise<void> {
@@ -207,6 +219,26 @@ export class MemoryBillingStore implements BillingStore {
     row.estimatedInputTokens = usage.inputTokens;
     row.estimatedOutputTokens = usage.outputTokens;
     row.tokensEstimated = usage.estimated === true;
+  }
+
+  async consumeFairUseRate(bucket: string, characters: number, limits: { perMinute: number; perHour: number; charactersPerHour: number }): Promise<FairUseVerdict> {
+    const now = this.now().getTime();
+    const minute = Math.floor(now / 60_000) * 60_000;
+    const hour = Math.floor(now / 3_600_000) * 3_600_000;
+    const count = (name: string, start: number) => this.data.rateLimits.get(`${bucket}:${name}:${start}`) ?? 0;
+    if (count('hour', hour) >= limits.perHour || count('characters', hour) + characters > limits.charactersPerHour) {
+      const alertKey = `${bucket}:alerted:${hour}`;
+      const alert = !this.data.rateLimits.has(alertKey);
+      this.data.rateLimits.set(alertKey, 1);
+      return { allowed: false, window: 'hour', retryAfterSeconds: Math.max(1, Math.ceil((hour + 3_600_000 - now) / 1000)), alert };
+    }
+    if (count('minute', minute) >= limits.perMinute) {
+      return { allowed: false, window: 'minute', retryAfterSeconds: Math.max(1, Math.ceil((minute + 60_000 - now) / 1000)), alert: false };
+    }
+    this.data.rateLimits.set(`${bucket}:minute:${minute}`, count('minute', minute) + 1);
+    this.data.rateLimits.set(`${bucket}:hour:${hour}`, count('hour', hour) + 1);
+    this.data.rateLimits.set(`${bucket}:characters:${hour}`, count('characters', hour) + characters);
+    return { allowed: true };
   }
 
   /** This user's usage rows, oldest first (dev and tests; production reads usage_events in SQL). */
@@ -270,7 +302,7 @@ export class MemoryBillingStore implements BillingStore {
     if (!canManageMembers(access.role) || access.type !== 'team') throw new Error('Only team owners and admins can invite members.');
     const overview = await this.overview(userId, workspaceId);
     if (access.type === 'team' && overview.occupiedSeats + overview.pendingInvitations >= overview.subscription.seats) {
-      throw new Error('Add a paid seat before sending another invitation.');
+      throw new Error(overview.subscription.plan === 'business' ? BUSINESS_SEATS_FULL : 'Add a paid seat before sending another invitation.');
     }
     const invitation: WorkspaceInvitation & { tokenHash: string } = {
       id: randomUUID(), workspaceId, email: email.trim().toLowerCase(), role, tokenHash,

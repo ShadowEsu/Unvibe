@@ -5,7 +5,7 @@ import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { proRequired, recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
-import { payloadSizeError } from '@/lib/reviewLimits';
+import { payloadCharacters, payloadSizeError } from '@/lib/reviewLimits';
 import { clientIp } from '@/lib/tryDemo';
 import { recordActivation } from '@/lib/activation';
 
@@ -49,7 +49,7 @@ export async function POST(req: Request): Promise<Response> {
   let trialStartedAt: string | undefined;
   if (!provider.mock && userId) {
     const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
-    const reserved = await reserveMeteredAction(userId, kind, req, { proOnly });
+    const reserved = await reserveMeteredAction(userId, kind, req, { proOnly, characters: payloadCharacters(payload) });
     if (reserved instanceof Response) return reserved;
     release = () => releaseMeteredAction(userId, kind, reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, kind, usage);

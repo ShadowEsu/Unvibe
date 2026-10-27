@@ -6,7 +6,7 @@ import { accountDeleted, sessionUser, unauthorized } from '@/lib/auth';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
-import { payloadSizeError } from '@/lib/reviewLimits';
+import { payloadCharacters, payloadSizeError } from '@/lib/reviewLimits';
 import { clientIp } from '@/lib/tryDemo';
 
 export const runtime = 'nodejs';
@@ -29,7 +29,7 @@ export async function POST(req: Request): Promise<Response> {
   let release: (() => Promise<void>) | null = null;
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   if (!provider.mock && userId) {
-    const reserved = await reserveMeteredAction(userId, 'project_question', req);
+    const reserved = await reserveMeteredAction(userId, 'project_question', req, { characters: payloadCharacters(payload) });
     if (reserved instanceof Response) return reserved;
     release = () => releaseMeteredAction(userId, 'project_question', reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, 'project_question', usage);

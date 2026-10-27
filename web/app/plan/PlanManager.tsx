@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BillingInterval, WorkspaceAccess, WorkspaceInvitation, WorkspaceMember } from '@/billing/types';
 import type { PublicBillingOverview as BillingOverview } from '@/billing/presentation';
-import { planDisplayName, planLimit, priceFor, TEAMS_MAX_SEATS } from '@/billing/plans';
+import { BUSINESS_SEATS, FAIR_USE_RATE_LIMIT_TEXT, planDisplayName, planLimit, priceFor, TEAMS_MAX_SEATS } from '@/billing/plans';
 
 interface Props {
   initialOverview: BillingOverview;
@@ -17,6 +17,13 @@ const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD
 const NEW_TIERS_APPLY_MAIL = 'mailto:hello@unvibe.site?subject=Unvibe%20Enterprise%20or%20Big%20Business%20application';
 const FAIR_USE_URL = 'https://unvibe.site/pricing#fair-use';
 const count = new Intl.NumberFormat('en-US');
+
+/** A capped plan's monthly explanations, formatted. Free, Pro and Enterprise always have a number. */
+function capText(plan: 'free' | 'pro' | 'enterprise'): string {
+  const limit = planLimit(plan, 'ai_explanation', 1);
+  if (limit === null) throw new Error(`${plan} has no monthly cap.`);
+  return count.format(limit);
+}
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
@@ -200,14 +207,14 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
 
       <section className="usage-panel" aria-labelledby="usage-title">
         <h2 id="usage-title">This month</h2>
-        <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{count.format(line.used)} / {count.format(line.limit)}</strong></div><progress value={line.used} max={line.limit} /><small>Resets {new Date(line.resetsAt).toLocaleDateString()}</small></div>)}</div>
+        <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.limit === null ? `${count.format(line.used)} · Unlimited` : `${count.format(line.used)} / ${count.format(line.limit)}`}</strong></div>{line.limit !== null && <progress value={line.used} max={line.limit} />}<small>{line.limit === null ? 'No monthly cap' : `Resets ${new Date(line.resetsAt).toLocaleDateString()}`}</small></div>)}</div>
       </section>
 
       {!isLifetime && <>
         <section className="pricing-controls-wrap" aria-label="Billing interval"><div className="pricing-controls"><button type="button" className={interval === 'monthly' ? 'active' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'active' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div><p><strong>Pro annual saves 25%:</strong> about $6.75/month, billed as $81/year. Monthly Pro is $9/month.</p></section>
         <section className="plan-grid plan-grid--two">
-          <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>{count.format(planLimit('free', 'ai_explanation', 1))} explanations a month with a free account (50 in your first 30 days without one)</li><li>1 active project</li><li>Core explanation levels</li><li>Selected-code explanations</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
-          <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>{count.format(planLimit('pro', 'ai_explanation', 1))} explanations a month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>{checkoutAvailable ? 'Upgrade to Pro' : 'Payments open soon'}</button></article>
+          <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>{capText('free')} explanations a month with a free account (50 in your first 30 days without one)</li><li>1 active project</li><li>Core explanation levels</li><li>Selected-code explanations</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
+          <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>{capText('pro')} explanations a month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>{checkoutAvailable ? 'Upgrade to Pro' : 'Payments open soon'}</button></article>
         </section>
 
         {lifetimeAvailable && (
@@ -225,15 +232,15 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
         <section className="plan-card plan-teams-band" aria-label="Enterprise and Big Business">
           <div>
             <p>Enterprise · {money.format(priceFor('enterprise', 'monthly', 1) / 100)} a month</p>
-            <small>{count.format(planLimit('enterprise', 'ai_explanation', 1))} explanations a month and every Pro feature, one account. Payments open soon.</small>
+            <small>{capText('enterprise')} explanations a month and every Pro feature, one account. Payments open soon.</small>
             <p>Big Business · {money.format(priceFor('business', 'lifetime', 1) / 100)} once</p>
-            <small>{count.format(planLimit('business', 'ai_explanation', 1))} explanations a month <a href={FAIR_USE_URL}>(fair use)</a> and {count.format(planLimit('business', 'project_question', 1))} questions a month, one account. Payments open soon.</small>
+            <small>Unlimited explanations and questions and every feature, for up to {BUSINESS_SEATS} named seats, paid once. Its only limit is the <a href={FAIR_USE_URL}>{FAIR_USE_RATE_LIMIT_TEXT}</a>. Payments open soon.</small>
           </div>
           <a className="btn btn--secondary" href={NEW_TIERS_APPLY_MAIL}>Contact us to apply</a>
         </section>
       </>}
 
-      {isLifetime && <p className="plan-notice plan-notice--quiet">{overview.subscription.plan === 'business' ? <>You have Big Business. Paid once, no renewal. <a href={FAIR_USE_URL}>Read its fair-use limit</a>.</> : 'You have Pro Lifetime. Included cloud models stay ready. No renewal.'}</p>}
+      {isLifetime && <p className="plan-notice plan-notice--quiet">{overview.subscription.plan === 'business' ? <>You have Big Business. Paid once, no renewal. Unlimited explanations and questions for up to {BUSINESS_SEATS} named seats, with a <a href={FAIR_USE_URL}>fair-use rate limit against automated abuse</a>.</> : 'You have Pro Lifetime. Included cloud models stay ready. No renewal.'}</p>}
 
       {overview.workspace.type === 'team' && <section className="team-panel">
         <h2>Team workspace</h2>

@@ -1,6 +1,6 @@
 import type Stripe from 'stripe';
 import type { BillingStore, BillingInterval, PlanId, SubscriptionRecord, SubscriptionStatus } from './types';
-import { complimentaryPaidEnd, isNewTierPlan, LIFETIME_PERIOD_END, newTiersEnabled } from './plans';
+import { BUSINESS_SEATS, complimentaryPaidEnd, isNewTierPlan, LIFETIME_PERIOD_END, newTiersEnabled } from './plans';
 import { stripePriceId } from './stripe';
 
 function mappedStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
@@ -386,7 +386,7 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
     plan,
     interval: 'lifetime',
     status: 'active',
-    seats: 1,
+    seats: plan === 'business' ? BUSINESS_SEATS : 1,
     stripeCustomerId: customerId,
     stripeSubscriptionId: paymentId,
     stripePriceId: expectedPrice,

@@ -1,19 +1,43 @@
+import { createHash } from 'node:crypto';
 import type { TokenUsage } from '@/ai/provider';
 import { getBillingStore } from './store';
-import { planDisplayName } from './plans';
+import { FAIR_USE_RATE_LIMIT, FAIR_USE_RATE_LIMIT_TEXT, planDisplayName } from './plans';
 import type { PlanId, UsageKind } from './types';
 
 /**
  * The workspace whose allowance pays for this call, with its plan when that was already loaded. A
- * workspace named in the request is used only while it is on a paid Teams plan; anything else
- * spends the caller's personal allowance, so creating free team workspaces cannot multiply the Free
+ * workspace named in the request is used only while it is on a paid Teams or Big Business plan;
+ * anything else spends the caller's default allowance (an active Big Business workspace they hold a
+ * named seat in, else their personal one), so creating free team workspaces cannot multiply the Free
  * allowance. Throws for a workspace the caller does not belong to.
  */
 async function meteredWorkspace(userId: string, req: Request): Promise<{ workspaceId: string | undefined; plan?: PlanId }> {
   const requested = req.headers.get('x-uncode-workspace-id')?.trim();
   if (!requested) return { workspaceId: undefined };
   const overview = await getBillingStore().overview(userId, requested);
-  return overview.subscription.plan === 'teams' ? { workspaceId: overview.workspace.id, plan: 'teams' } : { workspaceId: undefined };
+  const { plan } = overview.subscription;
+  return plan === 'teams' || plan === 'business' ? { workspaceId: overview.workspace.id, plan } : { workspaceId: undefined };
+}
+
+/**
+ * The 429 for a request over the fair-use rate limit, or null when it may go ahead (it is then
+ * counted). Keyed by a hash of the account id, so each named seat has its own limit and no raw id is
+ * stored or logged. An account's first hourly refusal in an hour logs one BUSINESS_RATE_LIMIT_HIT
+ * line (hashed id, no text) for review.
+ */
+async function fairUseRefusal(userId: string, characters: number): Promise<Response | null> {
+  const account = createHash('sha256').update(`unvibe-fair-use:${userId}`).digest('hex').slice(0, 32);
+  const verdict = await getBillingStore().consumeFairUseRate(`fair-use:${account}`, characters, FAIR_USE_RATE_LIMIT);
+  if (verdict.allowed) return null;
+  if (verdict.alert) console.warn(JSON.stringify({ event: 'BUSINESS_RATE_LIMIT_HIT', account, window: 'hour' }));
+  const seconds = verdict.retryAfterSeconds;
+  const minutes = Math.ceil(seconds / 60);
+  const wait = seconds < 60 ? `${seconds} second${seconds === 1 ? '' : 's'}` : `${minutes} minute${minutes === 1 ? '' : 's'}`;
+  return Response.json({
+    error: 'fair_use_rate_limited',
+    message: `You have reached the ${FAIR_USE_RATE_LIMIT_TEXT}. Try again in ${wait}.`,
+    retryAfterSeconds: seconds,
+  }, { status: 429, headers: { 'retry-after': String(seconds) } });
 }
 
 /** The refusal for a Pro feature on Free or the trial, shaped like the 429 so clients show `message` and `upgradePath`. */
@@ -33,34 +57,45 @@ export interface MeteredReservation {
 /**
  * Takes one unit of the caller's allowance, or returns the response that refuses the call (429, 402
  * for a Pro feature the paying plan does not include, or 503 when the plan cannot be checked). The
- * plan of the workspace that would pay decides, and is checked before anything is reserved.
+ * plan of the workspace that would pay decides, and is checked before anything is reserved. An
+ * unlimited allowance (Big Business) has no monthly cap; its one limit is the fair-use rate limit,
+ * per person, counted with the request's `characters` (a refused request gives its unit back).
  */
 export async function reserveMeteredAction(
   userId: string,
   kind: UsageKind,
   req: Request,
-  options: { proOnly?: boolean } = {},
+  options: { proOnly?: boolean; characters: number },
 ): Promise<Response | MeteredReservation> {
   try {
     const { workspaceId, plan } = await meteredWorkspace(userId, req);
     if (options.proOnly && (plan ?? (await getBillingStore().overview(userId)).subscription.plan) === 'free') return proRequired();
     const reservation = await getBillingStore().reserveUsage(userId, kind, workspaceId);
-    if (reservation.allowed) return { workspaceId };
-    await getBillingStore().recordAudit(userId, workspaceId ?? null, 'upgrade_prompt.impression', { kind, used: reservation.line.used, limit: reservation.line.limit });
+    const { limit, used } = reservation.line;
+    if (reservation.allowed) {
+      if (limit !== null) return { workspaceId };
+      const refusal = await fairUseRefusal(userId, options.characters).catch(async (error: unknown) => {
+        await releaseMeteredAction(userId, kind, { workspaceId });
+        throw error;
+      });
+      if (!refusal) return { workspaceId };
+      await releaseMeteredAction(userId, kind, { workspaceId });
+      return refusal;
+    }
+    // Only a monthly cap refuses a reservation; an unlimited line never reaches one.
+    if (limit === null) throw new Error('An unlimited allowance refused a reservation.');
+    await getBillingStore().recordAudit(userId, workspaceId ?? null, 'upgrade_prompt.impression', { kind, used, limit });
     const resets = reservation.line.resetsAt
       ? new Date(reservation.line.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
       : 'next month';
     const label = kind === 'ai_explanation' ? 'explanations' : kind === 'project_question' ? 'questions' : kind.replaceAll('_', ' ');
-    const limit = reservation.line.limit.toLocaleString('en-US');
+    const limitText = limit.toLocaleString('en-US');
     const payingPlan = plan ?? (await getBillingStore().overview(userId)).subscription.plan;
-    const reached = payingPlan === 'business'
-      ? `You have reached the Big Business fair-use limit of ${limit} ${label} this month (unvibe.site/pricing#fair-use). They pause until ${resets}. Saved history and settings stay available.`
-      : `You have reached your ${planDisplayName(payingPlan)} monthly ${label} limit (${limit}). Your allowance resets on ${resets}. Saved history and settings stay available.`;
     return Response.json({
       error: 'plan_limit_reached',
-      message: reservation.line.remaining <= 0
-        ? reached
-        : `You have used ${reservation.line.used.toLocaleString('en-US')} of ${limit} ${label} this month.`,
+      message: used >= limit
+        ? `You have reached your ${planDisplayName(payingPlan)} monthly ${label} limit (${limitText}). Your allowance resets on ${resets}. Saved history and settings stay available.`
+        : `You have used ${used.toLocaleString('en-US')} of ${limitText} ${label} this month.`,
       usage: reservation.line,
       upgradePath: '/plan',
     }, { status: 429 });

@@ -3,9 +3,11 @@ import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  FairUseVerdict,
   SubscriptionRecord,
   SubscriptionSyncInput,
   UsageKind,
+  UsageLine,
   UsageReservation,
   WebhookClaim,
   WorkspaceAccess,
@@ -21,6 +23,19 @@ import { TEAM_WORKSPACE_LIMIT_MESSAGE, TeamWorkspaceLimitError } from './teamWor
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Persistent billing returned an invalid record.');
   return value as Record<string, unknown>;
+}
+
+/** A usage line as billing_overview and reserve_billing_usage write it; a null limit is unlimited and stays null, never 0. */
+function usageLine(value: unknown): UsageLine {
+  const line = asObject(value);
+  const limit = line.limit === null ? null : Number(line.limit);
+  return {
+    kind: line.kind as UsageKind,
+    used: Number(line.used),
+    limit,
+    remaining: limit === null ? null : Number(line.remaining),
+    resetsAt: String(line.resets_at),
+  };
 }
 
 export class SupabaseBillingStore implements BillingStore {
@@ -67,16 +82,7 @@ export class SupabaseBillingStore implements BillingStore {
     const row = asObject(value);
     const workspace = asObject(row.workspace);
     const subscription = asObject(row.subscription);
-    const usage = Array.isArray(row.usage) ? row.usage.map((item) => {
-      const line = asObject(item);
-      return {
-        kind: line.kind as UsageKind,
-        used: Number(line.used),
-        limit: Number(line.limit),
-        remaining: Number(line.remaining),
-        resetsAt: String(line.resets_at),
-      };
-    }) : [];
+    const usage = Array.isArray(row.usage) ? row.usage.map(usageLine) : [];
     return {
       workspace: this.mapAccess(workspace),
       subscription: this.mapSubscription(subscription),
@@ -125,17 +131,25 @@ export class SupabaseBillingStore implements BillingStore {
     const { data, error } = await this.db.rpc('reserve_billing_usage', { p_user_id: userId, p_kind: kind, p_workspace_id: workspaceId ?? null });
     this.require(error, 'reserve usage');
     const row = asObject(data);
-    const line = asObject(row.line);
     return {
       allowed: Boolean(row.allowed),
       reason: row.reason === 'limit_reached' || row.reason === 'subscription_inactive' ? row.reason : undefined,
-      line: {
-        kind: line.kind as UsageKind,
-        used: Number(line.used),
-        limit: Number(line.limit),
-        remaining: Number(line.remaining),
-        resetsAt: String(line.resets_at),
-      },
+      line: usageLine(row.line),
+    };
+  }
+
+  async consumeFairUseRate(bucket: string, characters: number, limits: { perMinute: number; perHour: number; charactersPerHour: number }): Promise<FairUseVerdict> {
+    const { data, error } = await this.db.rpc('consume_fair_use_rate_limit', {
+      p_bucket: bucket, p_characters: characters, p_per_minute: limits.perMinute, p_per_hour: limits.perHour, p_characters_per_hour: limits.charactersPerHour,
+    });
+    this.require(error, 'check the fair-use rate limit');
+    const row = asObject(data);
+    if (row.allowed === true) return { allowed: true };
+    return {
+      allowed: false,
+      window: row.window === 'minute' ? 'minute' : 'hour',
+      retryAfterSeconds: Math.max(1, Number(row.retry_after_seconds) || 60),
+      alert: row.alert === true,
     };
   }
 

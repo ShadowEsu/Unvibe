@@ -9,15 +9,37 @@ export const LIFETIME_PERIOD_END = '2099-12-31T23:59:59.000Z';
 /**
  * Caps a month. Billing helpers mirror the limits and access rules in the Supabase migrations
  * (plan_entitlements; the latest values are in 20261031090000_enterprise_business_tiers.sql).
- * Big Business's explanations and questions are its written fair-use limit.
+ * `null` is unlimited: no monthly cap at all. Only Big Business's explanations and questions are
+ * unlimited; their one limit is FAIR_USE_RATE_LIMIT.
  */
-const BILLING_LIMITS: Record<PlanId, Record<UsageKind, number>> = {
+const BILLING_LIMITS: Record<PlanId, Record<UsageKind, number | null>> = {
   free: { ai_explanation: 50, project_question: 10, indexed_project: 1, dictionary_item: 25, saved_item: 20 },
   pro: { ai_explanation: 200, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
   teams: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
   enterprise: { ai_explanation: 1000, project_question: 2500, indexed_project: 25, dictionary_item: 5000, saved_item: 5000 },
-  business: { ai_explanation: 5000, project_question: 10000, indexed_project: 100, dictionary_item: 20000, saved_item: 20000 },
+  business: { ai_explanation: null, project_question: null, indexed_project: 100, dictionary_item: 20000, saved_item: 20000 },
 };
+
+/**
+ * People one Big Business purchase covers: named seats on its team workspace (the owner plus
+ * members and pending invitations). A seat frees only when its person is removed or the invitation
+ * is revoked or expires. Must match validate_subscription_workspace and create_workspace_invitation.
+ */
+export const BUSINESS_SEATS = 10;
+
+/** The refusal of an 11th Big Business seat; the same text is raised by create_workspace_invitation (SQL). */
+export const BUSINESS_SEATS_FULL = 'Big Business includes up to 10 named seats. Remove someone from the workspace to free a seat.';
+
+/**
+ * The only limit on an unlimited allowance, per person (account), counting explanations and
+ * questions together: requests a minute and an hour, and the characters sent an hour (fixed
+ * windows). An explanation streams for about 3 to 14 seconds and a person reads it before the next,
+ * so one person working normally stays far below it; a script does not.
+ */
+export const FAIR_USE_RATE_LIMIT = { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 } as const;
+
+/** The rate limit in words, as on the pricing card and in the Terms. */
+export const FAIR_USE_RATE_LIMIT_TEXT = 'fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour';
 
 /** Enterprise and Big Business: sold only while BILLING_NEW_TIERS_ENABLED is exactly `true`. */
 export type NewTierPlan = 'enterprise' | 'business';
@@ -94,7 +116,7 @@ export const PRO_LIFETIME_CENTS = 8_000;
 /** Enterprise $50 a month, one account (no annual price). */
 export const ENTERPRISE_MONTHLY_CENTS = 5_000;
 
-/** Big Business $5,000 one-time, one account. */
+/** Big Business $5,000 one-time, for up to BUSINESS_SEATS people. */
 export const BUSINESS_ONE_TIME_CENTS = 500_000;
 
 export function priceFor(plan: PlanId, interval: 'monthly' | 'annual' | 'lifetime', seats: number): number {
@@ -115,7 +137,9 @@ export function teamsAnnualSavingsPercent(): number {
   return 25;
 }
 
+/** Seats a checkout buys: Teams as asked within its range, Big Business always BUSINESS_SEATS, anything else one. */
 export function normalizedSeats(plan: Exclude<PlanId, 'free'>, requested: number): number {
+  if (plan === 'business') return BUSINESS_SEATS;
   if (plan !== 'teams') return 1;
   if (!Number.isFinite(requested)) return 2;
   return Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(requested)));
@@ -153,9 +177,10 @@ export function monthWindow(now = new Date()): { startsAt: string; resetsAt: str
   return { startsAt: startsAt.toISOString(), resetsAt: resetsAt.toISOString() };
 }
 
-export function planLimit(plan: PlanId, kind: UsageKind, seats: number): number {
+/** The plan's monthly cap for one kind, or null when it has none (unlimited). */
+export function planLimit(plan: PlanId, kind: UsageKind, seats: number): number | null {
   const limit = BILLING_LIMITS[plan][kind];
-  return plan === 'teams' && (kind === 'ai_explanation' || kind === 'project_question')
+  return limit !== null && plan === 'teams' && (kind === 'ai_explanation' || kind === 'project_question')
     ? limit * Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(seats)))
     : limit;
 }

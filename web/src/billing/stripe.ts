@@ -80,11 +80,28 @@ export function lifetimeCheckoutOpen(): boolean {
 /**
  * Enterprise (monthly) and Big Business (one-time) checkout, for Stripe test mode work until live money is cleared.
  * Needs BILLING_NEW_TIERS_ENABLED exactly `true`, the plan's own Stripe price, and checkout open
- * (so every payment lock above still applies on top).
+ * (so every payment lock above still applies on top). Big Business also needs businessModelReady().
  */
 export function newTierCheckoutOpen(plan: NewTierPlan): boolean {
   const key = plan === 'enterprise' ? 'STRIPE_PRICE_ENTERPRISE_MONTHLY' : 'STRIPE_PRICE_BUSINESS_LIFETIME';
-  return newTiersEnabled() && checkoutOpen() && Boolean(process.env[key]?.trim());
+  return newTiersEnabled() && checkoutOpen() && Boolean(process.env[key]?.trim()) && (plan !== 'business' || businessModelReady());
+}
+
+/** The Bedrock model ids Big Business is priced on: Claude Haiku 5.5 only. */
+const BUSINESS_MODELS: Readonly<Record<string, true>> = { 'us.anthropic.claude-haiku-5-5': true, 'global.anthropic.claude-haiku-5-5': true };
+
+/**
+ * Big Business is unlimited for a one-time price, which holds only while explanations run on Claude
+ * Haiku 5.5 on Bedrock (never Gemini Flash-Lite or Haiku 4.5): AI_PROVIDER=bedrock, a non-empty
+ * AWS_BEARER_TOKEN_BEDROCK, and BEDROCK_MODEL_ID one of BUSINESS_MODELS. Same reading of those
+ * variables as bedrockSelected() and bedrockModelId() (web/src/ai/bedrock.ts) with
+ * PRICED_BEDROCK_MODELS (web/src/billing/stripe.ts) on the ai/bedrock-haiku branch; when the
+ * branches merge, this becomes bedrockSelected() && the model check over those helpers.
+ */
+export function businessModelReady(env: Record<string, string | undefined> = process.env): boolean {
+  const model = env.BEDROCK_MODEL_ID?.trim() ?? '';
+  return env.AI_PROVIDER?.trim().toLowerCase() === 'bedrock' && Boolean(env.AWS_BEARER_TOKEN_BEDROCK?.trim())
+    && Object.hasOwn(BUSINESS_MODELS, model);
 }
 
 export function publicAppUrl(req: Request): string {

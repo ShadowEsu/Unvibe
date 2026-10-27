@@ -31,6 +31,11 @@ process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 process.env.STRIPE_PRICE_PRO_ANNUAL = 'price_pro_annual';
 process.env.STRIPE_PRICE_PRO_LIFETIME = 'price_pro_lifetime';
 process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY = 'price_enterprise_monthly';
+// Big Business checkout also needs explanations on Claude Haiku 5.5 (businessModelReady); its own
+// gate is tested in bigBusiness.test.ts. This branch has no Bedrock provider, so nothing else reads these.
+process.env.AI_PROVIDER = 'bedrock';
+process.env.AWS_BEARER_TOKEN_BEDROCK = 'local-bedrock-token';
+process.env.BEDROCK_MODEL_ID = 'us.anthropic.claude-haiku-5-5';
 process.env.STRIPE_PRICE_BUSINESS_LIFETIME = 'price_business_lifetime';
 
 /** Every value other than exactly `true` keeps the new tiers off. */
@@ -288,12 +293,12 @@ test('flag on: a paid Big Business checkout grants Big Business for good (period
     const overview = await b.store.overview(b.userId);
     assert.equal(overview.subscription.plan, 'business');
     assert.equal(overview.subscription.interval, 'lifetime');
-    assert.equal(overview.subscription.seats, 1);
+    assert.equal(overview.subscription.seats, 10, 'up to 10 named seats');
     assert.equal(overview.subscription.stripeSubscriptionId, paymentIntent);
     assert.equal(overview.subscription.currentPeriodEnd, LIFETIME_PERIOD_END);
     assert.equal(LIFETIME_PERIOD_END, '2099-12-31T23:59:59.000Z');
-    assert.equal(overview.usage.find((line) => line.kind === 'ai_explanation')?.limit, 5_000);
-    assert.equal(overview.usage.find((line) => line.kind === 'project_question')?.limit, 10_000);
+    assert.equal(overview.usage.find((line) => line.kind === 'ai_explanation')?.limit, null, 'no monthly cap on explanations');
+    assert.equal(overview.usage.find((line) => line.kind === 'project_question')?.limit, null, 'no monthly cap on questions');
   });
 });
 
@@ -489,7 +494,7 @@ test('out of order: an event older than a newer refund leaves the account Free (
 
 // ------------------------------------------------- checkout guards (security F3, F4) and F11
 
-test('GAP-M19: Enterprise and Big Business checkout always bind to the caller\'s personal workspace, never a team workspace', async () => {
+test('GAP-M19: Enterprise checkout always binds to the caller\'s personal workspace; Big Business to a team workspace the caller owns', async () => {
   await withFlag('true', async () => {
     for (const [plan, interval] of [['enterprise', 'monthly'], ['business', 'lifetime']] as const) {
       const me = await buyer();
@@ -502,17 +507,25 @@ test('GAP-M19: Enterprise and Big Business checkout always bind to the caller\'s
         body: JSON.stringify({ plan, interval, workspaceId: team.id }),
       }));
       assert.equal(response.status, 201, plan);
-      assert.equal(sessions[0]?.metadata?.workspace_id, personal.id, `${plan} is bought for the personal workspace`);
+      assert.equal(sessions[0]?.metadata?.workspace_id, plan === 'enterprise' ? personal.id : team.id, `${plan} is bought for the ${plan === 'enterprise' ? 'personal' : 'team'} workspace`);
     }
+    // Without a workspace, Big Business gets a team workspace, never the personal one.
+    const me = await buyer();
+    const personal = await getBillingStore().ensurePersonalWorkspace(me.userId);
+    sessions.length = 0;
+    assert.equal((await start(me.token, 'business', 'lifetime')).status, 201);
+    const bought = sessions[0]?.metadata?.workspace_id;
+    assert.notEqual(bought, personal.id);
+    assert.equal((await getBillingStore().getWorkspaceAccess(me.userId, String(bought)))?.type, 'team');
   });
 });
 
 test('GAP-M27: an account with Big Business cannot start another Big Business, Enterprise or Pro checkout', async () => {
   await withFlag('true', async () => {
     const me = await buyer();
-    const workspace = await getBillingStore().ensurePersonalWorkspace(me.userId);
+    const workspace = await getBillingStore().createTeamWorkspace(me.userId, 'Big');
     await getBillingStore().syncSubscription({
-      workspaceId: workspace.id, plan: 'business', interval: 'lifetime', status: 'active', seats: 1,
+      workspaceId: workspace.id, plan: 'business', interval: 'lifetime', status: 'active', seats: 10,
       stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: `pi_${randomUUID()}`, stripePriceId: 'price_business_lifetime',
       currentPeriodStart: new Date().toISOString(), currentPeriodEnd: LIFETIME_PERIOD_END, cancelAtPeriodEnd: false,
     });

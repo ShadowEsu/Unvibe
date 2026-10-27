@@ -59,7 +59,8 @@ test('Teams clamps abusive seat quantities while Pro stays one-person', () => {
   assert.equal(normalizedSeats('teams', 500), 20);
   assert.equal(normalizedSeats('pro', 300), 1);
   assert.equal(normalizedSeats('enterprise', 300), 1);
-  assert.equal(normalizedSeats('business', 300), 1);
+  assert.equal(normalizedSeats('business', 300), 10, 'Big Business is always 10 named seats');
+  assert.equal(normalizedSeats('business', 1), 10);
   assert.equal(minimumSeatsForUsage(3, 2), 5);
 });
 
@@ -76,8 +77,8 @@ test('Pro, Enterprise, Big Business and Teams entitlements use configured allowa
   );
   assert.deepEqual(
     (['ai_explanation', 'project_question', 'indexed_project', 'dictionary_item', 'saved_item'] as const).map((kind) => planLimit('business', kind, 7)),
-    [5_000, 10_000, 100, 20_000, 20_000],
-    'Big Business written fair-use caps, never scaled by seats',
+    [null, null, 100, 20_000, 20_000],
+    'Big Business: no monthly cap on explanations or questions (null, never a number), never scaled by seats',
   );
 });
 

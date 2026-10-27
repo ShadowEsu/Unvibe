@@ -3,7 +3,7 @@ import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
-import { CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, isNewTierPlan, newTiersEnabled, normalizedSeats, PLAN_NAMES, planDisplayName, planSoldOnInterval, teamsCheckoutEnabled } from '@/billing/plans';
+import { BUSINESS_SEATS, CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, isNewTierPlan, newTiersEnabled, normalizedSeats, PLAN_NAMES, planDisplayName, planSoldOnInterval, teamsCheckoutEnabled } from '@/billing/plans';
 import { checkoutOpen, getStripe, lifetimeCheckoutOpen, newTierCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, SubscriptionStatus, WorkspaceAccess } from '@/billing/types';
 
@@ -64,10 +64,16 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime is not available. Choose monthly or annual Pro.' }, { status: 503 });
     }
     const billing = getBillingStore();
+    // Big Business covers every workspace its holder is a named seat in, so a second paid plan on top
+    // of it is refused (the default overview is that Big Business workspace).
+    if (plan !== 'teams' && (await billing.overview(user)).subscription.plan === 'business') {
+      return Response.json({ error: 'lifetime_active', message: 'This account already has Big Business.' }, { status: 409 });
+    }
     const requestedSeats = typeof body.seats === 'number' ? body.seats : Number(body.seats ?? (plan === 'teams' ? 2 : 1));
-    const seats = interval === 'lifetime' ? 1 : normalizedSeats(plan, requestedSeats);
-    // Pro, Enterprise and Big Business are one account each, on the personal workspace.
-    const personal = plan !== 'teams';
+    const seats = normalizedSeats(plan, requestedSeats);
+    // Pro and Enterprise are one account each, on the personal workspace. Teams and Big Business are
+    // bought for a team workspace: Big Business for up to BUSINESS_SEATS named seats.
+    const personal = plan !== 'teams' && plan !== 'business';
     let workspace: WorkspaceAccess | null;
     if (personal) {
       workspace = await billing.ensurePersonalWorkspace(user);
@@ -84,6 +90,9 @@ export async function POST(req: Request): Promise<Response> {
     const current = await billing.overview(user, workspace.id);
     if (current.subscription.interval === 'lifetime' && current.subscription.status === 'active') {
       return Response.json({ error: 'lifetime_active', message: `This account already has ${current.subscription.plan === 'pro' ? 'Pro Lifetime' : planDisplayName(current.subscription.plan)}.` }, { status: 409 });
+    }
+    if (plan === 'business' && current.occupiedSeats + current.pendingInvitations > BUSINESS_SEATS) {
+      return Response.json({ error: 'too_many_seats', message: 'Big Business includes up to 10 named seats. Remove people or invitations from this workspace first.' }, { status: 409 });
     }
     // Complimentary access (promo code, gift, referral) runs to its end date first: a paid
     // subscription now would replace it and the remaining free time would be lost.
@@ -106,7 +115,7 @@ export async function POST(req: Request): Promise<Response> {
     const stripe = getStripe();
     const pending = await billing.pendingCheckout(user, workspace.id);
     if (!personal && !pending) {
-      // One open Teams checkout per owner across all of their team workspaces.
+      // One open team checkout (Teams or Big Business) per owner across all of their team workspaces.
       for (const other of (await billing.listWorkspaces(user)).filter((w) => w.type === 'team' && w.role === 'owner' && w.id !== workspace.id)) {
         if (await billing.pendingCheckout(user, other.id)) {
           return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open Teams checkout before starting another.' }, { status: 409 });
