@@ -72,6 +72,18 @@ export function refillDate(plan: string | undefined, resetsAt: string): string |
   return at.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 }
 
+/**
+ * How a usage meter names its window. Signed-in plans refill every month. The public-beta trial is
+ * a fixed allowance on this computer whose `resetsAt` is the day it ends, so it never says "this
+ * month" or "resets".
+ */
+export function allowancePeriod(plan: string | undefined, resetsAt: string): { scope: string; when: string } {
+  const date = new Date(resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  return plan === 'trial'
+    ? { scope: 'on this computer', when: `They end on ${date} and don't refill.` }
+    : { scope: 'this month', when: `Resets ${date}.` };
+}
+
 /** While Pro is closed: Pro isn't open yet, and the Free plan keeps working with its real allowance. */
 export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): string {
   if (!usage || usage.limit <= 0) return "Pro isn't open yet. Your Free plan keeps working.";

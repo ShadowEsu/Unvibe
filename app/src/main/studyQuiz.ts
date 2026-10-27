@@ -105,7 +105,9 @@ async function collectReviewText(payload: ReviewRequestPayload, signal: AbortSig
   }
 
   if (usage.remaining <= 0 && !localKey) {
-    throw new Error('Monthly explanation limit reached. Add your own API key in Settings → AI, or upgrade.');
+    throw new Error(usage.plan === 'trial'
+      ? 'The free explanations on this computer have ended. Sign in to keep going on the Free plan, or add your own API key in Settings → AI.'
+      : 'Monthly explanation limit reached. Add your own API key in Settings → AI, or upgrade.');
   }
 
   const abort = new AbortController();
@@ -354,7 +356,10 @@ export async function askChat(input: {
     if (request.signal.aborted) return { ok: false, error: 'The request was cancelled.', remaining };
     const localKey = readAiKey();
     if (usage.remaining <= 0 && !localKey) {
-      return { ok: false, error: 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.', remaining: 0 };
+      const error = usage.plan === 'trial'
+        ? 'The free AI on this computer has ended. Sign in to keep going on the Free plan, or add your own API key in Settings.'
+        : 'Monthly AI limit reached. Add your own API key in Settings, or upgrade.';
+      return { ok: false, error, remaining: 0 };
     }
 
     const prior = (input.messages ?? []).slice(-8)

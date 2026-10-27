@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../src/renderer/shared/planStatus';
+import { allowancePeriod, giftStatusLine, paidStatusLine, proCard, resetLabel } from '../src/renderer/shared/planStatus';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');
 const END = '2026-11-21T12:00:00.000Z';
@@ -69,4 +69,15 @@ test('while Pro is closed the card has no price or terms, only the Free plan\'s 
 test('once Pro is open the card keeps the price and renewal terms for the chosen interval', () => {
   assert.deepEqual(proCard(true, 'monthly', null, NOW), { open: true, price: '$9/mo', terms: 'Pro renews at $9 per month until canceled.' });
   assert.deepEqual(proCard(true, 'annual', null, NOW), { open: true, price: '$81/yr', terms: 'Pro renews at $81 per year until canceled.' });
+});
+
+test('a usage meter never tells a trial user their allowance refills monthly', () => {
+  const trial = allowancePeriod('trial', END);
+  assert.doesNotMatch(`${trial.scope} ${trial.when}`, /month|resets?\b/i);
+  assert.match(trial.when, /end on .+ and don't refill/);
+  for (const plan of ['free', 'pro', 'teams', 'local', undefined]) {
+    const monthly = allowancePeriod(plan, END);
+    assert.equal(monthly.scope, 'this month');
+    assert.match(monthly.when, /^Resets .+\.$/);
+  }
 });

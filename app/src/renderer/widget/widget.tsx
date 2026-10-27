@@ -7,7 +7,7 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
-import { freePlanLine } from '../shared/planStatus';
+import { allowancePeriod, freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { UsageRings } from '../shared/usageRings';
@@ -401,6 +401,7 @@ function Widget() {
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
   const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
+  const period = usage ? allowancePeriod(usage.plan, usage.resetsAt) : null;
   const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
   const [revealedText, setRevealedText] = useState('');
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
@@ -753,7 +754,7 @@ function Widget() {
             <div className="widget-tools__spacer" />
             <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
             {usage && (
-              <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
+              <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used ${period?.scope}. ${period?.when}`}>
                 <span>Available</span>
                 <UsageRings ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }} selections={usage.selections} size={26} tiny />
               </div>

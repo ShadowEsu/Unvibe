@@ -4,6 +4,7 @@ import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
 import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
+import { allowancePeriod } from '../shared/planStatus';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -143,7 +144,7 @@ export function Chat({
   usingOwnAi: boolean;
   providerId: string;
   userName?: string;
-  usage: { used: number; limit: number; remaining: number; resetsAt: string } | null;
+  usage: { used: number; limit: number; remaining: number; resetsAt: string; plan?: string } | null;
   onRefresh: () => void | Promise<void>;
   onOpenAiSettings: () => void;
 }) {
@@ -173,6 +174,7 @@ export function Chat({
   const limit = Math.max(1, usage?.limit ?? 1);
   const pct = Math.min(100, Math.round((used / limit) * 100));
   const remaining = left ?? usage?.remaining ?? null;
+  const period = usage ? allowancePeriod(usage.plan, usage.resetsAt) : null;
   const aiLabel = usingOwnAi
     ? (modelName ? `${providerLabel}, ${modelName}` : providerLabel)
     : `${providerLabel} (default)`;
@@ -429,11 +431,11 @@ export function Chat({
             <button
               type="button"
               className={`chat-meter chat-meter--${tone}`}
-              aria-label={`${pct} percent of monthly AI used. ${remaining ?? usage.remaining} of ${usage.limit} left.`}
-              title={`${remaining ?? usage.remaining} of ${usage.limit} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
+              aria-label={`${pct} percent of AI used ${period?.scope}. ${remaining ?? usage.remaining} of ${usage.limit} left.`}
+              title={`${remaining ?? usage.remaining} of ${usage.limit} left ${period?.scope}. ${period?.when}`}
               onClick={() => void onRefresh()}
             >
-              <span>{pct}% used this month</span>
+              <span>{pct}% used {period?.scope}</span>
             </button>
           ) : null}
           {empty ? (

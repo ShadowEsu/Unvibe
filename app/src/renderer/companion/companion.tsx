@@ -776,7 +776,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
   ].filter((chip) => chip.n > 0);
   const streak = profile?.streak ?? 0;
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
-  const note = explainDisabled ? 'out of explains this month, catch you soon'
+  const note = explainDisabled ? (usage?.plan === 'trial' ? 'free explains here are done, sign in to keep going' : 'out of explains this month, catch you soon')
     : brief ? 'you changed some code, want the story?'
       : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
         : streak > 1 ? `${streak} days in a row, nice!` : 'ready when you are';
