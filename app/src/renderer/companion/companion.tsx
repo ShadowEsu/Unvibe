@@ -770,7 +770,7 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
     { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
     { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
     { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
-    { id: '06', title: 'Build your rhythm', copy: 'Return tomorrow and keep the streak.', icon: IC.progress, done: (profile?.streak ?? 0) > 1, run: () => onNavigate('Progress') },
+    { id: '06', title: 'Build your rhythm', copy: 'Return tomorrow and keep the streak.', icon: IC.progress, done: (today?.streak ?? 0) > 1, run: () => onNavigate('Progress') },
   ];
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
@@ -782,12 +782,12 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
     { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
     { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
   ].filter((chip) => chip.n > 0);
-  const streak = profile?.streak ?? 0;
+  // The streak is shown once, on the Today card, so the greeting doesn't repeat it.
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
   const note = explainDisabled ? 'out of explains this month, catch you soon'
     : brief ? 'you changed some code, want the story?'
       : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
-        : streak > 1 ? `${streak} days in a row, nice!` : 'ready when you are';
+        : 'ready when you are';
   return (
     <div className="today">
       <header className="today-hero">
@@ -897,7 +897,7 @@ function TodayGoalCard({ goal }: { goal: TodayGoal }) {
   return (
     <section className="today-goal" aria-label="Today's goal">
       <p className="today-goal__line">
-        Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 Test me question
+        Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 question
       </p>
       {goal.streak > 0 ? <p className="today-goal__streak">Streak: {goal.streak} {goal.streak === 1 ? 'day' : 'days'}</p> : null}
     </section>
@@ -930,7 +930,7 @@ function Progress({ profile }: { profile: Profile | null }) {
         <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
       </div>
       <div className="panel-card">
-        <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
+        <div className="ph"><span className="t">Explained per day</span><span className="m">last 6 months</span></div>
         <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
         <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
       </div>

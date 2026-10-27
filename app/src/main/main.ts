@@ -743,7 +743,7 @@ app.whenReady().then(() => {
     return {
       shortcut: settings().all().shortcut,
       recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
-      streak: profile.streak,
+      streak: computeToday(store().events(), new Date()).streak,
       explanations: profile.reviews,
       understood: profile.understood,
       needsReview: profile.needsReview,
