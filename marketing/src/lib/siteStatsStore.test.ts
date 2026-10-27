@@ -154,4 +154,21 @@ describe("site channel counts (site_events_daily, local store)", () => {
       });
     });
   });
+
+  it("loses no count when requests arrive at once (a download click sends two)", async () => {
+    await withLocalStore(async () => {
+      const responses = await Promise.all([
+        ...Array.from({ length: 20 }, () => postEvent(post({ event: "release_download_clicked", surface: "beta", platform: "mac" }))),
+        ...Array.from({ length: 20 }, () => postEvent(post({ event: "download_cta_clicked", surface: "beta", platform: "mac" }))),
+        ...Array.from({ length: 5 }, (_, i) => postHit(post({ visitorId: `visitor-${i}`, channel: { source: "github", campaign: "readme" } }))),
+      ]);
+      assert.ok(responses.every((response) => response.status === 200));
+      assert.deepEqual(await todaysCounts(), {
+        "release_download_clicked|beta|mac": 20,
+        "download_cta_clicked|beta|mac": 20,
+        "visit_source|github|readme": 5,
+      });
+      assert.equal((await getSiteStats()).today.views, 5);
+    });
+  });
 });

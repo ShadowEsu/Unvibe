@@ -277,6 +277,22 @@ function countEventLocally(data: StatsFile, day: string, { event, dim1, dim2 }: 
   data.events[key] = (Number(data.events[key]) || 0) + 1;
 }
 
+let lastLocalUpdate: Promise<unknown> = Promise.resolve();
+
+/**
+ * Without Supabase every write reads, changes and rewrites the whole file, so two at once (a
+ * download click sends two counts) would lose one. This server process runs them one at a time.
+ */
+function updateLocally(change: (data: StatsFile) => void): Promise<void> {
+  const run = lastLocalUpdate.then(async () => {
+    const data = await load();
+    change(data);
+    await save(data);
+  });
+  lastLocalUpdate = run.catch(() => undefined);
+  return run;
+}
+
 /**
  * Record one page view for an anonymous visitor id. `channel` (the visit's first-touch utm, from
  * parseVisitSource) is counted only on the visitor's first view of the day; null counts nothing.
@@ -295,24 +311,23 @@ export async function recordSiteHit(visitorId: string, channel: SiteEventCount |
     if (channel && firstToday === true) await recordSiteEvent(channel, key);
     return;
   }
-  const data = await load();
-  const day = ensureDay(data, key);
+  await updateLocally((data) => {
+    const day = ensureDay(data, key);
 
-  day.views += 1;
-  data.totalViews += 1;
+    day.views += 1;
+    data.totalViews += 1;
 
-  if (!day.ids.includes(id)) {
-    if (day.ids.length < MAX_DAY_IDS) day.ids.push(id);
-    day.uniques += 1;
-    if (channel) countEventLocally(data, key, channel);
-  }
+    if (!day.ids.includes(id)) {
+      if (day.ids.length < MAX_DAY_IDS) day.ids.push(id);
+      day.uniques += 1;
+      if (channel) countEventLocally(data, key, channel);
+    }
 
-  if (!data.seenIds.includes(id)) {
-    data.seenIds.push(id);
-    data.totalUniques += 1;
-  }
-
-  await save(data);
+    if (!data.seenIds.includes(id)) {
+      data.seenIds.push(id);
+      data.totalUniques += 1;
+    }
+  });
 }
 
 /** Add one to a daily channel count (`record_site_event`). */
@@ -327,9 +342,7 @@ export async function recordSiteEvent(count: SiteEventCount, day = dayKey()): Pr
     if (error) throw new Error(`Supabase site event write failed: ${error.message}`);
     return;
   }
-  const data = await load();
-  countEventLocally(data, day, count);
-  await save(data);
+  await updateLocally((data) => countEventLocally(data, day, count));
 }
 
 export async function getSiteStats(): Promise<SiteStatsSummary> {
