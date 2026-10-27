@@ -50,11 +50,10 @@ export function Footer() {
         <FooterLinks heading="Product" links={product} />
         <FooterLinks heading="Company" links={company} />
       </div>
-      {pathname !== "/" ? (
-        <div className="paper-wrap pb-10">
-          <ListingBadges />
-        </div>
-      ) : null}
+      {/* The homepage gets the plain links only: directories such as Startup Fame check for a visible, followed link there. */}
+      <div className="paper-wrap pb-10">
+        <ListingBadges textOnly={pathname === "/"} />
+      </div>
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}

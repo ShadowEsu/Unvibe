@@ -59,4 +59,7 @@ export const listingLinks = [
   { name: "SideProjectors", href: "https://www.sideprojectors.com/project/86739/unvibe" },
   { name: "LaunchBuff", href: "https://launchbuff.com" },
   { name: "Tool Index", href: "https://toolindex.net/tools/unvibe?ref=badge" },
+  // Free listings that require a visible, followed link on the homepage (Startup Fame) or footer (Fazier).
+  { name: "Startup Fame", href: "https://startupfa.me" },
+  { name: "Fazier", href: "https://fazier.com" },
 ] as const;

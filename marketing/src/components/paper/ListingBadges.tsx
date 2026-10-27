@@ -26,13 +26,16 @@ function ListingBadge({ badge }: { badge: Badge }) {
   );
 }
 
-export function ListingBadges() {
+/** `textOnly` (the homepage) lists the same directories as plain links, with no hot-linked badge images. */
+export function ListingBadges({ textOnly = false }: { textOnly?: boolean }) {
   return (
     <div className="paper-listings">
       <p className="paper-meta">Listed on</p>
-      <div className="paper-listings__badges">
-        {listingBadges.map((badge) => <ListingBadge key={badge.src} badge={badge} />)}
-      </div>
+      {textOnly ? null : (
+        <div className="paper-listings__badges">
+          {listingBadges.map((badge) => <ListingBadge key={badge.src} badge={badge} />)}
+        </div>
+      )}
       <div className="paper-listings__links">
         {listingLinks.map((listing) => (
           <a
