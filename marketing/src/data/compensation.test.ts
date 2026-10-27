@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   compensationLines,
@@ -40,5 +40,9 @@ describe("compensation", () => {
     for (const name of ["aws", "deepgram", "gitlab", "googlecloud", "linear", "mixpanel", "mongodb", "openai", "posthog", "salesforce"]) {
       assert.equal(existsSync(join(process.cwd(), "public/sponsors", `${name}.svg`)), false, name);
     }
+    const claimNamed = readdirSync(join(process.cwd(), "public"), { recursive: true })
+      .map(String)
+      .filter((path) => /for-startups|sponsor/i.test(path));
+    assert.deepEqual(claimNamed, []);
   });
 });
