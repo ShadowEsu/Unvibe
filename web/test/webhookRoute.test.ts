@@ -13,6 +13,7 @@ delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
+process.env.STRIPE_PRICE_BUSINESS_LIFETIME = 'price_business_lifetime';
 
 function post(event: { id: string; type: string; livemode?: boolean; data?: { object: Record<string, unknown> } }): Promise<Response> {
   const payload = JSON.stringify({ object: 'event', livemode: false, data: { object: { id: 'cus_ignored', object: 'customer' } }, ...event });
@@ -237,5 +238,66 @@ test('GAP-M12: a delivery signed with any other secret is refused 400 invalid_si
   const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', { method: 'POST', headers: { 'stripe-signature': forged }, body: payload }));
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: 'invalid_signature' });
+  assert.equal((await store.overview(userId)).subscription.plan, 'free');
+});
+
+/**
+ * A signed Big Business checkout.session.completed through the real route, with the new tiers on.
+ * Stripe's PaymentIntent read returns `latest_charge` as an object only when the route expands it.
+ */
+function signedBusinessCheckout(workspaceId: string, userId: string, intent: (id: string) => Stripe.PaymentIntent) {
+  const stripe = getStripe();
+  const session = {
+    id: `cs_test_${randomUUID()}`, object: 'checkout.session', mode: 'payment', payment_status: 'paid',
+    metadata: { workspace_id: workspaceId, user_id: userId, plan: 'business', interval: 'lifetime' },
+    line_items: { data: [{ price: { id: 'price_business_lifetime' } }] },
+    customer: `cus_${randomUUID()}`, payment_intent: `pi_${randomUUID()}`,
+  };
+  stripe.checkout.sessions.retrieve = (async () => session) as unknown as typeof stripe.checkout.sessions.retrieve;
+  stripe.paymentIntents.retrieve = (async (id: string, params?: Stripe.PaymentIntentRetrieveParams) => {
+    const read = intent(id);
+    return params?.expand?.includes('latest_charge') ? read : { ...read, latest_charge: `ch_${id}` };
+  }) as unknown as typeof stripe.paymentIntents.retrieve;
+  const payload = JSON.stringify({ id: `evt_${randomUUID()}`, object: 'event', type: 'checkout.session.completed', livemode: false, created: 1_797_000_100, data: { object: session } });
+  return async () => {
+    const saved = process.env.BILLING_NEW_TIERS_ENABLED;
+    const original = console.error;
+    process.env.BILLING_NEW_TIERS_ENABLED = 'true';
+    console.error = () => undefined;
+    try {
+      return await webhook(new Request('http://localhost/api/v1/billing/webhook', { method: 'POST', headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) }, body: payload }));
+    } finally {
+      console.error = original;
+      if (saved === undefined) delete process.env.BILLING_NEW_TIERS_ENABLED; else process.env.BILLING_NEW_TIERS_ENABLED = saved;
+    }
+  };
+}
+
+function intentRead(id: string, charge: Partial<Stripe.Charge> = {}): Stripe.PaymentIntent {
+  return { id, object: 'payment_intent', status: 'succeeded', latest_charge: { id: `ch_${id}`, object: 'charge', amount: 500_000, amount_refunded: 0, refunded: false, disputed: false, ...charge } } as unknown as Stripe.PaymentIntent;
+}
+
+test('N3 (D14/D22): Stripe down at the PaymentIntent read is a 500 and Free; the redelivery after recovery grants Big Business', async () => {
+  const store = getBillingStore();
+  const userId = randomUUID();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  let down = true;
+  const send = signedBusinessCheckout(workspace.id, userId, (id) => {
+    if (down) throw new Stripe.errors.StripeAPIError({ message: 'api down', type: 'api_error' });
+    return intentRead(id);
+  });
+  assert.equal((await send()).status, 500);
+  assert.equal((await store.overview(userId)).subscription.plan, 'free');
+  down = false;
+  assert.equal((await send()).status, 200);
+  assert.equal((await store.overview(userId)).subscription.plan, 'business');
+});
+
+test('N3 (D23): the route expands latest_charge, so a refunded payment is seen and refused (200, Free)', async () => {
+  const store = getBillingStore();
+  const userId = randomUUID();
+  const workspace = await store.ensurePersonalWorkspace(userId);
+  const send = signedBusinessCheckout(workspace.id, userId, (id) => intentRead(id, { refunded: true, amount_refunded: 500_000 }));
+  assert.equal((await send()).status, 200);
   assert.equal((await store.overview(userId)).subscription.plan, 'free');
 });

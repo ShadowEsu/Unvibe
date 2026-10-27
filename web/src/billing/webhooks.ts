@@ -185,7 +185,9 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
       return;
     }
   }
-  await store.syncSubscription({
+  // The store compares stripe_event_at again inside the write, so a newer event for this subscription
+  // applied since the read above (say a concurrent deleted) is never overwritten by this older one.
+  const applied = await store.syncSubscription({
     workspaceId: metadata.workspaceId,
     plan: metadata.plan,
     interval: metadata.interval,
@@ -200,6 +202,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     stripeEventAt: laterEventTime(prior, eventAt),
     cancelAtPeriodEnd: endsWithoutRenewing(subscription, item.current_period_end),
   });
+  if (!applied) await store.recordAudit(null, metadata.workspaceId, 'subscription.ignored_stale_event', { stripeSubscriptionId: subscription.id, eventAt, atWrite: true });
 }
 
 /** When a grace period that starts now ends: BILLING_GRACE_PERIOD_DAYS (1 to 30, default 7) from now. */
@@ -232,7 +235,7 @@ async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Sub
     status = mappedStatus(subscription.status);
     if (!WITHOUT_ACCESS.includes(status)) return;
   }
-  await store.syncSubscription({
+  const applied = await store.syncSubscription({
     workspaceId: stored.workspaceId,
     plan: stored.plan,
     interval: stored.interval,
@@ -247,7 +250,7 @@ async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Sub
     cancelAtPeriodEnd: stored.cancelAtPeriodEnd,
     stripeEventAt: laterEventTime(stored, eventAt),
   });
-  await store.recordAudit(null, stored.workspaceId, 'subscription.revoked_while_locked', { stripeSubscriptionId: subscription.id, status });
+  await store.recordAudit(null, stored.workspaceId, applied ? 'subscription.revoked_while_locked' : 'subscription.ignored_stale_event', { stripeSubscriptionId: subscription.id, status });
 }
 
 /** Why a payment must not grant access, or null when it may. */
@@ -302,23 +305,35 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
     throw new Error('Stripe lifetime price does not match the trusted plan configuration.');
   }
   const customerId = providerId(session.customer);
-  const paymentId = session.payment_intent
-    ? providerId(session.payment_intent)
-    : `lifetime_${session.id}`;
+  // A paid payment-mode session always carries its PaymentIntent. Without one there is no payment
+  // to check, so nothing is granted.
+  if (!session.payment_intent) {
+    await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_payment', { plan, checkoutSessionId: session.id, paymentIntentId: null, reason: 'no_payment_intent' });
+    return;
+  }
+  const paymentId = providerId(session.payment_intent);
   // A checkout event can be retried or arrive late. An event older than the last one applied to this
   // payment, a payment whose access was revoked (a refund or a lost dispute leaves its row canceled),
-  // and a payment that was refunded or disputed all grant nothing. Without a PaymentIntent nothing was paid.
+  // and a payment that was refunded or disputed all grant nothing.
   const stored = await store.subscriptionByProviderId(paymentId);
   let reason: PaymentRefusal | 'revoked' | 'stale_event' | null = null;
   if (olderThanStored(stored, eventAt)) reason = 'stale_event';
   else if (stored?.status === 'canceled') reason = 'revoked';
-  else if (session.payment_intent) reason = await paymentRefusal(store, deps, paymentId);
+  else reason = await paymentRefusal(store, deps, paymentId);
   if (reason) {
+    // A delivery of this same event (same `created`; Postgres and JS print it differently) wrote the
+    // row and then failed its check after the write (below): that grant was never confirmed, so it is
+    // taken back.
+    const writtenByThisEvent = stored?.status === 'active'
+      && (stored.stripeEventAt === undefined || eventAt === undefined ? stored.stripeEventAt === eventAt : Date.parse(stored.stripeEventAt) === Date.parse(eventAt));
+    if (reason !== 'stale_event' && reason !== 'revoked' && writtenByThisEvent) {
+      await store.markSubscriptionCanceled(paymentId, laterEventTime(stored, eventAt));
+    }
     await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_payment', { plan, checkoutSessionId: session.id, paymentIntentId: paymentId, reason });
     return;
   }
   const now = new Date().toISOString();
-  await store.syncSubscription({
+  const applied = await store.syncSubscription({
     workspaceId,
     plan,
     interval: 'lifetime',
@@ -332,6 +347,22 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
     cancelAtPeriodEnd: false,
     stripeEventAt: laterEventTime(stored, eventAt),
   });
+  // The store applies the write only if no newer event for this payment landed since the read above.
+  if (!applied) {
+    await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_payment', { plan, checkoutSessionId: session.id, paymentIntentId: paymentId, reason: 'stale_event' });
+    return;
+  }
+  // A charge.refunded (or dispute) handled between the check above and this write found no row to
+  // revoke. Checking again after the write closes that window: if the refund handler looked for the
+  // row before it was written, Stripe already had the refund, so this read sees it (or the recorded
+  // refund); if it looked after, it found the row and revoked it. A failure here fails the event
+  // with the row written; its retry refuses and takes the row back (above).
+  const after = await paymentRefusal(store, deps, paymentId);
+  if (after) {
+    await store.markSubscriptionCanceled(paymentId, laterEventTime(stored, eventAt));
+    await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_payment', { plan, checkoutSessionId: session.id, paymentIntentId: paymentId, reason: after, afterWrite: true });
+    return;
+  }
   await store.completeCheckoutIntent(session.id);
   await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.completed', {
     mode: 'payment',

@@ -372,13 +372,14 @@ test('lifetime checkout does not grant Pro until an asynchronous payment succeed
   const intent = await store.createCheckoutIntent({ userId, workspaceId: workspace.id, plan: 'pro', interval: 'lifetime', seats: 1 });
   await store.attachCheckoutSession(intent.id, 'cs_delayed');
   const session = {
-    id: 'cs_delayed', mode: 'payment', payment_status: 'unpaid', customer: 'cus_delayed',
+    id: 'cs_delayed', mode: 'payment', payment_status: 'unpaid', customer: 'cus_delayed', payment_intent: 'pi_delayed',
     metadata: { workspace_id: workspace.id, user_id: userId, plan: 'pro', interval: 'lifetime' },
     line_items: { data: [{ price: { id: 'price_pro_lifetime' } }] },
   } as unknown as Stripe.Checkout.Session;
   const deps = {
     retrieveSubscription: async (): Promise<Stripe.Subscription> => { throw new Error('unexpected subscription'); },
     retrieveCheckoutSession: async () => session,
+    retrievePaymentIntent: goodPayments.retrievePaymentIntent,
   };
   await processStripeEvent(store, { type: 'checkout.session.completed', data: { object: session } } as Stripe.Event, deps);
   assert.equal((await store.overview(userId)).subscription.plan, 'free');

@@ -316,20 +316,21 @@ export class SupabaseBillingStore implements BillingStore {
     };
   }
 
-  async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
-    const { error } = await this.db.from('subscriptions').upsert({
-      workspace_id: input.workspaceId, plan: input.plan, interval: input.interval, status: input.status, seats: input.seats,
-      stripe_customer_id: input.stripeCustomerId, stripe_subscription_id: input.stripeSubscriptionId, stripe_price_id: input.stripePriceId,
-      current_period_start: input.currentPeriodStart ?? null,
-      current_period_end: input.currentPeriodEnd ?? null, grace_period_ends_at: input.gracePeriodEndsAt ?? null,
-      stripe_event_at: input.stripeEventAt ?? null,
-      cancel_at_period_end: input.cancelAtPeriodEnd, updated_at: new Date().toISOString(),
-    }, { onConflict: 'workspace_id' });
+  async syncSubscription(input: SubscriptionSyncInput): Promise<boolean> {
+    const { data, error } = await this.db.rpc('sync_subscription_if_not_older', {
+      p_workspace_id: input.workspaceId, p_plan: input.plan, p_interval: input.interval, p_status: input.status, p_seats: input.seats,
+      p_stripe_customer_id: input.stripeCustomerId, p_stripe_subscription_id: input.stripeSubscriptionId, p_stripe_price_id: input.stripePriceId,
+      p_current_period_start: input.currentPeriodStart ?? null,
+      p_current_period_end: input.currentPeriodEnd ?? null, p_grace_period_ends_at: input.gracePeriodEndsAt ?? null,
+      p_stripe_event_at: input.stripeEventAt ?? null,
+      p_cancel_at_period_end: input.cancelAtPeriodEnd,
+    });
     this.require(error, 'sync subscription');
+    return data === true;
   }
 
   async markSubscriptionCanceled(stripeSubscriptionId: string, stripeEventAt?: string): Promise<void> {
-    const { error } = await this.db.from('subscriptions').update({ status: 'canceled', updated_at: new Date().toISOString(), ...(stripeEventAt ? { stripe_event_at: stripeEventAt } : {}) }).eq('stripe_subscription_id', stripeSubscriptionId);
+    const { error } = await this.db.rpc('cancel_subscription_by_provider_id', { p_stripe_subscription_id: stripeSubscriptionId, p_stripe_event_at: stripeEventAt ?? null });
     this.require(error, 'cancel subscription');
   }
 

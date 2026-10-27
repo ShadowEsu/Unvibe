@@ -561,3 +561,245 @@ test('the Supabase store writes stripe_event_at only with its own migration in t
   // The column is the only schema change in it.
   assert.deepEqual(migration.split('\n').filter((line) => line.trim() && !line.startsWith('--')), ['alter table public.subscriptions add column if not exists stripe_event_at timestamptz;']);
 });
+
+// ------------------------------------------- before the flag goes on (security N1-N5, 1369968)
+
+const T1 = 1_797_000_100;
+const T2 = 1_797_000_200;
+const T3 = 1_797_000_300;
+const isoAt = (seconds: number) => new Date(seconds * 1_000).toISOString();
+
+function subscriptionEvent(type: string, id: string, created: number): Stripe.Event {
+  return { id: `evt_${randomUUID()}`, type, livemode: false, created, data: { object: { id } } } as unknown as Stripe.Event;
+}
+
+test('N1: a refund handled while the Big Business grant is between its payment check and its write leaves the account Free', async () => {
+  await withFlag('true', async () => {
+    // After the refund, Stripe's read shows it (consistent), or still shows the payment as good (only the recorded refund does).
+    for (const stripeAfterRefund of [refundedIntent, paymentIntent]) {
+      const b = await customer();
+      const pi = `pi_${randomUUID()}`;
+      const cus = `cus_${randomUUID()}`;
+      let refunded = false;
+      const grant = deps();
+      grant.retrievePaymentIntent = async (id) => {
+        if (refunded) return stripeAfterRefund(id);
+        // The grant has read the recorded refunds (none) and now reads Stripe; the refund lands and its
+        // webhook is processed in full before the grant writes. It finds no row to revoke.
+        refunded = true;
+        await processStripeEvent(b.store, at(refund(pi, cus), T1 + 1), deps(undefined, refundedIntent));
+        return paymentIntent(id);
+      };
+      await processStripeEvent(b.store, at(businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, cus), T1), grant);
+      assert.equal(await b.store.paymentRefunded(pi), true);
+      assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+      assert.equal((await b.store.subscriptionByProviderId(pi))?.status, 'canceled');
+      const after = b.audits.filter((a) => a.action === 'checkout.refused_payment');
+      assert.equal(after.length, 1);
+      assert.equal(after[0]?.metadata.afterWrite, true);
+      assert.ok(!b.audits.some((a) => a.action === 'checkout.completed'));
+    }
+  });
+});
+
+test('N1: a refund that looked for the row before the grant wrote it, and records its audit row only after the grant\'s re-check, still leaves the account Free', async () => {
+  await withFlag('true', async () => {
+    const b = await customer();
+    const pi = `pi_${randomUUID()}`;
+    const cus = `cus_${randomUUID()}`;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let lookedUp!: () => void;
+    const refundLookedUp = new Promise<void>((resolve) => { lookedUp = resolve; });
+    // The refund handler found no Lifetime row and is waiting on Stripe's invoice lookup.
+    const refundStripe: StripeWebhookDependencies = { ...deps(undefined, refundedIntent), invoicesForPaymentIntent: async () => { lookedUp(); await held; return []; } };
+    let refunding: Promise<void> | undefined;
+    let reads = 0;
+    const grant = deps();
+    grant.retrievePaymentIntent = async (id) => {
+      reads += 1;
+      if (reads > 1) return refundedIntent(id);
+      refunding = processStripeEvent(b.store, at(refund(pi, cus), T1 + 1), refundStripe);
+      await refundLookedUp;
+      return paymentIntent(id);
+    };
+    await processStripeEvent(b.store, at(businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, cus), T1), grant);
+    // The grant's re-check ran before the refund's audit row existed: only Stripe's read after the write saw it.
+    assert.equal(await b.store.paymentRefunded(pi), false);
+    release();
+    await refunding;
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    assert.equal(reads, 2);
+    assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), ['refunded']);
+  });
+});
+
+test('N1: when the check after the write fails, the event fails with the row written; its retry takes the row back once the refund is visible', async () => {
+  await withFlag('true', async () => {
+    for (const [retryRead, plan] of [[refundedIntent, 'free'], [paymentIntent, 'business']] as const) {
+      const b = await customer();
+      const pi = `pi_${randomUUID()}`;
+      const paid = at(businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', pi, `cus_${randomUUID()}`), T1);
+      let reads = 0;
+      const down = deps();
+      down.retrievePaymentIntent = async (id) => {
+        reads += 1;
+        if (reads > 1) throw Object.assign(new Error('api down'), { type: 'StripeAPIError', code: 'api_error' });
+        return paymentIntent(id);
+      };
+      await assert.rejects(processStripeEvent(b.store, paid, down), /api down/);
+      // Stripe retries the same event (same id and created).
+      await processStripeEvent(b.store, paid, deps(undefined, retryRead));
+      assert.equal((await b.store.overview(b.userId)).subscription.plan, plan, `retry reads ${plan === 'free' ? 'refunded' : 'good'}`);
+    }
+  });
+});
+
+test('N2: an older invoice.paid whose read precedes a concurrent customer.subscription.deleted keeps canceled and the newer stripe_event_at', async () => {
+  await withFlag('true', async () => {
+    const e = await customer();
+    const subscription = enterpriseSubscription(e.workspaceId);
+    const stripe = deps(subscription);
+    await processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', subscription.id, T1), stripe);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'enterprise');
+    // Forced interleaving: the invoice.paid handler (t2) reads the row, the deleted (t3) completes, then t2 writes.
+    const read = e.store.subscriptionByWorkspaceId.bind(e.store);
+    let armed = true;
+    e.store.subscriptionByWorkspaceId = async (workspaceId) => {
+      const snapshot = await read(workspaceId);
+      if (armed) {
+        armed = false;
+        await processStripeEvent(e.store, subscriptionEvent('customer.subscription.deleted', subscription.id, T3), stripe);
+      }
+      return snapshot;
+    };
+    const invoice = { id: `in_${randomUUID()}`, parent: { subscription_details: { subscription: subscription.id } } };
+    await processStripeEvent(e.store, { id: `evt_${randomUUID()}`, type: 'invoice.paid', livemode: false, created: T2, data: { object: invoice } } as unknown as Stripe.Event, stripe);
+    e.store.subscriptionByWorkspaceId = read;
+    const row = await e.store.subscriptionByWorkspaceId(e.workspaceId);
+    assert.equal(row?.status, 'canceled');
+    assert.equal(row?.stripeEventAt, isoAt(T3));
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+    assert.ok(e.audits.some((a) => a.action === 'subscription.ignored_stale_event' && a.metadata.atWrite === true));
+  });
+});
+
+test('N2: the memory store mirrors the SQL write: same subscription older skipped, another subscription written, a cancel always applies and never moves the time back', async () => {
+  const store = new MemoryBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const row = (stripeSubscriptionId: string, stripeEventAt: string | undefined, status: 'active' | 'canceled' = 'active') => ({
+    workspaceId: workspace.id, plan: 'enterprise' as const, interval: 'monthly' as const, status, seats: 1,
+    stripeCustomerId: 'cus_mirror', stripeSubscriptionId, stripePriceId: 'price_enterprise_monthly', cancelAtPeriodEnd: false, stripeEventAt,
+  });
+  assert.equal(await store.syncSubscription(row('sub_a', isoAt(T2))), true);
+  assert.equal(await store.syncSubscription(row('sub_a', isoAt(T2))), true, 'an equal time is applied (a redelivery)');
+  assert.equal(await store.syncSubscription(row('sub_a', isoAt(T1), 'canceled')), false, 'older');
+  assert.equal(await store.syncSubscription(row('sub_a', undefined, 'canceled')), false, 'no time over a stored one');
+  assert.equal((await store.subscriptionByWorkspaceId(workspace.id))?.status, 'active');
+  assert.equal(await store.syncSubscription(row('sub_b', isoAt(T1))), true, 'another subscription is not ordered by event time');
+  await store.markSubscriptionCanceled('sub_b', isoAt(T3));
+  await store.markSubscriptionCanceled('sub_b', isoAt(T2));
+  await store.markSubscriptionCanceled('sub_b');
+  const stored = await store.subscriptionByWorkspaceId(workspace.id);
+  assert.equal(stored?.status, 'canceled');
+  assert.equal(stored?.stripeEventAt, isoAt(T3));
+});
+
+test('N2/N5: the Supabase store writes through the two functions of their own migration, service-role only, with the refund lookup index', () => {
+  const storeSource = readFileSync(join(process.cwd(), 'src/billing/supabaseBillingStore.ts'), 'utf8');
+  assert.match(storeSource, /rpc\('sync_subscription_if_not_older'/);
+  assert.match(storeSource, /rpc\('cancel_subscription_by_provider_id'/);
+  assert.doesNotMatch(storeSource, /from\('subscriptions'\)\.(upsert|update)\(/);
+  const dir = join(process.cwd(), 'supabase/migrations');
+  const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
+  const defining = files.filter((f) => /create or replace function public\.sync_subscription_if_not_older\(/.test(readFileSync(join(dir, f), 'utf8')));
+  assert.deepEqual(defining, ['20261101090000_atomic_subscription_writes.sql']);
+  assert.ok(files.indexOf(defining[0]) > files.indexOf('20261031091000_subscriptions_stripe_event_at.sql'));
+  const sql = readFileSync(join(dir, defining[0]), 'utf8');
+  const body = sql.split('\n').filter((line) => !line.startsWith('--')).join('\n');
+  assert.equal(body.match(/security invoker\nset search_path = public\n/g)?.length, 2);
+  assert.doesNotMatch(body, /security definer/);
+  assert.match(body, /where s\.stripe_subscription_id is distinct from excluded\.stripe_subscription_id\n\s+or s\.stripe_event_at is null\n\s+or s\.stripe_event_at <= excluded\.stripe_event_at;/);
+  assert.match(body, /stripe_event_at = greatest\(stripe_event_at, p_stripe_event_at\)/);
+  for (const fn of ['sync_subscription_if_not_older(uuid, text, text, text, integer, text, text, text, timestamptz, timestamptz, timestamptz, timestamptz, boolean)', 'cancel_subscription_by_provider_id(text, timestamptz)']) {
+    assert.ok(body.includes(`revoke all on function public.${fn} from public, anon, authenticated;`), fn);
+    assert.ok(body.includes(`grant execute on function public.${fn} to service_role;`), fn);
+    assert.match(sql, new RegExp(`^--\\s+drop function if exists public\\.${fn.replace(/[()]/g, '\\$&')};$`, 'm'));
+  }
+  assert.match(body, /create index if not exists billing_audit_refund_payment_intent_idx\n\s+on public\.billing_audit_log \(action, \(metadata->>'paymentIntentId'\)\);/);
+  assert.match(sql, /^--\s+drop index if exists public\.billing_audit_refund_payment_intent_idx;$/m);
+  // The index serves the lookup exactly as the store runs it.
+  assert.match(storeSource, /from\('billing_audit_log'\)\.select\('id'\)\.eq\('action', 'refund\.full'\)\.eq\('metadata->>paymentIntentId', paymentIntentId\)/);
+});
+
+test('N3 (D14): a Stripe error on the PaymentIntent read fails the event and grants nothing (Big Business and Enterprise)', async () => {
+  await withFlag('true', async () => {
+    const down = () => { throw Object.assign(new Error('api down'), { type: 'StripeAPIError', code: 'api_error' }); };
+    const b = await customer();
+    await assert.rejects(processStripeEvent(b.store, businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', `pi_${randomUUID()}`, `cus_${randomUUID()}`), deps(undefined, down)), /api down/);
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    const e = await customer();
+    const subscription = enterpriseSubscription(e.workspaceId);
+    await assert.rejects(processStripeEvent(e.store, enterpriseCheckoutCompleted(e.workspaceId, subscription.id), deps(subscription, down, [`pi_${randomUUID()}`])), /api down/);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+  });
+});
+
+test('N3 (D15): a PaymentIntent read without its expanded latest_charge never grants', async () => {
+  await withFlag('true', async () => {
+    const unexpanded = (id: string) => ({ ...paymentIntent(id), latest_charge: `ch_${id}` }) as unknown as Stripe.PaymentIntent;
+    const b = await customer();
+    await assert.rejects(processStripeEvent(b.store, businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', `pi_${randomUUID()}`, `cus_${randomUUID()}`), deps(undefined, unexpanded)), /latest charge/);
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    const e = await customer();
+    const subscription = enterpriseSubscription(e.workspaceId);
+    await assert.rejects(processStripeEvent(e.store, enterpriseCheckoutCompleted(e.workspaceId, subscription.id), deps(subscription, unexpanded, [`pi_${randomUUID()}`])), /latest charge/);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+  });
+});
+
+test('N3 (D20): an Enterprise row on record without access (incomplete) moving to active is checked: a refunded first invoice grants nothing', async () => {
+  await withFlag('true', async () => {
+    const e = await customer();
+    const base = enterpriseSubscription(e.workspaceId);
+    let live = { ...base, status: 'incomplete' } as Stripe.Subscription;
+    const stripe: StripeWebhookDependencies = { ...deps(base, (id) => paymentIntent(id, { refunded: true, amount_refunded: 5_000 }), [`pi_${randomUUID()}`]), retrieveSubscription: async () => live };
+    await processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', base.id, T1), stripe);
+    assert.equal((await e.store.subscriptionByWorkspaceId(e.workspaceId))?.status, 'inactive');
+    live = { ...base, status: 'active' } as Stripe.Subscription;
+    await processStripeEvent(e.store, subscriptionEvent('customer.subscription.updated', base.id, T2), stripe);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+    assert.deepEqual(refusals(e.audits, 'subscription.refused_payment'), ['refunded']);
+  });
+});
+
+test('N3 (D17): customer.subscription.deleted records its event time, so an older updated stays revoked even with a stale active read', async () => {
+  await withFlag('true', async () => {
+    const e = await customer();
+    const active = enterpriseSubscription(e.workspaceId);
+    let live: Stripe.Subscription = active;
+    const stripe: StripeWebhookDependencies = { ...deps(active), retrieveSubscription: async () => live };
+    await processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', active.id, T1), stripe);
+    live = { ...active, status: 'canceled' } as Stripe.Subscription;
+    await processStripeEvent(e.store, subscriptionEvent('customer.subscription.deleted', active.id, T3), stripe);
+    assert.equal((await e.store.subscriptionByWorkspaceId(e.workspaceId))?.stripeEventAt, isoAt(T3));
+    for (const read of [live, active]) {
+      live = read;
+      await processStripeEvent(e.store, subscriptionEvent('customer.subscription.updated', active.id, T2), stripe);
+      assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free', `live read ${read.status}`);
+    }
+  });
+});
+
+test('N4: a paid payment-mode session without a payment_intent grants nothing and reads no payment', async () => {
+  await withFlag('true', async () => {
+    const b = await customer();
+    const paid = businessPaid(b.workspaceId, b.userId, 'price_business_lifetime', `pi_${randomUUID()}`, `cus_${randomUUID()}`);
+    const event = { ...paid, data: { object: { ...paid.data.object, payment_intent: null } } } as Stripe.Event;
+    let reads = 0;
+    await processStripeEvent(b.store, event, deps(undefined, (id) => { reads += 1; return paymentIntent(id); }));
+    assert.equal((await b.store.overview(b.userId)).subscription.plan, 'free');
+    assert.equal(reads, 0);
+    assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), ['no_payment_intent']);
+  });
+});

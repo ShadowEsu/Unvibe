@@ -16,6 +16,7 @@ usage reservations; the migration seeds it to the same initial values:
 - Enterprise and Big Business are sold only while `BILLING_NEW_TIERS_ENABLED` is exactly `true` (`newTiersEnabled()`), on top of the payment locks below. Off (the default, and production): checkout answers 400 `plan_unavailable` for `enterprise`/`business`, and the webhook never grants either (it can still revoke one already on record). The site and the Plan pages show both as "Payments open soon" with an apply-by-email link and no Buy button, whatever the flag, until live payments are cleared.
 - Runbook, before ever turning `BILLING_NEW_TIERS_ENABLED` off: first expire every open Enterprise and Big Business Checkout Session (a session lives about 31 minutes and can still be paid after the switch), then switch it off. Every `checkout.refused_plan_unavailable` or `subscription.refused_plan_unavailable` audit row afterwards is a payment taken with nothing granted: refund it, and cancel the Enterprise subscription, within one business day.
 - Deploy order: apply `20261031090000_enterprise_business_tiers.sql` and `20261031091000_subscriptions_stripe_event_at.sql`, then merge. The server writes `subscriptions.stripe_event_at` on every Stripe subscription write, Pro included, so code deployed before that column exists fails every such write. `web/test/newTiers.test.ts` fails if the store writes the column while its migration is missing. Rollback of the column (after rolling the code back): `alter table public.subscriptions drop column if exists stripe_event_at;`.
+- Then apply `20261101090000_atomic_subscription_writes.sql` before deploying the code that calls its two functions: every subscription write and cancel goes through `sync_subscription_if_not_older` and `cancel_subscription_by_provider_id` (service role only), so code deployed before them fails every such write, Pro included. Rollback (after rolling the code back) is the three `drop ... if exists` lines in its header; roll back in reverse order, this migration before the column.
 - Pro Lifetime: $80 one-time (`PRO_LIFETIME_CENTS`), offered only while checkout is open, `STRIPE_PRICE_PRO_LIFETIME` is set and `BILLING_LIFETIME_ENABLED=true`.
 - Teams ($8/seat/month or $72/seat/year) is no longer offered: the site, the web Plan page and the app have no Teams purchase or seat-request path, and existing Teams workspaces keep their seats and Manage billing. Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
 - Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
@@ -73,7 +74,19 @@ with `latest_charge`) as not succeeded, refunded in whole or part, or disputed. 
 whose row a refund or lost dispute already canceled is never granted again. Each subscription row
 keeps the Stripe `created` time of the last event applied (`stripe_event_at`), and an older event
 for the same subscription or payment changes nothing, so a retried or late checkout event cannot
-restore access a newer refund took away.
+restore access a newer refund took away. The comparison is part of the write
+(`sync_subscription_if_not_older`: one `insert ... on conflict do update ... where`), so two deliveries
+processed at once cannot let an older event overwrite a newer one either; a cancel always applies
+and never moves `stripe_event_at` back (`cancel_subscription_by_provider_id`). After a Lifetime or
+Big Business grant writes its row, the payment is checked again (recorded refunds, then Stripe), so a
+refund or dispute handled while the grant was in flight still ends access; a failure of that check
+fails the event, and its retry takes the row back if the payment is refused by then. A paid checkout
+session without a PaymentIntent grants nothing (`checkout.refused_payment`, reason `no_payment_intent`).
+
+The `refund.full` rows in `billing_audit_log` are security state, not just history: they are what
+refuses a grant of a payment whose refund arrived before (or during) its checkout event. Never prune,
+archive or rewrite them. The lookup (`action = 'refund.full'` and `metadata->>'paymentIntentId'`)
+uses `billing_audit_refund_payment_intent_idx`.
 
 ## Lifecycle behavior
 
@@ -162,7 +175,7 @@ Then verify with test credentials:
 - Invitation acceptance with the right/wrong email; owner/admin/member permission boundaries.
 - User A cannot read or mutate User B workspaces using staging isolation scripts.
 - Published totals: $9/mo Pro, $81/yr Pro (25% annual savings), $80 Pro Lifetime, $50/mo Enterprise, $5,000 Big Business. Legacy Teams seat math remains in tests.
-- New tiers: flag exactness, checkout refusal and webhook non-grant with the flag off, price/metadata mismatches, Big Business refund and dispute revocation (`web/test/newTiers.test.ts`); the QA usage seed (`web/test/usageSeed.test.ts`).
+- New tiers: flag exactness, checkout refusal and webhook non-grant with the flag off, price/metadata mismatches, Big Business refund and dispute revocation, refunds and cancels racing a grant (forced interleavings), and the route's PaymentIntent read (`web/test/newTiers.test.ts`, `web/test/webhookRoute.test.ts`); the QA usage seed (`web/test/usageSeed.test.ts`).
 
 ## Known launch boundary
 

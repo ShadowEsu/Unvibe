@@ -179,8 +179,17 @@ export interface BillingStore {
   expireCheckoutIntent(intentId: string): Promise<void>;
   completeCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null>;
   findCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null>;
-  syncSubscription(input: SubscriptionSyncInput): Promise<void>;
-  /** Ends access for the row stored under this Stripe id; `stripeEventAt` replaces the stored event time when given. */
+  /**
+   * Writes the workspace's row unless it already holds this same Stripe subscription (or payment)
+   * with a newer `stripe_event_at` than the input's (or one when the input has none). The compare and
+   * the write are one statement (`sync_subscription_if_not_older`), so a concurrent newer write is
+   * never overwritten. Returns whether the row was written.
+   */
+  syncSubscription(input: SubscriptionSyncInput): Promise<boolean>;
+  /**
+   * Ends access for the row stored under this Stripe id, always; the stored event time becomes the
+   * later of the stored one and `stripeEventAt`, so it never moves back (`cancel_subscription_by_provider_id`).
+   */
   markSubscriptionCanceled(stripeSubscriptionId: string, stripeEventAt?: string): Promise<void>;
   /** True when a full refund of this PaymentIntent was recorded (`refund.full` audit row), matched to a row or not. */
   paymentRefunded(paymentIntentId: string): Promise<boolean>;

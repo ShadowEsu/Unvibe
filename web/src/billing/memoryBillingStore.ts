@@ -341,13 +341,22 @@ export class MemoryBillingStore implements BillingStore {
     return [...this.data.checkoutIntents.values()].find((intent) => intent.stripeCheckoutSessionId === stripeCheckoutSessionId) ?? null;
   }
 
-  async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
+  async syncSubscription(input: SubscriptionSyncInput): Promise<boolean> {
+    // Mirrors sync_subscription_if_not_older: the same subscription with a newer event time (or any
+    // event time against an input without one, as SQL's null comparison does) keeps its row.
+    const stored = this.data.subscriptions.get(input.workspaceId);
+    if (stored?.stripeSubscriptionId === input.stripeSubscriptionId && stored.stripeEventAt
+      && (!input.stripeEventAt || Date.parse(stored.stripeEventAt) > Date.parse(input.stripeEventAt))) return false;
     this.data.subscriptions.set(input.workspaceId, { ...input });
+    return true;
   }
 
   async markSubscriptionCanceled(stripeSubscriptionId: string, stripeEventAt?: string): Promise<void> {
+    // Mirrors cancel_subscription_by_provider_id: always cancels; the event time only moves forward.
     const subscription = await this.subscriptionByProviderId(stripeSubscriptionId);
-    if (subscription) this.data.subscriptions.set(subscription.workspaceId, { ...subscription, status: 'canceled', ...(stripeEventAt ? { stripeEventAt } : {}) });
+    if (!subscription) return;
+    const later = !stripeEventAt || (subscription.stripeEventAt && Date.parse(subscription.stripeEventAt) > Date.parse(stripeEventAt)) ? subscription.stripeEventAt : stripeEventAt;
+    this.data.subscriptions.set(subscription.workspaceId, { ...subscription, status: 'canceled', stripeEventAt: later });
   }
 
   async paymentRefunded(paymentIntentId: string): Promise<boolean> {

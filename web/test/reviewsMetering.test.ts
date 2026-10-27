@@ -258,7 +258,7 @@ test('a unit released after Teams ended mid-request goes back to the Teams works
   };
   await getBillingStore().syncSubscription(teams);
   // The Teams plan ends while the AI call runs, and the call then fails.
-  duringUpstream = () => getBillingStore().syncSubscription({ ...teams, status: 'canceled' });
+  duringUpstream = async () => { await getBillingStore().syncSubscription({ ...teams, status: 'canceled' }); };
   upstream = 'fail';
   try {
     await (await review(explainRequest({ ...owner.headers, 'x-uncode-workspace-id': teamId }))).text();
