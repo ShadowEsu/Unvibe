@@ -87,16 +87,21 @@ export function newTierCheckoutOpen(plan: NewTierPlan): boolean {
   return newTiersEnabled() && checkoutOpen() && Boolean(process.env[key]?.trim()) && (plan !== 'business' || businessModelReady());
 }
 
-/** The Bedrock model ids Big Business is priced on: Claude Haiku 5.5 only. */
-const BUSINESS_MODELS: Readonly<Record<string, true>> = { 'us.anthropic.claude-haiku-5-5': true, 'global.anthropic.claude-haiku-5-5': true };
+/**
+ * The Bedrock model ids Big Business is priced on: Claude Haiku 5.5 on the US cross-region profile
+ * only. A `global.` profile may process requests outside the United States, and /privacy says
+ * US-only, so it stays out until /privacy changes.
+ */
+const BUSINESS_MODELS: Readonly<Record<string, true>> = { 'us.anthropic.claude-haiku-5-5': true };
 
 /**
  * Big Business is unlimited for a one-time price, which holds only while explanations run on Claude
- * Haiku 5.5 on Bedrock (never Gemini Flash-Lite or Haiku 4.5): AI_PROVIDER=bedrock, a non-empty
- * AWS_BEARER_TOKEN_BEDROCK, and BEDROCK_MODEL_ID one of BUSINESS_MODELS. Same reading of those
- * variables as bedrockSelected() and bedrockModelId() (web/src/ai/bedrock.ts) with
- * PRICED_BEDROCK_MODELS (web/src/billing/stripe.ts) on the ai/bedrock-haiku branch; when the
- * branches merge, this becomes bedrockSelected() && the model check over those helpers.
+ * Haiku 5.5 on Bedrock in the US (never Gemini Flash-Lite or Haiku 4.5): AI_PROVIDER=bedrock, a
+ * non-empty AWS_BEARER_TOKEN_BEDROCK, and BEDROCK_MODEL_ID one of BUSINESS_MODELS. This reads the
+ * env the way bedrockSelected() and bedrockModelId() (web/src/ai/bedrock.ts) do on the
+ * ai/bedrock-haiku branch, with PRICED_BEDROCK_MODELS (web/src/billing/stripe.ts there). The
+ * integration merge replaces this env reading with bedrockSelected() and bedrockModelId() from
+ * ai/bedrock-haiku, so its BEDROCK_REGION allowlist closes Big Business checkout too.
  */
 export function businessModelReady(env: Record<string, string | undefined> = process.env): boolean {
   const model = env.BEDROCK_MODEL_ID?.trim() ?? '';

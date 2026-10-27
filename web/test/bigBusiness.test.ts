@@ -225,11 +225,11 @@ test('the rate limit trips at 10 a minute and 60 an hour and resets with each wi
   assert.deepEqual(await consume(120_000), { allowed: true });
 });
 
-test('Big Business checkout opens only on Claude Haiku 5.5 through Bedrock, never Gemini Flash-Lite or Haiku 4.5; closed by default', async () => {
+test('Big Business checkout opens only on Claude Haiku 5.5 through Bedrock in the US (us. profile), never Gemini Flash-Lite, Haiku 4.5 or a global profile; closed by default', async () => {
   const haiku55 = { AI_PROVIDER: 'bedrock', AWS_BEARER_TOKEN_BEDROCK: 'token', BEDROCK_MODEL_ID: 'us.anthropic.claude-haiku-5-5' };
   assert.equal(businessModelReady({}), false, 'closed by default');
   assert.equal(businessModelReady(haiku55), true);
-  assert.equal(businessModelReady({ ...haiku55, BEDROCK_MODEL_ID: 'global.anthropic.claude-haiku-5-5' }), true);
+  assert.equal(businessModelReady({ ...haiku55, BEDROCK_MODEL_ID: 'global.anthropic.claude-haiku-5-5' }), false, 'a global profile may run outside the US; /privacy says US only');
   assert.equal(businessModelReady({ ...haiku55, AI_PROVIDER: ' Bedrock ' }), true, 'read like bedrockSelected()');
   for (const [label, env] of [
     ['Gemini', { ...haiku55, AI_PROVIDER: 'gemini' }],
