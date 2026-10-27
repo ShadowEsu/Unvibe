@@ -142,7 +142,7 @@ const organizationJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f3eef8",
+  themeColor: "#ffe7e7",
 };
 
 export default function RootLayout({
