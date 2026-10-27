@@ -7,11 +7,12 @@
 /* Paper chips keep eyebrows and leads readable where a head sits straight on the dusk photo (inside a sheet they flatten). */
 .sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: var(--u-sheet); }
 .sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
+.sec-head > .paper-lead .paper-text-link { font-size: inherit; }
 
 /* ── Try it: editor on the left, Vibe panel on the right ── */
 .try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .try__editor { background: #151514; }
-.try__editor textarea { flex: 1; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); tab-size: 2; }
+.try__editor textarea { flex: 1; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); font-variant-ligatures: none; tab-size: 2; }
 .try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
 .try__foot { display: grid; gap: 0.55rem; padding: 0.9rem 1rem 1rem; border-top: 1px solid #2c2c29; }
 .try__foot .try__go { margin: 0; padding: 0 1.2rem; }
@@ -76,13 +77,6 @@ html[data-performance="lite"] .try__bob { animation: none; }
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
 .paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
-
-/* ── Startup programs ── */
-.paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
-.paper-backing .paper-partners { max-width: 1000px; margin: 0 auto; }
-.claude-startups__tag { color: #141414; }
-.claude-startups__copy a { color: var(--u-text); font-weight: 700; }
-.paper-partners__viewport:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 4px; border-radius: 12px; }
 
 /* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
 .paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }
