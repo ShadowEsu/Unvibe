@@ -8,7 +8,7 @@ import { POST as checkout } from '../app/api/v1/billing/checkout/route';
 import { getStore } from '../src/data/store';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { getBillingStore } from '../src/billing/store';
-import { getStripe } from '../src/billing/stripe';
+import { getStripe, newTierCheckoutOpen } from '../src/billing/stripe';
 import { LIFETIME_PERIOD_END, newTiersEnabled, planDisplayName } from '../src/billing/plans';
 import { processStripeEvent, type StripeWebhookDependencies } from '../src/billing/webhooks';
 
@@ -72,10 +72,21 @@ async function openIntent(userId: string): Promise<boolean> {
   return personal ? (await getBillingStore().pendingCheckout(userId, personal.id)) !== null : false;
 }
 
-test('the flag is on only for exactly "true"', () => {
+test('the flag is on only for exactly "true"', async () => {
   assert.equal(newTiersEnabled({ BILLING_NEW_TIERS_ENABLED: 'true' }), true);
   for (const value of OFF_VALUES) assert.equal(newTiersEnabled({ BILLING_NEW_TIERS_ENABLED: value }), false, JSON.stringify(value));
   assert.equal(newTiersEnabled({}), false);
+  // The checkout gate for each new plan reads the same flag, whatever else is configured.
+  for (const value of OFF_VALUES) {
+    await withFlag(value, async () => {
+      assert.equal(newTierCheckoutOpen('enterprise'), false);
+      assert.equal(newTierCheckoutOpen('business'), false);
+    });
+  }
+  await withFlag('true', async () => {
+    assert.equal(newTierCheckoutOpen('enterprise'), true);
+    assert.equal(newTierCheckoutOpen('business'), true);
+  });
 });
 
 test('flag off (any value but exactly "true"): checkout answers 400 plan_unavailable for both new plans, with no Stripe call and no intent', async () => {
