@@ -5,7 +5,7 @@
 import { net, type BrowserWindow } from 'electron';
 import { scanReviewPayload, hasBlocking, type SecretFinding } from '../core/secretFilter';
 import { SseParser } from '../core/sse';
-import { explanationFailure } from '../core/serviceError';
+import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
@@ -67,6 +67,8 @@ export interface ReviewSession {
   isSample?: () => boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
+  /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
+  wipeGeneration?: number;
 }
 
 export interface RequestOpts {
@@ -151,8 +153,17 @@ function persistUnderstoodSnapshot(session: ReviewSession): void {
   store().saveFileSnapshot(session.file, session.project, session.snapshotText.slice(0, 12_000));
 }
 
-/** Mark the current review understood (Got it) and refresh the file memory baseline when safe. */
+/** True once the store was wiped (account deletion, Erase everything) after this session's latest run started. */
+function wipedSinceRun(session: ReviewSession): boolean {
+  return session.wipeGeneration !== undefined && session.wipeGeneration !== store().wipeGeneration();
+}
+
+/**
+ * Mark the current review understood (Got it) and refresh the file memory baseline when safe. On a
+ * panel that outlived a wipe nothing is saved: no lesson, outcome or file snapshot.
+ */
 export function markUnderstood(win: BrowserWindow, session: ReviewSession): void {
+  if (wipedSinceRun(session)) return;
   if (!session.recorded) recordReview(win, session, false);
   try {
     store().setOutcome(session.reviewId, 'understood');
@@ -198,9 +209,11 @@ function appendExplanation(session: ReviewSession, text: string): void {
 /**
  * Saves the finished run as the lesson. A follow-up answer is shown in the panel but never replaces
  * the saved explanation of the code (its first run still records the lesson, so nothing is lost).
+ * A run that started before the store was wiped (account deletion, Erase everything) saves nothing.
  */
 function recordReview(win: BrowserWindow, session: ReviewSession, followUp: boolean): boolean {
   if (!session.code) return false;
+  if (wipedSinceRun(session)) return false;
   const explanation = session.explanationText?.trim() || undefined;
   if (session.recorded) {
     if (followUp) return true;
@@ -284,6 +297,9 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   session.level = opts.level;
   session.explanationText = '';
   session.islandStreaming = false;
+  // A lesson this panel saved before a wipe went with it: this run saves a new one.
+  if (wipedSinceRun(session)) session.recorded = false;
+  session.wipeGeneration = store().wipeGeneration();
   pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 
   const usageEarly = await cachedAppUsage();
@@ -445,9 +461,18 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       if (done) break;
       stillStreaming();
       for (const ev of parser.feed(decoder.decode(value, { stream: true }))) {
-        if (ev.type === 'token' && typeof ev.text === 'string') appendExplanation(session, ev.text);
-        send(win, session, ev);
-        if (ev.type === 'done') {
+        // The service streams only token, done and error (web/app/api/v1/reviews/route.ts). Each is
+        // rebuilt from the checked fields the panel reads, so nothing else the service sends reaches
+        // it; any other type is dropped (init, usage, consent and the rest come from the app).
+        if (ev.type === 'token') {
+          if (typeof ev.text !== 'string') continue;
+          appendExplanation(session, ev.text);
+          send(win, session, { type: 'token', text: ev.text });
+        } else if (ev.type === 'error') {
+          // The service's error text reaches the panel only as a capped string.
+          send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
+        } else if (ev.type === 'done') {
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model : undefined, mock: ev.mock === true });
           completed = true;
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
@@ -508,6 +533,7 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
 }
 
 export function gradeComprehension(win: BrowserWindow, session: ReviewSession, choice: number): void {
+  if (wipedSinceRun(session)) return;
   const a = session.pendingAnswer;
   if (!a) return;
   const correct = choice === a.answerIndex;

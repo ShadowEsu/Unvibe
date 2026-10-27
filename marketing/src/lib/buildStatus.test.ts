@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyBuildAction, defaultBuildStatus, INITIAL_SECONDS, normalizeBuildStatus, publicBuildStatus } from "@/lib/buildStatus";
+import { applyBuildAction, buildDayKey, defaultBuildStatus, INITIAL_SECONDS, normalizeBuildStatus, publicBuildStatus } from "@/lib/buildStatus";
+import { dayKey } from "@/lib/siteStatsStore";
 
 test("build timer starts, credits bounded heartbeats, and stops", () => {
   const start = new Date("2026-07-29T10:00:00.000Z");
@@ -44,4 +45,21 @@ test("set-clock writes hours and minutes without dropping below the floor", () =
 
   const floored = applyBuildAction(defaultBuildStatus(now), { action: "set-clock", hours: 10, minutes: 0 }, now);
   assert.equal(floored.totalSeconds, INITIAL_SECONDS);
+});
+
+test("the build day turns over at Pacific midnight, like the site's other day keys", () => {
+  const cases: Array<[string, string]> = [
+    ["2026-10-26T06:59:59.000Z", "2026-10-25"],
+    ["2026-10-26T07:00:00.000Z", "2026-10-26"],
+    ["2026-12-01T07:59:59.000Z", "2026-11-30"],
+    ["2026-12-01T08:00:00.000Z", "2026-12-01"],
+  ];
+  for (const [iso, day] of cases) {
+    assert.equal(buildDayKey(new Date(iso)), day, iso);
+    assert.equal(buildDayKey(new Date(iso)), dayKey(new Date(iso)), iso);
+  }
+
+  const yesterday = { todayKey: "2026-10-25", todaySeconds: 100 };
+  assert.equal(normalizeBuildStatus(yesterday, new Date("2026-10-26T06:59:59.000Z")).todaySeconds, 100);
+  assert.equal(normalizeBuildStatus(yesterday, new Date("2026-10-26T07:00:00.000Z")).todaySeconds, 0);
 });

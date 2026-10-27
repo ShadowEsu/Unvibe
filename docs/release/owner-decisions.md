@@ -1,4 +1,4 @@
-# Founder decision sheet
+# Owner decision sheet
 
 Record decision, owner, date, rationale, expiry/revisit date, and evidence.
 
@@ -18,6 +18,6 @@ Record decision, owner, date, rationale, expiry/revisit date, and evidence.
 | Parked extension esbuild | Dev-only esbuild 0.20 advisory; extension is not distributed in desktop beta | Keep parked or approve isolated upgrade |
 | Data retention/deletion timing | Draft only | Counsel/operations approval |
 | Signing/notarization owner | Not assigned | Yes |
-| Rollback authority | Founder default | Name primary/backup |
+| Rollback authority | Business owner default | Name primary/backup |
 
 No decision here constitutes legal approval. Avoid “completely free,” “always protected,” “always private,” or “never trains” unless the exact scope, provider terms, limits, and legal review support it.
