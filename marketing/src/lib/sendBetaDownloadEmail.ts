@@ -25,7 +25,7 @@ export async function sendBetaDownloadEmail(input: {
     body: JSON.stringify({
       from,
       to: [input.email],
-      reply_to: "preston@unvibe.site",
+      reply_to: "support@unvibe.site",
       subject: BETA_DOWNLOAD_SUBJECT,
       html: betaDownloadHtml(content),
       text: betaDownloadText(content),
@@ -80,7 +80,7 @@ export async function scheduleSetupReminder(email: string, referralCode: string)
     body: JSON.stringify({
       from,
       to: [email],
-      reply_to: "preston@unvibe.site",
+      reply_to: "support@unvibe.site",
       subject: "Your first Unvibe explanation is waiting",
       html,
       text,

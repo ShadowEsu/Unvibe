@@ -25,7 +25,7 @@ export default function AboutPage() {
             AI writes code faster than anyone can read it. Unvibe sits beside your editor, explains the exact code you select at your level, checks that you got it, and keeps the lesson. It is free for Mac and Windows.
           </p>
           <div className="founder-about__actions">
-            <a className="founder-about__btn founder-about__btn--lime" href="mailto:preston@unvibe.site">Email us</a>
+            <a className="founder-about__btn founder-about__btn--lime" href="mailto:support@unvibe.site">Email us</a>
             <Link className="founder-about__btn" href="/investors">Investors</Link>
             <Link className="founder-about__btn" href="/beta">Try Unvibe free</Link>
           </div>
@@ -52,7 +52,7 @@ export default function AboutPage() {
       <section className="paper-wrap founder-about__contact">
         <h2>Say hi.</h2>
         <p>Feedback, bugs, partnerships or investing: we read every email.</p>
-        <a className="founder-about__btn founder-about__btn--lime" href="mailto:preston@unvibe.site">Email us</a>
+        <a className="founder-about__btn founder-about__btn--lime" href="mailto:support@unvibe.site">Email us</a>
       </section>
     </article>
   );

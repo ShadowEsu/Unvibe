@@ -65,7 +65,7 @@ async function sendBatch(entries: Invitee[]): Promise<void> {
       return {
         from,
         to: entry.email,
-        reply_to: "preston@unvibe.site",
+        reply_to: "support@unvibe.site",
         subject: BETA_INVITE_SUBJECT,
         html: betaInviteHtml(entry.firstName, unsubscribe),
         text: betaInviteText(entry.firstName, unsubscribe),

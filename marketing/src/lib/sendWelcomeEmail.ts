@@ -40,7 +40,7 @@ export async function sendWelcomeEmail(input: {
       body: JSON.stringify({
         from,
         to: [input.email],
-        reply_to: "preston@unvibe.site",
+        reply_to: "support@unvibe.site",
         subject: WELCOME_SUBJECT,
         html: welcomeHtml(content),
         text: welcomeText(content),

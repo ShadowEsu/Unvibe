@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
-import {
-  FOUNDER_EMAIL,
-  SUPPORT_EMAIL,
-  founderMailto,
-  supportMailto,
-} from "@/lib/contact";
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Account deletion",
@@ -64,9 +59,6 @@ export default function AccountDeletionPage() {
         <p>
           Email{" "}
           <a href={supportMailto}>{SUPPORT_EMAIL}</a>
-          {" "}
-          or{" "}
-          <a href={founderMailto}>{FOUNDER_EMAIL}</a>
           {" "}
           and we will help you delete your account or data.
         </p>

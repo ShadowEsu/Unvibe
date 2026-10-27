@@ -1,4 +1,3 @@
-import { FOUNDER_EMAIL } from "@/lib/contact";
 import type { WaitlistNotificationRecord } from "@/lib/waitlistStore";
 
 export interface FounderNotificationInput {
@@ -24,9 +23,14 @@ function escapeHtml(value: string): string {
   );
 }
 
-/** Every signup alert is intentionally delivered to the monitored founder inbox. */
+/**
+ * Every signup alert is intentionally delivered to the monitored owner inbox. Internal only: it is the
+ * alert's recipient, never shown to visitors, so it is not a public contact (those use SUPPORT_EMAIL).
+ */
+const ALERT_INBOX = "preston@unvibe.site";
+
 function notifyTo(): string {
-  return FOUNDER_EMAIL;
+  return ALERT_INBOX;
 }
 
 function emailHtml(entry: FounderNotificationInput): string {
