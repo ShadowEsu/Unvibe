@@ -23,34 +23,9 @@
   --blue-bg: #eff6ff;
   --red: #ef4444;
   --red-bg: #fef2f2;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0b0b;
-    --bg-subtle: #141414;
-    --fg: #f2f2f2;
-    --fg-muted: #a3a3a3;
-    --fg-faint: #6e6e6e;
-    --line: #242424;
-    --line-strong: #3a3a3a;
-    --fill-hover: #1c1c1c;
-    --fill-active: #f2f2f2;
-    --on-fill: #0b0b0b;
-
-    --green: #34d399;
-    --green-bg: #064e3b;
-    --orange: #fbbf24;
-    --orange-bg: #78350f;
-    --purple: #a78bfa;
-    --purple-bg: #2e1065;
-    --cyan: #22d3ee;
-    --cyan-bg: #083344;
-    --blue: #60a5fa;
-    --blue-bg: #1e3a5f;
-    --red: #f87171;
-    --red-bg: #450a0a;
-  }
+  /* One light theme for every visitor, like unvibe.site: form controls, scrollbars and autofill stay light on a dark OS. */
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
