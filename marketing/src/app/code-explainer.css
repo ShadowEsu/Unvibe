@@ -40,9 +40,9 @@
   gap: 0.6rem 1.2rem;
 }
 
+/* Wraps instead of scrolling: a sideways-scrolling box at 390 px would need its own keyboard focus. */
 .explain-card .os-cmd {
   display: block;
-  overflow-x: auto;
   margin: 0 0 1rem;
   padding: 0.8rem 1rem;
   border: 0;
@@ -50,5 +50,6 @@
   background: #151514;
   color: #f4f1ea;
   font: 500 0.95rem / 1.4 var(--font-mono);
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
