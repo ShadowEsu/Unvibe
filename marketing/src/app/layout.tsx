@@ -99,7 +99,6 @@ export const metadata: Metadata = {
   verification: {
     google: "7KTQZKnFINspHj8_DOwYo9FnaD-9-nLZQ-adL2dgH6Q",
   },
-  alternates: { canonical: siteUrl },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "48x48" },

@@ -10,6 +10,7 @@ import { changelogPreview } from "@/data/milestones";
 export const metadata: Metadata = {
   title: "Building Unvibe",
   description: "Unvibe is out for Mac and Windows. Follow the build on Instagram, TikTok and LinkedIn.",
+  alternates: { canonical: "/build" },
 };
 
 export default function BuildPage() {

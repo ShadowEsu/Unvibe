@@ -5,6 +5,7 @@ import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 export const metadata: Metadata = {
   title: "Waitlist",
   robots: { index: false, follow: false, noarchive: true, nocache: true },
+  alternates: { canonical: "/waitlist" },
 };
 
 /** Private founder view. Not linked from the public site. */

@@ -13,6 +13,7 @@ import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 export const metadata: Metadata = {
   title: "Investors",
   description: "Unvibe on one page: the thesis, what shipped, public cash figures, what is next, and how to reach us.",
+  alternates: { canonical: "/investors" },
 };
 
 const pipeline = [

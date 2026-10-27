@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Analytics",
   description: "Live aggregate traffic, waitlist, and beta-request numbers for Unvibe.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "/founder" },
 };
 
 export default function FounderPage() {

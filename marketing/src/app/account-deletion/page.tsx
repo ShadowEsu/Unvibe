@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Account deletion",
   description:
     "How to delete your Unvibe account, what deletion removes, and the timeline for local and backend data.",
+  alternates: { canonical: "/account-deletion" },
 };
 
 export default function AccountDeletionPage() {

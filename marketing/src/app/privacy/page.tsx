@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Privacy",
   description:
     "How Unvibe handles code and learning data during the beta, including on-device secret filtering and cloud-provider disclosure.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

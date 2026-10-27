@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Data controls",
   description:
     "What data Unvibe keeps, where it lives, how long it is retained, and how to get a copy or delete it.",
+  alternates: { canonical: "/data-controls" },
 };
 
 export default function DataControlsPage() {
