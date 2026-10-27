@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { stripeKeyMode } from './stripeKey';
+import { newTiersEnabled, PLAN_NAMES, planSoldOnInterval, type NewTierPlan } from './plans';
 import type { BillingInterval, PlanId } from './types';
 
 let stripeClient: Stripe | undefined;
@@ -17,13 +18,13 @@ export function getStripe(): Stripe {
   return stripeClient;
 }
 
+/**
+ * The configured Stripe price for a plan and interval: `STRIPE_PRICE_${PLAN}_${INTERVAL}`
+ * (STRIPE_PRICE_PRO_LIFETIME, STRIPE_PRICE_ENTERPRISE_MONTHLY, STRIPE_PRICE_BUSINESS_LIFETIME, ...).
+ * A plan never sold on that interval throws, whatever the environment holds.
+ */
 export function stripePriceId(plan: Exclude<PlanId, 'free'>, interval: BillingInterval): string {
-  if (interval === 'lifetime') {
-    if (plan !== 'pro') throw new Error('Lifetime checkout is only configured for Pro.');
-    const value = process.env.STRIPE_PRICE_PRO_LIFETIME?.trim();
-    if (!value) throw new Error('STRIPE_PRICE_PRO_LIFETIME is not configured.');
-    return value;
-  }
+  if (!planSoldOnInterval(plan, interval)) throw new Error(`${PLAN_NAMES[plan]} has no ${interval} price.`);
   const key = `STRIPE_PRICE_${plan.toUpperCase()}_${interval.toUpperCase()}`;
   const value = process.env[key]?.trim();
   if (!value) throw new Error(`${key} is not configured.`);
@@ -74,6 +75,16 @@ export function checkoutOpen(): boolean {
 /** Pro Lifetime is hidden unless explicitly enabled (pending Preston's keep/drop decision). */
 export function lifetimeCheckoutOpen(): boolean {
   return checkoutOpen() && Boolean(process.env.STRIPE_PRICE_PRO_LIFETIME?.trim()) && process.env.BILLING_LIFETIME_ENABLED?.trim() === 'true';
+}
+
+/**
+ * Enterprise (monthly) and Big Business (one-time) checkout, for Stripe test mode work until live money is cleared.
+ * Needs BILLING_NEW_TIERS_ENABLED exactly `true`, the plan's own Stripe price, and checkout open
+ * (so every payment lock above still applies on top).
+ */
+export function newTierCheckoutOpen(plan: NewTierPlan): boolean {
+  const key = plan === 'enterprise' ? 'STRIPE_PRICE_ENTERPRISE_MONTHLY' : 'STRIPE_PRICE_BUSINESS_LIFETIME';
+  return newTiersEnabled() && checkoutOpen() && Boolean(process.env[key]?.trim());
 }
 
 export function publicAppUrl(req: Request): string {

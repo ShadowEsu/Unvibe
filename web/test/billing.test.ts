@@ -35,6 +35,12 @@ test('pricing math matches every published total', () => {
   assert.equal(priceFor('teams', 'annual', 5), 36_000);
   assert.equal(priceFor('teams', 'monthly', 20), 16_000);
   assert.equal(priceFor('teams', 'monthly', 500), 16_000);
+  assert.equal(priceFor('enterprise', 'monthly', 1), 5_000);
+  assert.equal(priceFor('enterprise', 'monthly', 9), 5_000, 'Enterprise is one account');
+  assert.equal(priceFor('business', 'lifetime', 1), 500_000);
+  assert.throws(() => priceFor('enterprise', 'annual', 1));
+  assert.throws(() => priceFor('business', 'monthly', 1));
+  assert.throws(() => priceFor('teams', 'lifetime', 2));
   assert.equal(proAnnualSavingsPercent(), 25);
   assert.equal(teamsAnnualSavingsPercent(), 25);
 });
@@ -51,15 +57,27 @@ test('Teams clamps abusive seat quantities while Pro stays one-person', () => {
   assert.equal(normalizedSeats('teams', 2), 2);
   assert.equal(normalizedSeats('teams', 500), 20);
   assert.equal(normalizedSeats('pro', 300), 1);
+  assert.equal(normalizedSeats('enterprise', 300), 1);
+  assert.equal(normalizedSeats('business', 300), 1);
   assert.equal(minimumSeatsForUsage(3, 2), 5);
 });
 
-test('Pro and Teams entitlements use configured allowance scaling', () => {
-  assert.equal(planLimit('pro', 'ai_explanation', 1), 100);
+test('Pro, Enterprise, Big Business and Teams entitlements use configured allowance scaling', () => {
+  assert.equal(planLimit('pro', 'ai_explanation', 1), 200);
   assert.equal(planLimit('pro', 'indexed_project', 1), 10);
   assert.equal(planLimit('teams', 'ai_explanation', 2), 200);
   assert.equal(planLimit('teams', 'project_question', 5), 2_500);
   assert.equal(planLimit('teams', 'indexed_project', 5), 10);
+  assert.deepEqual(
+    (['ai_explanation', 'project_question', 'indexed_project', 'dictionary_item', 'saved_item'] as const).map((kind) => planLimit('enterprise', kind, 7)),
+    [1_000, 2_500, 25, 5_000, 5_000],
+    'Enterprise caps, never scaled by seats',
+  );
+  assert.deepEqual(
+    (['ai_explanation', 'project_question', 'indexed_project', 'dictionary_item', 'saved_item'] as const).map((kind) => planLimit('business', kind, 7)),
+    [5_000, 10_000, 100, 20_000, 20_000],
+    'Big Business written fair-use caps, never scaled by seats',
+  );
 });
 
 test('server selects trusted price IDs for every paid interval', () => {
@@ -71,6 +89,17 @@ test('server selects trusted price IDs for every paid interval', () => {
   assert.equal(stripePriceId('pro', 'annual'), 'price_pa');
   assert.equal(stripePriceId('teams', 'monthly'), 'price_tm');
   assert.equal(stripePriceId('teams', 'annual'), 'price_ta');
+  process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY = 'price_em';
+  process.env.STRIPE_PRICE_BUSINESS_LIFETIME = 'price_bl';
+  process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL = 'price_never_sold';
+  assert.equal(stripePriceId('enterprise', 'monthly'), 'price_em');
+  assert.equal(stripePriceId('business', 'lifetime'), 'price_bl');
+  assert.throws(() => stripePriceId('enterprise', 'annual'), /no annual price/, 'a plan never sold on an interval has no price, whatever the env holds');
+  assert.throws(() => stripePriceId('business', 'monthly'));
+  assert.throws(() => stripePriceId('teams', 'lifetime'));
+  delete process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY;
+  delete process.env.STRIPE_PRICE_BUSINESS_LIFETIME;
+  delete process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL;
 });
 
 test('roles separate billing and member authority', () => {

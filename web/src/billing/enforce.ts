@@ -1,5 +1,6 @@
 import type { TokenUsage } from '@/ai/provider';
 import { getBillingStore } from './store';
+import { planDisplayName } from './plans';
 import type { PlanId, UsageKind } from './types';
 
 /**
@@ -50,10 +51,14 @@ export async function reserveMeteredAction(
       ? new Date(reservation.line.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
       : 'next month';
     const label = kind === 'ai_explanation' ? 'explanations' : kind.replaceAll('_', ' ');
+    const payingPlan = plan ?? (await getBillingStore().overview(userId)).subscription.plan;
+    const reached = payingPlan === 'business'
+      ? `You have reached the Big Business fair-use limit of ${reservation.line.limit} ${label} this month (unvibe.site/pricing#fair-use). They pause until ${resets}, and we contact you first. Saved history and settings stay available.`
+      : `You have reached your ${planDisplayName(payingPlan)} monthly ${label} limit (${reservation.line.limit}). Your allowance resets on ${resets}. Saved history and settings stay available.`;
     return Response.json({
       error: 'plan_limit_reached',
       message: reservation.line.remaining <= 0
-        ? `You have reached your monthly ${label} limit (${reservation.line.limit}). Your allowance resets on ${resets}. Saved history and settings stay available.`
+        ? reached
         : `You have used ${reservation.line.used} of ${reservation.line.limit} ${label} this month.`,
       usage: reservation.line,
       upgradePath: '/plan',

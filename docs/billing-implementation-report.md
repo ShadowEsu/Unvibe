@@ -12,10 +12,13 @@ remote project, or approve legal language.
 
 ## Implemented
 
-- Central plan definitions and limits: Free 30 explanations/1 project/25 dictionary/20 saved;
-  Pro 1,000 explanations/10 projects; Teams usage scales by purchased seats.
-- Exact price math: Pro $8/month or $72/year with 25% annual savings; Teams plan math retained
-  server-side but not offered in current product surfaces.
+- Central plan definitions and limits (current values; this report first shipped Free 30 and Pro
+  1,000 at $8/$72, since changed): Free 50 explanations/1 project/25 dictionary/20 saved; Pro 200
+  explanations/10 projects; Enterprise 1,000; Big Business a written fair-use limit of 5,000
+  explanations and 10,000 questions; Teams usage scales by purchased seats. See `docs/billing.md`.
+- Exact price math: Pro $9/month or $81/year with 25% annual savings, Pro Lifetime $80, Enterprise
+  $50/month, Big Business $5,000 once; Teams plan math retained server-side but not offered in
+  current product surfaces.
 - Personal and team workspaces, owner/admin/member roles, separate member identities, secure
   hashed invitations, invitation expiry/revocation, and pending-invite seat reservation.
 - Server-only Stripe Checkout, Customer Portal, quantity updates with prorations, signed raw-body

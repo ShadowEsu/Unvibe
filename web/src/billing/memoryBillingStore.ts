@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
+import { canManageBilling, canManageMembers, CHECKOUT_INTENT_TTL_MS, effectivePlan, LIFETIME_PERIOD_END, minimumSeatsForUsage, monthWindow, planLimit, USAGE_TOKEN_WINDOW_MS } from './plans';
 import { CheckoutPendingError } from './checkoutPending';
 import { MAX_TEAM_WORKSPACES_PER_OWNER, TeamWorkspaceLimitError } from './teamWorkspaceLimit';
 import { TeamHasMembersError } from '@/data/teamHasMembers';
@@ -8,6 +8,7 @@ import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  PlanId,
   SubscriptionRecord,
   SubscriptionSyncInput,
   UsageKind,
@@ -66,13 +67,21 @@ function defaultSubscription(workspaceId: string): SubscriptionRecord {
   };
 }
 
+/** QA only (UNVIBE_TEST_USAGE_SEED, see store.ts): the plan and explanations used a new personal workspace starts with. */
+export interface MemoryUsageSeed {
+  plan: Exclude<PlanId, 'teams'>;
+  used: number;
+}
+
 export class MemoryBillingStore implements BillingStore {
   readonly kind = 'memory billing (dev)';
   private readonly data: MemoryBillingData;
   private readonly now: () => Date;
+  private readonly seed: MemoryUsageSeed | undefined;
 
-  constructor(now: () => Date = () => new Date()) {
+  constructor(now: () => Date = () => new Date(), seed?: MemoryUsageSeed) {
     this.now = now;
+    this.seed = seed;
     const global = globalThis as unknown as { __uncodeBillingData?: MemoryBillingData };
     global.__uncodeBillingData ??= {
       workspaces: new Map(),
@@ -95,8 +104,28 @@ export class MemoryBillingStore implements BillingStore {
     const workspace = { id, name: 'Personal', type: 'personal' as const, ownerUserId: userId };
     this.data.workspaces.set(id, workspace);
     this.data.memberships.set(membershipKey(id, userId), 'owner');
-    this.data.subscriptions.set(id, defaultSubscription(id));
+    this.data.subscriptions.set(id, this.seed ? this.seededSubscription(id, this.seed) : defaultSubscription(id));
+    if (this.seed) this.data.usage.set(usageKey(id, 'ai_explanation', monthWindow(this.now()).startsAt), this.seed.used);
     return { ...workspace, role: 'owner' };
+  }
+
+  /** A paid seed looks like a Stripe purchase (so checkout treats it as paid), not a complimentary grant. */
+  private seededSubscription(workspaceId: string, seed: MemoryUsageSeed): SubscriptionRecord {
+    if (seed.plan === 'free') return defaultSubscription(workspaceId);
+    const now = this.now();
+    const oneTime = seed.plan === 'business';
+    return {
+      workspaceId,
+      plan: seed.plan,
+      interval: oneTime ? 'lifetime' : 'monthly',
+      status: 'active',
+      seats: 1,
+      stripeCustomerId: `cus_test_seed_${workspaceId}`,
+      stripeSubscriptionId: `${oneTime ? 'pi' : 'sub'}_test_seed_${workspaceId}`,
+      currentPeriodStart: now.toISOString(),
+      currentPeriodEnd: oneTime ? LIFETIME_PERIOD_END : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      cancelAtPeriodEnd: false,
+    };
   }
 
   async listWorkspaces(userId: string): Promise<WorkspaceAccess[]> {

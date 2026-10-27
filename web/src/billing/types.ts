@@ -1,6 +1,7 @@
 import type { TokenUsage } from '@/ai/provider';
 
-export type PlanId = 'free' | 'pro' | 'teams';
+/** `enterprise` is sold monthly only; `business` (Big Business) is one-time, stored as interval `lifetime`. */
+export type PlanId = 'free' | 'pro' | 'teams' | 'enterprise' | 'business';
 export type BillingInterval = 'monthly' | 'annual' | 'lifetime';
 export type WorkspaceType = 'personal' | 'team';
 export type WorkspaceRole = 'owner' | 'admin' | 'member';

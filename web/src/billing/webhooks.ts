@@ -1,10 +1,7 @@
 import type Stripe from 'stripe';
 import type { BillingStore, BillingInterval, PlanId, SubscriptionRecord, SubscriptionStatus } from './types';
-import { complimentaryPaidEnd } from './plans';
+import { complimentaryPaidEnd, isNewTierPlan, LIFETIME_PERIOD_END, newTiersEnabled } from './plans';
 import { stripePriceId } from './stripe';
-
-/** Far-future end date used for Pro Lifetime grants (effectively permanent). */
-export const LIFETIME_PERIOD_END = '2099-12-31T23:59:59.000Z';
 
 function mappedStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
   if (status === 'trialing' || status === 'active' || status === 'past_due' || status === 'unpaid' || status === 'canceled') return status;
@@ -15,7 +12,7 @@ function requiredMetadata(subscription: Stripe.Subscription): { workspaceId: str
   const workspaceId = subscription.metadata.workspace_id;
   const plan = subscription.metadata.plan;
   const interval = subscription.metadata.interval;
-  if (!workspaceId || (plan !== 'pro' && plan !== 'teams') || (interval !== 'monthly' && interval !== 'annual')) {
+  if (!workspaceId || (plan !== 'pro' && plan !== 'teams' && plan !== 'enterprise') || (interval !== 'monthly' && interval !== 'annual')) {
     throw new Error('Stripe subscription metadata is incomplete.');
   }
   return { workspaceId, plan, interval };
@@ -96,10 +93,16 @@ async function stopDuplicate(store: BillingStore, deps: StripeWebhookDependencie
 
 export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, deps: StripeWebhookDependencies): Promise<void> {
   const metadata = requiredMetadata(subscription);
+  // Flag off: an Enterprise subscription is never granted or extended; Stripe can still only take away.
+  if (isNewTierPlan(metadata.plan) && !newTiersEnabled()) {
+    await applyRevocationOnly(store, subscription);
+    await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_plan_unavailable', { stripeSubscriptionId: subscription.id, plan: metadata.plan });
+    return;
+  }
   const item = subscription.items.data[0];
   if (!item) throw new Error('Stripe subscription has no billable item.');
   if (item.price.id !== stripePriceId(metadata.plan, metadata.interval)) throw new Error('Stripe subscription price does not match the trusted plan configuration.');
-  if (metadata.plan === 'pro' && (item.quantity ?? 1) !== 1) throw new Error('Pro subscriptions must have exactly one account seat.');
+  if (metadata.plan !== 'teams' && (item.quantity ?? 1) !== 1) throw new Error(`${metadata.plan === 'pro' ? 'Pro' : 'Enterprise'} subscriptions must have exactly one account seat.`);
   if (metadata.plan === 'teams' && (item.quantity ?? 0) < 2) throw new Error('Teams subscriptions require at least two seats.');
   const stored = await store.subscriptionByWorkspaceId(metadata.workspaceId);
   // Lifetime is paid once and never ends here: a subscription event for the same workspace (say one
@@ -218,10 +221,15 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
   const workspaceId = session.metadata?.workspace_id;
   const plan = session.metadata?.plan;
   const interval = session.metadata?.interval;
-  if (!workspaceId || plan !== 'pro' || interval !== 'lifetime') {
+  if (!workspaceId || (plan !== 'pro' && plan !== 'business') || interval !== 'lifetime') {
     throw new Error('Stripe lifetime checkout metadata is incomplete.');
   }
-  const expectedPrice = stripePriceId('pro', 'lifetime');
+  // Flag off: a Big Business payment grants nothing (recorded for a person to refund).
+  if (plan === 'business' && !newTiersEnabled()) {
+    await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_plan_unavailable', { plan, checkoutSessionId: session.id });
+    return;
+  }
+  const expectedPrice = stripePriceId(plan, 'lifetime');
   const linePrice = session.line_items?.data?.[0]?.price;
   const priceId = typeof linePrice === 'string' ? linePrice : linePrice?.id;
   if (priceId !== expectedPrice) {
@@ -234,7 +242,7 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
   const now = new Date().toISOString();
   await store.syncSubscription({
     workspaceId,
-    plan: 'pro',
+    plan,
     interval: 'lifetime',
     status: 'active',
     seats: 1,
@@ -248,6 +256,7 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
   await store.completeCheckoutIntent(session.id);
   await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.completed', {
     mode: 'payment',
+    plan,
     interval: 'lifetime',
   });
 }
@@ -388,6 +397,11 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       }
       if (session.mode !== 'subscription' || !session.subscription) return;
       const subscription = await deps.retrieveSubscription(providerId(session.subscription));
+      // Flag off: no Enterprise grant from checkout (syncStripeSubscription would refuse it too).
+      if (isNewTierPlan(subscription.metadata.plan) && !newTiersEnabled()) {
+        await store.recordAudit(null, subscription.metadata.workspace_id ?? null, 'checkout.refused_plan_unavailable', { eventId: event.id, plan: subscription.metadata.plan });
+        return;
+      }
       await syncStripeSubscription(store, subscription, deps);
       await store.completeCheckoutIntent(session.id);
       await store.recordAudit(null, subscription.metadata.workspace_id ?? null, 'checkout.completed', { eventId: event.id });

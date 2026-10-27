@@ -3,8 +3,8 @@ import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
-import { CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, isNewTierPlan, newTiersEnabled, normalizedSeats, PLAN_NAMES, planDisplayName, planSoldOnInterval, teamsCheckoutEnabled } from '@/billing/plans';
+import { checkoutOpen, getStripe, lifetimeCheckoutOpen, newTierCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, SubscriptionStatus, WorkspaceAccess } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -39,22 +39,35 @@ export async function POST(req: Request): Promise<Response> {
   if (!checkoutOpen()) return Response.json(PAYMENTS_NOT_OPEN, { status: 503 });
   try {
     const body = (await req.json()) as CheckoutBody;
+    // Enterprise and Big Business are refused outright unless the flag is exactly `true`.
+    if (isNewTierPlan(body.plan) && !newTiersEnabled()) {
+      return Response.json({ error: 'plan_unavailable', message: 'Enterprise and Big Business payments open soon. Contact us to apply.' }, { status: 400 });
+    }
     if (body.plan === 'teams' && !teamsCheckoutEnabled()) {
       return Response.json({ error: 'teams_unavailable', message: 'Teams is not available right now. Choose Pro for a personal plan.' }, { status: 403 });
     }
-    if ((body.plan !== 'pro' && body.plan !== 'teams') || !isBillingInterval(body.interval)) {
+    if ((body.plan !== 'pro' && body.plan !== 'teams' && !isNewTierPlan(body.plan)) || !isBillingInterval(body.interval)) {
       return Response.json({ error: 'invalid_checkout', message: 'Choose Pro and a valid billing interval.' }, { status: 400 });
     }
-    if (body.interval === 'lifetime' && body.plan !== 'pro') {
-      return Response.json({ error: 'invalid_checkout', message: 'Lifetime is only available for Pro.' }, { status: 400 });
+    const plan = body.plan;
+    const interval = body.interval;
+    if (!planSoldOnInterval(plan, interval)) {
+      const message = plan === 'enterprise' ? 'Enterprise is billed monthly.'
+        : plan === 'business' ? 'Big Business is a one-time payment.'
+        : 'Lifetime is only available for Pro.';
+      return Response.json({ error: 'invalid_checkout', message }, { status: 400 });
     }
-    if (body.interval === 'lifetime' && !lifetimeCheckoutOpen()) {
+    if (isNewTierPlan(plan) && !newTierCheckoutOpen(plan)) {
+      return Response.json({ error: 'plan_unavailable', message: `${PLAN_NAMES[plan]} is not available right now.` }, { status: 503 });
+    }
+    if (plan === 'pro' && interval === 'lifetime' && !lifetimeCheckoutOpen()) {
       return Response.json({ error: 'lifetime_unavailable', message: 'Pro Lifetime is not available. Choose monthly or annual Pro.' }, { status: 503 });
     }
     const billing = getBillingStore();
-    const requestedSeats = typeof body.seats === 'number' ? body.seats : Number(body.seats ?? (body.plan === 'teams' ? 2 : 1));
-    const seats = body.interval === 'lifetime' ? 1 : normalizedSeats(body.plan, requestedSeats);
-    const personal = body.plan === 'pro';
+    const requestedSeats = typeof body.seats === 'number' ? body.seats : Number(body.seats ?? (plan === 'teams' ? 2 : 1));
+    const seats = interval === 'lifetime' ? 1 : normalizedSeats(plan, requestedSeats);
+    // Pro, Enterprise and Big Business are one account each, on the personal workspace.
+    const personal = plan !== 'teams';
     let workspace: WorkspaceAccess | null;
     if (personal) {
       workspace = await billing.ensurePersonalWorkspace(user);
@@ -70,13 +83,13 @@ export async function POST(req: Request): Promise<Response> {
     }
     const current = await billing.overview(user, workspace.id);
     if (current.subscription.interval === 'lifetime' && current.subscription.status === 'active') {
-      return Response.json({ error: 'lifetime_active', message: 'This account already has Pro Lifetime.' }, { status: 409 });
+      return Response.json({ error: 'lifetime_active', message: `This account already has ${current.subscription.plan === 'pro' ? 'Pro Lifetime' : planDisplayName(current.subscription.plan)}.` }, { status: 409 });
     }
     // Complimentary access (promo code, gift, referral) runs to its end date first: a paid
     // subscription now would replace it and the remaining free time would be lost.
     const complimentaryEnd = complimentaryPaidEnd(current.subscription);
     if (complimentaryEnd) {
-      const planName = current.subscription.plan === 'teams' ? 'Teams' : 'Pro';
+      const planName = planDisplayName(current.subscription.plan);
       const until = new Date(complimentaryEnd).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
       return Response.json({
         error: 'complimentary_active',
@@ -100,7 +113,7 @@ export async function POST(req: Request): Promise<Response> {
         }
       }
     }
-    if (pending?.stripeCheckoutSessionId && pending.plan === body.plan && pending.interval === body.interval && pending.seats === seats) {
+    if (pending?.stripeCheckoutSessionId && pending.plan === plan && pending.interval === interval && pending.seats === seats) {
       const existing = await stripe.checkout.sessions.retrieve(pending.stripeCheckoutSessionId);
       if (existing.status === 'open' && existing.url) return Response.json({ url: existing.url, reused: true });
       await billing.expireCheckoutIntent(pending.id);
@@ -111,10 +124,10 @@ export async function POST(req: Request): Promise<Response> {
     // leaves an open intent that answers the next try with checkout_pending.
     const account = await getStore().accountInfo(user);
     const appUrl = publicAppUrl(req);
-    const price = stripePriceId(body.plan, body.interval);
+    const price = stripePriceId(plan, interval);
     let intent;
     try {
-      intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan: body.plan, interval: body.interval, seats });
+      intent = await billing.createCheckoutIntent({ userId: user, workspaceId: workspace.id, plan, interval, seats });
     } catch (error) {
       // A parallel request (double click, second tab) created the open intent first.
       if (error instanceof CheckoutPendingError) return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
@@ -123,8 +136,8 @@ export async function POST(req: Request): Promise<Response> {
     const metadata = {
       workspace_id: workspace.id,
       user_id: user,
-      plan: body.plan,
-      interval: body.interval,
+      plan,
+      interval,
       checkout_intent_id: intent.id,
     };
     // Reuse the Stripe customer after cancellation or a prior purchase. Email is only a
@@ -137,7 +150,8 @@ export async function POST(req: Request): Promise<Response> {
     // considered stale, so the server never opens a second payable session for one workspace.
     const expires_at = Math.floor((Date.now() + CHECKOUT_SESSION_TTL_MS) / 1000);
     try {
-      session = body.interval === 'lifetime'
+      // Pro Lifetime and Big Business are one-time payments: the line item is the plan's own price only.
+      session = interval === 'lifetime'
         ? await stripe.checkout.sessions.create({
           mode: 'payment',
           line_items: [{ price, quantity: 1 }],
@@ -170,12 +184,12 @@ export async function POST(req: Request): Promise<Response> {
         }, { idempotencyKey: `uncode-checkout-${intent.id}` });
     } catch (error) {
       await billing.expireCheckoutIntent(intent.id);
-      await billing.recordAudit(user, workspace.id, 'checkout.failed', { plan: body.plan, interval: body.interval });
+      await billing.recordAudit(user, workspace.id, 'checkout.failed', { plan, interval });
       throw error;
     }
     if (!session.url) throw new Error('Stripe did not return a checkout URL.');
     await billing.attachCheckoutSession(intent.id, session.id);
-    await billing.recordAudit(user, workspace.id, 'checkout.created', { plan: body.plan, interval: body.interval, seats });
+    await billing.recordAudit(user, workspace.id, 'checkout.created', { plan, interval, seats });
     return Response.json({ url: session.url }, { status: 201 });
   } catch (error) {
     // Every owned team workspace is paid for and the owner is at the cap: no new one for this checkout.

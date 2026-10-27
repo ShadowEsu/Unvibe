@@ -1,4 +1,4 @@
-# Free, Pro, and Teams billing operations
+# Free, Pro, Enterprise, Big Business and Teams billing operations
 
 This document describes the implemented engineering behavior. It is not legal approval and it
 does not activate production billing.
@@ -9,8 +9,11 @@ does not activate production billing.
 `plan_entitlements` database table is the persistent, editable source used by atomic Supabase
 usage reservations; the migration seeds it to the same initial values:
 
-- Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
-- Pro: $9/month or $81/year (about $6.75/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
+- Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items. Every new signed-in account still gets its first month on Pro (the `on_app_account` welcome month, unchanged).
+- Pro: $9/month or $81/year (about $6.75/month, 25% annual savings); 200 AI explanations/month (was 100; the database row changes when `20261031090000_enterprise_business_tiers.sql` is applied, which needs the owner's yes because it reaches every existing Pro row at once); up to 10 active projects.
+- Enterprise: $50/month (`ENTERPRISE_MONTHLY_CENTS`), monthly only, one account (personal workspace, one seat); 1,000 explanations, 2,500 questions, 25 projects, 5,000 dictionary and 5,000 saved items a month; every Pro feature. Stripe price `STRIPE_PRICE_ENTERPRISE_MONTHLY`.
+- Big Business: $5,000 one-time (`BUSINESS_ONE_TIME_CENTS`), stored as interval `lifetime` with period end 2099-12-31 and the PaymentIntent id, exactly like Pro Lifetime (paid sessions only, trusted line-item price; a full refund or a lost dispute revokes it). One account. "Unlimited" under a written fair-use limit: 5,000 explanations and 10,000 questions a month (also 100 projects, 20,000 dictionary and 20,000 saved items), enforced like any cap, no hidden throttling. These numbers are a placeholder pending the owner's choice; they live only in `BILLING_LIMITS` (`web/src/billing/plans.ts`) and the migration (the site copies them in `marketing/src/lib/pricing.ts`). Stripe price `STRIPE_PRICE_BUSINESS_LIFETIME`. The call with the team is not part of the purchase: never put it in a Stripe product, price, line item or receipt text.
+- Enterprise and Big Business are sold only while `BILLING_NEW_TIERS_ENABLED` is exactly `true` (`newTiersEnabled()`), on top of the payment locks below. Off (the default, and production): checkout answers 400 `plan_unavailable` for `enterprise`/`business`, and the webhook never grants either (it can still revoke one already on record). The site and the Plan pages show both as "Payments open soon" with an apply-by-email link and no Buy button, whatever the flag, until live payments are cleared.
 - Pro Lifetime: $80 one-time (`PRO_LIFETIME_CENTS`), offered only while checkout is open, `STRIPE_PRICE_PRO_LIFETIME` is set and `BILLING_LIFETIME_ENABLED=true`.
 - Teams ($8/seat/month or $72/seat/year) is sold as a pilot by email: the site collects company email + seat request (mailto). Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
 - Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
@@ -19,7 +22,15 @@ usage reservations; the migration seeds it to the same initial values:
 
 The server always chooses a trusted Stripe price ID. Browser-supplied amounts, price IDs,
 customer IDs, subscription IDs, and entitlements are ignored. The database also rejects Pro on
-a team workspace, Teams on a personal workspace, one-seat Teams, and multi-seat Pro.
+a team workspace, Teams on a personal workspace, one-seat Teams, and multi-seat Pro, Enterprise or Big Business;
+Enterprise is monthly only and Big Business is `lifetime` only.
+
+QA usage seed (memory store only): `UNVIBE_TEST_USAGE_SEED=<plan>:<used>` (`free`, `pro`, `enterprise` or
+`business`, for example `pro:199` or `enterprise:999`) makes every personal workspace the memory billing
+store creates start on that plan with that many explanations already used this month. It throws when the
+store starts with `VERCEL_ENV=production` or with any `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`. The
+memory store runs when no Supabase variables are set (`next dev`); under `NODE_ENV=production` it also
+needs `UNCODE_ALLOW_MEMORY_STORE=true`.
 
 ## Data model and migration
 
@@ -35,7 +46,8 @@ privileges are also restricted to `service_role`.
 
 ## Stripe test-mode setup
 
-1. Create two recurring Stripe Prices in test mode: Pro monthly ($9) and Pro annual ($81).
+1. Create two recurring Stripe Prices in test mode: Pro monthly ($9) and Pro annual ($81). For the new tiers (test mode only, with
+   `BILLING_NEW_TIERS_ENABLED=true`): Enterprise monthly ($50, recurring) and Big Business ($5,000, one-time).
 2. Set the server-only values in `web/.env.example`: secret key, webhook secret, and both Pro
    price IDs. Set `PUBLIC_APP_URL` to the dashboard HTTPS origin outside local development.
 3. Register `POST /api/v1/billing/webhook` and subscribe to:
@@ -138,7 +150,8 @@ Then verify with test credentials:
 - Successful, failed, past-due/grace, renewed, cancel-at-period-end, deleted, and reactivated states.
 - Invitation acceptance with the right/wrong email; owner/admin/member permission boundaries.
 - User A cannot read or mutate User B workspaces using staging isolation scripts.
-- Published totals: $9/mo Pro, $81/yr Pro (25% annual savings), $80 Pro Lifetime. Legacy Teams seat math remains in tests.
+- Published totals: $9/mo Pro, $81/yr Pro (25% annual savings), $80 Pro Lifetime, $50/mo Enterprise, $5,000 Big Business. Legacy Teams seat math remains in tests.
+- New tiers: flag exactness, checkout refusal and webhook non-grant with the flag off, price/metadata mismatches, Big Business refund and dispute revocation (`web/test/newTiers.test.ts`); the QA usage seed (`web/test/usageSeed.test.ts`).
 
 ## Known launch boundary
 

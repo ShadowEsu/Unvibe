@@ -1,14 +1,64 @@
-import type { PlanId, SubscriptionRecord, SubscriptionStatus, UsageKind, WorkspaceRole } from './types';
+import type { BillingInterval, PlanId, SubscriptionRecord, SubscriptionStatus, UsageKind, WorkspaceRole } from './types';
 
 /** How long after its reservation a request's usage row can still receive token counts. */
 export const USAGE_TOKEN_WINDOW_MS = 15 * 60_000;
 
-/** Billing helpers mirror the limits and access rules in the Supabase migration. */
+/** Far-future end date used for one-time grants (Pro Lifetime, Big Business; effectively permanent). */
+export const LIFETIME_PERIOD_END = '2099-12-31T23:59:59.000Z';
+
+/**
+ * Caps a month. Billing helpers mirror the limits and access rules in the Supabase migrations
+ * (plan_entitlements; the latest values are in 20261031090000_enterprise_business_tiers.sql).
+ * Big Business's explanations and questions are its written fair-use limit.
+ */
 const BILLING_LIMITS: Record<PlanId, Record<UsageKind, number>> = {
   free: { ai_explanation: 50, project_question: 10, indexed_project: 1, dictionary_item: 25, saved_item: 20 },
-  pro: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
+  pro: { ai_explanation: 200, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
   teams: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
+  enterprise: { ai_explanation: 1000, project_question: 2500, indexed_project: 25, dictionary_item: 5000, saved_item: 5000 },
+  business: { ai_explanation: 5000, project_question: 10000, indexed_project: 100, dictionary_item: 20000, saved_item: 20000 },
 };
+
+/** Enterprise and Big Business: sold only while BILLING_NEW_TIERS_ENABLED is exactly `true`. */
+export type NewTierPlan = 'enterprise' | 'business';
+
+export function isNewTierPlan(plan: unknown): plan is NewTierPlan {
+  return plan === 'enterprise' || plan === 'business';
+}
+
+/**
+ * Whether checkout and the webhook may sell and grant Enterprise and Big Business. Exactly `true`
+ * (no trimming, no other spelling); off by default. The payment locks in stripe.ts still apply on top.
+ */
+export function newTiersEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.BILLING_NEW_TIERS_ENABLED === 'true';
+}
+
+/** The billing intervals each paid plan is sold on. Big Business is one-time, stored as `lifetime`. */
+const PLAN_INTERVALS: Record<Exclude<PlanId, 'free'>, readonly BillingInterval[]> = {
+  pro: ['monthly', 'annual', 'lifetime'],
+  teams: ['monthly', 'annual'],
+  enterprise: ['monthly'],
+  business: ['lifetime'],
+};
+
+export function planSoldOnInterval(plan: Exclude<PlanId, 'free'>, interval: BillingInterval): boolean {
+  return PLAN_INTERVALS[plan].includes(interval);
+}
+
+/** Reader-facing plan names. */
+export const PLAN_NAMES: Record<PlanId, string> = {
+  free: 'Free',
+  pro: 'Pro',
+  teams: 'Teams',
+  enterprise: 'Enterprise',
+  business: 'Big Business',
+};
+
+/** A plan id from storage or the network as a name; an id this build does not know is a paid plan, never Free. */
+export function planDisplayName(plan: string): string {
+  return Object.hasOwn(PLAN_NAMES, plan) ? PLAN_NAMES[plan as PlanId] : 'Paid plan';
+}
 
 /**
  * Teams checkout opens as soon as both Teams Stripe prices exist on the server
@@ -30,7 +80,7 @@ export const CHECKOUT_SESSION_TTL_MS = 31 * 60_000;
 export const CHECKOUT_INTENT_TTL_MS = 32 * 60_000;
 
 /** Published totals in cents. UI copy must stay in lockstep with these numbers. */
-const UNIT_CENTS: Record<PlanId, { monthly: number; annual: number }> = {
+const UNIT_CENTS: Record<'free' | 'pro' | 'teams', { monthly: number; annual: number }> = {
   free: { monthly: 0, annual: 0 },
   /** Pro $9/mo · $81/yr (25% off). Stripe price IDs must match. */
   pro: { monthly: 900, annual: 8_100 },
@@ -41,12 +91,18 @@ const UNIT_CENTS: Record<PlanId, { monthly: number; annual: number }> = {
 /** Pro Lifetime one-time purchase in cents. */
 export const PRO_LIFETIME_CENTS = 8_000;
 
+/** Enterprise $50 a month, one account (no annual price). */
+export const ENTERPRISE_MONTHLY_CENTS = 5_000;
+
+/** Big Business $5,000 one-time, one account. */
+export const BUSINESS_ONE_TIME_CENTS = 500_000;
+
 export function priceFor(plan: PlanId, interval: 'monthly' | 'annual' | 'lifetime', seats: number): number {
   if (plan === 'free') return 0;
-  if (interval === 'lifetime') {
-    if (plan !== 'pro') throw new Error('Lifetime is only available for Pro.');
-    return PRO_LIFETIME_CENTS;
-  }
+  if (!planSoldOnInterval(plan, interval)) throw new Error(`${PLAN_NAMES[plan]} is not sold ${interval === 'lifetime' ? 'as a one-time purchase' : interval}.`);
+  if (plan === 'enterprise') return ENTERPRISE_MONTHLY_CENTS;
+  if (plan === 'business') return BUSINESS_ONE_TIME_CENTS;
+  if (interval === 'lifetime') return PRO_LIFETIME_CENTS;
   const n = plan === 'pro' ? 1 : Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(seats)));
   return UNIT_CENTS[plan][interval] * n;
 }
@@ -60,7 +116,7 @@ export function teamsAnnualSavingsPercent(): number {
 }
 
 export function normalizedSeats(plan: Exclude<PlanId, 'free'>, requested: number): number {
-  if (plan === 'pro') return 1;
+  if (plan !== 'teams') return 1;
   if (!Number.isFinite(requested)) return 2;
   return Math.max(2, Math.min(TEAMS_MAX_SEATS, Math.floor(requested)));
 }

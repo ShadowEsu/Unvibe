@@ -1,5 +1,6 @@
 import { getBillingStore } from '@/billing/store';
 import { billingError, isResponse, requireUser } from '@/billing/http';
+import { PLAN_NAMES } from '@/billing/plans';
 
 const EVENTS = new Set(['plan.comparison_viewed', 'upgrade_prompt.clicked', 'checkout.canceled']);
 
@@ -12,7 +13,7 @@ export async function POST(req: Request): Promise<Response> {
     const billing = getBillingStore();
     const overview = await billing.overview(user, typeof body.workspaceId === 'string' ? body.workspaceId : undefined);
     const metadata: Record<string, string> = {};
-    if (body.plan === 'free' || body.plan === 'pro' || body.plan === 'teams') metadata.plan = body.plan;
+    if (typeof body.plan === 'string' && Object.hasOwn(PLAN_NAMES, body.plan)) metadata.plan = body.plan;
     if (body.interval === 'monthly' || body.interval === 'annual') metadata.interval = body.interval;
     await billing.recordAudit(user, overview.workspace.id, body.event, metadata);
     return Response.json({ ok: true });

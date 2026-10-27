@@ -85,16 +85,18 @@ async function jsonRecord(response: Response): Promise<Record<string, unknown>> 
 test('a signed-in Pro user is metered by the Pro plan, not the old 30-explanation beta counter', async () => {
   upstream = 'answer';
   const pro = await signedIn('pro');
-  for (let i = 1; i <= 100; i += 1) {
+  for (let i = 1; i <= 200; i += 1) {
     const response = await review(explainRequest(pro.headers));
     assert.equal(response.status, 200, `explanation #${i} should be allowed on Pro`);
     assert.match(await response.text(), /"type":"done"/);
   }
-  assert.equal(await used(pro.userId, 'ai_explanation'), 100, 'the Plan meter must count every explanation');
+  assert.equal(await used(pro.userId, 'ai_explanation'), 200, 'the Plan meter must count every explanation');
   assert.equal(await used(pro.userId, 'project_question'), 0);
   const denied = await review(explainRequest(pro.headers));
-  assert.equal(denied.status, 429, 'explanation #101 is over the Pro monthly allowance');
-  assert.equal((await jsonRecord(denied)).error, 'plan_limit_reached');
+  assert.equal(denied.status, 429, 'explanation #201 is over the Pro monthly allowance');
+  const body = await jsonRecord(denied);
+  assert.equal(body.error, 'plan_limit_reached');
+  assert.match(String(body.message), /your Pro monthly explanations limit \(200\)/);
 });
 
 test('explanations fail closed when the plan cannot be checked', async () => {
