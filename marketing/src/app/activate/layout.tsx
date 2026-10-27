@@ -3,7 +3,7 @@ import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 import "./activate.css";
 
 export const metadata: Metadata = {
-  title: "Connect Unvibe",
+  title: { absolute: "Connect Unvibe" },
   description: "Approve your desktop app and finish signing in with Google.",
   robots: { index: false, follow: false },
   alternates: { canonical: "/activate" },

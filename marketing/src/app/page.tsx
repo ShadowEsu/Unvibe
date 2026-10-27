@@ -16,7 +16,8 @@ import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
 
 export const metadata: Metadata = {
-  title: { absolute: "Unvibe: understand the code AI writes for you" },
+  title: { absolute: "Unvibe: Code Explainer for Mac and Windows, Free" },
+  description: `Select code in any app, press ${SHORTCUTS.mac.anywhere} (${SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English beside your editor. Free, no API key.`,
   alternates: { canonical: "/" },
 };
 

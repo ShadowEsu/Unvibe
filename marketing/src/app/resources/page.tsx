@@ -3,9 +3,9 @@ import { ResourcesHub } from "@/components/paper/ResourcesHub";
 import "./resources.css";
 
 export const metadata: Metadata = {
-  title: "Resources and guides",
+  title: { absolute: "Unvibe Guide: Depths, Shortcuts and Privacy" },
   description:
-    "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
+    "How to use Unvibe: the explanation depths, the Mac and Windows shortcuts, and exactly what is sent when you explain code.",
   alternates: { canonical: "/resources" },
   openGraph: {
     title: "Resources and guides",

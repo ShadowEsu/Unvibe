@@ -8,7 +8,8 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Pricing",
+    // True whether payments are open or not; the description follows paymentsOpen through pricingCopy.
+    title: { absolute: "Unvibe Pricing: Free, with Pro for Expert Depth" },
     description: pricingCopy(await fetchPaymentsOpen()).description,
     alternates: { canonical: "/pricing" },
   };

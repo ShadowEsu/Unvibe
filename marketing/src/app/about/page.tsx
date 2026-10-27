@@ -5,8 +5,8 @@ import { compensationTotalLabel } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 
 export const metadata: Metadata = {
-  title: "About",
-  description: "What Unvibe is, why it exists, how it is built, and how to reach us.",
+  title: { absolute: "About Unvibe: Understand the Code AI Writes" },
+  description: "What Unvibe is, why it exists, how explanations are made, and how to reach the team.",
   alternates: { canonical: "/about" },
 };
 

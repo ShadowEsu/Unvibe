@@ -8,7 +8,7 @@ import { Reveal } from "@/components/redesign/Reveal";
 import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
-  title: "Building Unvibe",
+  title: { absolute: "Building Unvibe in Public" },
   description: "Unvibe is out for Mac and Windows. Follow the build on Instagram and LinkedIn.",
   alternates: { canonical: "/build" },
 };

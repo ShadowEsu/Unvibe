@@ -4,8 +4,8 @@ import { Reveal } from "@/components/redesign/Reveal";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 export const metadata: Metadata = {
-  title: "Download Unvibe for Mac and Windows",
-  description: "Download Unvibe free. No API key, no credit card. Available for Mac (Apple silicon and Intel) and Windows (x64).",
+  title: { absolute: "Download Unvibe: Free Code Explainer for Mac and Windows" },
+  description: "Download Unvibe free for Mac (Apple silicon and Intel) and Windows 10 or 11 (x64). No API key, no credit card.",
   robots: { index: true, follow: true },
   alternates: { canonical: "/beta" },
 };

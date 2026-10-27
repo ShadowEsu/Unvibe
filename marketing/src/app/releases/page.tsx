@@ -5,8 +5,8 @@ import { changelogEntries } from "@/data/milestones";
 import { fetchReleases } from "@/lib/releases";
 
 export const metadata: Metadata = {
-  title: "Change Log",
-  description: "Unvibe product change log and company milestones.",
+  title: { absolute: "Unvibe Change Log: What Shipped" },
+  description: "Every Unvibe release and product change, newest first, with the date of each update for Mac and Windows.",
   alternates: { canonical: "/releases" },
 };
 

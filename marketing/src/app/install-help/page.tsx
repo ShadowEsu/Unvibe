@@ -5,8 +5,8 @@ import { Vibe } from "@/components/paper/Vibe";
 import { BETA_INSTALL_SCRIPT_SOURCE_URL, BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 
 export const metadata: Metadata = {
-  title: "Install help",
-  description: "How to open Unvibe the first time on Mac and Windows, and how to fix a download that will not open.",
+  title: { absolute: "Open Unvibe the First Time on Mac and Windows" },
+  description: "Mac says \"Unvibe Not Opened\"? Windows says \"Windows protected your PC\"? Here is exactly what to press the first time.",
   alternates: { canonical: "/install-help" },
 };
 
