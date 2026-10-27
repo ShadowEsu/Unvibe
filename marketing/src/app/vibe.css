@@ -560,13 +560,6 @@ p { font-size: 1.02rem; }
 .fos__cmd { min-width: 0; }
 .fos__cmd code { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
 
-/* Claude for Startups: one big, plain callout above the backing numbers. */
-.claude-startups { display: grid; gap: 8px; margin: 0 0 28px; padding: clamp(22px, 4vw, 36px); border: 2px solid var(--u-line-strong); border-radius: 24px; background: var(--u-card); box-shadow: var(--u-lift-2); color: var(--u-text); text-align: center; }
-.claude-startups__tag { justify-self: center; padding: 3px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #d6f45a; color: #141414; font: 700 13px/1.4 Inter, sans-serif; letter-spacing: .02em; }
-.claude-startups__title { margin: 0; font: 800 clamp(28px, 5vw, 48px)/1.08 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.035em; color: var(--u-text); }
-.claude-startups__title em { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-style: italic; }
-.claude-startups__copy { margin: 0 auto; max-width: 560px; font-size: 16px; line-height: 1.5; color: var(--u-text-2); }
-
 /* Rewards: paper and ink like the rest of the site (the old dark panel hid its own heading). */
 .reward-page { background: color-mix(in srgb, var(--u-sheet) 88%, transparent) !important; color: var(--u-text) !important; }
 .reward-panel { background: var(--u-card) !important; border: 2px solid var(--u-line-strong) !important; border-radius: 24px; box-shadow: 6px 6px 0 var(--u-ink) !important; color: var(--u-text); }
@@ -764,7 +757,7 @@ p { font-size: 1.02rem; }
 .paper-invite__vibe { display: flex; justify-content: center; margin-bottom: 0.4rem; }
 
 /* Looping animations pause while their root is off-screen (data-in set by lib/motionInView). */
-[data-in="false"] :is(.vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow, .paper-partners__track, .paper-footer__dot, .resources-explanation-indicator) { animation-play-state: paused; }
+[data-in="false"] :is(.vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow, .paper-footer__dot, .resources-explanation-indicator) { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   .flexacc__item, .flexacc__body, .flexacc__shot, .mnav__toggle span, .mnav__toggle span::before { transition: none; animation: none; }
