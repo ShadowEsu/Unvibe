@@ -108,7 +108,7 @@ import { deleteAccountAndLocalData } from './accountDeletion';
 import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
-import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
+import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile, repoRelativePath } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
 
 function osUserName(): string {
@@ -845,7 +845,7 @@ app.whenReady().then(() => {
     }
     if (!text) return { ok: false as const, error: 'That file looks empty.' };
     const root = await resolveRepoRoot(path.dirname(filePath));
-    const rel = root ? path.relative(root, filePath) : path.basename(filePath);
+    const rel = root ? repoRelativePath(root, filePath) : path.basename(filePath);
     const usage = await cachedAppUsage();
     try {
       const built = await buildSelectionPayload({

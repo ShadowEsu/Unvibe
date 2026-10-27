@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -294,4 +295,24 @@ export async function findGitRoot(startDir: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function realPath(p: string): string {
+  try {
+    return realpathSync.native(p);
+  } catch {
+    return path.resolve(p);
+  }
+}
+
+/**
+ * A file's path inside its repo: what the AI, git blame and the synced learning record see.
+ * git reports the repo root with links resolved (macOS /var is /private/var, and ~/code can link to
+ * another volume), so both sides are resolved first. A path that still leads out of the repo falls
+ * back to the file name, so no folder outside the project is ever sent or stored.
+ */
+export function repoRelativePath(repoRoot: string, filePath: string): string {
+  const rel = path.relative(realPath(repoRoot), realPath(filePath));
+  const outside = rel === '' || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel);
+  return outside ? path.basename(filePath) : rel;
 }

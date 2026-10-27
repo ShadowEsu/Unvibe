@@ -3,7 +3,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { capHunks, collectDiffHunks, findGitRoot, type GitDiffScope } from '../core/gitDiff';
+import { capHunks, collectDiffHunks, findGitRoot, repoRelativePath, type GitDiffScope } from '../core/gitDiff';
 import { extractImports, relativeImportPaths } from '../core/parse';
 import { detectLanguage, guessLanguage } from '../core/language';
 import type { DiffHunk, ExplanationLevel, ReviewRequestPayload, ReviewScope } from '../core/protocol';
@@ -105,7 +105,7 @@ export async function buildSelectionPayload(opts: {
 }): Promise<BuiltReview> {
   const repoRoot = opts.repoRoot ?? (opts.filePath ? await resolveRepoRoot(path.dirname(opts.filePath)) : await resolveRepoRoot());
   const relFile = opts.filePath && repoRoot
-    ? path.relative(repoRoot, opts.filePath)
+    ? repoRelativePath(repoRoot, opts.filePath)
     : opts.filePath ? path.basename(opts.filePath) : undefined;
 
   let imports: string[] = extractImports(opts.code);
@@ -209,7 +209,7 @@ export async function buildComparePayload(opts: {
 }): Promise<BuiltReview> {
   const current = await readFile(opts.filePath, 'utf8');
   const repoRoot = opts.repoRoot ?? await resolveRepoRoot(path.dirname(opts.filePath));
-  const relFile = repoRoot ? path.relative(repoRoot, opts.filePath) : path.basename(opts.filePath);
+  const relFile = repoRoot ? repoRelativePath(repoRoot, opts.filePath) : path.basename(opts.filePath);
   const project = repoRoot ? projectName(repoRoot) : undefined;
 
   const prior = store().events()
