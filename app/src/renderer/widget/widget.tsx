@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
-import { isProPlan } from '../../core/plans';
+import { formatCount, isProPlan } from '../../core/plans';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
@@ -397,7 +397,7 @@ function Widget() {
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
-  // While checkout is closed the panel says "Pro opens soon" instead of offering a purchase.
+  // While checkout is closed the panel says "Payments open soon" instead of offering a purchase.
   const [proOpen, setProOpen] = useState(false);
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
@@ -710,7 +710,7 @@ function Widget() {
         <div className="head__actions">
           {usage && (
             <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
-              {usage.remaining} left
+              {formatCount(usage.remaining)} left
             </span>
           )}
           <button
@@ -762,7 +762,7 @@ function Widget() {
             <div className="widget-tools__spacer" />
             <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
             {usage && (
-              <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
+              <div className="widget-tools__usage" title={`${formatCount(usage.used)} of ${formatCount(usage.limit)} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
                 <span>Available</span>
                 <UsageRings ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }} selections={usage.selections} size={26} tiny />
               </div>
@@ -809,7 +809,7 @@ function Widget() {
             </button>
             {offer.showPlan ? (
               <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
-                {proOpen ? 'Buy a subscription' : 'Pro opens soon'}
+                {proOpen ? 'Buy a subscription' : 'Payments open soon'}
               </button>
             ) : null}
           </div>
@@ -920,11 +920,11 @@ function Widget() {
                     if (offer?.primaryKind === 'survey') void window.unvibe.openUrl(BETA_SURVEY_URL);
                     else window.unvibe.openPlan();
                   }}>
-                    {outOfExplanations && offer ? offer.primary : proOpen ? 'Upgrade to Pro' : 'Pro opens soon'}
+                    {outOfExplanations && offer ? offer.primary : proOpen ? 'Upgrade to Pro' : 'Payments open soon'}
                   </button>
                   {outOfExplanations && offer?.showPlan && offer.primaryKind === 'survey' ? (
                     <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
-                      {proOpen ? 'Buy a subscription' : 'Pro opens soon'}
+                      {proOpen ? 'Buy a subscription' : 'Payments open soon'}
                     </button>
                   ) : (
                     <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>

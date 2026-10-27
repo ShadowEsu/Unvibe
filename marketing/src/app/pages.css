@@ -201,6 +201,15 @@
   }
 }
 
+/* The fixed Feedback tab (vibe.css .fb-tab: left 20px, about 115px wide, fixed from 768px up) must never sit on
+   card text while the page scrolls: the pricing block starts at least 156px from the viewport's left edge.
+   (100vw - 100%) / 2 is how far the centered wrap already sits from that edge. */
+@media (min-width: 768px) {
+  .paper-pricing .pricing-plans {
+    margin-left: max(0px, calc(156px - (100vw - 100%) / 2));
+  }
+}
+
 /* Explanations a month: the one number per card. Big Business links it to the fair-use section. */
 .paper-pricing .marketing-plan-allowance {
   margin: 0.75rem 0 0;

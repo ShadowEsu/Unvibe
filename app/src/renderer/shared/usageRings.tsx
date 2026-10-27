@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { formatCount } from '../../core/plans';
 import './usageRings.css';
 import { LogoMark } from './logo';
 import { isMac } from './platform';
@@ -35,7 +36,7 @@ function Ring({
       className={`usage-ring${tiny ? ' usage-ring--tiny' : ''}`}
       data-tone={tone(pct)}
       tabIndex={0}
-      aria-label={`${label}: ${left} of ${safeLimit} remaining, ${used} used`}
+      aria-label={`${label}: ${formatCount(left)} of ${formatCount(safeLimit)} remaining, ${formatCount(used)} used`}
       aria-describedby={detailId}
     >
       <span className="usage-ring__dial" style={{ width: size, height: size }}>
@@ -56,12 +57,12 @@ function Ring({
         <span className="usage-ring__brand"><LogoMark size={tiny ? 13 : 21} /></span>
         <b>{pct}%</b>
       </span>
-      <small>{label} · {left} left</small>
+      <small>{label} · {formatCount(left)} left</small>
       <span className="usage-ring__detail" role="tooltip" id={detailId}>
         <strong>{label === 'AI' ? '✨ AI explanations' : `${isMac ? '⌘' : '⌨'} Code selections`}</strong>
-        <span>{Math.max(0, used)} used · {left} remaining</span>
+        <span>{formatCount(Math.max(0, used))} used · {formatCount(left)} remaining</span>
         <span className="usage-ring__bar"><i style={{ width: `${pct}%` }} /></span>
-        <span>{pct}% of your {safeLimit} allowance left</span>
+        <span>{pct}% of your {formatCount(safeLimit)} allowance left</span>
       </span>
     </span>
   );

@@ -200,14 +200,14 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
 
       <section className="usage-panel" aria-labelledby="usage-title">
         <h2 id="usage-title">This month</h2>
-        <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong></div><progress value={line.used} max={line.limit} /><small>Resets {new Date(line.resetsAt).toLocaleDateString()}</small></div>)}</div>
+        <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{count.format(line.used)} / {count.format(line.limit)}</strong></div><progress value={line.used} max={line.limit} /><small>Resets {new Date(line.resetsAt).toLocaleDateString()}</small></div>)}</div>
       </section>
 
       {!isLifetime && <>
         <section className="pricing-controls-wrap" aria-label="Billing interval"><div className="pricing-controls"><button type="button" className={interval === 'monthly' ? 'active' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button><button type="button" className={interval === 'annual' ? 'active' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual <span>Save 25%</span></button></div><p><strong>Pro annual saves 25%:</strong> about $6.75/month, billed as $81/year. Monthly Pro is $9/month.</p></section>
         <section className="plan-grid plan-grid--two">
-          <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>{planLimit('free', 'ai_explanation', 1)} explanations a month with a free account (50 in your first 30 days without one)</li><li>1 active project</li><li>Core explanation levels</li><li>Selected-code explanations</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
-          <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>{planLimit('pro', 'ai_explanation', 1)} explanations a month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>Upgrade to Pro</button></article>
+          <article className="plan-card"><p>Free</p><h2>$0</h2><small>No card required</small><ul><li>{count.format(planLimit('free', 'ai_explanation', 1))} explanations a month with a free account (50 in your first 30 days without one)</li><li>1 active project</li><li>Core explanation levels</li><li>Selected-code explanations</li></ul><button className="btn btn--secondary" disabled>Included</button></article>
+          <article className="plan-card plan-card--featured"><p>Pro</p><h2>{priceLabel.pro}</h2><small>{interval === 'annual' ? 'About $6.75/month · billed $81/year · save 25%' : 'One personal account · billed monthly'}</small><ul><li>{count.format(planLimit('pro', 'ai_explanation', 1))} explanations a month</li><li>Git diff + agent change briefs</li><li>Nearby-file context</li><li>Since-last-understood compares</li><li>Expert explanations</li></ul><button className="btn btn--primary" onClick={() => void checkout()} disabled={busy || !checkoutAvailable || overview.workspace.type !== 'personal'}>{checkoutAvailable ? 'Upgrade to Pro' : 'Payments open soon'}</button></article>
         </section>
 
         {lifetimeAvailable && (
@@ -233,7 +233,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
         </section>
       </>}
 
-      {isLifetime && <p className="plan-notice plan-notice--quiet">{overview.subscription.plan === 'business' ? 'You have Big Business. Paid once, no renewal. Its fair-use limit is on unvibe.site/pricing.' : 'You have Pro Lifetime. Included cloud models stay ready. No renewal.'}</p>}
+      {isLifetime && <p className="plan-notice plan-notice--quiet">{overview.subscription.plan === 'business' ? <>You have Big Business. Paid once, no renewal. <a href={FAIR_USE_URL}>Read its fair-use limit</a>.</> : 'You have Pro Lifetime. Included cloud models stay ready. No renewal.'}</p>}
 
       {overview.workspace.type === 'team' && <section className="team-panel">
         <h2>Team workspace</h2>

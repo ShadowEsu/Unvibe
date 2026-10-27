@@ -52,12 +52,18 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 export function limitReachedMessage(usage: { plan: string; limit: number; resetsAt: string }): string {
   const id = asPlanId(usage.plan);
   const resets = new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  const limit = formatCount(usage.limit);
   if (id === 'trial') {
-    return `You have reached your 30-day Free explanation limit (${usage.limit}). Free explanations on this computer end on ${resets}. Sign in to keep going (a new account's first month is Pro), or add your own API key in Settings → AI.`;
+    return `You have reached your 30-day Free explanation limit (${limit}). Free explanations on this computer end on ${resets}. Sign in to keep going (a new account's first month is Pro), or add your own API key in Settings → AI.`;
   }
   if (id === 'business') {
-    return `You have reached the Big Business fair-use limit of ${usage.limit} explanations this month. Explanations pause until ${resets}, and we contact you first. The written fair-use limit is at ${FAIR_USE_URL}. Add your own API key in Settings → AI to keep going.`;
+    return `You have reached the Big Business fair-use limit of ${limit} explanations this month. Explanations pause until ${resets}. The written fair-use limit is at ${FAIR_USE_URL}. Add your own API key in Settings → AI to keep going.`;
   }
   const name = id === 'paid' ? '' : `${planLabel(id)} `;
-  return `You have reached your monthly ${name}explanation limit (${usage.limit}). Resets on ${resets}. Add your own API key in Settings → AI to keep going.`;
+  return `You have reached your monthly ${name}explanation limit (${limit}). Resets on ${resets}. Add your own API key in Settings → AI to keep going.`;
+}
+
+/** Counts as people read them: 5000 → "5,000". Every reader-facing allowance number goes through this. */
+export function formatCount(n: number): string {
+  return n.toLocaleString('en-US');
 }

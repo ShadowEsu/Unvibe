@@ -71,10 +71,18 @@ test('Enterprise, Big Business and unknown plans are paid: no survey, no Free co
   assert.equal(limitOfferCopy('enterprise', usage, false).title, 'Monthly limit reached');
 });
 
-test('Big Business names the fair-use limit, links it, and says we contact you first', () => {
-  const copy = limitOfferCopy('business', usage, false);
+test('Big Business names the fair-use limit with formatted counts, links it, and promises no contact', () => {
+  const copy = limitOfferCopy('business', { used: 5000, limit: 5000, resetsAt: usage.resetsAt }, false);
   assert.equal(copy.title, 'Fair-use limit reached');
-  assert.match(copy.body, /fair-use limit/);
-  assert.match(copy.body, /we contact you first/);
+  assert.match(copy.body, /^You used 5,000 of 5,000 explanations, the Big Business fair-use limit for this month\. Explanations pause until /);
+  assert.doesNotMatch(copy.body, /contact you/);
   assert.ok(copy.body.includes('https://unvibe.site/pricing#fair-use'));
+});
+
+test('paid plans point to Plan & usage for details, never to managing billing they may not have', () => {
+  for (const plan of ['pro', 'teams', 'enterprise', 'some-future-plan']) {
+    const copy = limitOfferCopy(plan, { used: 1000, limit: 1000, resetsAt: usage.resetsAt }, true);
+    assert.match(copy.body, /^You used 1,000 of 1,000 explanations\. They refill on .+\. Open Plan & usage for details\.$/, plan);
+    assert.doesNotMatch(copy.body, /manage billing/i, plan);
+  }
 });

@@ -1,4 +1,4 @@
-import { FAIR_USE_URL, asPlanId } from '../../core/plans';
+import { FAIR_USE_URL, asPlanId, formatCount } from '../../core/plans';
 import { refillDate, SIGN_IN_FREE_LINE } from './planStatus';
 
 export const BETA_SURVEY_URL = 'https://unvibe.site/feedback';
@@ -17,7 +17,7 @@ export interface LimitOfferCopy {
  */
 function refillSentence(plan: string | undefined, usage: { limit: number; resetsAt: string }): string {
   const refill = refillDate(plan, usage.resetsAt);
-  if (refill) return `Your ${usage.limit} Free explanations refill on ${refill}.`;
+  if (refill) return `Your ${formatCount(usage.limit)} Free explanations refill on ${refill}.`;
   if (plan === 'trial') return `The free explanations on this computer don't refill. ${SIGN_IN_FREE_LINE}`;
   return '';
 }
@@ -44,7 +44,7 @@ export function limitOfferCopy(plan: string | undefined, usage: {
   if (id === 'business') {
     return {
       title: 'Fair-use limit reached',
-      body: `You used ${usage.used} of ${usage.limit} explanations, the Big Business fair-use limit for this month. Explanations pause until ${reset}, and we contact you first. The written limit is at ${FAIR_USE_URL}.`,
+      body: `You used ${formatCount(usage.used)} of ${formatCount(usage.limit)} explanations, the Big Business fair-use limit for this month. Explanations pause until ${reset}. The written limit is at ${FAIR_USE_URL}.`,
       primary: 'Open Plan',
       primaryKind: 'plan',
       showPlan: false,
@@ -54,7 +54,7 @@ export function limitOfferCopy(plan: string | undefined, usage: {
   if (id === 'pro' || id === 'teams' || id === 'enterprise' || id === 'paid') {
     return {
       title: 'Monthly limit reached',
-      body: `You used ${usage.used} of ${usage.limit} explanations. They refill on ${reset}. Open Plan to manage billing.`,
+      body: `You used ${formatCount(usage.used)} of ${formatCount(usage.limit)} explanations. They refill on ${reset}. Open Plan & usage for details.`,
       primary: 'Open Plan',
       primaryKind: 'plan',
       showPlan: false,
@@ -62,7 +62,7 @@ export function limitOfferCopy(plan: string | undefined, usage: {
   }
   return {
     title: 'Monthly limit reached',
-    body: `You used all ${usage.limit} Free explanations this month.${proOpen ? ' Open Plan to upgrade.' : refill ? ` ${refill}` : ''}`,
+    body: `You used all ${formatCount(usage.limit)} Free explanations this month.${proOpen ? ' Open Plan to upgrade.' : refill ? ` ${refill}` : ''}`,
     primary: 'Open Plan',
     primaryKind: 'plan',
     showPlan: true,

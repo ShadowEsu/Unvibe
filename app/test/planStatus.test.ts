@@ -84,7 +84,8 @@ test('Enterprise and Big Business holders get a status line with no price, upgra
   assert.ok(business);
   assert.match(business, /^Big Business is paid once and doesn't renew\./);
   assert.match(business, /written fair-use limit of 5,000 explanations a month/);
-  assert.match(business, /we contact you first/);
+  assert.match(business, /past it, explanations pause until the next month\. They refill on /);
+  assert.doesNotMatch(business, /contact you/);
   for (const line of [enterprise, business, tierStatusLine('business', null), tierStatusLine('enterprise', null)]) {
     assert.ok(line);
     assert.doesNotMatch(line, /\$|upgrade|buy|subscribe|calls?\b|unlimited|undefined|NaN/i);

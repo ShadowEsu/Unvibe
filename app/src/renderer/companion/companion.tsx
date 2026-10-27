@@ -15,7 +15,7 @@ import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
 import type { ChangeBrief } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
-import { asPlanId, FAIR_USE_URL, isPaidPlan, planLabel, type PlanId } from '../../core/plans';
+import { asPlanId, FAIR_USE_URL, formatCount, isPaidPlan, planLabel, type PlanId } from '../../core/plans';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FloatingBuddy } from './floatingBuddy';
@@ -798,7 +798,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
               <button type="button" className="primary-btn" onClick={onPlan}>{limitOffer.primary}</button>
             )}
             {limitOffer.showPlan && limitOffer.primaryKind === 'survey' ? (
-              <button type="button" className="soft-btn" onClick={onPlan}>{proOpen ? 'Buy a subscription' : 'Pro opens soon'}</button>
+              <button type="button" className="soft-btn" onClick={onPlan}>{proOpen ? 'Buy a subscription' : 'Payments open soon'}</button>
             ) : null}
           </div>
         </div>
@@ -931,7 +931,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const [message, setMessage] = useState(compact || !signedIn ? '' : 'Loading plan…');
   const [busy, setBusy] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(true);
-  // Public checkout status (GET /api/v1/billing/status). Until it says open, Pro reads "opens soon".
+  // Public checkout status (GET /api/v1/billing/status). Until it says open, Pro reads "Payments open soon".
   const [proOpen, setProOpen] = useState(false);
 
   const load = async () => {
@@ -1031,7 +1031,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
 
         {upgradeIsPro && (
           <article className="plan-pick__card is-upgrade">
-            <span>{pro.open ? 'Upgrade available' : 'Pro opens soon'}</span>
+            <span>{pro.open ? 'Upgrade available' : 'Payments open soon'}</span>
             {pro.open ? (
               <>
                 <h2>Pro {pro.price}</h2>
@@ -1088,7 +1088,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
                   <small>
                     {open
                       ? 'Unlimited on this build'
-                      : `${line.used} of ${line.limit} used · ${line.remaining} left`}
+                      : `${formatCount(line.used)} of ${formatCount(line.limit)} used · ${formatCount(line.remaining)} left`}
                   </small>
                 </div>
                 <b>{open ? 'Open' : `${left}% left`}</b>
@@ -1867,7 +1867,7 @@ function App() {
           </button>
           {usageLine ? (
             <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
-              <span className="side-usage__row"><span>{asPlanId(usageLine.plan) === 'paid' ? planLabel(usageLine.plan) : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
+              <span className="side-usage__row"><span>{asPlanId(usageLine.plan) === 'paid' ? planLabel(usageLine.plan) : `${planLabel(usageLine.plan)} plan`}</span><b>{formatCount(usageLine.remaining)} left</b></span>
               <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
             </button>
           ) : null}

@@ -107,23 +107,27 @@ describe("Enterprise and Big Business", () => {
     assert.match(TERMS_NEW_TIERS, /Big Business is a one-time payment for one account that does not renew\./);
   });
 
-  it("never lists the call with the team as part of the purchase", () => {
+  it("never mentions a call anywhere in tier, fair-use, terms or FAQ copy", () => {
     for (const paymentsOpen of STATES) {
       for (const item of pricingCopy(paymentsOpen).plans) {
-        for (const text of [item.price, item.allowance, item.detail, item.cta, item.badge, item.eyebrow, ...item.features]) assert.doesNotMatch(text, /\bcall\b/i, `${item.id}: ${text}`);
+        assert.equal(item.note, null, item.id);
+        for (const text of planText(item)) assert.doesNotMatch(text, /\bcall\b/i, `${item.id}: ${text}`);
       }
-      const business = plan(pricingCopy(paymentsOpen), "business");
-      assert.equal(business.note, "Ask us about a call with the team; it is not part of the purchase.");
-      for (const item of pricingCopy(paymentsOpen).plans) if (item.id !== "business") assert.equal(item.note, null, item.id);
     }
     for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /\bcall with\b/i, text);
+  });
+
+  it("promises no early access and no contact that nothing sends", () => {
+    assert.ok(plan(pricingCopy(false), "business").features.includes("The latest features"));
+    for (const paymentsOpen of STATES) assert.doesNotMatch(PUBLIC_COPY + pricingCopy(paymentsOpen).description, /latest features first|newest features|contact you/i);
+    for (const text of [FAIR_USE.limit, TERMS_NEW_TIERS, ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /latest features first|contact you/i, text);
   });
 });
 
 describe("fair use", () => {
   it("is one constant, and the written section is built from it", () => {
     assert.deepEqual(BUSINESS_FAIR_USE, { explanations: 5000, questions: 10000 });
-    assert.equal(FAIR_USE.limit, "Big Business includes up to 5,000 explanations and 10,000 questions a month, for one person's normal use. Past that, explanations pause until the next month, and we contact you first.");
+    assert.equal(FAIR_USE.limit, "Big Business includes up to 5,000 explanations and 10,000 questions a month, for one person's normal use. Past that, explanations pause until the next month.");
     assert.equal(FAIR_USE.enforcement, "The app enforces this limit exactly like any other plan limit. No hidden throttling.");
     assert.equal(FAIR_USE_HREF, "/pricing#fair-use");
   });
@@ -183,7 +187,8 @@ describe("copy rules for pricing, FAQ and Terms", () => {
     assert.ok(betaWindowsInstallScript().startsWith(`# Unvibe private beta installer for Windows. ${FREE_LINE}. Unsigned.\n`));
     const kit = kitMarkdown();
     assert.ok(kit.includes(`${FREE_LINE}. Every new app account starts with a free month of Pro.`));
-    assert.match(kit, /Pro: \$9\/month or \$81\/year, 200 explanations a month\. Enterprise: \$50 a month, 1,000 explanations a month, one account\. Big Business: \$5,000 as one payment/);
+    assert.match(kit, /Pro: \$9\/month or \$81\/year, 200 explanations a month\. Enterprise: \$50 a month, 1,000 explanations a month, one account\. Big Business: \$5,000 as one payment, one account, the latest features, under a written fair-use limit/);
+    assert.match(kit, /Pro, Enterprise and Big Business payments open soon; nobody can buy them yet\./);
     assert.doesNotMatch(kit, /\bTeams\b|per seat|\bcalls\b|\brequests\b|unlimited/i);
     assert.match(source("app", "beta", "page.tsx"), /\{FREE_LINE\}\. Skip sign-in/);
     assert.match(source("app", "layout.tsx"), /description: `\$\{FREE_LINE\}\. No API key or credit card required\.`/);
@@ -200,8 +205,8 @@ describe("copy rules for pricing, FAQ and Terms", () => {
     assert.match(answer("free"), /A new account's first month is Pro\./);
     assert.match(answer("plans"), /Pro: \$9 a month or \$81 a year, 200 explanations a month\./);
     assert.match(answer("plans"), /Enterprise: \$50 a month, 1,000 explanations a month, one account\./);
-    assert.match(answer("plans"), /Big Business: \$5,000 as one payment, one account, the latest features first, and a written fair-use limit of 5,000 explanations and 10,000 questions a month/);
-    assert.match(answer("plans"), /Payments for Enterprise and Big Business open soon\./);
+    assert.match(answer("plans"), /Big Business: \$5,000 as one payment, one account, the latest features, and a written fair-use limit of 5,000 explanations and 10,000 questions a month/);
+    assert.match(answer("plans"), /Payments for Pro, Enterprise and Big Business open soon\./);
   });
 });
 

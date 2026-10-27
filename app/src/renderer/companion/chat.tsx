@@ -3,6 +3,7 @@ import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
+import { formatCount } from '../../core/plans';
 import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 import { chatAskRequest } from './chatRequest';
 
@@ -429,8 +430,8 @@ export function Chat({
             <button
               type="button"
               className={`chat-meter chat-meter--${tone}`}
-              aria-label={`${pct} percent of monthly AI used. ${remaining ?? usage.remaining} of ${usage.limit} left.`}
-              title={`${remaining ?? usage.remaining} of ${usage.limit} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
+              aria-label={`${pct} percent of monthly AI used. ${formatCount(remaining ?? usage.remaining)} of ${formatCount(usage.limit)} left.`}
+              title={`${formatCount(remaining ?? usage.remaining)} of ${formatCount(usage.limit)} left this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}
               onClick={() => void onRefresh()}
             >
               <span>{pct}% used this month</span>

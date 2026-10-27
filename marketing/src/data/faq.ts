@@ -118,7 +118,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "plans",
     question: "What plans are there?",
-    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, the latest features first, and a written fair-use limit of ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month (Fair use, on the pricing page). Payments for Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
+    answer: `Four. ${FREE_LINE}. Pro: $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year, ${formatCount(EXPLANATIONS_PER_MONTH.pro)} explanations a month. Enterprise: $${PRICING.enterpriseMonthly} a month, ${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account. Big Business: ${formatUsd(PRICING.businessOnce)} as one payment, one account, the latest features, and a written fair-use limit of ${formatCount(BUSINESS_FAIR_USE.explanations)} explanations and ${formatCount(BUSINESS_FAIR_USE.questions)} questions a month (Fair use, on the pricing page). Payments for Pro, Enterprise and Big Business open soon. Email hello@unvibe.site to apply.`,
     category: "pricing",
   },
   {

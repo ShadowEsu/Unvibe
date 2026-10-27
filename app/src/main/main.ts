@@ -1403,7 +1403,7 @@ app.whenReady().then(() => {
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
-  // Plan card and panel copy: "Pro opens soon" while checkout is closed. The server caches 5 minutes too.
+  // Plan card and panel copy: "Payments open soon" while checkout is closed. The server caches 5 minutes too.
   let billingStatusCache: { at: number; value: { paymentsOpen: boolean } } | null = null;
   ipcMain.handle('billing:status', async () => {
     if (billingStatusCache && Date.now() - billingStatusCache.at < 300_000) return billingStatusCache.value;

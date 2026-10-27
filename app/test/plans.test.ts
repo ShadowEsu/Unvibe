@@ -46,12 +46,12 @@ test('the limit message names the plan and never offers a purchase', () => {
     `You have reached your 30-day Free explanation limit (50). Free explanations on this computer end on ${resets}. Sign in to keep going (a new account's first month is Pro), or add your own API key in Settings → AI.`,
   );
   const enterprise = limitReachedMessage({ plan: 'enterprise', limit: 1000, resetsAt: RESETS });
-  assert.equal(enterprise, `You have reached your monthly Enterprise explanation limit (1000). Resets on ${resets}. Add your own API key in Settings → AI to keep going.`);
+  assert.equal(enterprise, `You have reached your monthly Enterprise explanation limit (1,000). Resets on ${resets}. Add your own API key in Settings → AI to keep going.`);
   const unknown = limitReachedMessage({ plan: 'platinum', limit: 300, resetsAt: RESETS });
   assert.doesNotMatch(unknown, /Free/);
   const business = limitReachedMessage({ plan: 'business', limit: 5000, resetsAt: RESETS });
-  assert.match(business, /Big Business fair-use limit of 5000 explanations/);
-  assert.match(business, /we contact you first/);
+  assert.match(business, /Big Business fair-use limit of 5,000 explanations this month\. Explanations pause until /);
+  assert.doesNotMatch(business, /contact you/);
   assert.ok(business.includes('https://unvibe.site/pricing#fair-use'));
   for (const message of [pro, free, trial, enterprise, unknown, business]) {
     assert.doesNotMatch(message, /upgrade|buy|subscribe|requests?\b|calls?\b|unlimited/i);

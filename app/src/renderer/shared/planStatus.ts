@@ -1,5 +1,7 @@
 /** Plan-card status copy. Pure so the wording for each billing state is testable. */
 
+import { formatCount } from '../../core/plans';
+
 /** The settled Free sentence, word for word, wherever the app describes Free. */
 export const FREE_LINE = 'Free: 50 explanations a month with a free account (50 in your first 30 days without one)';
 
@@ -81,7 +83,7 @@ export function refillDate(plan: string | undefined, resetsAt: string): string |
 /** While Pro is closed: Pro isn't open yet, and the Free plan keeps working with its real allowance. */
 export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): string {
   if (!usage || usage.limit <= 0) return `Pro isn't open yet. ${FREE_LINE}.`;
-  const left = `${usage.remaining} of ${usage.limit} explanations left`;
+  const left = `${formatCount(usage.remaining)} of ${formatCount(usage.limit)} explanations left`;
   const refill = refillDate(usage.plan, usage.resetsAt);
   if (refill) return `Pro isn't open yet. Your Free plan keeps working: ${left}, refilling on ${refill}.`;
   const end = new Date(usage.resetsAt).getTime();
@@ -107,8 +109,8 @@ export function tierStatusLine(plan: string, usage: AllowanceLine | null): strin
   const refills = refill ? ` They refill on ${refill}.` : '';
   if (plan === 'enterprise') return `Enterprise includes 1,000 explanations a month.${refills}`;
   if (plan === 'business') {
-    const limit = usage && usage.limit > 0 ? ` of ${usage.limit.toLocaleString('en-US')} explanations a month` : '';
-    return `Big Business is paid once and doesn't renew. It has a written fair-use limit${limit}; past it, explanations pause until the next month and we contact you first.${refills}`;
+    const limit = usage && usage.limit > 0 ? ` of ${formatCount(usage.limit)} explanations a month` : '';
+    return `Big Business is paid once and doesn't renew. It has a written fair-use limit${limit}; past it, explanations pause until the next month.${refills}`;
   }
   return null;
 }
