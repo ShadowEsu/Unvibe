@@ -293,22 +293,18 @@ function updateLocally(change: (data: StatsFile) => void): Promise<void> {
   return run;
 }
 
-/**
- * Record one page view for an anonymous visitor id. `channel` (the visit's first-touch utm, from
- * parseVisitSource) is counted only on the visitor's first view of the day; null counts nothing.
- */
-export async function recordSiteHit(visitorId: string, channel: SiteEventCount | null = null): Promise<void> {
+/** Record one page view for an anonymous visitor id. */
+export async function recordSiteHit(visitorId: string): Promise<void> {
   const raw = visitorId.trim().slice(0, 128);
   if (!raw) return;
   const id = hashVisitor(raw);
   const key = dayKey();
   if (supabaseConfigured()) {
-    const { data: firstToday, error } = await supabaseClient().rpc("record_site_hit", {
+    const { error } = await supabaseClient().rpc("record_site_hit", {
       p_visitor_hash: id,
       p_visit_date: key,
     });
     if (error) throw new Error(`Supabase traffic write failed: ${error.message}`);
-    if (channel && firstToday === true) await recordSiteEvent(channel, key);
     return;
   }
   await updateLocally((data) => {
@@ -320,7 +316,6 @@ export async function recordSiteHit(visitorId: string, channel: SiteEventCount |
     if (!day.ids.includes(id)) {
       if (day.ids.length < MAX_DAY_IDS) day.ids.push(id);
       day.uniques += 1;
-      if (channel) countEventLocally(data, key, channel);
     }
 
     if (!data.seenIds.includes(id)) {

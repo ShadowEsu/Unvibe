@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { parseVisitSource } from "@/lib/siteEvents";
-import { recordSiteHit } from "@/lib/siteStatsStore";
+import { recordSiteEvent, recordSiteHit } from "@/lib/siteStatsStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+let channelFailureLogged = false;
+
+/**
+ * One page view. `channel` (first-touch utm) comes only with the browser's first hit of its day
+ * (visitHit.ts), so each one adds a visit_source count. A failed channel count, such as before
+ * the site_events_daily migration is applied, never fails the hit; it is logged once per process.
+ */
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => null)) as { visitorId?: unknown; channel?: unknown } | null;
@@ -12,7 +19,15 @@ export async function POST(req: Request) {
     if (!visitorId.trim()) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    await recordSiteHit(visitorId, parseVisitSource(body?.channel));
+    await recordSiteHit(visitorId);
+    const channel = parseVisitSource(body?.channel);
+    if (channel) {
+      await recordSiteEvent(channel).catch((error: unknown) => {
+        if (channelFailureLogged) return;
+        channelFailureLogged = true;
+        console.error("visit source count failed", error);
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("stats hit failed", error);

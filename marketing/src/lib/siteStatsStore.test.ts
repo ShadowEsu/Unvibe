@@ -4,7 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { POST as postEvent } from "../app/api/stats/event/route";
 import { POST as postHit } from "../app/api/stats/hit/route";
-import { dayKey, getSiteStats, lastNDates, recordSiteHit } from "./siteStatsStore";
+import { dayKey, getSiteStats, lastNDates, recordSiteEvent, recordSiteHit } from "./siteStatsStore";
 
 const dataFile = path.join(process.cwd(), ".data", "site-stats.json");
 
@@ -96,18 +96,18 @@ function post(body: unknown): Request {
 }
 
 describe("site channel counts (site_events_daily, local store)", () => {
-  it("counts visit_source once per visitor per day, from the hit's first-touch channel", async () => {
+  it("counts a visit_source for each hit that carries a channel (the browser sends it once a day) and none without", async () => {
     await withLocalStore(async () => {
       const channel = { source: "instagram", campaign: "profile" };
       assert.equal((await postHit(post({ visitorId: "visitor-a", channel }))).status, 200);
-      assert.equal((await postHit(post({ visitorId: "visitor-a", channel }))).status, 200);
+      // The same visitor's later hits that day come without a channel (visitHit.ts).
+      assert.equal((await postHit(post({ visitorId: "visitor-a" }))).status, 200);
       assert.equal((await postHit(post({ visitorId: "visitor-b", channel: { source: "", campaign: "" } }))).status, 200);
-      // A hit without a channel (an admin page, or a page cached before this change) counts no source.
-      assert.equal((await postHit(post({ visitorId: "visitor-c" }))).status, 200);
+      assert.equal((await postHit(post({ visitorId: "visitor-c", channel: "instagram" }))).status, 200);
       assert.deepEqual(await todaysCounts(), {
         "visit_source|instagram|profile": 1,
         "visit_source|direct|none": 1,
-      }, "second visit the same day adds no visit_source count");
+      });
       assert.equal((await getSiteStats()).today.views, 4);
     });
   });
@@ -120,7 +120,7 @@ describe("site channel counts (site_events_daily, local store)", () => {
         ip: "203.0.113.9",
         channel: { source: "  Newsletter ", campaign: "ref=ab12cd34", ref: "ab12cd34", ip: "203.0.113.9" },
       }));
-      await recordSiteHit("visitor-d", { event: "visit_source", dim1: "tiktok", dim2: "carousel-one-shortcut" });
+      await recordSiteEvent({ event: "visit_source", dim1: "tiktok", dim2: "carousel-one-shortcut" });
       await postEvent(post({ event: "download_cta_clicked", surface: "visitor-secret-id", platform: "203.0.113.9", ref: "ab12cd34" }));
       assert.deepEqual(await todaysCounts(), {
         "visit_source|other|other": 1,
@@ -170,5 +170,43 @@ describe("site channel counts (site_events_daily, local store)", () => {
       });
       assert.equal((await getSiteStats()).today.views, 5);
     });
+  });
+
+  it("hit still counts the view when record_site_event errors (migration not applied yet)", async () => {
+    const saved = STORE_ENV.map((name) => [name, process.env[name]] as const);
+    const realFetch = globalThis.fetch;
+    const realError = console.error;
+    const calls: string[] = [];
+    let logged = 0;
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    process.env.SUPABASE_URL = "https://project.supabase.test";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+    const fakeSupabase: typeof fetch = async (input) => {
+      const url = String(input);
+      calls.push(url.replace("https://project.supabase.test/rest/v1/rpc/", ""));
+      if (url.endsWith("/rpc/record_site_hit")) return new Response(null, { status: 204 });
+      return new Response(JSON.stringify({ code: "PGRST202", message: "Could not find the function public.record_site_event" }), {
+        status: 404,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    globalThis.fetch = fakeSupabase;
+    console.error = () => void (logged += 1);
+    try {
+      const channel = { source: "x", campaign: "profile" };
+      assert.equal((await postHit(post({ visitorId: "visitor-a", channel }))).status, 200, "the hit is ok");
+      assert.equal((await postHit(post({ visitorId: "visitor-b", channel }))).status, 200, "the hit is ok");
+      assert.deepEqual(calls, ["record_site_hit", "record_site_event", "record_site_hit", "record_site_event"], "each view was counted");
+      assert.equal(logged, 1, "the failed channel count is logged once");
+      assert.equal((await postEvent(post({ event: "download_cta_clicked", surface: "hero", platform: "mac" }))).status, 500, "a download count fails alone");
+      assert.equal((await postHit(post({ visitorId: "visitor-c" }))).status, 200, "and hits still work");
+    } finally {
+      globalThis.fetch = realFetch;
+      console.error = realError;
+      for (const [name, value] of saved) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
   });
 });

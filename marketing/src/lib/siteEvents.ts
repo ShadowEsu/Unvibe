@@ -135,18 +135,23 @@ export interface FirstTouch {
 }
 
 export const FIRST_TOUCH_KEY = "unvibe.firstTouch";
+/** A first touch older than this is dropped; the next tagged landing becomes the first touch. */
+export const FIRST_TOUCH_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Longer than any dictionary value, so an overlong tag still reads as "other". */
 const STORED_MAX = 64;
 
-function readFirstTouch(saved: string | null): FirstTouch | null {
+/** The stored first touch, or null when there is none, it is unreadable, or it has expired. */
+function readFirstTouch(saved: string | null, now: number): FirstTouch | null {
   if (!saved) return null;
   try {
     const parsed: unknown = JSON.parse(saved);
     if (!parsed || typeof parsed !== "object") return null;
     const source: unknown = Reflect.get(parsed, "source");
     const campaign: unknown = Reflect.get(parsed, "campaign");
+    const at: unknown = Reflect.get(parsed, "at");
     if (typeof source !== "string" || !source) return null;
+    if (typeof at !== "number" || !(now - at < FIRST_TOUCH_MAX_AGE_MS)) return null;
     return { source, campaign: typeof campaign === "string" ? campaign : "" };
   } catch {
     return null;
@@ -154,20 +159,21 @@ function readFirstTouch(saved: string | null): FirstTouch | null {
 }
 
 /**
- * Keeps the first landing that carried a utm_source (later tagged visits don't replace it) and
- * returns it; empty values for a visitor who never arrived through a tagged link. Only the two
- * tags are read, never `ref`. Call only where analytics may run (see VisitBeacon).
+ * Keeps the first landing that carried a utm_source for 30 days (later tagged visits don't replace
+ * it until it expires) and returns it; empty values for a visitor with no live first touch. Only
+ * the two tags are read, never `ref`. Call only where analytics may run (see visitHit.ts).
  */
-export function rememberFirstTouch(search: string, storage: OptOutStorage | null): FirstTouch {
+export function rememberFirstTouch(search: string, storage: OptOutStorage | null, now = Date.now()): FirstTouch {
   const params = new URLSearchParams(search);
   const current: FirstTouch = {
     source: (params.get("utm_source") ?? "").trim().toLowerCase().slice(0, STORED_MAX),
     campaign: (params.get("utm_campaign") ?? "").trim().toLowerCase().slice(0, STORED_MAX),
   };
   try {
-    const saved = readFirstTouch(storage?.getItem(FIRST_TOUCH_KEY) ?? null);
+    const saved = readFirstTouch(storage?.getItem(FIRST_TOUCH_KEY) ?? null, now);
     if (saved) return saved;
-    if (current.source) storage?.setItem(FIRST_TOUCH_KEY, JSON.stringify(current));
+    if (current.source) storage?.setItem(FIRST_TOUCH_KEY, JSON.stringify({ ...current, at: now }));
+    else storage?.removeItem(FIRST_TOUCH_KEY);
   } catch {
     // Storage blocked: this page's tags still count for this visit.
   }

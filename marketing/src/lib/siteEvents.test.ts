@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { trackDownloadClick, trackDownloadPageClick, trackReleaseDownload } from "./downloadTracking";
 import {
   FIRST_TOUCH_KEY,
+  FIRST_TOUCH_MAX_AGE_MS,
   normalizeUtmCampaign,
   normalizeUtmSource,
   parseSiteCount,
@@ -12,7 +13,7 @@ import {
   rememberFirstTouch,
 } from "./siteEvents";
 import type { OptOutStorage } from "./trackingOptOut";
-import { sendVisitHit } from "./visitHit";
+import { CHANNEL_DAY_KEY, sendVisitHit } from "./visitHit";
 
 after(restoreAnalyticsKeys);
 
@@ -132,21 +133,64 @@ describe("first touch", () => {
     };
     assert.deepEqual(rememberFirstTouch("?utm_source=youtube&utm_campaign=channel", blocked), { source: "youtube", campaign: "channel" });
   });
+
+  it("a first-touch older than 30 days is dropped", () => {
+    const storage = fakeStorage();
+    const start = Date.UTC(2026, 9, 1);
+    rememberFirstTouch("?utm_source=instagram&utm_campaign=profile", storage, start);
+    const justInside = start + FIRST_TOUCH_MAX_AGE_MS - 1;
+    assert.deepEqual(rememberFirstTouch("?utm_source=tiktok", storage, justInside), { source: "instagram", campaign: "profile" });
+    const expired = start + FIRST_TOUCH_MAX_AGE_MS;
+    assert.deepEqual(rememberFirstTouch("", storage, expired), { source: "", campaign: "" }, "an untagged visit after 30 days is direct");
+    assert.equal(storage.data.has(FIRST_TOUCH_KEY), false, "the expired first touch is removed");
+    assert.deepEqual(rememberFirstTouch("?utm_source=tiktok&utm_campaign=x-p0", storage, expired + 1), { source: "tiktok", campaign: "x-p0" });
+    assert.deepEqual(rememberFirstTouch("?utm_source=github", storage, expired + 2), { source: "tiktok", campaign: "x-p0" }, "the next tagged visit replaced it");
+  });
+
+  it("treats a stored first touch without a time as expired", () => {
+    const storage = fakeStorage({ [FIRST_TOUCH_KEY]: JSON.stringify({ source: "instagram", campaign: "profile" }) });
+    assert.deepEqual(rememberFirstTouch("?utm_source=youtube&utm_campaign=channel", storage), { source: "youtube", campaign: "channel" });
+  });
 });
 
 describe("visit hit", () => {
-  it("sends the first-touch channel with the hit on a public page", () => {
+  it("sends the first-touch channel with the visitor's first hit of the day", () => {
     const storage = fakeStorage();
     installWindow({ search: "?utm_source=x&utm_campaign=profile", storage });
-    sendVisitHit();
+    sendVisitHit(new Date("2026-10-27T18:00:00Z"));
+    const [hit] = sentTo("/api/stats/hit");
+    assert.deepEqual(Reflect.get(Object(hit), "channel"), { source: "x", campaign: "profile" });
+    assert.equal(Reflect.get(Object(hit), "visitorId"), storage.data.get("unvibe_anon_id"));
+    assert.equal(storage.data.get(CHANNEL_DAY_KEY), "2026-10-27");
+  });
+
+  it("a second beacon the same day sends no channel", () => {
+    const storage = fakeStorage();
+    installWindow({ search: "?utm_source=x&utm_campaign=profile", storage });
+    sendVisitHit(new Date("2026-10-27T15:00:00Z"));
     installWindow({ pathname: "/pricing", storage });
-    sendVisitHit();
-    const hits = sentTo("/api/stats/hit");
-    assert.equal(hits.length, 2);
-    for (const hit of hits) {
-      assert.deepEqual(Reflect.get(Object(hit), "channel"), { source: "x", campaign: "profile" });
-      assert.equal(Reflect.get(Object(hit), "visitorId"), storage.data.get("unvibe_anon_id"));
-    }
+    sendVisitHit(new Date("2026-10-27T20:00:00Z"));
+    installWindow({ search: "?utm_source=x&utm_campaign=profile", storage });
+    // 06:59 UTC on the 28th is still the 27th in Pacific time, the server's stats day.
+    sendVisitHit(new Date("2026-10-28T06:59:00Z"));
+    // The next Pacific day sends it again.
+    sendVisitHit(new Date("2026-10-28T07:00:00Z"));
+    const channels = sentTo("/api/stats/hit").map((hit) => Reflect.get(Object(hit), "channel"));
+    assert.deepEqual(channels, [
+      { source: "x", campaign: "profile" },
+      undefined,
+      undefined,
+      { source: "x", campaign: "profile" },
+    ]);
+  });
+
+  it("sends direct / none as an empty channel once a day for an untagged visitor", () => {
+    const storage = fakeStorage();
+    installWindow({ storage });
+    sendVisitHit(new Date("2026-10-27T18:00:00Z"));
+    sendVisitHit(new Date("2026-10-27T19:00:00Z"));
+    const channels = sentTo("/api/stats/hit").map((hit) => Reflect.get(Object(hit), "channel"));
+    assert.deepEqual(channels, [{ source: "", campaign: "" }, undefined]);
   });
 
   for (const [label, options] of [
@@ -174,6 +218,7 @@ describe("visit hit", () => {
       for (const hit of sentTo("/api/stats/hit")) assert.equal(Reflect.get(Object(hit), "channel"), undefined);
       assert.deepEqual(sentTo("/api/stats/event"), []);
       assert.equal(storage.data.has(FIRST_TOUCH_KEY), false, "the tags are not remembered there either");
+      assert.equal(storage.data.has(CHANNEL_DAY_KEY), false, "and the day's channel is still to send from a public page");
     });
   }
 });

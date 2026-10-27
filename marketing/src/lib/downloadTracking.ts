@@ -15,7 +15,8 @@
  *   fire DOWNLOADED_EVENT, as they always have.
  *
  * `release_download_clicked {os, surface: tone}`: the BetaInstall box's direct download button;
- * its first-party count uses the box's DownloadSurface and the os as platform.
+ * its first-party count uses the box's DownloadSurface and the os as platform. That button also
+ * sends download_cta_clicked, so the two events are never summed.
  *
  * `download_cta_viewed {surface: "hero", platform}`: once per page view, hero CTA half visible.
  * `install_help_viewed {from, os_default}`: once per /install-help view, from home | beta | pricing |

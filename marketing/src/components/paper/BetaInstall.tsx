@@ -135,6 +135,8 @@ export function BetaInstall({
           href={directHref}
           rel="noreferrer"
           onClick={() => {
+            // One click sends both events (and both first-party counts). Never sum
+            // release_download_clicked and download_cta_clicked: that counts this click twice.
             trackReleaseDownload(surface, os, tone);
             trackDownloadClick(surface, os);
             delight();
