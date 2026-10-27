@@ -286,21 +286,3 @@
   .activate-progress li { min-width: 0; align-items: flex-start; font-size: 11.5px; line-height: 1.35; white-space: normal; }
   .activate-progress span { flex: none; }
 }
-
-@media (prefers-color-scheme: dark) {
-  .activate-root {
-    --a-paper: #121110; --a-card: #1b1a18; --a-ink: #f4f1ec; --a-muted: #b4ada3; --a-faint: #948e85; /* 5.4:1 on the card */
-    --a-line: #2c2a27; --a-line-strong: #3b3834; --a-soft: #24221f; --a-green: #4cc38a; --a-red: #f08a7a;
-  }
-  .activate-card { box-shadow: none; }
-  .activate-field, .activate-btn--google, .activate-btn--ghost { background: var(--a-card); }
-  .activate-btn { color: #121110; }
-  .activate-btn:hover:not(:disabled) { background: #dcd7cf; }
-  .activate-btn--google, .activate-btn--ghost { color: var(--a-ink); }
-  .activate-btn--google:hover:not(:disabled), .activate-btn--ghost:hover:not(:disabled) { background: var(--a-soft); }
-  .activate-progress li.is-current span, .activate-progress li.is-done span { color: #121110; }
-  .activate-codechip button:hover { background: var(--a-card); }
-  /* The light amber box would put near-white ink on a pale fill; use a dark amber fill instead. */
-  .activate-check { background: #2a2214; border-left-color: #d9a441; }
-  .activate-check__title svg { color: #e0b252; }
-}
