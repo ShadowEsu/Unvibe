@@ -95,7 +95,7 @@ export default function CodeExplainerWindowsPage() {
           <li>Explain it at the level you pick. New, Beginner, Intermediate and Advanced are free; Expert comes with Pro.</li>
           <li>Quiz you with Test me: one question written about the lines you highlighted.</li>
           <li>Keep the lessons you want in your Library, saved on this PC.</li>
-          <li>Sum up your git changes in a Change Brief, built on your PC at no cost.</li>
+          <li>See what changed in your repo in a Change Brief, built on your PC at no cost (its AI explanation is Pro).</li>
           <li>
             Answer &ldquo;Why does this exist?&rdquo; from the git blame of those lines and the file&apos;s 8 most recent
             commits, read from the repository on your PC.

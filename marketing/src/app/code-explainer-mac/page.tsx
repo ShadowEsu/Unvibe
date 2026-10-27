@@ -97,7 +97,7 @@ export default function CodeExplainerMacPage() {
           <li>Any code you select, at four free depths: New, Beginner, Intermediate and Advanced. Expert is part of Pro.</li>
           <li>Test me writes one question about the exact code you selected, to check the explanation stuck.</li>
           <li>Lessons you keep are saved to your Library on this Mac.</li>
-          <li>Change Briefs summarise your git changes, made on your Mac, for free.</li>
+          <li>Change Briefs list what changed in your git repo, made on your Mac, for free. The AI explanation of a change is Pro.</li>
           <li>
             &ldquo;Why does this exist?&rdquo; answers from git blame and the file&apos;s last 8 commits, which Unvibe reads
             in your repository on your Mac.
