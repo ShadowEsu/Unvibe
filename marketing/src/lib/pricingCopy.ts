@@ -20,6 +20,11 @@ export type PlanCopy = {
   /** The allowance: explanations a month, or for Big Business its seats, use with no monthly cap and the rate limit. When `allowanceHref` is set, FAIR_USE_LABEL in the line links there. */
   allowance: string;
   allowanceHref: string | null;
+  /**
+   * The end of `allowance` that qualifies the offer (Big Business: its fair-use rate limit). The card
+   * sets it on its own line at regular weight; the words and the single paragraph stay the same.
+   */
+  allowanceLimit: string | null;
   detail: string;
   /** What the price includes. */
   features: readonly string[];
@@ -75,6 +80,7 @@ const free: PlanCopy = {
   price: "$0",
   allowance: FREE_LINE,
   allowanceHref: null,
+  allowanceLimit: null,
   detail: "No card and no separate API key. A new account's first month is Pro.",
   features: FEATURES.free,
   note: null,
@@ -94,6 +100,7 @@ const enterprise: PlanCopy = {
   price: "",
   allowance: `${formatCount(EXPLANATIONS_PER_MONTH.enterprise)} explanations a month, one account`,
   allowanceHref: null,
+  allowanceLimit: null,
   detail: "One account, no shared seats. Email us to apply and we write back when it opens.",
   features: FEATURES.enterprise,
   note: null,
@@ -103,14 +110,17 @@ const enterprise: PlanCopy = {
   primary: false,
 };
 
+const businessAllowanceLimit = `under a ${BUSINESS_RATE_LIMIT_LINE}`;
+
 const business: PlanCopy = {
   id: "business",
   name: "Big Business",
   badge: PAYMENTS_OPEN_SOON,
   eyebrow: "The most room of any plan.",
   price: formatUsd(PRICING.businessOnce),
-  allowance: `Up to ${BUSINESS_SEATS} named seats, ${BUSINESS_UNLIMITED}, under a ${BUSINESS_RATE_LIMIT_LINE}`,
+  allowance: `Up to ${BUSINESS_SEATS} named seats, ${BUSINESS_UNLIMITED}, ${businessAllowanceLimit}`,
   allowanceHref: FAIR_USE_HREF,
+  allowanceLimit: businessAllowanceLimit,
   detail: `One named account for each of up to ${BUSINESS_SEATS} people. Email us to apply and we write back when it opens.`,
   features: FEATURES.business,
   note: null,
@@ -127,7 +137,7 @@ const OPEN: PricingCopy = {
   description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. ${NEW_TIERS} open soon.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, note: null, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, allowanceLimit: null, detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, note: null, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
     enterprise,
     business,
   ],
@@ -140,7 +150,7 @@ const CLOSED: PricingCopy = {
   description: `Download Unvibe free today. ${PAYMENTS_OPEN_SOON}. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. ${NEW_TIERS} are not on sale yet either.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: PAYMENTS_OPEN_SOON, eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, detail: "One developer account. Your Free plan keeps working until payments open.", features: FEATURES.pro, note: null, cta: "Apply by email", href: PRO_MAILTO, featured: true, primary: false },
+    { id: "pro", name: "Pro", badge: PAYMENTS_OPEN_SOON, eyebrow: "Go deeper and keep the context.", price: "", allowance: proAllowance, allowanceHref: null, allowanceLimit: null, detail: "One developer account. Your Free plan keeps working until payments open.", features: FEATURES.pro, note: null, cta: "Apply by email", href: PRO_MAILTO, featured: true, primary: false },
     enterprise,
     business,
   ],

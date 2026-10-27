@@ -232,6 +232,14 @@
   color: var(--v-ink);
 }
 
+/* Big Business: the offer stays at allowance weight; its fair-use rate limit reads as the qualifier, on its own line. */
+.paper-pricing .marketing-plan-allowance-limit {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
+  color: var(--u-text-2);
+}
+
 .paper-pricing .marketing-plan-allowance a,
 .paper-pricing .pricing-fair-use a {
   text-decoration: underline;

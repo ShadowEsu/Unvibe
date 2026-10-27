@@ -77,12 +77,22 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
             })()}
             <small>{plan.detail}</small>
             <p className="marketing-plan-allowance">
-              {plan.allowanceHref
-                ? (() => {
-                    const [before, after] = plan.allowance.split(FAIR_USE_LABEL);
-                    return <>{before}<a href={plan.allowanceHref}>{FAIR_USE_LABEL}</a>{after}</>;
-                  })()
-                : plan.allowance}
+              {(() => {
+                // Big Business: the offer at allowance weight, then its fair-use rate limit on its own line
+                // at regular weight. Same words in the same paragraph, so its text never changes.
+                const head = plan.allowanceLimit ? plan.allowance.slice(0, -plan.allowanceLimit.length) : plan.allowance;
+                const linked = (text: string) => {
+                  if (!plan.allowanceHref || !text.includes(FAIR_USE_LABEL)) return text;
+                  const [before, after] = text.split(FAIR_USE_LABEL);
+                  return <>{before}<a href={plan.allowanceHref}>{FAIR_USE_LABEL}</a>{after}</>;
+                };
+                return (
+                  <>
+                    {linked(head)}
+                    {plan.allowanceLimit ? <span className="marketing-plan-allowance-limit">{linked(plan.allowanceLimit)}</span> : null}
+                  </>
+                );
+              })()}
             </p>
             <ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
             {plan.note ? <p className="marketing-plan-note">{plan.note}</p> : null}
