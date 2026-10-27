@@ -9,7 +9,7 @@
 //      every run a fresh id and flags it as QA; an id reused across runs runs out of free explanations).
 import { _electron as electron } from 'playwright';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -159,7 +159,9 @@ if (explained) {
   // "Why does this exist?" reads git history, so it needs a file inside a repo. The repo is made
   // here with a neutral author, because the answer shows who last changed the lines.
   await step('why exists', async () => {
-    const repo = mkdtempSync(path.join(tmpdir(), 'unvibe-why-'));
+    // The real path: on macOS tmpdir() is under /var, a link to /private/var, and git reports the
+    // repo root through the link, so a /var file path would sit "outside" its own repo.
+    const repo = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-why-')));
     const git = (...args) => execFileSync('git', args, {
       cwd: repo,
       env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
@@ -206,10 +208,12 @@ if (explained) {
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: 'MAX_ATTEMPTS' }).first().waitFor({ timeout: 30000 });
     const panel = await settledPanel();
     await panel.locator('.tool--why').click();
-    await panel.locator('.origin-panel').getByText('Reason documented').waitFor({ timeout: 20000 });
+    await panel.locator('.origin-panel').waitFor({ timeout: 20000 });
     await panel.locator('.origin-panel').scrollIntoViewIfNeeded();
     await sleep(800);
     await shot(panel, 'panel-why');
+    // The answer must carry the real commit history, not the "no documented history" fallback.
+    await panel.locator('.origin-panel').getByText('Reason documented').waitFor({ timeout: 5000 });
   });
 }
 
