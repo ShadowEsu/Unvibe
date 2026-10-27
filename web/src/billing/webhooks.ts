@@ -95,16 +95,25 @@ async function stopDuplicate(store: BillingStore, deps: StripeWebhookDependencie
     const target = refundTarget(payment);
     if (!target) continue;
     const paymentId = 'payment_intent' in target ? target.payment_intent : target.charge;
-    try {
-      refunded.push(await refundPayment(target, `uncode-dup-refund-${stopped}-${paymentId}`));
-    } catch (error) {
-      if (!(typeof error === 'object' && error !== null && 'code' in error && error.code === 'charge_already_refunded')) throw error;
-      refunded.push(`already-refunded:${paymentId}`);
-    }
+    refunded.push(await refundInFull(refundPayment, target, paymentId, `uncode-dup-refund-${stopped}-${paymentId}`));
   }
   await cancelSubscription(stopped, `uncode-dup-cancel-${stopped}`);
   await store.recordAudit(null, workspaceId, 'subscription.duplicate', { kept, stopped, refunded });
   console.error(`[billing] duplicate subscription stopped: workspace=${workspaceId} kept=${kept} stopped=${stopped} refunds=${refunded.join(',') || 'none'}`);
+}
+
+/**
+ * Refunds one payment in full with a key derived from it, so a retry never refunds twice. A payment
+ * already refunded (by support, or by an earlier delivery whose key Stripe has since forgotten after
+ * 24 hours) counts as refunded: returns `already-refunded:<payment id>` instead of the refund id.
+ */
+async function refundInFull(refundPayment: NonNullable<StripeWebhookDependencies['refundPayment']>, target: RefundTarget, paymentId: string, idempotencyKey: string): Promise<string> {
+  try {
+    return await refundPayment(target, idempotencyKey);
+  } catch (error) {
+    if (!(typeof error === 'object' && error !== null && 'code' in error && error.code === 'charge_already_refunded')) throw error;
+    return `already-refunded:${paymentId}`;
+  }
 }
 
 export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, deps: StripeWebhookDependencies, eventAt?: string): Promise<void> {
@@ -396,6 +405,23 @@ async function grantLifetimeFromCheckout(store: BillingStore, session: Stripe.Ch
     }
     await store.recordAudit(session.metadata?.user_id ?? null, workspaceId, 'checkout.refused_payment', { plan, checkoutSessionId: session.id, paymentIntentId: paymentId, reason });
     return;
+  }
+  // Big Business is exactly 10 named seats, and the database refuses the grant to a workspace that
+  // already holds more people and invitations than that (a canceled Teams subscription may have
+  // allowed more). Rather than leave the team paid with nothing, the payment is refunded in full,
+  // once, and audited for a person to follow up (Security BB1).
+  if (plan === 'business') {
+    const ownerId = session.metadata?.user_id;
+    if (!ownerId) throw new Error('Stripe lifetime checkout metadata is incomplete.');
+    const { occupiedSeats, pendingInvitations } = await store.overview(ownerId, workspaceId);
+    const seatsTaken = occupiedSeats + pendingInvitations;
+    if (seatsTaken > BUSINESS_SEATS) {
+      if (!deps.refundPayment) throw new Error('Refusing a Big Business grant for seats needs refundPayment.');
+      const refund = await refundInFull(deps.refundPayment, { payment_intent: paymentId }, paymentId, `uncode-seats-refund-${paymentId}`);
+      await store.recordAudit(ownerId, workspaceId, 'checkout.refused_seats', { plan, checkoutSessionId: session.id, paymentIntentId: paymentId, seatsTaken, refund });
+      console.error(`[billing] Big Business refused for seats and refunded: workspace=${workspaceId} payment=${paymentId} seats=${seatsTaken}`);
+      return;
+    }
   }
   const now = new Date().toISOString();
   const applied = await store.syncSubscription({
