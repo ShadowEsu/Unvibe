@@ -67,3 +67,30 @@ test('a file opened through a linked folder keeps only its path inside the repo'
     rmSync(base, { recursive: true, force: true });
   }
 });
+
+test('a git repo at the home folder is never the project, but a repo inside home is', async () => {
+  const home = mkdtempSync(path.join(tmpdir(), 'unvibe-home-'));
+  const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: home });
+    const code = path.join(home, 'code');
+    mkdirSync(code);
+    writeFileSync(path.join(code, 'a.js'), '\n');
+    // A dotfiles repo at ~ would make the project name the OS username.
+    assert.equal(await findGitRoot(code), null);
+    const shop = path.join(code, 'shop');
+    mkdirSync(shop);
+    execFileSync('git', ['init', '-q'], { cwd: shop });
+    const root = await findGitRoot(shop);
+    assert.ok(root);
+    assert.equal(path.basename(root), 'shop');
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    rmSync(home, { recursive: true, force: true });
+  }
+});

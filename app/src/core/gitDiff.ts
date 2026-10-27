@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { DiffHunk } from './protocol';
@@ -287,14 +288,26 @@ export async function readRepoFile(repoRoot: string, relativePath: string): Prom
   }
 }
 
+/**
+ * The project's git root, or null. A repo at the home folder or above it (a dotfiles `git init ~`,
+ * or `/`) is never a project: its name would be the OS username, and every file under home would
+ * look like part of it.
+ */
 export async function findGitRoot(startDir: string): Promise<string | null> {
   try {
     const { stdout } = await pexecFile('git', ['rev-parse', '--show-toplevel'], { cwd: startDir, windowsHide: true });
     const root = stdout.trim();
-    return root || null;
+    return root && !isHomeOrAbove(root) ? root : null;
   } catch {
     return null;
   }
+}
+
+function isHomeOrAbove(root: string): boolean {
+  const home = homedir();
+  if (!home) return false;
+  const rel = path.relative(realPath(root), realPath(home));
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
 }
 
 function realPath(p: string): string {
