@@ -70,7 +70,10 @@ Grants are refund-aware and ordered. Before any grant (a Lifetime or Big Busines
 subscription moving into paid access), the webhook refuses, with a `checkout.refused_payment` or
 `subscription.refused_payment` audit row, a payment with a recorded full refund (`charge.refunded`
 records its PaymentIntent even when nothing matched yet) or one that Stripe reports (PaymentIntent
-with `latest_charge`) as not succeeded, refunded in whole or part, or disputed. A one-time payment
+with `latest_charge`) as not succeeded, refunded (`refunded`: the whole amount; `partly_refunded`:
+part of it), or disputed. A subscription refused before the write because of a full refund
+(`refund_recorded` or `refunded`) is also canceled at Stripe with `uncode-revoke-<subscription id>`,
+so it never keeps charging without access; the other refusals cancel nothing. A one-time payment
 whose row a refund or lost dispute already canceled is never granted again. Each subscription row
 keeps the Stripe `created` time of the last event applied (`stripe_event_at`), and an older event
 for the same subscription or payment changes nothing, so a retried or late checkout event cannot
@@ -87,11 +90,13 @@ After every subscription write that grants access, the webhook also re-reads the
 Stripe. If it ended (or no longer exists), the row is canceled; a non-entitling state or failed
 payment applies the revoke-only downgrade/grace rules. This closes the window where a `deleted`
 arrived before there was a row for that subscription and so canceled nothing. After a subscription
-first grants access, its payments are checked again too: a refusal cancels the Stripe subscription
-with `uncode-revoke-<subscription id>`, then cancels the row. If the Stripe cancel fails, the event
-fails and its retry checks the payment and retries that same cancellation key, even though the row
-has already been written. Stripe is canceled first so a failed attempt cannot leave a subscription
-charging while a canceled local row causes its retry to skip the payment check.
+first grants access (or on a delivery of the event that wrote the row), its payments are checked
+again too. Only a full refund takes the grant back there: it cancels the Stripe subscription with
+`uncode-revoke-<subscription id>`, and the row is canceled whether or not that cancel succeeded. A
+partial refund or an open dispute never cancels and never takes away access already granted (see
+the refund and dispute policy below). If the Stripe cancel fails, the event fails; its retry, or any
+later event for that subscription, finds the row without access and the full refund, refuses the
+grant before the write and retries the same cancellation key.
 
 The `refund.full` rows in `billing_audit_log` are security state, not just history: they are what
 refuses a grant of a payment whose refund arrived before (or during) its checkout event. Never prune,

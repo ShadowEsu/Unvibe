@@ -182,6 +182,9 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   if (enteringAccess) {
     const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
     if (reason) {
+      // A fully refunded subscription would keep charging with no access: stop it at Stripe too.
+      // This is also how a refund whose revoke failed (below) ends the charges on the next event.
+      if (FULL_REFUND.includes(reason)) await cancelAtStripe(deps, subscription.id);
       await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason });
       return;
     }
@@ -221,18 +224,29 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   }
   // A first-invoice refund may likewise have matched no row between the payment check and write.
   // Check again, including on a retry of an event whose grant/check/cancel failed after the write.
+  // Only a full refund takes the grant back and cancels at Stripe: a partial refund keeps access,
+  // and an open dispute only flags (it is handled by the dispute events).
   const retryingGrant = prior && (prior.stripeEventAt === undefined || eventAt === undefined
     ? prior.stripeEventAt === eventAt : Date.parse(prior.stripeEventAt) === Date.parse(eventAt));
   if (enteringAccess || retryingGrant) {
     const reason = await subscriptionPaymentRefusal(store, deps, subscription.id);
-    if (reason) {
-      if (!deps.cancelSubscription) throw new Error('Revoking a subscription grant needs cancelSubscription.');
-      // Cancel Stripe first: if it fails, the event fails and its retry must still stop the charges.
-      await deps.cancelSubscription(subscription.id, `uncode-revoke-${subscription.id}`);
-      await store.markSubscriptionCanceled(subscription.id, eventAt);
+    if (reason && FULL_REFUND.includes(reason)) {
+      // Access ends even when the Stripe cancel fails. The event then fails, and its retry or any
+      // later event for this subscription is refused before the write (above), which cancels again.
+      try {
+        await cancelAtStripe(deps, subscription.id);
+      } finally {
+        await store.markSubscriptionCanceled(subscription.id, eventAt);
+      }
       await store.recordAudit(null, metadata.workspaceId, 'subscription.refused_payment', { stripeSubscriptionId: subscription.id, reason, afterWrite: true });
     }
   }
+}
+
+/** Cancels a refunded subscription at Stripe now, once: every revoke of one subscription shares the key. */
+async function cancelAtStripe(deps: StripeWebhookDependencies, subscriptionId: string): Promise<void> {
+  if (!deps.cancelSubscription) throw new Error('Revoking a subscription grant needs cancelSubscription.');
+  await deps.cancelSubscription(subscriptionId, `uncode-revoke-${subscriptionId}`);
 }
 
 /** When a grace period that starts now ends: BILLING_GRACE_PERIOD_DAYS (1 to 30, default 7) from now. */
@@ -284,7 +298,10 @@ async function applyRevocationOnly(store: BillingStore, subscription: Stripe.Sub
 }
 
 /** Why a payment must not grant access, or null when it may. */
-type PaymentRefusal = 'refund_recorded' | 'not_succeeded' | 'refunded' | 'disputed';
+type PaymentRefusal = 'refund_recorded' | 'not_succeeded' | 'refunded' | 'partly_refunded' | 'disputed';
+
+/** The refusals that are a full refund: the only ones that take a grant back and cancel at Stripe. */
+const FULL_REFUND: readonly PaymentRefusal[] = ['refund_recorded', 'refunded'];
 
 /**
  * Checked before every grant: the recorded full refunds first (charge.refunded writes one even when
@@ -298,7 +315,8 @@ async function paymentRefusal(store: BillingStore, deps: StripeWebhookDependenci
   if (intent.status !== 'succeeded') return 'not_succeeded';
   const charge = intent.latest_charge;
   if (!charge || typeof charge === 'string') throw new Error('The PaymentIntent was retrieved without its latest charge.');
-  if (charge.refunded || charge.amount_refunded > 0) return 'refunded';
+  if (charge.refunded || (charge.amount > 0 && charge.amount_refunded >= charge.amount)) return 'refunded';
+  if (charge.amount_refunded > 0) return 'partly_refunded';
   if (charge.disputed) return 'disputed';
   return null;
 }

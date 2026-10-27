@@ -411,11 +411,11 @@ test('P2: grant, a full refund revokes, then a retried completed or async_paymen
   });
 });
 
-test('a checkout event whose payment Stripe reports refunded, partly refunded, disputed or not succeeded grants nothing', async () => {
+test('a checkout event whose payment Stripe reports refunded, partly refunded, disputed or not succeeded grants nothing; only a full refund cancels the subscription at Stripe', async () => {
   await withFlag('true', async () => {
     const cases: Array<[string, (id: string) => Stripe.PaymentIntent]> = [
       ['refunded', refundedIntent],
-      ['refunded', (id) => paymentIntent(id, { amount_refunded: 1_000 })],
+      ['partly_refunded', (id) => paymentIntent(id, { amount_refunded: 1_000 })],
       ['disputed', (id) => paymentIntent(id, { disputed: true })],
       ['not_succeeded', (id) => paymentIntent(id, {}, 'processing')],
     ];
@@ -427,9 +427,12 @@ test('a checkout event whose payment Stripe reports refunded, partly refunded, d
 
       const e = await customer();
       const subscription = enterpriseSubscription(e.workspaceId);
-      await processStripeEvent(e.store, enterpriseCheckoutCompleted(e.workspaceId, subscription.id), deps(subscription, intent, [`pi_${randomUUID()}`]));
+      const cancels: string[] = [];
+      const stripe: StripeWebhookDependencies = { ...deps(subscription, intent, [`pi_${randomUUID()}`]), cancelSubscription: async (_id, key) => { cancels.push(key); } };
+      await processStripeEvent(e.store, enterpriseCheckoutCompleted(e.workspaceId, subscription.id), stripe);
       assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free', `enterprise ${reason}`);
       assert.deepEqual(refusals(e.audits, 'subscription.refused_payment'), [reason]);
+      assert.deepEqual(cancels, reason === 'refunded' ? [`uncode-revoke-${subscription.id}`] : [], `enterprise ${reason}`);
     }
   });
 });
@@ -763,13 +766,19 @@ test('N3 (D20): an Enterprise row on record without access (incomplete) moving t
     const e = await customer();
     const base = enterpriseSubscription(e.workspaceId);
     let live = { ...base, status: 'incomplete' } as Stripe.Subscription;
-    const stripe: StripeWebhookDependencies = { ...deps(base, (id) => paymentIntent(id, { refunded: true, amount_refunded: 5_000 }), [`pi_${randomUUID()}`]), retrieveSubscription: async () => live };
+    const cancels: string[] = [];
+    const stripe: StripeWebhookDependencies = {
+      ...deps(base, (id) => paymentIntent(id, { refunded: true, amount_refunded: 5_000 }), [`pi_${randomUUID()}`]),
+      retrieveSubscription: async () => live,
+      cancelSubscription: async (_id, key) => { cancels.push(key); },
+    };
     await processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', base.id, T1), stripe);
     assert.equal((await e.store.subscriptionByWorkspaceId(e.workspaceId))?.status, 'inactive');
     live = { ...base, status: 'active' } as Stripe.Subscription;
     await processStripeEvent(e.store, subscriptionEvent('customer.subscription.updated', base.id, T2), stripe);
     assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
     assert.deepEqual(refusals(e.audits, 'subscription.refused_payment'), ['refunded']);
+    assert.deepEqual(cancels, [`uncode-revoke-${base.id}`]);
   });
 });
 
