@@ -27,9 +27,33 @@ try {
   process.exit(2);
 }
 
+/**
+ * Disallow paths from the `User-agent: *` group only. A rule for one crawler (say GPTBot `Disallow: /`)
+ * says nothing about search engines and must not switch this check off. Consecutive User-agent lines
+ * share one group; an empty Disallow allows everything.
+ */
+function starDisallows(text) {
+  const paths = [];
+  let agents = [];
+  let inRules = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const field = /^\s*([A-Za-z-]+)\s*:\s*(.*?)\s*$/.exec(raw.replace(/#.*/, ""));
+    if (!field) continue;
+    const [, key, value] = field;
+    if (key.toLowerCase() === "user-agent") {
+      if (inRules) { agents = []; inRules = false; }
+      agents.push(value);
+    } else {
+      inRules = true;
+      if (key.toLowerCase() === "disallow" && value && agents.includes("*")) paths.push(value);
+    }
+  }
+  return paths;
+}
+
 let disallowed = [];
 try {
-  disallowed = [...readFileSync(join(appDir, "robots.txt.body"), "utf8").matchAll(/^Disallow: (\S+)/gm)].map((m) => m[1]);
+  disallowed = starDisallows(readFileSync(join(appDir, "robots.txt.body"), "utf8"));
 } catch {
   console.error("No built robots.txt: every page is treated as public.");
 }
