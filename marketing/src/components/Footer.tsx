@@ -12,6 +12,8 @@ import { observeMotion } from "@/lib/motionInView";
 const product = [
   ["Product", "/#product"],
   ["Explain code", "/explain"],
+  ["Code explainer for Mac", "/code-explainer-mac"],
+  ["Code explainer for Windows", "/code-explainer-windows"],
   ["Download", "/beta"],
   ["Pricing", "/pricing"],
   ["Change log", "/releases"],
