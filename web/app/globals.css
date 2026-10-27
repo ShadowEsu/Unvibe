@@ -474,6 +474,8 @@ img { max-width: 100%; display: block; }
 .workspace-picker select, .team-checkout input, .team-checkout select, .seat-editor input, .invite-form input, .invite-form select, .invite-link input, .member-row select { min-height: 40px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--fg); padding: 8px 10px; }
 .plan-notice { border: 1px solid var(--purple); background: var(--purple-bg); padding: 12px 14px; border-radius: 8px; }
 .plan-notice--quiet { color: var(--fg-muted); border-color: var(--line-strong); background: var(--bg-subtle); }
+/* The fair-use links in the Plan notices and the Enterprise/Big Business band read as links. */
+.plan-notice a, .plan-teams-band small a { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; }
 .current-plan { display: flex; align-items: center; gap: 32px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-subtle); }
 .current-plan > div { display: grid; }.current-plan span { color: var(--fg-muted); font-size: 12px; }.current-plan .btn { margin-left: auto; }
 .usage-panel, .team-panel { margin-top: 24px; padding: 24px; border: 1px solid var(--line); border-radius: 10px; }
