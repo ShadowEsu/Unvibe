@@ -12,10 +12,6 @@
 -- person already in the workspace keeps their role (on conflict do nothing), and an unknown or
 -- missing email joins nothing instead of raising, so a sign-in never fails because of an invitation.
 -- Rows are locked in created_at order, so two approvals at once can't accept one invitation twice.
---
--- The email match alone grants the seat, so only a confirmed address counts. The API checks
--- email_confirmed_at before calling; this function checks auth.users too (users.id is the Supabase
--- Auth id), so any other caller gets the same rule. An id with no confirmed Auth user joins nothing.
 
 create or replace function public.accept_pending_invitations(p_user_id uuid)
 returns setof uuid
@@ -25,9 +21,7 @@ set search_path = public, pg_temp
 as $$
 declare v_email text; v_invitation workspace_invitations%rowtype;
 begin
-  select lower(u.email) into v_email
-    from users u join auth.users a on a.id = u.id and a.email_confirmed_at is not null
-    where u.id = p_user_id;
+  select lower(email) into v_email from users where id = p_user_id;
   if v_email is null then return; end if;
   for v_invitation in
     select * from workspace_invitations
