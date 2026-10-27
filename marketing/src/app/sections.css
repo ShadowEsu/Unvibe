@@ -77,13 +77,6 @@ html[data-performance="lite"] .try__bob { animation: none; }
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
 .paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
 
-/* ── Startup programs ── */
-.paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
-.paper-backing .paper-partners { max-width: 1000px; margin: 0 auto; }
-.claude-startups__tag { color: #141414; }
-.claude-startups__copy a { color: var(--u-text); font-weight: 700; }
-.paper-partners__viewport:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 4px; border-radius: 12px; }
-
 /* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
 .paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }
 .paper-faq details { padding: 1.1rem 1.3rem; }

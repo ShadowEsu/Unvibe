@@ -1,42 +1,44 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
-  compensationCashUsd,
-  compensationCreditsUsd,
   compensationLines,
-  compensationProgramCount,
   compensationTotalLabel,
   compensationTotalUsd,
 } from "./compensation";
 
 describe("compensation", () => {
-  it("includes Mixpanel Pro at 144000 and sums every line", () => {
-    const mixpanel = compensationLines.find((line) => line.name.startsWith("Mixpanel"));
-    assert.equal(mixpanel?.amountUsd, 144_000);
-    assert.match(mixpanel?.detail ?? "", /1 year/i);
-    const salesforce = compensationLines.find((line) => line.name.startsWith("Salesforce"));
-    assert.equal(salesforce?.amountUsd, 13_500);
-    assert.match(salesforce?.detail ?? "", /30 Starter Suite seats/i);
-    const explicitSum = compensationLines.reduce((sum, line) => sum + line.amountUsd, 0);
-    assert.equal(explicitSum, 262_700);
-    assert.equal(compensationTotalUsd(), compensationCreditsUsd() + compensationCashUsd());
-    assert.equal(compensationTotalUsd(), 262_700);
-    assert.equal(compensationCreditsUsd(), 261_900);
-    assert.equal(compensationCashUsd(), 800);
-    assert.equal(compensationTotalLabel(), "$262,700");
-    const claude = compensationLines.find((line) => line.name === "Claude for Startups");
-    assert.equal(claude?.amountUsd, 21_500);
-    const deepgram = compensationLines.find((line) => line.name.startsWith("Deepgram"));
-    assert.equal(deepgram?.amountUsd, 1_000);
+  it("sums the public self-reported cash lines", () => {
+    assert.equal(compensationLines.length, 2);
+    assert.ok(compensationLines.every((line) => line.kind === "cash"));
+    assert.equal(compensationLines.reduce((sum, line) => sum + line.amountUsd, 0), 800);
+    assert.equal(compensationTotalUsd(), 800);
+    assert.equal(compensationTotalLabel(), "$800");
   });
 
-  it("never publishes AWS Activate credits (AWS Activate terms forbid disclosing them)", () => {
+  it("never publishes programs without verified disclosure permission", () => {
     assert.equal(compensationLines.some((line) => /aws/i.test(`${line.name} ${line.detail}`)), false);
+    const removedPrograms = /anthropic|claude|mixpanel|posthog|salesforce|gitlab|linear|google|openai|deepgram|mongodb/i;
+    assert.equal(
+      compensationLines.some((line) => removedPrograms.test(`${line.name} ${line.detail}`)),
+      false,
+    );
   });
 
-  it("counts only credit lines as startup programs", () => {
-    const cashLines = compensationLines.filter((line) => line.kind === "cash").length;
-    assert.ok(cashLines > 0);
-    assert.equal(compensationProgramCount(), compensationLines.length - cashLines);
+  it("keeps removed program claims and sponsor assets off the public surfaces", () => {
+    const membership = /(?:claude|mixpanel|posthog|salesforce|gitlab|openai|deepgram|mongodb) for startups|salesforce launchpad|linear founder value pack|google ai startups|(?:aws|google cloud) credits/i;
+    for (const file of [
+      "src/components/paper/BackingStrip.tsx",
+      "src/app/about/page.tsx",
+      "src/app/investors/page.tsx",
+      "src/lib/kit.ts",
+      "src/data/milestones.ts",
+    ]) {
+      assert.doesNotMatch(readFileSync(join(process.cwd(), file), "utf8"), membership, file);
+    }
+    for (const name of ["aws", "deepgram", "gitlab", "googlecloud", "linear", "mixpanel", "mongodb", "openai", "posthog", "salesforce"]) {
+      assert.equal(existsSync(join(process.cwd(), "public/sponsors", `${name}.svg`)), false, name);
+    }
   });
 });
