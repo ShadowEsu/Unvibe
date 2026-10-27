@@ -3,9 +3,12 @@
 ## Authoritative app baseline — user confirmed 2026-09-13
 The approved product is Unvibe v0.1.11 from `unvibe-studio-redesign` at `cdaa4fd`,
 including the user's local widget refinements. Preserve Newsreader/JetBrains Mono,
-Golden Gate imagery and coral/blue glass surfaces, separate Learn/History/Quiz/Chat
+the coral-to-blue dusk backdrop and coral/blue glass surfaces, separate Learn/History/Quiz/Chat
 pages, usage meters, and the learning-pulse Island. The user screenshots in
 `Desktop/Unvibe Resources/new app` identify the approved appearance.
+The dusk backdrop is our own colour field (`dusk-field.webp`). The Golden Gate photo it
+was first blurred from had no licence and was removed on 2026-10-27. Ship only images
+listed with source and licence in `docs/licenses.md`.
 The DM Sans app previously on main at `9df8e45` is NOT the approved design.
 Never use branch recency alone to select a visual baseline or port its full UI over this app.
 This section overrides historical naming, monochrome and design notes below.

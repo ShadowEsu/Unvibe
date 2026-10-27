@@ -9,13 +9,15 @@ application on the latest main commit was the approved visual design.
 - App v0.1.11: `origin/unvibe-studio-redesign`, commit `cdaa4fd`.
 - Authoritative local copy: `Unvibe/Unvibe` relative to the original workspace.
 - Preserve its local changes to `widget.tsx` and `widget.css`: the San Francisco
-  backdrop and refined widget logo/appearance.
+  dusk backdrop and refined widget logo/appearance. The backdrop is now our own colour
+  field (`dusk-field.webp`); the unlicensed photo it was blurred from was removed on
+  2026-10-27 (`docs/licenses.md`).
 - Include the matching desktop bridge, custom URL handler and packaged assets.
 - User reference set: `Desktop/Unvibe Resources/new app`, August 17–18 screenshots.
 
 ## Protect
 
-Newsreader serif typography; JetBrains Mono; Golden Gate background imagery;
+Newsreader serif typography; JetBrains Mono; the coral-to-blue dusk background (licensed or our own images only);
 coral, blue and purple translucent surfaces; separate Home, Learn, History, Quiz,
 Chat, Progress, Plan and Gift pages; AI/selection usage meters; existing Island
 learning pulse and explanation widgets. Preserve the current optional light theme.
