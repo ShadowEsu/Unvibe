@@ -272,3 +272,89 @@ test('streamed token, done and error events reach the panel with only their chec
     assert.ok(Object.values(ev).every((value) => value === undefined || typeof value === 'string' || typeof value === 'boolean'), JSON.stringify(ev));
   }
 });
+
+test('Test me asks quick-check, scenario, recall, then makes no fourth request', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  for (let i = 0; i < 4; i++) {
+    await startComprehension(win, s);
+    gradeComprehension(win, s, 0);
+  }
+  assert.deepEqual(received.filter((r) => r.path === '/api/v1/comprehension').map((r) => r.body.quizMode),
+    ['quick-check', 'scenario', 'recall'], 'exactly three requests in angle order');
+  assert.deepEqual(events.filter((ev) => ev.type === 'question').map(({ index, total, mode }) => ({ index, total, mode })), [
+    { index: 1, total: 3, mode: 'quick-check' },
+    { index: 2, total: 3, mode: 'scenario' },
+    { index: 3, total: 3, mode: 'recall' },
+  ]);
+});
+
+test('a new explanation resets Test me, but a follow-up and another tab do not', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  await startComprehension(win, s);
+  await runReview(win, s, { level: s.level, question: 'Why wait?' });
+  await startComprehension(win, s);
+  const other = { ...session('beginner'), tabId: '2' };
+  await startComprehension(win, other);
+  await runReview(win, s, { level: 'advanced', variant: 'different' });
+  await startComprehension(win, s);
+  assert.deepEqual(received.filter((r) => r.path === '/api/v1/comprehension').map((r) => r.body.quizMode),
+    ['quick-check', 'scenario', 'quick-check', 'quick-check'], 'new explanation starts again at quick-check');
+  assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1);
+});
+
+test('a wrong answer then a right answer stays needs_review for this explanation', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 1);
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 0);
+  assert.equal(lesson(s.reviewId)?.outcome, 'needs_review', 'a later right answer must not clear a miss');
+  assert.equal(events.filter((ev) => ev.type === 'graded').at(-1)?.hasMissed, true);
+  await runReview(win, s, { level: 'advanced' });
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 0);
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood', 'a new explanation starts a fresh outcome');
+});
+
+test('all right answers stay understood and save the snapshot and callback only once', async () => {
+  const { win } = panel();
+  const file = `quiz-once-${Math.random().toString(36).slice(2)}.js`;
+  let understood = 0;
+  const s: ReviewSession = { ...session('intermediate'), file, snapshotText: 'original', onUnderstood: () => { understood++; } };
+  await runReview(win, s, { level: s.level });
+  for (let i = 0; i < 3; i++) {
+    await startComprehension(win, s);
+    gradeComprehension(win, s, 0);
+    s.snapshotText = 'must not overwrite first snapshot';
+  }
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood');
+  assert.equal(understood, 1, 'only the first right answer calls onUnderstood');
+  assert.equal(store().fileSnapshot(file)?.text, 'original', 'only the first right answer saves the snapshot');
+});
+
+test('question allowance refusals keep the explanation and use the existing plan wording', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  try {
+    for (const status of [402, 429]) {
+      quizStatus = status;
+      await startComprehension(win, s);
+      assert.equal(events.filter((ev) => ev.type === 'quizError').at(-1)?.message,
+        'Your plan limit has been reached. Open Plan & usage to review options.', `allowance status ${status}`);
+    }
+  } finally {
+    quizStatus = null;
+  }
+  await startComprehension(win, s);
+  assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1, 'refusals do not consume a question position');
+  assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION/);
+});
