@@ -643,8 +643,9 @@
   & .ob2__level p { margin: 0; font-size: 14.5px; color: var(--v-ink); text-align: center; }
   & .ob2__choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   & .ob2__task { margin: 0; font-size: 16px; font-weight: 650; color: var(--v-ink); text-align: center; }
-  /* The next open's paste step (OwnCodeWelcome): the target spans the card, Not now alone on the right. */
-  & .ob2__paste { justify-self: stretch; width: 100%; }
+  /* The next open's paste step (OwnCodeWelcome): a fixed width keeps the card 720 px in every state
+     (the onboarding grid sizes its card to the content), Not now alone on the right. */
+  & .ob2__paste { width: 652px; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
   & .ob2 .ob2__actions--end { justify-content: flex-end; }
   & .ob2__shortcut { text-align: center; }
   & .ob2__alt { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
