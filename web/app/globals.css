@@ -422,6 +422,19 @@ img { max-width: 100%; display: block; }
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.invite-steps {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0 0;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.invite-steps .btn {
+  display: flex;
+  width: max-content;
+  margin-top: 10px;
+}
 
 /* ---- legacy compat (list, row, badge, field, mono) ---- */
 .list {

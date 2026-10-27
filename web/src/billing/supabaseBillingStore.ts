@@ -11,6 +11,7 @@ import type {
   UsageReservation,
   WebhookClaim,
   WorkspaceAccess,
+  InvitationPreview,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
@@ -269,6 +270,26 @@ export class SupabaseBillingStore implements BillingStore {
     const access = await this.getWorkspaceAccess(userId, String(data));
     if (!access) throw new Error('Persistent billing did not return the accepted workspace.');
     return access;
+  }
+
+  async acceptPendingInvitations(userId: string, _userEmail?: string): Promise<string[]> {
+    const { data, error } = await this.db.rpc('accept_pending_invitations', { p_user_id: userId });
+    this.require(error, 'accept pending invitations');
+    return Array.isArray(data) ? data.map(String) : [];
+  }
+
+  async invitationPreview(tokenHash: string): Promise<InvitationPreview | null> {
+    const { data, error } = await this.db.from('workspace_invitations')
+      .select('email, status, expires_at, workspaces(name)').eq('token_hash', tokenHash).maybeSingle();
+    this.require(error, 'read invitation');
+    if (!data) return null;
+    const row = asObject(data);
+    const workspace = asObject(Array.isArray(row.workspaces) ? row.workspaces[0] : row.workspaces);
+    return {
+      email: String(row.email),
+      workspaceName: String(workspace.name ?? 'your team'),
+      open: row.status === 'pending' && new Date(String(row.expires_at)).getTime() > Date.now(),
+    };
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {

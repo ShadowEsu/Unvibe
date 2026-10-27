@@ -115,6 +115,14 @@ export interface WorkspaceInvitation {
   createdAt: string;
 }
 
+/** What /invite shows for a link: who it was sent to and which workspace, so the person signs in with that address. */
+export interface InvitationPreview {
+  email: string;
+  workspaceName: string;
+  /** pending and not past expiresAt */
+  open: boolean;
+}
+
 export interface WorkspaceMember {
   userId: string;
   email?: string;
@@ -193,6 +201,13 @@ export interface BillingStore {
   ): Promise<WorkspaceInvitation>;
   revokeInvitation(userId: string, workspaceId: string, invitationId: string): Promise<void>;
   acceptInvitation(userId: string, tokenHash: string, userEmail?: string): Promise<WorkspaceAccess>;
+  /**
+   * The desktop app is the only sign-in: when a sign-in is approved, every pending, unexpired invitation to
+   * that person's email joins them to its workspace (the seat was reserved when the invitation was made).
+   * Returns the workspaces joined. The Supabase store reads the email from the users row the sign-in just wrote.
+   */
+  acceptPendingInvitations(userId: string, userEmail?: string): Promise<string[]>;
+  invitationPreview(tokenHash: string): Promise<InvitationPreview | null>;
   createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord>;
   pendingCheckout(userId: string, workspaceId: string): Promise<CheckoutIntentRecord | null>;
   attachCheckoutSession(intentId: string, stripeCheckoutSessionId: string): Promise<void>;

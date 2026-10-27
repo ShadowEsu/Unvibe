@@ -16,6 +16,7 @@ import type {
   UsageReservation,
   WebhookClaim,
   WorkspaceAccess,
+  InvitationPreview,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
@@ -330,6 +331,31 @@ export class MemoryBillingStore implements BillingStore {
     this.data.memberships.set(membershipKey(workspace.id, userId), invitation.role);
     invitation.status = 'accepted';
     return { ...workspace, role: invitation.role };
+  }
+
+  async acceptPendingInvitations(userId: string, userEmail?: string): Promise<string[]> {
+    const email = userEmail?.trim().toLowerCase();
+    if (!email) return [];
+    const pending = [...this.data.invitations.values()]
+      .filter((entry) => entry.email === email && entry.status === 'pending' && new Date(entry.expiresAt) > this.now())
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const joined: string[] = [];
+    for (const invitation of pending) {
+      if (!this.data.workspaces.has(invitation.workspaceId)) continue;
+      // Someone already in the workspace keeps their role.
+      const key = membershipKey(invitation.workspaceId, userId);
+      if (!this.data.memberships.has(key)) this.data.memberships.set(key, invitation.role);
+      invitation.status = 'accepted';
+      joined.push(invitation.workspaceId);
+    }
+    return joined;
+  }
+
+  async invitationPreview(tokenHash: string): Promise<InvitationPreview | null> {
+    const invitation = [...this.data.invitations.values()].find((entry) => entry.tokenHash === tokenHash);
+    const workspace = invitation ? this.data.workspaces.get(invitation.workspaceId) : undefined;
+    if (!invitation || !workspace) return null;
+    return { email: invitation.email, workspaceName: workspace.name, open: invitation.status === 'pending' && new Date(invitation.expiresAt) > this.now() };
   }
 
   async createCheckoutIntent(input: Omit<CheckoutIntentRecord, 'id' | 'status' | 'createdAt'>): Promise<CheckoutIntentRecord> {
