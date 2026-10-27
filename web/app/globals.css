@@ -15,7 +15,7 @@
   --green-bg: #ecfdf5;
   --orange: #f59e0b;
   --orange-bg: #fffbeb;
-  --purple: #8b5cf6;
+  --purple: #7c3aed; /* 5.70:1 on white, 5.2:1 on --purple-bg (AA for text) */
   --purple-bg: #f5f3ff;
   --cyan: #06b6d4;
   --cyan-bg: #ecfeff;
