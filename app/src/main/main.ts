@@ -520,13 +520,16 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
   if (!code) pulseBar({ phase: 'error', label: 'Select code first' });
+  // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
+  // instead of leaving the panel to guess why.
+  if (!code && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
   if (!code && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
   }
   if (!code && isMac && !options.preferClipboard && !accessibilityGranted(false)) {
-    // The panel shows the one-button pre-permission screen (first-run spec, change 2).
+    // The panel shows the pre-permission screen (Continue asks; clipboard and file work without it).
     reportProgress('accessibility_asked');
     pendingGrant = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? { app: sourceApp, at: Date.now() } : null;
   }

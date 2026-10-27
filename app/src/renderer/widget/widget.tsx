@@ -175,7 +175,8 @@ function ResizeGrips() {
 
 /**
  * Calm fallback when ⌘U finds no selection: pick a source, never hard-error. On a Mac without
- * Accessibility it is the one-button pre-permission screen instead (first-run spec, change 2).
+ * Accessibility it is the pre-permission screen instead: Continue asks for the grant, and the
+ * clipboard and file buttons still work without it.
  */
 function EmptyPicker({
   shortcut,
@@ -219,6 +220,18 @@ function EmptyPicker({
     await window.unvibe.openAccessibility();
   };
 
+  const chooseFile = async () => {
+    setHint('');
+    setPicking(true);
+    try {
+      const result = await window.unvibe.pickFile({ level });
+      if (result?.error) setHint(result.error);
+      else if (!result?.ok && !result?.cancelled) setHint('Could not open that file.');
+    } finally {
+      setPicking(false);
+    }
+  };
+
   if (needsAccess) {
     return (
       <div className="state empty-picker">
@@ -238,26 +251,21 @@ function EmptyPicker({
             </div>
           </div>
         ) : null}
+        {/* Many first-run Macs never grant Accessibility, so the screen also offers the two ways in
+            that need no permission. */}
+        <div className="sub">Or skip this: copy some code (⌘C) and explain your clipboard, or choose a file.</div>
         <div className="empty-actions">
-          <button className="btn ghost" onClick={() => window.unvibe.useClipboard({ level })}>
+          <button className="btn ghost" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
             Explain my clipboard
           </button>
+          <button className="btn ghost" disabled={picking} onClick={() => void chooseFile()}>
+            {picking ? 'Opening…' : 'Choose a file…'}
+          </button>
         </div>
+        {hint ? <div className="sub empty-hint">{hint}</div> : null}
       </div>
     );
   }
-
-  const chooseFile = async () => {
-    setHint('');
-    setPicking(true);
-    try {
-      const result = await window.unvibe.pickFile({ level });
-      if (result?.error) setHint(result.error);
-      else if (!result?.ok && !result?.cancelled) setHint('Could not open that file.');
-    } finally {
-      setPicking(false);
-    }
-  };
 
   const runPro = async (kind: 'diff' | 'brief' | 'compare') => {
     setPicking(true);
