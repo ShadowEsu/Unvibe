@@ -7,7 +7,7 @@ import { app, safeStorage } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
-import type { LocalEvent, Outcome } from '../core/learning';
+import { withAnswerDay, type LocalEvent, type Outcome } from '../core/learning';
 import type { ProgressStep } from './progress';
 import { openToken, sealToken } from '../core/tokenVault';
 import { mergeRemoteEvents } from '../core/syncModel';
@@ -143,12 +143,14 @@ class Store {
   }
 
 
-  setOutcome(id: string, outcome: Outcome, concept?: string, conceptLabel?: string): void {
+  /** `answeredAt`: when a Test me or quiz answer set this outcome; its local day counts toward today's goal. */
+  setOutcome(id: string, outcome: Outcome, concept?: string, conceptLabel?: string, answeredAt?: Date): void {
     const ev = this.data.events.find((e) => e.id === id);
     if (!ev) return;
     ev.outcome = outcome;
     if (concept) ev.concept = concept;
     if (conceptLabel) ev.conceptLabel = conceptLabel;
+    if (answeredAt) ev.answeredOn = withAnswerDay(ev.answeredOn, answeredAt);
     this.queue(id);
     this.save();
     learningChanged();

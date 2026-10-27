@@ -20,12 +20,13 @@ export function mergeRemoteEvents(
       merged += 1;
     } else if (!pending.has(event.id)) {
       const previous = events[idx]!;
-      // Keep on-device lesson bodies and the sample mark when the cloud mirror has none.
+      // Keep on-device lesson bodies, answer days and the sample mark when the cloud mirror has none.
       events[idx] = {
         ...event,
         code: previous.code ?? event.code,
         explanation: previous.explanation ?? event.explanation,
         note: previous.note,
+        answeredOn: previous.answeredOn,
         sample: previous.sample ?? event.sample,
       };
       merged += 1;

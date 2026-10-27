@@ -36,6 +36,8 @@ interface Profile {
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
+/** The daily goal from `learning:today`, derived from saved lessons on this computer. */
+interface TodayGoal { explained: boolean; answered: boolean; streak: number }
 interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
@@ -725,8 +727,9 @@ function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: str
   return { text: 'Stale', tone: 'stale' };
 }
 
-function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
+function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
   onTryVoice: () => void;
+  today: TodayGoal | null;
   shortcut: string;
   userName?: string;
   profile: Profile | null;
@@ -836,6 +839,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
         </span>
         <span className="voice-cta__go" aria-hidden="true">→</span>
       </button>
+      {today ? <TodayGoalCard goal={today} /> : null}
       <div className="today-cols">
         {upNext.length ? (
           <section className="today-sec">
@@ -881,6 +885,22 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
         </section>
       </div>
     </div>
+  );
+}
+
+function GoalCheck({ done }: { done: boolean }) {
+  return <span className={`today-goal__check${done ? ' is-done' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>{done ? '✓' : ''}</span>;
+}
+
+/** One quiet card: today's two steps and, from 1 day on, the streak. No celebration. */
+function TodayGoalCard({ goal }: { goal: TodayGoal }) {
+  return (
+    <section className="today-goal" aria-label="Today's goal">
+      <p className="today-goal__line">
+        Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 Test me question
+      </p>
+      {goal.streak > 0 ? <p className="today-goal__streak">Streak: {goal.streak} {goal.streak === 1 ? 'day' : 'days'}</p> : null}
+    </section>
   );
 }
 
@@ -1659,6 +1679,7 @@ function App() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [history, setHistory] = useState<LearningItem[]>([]);
   const [queue, setQueue] = useState<LearningItem[]>([]);
+  const [today, setToday] = useState<TodayGoal | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
@@ -1678,7 +1699,7 @@ function App() {
 
   const refresh = async () => {
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q, appInfo] = await Promise.all([
+      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.feed(8) as Promise<FeedItem[]>,
@@ -1687,9 +1708,10 @@ function App() {
         window.unvibe.syncStatus() as Promise<SyncStatus>,
         window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
+        window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
       ]);
-      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
+      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
         setSideWidth(st.sidebarWidth);
@@ -1973,7 +1995,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}

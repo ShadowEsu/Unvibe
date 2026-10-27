@@ -567,7 +567,7 @@ export function gradeComprehension(win: BrowserWindow, session: ReviewSession, c
   const hasMissed = progress.hasMissed || !correct;
   const firstRight = correct && !progress.understood;
   try {
-    store().setOutcome(session.reviewId, hasMissed ? 'needs_review' : 'understood', a.concept, a.conceptLabel);
+    store().setOutcome(session.reviewId, hasMissed ? 'needs_review' : 'understood', a.concept, a.conceptLabel, new Date());
     if (firstRight) persistUnderstoodSnapshot(session);
   } catch (error) {
     send(win, session, {

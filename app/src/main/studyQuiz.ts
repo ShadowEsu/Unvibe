@@ -310,7 +310,7 @@ export function answerQuizCard(eventId: string, choice: number):
   // Soft mode: wrong answers stay open so the learner can try again.
   if (!correct) {
     try {
-      store().setOutcome(eventId, 'needs_review', pending.concept, pending.conceptLabel);
+      store().setOutcome(eventId, 'needs_review', pending.concept, pending.conceptLabel, new Date());
       void flush();
     } catch {
       // Keep grading even if the outcome write fails.
@@ -322,7 +322,7 @@ export function answerQuizCard(eventId: string, choice: number):
     };
   }
   try {
-    store().setOutcome(eventId, 'understood', pending.concept, pending.conceptLabel);
+    store().setOutcome(eventId, 'understood', pending.concept, pending.conceptLabel, new Date());
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Could not save the quiz result.' };
   }

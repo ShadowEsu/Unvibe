@@ -32,6 +32,8 @@ export interface LocalEvent {
   note?: string;
   /** The built-in first-run sample, not the user's own code. Never a streak day. */
   sample?: true;
+  /** Local days (YYYY-MM-DD) a Test me or quiz question about this lesson was answered. Local only, never synced. */
+  answeredOn?: string[];
 }
 
 export interface Usage {
@@ -81,9 +83,9 @@ export interface LearningItem extends FeedItem {
   note?: string;
 }
 
-/** Strip local-only lesson bodies before any remote sync. */
+/** Strip local-only lesson bodies and answer days before any remote sync. */
 export function forSync(event: LocalEvent): LocalEvent {
-  const { code: _code, explanation: _explanation, note: _note, ...rest } = event;
+  const { code: _code, explanation: _explanation, note: _note, answeredOn: _answeredOn, ...rest } = event;
   return rest;
 }
 
@@ -148,6 +150,35 @@ export function bestStreak(days: Set<string>): number {
     if (run > best) best = run;
   }
   return best;
+}
+
+/** Adds the local day of `now` (the computer's midnight is the boundary) to a lesson's answer days. */
+export function withAnswerDay(answeredOn: string[] | undefined, now: Date): string[] {
+  const day = localDayKey(now);
+  const days = answeredOn ?? [];
+  return days.includes(day) ? days : [...days, day];
+}
+
+export interface TodayGoal {
+  /** An explanation of the user's own code was saved today. */
+  explained: boolean;
+  /** A Test me or quiz question about the user's own code was answered today. */
+  answered: boolean;
+  /** Consecutive local days, ending today or yesterday, on which both happened. */
+  streak: number;
+}
+
+/**
+ * The daily goal (explain 1 piece of code, answer 1 question) derived from the saved lessons.
+ * The two can come from different lessons. Chats and the first-run sample count for neither.
+ */
+export function computeToday(events: LocalEvent[], now: Date): TodayGoal {
+  const own = events.filter((e) => isLearningEvent(e) && e.scope !== 'chat' && !e.sample);
+  const explainedDays = new Set(own.map(eventDay));
+  const answeredDays = new Set(own.flatMap((e) => e.answeredOn ?? []));
+  const goalDays = new Set([...explainedDays].filter((day) => answeredDays.has(day)));
+  const today = localDayKey(now);
+  return { explained: explainedDays.has(today), answered: answeredDays.has(today), streak: currentStreak(goalDays, today) };
 }
 
 const APP_BUCKETS: Array<{ label: string; re: RegExp }> = [

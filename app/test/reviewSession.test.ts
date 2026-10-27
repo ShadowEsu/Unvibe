@@ -13,6 +13,7 @@ import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
 import { gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
+import { computeToday } from '../src/core/learning';
 
 /** Every request body the backend received, by path. */
 const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
@@ -322,6 +323,17 @@ test('a wrong answer then a right answer stays needs_review for this explanation
   await startComprehension(win, s);
   gradeComprehension(win, s, 0);
   assert.equal(lesson(s.reviewId)?.outcome, 'understood', 'a new explanation starts a fresh outcome');
+});
+
+test('a Test me answer counts toward today\'s goal; "Got it" alone does not', async () => {
+  const { win } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  markUnderstood(win, s);
+  assert.deepEqual(computeToday([lesson(s.reviewId)!], new Date()), { explained: true, answered: false, streak: 0 }, 'Got it is not an answer');
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 1);
+  assert.deepEqual(computeToday([lesson(s.reviewId)!], new Date()), { explained: true, answered: true, streak: 1 }, 'a graded Test me answer, even a wrong one');
 });
 
 test('all right answers stay understood and save the snapshot and callback only once', async () => {

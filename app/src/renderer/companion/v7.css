@@ -279,6 +279,17 @@
   & .today-cta__text small { color: #bdbab3; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   & .today-cta__key { flex: 0 0 auto; padding: 4px 10px; border: 1.5px solid var(--lime); border-bottom-width: 3px; border-radius: 8px; background: transparent; color: var(--lime); font: 800 13px var(--font-sans); }
 
+  /* Daily goal: quiet on purpose, no hard shadow or color fill. */
+  & .today-goal { display: grid; gap: 6px; padding: 14px 16px; border: 1.5px solid var(--v-line); border-radius: 14px; background: var(--v-surface); }
+  & .today-goal p { margin: 0; }
+  & .today-goal__line { color: var(--v-ink-2); font: 550 14px/1.7 var(--font-sans); }
+  & .today-goal__check {
+    display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0 2px; vertical-align: -3px;
+    border: 1.5px solid var(--v-faint); border-radius: 5px; color: var(--v-ink); font: 800 11px var(--font-sans);
+  }
+  & .today-goal__check.is-done { border-color: var(--v-ink); background: var(--lime); }
+  & .today-goal__streak { color: var(--v-muted); font: 600 13px var(--font-sans); }
+
   & .today-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; align-items: start; }
   /* One track sized to the column; an implicit track grows to max-content and spills into the next column. */
   & .today-sec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; min-width: 0; }

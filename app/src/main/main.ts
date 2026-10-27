@@ -80,7 +80,7 @@ import {
   networkFetch,
 } from './backend';
 import { setBar, notify, pulseBar } from './notify';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
 import { installHardening } from './hardening';
@@ -991,6 +991,7 @@ app.whenReady().then(() => {
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
+  ipcMain.handle('learning:today', () => computeToday(store().events(), new Date()));
   ipcMain.handle('learning:item', (_e, id: string) => {
     const event = store().eventById(id);
     if (!event) return null;
