@@ -647,7 +647,7 @@
      (the onboarding grid sizes its card to the content), Not now alone on the right. */
   & .ob2__paste { width: 652px; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
   & .ob2 .ob2__actions--end { justify-content: flex-end; }
-  & .ob2__shortcut { text-align: center; }
+  & .ob2__shortcut { justify-self: center; text-align: center; }
   & .ob2__alt { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
 
   & .ob__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
