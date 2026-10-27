@@ -5,8 +5,8 @@
 //
 // Run from a folder where `playwright` is installed (CI does this in real-device-test.yml):
 //   UNVIBE_EXE=/Applications/Unvibe.app/Contents/MacOS/Unvibe MEDIA_DIR=/tmp/uv-media node marketing-media.mjs
-// Env: UNVIBE_EXE (installed app executable), MEDIA_DIR (output folder), MEDIA_INSTALL_ID (reused
-//      so repeated captures count as one install in founder stats).
+// Env: UNVIBE_EXE (installed app executable), MEDIA_DIR (output folder), MEDIA_INSTALL_ID (CI gives
+//      every run a fresh id and flags it as QA; an id reused across runs runs out of free explanations).
 import { _electron as electron } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
