@@ -200,18 +200,20 @@
   color: var(--v-ink);
 }
 
-@media (min-width: 1280px) {
-  .paper-pricing .marketing-plan-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  /* Four in a row: every kicker holds two lines, so the prices start on one line whichever kicker wraps.
-     calc instead of 2lh: the site's default browser targets predate the lh unit. 1.6 is the line-height the
-     kicker already inherits from body, pinned here so the reserved height and the text agree. */
+/* Two or four plans in a row (from 760px): every kicker holds two lines, so the prices in a row start on one
+   line whichever kicker wraps. calc instead of 2lh: the site's default browser targets predate the lh unit.
+   1.6 is the line-height the kicker already inherits from body, pinned here so the reserved height and the text agree. */
+@media (min-width: 760px) {
   .paper-pricing .plan-kicker {
     --kicker-leading: 1.6;
     line-height: var(--kicker-leading);
     min-height: calc(2em * var(--kicker-leading));
+  }
+}
+
+@media (min-width: 1280px) {
+  .paper-pricing .marketing-plan-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

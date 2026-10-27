@@ -1298,8 +1298,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   }
 }
 
-/* Four in a row from 1280px (pages.css repeats the breakpoint with the kicker reservation); below it, two columns. With the
-   Vibe gutter, four-up cards under 1263px squeeze the Free kicker to three lines and drop its price below the others. */
+/* Four in a row from 1280px (pages.css repeats the breakpoint; its 760px rule reserves two kicker lines); below it, two
+   columns. With the Vibe gutter, four-up cards under 1263px squeeze the Free kicker to three lines. */
 @media (min-width: 1280px) {
   .paper-pricing .marketing-plan-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
