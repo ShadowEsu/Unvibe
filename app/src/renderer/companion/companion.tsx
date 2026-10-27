@@ -103,11 +103,11 @@ interface AppUsageLine {
   selections?: { used: number; limit: number; remaining: number; resetsAt: string };
 }
 
-/** Shown after the plan name; the free plan has none. Enterprise and Big Business are never sold in the app, so they show no price. */
-function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | 'lifetime' | null): string | null {
+/** Shown after the plan name; the free plan has none. Enterprise and Big Business are never sold in the app, so they show no price. Teams shows its seats. */
+function planPriceLabel(plan: PlanId, interval: 'monthly' | 'annual' | 'lifetime' | null, seats?: number): string | null {
   if (plan === 'full') return 'Included';
   if (plan === 'pro') return interval === 'lifetime' ? 'Lifetime' : interval === 'annual' ? '$81/yr' : '$9/mo';
-  if (plan === 'teams') return interval === 'annual' ? '$72/seat/yr' : '$8/seat';
+  if (plan === 'teams') return seats ? `· ${seats} seats` : null;
   return null;
 }
 
@@ -926,9 +926,6 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [localUsage, setLocalUsage] = useState<AppUsageLine | null>(null);
   const [available, setAvailable] = useState(false);
-  const [teamsAvailable, setTeamsAvailable] = useState(false);
-  const [seats, setSeats] = useState(3);
-  const [teamName, setTeamName] = useState('');
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
   // Signed out there is no cloud plan to load, so nothing says "Loading plan…" (only the local usage line fills in).
   const [message, setMessage] = useState(compact || !signedIn ? '' : 'Loading plan…');
@@ -956,7 +953,6 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     setOverview(result.data.overview);
     setAvailable(result.data.checkoutAvailable);
     setPaymentsOpen(result.data.paymentsOpen !== false);
-    setTeamsAvailable(Boolean(result.data.teamsAvailable));
     const subscriptionInterval = result.data.overview.subscription.interval;
     if (subscriptionInterval === 'monthly' || subscriptionInterval === 'annual') setInterval(subscriptionInterval);
     setMessage('');
@@ -979,48 +975,6 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
     setBusy(false);
   };
 
-  const teamsCheckout = async () => {
-    if (!signedIn) {
-      setMessage('Sign in to start a team. Google approval happens in the browser.');
-      return;
-    }
-    setBusy(true); setMessage('');
-    const result = await window.unvibe.startBillingCheckout({ plan: 'teams', interval, seats, workspaceName: teamName.trim() || 'My team' }) as { ok: boolean; error?: string };
-    if (!result.ok) setMessage(result.error ?? 'Teams checkout could not start.');
-    setBusy(false);
-  };
-  const teamsTotal = interval === 'annual' ? seats * 72 : seats * 8;
-  const teamsCard = proOpen ? (
-    <article className="plan-pick__card plan-pick__card--teams">
-      <span>For clubs, classes and small teams</span>
-      <h2>Teams $8/seat{interval === 'annual' ? ' · $72/yr' : '/mo'}</h2>
-      <p>One shared workspace, invites, and who reviewed what. 2 to 20 seats. Each person keeps their explanations on their own computer.</p>
-      <div className="teams-form">
-        <label>Team name<input value={teamName} maxLength={60} placeholder="My team" onChange={(e) => setTeamName(e.target.value)} /></label>
-        <label>Seats
-          <span className="seat-step">
-            <button type="button" aria-label="Fewer seats" onClick={() => setSeats((n) => Math.max(2, n - 1))} disabled={seats <= 2}>−</button>
-            <b aria-live="polite">{seats}</b>
-            <button type="button" aria-label="More seats" onClick={() => setSeats((n) => Math.min(20, n + 1))} disabled={seats >= 20}>+</button>
-          </span>
-        </label>
-      </div>
-      <p className="plan-pick__terms">${teamsTotal} {interval === 'annual' ? 'per year' : 'per month'} for {seats} seats, until canceled. Change seats later from this page.</p>
-      {teamsAvailable ? (
-        <button type="button" className="primary-btn" onClick={() => void teamsCheckout()} disabled={busy}>{signedIn ? 'Start Teams' : 'Sign in to start Teams'}</button>
-      ) : (
-        <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(`https://unvibe.site/pricing#teams`)}>Request Teams seats</button>
-      )}
-    </article>
-  ) : (
-    <article className="plan-pick__card plan-pick__card--teams">
-      <span>Teams opens soon</span>
-      <h2>Teams</h2>
-      <p>One shared workspace, invites, and who reviewed what. 2 to 20 seats. Each person keeps their explanations on their own computer.</p>
-      <button type="button" className="soft-btn" onClick={() => void window.unvibe.openUrl(`https://unvibe.site/pricing#teams`)}>Request Teams seats</button>
-    </article>
-  );
-
   const portal = async () => {
     if (!overview) return;
     setBusy(true);
@@ -1034,9 +988,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   const gifted = currentPlan === 'pro' && overview && !overview.hasBillingAccount;
   const paid = Boolean(overview?.hasBillingAccount && isPaidPlan(currentPlan));
   const canPortal = Boolean(overview?.canManageBilling && overview.hasBillingAccount);
-  const showUpgrade = currentPlan !== 'teams';
-  // Teams is offered only below it; Enterprise, Big Business and unknown paid plans see no purchase.
-  const showTeams = currentPlan !== 'teams' && currentPlan !== 'enterprise' && currentPlan !== 'business' && currentPlan !== 'paid';
+  // Only Pro is offered, and only below it; Teams shows only to an account that already has it.
   const upgradeIsPro = currentPlan === 'free' || currentPlan === 'local' || currentPlan === 'trial';
   const meters = collectUsageMeters(overview, localUsage);
   const resetIso = meters[0]?.resetsAt ?? localUsage?.resetsAt;
@@ -1060,7 +1012,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
       <div className="plan-pick">
         <article className="plan-pick__card is-current">
           <span>Current plan</span>
-          <h2>{[planLabel(currentPlan), planPriceLabel(currentPlan, currentInterval)].filter(Boolean).join(' ')}</h2>
+          <h2>{[planLabel(currentPlan), planPriceLabel(currentPlan, currentInterval, overview?.subscription.seats)].filter(Boolean).join(' ')}</h2>
           <p>
             {gifted && overview ? giftStatusLine(overview.subscription.currentPeriodEnd)
               : unlimited ? 'This build is not metered locally.'
@@ -1077,7 +1029,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             : <button type="button" className="soft-btn" disabled>{gifted ? 'Included with a gift' : paid ? 'Active' : 'Included'}</button>}
         </article>
 
-        {showUpgrade && upgradeIsPro && (
+        {upgradeIsPro && (
           <article className="plan-pick__card is-upgrade">
             <span>{pro.open ? 'Upgrade available' : 'Pro opens soon'}</span>
             {pro.open ? (
@@ -1111,7 +1063,6 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             )}
           </article>
         )}
-        {showTeams && !compact ? teamsCard : null}
       </div>
 
       {!signedIn && (

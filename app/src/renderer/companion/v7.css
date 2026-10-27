@@ -746,14 +746,6 @@
 :root[data-ui="v3"][data-v7][data-platform="win"] .topbar { padding-right: 150px; }
 :root[data-ui="v3"][data-v7] .side-resize { width: 12px; right: -4px; }
 
-/* Plan: Teams card */
-.plan-pick__card--teams .teams-form { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
-.plan-pick__card--teams .teams-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: #3b3b3b; }
-.plan-pick__card--teams .teams-form input { width: 180px; padding: 7px 10px; border: 1.5px solid #141414; border-radius: 9px; background: #fff; color: #141414; font: inherit; font-weight: 500; }
-.plan-pick__card--teams .seat-step { display: inline-flex; align-items: center; gap: 10px; }
-.plan-pick__card--teams .seat-step button { width: 30px; height: 30px; border: 1.5px solid #141414; border-radius: 8px; background: #fff; color: #141414; font-weight: 800; cursor: pointer; }
-.plan-pick__card--teams .seat-step button:disabled { opacity: .4; cursor: default; }
-.plan-pick__card--teams .seat-step b { min-width: 22px; text-align: center; font-size: 16px; }
 /* The model picker lives in the composer bar; its menu opens upward there. */
 .chat-composer__bar .chat-ai { flex: 0 1 auto; min-width: 0; }
 .chat-composer__bar .chat-ai__btn { max-width: 240px; }

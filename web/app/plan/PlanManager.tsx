@@ -14,7 +14,6 @@ interface Props {
 }
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-const SUPPORT_MAIL = 'preston@unvibe.site';
 const NEW_TIERS_APPLY_MAIL = 'mailto:hello@unvibe.site?subject=Unvibe%20Enterprise%20or%20Big%20Business%20application';
 const FAIR_USE_URL = 'https://unvibe.site/pricing#fair-use';
 const count = new Intl.NumberFormat('en-US');
@@ -31,9 +30,6 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
   const [workspaces, setWorkspaces] = useState(initialWorkspaces);
   const [interval, setInterval] = useState<Exclude<BillingInterval, 'lifetime'>>('monthly');
   const [teamSeats, setTeamSeats] = useState(Math.max(2, initialOverview.subscription.seats));
-  const [companyEmail, setCompanyEmail] = useState('');
-  const [teamSeatsWanted, setTeamSeatsWanted] = useState(5);
-  const [newTeamName, setNewTeamName] = useState('Engineering');
   const [teamActivity, setTeamActivity] = useState<Array<{ id: string; ts: string; outcome: string; file?: string; project?: string; concept?: string; authorEmail?: string; authorUserId?: string; userId: string }>>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
@@ -73,17 +69,6 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
   }, [overview.workspace.id, overview.workspace.type, overview.canManageMembers]);
 
   useEffect(() => { void loadTeam(); }, [loadTeam]);
-
-  const createTeam = async () => {
-    setBusy(true); setNotice('');
-    try {
-      const data = await requestJson<{ workspace: WorkspaceAccess }>('/api/v1/workspaces', { method: 'POST', body: JSON.stringify({ name: newTeamName.trim() || 'Team' }) });
-      setWorkspaces((current) => [...current, data.workspace]);
-      await loadWorkspace(data.workspace.id);
-      setNotice('Team workspace created. Invite teammates below.');
-    } catch (error) { setNotice(error instanceof Error ? error.message : 'Team could not be created.'); }
-    finally { setBusy(false); }
-  };
 
   useEffect(() => {
     if (initialTrackingRef.current) return;
@@ -190,15 +175,6 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
     finally { setBusy(false); }
   };
 
-  const requestTeams = () => {
-    const email = companyEmail.trim().toLowerCase();
-    if (!email.includes('@')) { setNotice('Enter a company email so we can follow up on Teams seats.'); return; }
-    const seats = Math.max(2, Math.min(20, Math.floor(teamSeatsWanted) || 2));
-    const subject = encodeURIComponent(`Unvibe Teams founding pilot · ${seats} seats`);
-    const body = encodeURIComponent(`Company email: ${email}\nSeats wanted: ${seats}\n\nWe want the Teams founding pilot (workspace + billing). GitHub intelligence can stay labeled Pilot until it ships.`);
-    window.location.href = `mailto:${SUPPORT_MAIL}?subject=${subject}&body=${body}`;
-  };
-
   const priceLabel = useMemo(() => ({
     pro: interval === 'monthly' ? '$9/month' : '$81/year',
   }), [interval]);
@@ -248,31 +224,12 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
         {/* Not for sale yet: no checkout button here until live payments are cleared, whatever the flag says. */}
         <section className="plan-card plan-teams-band" aria-label="Enterprise and Big Business">
           <div>
-            <p>Enterprise · {money.format(priceFor('enterprise', 'monthly', 1) / 100)}/month</p>
+            <p>Enterprise · {money.format(priceFor('enterprise', 'monthly', 1) / 100)} a month</p>
             <small>{count.format(planLimit('enterprise', 'ai_explanation', 1))} explanations a month and every Pro feature, one account. Payments open soon.</small>
             <p>Big Business · {money.format(priceFor('business', 'lifetime', 1) / 100)} once</p>
             <small><a href={FAIR_USE_URL}>Unlimited explanations under fair use</a>: up to {count.format(planLimit('business', 'ai_explanation', 1))} explanations and {count.format(planLimit('business', 'project_question', 1))} questions a month, the latest features, one account. Payments open soon.</small>
           </div>
           <a className="btn btn--secondary" href={NEW_TIERS_APPLY_MAIL}>Contact us to apply</a>
-        </section>
-
-        <section className="plan-card plan-teams-band">
-          <div>
-            <p>Teams founding pilot</p>
-            <h2>$8/seat</h2>
-            <small>Shared workspace + who reviewed what. Explanation text stays on each device. GitHub intelligence stays Pilot. Self-serve Stripe checkout is paused.</small>
-            {overview.workspace.type === 'personal' && (
-              <div className="plan-team-request">
-                <input type="text" placeholder="Team name" value={newTeamName} onChange={(event) => setNewTeamName(event.target.value)} aria-label="Team name" />
-                <button className="btn btn--primary" type="button" onClick={() => void createTeam()} disabled={busy}>Create team</button>
-              </div>
-            )}
-            <div className="plan-team-request">
-              <input type="email" placeholder="company@email.com" value={companyEmail} onChange={(event) => setCompanyEmail(event.target.value)} aria-label="Company email" />
-              <input type="number" min={2} max={20} value={teamSeatsWanted} onChange={(event) => setTeamSeatsWanted(Number(event.target.value))} aria-label="Seats wanted" />
-            </div>
-          </div>
-          <button className="btn btn--secondary" type="button" onClick={requestTeams}>Request paid seats</button>
         </section>
       </>}
 
