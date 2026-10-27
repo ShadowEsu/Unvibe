@@ -100,7 +100,7 @@ export function kitSections(): KitSection[] {
     {
       id: "investors",
       title: "Persuading investors",
-      intro: `Unvibe is live, free, and shipping fast. Public, self-reported committed cash: ${total}. Program memberships and credits are not listed. This is not a priced round or a complete account of company resources.`,
+      intro: `Unvibe is live, free, and shipping fast. Public, self-reported committed cash: ${total}. This is not a priced round or a complete account of company resources.`,
       bullets: [
         "Problem: developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment code changes.",
         "Product: select code, press one key, get an in-place explanation at five depths, a quiz, a saved lesson, and a review of what the agent changed.",

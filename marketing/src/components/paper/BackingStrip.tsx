@@ -5,7 +5,7 @@ export function BackingStrip() {
         <div className="sec-head">
           <p className="paper-meta">Behind Unvibe</p>
           <h2 id="backing-title">Follow <em>what we&apos;re building.</em></h2>
-          <p className="paper-lead">Read the <a href="/investors">investor overview</a> for the product thesis, public cash figures, and what comes next.</p>
+          <p className="paper-lead">Read the <a className="paper-text-link" href="/investors">investor overview</a> for the product thesis, public cash figures, and what comes next.</p>
         </div>
       </div>
     </section>

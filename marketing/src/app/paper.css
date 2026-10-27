@@ -702,7 +702,6 @@ h2 {
   main > .paper-section:not(.paper-install--front) { content-visibility: auto; contain-intrinsic-size: 1px 850px; }
 }
 
-html[data-performance="lite"] .paper-partners__track,
 html[data-performance="lite"] .paper-marquee__track,
 html[data-performance="lite"] .paper-follow,
 html[data-performance="lite"] .paper-keys,
@@ -750,7 +749,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .paper-partners__track,
   .paper-marquee__track {
     animation: none;
   }
