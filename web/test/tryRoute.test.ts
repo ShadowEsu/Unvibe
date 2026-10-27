@@ -1,6 +1,6 @@
 import { createHash, createHmac } from 'node:crypto';
 import assert from 'node:assert/strict';
-import { beforeEach, test } from 'node:test';
+import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/try/route';
 
 // The real /api/v1/try handler; only the AI providers and PostgREST HTTP boundaries are local.
@@ -8,11 +8,18 @@ const BASE_ENV = { ...process.env };
 const STORE_HOST = 'try.supabase.test';
 
 type Row = { ip_hash: string; created_at: string };
+type RpcArgs = { p_ip_hash: string; p_ip_cap: number; p_day_cap: number };
 const calls = { gemini: 0, openrouter: 0, anthropic: 0 };
 let rows: Row[] = [];
-let inserted: unknown[] = [];
-/** `count`: counts answer 500; `missing`: no table (PostgREST answers a head request 404, no body); `insert`: inserts answer 500. */
-let fault: 'count' | 'missing' | 'insert' | null = null;
+/** Every `reserve_try_request` call's arguments, in order. */
+let rpcCalls: RpcArgs[] = [];
+/** Any other request to the store (a direct table read or write): the route must make none. */
+let tableCalls: string[] = [];
+/**
+ * Overrides what the RPC answers. `null`: applies the caps to `rows` like the SQL function and answers
+ * its text. A `Response` factory: answers that instead and records nothing.
+ */
+let rpcAnswer: (() => Response) | null = null;
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
@@ -28,27 +35,27 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     calls.anthropic += 1;
     return Response.json({ content: [{ type: 'text', text: 'Anthropic answer.' }] });
   }
-  if (url.hostname === STORE_HOST && url.pathname === '/rest/v1/try_requests') return store(url, init);
+  if (url.hostname === STORE_HOST && url.pathname === '/rest/v1/rpc/reserve_try_request' && init?.method === 'POST') {
+    return reserve(JSON.parse(String(init.body)) as RpcArgs);
+  }
+  if (url.hostname === STORE_HOST) {
+    tableCalls.push(`${init?.method ?? 'GET'} ${url.pathname}${url.search}`);
+    return Response.json({ code: 'XX000', message: 'not part of the fake store' }, { status: 500 });
+  }
   throw new Error(`Unexpected request: ${url}`);
 }) as typeof fetch;
 
-/** PostgREST for `try_requests`: head counts with `ip_hash=eq.` / `created_at=gte.` filters, and inserts. */
-async function store(url: URL, init?: RequestInit): Promise<Response> {
-  const method = init?.method ?? 'GET';
-  if (method === 'POST') {
-    if (fault === 'insert') return Response.json({ code: 'XX000', message: 'insert failed' }, { status: 500 });
-    const body: unknown = JSON.parse(String(init?.body));
-    inserted.push(body);
-    const ipHash = body && typeof body === 'object' && 'ip_hash' in body ? String(body.ip_hash) : '';
-    rows.push({ ip_hash: ipHash, created_at: new Date().toISOString() });
-    return new Response(null, { status: 201 });
-  }
-  if (fault === 'count') return Response.json({ code: 'XX000', message: 'count failed' }, { status: 500 });
-  if (fault === 'missing') return new Response(null, { status: 404 });
-  const ip = url.searchParams.get('ip_hash')?.replace(/^eq\./, '');
-  const since = url.searchParams.get('created_at')?.replace(/^gte\./, '') ?? '';
-  const count = rows.filter((row) => (!ip || row.ip_hash === ip) && row.created_at >= since).length;
-  return new Response(null, { status: 200, headers: { 'content-range': `*/${count}` } });
+/** PostgREST's answer to `rpc('reserve_try_request')`: a text function's result is a JSON string. */
+function reserve(args: RpcArgs): Response {
+  rpcCalls.push(args);
+  if (rpcAnswer) return rpcAnswer();
+  const now = Date.now();
+  const mine = rows.filter((row) => row.ip_hash === args.p_ip_hash && now - Date.parse(row.created_at) <= 3_600_000).length;
+  if (mine >= args.p_ip_cap) return Response.json('hour_cap');
+  const all = rows.filter((row) => now - Date.parse(row.created_at) <= 86_400_000).length;
+  if (all >= args.p_day_cap) return Response.json('day_cap');
+  rows.push({ ip_hash: args.p_ip_hash, created_at: new Date(now).toISOString() });
+  return Response.json('ok');
 }
 
 function setEnv(vars: Record<string, string | undefined>): void {
@@ -96,9 +103,15 @@ beforeEach(() => {
   calls.openrouter = 0;
   calls.anthropic = 0;
   rows = [];
-  inserted = [];
-  fault = null;
+  rpcCalls = [];
+  tableCalls = [];
+  rpcAnswer = null;
   delete (globalThis as { __unvibeTryMemory?: unknown }).__unvibeTryMemory;
+});
+
+afterEach(() => {
+  // The limiter's only store access is the RPC: no direct count or insert on try_requests.
+  assert.deepEqual(tableCalls, []);
 });
 
 test('Try uses Gemini even when OpenRouter and Anthropic keys are set too', async () => {
@@ -131,9 +144,9 @@ test('outside production ENABLE_MOCK_AI selects the labelled mock, which Try nev
 });
 
 function storedHash(): string {
-  const last = inserted.at(-1);
-  assert.ok(last && typeof last === 'object' && 'ip_hash' in last && typeof last.ip_hash === 'string', 'Try stored one row');
-  return last.ip_hash;
+  const last = rpcCalls.at(-1);
+  assert.ok(last, 'Try reserved through the RPC');
+  return last.p_ip_hash;
 }
 
 test('the stored IP hash is an HMAC keyed by the service-role key, not sha256 of a public constant', async () => {
@@ -162,28 +175,80 @@ test('production with neither TRY_IP_SALT nor the service-role key answers 503 a
   const res = await POST(tryRequest());
   assert.equal(res.status, 503);
   assert.equal(calls.gemini, 0);
-  assert.equal(inserted.length, 0);
+  assert.equal(rpcCalls.length, 0);
 });
 
-test('a store count error answers 503 with zero model calls', async () => {
+test('each POST makes exactly one reserve_try_request call with the hash and both caps', async () => {
   production();
-  fault = 'count';
-  assert.equal((await POST(tryRequest())).status, 503);
+  const ip = '203.0.113.11';
+  for (let i = 1; i <= 3; i += 1) {
+    assert.equal((await POST(tryRequest(ip))).status, 200);
+    assert.equal(rpcCalls.length, i);
+  }
+  const hash = createHmac('sha256', 'local-service-role-key').update(`unvibe-try:${ip}`).digest('hex').slice(0, 32);
+  assert.deepEqual(rpcCalls.at(-1), { p_ip_hash: hash, p_ip_cap: 6, p_day_cap: 500 });
+  assert.equal(calls.gemini, 3);
+});
+
+test('the RPC answering ok calls the model once and answers 200', async () => {
+  production();
+  rpcAnswer = () => Response.json('ok');
+  const res = await POST(tryRequest());
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /"text":"Gemini says it adds one\."/);
+  assert.equal(rpcCalls.length, 1);
+  assert.equal(calls.gemini, 1);
+});
+
+test('the RPC answering hour_cap or day_cap answers 429 with that message and calls no model', async () => {
+  production();
+  for (const [answer, message] of [['hour_cap', /a lot this hour/], ['day_cap', /busy today/]] as const) {
+    rpcAnswer = () => Response.json(answer);
+    const res = await POST(tryRequest());
+    assert.equal(res.status, 429, answer);
+    assert.match(await res.text(), message);
+  }
+  assert.equal(rpcCalls.length, 2);
   assert.equal(calls.gemini, 0);
-  assert.equal(inserted.length, 0);
 });
 
-test('a missing try_requests table (head count with no count) answers 503 with zero model calls', async () => {
+test('an RPC error (500, missing function 404, permission 401) answers 503 with zero model calls', async () => {
   production();
-  fault = 'missing';
-  assert.equal((await POST(tryRequest())).status, 503);
+  const errors = [
+    () => Response.json({ code: 'XX000', message: 'reserve failed' }, { status: 500 }),
+    () => Response.json({ code: 'PGRST202', message: 'Could not find the function public.reserve_try_request' }, { status: 404 }),
+    () => Response.json({ code: '42501', message: 'permission denied for function reserve_try_request' }, { status: 401 }),
+  ];
+  for (const answer of errors) {
+    rpcAnswer = answer;
+    assert.equal((await POST(tryRequest())).status, 503);
+  }
+  assert.equal(rpcCalls.length, errors.length);
   assert.equal(calls.gemini, 0);
 });
 
-test('a store insert error answers 503 with zero model calls', async () => {
+test('an RPC answering null or no body (200, bodyless 404) answers 503 with zero model calls', async () => {
   production();
-  fault = 'insert';
+  const answers = [() => Response.json(null), () => new Response(null, { status: 200 }), () => new Response(null, { status: 404 })];
+  for (const answer of answers) {
+    rpcAnswer = answer;
+    assert.equal((await POST(tryRequest())).status, 503);
+  }
+  assert.equal(rpcCalls.length, answers.length);
+  assert.equal(calls.gemini, 0);
+});
+
+test('an unexpected RPC value (other text, wrong case, array, object, number, true) answers 503 with zero model calls', async () => {
+  production();
+  const values = ['maybe', 'OK', ' ok', ['ok'], { reserve_try_request: 'ok' }, 1, true];
+  for (const value of values) {
+    rpcAnswer = () => Response.json(value);
+    assert.equal((await POST(tryRequest())).status, 503, JSON.stringify(value));
+  }
+  // PostgREST answers an array of rows with 404 when no function matched: postgrest-js reads it as data [] and no error.
+  rpcAnswer = () => Response.json([], { status: 404 });
   assert.equal((await POST(tryRequest())).status, 503);
+  assert.equal(rpcCalls.length, values.length + 1);
   assert.equal(calls.gemini, 0);
 });
 
@@ -201,6 +266,8 @@ test('the store caps one IP at 6 an hour and everyone at 500 a day', async () =>
   const now = new Date().toISOString();
   while (rows.length < 500) rows.push({ ip_hash: `other-${rows.length}`, created_at: now });
   assert.equal((await POST(tryRequest())).status, 429);
+  assert.equal(rows.length, 500);
+  assert.equal(rpcCalls.length, 8);
   assert.equal(calls.gemini, 6);
 });
 

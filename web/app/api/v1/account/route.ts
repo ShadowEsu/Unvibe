@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { getStore } from '@/data/store';
 import { userFromRequest, unauthorized } from '@/lib/auth';
+import { errorSummary } from '@/billing/http';
 import { getBillingStore } from '@/billing/store';
 import { getStripe } from '@/billing/stripe';
 import type { SubscriptionRecord } from '@/billing/types';
@@ -51,8 +52,9 @@ export async function DELETE(req: Request): Promise<Response> {
     try {
       charges = await stillCharges(overview.subscription);
     } catch (error) {
-      // Unknown billing state: never delete an account Stripe might keep charging.
-      console.error('account delete: subscription check failed', error instanceof Error ? error.message : error);
+      // Unknown billing state: never delete an account Stripe might keep charging. Only the error's
+      // type and code are logged: Stripe's message can quote customer, price and key details.
+      console.error('account delete: subscription check failed', errorSummary(error));
       return Response.json({ error: 'billing_unavailable', message: 'We could not check your subscription. Nothing was deleted. Try again in a minute.' }, { status: 503 });
     }
     if (charges) {

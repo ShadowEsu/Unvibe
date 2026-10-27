@@ -1,4 +1,4 @@
-import type { PlanId, SubscriptionStatus, UsageKind, WorkspaceRole } from './types';
+import type { PlanId, SubscriptionRecord, SubscriptionStatus, UsageKind, WorkspaceRole } from './types';
 
 /** How long after its reservation a request's usage row can still receive token counts. */
 export const USAGE_TOKEN_WINDOW_MS = 15 * 60_000;
@@ -76,6 +76,19 @@ export function effectivePlan(
   if (plan === 'free' || status === 'trialing' || status === 'active') return plan;
   if (status === 'grace_period' && gracePeriodEndsAt && new Date(gracePeriodEndsAt) > now) return plan;
   return 'free';
+}
+
+/**
+ * When paid access on this row came from outside Stripe (a promo code, a gift, a referral or any other
+ * complimentary grant) and is still running, the date it ends; otherwise null. Such a row carries no
+ * Stripe subscription id. Lifetime is a Stripe purchase and is never complimentary.
+ */
+export function complimentaryPaidEnd(subscription: SubscriptionRecord, now = new Date()): string | null {
+  if (subscription.stripeSubscriptionId || subscription.interval === 'lifetime') return null;
+  const { currentPeriodEnd } = subscription;
+  if (!currentPeriodEnd || new Date(currentPeriodEnd) <= now) return null;
+  const plan = effectivePlan(subscription.plan, subscription.status, subscription.gracePeriodEndsAt, now, currentPeriodEnd);
+  return plan === 'free' ? null : currentPeriodEnd;
 }
 
 export function monthWindow(now = new Date()): { startsAt: string; resetsAt: string } {

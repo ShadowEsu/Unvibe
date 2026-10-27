@@ -1,3 +1,5 @@
+import { stripeKeyMode } from '../src/billing/stripeKey';
+
 export interface StagingConfig {
   supabaseUrl: string;
   anonKey: string;
@@ -33,9 +35,10 @@ export function stagingConfig(env: NodeJS.ProcessEnv = process.env): StagingConf
   if (env.PRODUCTION_WEB_BASE_URL && new URL(env.PRODUCTION_WEB_BASE_URL).origin === appUrl.origin) {
     throw new Error('Refusing: staging and production web origins match.');
   }
-  // Any key that is not a test (or restricted test) key is refused: rk_live_, a mistyped or padded key.
+  // Any key that is not a well-formed test (or restricted test) key is refused: rk_live_, a
+  // publishable or org key, a mistyped, padded or newline-terminated key, an empty suffix.
   const stripeKey = env.STRIPE_SECRET_KEY;
-  if (stripeKey !== undefined && stripeKey !== '' && !/^(sk|rk)_test_/.test(stripeKey)) throw new Error('Refusing a Stripe key that is not a test key.');
+  if (stripeKey !== undefined && stripeKey !== '' && stripeKeyMode(stripeKey) !== 'test') throw new Error('Refusing a Stripe key that is not a test key.');
   return {
     supabaseUrl,
     anonKey,

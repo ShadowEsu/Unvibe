@@ -3,7 +3,7 @@ import { getBillingStore } from '@/billing/store';
 import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
-import { CHECKOUT_SESSION_TTL_MS, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
+import { CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
 import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, SubscriptionStatus, WorkspaceAccess } from '@/billing/types';
 
@@ -71,6 +71,18 @@ export async function POST(req: Request): Promise<Response> {
     const current = await billing.overview(user, workspace.id);
     if (current.subscription.interval === 'lifetime' && current.subscription.status === 'active') {
       return Response.json({ error: 'lifetime_active', message: 'This account already has Pro Lifetime.' }, { status: 409 });
+    }
+    // Complimentary access (promo code, gift, referral) runs to its end date first: a paid
+    // subscription now would replace it and the remaining free time would be lost.
+    const complimentaryEnd = complimentaryPaidEnd(current.subscription);
+    if (complimentaryEnd) {
+      const planName = current.subscription.plan === 'teams' ? 'Teams' : 'Pro';
+      const until = new Date(complimentaryEnd).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+      return Response.json({
+        error: 'complimentary_active',
+        message: `You already have ${planName} until ${until}. You can subscribe after that.`,
+        proUntil: complimentaryEnd,
+      }, { status: 409 });
     }
     // Only a subscription that can still charge or entitle blocks a new checkout; an inactive or
     // canceled row that still carries its old Stripe id must not lock the workspace out for good.

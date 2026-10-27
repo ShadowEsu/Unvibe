@@ -15,7 +15,7 @@ delete process.env.VERCEL_ENV;
 delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
 delete process.env.APP_URL;
 delete process.env.PUBLIC_APP_URL;
-process.env.STRIPE_SECRET_KEY = 'sk_test_local_only_never_sent';
+process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 
 const CONFIG = {
   STRIPE_WEBHOOK_SECRET: 'whsec_local_only',

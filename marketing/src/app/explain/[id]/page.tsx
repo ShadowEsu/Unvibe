@@ -13,6 +13,9 @@ interface Params {
 
 export const dynamicParams = false;
 
+const OG_CARDS: Record<string, string> = { sql: "/og/og-explain-sql.png", bash: "/og/og-explain-bash.png" };
+const OG_DEFAULT = "/og/og-home.png";
+
 export function generateStaticParams(): Params["params"][] {
   return explainPages.map(({ id }) => ({ id }));
 }
@@ -22,7 +25,8 @@ export function generateMetadata({ params }: Params): Metadata {
   if (!page) return {};
   const title = `Explain ${explainLanguage(page).name} code in plain English`;
   const url = `/explain/${page.id}`;
-  const image = "/unvibe-social-preview-v6.png";
+  // Link cards drawn from the page's own title, lead and sample; languages without one use the home card.
+  const image = OG_CARDS[page.id] ?? OG_DEFAULT;
   return {
     title,
     description: page.description,

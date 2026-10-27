@@ -50,27 +50,34 @@ function memory(): { visitors: Map<string, number[]>; all: number[] } {
 }
 
 /**
- * Counts this visitor's requests in the last hour and everyone's in the last day, then records this one.
- * Returns null only when the request is under both caps and was recorded. Any store error, a count the
- * store didn't return (a missing table answers a head count with no count), or a failed insert is a 503,
- * so a broken store never means no limit. Production never falls back to process memory.
+ * Records this request if this visitor is under the hourly cap and everyone is under the daily cap.
+ * In the store this is one call to `reserve_try_request`, which counts and inserts under one advisory
+ * lock, so a concurrent burst can't all read the same count (migration 20261028090000). Returns null
+ * only when the function answered `ok`; `hour_cap` and `day_cap` are 429s, and an error, a null or any
+ * other answer is a 503, so a broken store never means no limit. Production never falls back to
+ * process memory.
  */
 async function reserveTry(visitor: string): Promise<Refusal | null> {
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (url && key) {
     const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-    const hourAgo = new Date(Date.now() - 3_600_000).toISOString();
-    const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
-    const [mine, all] = await Promise.all([
-      db.from('try_requests').select('id', { count: 'exact', head: true }).eq('ip_hash', visitor).gte('created_at', hourAgo),
-      db.from('try_requests').select('id', { count: 'exact', head: true }).gte('created_at', dayAgo),
-    ]);
-    if (mine.error || all.error || typeof mine.count !== 'number' || typeof all.count !== 'number') return UNAVAILABLE;
-    if (mine.count >= TRY_PER_IP_PER_HOUR) return HOUR_CAP;
-    if (all.count >= TRY_GLOBAL_PER_DAY) return DAY_CAP;
-    const { error } = await db.from('try_requests').insert({ ip_hash: visitor });
-    return error ? UNAVAILABLE : null;
+    const { data, error } = await db.rpc('reserve_try_request', {
+      p_ip_hash: visitor,
+      p_ip_cap: TRY_PER_IP_PER_HOUR,
+      p_day_cap: TRY_GLOBAL_PER_DAY,
+    });
+    if (error) return UNAVAILABLE;
+    switch (data) {
+      case 'ok':
+        return null;
+      case 'hour_cap':
+        return HOUR_CAP;
+      case 'day_cap':
+        return DAY_CAP;
+      default:
+        return UNAVAILABLE;
+    }
   }
   if (process.env.NODE_ENV === 'production') return UNAVAILABLE;
   const now = Date.now();

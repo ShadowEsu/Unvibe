@@ -68,6 +68,7 @@ Signed in, you can delete your account and all associated data at any time from 
 - All learning events and reviews
 - Account credentials and session tokens
 - Synced data on our servers
+- On this computer: your learning, the API key you saved in Unvibe, and the name, email and last project folder saved in Unvibe
 
 Without an account, **Erase learning** in Settings › Account & Plan removes every saved explanation from this computer.
 

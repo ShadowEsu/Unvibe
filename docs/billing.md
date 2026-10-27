@@ -15,7 +15,7 @@ usage reservations; the migration seeds it to the same initial values:
 - Teams ($8/seat/month or $72/seat/year) is sold as a pilot by email: the site collects company email + seat request (mailto). Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
 - Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
 - Founding Teams collab (no Stripe required): create team workspace, invite seats, shared activity feed with authorship (`GET /api/v1/workspaces/:id/history`). Explanation/code bodies stay on-device. GitHub intelligence remains out of scope.
-- Founder env paste list: `docs/release/founder-paste-list.md`.
+- Owner env paste list: `docs/release/owner-paste-list.md`.
 
 The server always chooses a trusted Stripe price ID. Browser-supplied amounts, price IDs,
 customer IDs, subscription IDs, and entitlements are ignored. The database also rejects Pro on
@@ -46,7 +46,7 @@ privileges are also restricted to `service_role`.
 4. Keep the Customer Portal configured for payment-method updates and cancellation. Do not enable
    customer-controlled quantities unless its minimums can match the server rules.
 5. Exercise the staging matrix below with Stripe test clocks/cards. Production keys and live-mode
-   Prices require a separate founder release decision.
+   Prices require a separate owner release decision.
 
 Checkout redirects do not grant access. The webhook is authoritative; the success-page refresh
 waits for the completed checkout intent and paid entitlement written by the signed webhook.
@@ -96,8 +96,22 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
 - No minting over the API. `web/scripts/promo-batch.mjs generate <batch> <count>` writes the codes to
   a private CSV (mode 600, `~/.config/unvibe-promo/unvibe-promo-<batch>.csv`) and a hash-only SQL
   insert that is run once by hand. `take <batch> <who>` hands out the next code under a file lock.
-  Both refuse a folder that other users can write (group or world), so nobody else can swap the
-  codes or the SQL before it runs; `chmod 700` the folder to go on.
+  `generate`, `take` and `verify` all refuse a folder that isn't yours, that other users can write
+  (group or world), or that sits under a folder they can change. A sticky parent like `/tmp` is
+  allowed, because other users can't rename or delete what is yours there. They also refuse a folder
+  path that is itself a symlink; pass the real folder path instead. `generate` refuses a `--label`
+  with control characters (tabs, line breaks and the like, and invisible ones such as zero-width
+  spaces and text-direction marks). It prints the SQL's sha256: record it somewhere off this Mac,
+  for example in a note on your phone, because anyone who could change the SQL here could change a
+  copy kept next to it. The verify command it prints has a placeholder where the sha256 goes, so a
+  copy from the Terminal history never carries it. Right before the SQL runs on production, run
+  `verify <batch> --expect-sha <sha256>` with the sha256 you recorded. It refuses to go on without
+  it, and refuses an SQL or CSV that is a symlink, has a second hard link, belongs to another user
+  or can be written by other users. It refuses the SQL (do not run it) if the file's sha256 is
+  different. Then it checks that the SQL is exactly the insert for the codes in the CSV, refuses a
+  label with control characters, and prints the batch settings. Run that verified file itself, for
+  example `psql -f <sql>`. Never paste it into an SQL editor: a pasted copy is not what the hash
+  covered.
 - `GET /api/v1/admin/promo` lists batches and redemptions; `POST` with `revoke_code` or
   `revoke_batch` switches codes off (`UNVIBE_ADMIN_STATS_TOKEN`; the script's `list` and `revoke`
   use it). Revoking a redeemed code takes back only the promo time not used yet: at most what that

@@ -1,6 +1,6 @@
 # Staging setup
 
-Owner: founder or authorized infrastructure operator. Do not reuse production projects, domains, keys, user data, billing, or AI credentials.
+Owner: business owner or authorized infrastructure operator. Do not reuse production projects, domains, keys, user data, billing, or AI credentials.
 
 ## Isolated resources
 

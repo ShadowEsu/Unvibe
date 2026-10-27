@@ -68,20 +68,41 @@ jobs:
           npm run package < /dev/null
           test -f release/unvibe-desktop-bridge-0.1.2.vsix
 
-      # Optional stable signing identity (self-signed, not Apple-issued). With it every Mac
-      # build has the same signature, so macOS keeps the Accessibility permission and the
-      # keychain stops asking for the login password after each update. Without the secrets
-      # the build falls back to ad-hoc signing in scripts/afterPackHook.cjs.
+      # Stable signing identity (self-signed, not Apple-issued). With it every Mac build has the
+      # same signature, so macOS keeps the Accessibility permission and the keychain stops asking
+      # for the login password after each update. A release must be signed with the certificate the
+      # app and install.sh pin (MAC_SIGNING_REQUIREMENT in app/src/main/updater.ts), so publishing
+      # stops here, before anything is uploaded, without it. A run that doesn't publish never
+      # imports it: scripts/afterPackHook.cjs signs that build ad-hoc, its installers are verified
+      # without the pin, and the app's updater and install.sh would refuse them.
       - name: Prepare stable Mac signing identity
         if: matrix.os == 'macos-latest'
         shell: bash
         env:
           MAC_SELF_SIGN_P12: ${{ secrets.MAC_SELF_SIGN_P12 }}
           MAC_SELF_SIGN_PASSWORD: ${{ secrets.MAC_SELF_SIGN_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
         run: |
-          if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
-            echo "No stable signing identity configured; builds use ad-hoc signing."
+          # With MAC_CSC_LINK set, electron-builder re-signs the app with that Developer ID, a
+          # different certificate. The app's updater and install.sh refuse such a build, so Mac
+          # updates would stop until the next release.
+          if [ "$PUBLISH" = "true" ] && [ -n "$MAC_CSC_LINK" ]; then
+            echo "MAC_CSC_LINK is set, so this Mac build would be signed with a Developer ID instead of the certificate the app's updater and install.sh pin. They would refuse it, so this release is not published. Remove the MAC_CSC_LINK secret to publish."
+            exit 1
+          fi
+          # Only a publishing run imports the signing identity: a tag push, or a manual run with
+          # publish set to true. A manual run can start from any branch, so any branch can produce and
+          # publish a build signed with the pinned certificate. Follow-up, the owner's decision: move
+          # MAC_SELF_SIGN_P12 and MAC_SELF_SIGN_PASSWORD into a protected environment so only an
+          # approved release run can read them.
+          if [ "$PUBLISH" != "true" ]; then
+            echo "Not publishing, so the stable signing identity is not imported; builds use ad-hoc signing."
             exit 0
+          fi
+          if [ -z "$MAC_SELF_SIGN_P12" ] || [ -z "$MAC_SELF_SIGN_PASSWORD" ]; then
+            echo "No stable signing identity configured. The app's updater and install.sh refuse builds not signed with it, so this release is not published."
+            exit 1
           fi
           kc="$RUNNER_TEMP/unvibe-sign.keychain-db"
           kcpass="$(uuidgen)"
@@ -97,6 +118,12 @@ jobs:
           sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$RUNNER_TEMP/sign.pem"
           rm -f "$RUNNER_TEMP/sign.p12"
           security find-identity -v -p codesigning "$kc"
+          # The SHA-1 of this certificate is the "certificate leaf" the app's update check pins.
+          leaf="$(security find-certificate -c "Unvibe Self Signed" -Z "$kc" | awk '/^SHA-1 hash:/ { print tolower($3) }')"
+          if [ "$leaf" != "c9da4f618adf98911a450e041b8f336574a99d0e" ]; then
+            echo "The signing certificate ($leaf) is not the one the app's updater and install.sh pin, so they would refuse this build."
+            exit 1
+          fi
           echo "UNVIBE_SIGN_IDENTITY=Unvibe Self Signed" >> "$GITHUB_ENV"
           echo "UNVIBE_SIGN_KEYCHAIN=$kc" >> "$GITHUB_ENV"
 
@@ -113,15 +140,24 @@ jobs:
           # Publish as a visible pre-release instead of a hidden draft, so site download links work.
           EP_DRAFT: "false"
           EP_PRE_RELEASE: "true"
-          # Optional: set these repo secrets to code-sign and notarize the macOS build.
-          # Without them the app is ad-hoc signed by scripts/afterPackHook.cjs so Apple silicon opens it.
+          # A Developer ID certificate. A Mac release with it set stops in "Prepare stable Mac
+          # signing identity": the app's updater and install.sh only accept the pinned certificate.
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          # scripts/afterPackHook.cjs signs the app and checks the pin before electron-builder's own
+          # signing step. If electron-builder found a signing identity on its own and signed again,
+          # the release would carry a signature that check never saw.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
         shell: bash
         run: |
           # An unset repo secret arrives as an empty string, which electron-builder misreads as a path.
           if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; fi
           if [ "$RUNNER_OS" = "macOS" ]; then
+            # scripts/afterPackHook.cjs signs with the pinned certificate, and checks it, only when the
+            # identity is set, and the installers are verified only after they are uploaded. Without it
+            # this would publish an ad-hoc build, so it stops here even if the steps above disagree
+            # about whether this run publishes.
+            [ -n "${UNVIBE_SIGN_IDENTITY:-}" ] || { echo "The stable signing identity was not imported, so this Mac build would be signed ad-hoc. The app's updater and install.sh would refuse it, so this release is not published."; exit 1; }
             # Spotlight indexing a freshly mounted DMG keeps it busy, so "hdiutil detach" fails
             # and the Apple silicon DMG never uploads. Indexing is useless on a CI runner.
             sudo mdutil -a -i off >/dev/null 2>&1 || true
@@ -161,6 +197,8 @@ jobs:
       - name: Verify Mac installers open on Apple silicon and Intel
         if: matrix.os == 'macos-latest'
         shell: bash
+        env:
+          PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
         run: |
           set -euo pipefail
           for dmg in release/*.dmg; do
@@ -168,7 +206,13 @@ jobs:
             hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" >/dev/null
             app="$mnt/Unvibe.app"
             echo "== $dmg"
-            codesign --verify --deep --strict --verbose=2 "$app"
+            if [ -n "${UNVIBE_SIGN_IDENTITY:-}" ] || [ "$PUBLISH" = "true" ]; then
+              # The same requirement the app's updater and install.sh check (MAC_SIGNING_REQUIREMENT).
+              codesign --verify --deep --strict --verbose=2 -R='identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"' "$app"
+            else
+              # Built ad-hoc for testing (no identity imported), so only the seal is checked.
+              codesign --verify --deep --strict --verbose=2 "$app"
+            fi
             ls "$mnt/.background" >/dev/null
             arch="$(lipo -archs "$app/Contents/MacOS/Unvibe")"
             echo "arch: $arch"

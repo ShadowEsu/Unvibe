@@ -38,10 +38,10 @@ class KnowledgeStore {
     }
   }
 
-  private save(): void {
+  private save(data: KnowledgeFile = this.data): void {
     mkdirSync(path.dirname(this.file), { recursive: true });
     const temporary = `${this.file}.tmp`;
-    writeFileSync(temporary, JSON.stringify(this.data), { mode: 0o600 });
+    writeFileSync(temporary, JSON.stringify(data), { mode: 0o600 });
     renameSync(temporary, this.file);
   }
 
@@ -141,8 +141,10 @@ class KnowledgeStore {
   }
 
   wipe(): void {
-    this.data = { objects: [], teachBacks: [] };
-    this.save();
+    // Save first: when the file can't be written, memory keeps matching what is on disk.
+    const empty: KnowledgeFile = { objects: [], teachBacks: [] };
+    this.save(empty);
+    this.data = empty;
   }
 }
 
