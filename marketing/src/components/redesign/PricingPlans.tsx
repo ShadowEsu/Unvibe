@@ -13,7 +13,7 @@ type Interval = 'monthly' | 'annual';
 /** Enterprise is monthly only, so it keeps its monthly price under the Annual toggle. */
 function priceFor(id: string, interval: Interval, fallback: string): { price: string; per: string } {
   if (id === 'pro') return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
-  if (id === 'enterprise') return { price: `$${PRICING.enterpriseMonthly}`, per: '/month' };
+  if (id === 'enterprise') return { price: `$${PRICING.enterpriseMonthly}`, per: ' a month' };
   if (id === 'business') return { price: fallback, per: ' once' };
   return { price: fallback, per: '' };
 }
