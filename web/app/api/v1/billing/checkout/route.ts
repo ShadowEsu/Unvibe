@@ -151,6 +151,7 @@ export async function POST(req: Request): Promise<Response> {
     const expires_at = Math.floor((Date.now() + CHECKOUT_SESSION_TTL_MS) / 1000);
     try {
       // Pro Lifetime and Big Business are one-time payments: the line item is the plan's own price only.
+      // Big Business takes no promotion code: an account-wide code must never discount the $5,000 price.
       session = interval === 'lifetime'
         ? await stripe.checkout.sessions.create({
           mode: 'payment',
@@ -163,7 +164,7 @@ export async function POST(req: Request): Promise<Response> {
           ...(!current.subscription.stripeCustomerId ? { customer_creation: 'always' as const } : {}),
           metadata,
           payment_intent_data: { metadata },
-          allow_promotion_codes: true,
+          ...(plan === 'business' ? {} : { allow_promotion_codes: true }),
         }, { idempotencyKey: `uncode-checkout-${intent.id}` })
         : await stripe.checkout.sessions.create({
           mode: 'subscription',

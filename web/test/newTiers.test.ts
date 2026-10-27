@@ -139,10 +139,28 @@ test('flag on: Big Business takes the one-time payment path with only its own pr
     assert.equal(params?.metadata?.plan, 'business');
     assert.equal(params?.payment_intent_data?.metadata?.plan, 'business');
     assert.equal(params?.custom_text, undefined, 'no extra checkout or receipt text');
+    assert.equal(params !== undefined && 'allow_promotion_codes' in params, false, 'no promotion code can discount Big Business');
     assert.doesNotMatch(JSON.stringify(params), /\bcall\b|meeting|founder/i);
     const monthly = await start((await buyer()).token, 'business', 'monthly');
     assert.equal(monthly.status, 400);
     assert.equal(monthly.body.error, 'invalid_checkout');
+  });
+});
+
+test('promotion codes: Pro (monthly and lifetime) and Enterprise keep them, Big Business never has them', async () => {
+  await withFlag('true', async () => {
+    const saved = process.env.BILLING_LIFETIME_ENABLED;
+    process.env.BILLING_LIFETIME_ENABLED = 'true';
+    try {
+      for (const [plan, interval, allowed] of [['pro', 'monthly', true], ['pro', 'lifetime', true], ['enterprise', 'monthly', true], ['business', 'lifetime', false]] as const) {
+        sessions.length = 0;
+        assert.equal((await start((await buyer()).token, plan, interval)).status, 201, `${plan} ${interval}`);
+        assert.equal(sessions.length, 1);
+        assert.equal(sessions[0]?.allow_promotion_codes, allowed ? true : undefined, `${plan} ${interval}`);
+      }
+    } finally {
+      if (saved === undefined) delete process.env.BILLING_LIFETIME_ENABLED; else process.env.BILLING_LIFETIME_ENABLED = saved;
+    }
   });
 });
 
