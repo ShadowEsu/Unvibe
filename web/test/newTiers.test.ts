@@ -803,3 +803,111 @@ test('N4: a paid payment-mode session without a payment_intent grants nothing an
     assert.deepEqual(refusals(b.audits, 'checkout.refused_payment'), ['no_payment_intent']);
   });
 });
+
+test('G1: a full refund between the Enterprise payment check and its write leaves Free and cancels Stripe once', async () => {
+  await withFlag('true', async () => {
+    const e = await customer();
+    const subscription = enterpriseSubscription(e.workspaceId);
+    const pi = `pi_${randomUUID()}`;
+    const invoice = { id: `in_${randomUUID()}`, billing_reason: 'subscription_create', parent: { subscription_details: { subscription: subscription.id } }, lines: { data: [{ period: { start: subscription.items.data[0]!.current_period_start } }] } } as unknown as Stripe.Invoice;
+    const canceled: unknown[][] = [];
+    let refunded = false;
+    const stripe: StripeWebhookDependencies = {
+      ...deps(subscription, paymentIntent, [pi]),
+      invoicesForPaymentIntent: async () => [invoice],
+      cancelSubscription: async (id, key) => { canceled.push([id, key]); },
+      retrievePaymentIntent: async (id) => {
+        if (refunded) return refundedIntent(id);
+        refunded = true;
+        await processStripeEvent(e.store, at(refund(pi, String(subscription.customer)), T2), stripe);
+        return paymentIntent(id); // The read started before the refund.
+      },
+    };
+    await processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', subscription.id, T1), stripe);
+    assert.equal(await e.store.paymentRefunded(pi), true);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+    assert.equal((await e.store.subscriptionByProviderId(subscription.id))?.status, 'canceled');
+    assert.deepEqual(canceled, [[subscription.id, `uncode-revoke-${subscription.id}`]]);
+  });
+});
+
+test('G1: a failed Stripe cancel after a grant is retried by the same event, even with an active row already written', async () => {
+  await withFlag('true', async () => {
+    const e = await customer();
+    const subscription = enterpriseSubscription(e.workspaceId);
+    let reads = 0;
+    let attempts = 0;
+    const stripe: StripeWebhookDependencies = {
+      ...deps(subscription, paymentIntent, [`pi_${randomUUID()}`]),
+      retrievePaymentIntent: async (id) => ++reads === 1 ? paymentIntent(id) : refundedIntent(id),
+      cancelSubscription: async (id, key) => {
+        assert.equal(id, subscription.id);
+        assert.equal(key, `uncode-revoke-${subscription.id}`);
+        if (++attempts === 1) throw new Error('cancel unavailable');
+      },
+    };
+    const event = subscriptionEvent('customer.subscription.created', subscription.id, T1);
+    await assert.rejects(processStripeEvent(e.store, event, stripe), /cancel unavailable/);
+    await processStripeEvent(e.store, event, stripe);
+    assert.equal(attempts, 2);
+    assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+  });
+});
+
+test('G2: a deleted delivered before the granting write cannot restore a missing or different subscription', async () => {
+  await withFlag('true', async () => {
+    for (const existing of ['none', 'other'] as const) {
+      const e = await customer();
+      const subscription = enterpriseSubscription(e.workspaceId);
+      let live = subscription;
+      if (existing === 'other') {
+        await e.store.syncSubscription({
+          workspaceId: e.workspaceId, plan: 'pro', interval: 'monthly', status: 'canceled', seats: 1,
+          stripeCustomerId: String(subscription.customer), stripeSubscriptionId: `sub_old_${randomUUID()}`,
+          stripePriceId: 'price_pro_monthly', cancelAtPeriodEnd: false, stripeEventAt: isoAt(T3),
+        });
+      }
+      const stripe: StripeWebhookDependencies = {
+        ...deps(subscription),
+        retrieveSubscription: async (id) => id === subscription.id ? live : { ...subscription, id, status: 'canceled' } as Stripe.Subscription,
+      };
+      const write = e.store.syncSubscription.bind(e.store);
+      let armed = true;
+      e.store.syncSubscription = async (input) => {
+        if (armed && input.stripeSubscriptionId === subscription.id) {
+          armed = false;
+          live = { ...subscription, status: 'canceled' } as Stripe.Subscription;
+          await processStripeEvent(e.store, subscriptionEvent('customer.subscription.deleted', subscription.id, T3), stripe);
+          assert.equal(await e.store.subscriptionByProviderId(subscription.id), null, 'deleted had no matching row');
+        }
+        return write(input);
+      };
+      await processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', subscription.id, T1), stripe);
+      assert.equal((await e.store.subscriptionByProviderId(subscription.id))?.status, 'canceled', existing);
+      assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free', existing);
+    }
+  });
+});
+
+test('G2: Stripe resource_missing after the granting write cancels access, while a transient read failure retries', async () => {
+  await withFlag('true', async () => {
+    for (const code of ['resource_missing', 'api_error']) {
+      const e = await customer();
+      const subscription = enterpriseSubscription(e.workspaceId);
+      let reads = 0;
+      const stripe: StripeWebhookDependencies = {
+        ...deps(subscription),
+        retrieveSubscription: async () => {
+          if (++reads === 1) return subscription;
+          throw Object.assign(new Error('Stripe read failed'), { code });
+        },
+      };
+      const processing = processStripeEvent(e.store, subscriptionEvent('customer.subscription.created', subscription.id, T1), stripe);
+      if (code === 'api_error') await assert.rejects(processing, /Stripe read failed/);
+      else {
+        await processing;
+        assert.equal((await e.store.overview(e.userId)).subscription.plan, 'free');
+      }
+    }
+  });
+});
