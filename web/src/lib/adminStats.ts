@@ -75,14 +75,28 @@ const DAILY_DAYS = 14;
 /** PostgREST caps responses (1000 rows by default), so row fetches are paged. */
 const PAGE_SIZE = 1000;
 
-/** True when the bearer token matches UNVIBE_ADMIN_STATS_TOKEN. Fails closed when unset. */
-export function isAdminStatsRequest(req: Request, secret = process.env.UNVIBE_ADMIN_STATS_TOKEN?.trim()): boolean {
-  if (!secret || secret.length < 24) return false;
+/** Constant-time bearer check. Fails closed when the secret is unset or shorter than `minLength`. */
+function bearerMatches(req: Request, secret: string | undefined, minLength: number): boolean {
+  if (!secret || secret.length < minLength) return false;
   const match = /^Bearer\s+(.+)$/i.exec(req.headers.get('authorization') ?? '');
   const token = match?.[1]?.trim() ?? '';
   const left = Buffer.from(token);
   const right = Buffer.from(secret);
   return left.length === right.length && timingSafeEqual(left, right);
+}
+
+/** True when the bearer token matches UNVIBE_ADMIN_STATS_TOKEN. Fails closed when unset. */
+export function isAdminStatsRequest(req: Request, secret = process.env.UNVIBE_ADMIN_STATS_TOKEN?.trim()): boolean {
+  return bearerMatches(req, secret, 24);
+}
+
+/**
+ * True when the bearer token matches UNVIBE_QA_FLAG_TOKEN, the CI-only secret. It can do exactly one
+ * thing, flag a test install as QA (`admin/qa-install`), so a leak from CI can't read stats or touch
+ * promo codes. Only that route may call this. Fails closed when unset or under 32 characters.
+ */
+export function isQaFlagRequest(req: Request, secret = process.env.UNVIBE_QA_FLAG_TOKEN?.trim()): boolean {
+  return bearerMatches(req, secret, 32);
 }
 
 /**

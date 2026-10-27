@@ -195,10 +195,11 @@ jobs:
         if: always()
         shell: pwsh
         env:
-          UNVIBE_ADMIN_STATS_TOKEN: ${{ secrets.UNVIBE_ADMIN_STATS_TOKEN }}
+          # CI-only: this token can flag a test install as QA and nothing else.
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
-          if (-not $env:UNVIBE_ADMIN_STATS_TOKEN) { 'QA install flag: skipped, no token'; exit 0 }
+          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: skipped, no token'; exit 0 }
           foreach ($name in 'walkthrough-profile', 'portable-profile') {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
@@ -206,7 +207,7 @@ jobs:
               $installId = (Get-Content $store -Raw | ConvertFrom-Json -AsHashtable)['installId']
               if (-not $installId) { "QA install flag ($name): skipped, no installId in the store"; continue }
               $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
-                -Headers @{ authorization = "Bearer $env:UNVIBE_ADMIN_STATS_TOKEN" } -ContentType 'application/json' `
+                -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
                 -Body (@{ installId = $installId } | ConvertTo-Json -Compress)
               "QA install flag ($name): $($r.StatusCode)"
             } catch { "QA install flag ($name) failed: $($_.Exception.Message)" }
@@ -239,12 +240,13 @@ jobs:
         if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
         shell: bash
         env:
-          UNVIBE_ADMIN_STATS_TOKEN: ${{ secrets.UNVIBE_ADMIN_STATS_TOKEN }}
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
           MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          if [ -z "$UNVIBE_ADMIN_STATS_TOKEN" ]; then echo 'QA install flag (media): skipped, no token'; exit 0; fi
-          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://api.unvibe.site/api/v1/admin/qa-install \
-            -H "authorization: Bearer $UNVIBE_ADMIN_STATS_TOKEN" -H 'content-type: application/json' \
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo 'QA install flag (media): skipped, no token'; exit 0; fi
+          # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
             --data "{\"installId\":\"$MEDIA_INSTALL_ID\"}") || code="curl failed"
           echo "QA install flag (media): $code"
 
