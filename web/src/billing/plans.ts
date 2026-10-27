@@ -36,7 +36,7 @@ export const BUSINESS_SEATS_FULL = 'Big Business includes up to 10 named seats. 
  * has), per person (account), counting explanations and
  * questions together: requests a minute and an hour, and the characters sent an hour (fixed
  * windows). An explanation streams for about 3 to 14 seconds and a person reads it before the next,
- * so one person working normally stays far below it; a script does not.
+ * so it is sized for one person working normally; a script goes far past it.
  */
 export const FAIR_USE_RATE_LIMIT = { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 } as const;
 

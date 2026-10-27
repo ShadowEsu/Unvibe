@@ -162,7 +162,7 @@ describe("fair use", () => {
     assert.deepEqual(BUSINESS_RATE_LIMIT, { perMinute: 10, perHour: 60, charactersPerHour: 1_000_000 });
     assert.equal(BUSINESS_SEATS, 10);
     assert.equal(BUSINESS_RATE_LIMIT_LINE, "fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour");
-    assert.equal(FAIR_USE.limit, "Big Business covers up to 10 people, each on a named seat, with no monthly cap on explanations or questions. Its only usage limit is a fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour, with explanations and questions counted together. It is sized so one person working normally never reaches it.");
+    assert.equal(FAIR_USE.limit, "Big Business covers up to 10 people, each on a named seat, with no monthly cap on explanations or questions. Its only usage limit is a fair-use rate limit against automated abuse: per person, 10 requests a minute, 60 an hour and 1 million characters an hour, with explanations and questions counted together. It is sized for one person working normally.");
     assert.equal(FAIR_USE.enforcement, "When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. Each request has the same size limit as every plan: up to 120,000 characters of code and 4,000 characters per question. No hidden throttling. Refunds and abuse follow the rest of the Terms.");
     assert.equal(FAIR_USE_HREF, "/pricing#fair-use");
   });
@@ -177,6 +177,11 @@ describe("fair use", () => {
     assert.deepEqual(REQUEST_SIZE_LIMIT, { codeCharacters: apiConstant("MAX_CONTEXT_CHARS"), questionCharacters: apiConstant("MAX_QUESTION_CHARS") });
     assert.ok(FAIR_USE.enforcement.includes(`Each request has the same size limit as every plan: up to ${formatCount(REQUEST_SIZE_LIMIT.codeCharacters)} characters of code and ${formatCount(REQUEST_SIZE_LIMIT.questionCharacters)} characters per question.`));
     for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /\bonly limit\b/i, text);
+  });
+
+  it("never promises that nobody reaches the rate limit: it is sized for one person working normally", () => {
+    for (const text of [FAIR_USE.limit, FAIR_USE.enforcement, TERMS_NEW_TIERS, kitMarkdown(), ...faqItems.map((item) => item.answer)]) assert.doesNotMatch(text, /\bnever (reach|hit)/i, text);
+    assert.ok(FAIR_USE.limit.endsWith("It is sized for one person working normally."));
   });
 
   it("names 10 requests a minute, 60 an hour, per person, and up to 10 people wherever Big Business is described", () => {

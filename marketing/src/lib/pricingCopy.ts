@@ -53,7 +53,7 @@ const BUSINESS_PRICE = `${formatUsd(PRICING.businessOnce)} once`;
 /** The written fair-use limit, shown on /pricing (id `fair-use`) and in the Terms. */
 export const FAIR_USE = {
   heading: "Fair use",
-  limit: `Big Business covers up to ${BUSINESS_SEATS} people, each on a named seat, with no monthly cap on explanations or questions. Its only usage limit is a ${BUSINESS_RATE_LIMIT_LINE}, with explanations and questions counted together. It is sized so one person working normally never reaches it.`,
+  limit: `Big Business covers up to ${BUSINESS_SEATS} people, each on a named seat, with no monthly cap on explanations or questions. Its only usage limit is a ${BUSINESS_RATE_LIMIT_LINE}, with explanations and questions counted together. It is sized for one person working normally.`,
   enforcement: `When someone reaches it, the app says so and shows when they can try again: at the end of that minute or hour. Each request has the same size limit as every plan: up to ${formatCount(REQUEST_SIZE_LIMIT.codeCharacters)} characters of code and ${formatCount(REQUEST_SIZE_LIMIT.questionCharacters)} characters per question. No hidden throttling. Refunds and abuse follow the rest of the Terms.`,
 } as const;
 
