@@ -171,6 +171,26 @@ test('a full refund of a Lifetime payment revokes Lifetime', async () => {
   assert.equal((await c.store.overview(c.userId)).subscription.plan, 'free');
 });
 
+test('charge.refunded counts the whole amount refunded as full even without the refunded flag; a $0 charge is never a full refund', async () => {
+  const refundedCharge = (paymentIntent: string, customer: string, amount: number, amountRefunded: number) => ({
+    id: `evt_${randomUUID()}`, type: 'charge.refunded', livemode: false,
+    data: { object: { id: `ch_${randomUUID()}`, object: 'charge', amount, amount_refunded: amountRefunded, refunded: false, currency: 'usd', payment_intent: paymentIntent, customer } },
+  }) as unknown as Stripe.Event;
+  const whole = await proCustomer();
+  const wholeStripe = fakeStripe({ [whole.paymentIntent]: whole.subscriptionId });
+  await processStripeEvent(whole.store, refundedCharge(whole.paymentIntent, whole.customer, 1000, 1000), wholeStripe.deps);
+  assert.deepEqual(wholeStripe.cancels, [whole.subscriptionId]);
+  assert.equal(await whole.store.paymentRefunded(whole.paymentIntent), true);
+
+  const zero = await proCustomer();
+  const zeroStripe = fakeStripe({ [zero.paymentIntent]: zero.subscriptionId });
+  await processStripeEvent(zero.store, refundedCharge(zero.paymentIntent, zero.customer, 0, 0), zeroStripe.deps);
+  assert.deepEqual(zeroStripe.cancels, []);
+  assert.equal((await zero.store.overview(zero.userId)).subscription.plan, 'pro');
+  assert.equal(await zero.store.paymentRefunded(zero.paymentIntent), false, 'a $0 charge records no full refund that would refuse a later grant');
+  assert.deepEqual(zero.audits.map((a) => a.action), ['refund.partial']);
+});
+
 test('an opened dispute keeps access and records the evidence deadline; a lost dispute cancels', async () => {
   const c = await proCustomer();
   const stripe = fakeStripe({ [c.paymentIntent]: c.subscriptionId });

@@ -615,9 +615,10 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
     case 'charge.refunded': {
       // A full refund of what pays for access now (the current period's invoice, or Lifetime) ends it.
       // Refunds of prorations, older periods, or charges matched only by customer are audited only.
+      // Full means the same as in paymentRefusal: a $0 charge is never a full refund.
       const charge = event.data.object;
       const chargeDeps = chargeEventDependencies(deps);
-      const full = charge.refunded || charge.amount_refunded >= charge.amount;
+      const full = charge.refunded || (charge.amount > 0 && charge.amount_refunded >= charge.amount);
       const match = await subscriptionForPayment(store, chargeDeps, charge.payment_intent, charge.customer);
       const revoked = full && (await revokeAccess(store, chargeDeps, match, true, eventAt));
       await store.recordAudit(null, match?.subscription.workspaceId ?? null, full ? 'refund.full' : 'refund.partial', {
