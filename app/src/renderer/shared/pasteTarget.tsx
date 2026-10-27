@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { isWindows } from './platform';
 
-/** First lines of what was pasted, shown in the target while the panel explains it. */
+/** First lines of what was pasted, shown in the target while the panel explains it. The compact
+ * panel target shows fewer, so no part of a hidden line peeks into the preview's padding. */
 const PREVIEW_LINES = 6;
+const COMPACT_PREVIEW_LINES = 4;
 
 /**
  * One focused paste target: the user copies code anywhere and pastes it here, with no permission
@@ -51,7 +53,7 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, com
         aria-label="Paste code here" aria-describedby={preview ? undefined : 'paste-target-hint'}>
         {preview ? (
           <>
-            <pre>{preview}</pre>
+            <pre>{compact ? preview.split('\n').slice(0, COMPACT_PREVIEW_LINES).join('\n') : preview}</pre>
             <span className="paste-target__pill" role="status"><i aria-hidden="true" />Explaining in the panel</span>
           </>
         ) : (
