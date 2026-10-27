@@ -133,10 +133,10 @@ const organizationJsonLd = {
   url: siteUrl,
   logo: `${siteUrl}/icon.png`,
   email: "support@unvibe.site",
+  // Only profiles that exist: TikTok and X are left out until their accounts do.
   sameAs: [
     "https://www.linkedin.com/company/unvibeapp/",
     "https://www.instagram.com/unvibe_app/",
-    "https://www.tiktok.com/@unvibe_app",
   ],
 };
 
