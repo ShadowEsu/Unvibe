@@ -6,10 +6,13 @@ import { isExcludedPath } from './config/exclusions';
  * The app explains it, so this extension makes no network calls and keeps no state.
  */
 export function activate(context: vscode.ExtensionContext): void {
-  // 0.1.2 and older kept a backend sign-in token and a queue of learning events (file paths,
-  // concept names). Nothing reads them anymore, so an upgrade clears them.
+  // 0.1.2 and older kept a backend sign-in token, a queue of learning events, learning history and
+  // per-repo consent (file paths, concept names, repo keys). Nothing reads them anymore, so an
+  // upgrade clears them.
   void context.secrets.delete('uncode.token');
-  void context.globalState.update('uncode.outbox.v1', undefined);
+  for (const key of context.globalState.keys()) {
+    if (key.startsWith('uncode.')) void context.globalState.update(key, undefined);
+  }
   context.subscriptions.push(
     vscode.commands.registerCommand('uncode.reviewSelectionInDesktop', async () => {
       const editor = vscode.window.activeTextEditor;
