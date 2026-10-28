@@ -15,11 +15,14 @@ import { settings } from './settings';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, streamLocalAi } from './localAi';
 import { cachedAppUsage, refreshAppUsage } from './usage';
 import { scanTypedText } from '../core/secretFilter';
+import { aiSendConsented } from './consent';
 
 /** Typed text has no consent step, so any secret finding stops it before anything leaves the Mac. */
 const SECRET_IN_MESSAGE = 'That looks like it contains a key, token, or password, so nothing was sent. Remove it and try again.';
+/** The companion shows the consent form on `code: 'consent'`; this text is for anything that can't. */
+const CONSENT_NEEDED = 'Nothing was sent. First agree to how Unvibe sends your code and questions to Google Gemini.';
 
-type AskFailure = { ok: false; error: string; remaining?: number; code?: 'secret' };
+type AskFailure = { ok: false; error: string; remaining?: number; code?: 'secret' | 'consent' };
 type AskResult = { ok: true; answer: string; remaining: number } | AskFailure;
 /** `wipeGeneration`: store().wipeGeneration() when this reply's request started. Saving its thread needs it. */
 type ChatResult = { ok: true; answer: string; remaining: number; wipeGeneration: number } | AskFailure;
@@ -161,6 +164,7 @@ export async function askStudyAssistant(input: {
   question: string;
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }): Promise<AskResult> {
+  if (!aiSendConsented()) return { ok: false, error: CONSENT_NEEDED, code: 'consent' };
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Ask a short question about this lesson.' };
   if (question.length > 800) return { ok: false, error: 'Keep questions under 800 characters.' };
@@ -249,8 +253,9 @@ function localLessonQuiz(event: LocalEvent, mode: QuizMode): {
 
 export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-check'): Promise<
   | { ok: true; question: string; options: string[]; conceptLabel: string; remaining: number }
-  | { ok: false; error: string; remaining?: number }
+  | { ok: false; error: string; remaining?: number; code?: 'consent' }
 > {
+  if (!aiSendConsented()) return { ok: false, error: CONSENT_NEEDED, code: 'consent' };
   const built = lessonPayload(eventId);
   if ('error' in built) return { ok: false, error: built.error };
 
@@ -346,6 +351,7 @@ export async function askChat(input: {
   question: string;
   wipeGeneration?: number;
 }): Promise<ChatResult> {
+  if (!aiSendConsented()) return { ok: false, error: CONSENT_NEEDED, code: 'consent' };
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Type a message first.' };
   if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };

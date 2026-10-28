@@ -110,6 +110,11 @@ const api = {
     return () => { ipcRenderer.removeListener('learning:changed', listener); };
   },
 
+  // consent before the user's own code is sent: status, the three-box form, the off switch
+  consentStatus: (): Promise<{ allowed: boolean; policyVersion: string; agreedAt?: string }> => ipcRenderer.invoke('consent:status'),
+  consentAgree: (form: { aiSend: boolean; terms: boolean; age18: boolean }): Promise<{ ok: true; status: { allowed: boolean } } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('consent:agree', form),
+  consentRevoke: (): Promise<{ ok: true; status: { allowed: boolean } } | { ok: false; error: string }> => ipcRenderer.invoke('consent:revoke'),
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),

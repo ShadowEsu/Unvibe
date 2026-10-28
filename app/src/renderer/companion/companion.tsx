@@ -21,6 +21,7 @@ import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
+import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 
@@ -77,6 +78,7 @@ interface Settings {
   sidebarWidth: number;
   sidebarHidden: boolean;
   shareSetupProgress: boolean;
+  nearbyFiles: boolean;
   features: {
     changeBrief: boolean;
     whyExists: boolean;
@@ -1382,6 +1384,42 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
   return <button type="button" className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} onClick={onClick}><span className="knob" /></button>;
 }
 
+/**
+ * The off switch for the first-send agreement (Security U15). Off takes effect on the next request:
+ * every send checks the stored record. On asks with the same three boxes as the first time.
+ */
+function AiSendRow() {
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    void window.unvibe.consentStatus().then((status) => setAllowed(status.allowed));
+  }, []);
+  const toggle = async () => {
+    setError('');
+    if (allowed) {
+      const result = await window.unvibe.consentRevoke();
+      if (result.ok) setAllowed(false);
+      else setError(result.error);
+      return;
+    }
+    if (await askForConsent()) setAllowed(true);
+  };
+  return (
+    <div className="setrow">
+      <div>
+        <div className="sl">Send code to Google Gemini</div>
+        <div className="sd">
+          {allowed === false
+            ? 'Off. Nothing you select, paste or ask is sent. Explaining code asks you again first.'
+            : 'On. The code you ask about and your questions go to Google Gemini to write explanations. Turn this off to stop sending at once.'}
+          {error ? <> {error}</> : null}
+        </div>
+      </div>
+      {allowed === null ? null : <Toggle label="Send code to Google Gemini" on={allowed} onClick={() => void toggle()} />}
+    </div>
+  );
+}
+
 function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: (message?: string) => void; onNotice: (message: string) => void }) {
   const [confirming, setConfirming] = useState(false);
   const [phrase, setPhrase] = useState('');
@@ -1820,8 +1858,10 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Privacy & Data' && (
             <>
+              <AiSendRow />
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and Chat messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
-              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. On Pro, explanations also include parts of nearby files from the same project. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
+              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
+              <div className="setrow"><div><div className="sl">Include nearby files (Pro)</div><div className="sd">Also sends parts of up to 2 files that the selected code imports from the same project, for better explanations. Off unless you turn it on.</div></div><Toggle label="Include nearby files" on={settings.nearbyFiles === true} onClick={() => onSettings({ nearbyFiles: settings.nearbyFiles !== true })} /></div>
               {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send anonymous setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send anonymous setup progress" on={settings.shareSetupProgress !== false} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress === false })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
@@ -2087,6 +2127,7 @@ function App() {
 
   return (
     <>
+      <ConsentDialog buttonClass="field-btn" />
       {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
           clicks on anything layered over them, whatever the z-index. */}
       <div className="titlebar" />

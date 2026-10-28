@@ -131,6 +131,8 @@ export interface Settings {
   shareSetupProgress: boolean;
   /** The first explanation of the user's own code is saved, so the companion's paste step is gone for good. */
   ownCodeExplained?: true;
+  /** Pro: also send up to 2 files the selected code imports. Off until the person turns it on (Security U13). */
+  nearbyFiles: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -170,6 +172,7 @@ const DEFAULTS: Settings = {
   giftCode: '',
   features: DEFAULT_FEATURES,
   shareSetupProgress: true,
+  nearbyFiles: false,
 };
 
 class SettingsStore {

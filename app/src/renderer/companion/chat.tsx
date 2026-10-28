@@ -5,6 +5,7 @@ import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
 import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 import { chatAskRequest } from './chatRequest';
+import { askForConsent } from '../shared/consentForm';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -275,12 +276,17 @@ export function Chat({
     window.clearTimeout(thinkTimer);
     setBusy(false);
     if (result.remaining !== undefined) setLeft(result.remaining);
-    if (!result.ok && result.code === 'secret') {
+    if (!result.ok && (result.code === 'secret' || result.code === 'consent')) {
       // Nothing was sent: take the message back out of the log so it is not resent next turn.
       setMessages(messages);
       setDraft(question);
-      setError(result.error ?? '');
       setBuddyMood('idle');
+      if (result.code === 'secret') {
+        setError(result.error ?? '');
+        return;
+      }
+      // First send of the person's own words: ask, then send this message once they agree.
+      if (await askForConsent()) void send(question);
       return;
     }
     if (!result.ok || !result.answer || result.wipeGeneration === undefined) {

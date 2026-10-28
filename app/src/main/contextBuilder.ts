@@ -226,7 +226,8 @@ export async function buildComparePayload(opts: {
       level: opts.level,
       filePath: opts.filePath,
       repoRoot,
-      withNearby: true,
+      // A Pro-only flow; nearby files still need the person's own switch (Security U13).
+      withNearby: settings().all().nearbyFiles === true,
       question: prior
         ? 'You marked this file understood before, but no local snapshot was kept. Explain the current file and note what to re-check.'
         : 'First pass on this file. Explain it clearly, then tap Got it so future compares have a baseline.',
@@ -274,6 +275,11 @@ export async function buildComparePayload(opts: {
 
 export function isProPlan(plan: string): boolean {
   return plan === 'pro' || plan === 'teams' || plan === 'full';
+}
+
+/** Pro's nearby files go only when the person turned them on in Settings › Privacy & Data (Security U13). */
+export function sendNearbyFiles(plan: string): boolean {
+  return isProPlan(plan) && settings().all().nearbyFiles === true;
 }
 
 export function scopeLabel(scope: ReviewScope | ReviewMode): string {

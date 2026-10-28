@@ -13,9 +13,11 @@ import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/plat
 import { UsageRings } from '../shared/usageRings';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
+import { ConsentForm } from '../shared/consentForm';
 import '../shared/tokens.css';
 
-type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
+/** `aiConsent`: the first-send agreement (sending code to Gemini, Terms, 18+); `consent`: a secret was found. */
+type Phase = 'boot' | 'ready' | 'aiConsent' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
 interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
@@ -487,7 +489,7 @@ function Widget() {
               quiz: null,
               error: '',
               mock: false,
-              phase: ev.hasCode ? 'ready' : 'empty',
+              phase: ev.consentNeeded ? 'aiConsent' : ev.hasCode ? 'ready' : 'empty',
               level: ev.level,
             });
           }
@@ -496,6 +498,8 @@ function Widget() {
           case 'status':
             playTone('think');
             return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+          case 'consentNeeded':
+            return patchTab(prev, tabId, { phase: 'aiConsent' });
           case 'consent':
             return patchTab(prev, tabId, { findings: ev.findings ?? [], phase: 'consent' });
           case 'blocked':
@@ -673,7 +677,7 @@ function Widget() {
   };
 
   const phase = active.phase;
-  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
+  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
       <b>{active.meta.lines} lines</b>
@@ -861,6 +865,20 @@ function Widget() {
           {phase === 'boot' && (
             <div className="state" role="status">
               <div className="sub">Capturing selection…</div>
+            </div>
+          )}
+
+          {phase === 'aiConsent' && (
+            <div className="state">
+              <ConsentForm
+                buttonClass="btn"
+                onAgreed={() => {
+                  // The captured code waited on this computer; explain it now. Nothing captured: the picker.
+                  if (active.meta.lines) request({});
+                  else setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'empty' }));
+                }}
+                onCancel={() => window.unvibe.closeWidget()}
+              />
             </div>
           )}
 

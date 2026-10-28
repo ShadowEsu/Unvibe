@@ -4,6 +4,7 @@ import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { playTone } from '../shared/tones';
 import { deviceName } from '../shared/platform';
+import { askForConsent } from '../shared/consentForm';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -261,9 +262,14 @@ export function Learn({
   const ask = async () => {
     if (!open) return;
     setAskBusy(true); setAskError(''); setAnswer('');
-    const resultAsk = await window.unvibe.studyAsk({ eventId: open.id, question }) as { ok: boolean; answer?: string; error?: string; remaining?: number };
+    const resultAsk = await window.unvibe.studyAsk({ eventId: open.id, question }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string };
     setAskBusy(false);
     if (resultAsk.remaining !== undefined) setAskLeft(resultAsk.remaining);
+    if (!resultAsk.ok && resultAsk.code === 'consent') {
+      // Nothing was sent: ask once, then send this question if the person agrees.
+      if (await askForConsent()) void ask();
+      return;
+    }
     if (!resultAsk.ok) { setAskError(resultAsk.error ?? 'Could not ask.'); return; }
     setAnswer(resultAsk.answer ?? '');
     setQuestion('');
@@ -274,11 +280,17 @@ export function Learn({
     if (quizRequestRef.current) return;
     quizRequestRef.current = true;
     setQuizBusy(true); setQuizError(''); setCard(null); setResult(null); setWrongPicks([]);
+    // Nothing was sent without the first-send agreement: ask after this request settles, then start again.
+    let needsConsent = false;
     try {
       const r = await window.unvibe.quizStart({ eventId: item.id, mode: quizMode }) as {
-        ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number;
+        ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number; code?: string;
       };
       if (r.remaining !== undefined) setQuizLeft(r.remaining);
+      if (!r.ok && r.code === 'consent') {
+        needsConsent = true;
+        return;
+      }
       if (!r.ok || !r.question || !r.options) { setQuizError(r.error ?? 'Could not start quiz.'); return; }
       const nextKey = cardKey + 1;
       setCardKey(nextKey);
@@ -289,6 +301,7 @@ export function Learn({
       quizRequestRef.current = false;
       setQuizBusy(false);
     }
+    if (needsConsent && await askForConsent()) void startQuiz(item);
   };
 
   const startMix = () => {

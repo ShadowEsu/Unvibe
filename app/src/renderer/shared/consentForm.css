@@ -1,0 +1,65 @@
+/* The first-send consent form, shared by the review panel and the companion (shared/tokens.css). */
+.consent-form {
+  display: grid;
+  gap: var(--uv-space-3);
+  max-width: 520px;
+  text-align: left;
+  color: var(--uv-text);
+}
+.consent-form__title {
+  margin: 0;
+  font-family: var(--uv-display);
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+.consent-form__lead,
+.consent-form__note {
+  margin: 0;
+  color: var(--uv-text-2);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.consent-form__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--uv-space-2);
+  align-items: start;
+  padding: var(--uv-space-2) var(--uv-space-3);
+  border: 1px solid var(--uv-border);
+  border-radius: var(--uv-radius-m);
+  background: var(--uv-surface);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.consent-form__row input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--uv-indigo);
+}
+.consent-form__row a { color: inherit; text-decoration: underline; }
+.consent-form__error { margin: 0; color: var(--uv-danger); font-size: 0.86rem; }
+.consent-form__actions { display: flex; gap: var(--uv-space-2); flex-wrap: wrap; }
+.consent-form__actions [aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+/* The companion's modal around the same form. */
+.consent-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--uv-space-5);
+  background: rgb(20 20 20 / 0.35);
+}
+.consent-dialog__card {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: var(--uv-space-5);
+  border: 1px solid var(--uv-border-strong);
+  border-radius: var(--uv-radius-l);
+  background: var(--uv-bg);
+  box-shadow: var(--uv-shadow);
+}

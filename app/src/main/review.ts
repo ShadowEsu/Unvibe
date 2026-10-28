@@ -21,15 +21,18 @@ import { cachedAppUsage, refreshAppUsage } from './usage';
 import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
-import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { buildSelectionPayload, isProPlan, sendNearbyFiles, type ReviewMode } from './contextBuilder';
 import { raiseLimitPause } from './windows';
 import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
 import { noteOwnCodeExplained } from './ownCodeStep';
 import { productEvent } from '../core/productEvents';
+import { aiSendConsented } from './consent';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentNeeded?: boolean; mode?: string; level: ExplanationLevel }
+  /** The person hasn't agreed to sending their code to the AI provider: the panel asks first. */
+  | { type: 'consentNeeded'; tabId: string }
   | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
@@ -119,7 +122,7 @@ async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise
     filePath: session.sourceFilePath,
     question: opts.question,
     variant: opts.variant,
-    withNearby: isProPlan(usage.plan),
+    withNearby: sendNearbyFiles(usage.plan),
   });
   session.payload = built.payload;
   session.file = built.file ?? session.file;
@@ -200,11 +203,17 @@ export function initWidget(
     language: code ? guessLanguage(code) : undefined,
     // Renderer-local only. The preview never leaves this process and is not persisted here.
     preview: code ? code.slice(0, 600) : undefined,
-    autoStart: Boolean(opts?.autoStart && code),
+    autoStart: Boolean(opts?.autoStart && code) && !needsConsent(session),
+    consentNeeded: needsConsent(session),
     mode: session.mode,
     // The panel's depth row and every re-request it sends start from the session depth (the user's default).
     level: session.level,
   });
+}
+
+/** The user's own content needs the first-send agreement; the built-in sample doesn't. */
+function needsConsent(session: ReviewSession): boolean {
+  return !session.isSample?.() && !aiSendConsented();
 }
 
 function appendExplanation(session: ReviewSession, text: string): void {
@@ -297,6 +306,11 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  // Fails closed: nothing of the user's is sent before they agree (the panel shows the form).
+  if (needsConsent(session)) {
+    send(win, session, { type: 'consentNeeded' });
+    return;
+  }
   if (!session.code && !session.payload) {
     send(win, session, { type: 'error', message: 'No code captured.' });
     return;
@@ -522,6 +536,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
 const QUESTION_MODES: readonly QuizMode[] = ['quick-check', 'scenario', 'recall'];
 
 export async function startComprehension(win: BrowserWindow, session: ReviewSession): Promise<void> {
+  if (needsConsent(session)) {
+    send(win, session, { type: 'consentNeeded' });
+    return;
+  }
   if (!session.code && !session.payload) return;
   const progress = session.comprehension ??= { asked: 0, hasMissed: false, understood: false, loading: false };
   if (progress.loading || progress.asked >= QUESTION_MODES.length) return;

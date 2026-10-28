@@ -99,9 +99,12 @@ import {
   buildDiffPayload,
   buildSelectionPayload,
   isProPlan,
+  sendNearbyFiles,
   resolveRepoRoot,
 } from './contextBuilder';
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
+import { consentStatus, consentStore } from './consent';
+import { agreedItems } from '../core/consent';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
@@ -805,6 +808,29 @@ app.whenReady().then(() => {
   });
   ipcMain.on('companion:review', () => void startReview());
 
+  // --- consent before the user's own code is sent (BOSS ledger 299) ---
+  ipcMain.handle('consent:status', () => consentStatus());
+  // Only a form with all three boxes exactly true is an agreement; the time is set here, not by the renderer.
+  ipcMain.handle('consent:agree', (_e, form: unknown) => {
+    const items = agreedItems(form);
+    if (!items) return { ok: false as const, error: 'Tick all three boxes to continue.' };
+    try {
+      consentStore().agree(items);
+    } catch {
+      return { ok: false as const, error: 'Unvibe could not save your answer. Nothing was sent; try again.' };
+    }
+    return { ok: true as const, status: consentStatus() };
+  });
+  // The off switch: every send checks it, so it applies to the next request at once.
+  ipcMain.handle('consent:revoke', () => {
+    try {
+      consentStore().revoke();
+    } catch {
+      return { ok: false as const, error: 'Unvibe could not save that. Try again.' };
+    }
+    return { ok: true as const, status: consentStatus() };
+  });
+
   // --- widget lifecycle (single panel + tabs) ---
   ipcMain.on('widget:ready', (e) => {
     const win = widgetOf(e);
@@ -877,7 +903,7 @@ app.whenReady().then(() => {
         level: opts?.level ?? session.level,
         filePath,
         repoRoot: root,
-        withNearby: isProPlan(usage.plan),
+        withNearby: sendNearbyFiles(usage.plan),
       });
       session.abort?.abort();
       session.sourceApp = path.basename(filePath);
@@ -1243,7 +1269,7 @@ app.whenReady().then(() => {
         level: session.level,
         filePath,
         repoRoot: repoRoot ?? undefined,
-        withNearby: isProPlan(usage.plan),
+        withNearby: sendNearbyFiles(usage.plan),
       });
       applyBuiltReview(session, built);
       session.sourceApp = 'Study';
