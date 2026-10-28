@@ -514,7 +514,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const lines = [
     "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
     explained
-      ? "That's me, explaining it in the panel. Real answer, not a demo."
+      ? "That's me, explaining it in the panel. Read it, then press Test me there."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
     isWindows
       ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
@@ -660,7 +660,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 {explained ? 'Explaining in the panel →' : 'Explain this code'}
               </button>
               <p className="ob__sub">{explained
-                ? `That's what ${spoken} does with any code you select. Read it, then press Next.`
+                ? `That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
                 : 'Uses one of your free explanations. No setup needed.'}</p>
               {sampleDone ? (
                 <div className="ob2__level" role="group" aria-label="How was that explanation pitched?">
