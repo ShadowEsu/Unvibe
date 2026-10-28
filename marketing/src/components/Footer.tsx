@@ -62,7 +62,7 @@ export function Footer() {
         </div>
       ) : null}
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
-        <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
+        <p>© {new Date().getFullYear()} Unvibe.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
         <p className="paper-footer__status" ref={statusRef}>
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
