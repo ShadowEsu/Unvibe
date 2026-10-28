@@ -42,7 +42,7 @@
     ],
     "extraResources": [
       {
-        "from": "../extension/release/unvibe-desktop-bridge-0.1.2.vsix",
+        "from": "../extension/release/unvibe-desktop-bridge-0.1.3.vsix",
         "to": "Unvibe Desktop Bridge.vsix"
       }
     ],

@@ -47,8 +47,8 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
   `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` / `GOOGLE_API_KEY`
   (see `web/src/ai/index.ts`). App users never supply a key.
 - `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` → real DB.
-- The parked VS Code extension talks to this origin (setting `uncode.backendUrl`, default
-  `http://localhost:8787`; its sign-in command still uses the old name, **Uncode: Sign In**).
+- The VS Code / Cursor Desktop Bridge (`extension/`) only hands the editor's selection to the
+  desktop app; it makes no network calls of its own.
 
 `server/` is an optional AI-only dev harness (superseded by `web/`).
 
