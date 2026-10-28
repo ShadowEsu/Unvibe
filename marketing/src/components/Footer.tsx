@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ListingBadges } from "@/components/paper/ListingBadges";
+import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
@@ -47,6 +48,8 @@ export function Footer() {
           <p className="mt-4 text-sm leading-relaxed">
             Select code in any app and Vibe explains it beside your editor, at your level. Free for Mac and Windows.
           </p>
+          <p className="mb-2 mt-5 text-sm font-semibold text-[color:var(--ink)]">Get the newsletter. One email when something ships.</p>
+          <NewsletterSignup id="footer" />
           <SocialFollowLinks includeMail />
         </div>
         <FooterLinks heading="Product" links={product} />
@@ -56,11 +59,9 @@ export function Footer() {
           </button>
         </FooterLinks>
       </div>
-      {pathname !== "/" ? (
-        <div className="paper-wrap pb-10">
-          <ListingBadges />
-        </div>
-      ) : null}
+      <div className="paper-wrap pb-10">
+        <ListingBadges />
+      </div>
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}

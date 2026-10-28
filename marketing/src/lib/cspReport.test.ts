@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import nextConfig from "../../next.config.mjs";
 import { ENFORCED_CSP, LISTING_IMAGE_HOSTS, REPORTING_ENDPOINTS, reportOnlyCsp } from "./csp.mjs";
@@ -34,12 +34,18 @@ describe("unvibe.site sends the C3 policies on every page (Security C3)", () => 
     assert.doesNotMatch(reportOnlyCsp({ api: "not a url", supabase: "" }), /not a url/);
   });
 
-  it("every footer listing badge's image origin is allowed in img-src", () => {
+  it("every badge is served from unvibe.site, and img-src allows exactly the after-Allow badge origins", () => {
     const imgSrc = reportOnlyCsp().split("; ").find((d) => d.startsWith("img-src ")) ?? "";
+    const hosts = new Set<string>();
     for (const badge of listingBadges) {
-      const host = new URL(badge.src).origin;
-      assert.ok(LISTING_IMAGE_HOSTS.includes(host) && imgSrc.includes(` ${host}`), badge.name);
+      assert.ok(badge.src.startsWith("/badges/"), `${badge.name}: ${badge.src} is not self-hosted`);
+      assert.ok(existsSync(path.join("public", badge.src)), `${badge.name}: public${badge.src} is missing`);
+      if (!("remoteSrc" in badge)) continue;
+      const host = new URL(badge.remoteSrc).origin;
+      hosts.add(host);
+      assert.ok(imgSrc.includes(` ${host}`), badge.name);
     }
+    assert.deepEqual([...LISTING_IMAGE_HOSTS].sort(), Array.from(hosts).sort());
   });
 
   it("no form on either site posts to another origin (form-action 'self' would block it)", () => {

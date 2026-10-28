@@ -173,6 +173,20 @@ export default function PrivacyPage() {
           26 October 2026 that hash is keyed with a server secret, so it can&apos;t be matched to an
           address without that secret; requests from before then kept a plain hash, which is weaker.
         </p>
+        <p>
+          If you tick the newsletter box, we keep your email, that you signed up through the
+          newsletter form, the version of the box&apos;s wording, and when you agreed. We use it only
+          for Unvibe product emails, and none have been sent yet. You can unsubscribe any time with
+          the link in each email or by emailing{" "}
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>. We don&apos;t sell it.
+        </p>
+        <p>
+          The footer shows badges from product directories, served from unvibe.site. Only if you
+          press Allow on the analytics bar does the Tool Index verification badge load from
+          toolindex.net instead, a third-party service that then receives your IP address and browser
+          details; the address of the page you are on is not sent with it. If you press No thanks, now
+          or later, the copy from unvibe.site is shown.
+        </p>
       </LegalSection>
 
       <LegalSection heading="Services we rely on">
@@ -193,6 +207,10 @@ export default function PrivacyPage() {
           <li><strong>Resend</strong> delivers sign-in and product emails.</li>
           <li><strong>GitHub</strong> hosts the installer downloads.</li>
           <li><strong>Mixpanel and PostHog</strong> measure website usage.</li>
+          <li>
+            <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
+            only after you press Allow on the analytics bar.
+          </li>
         </ul>
       </LegalSection>
 
