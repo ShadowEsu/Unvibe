@@ -519,6 +519,8 @@ code.inline {
 .pause-actions .btn { margin-top: 0; width: 100%; }
 .state .findings { text-align: left; font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px dashed var(--danger-line); border-radius: 8px; padding: 8px 12px; max-width: 320px; }
 .ready-state { justify-content: center; }
+/* The code the person is deciding to send reads as written: full width, indentation kept (QA). */
+.ready-state .code-context { align-self: stretch; text-align: left; }
 .container-progress { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:4px; color:var(--muted); font:8px var(--font-mono); letter-spacing:.04em; text-transform:uppercase; }
 .container-progress span { opacity:.48; }.container-progress span.on { color:var(--fill-strong); opacity:1; }
 .empty-picker { justify-content: flex-start; padding-top: 18px; gap: 10px; }
