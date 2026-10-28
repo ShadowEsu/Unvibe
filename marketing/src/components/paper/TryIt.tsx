@@ -103,9 +103,15 @@ export function TryIt({
   const [ticks, setTicks] = useState<TryConsentTicks>({ aiSend: false, age18: false });
   const consented = ticks.aiSend && ticks.age18;
   const timer = useRef<number | null>(null);
+  // Group sessions: opened as unvibe.site/?room, Try it shows a room code field. The host says the code
+  // out loud, so it is never in a page address, a referrer or analytics.
+  const [roomField, setRoomField] = useState(false);
+  const [room, setRoom] = useState("");
+  const [roomNotOpen, setRoomNotOpen] = useState(false);
 
   useEffect(() => {
     setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone");
+    setRoomField(new URLSearchParams(window.location.search).has("room"));
     try {
       setTicks(storedTryConsent(localStorage.getItem(TRY_CONSENT_KEY)));
     } catch {
@@ -156,6 +162,7 @@ export function TryIt({
     if (!consented) return;
     setState("thinking");
     setError("");
+    setRoomNotOpen(false);
     setAnswer("");
     setTookMs(0);
     const started = performance.now();
@@ -163,13 +170,19 @@ export function TryIt({
       const response = await fetch(`${API}/api/v1/try`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, level: depth, consent: { v: TRY_CONSENT_VERSION, aiSend: ticks.aiSend, age18: ticks.age18 } }),
+        body: JSON.stringify({
+          code,
+          level: depth,
+          consent: { v: TRY_CONSENT_VERSION, aiSend: ticks.aiSend, age18: ticks.age18 },
+          ...(roomField && room.trim() ? { room: room.trim() } : {}),
+        }),
       });
-      const body = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
+      const body = (await response.json().catch(() => ({}))) as { text?: string; error?: string; room?: string };
       if (!response.ok || !body.text) throw new Error(body.error || FALLBACK_ERROR);
       // The body is read in full above, so this is the moment the last of the answer arrived.
       setTookMs(performance.now() - started);
       setAnswer(body.text);
+      setRoomNotOpen(body.room === "not-open");
       setState("done");
       delight();
       track("try_explained", { level: depth });
@@ -224,6 +237,24 @@ export function TryIt({
             <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />{" "}
             <label htmlFor="try-consent-age">I&apos;m 18 or older</label>
           </p>
+          {roomField ? (
+            <p className="try__fine try__room">
+              <label htmlFor="try-room">Room code</label>{" "}
+              <input
+                id="try-room"
+                type="text"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={40}
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+              />
+            </p>
+          ) : null}
+          {roomNotOpen ? (
+            <p className="try__fine" role="status">That room code isn&apos;t open right now, so this counted as a normal visit.</p>
+          ) : null}
           <button
             type="button"
             className="try__go"
