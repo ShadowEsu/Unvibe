@@ -271,7 +271,7 @@ p { font-size: 1.02rem; }
 /* ── Investors, one page ──────────────────────────────────────────────────── */
 .inv { width: min(1180px, 92vw); margin: 0 auto; padding: 7.5rem 0 4rem; color: var(--v-ink); }
 .inv h1 { margin: 0.4rem 0 1.2rem; font-size: clamp(3rem, 7vw, 6rem); line-height: 0.98; }
-.inv h3 { margin: 0.6rem 0 0.4rem; font: 750 1.45rem var(--font-display); letter-spacing: -0.03em; }
+.inv h3, .inv-card h3 { margin: 0.6rem 0 0.4rem; font: 750 1.45rem var(--font-display); letter-spacing: -0.03em; }
 .inv-eyebrow { margin: 0; font-family: var(--font-serif); font-style: italic; }
 .inv-lead { max-width: 46rem; font-size: 1.25rem !important; color: var(--u-text-2); }
 .inv-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3rem; min-height: 70vh; }
