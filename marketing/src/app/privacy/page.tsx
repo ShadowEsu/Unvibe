@@ -117,16 +117,19 @@ export default function PrivacyPage() {
           explanations carry your sign-in token instead of the install ID.
         </p>
         <p>
-          From version 0.1.44, the app also sends anonymous setup progress, one message per step the first time it
+          From version 0.1.44, the app can also send setup progress, one message per step the first time it
           happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, the
           explanation level question answered, and the question about opening Unvibe when you log in
           shown and answered yes. Each message carries the step name with the same
           random install ID, system and app version as above, never your sign-in token. We keep only
           the step and the time it arrived (for signing in, only the day), never your code, file
           names, email or IP address. A step that does not get through is sent
-          again on a later launch. To turn this off, open Settings, then Privacy &amp; Data, and switch
-          off Send anonymous setup progress. That switch does not cover the install ID, dates and
-          counts in the paragraph above, which come with requests the app makes anyway.
+          again on a later launch. From version 0.1.45 this is off unless you turn it on, and updating
+          to 0.1.45 switches it off once even if it was on before. Version 0.1.44 sends it until you
+          switch it off. To turn it on or off, open Settings, then Privacy &amp; Data, and use Send setup
+          progress (in version 0.1.44 the switch reads Send anonymous setup progress). That switch does
+          not cover the install ID, dates and counts in the paragraph above, which come with requests
+          the app makes anyway.
         </p>
         <p>
           If you redeem a promo code at <a href="/redeem">/redeem</a>, we keep a redemption record: a
@@ -158,8 +161,8 @@ export default function PrivacyPage() {
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
-          install scripts send one anonymous &apos;installed&apos; count to unvibe.site when
-          they finish, with no code or personal data. If you use the Try it box on the site,
+          install scripts send one &apos;installed&apos; count to unvibe.site when they finish,
+          with no ID, code or personal data. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Google Gemini to write the explanation. To limit how often the box can be used,
           Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
@@ -192,7 +195,8 @@ export default function PrivacyPage() {
       <LegalSection heading="Children">
         <p>
           Unvibe is for people 18 or older, because Google&apos;s terms for the Gemini API, which
-          writes the explanations, require it. Try it on this site asks you to confirm it. We do
+          writes the explanations, require it. Try it on this site, and the app from version 0.1.45,
+          ask you to confirm it before any of your own code is sent. We do
           not knowingly collect personal information from anyone younger.
           If you believe someone under 18 has given us data, email us and we will delete it.
         </p>
