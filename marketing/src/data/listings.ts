@@ -41,7 +41,7 @@ export const listingBadges = [
   },
   {
     name: "LaunchBuff",
-    href: "https://launchbuff.com",
+    href: "https://launchbuff.com/products/unvibe-8ayflt",
     src: "https://launchbuff.com/badge-featured-dark.svg",
     alt: "Featured on LaunchBuff",
     width: 256,
@@ -57,6 +57,16 @@ export const listingLinks = [
   { name: "AI Tool Discovery", href: "https://www.aitooldiscovery.com/tools/aih_unvibe" },
   { name: "VibeRank", href: "https://viberank.dev/apps/Unvibe" },
   { name: "SideProjectors", href: "https://www.sideprojectors.com/project/86739/unvibe" },
-  { name: "LaunchBuff", href: "https://launchbuff.com" },
+  { name: "LaunchBuff", href: "https://launchbuff.com/products/unvibe-8ayflt" },
   { name: "Tool Index", href: "https://toolindex.net/tools/unvibe?ref=badge" },
+  { name: "ToolIndex on Replit", href: "https://strategic-flow-audit.replit.app/directory/unvibe-185" },
+  { name: "TinyLaunch", href: "https://tinylaunch.com/launch/27829-unvibe" },
+  { name: "Uneed", href: "https://www.uneed.best/tool/unvibe" },
+  { name: "F6S", href: "https://www.f6s.com/company/unvibe" },
+  { name: "FounderMag", href: "https://foundermag.co/products/unvibe/" },
+  { name: "KrispiTech product showcase", href: "https://krispitech.com/the-hidden-cost-of-vibe-coding-and-how-unvibe-helps-you-actually-own-your-codebase/" },
+  { name: "vibecoding.app", href: "https://vibecoding.app/tools/unvibe" },
+  // Approved backlinks required before the free listings can be submitted.
+  { name: "Startup Fame", href: "https://startupfa.me" },
+  { name: "Fazier", href: "https://fazier.com" },
 ] as const;

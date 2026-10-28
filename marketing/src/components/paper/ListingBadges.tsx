@@ -29,7 +29,8 @@ function ListingBadge({ badge }: { badge: Badge }) {
 export function ListingBadges() {
   return (
     <div className="paper-listings">
-      <p className="paper-meta">Listed on</p>
+      {/* Not "Listed on": Startup Fame and Fazier are backlinks required before those listings are submitted. */}
+      <p className="paper-meta">Find Unvibe</p>
       <div className="paper-listings__badges">
         {listingBadges.map((badge) => <ListingBadge key={badge.src} badge={badge} />)}
       </div>

@@ -59,11 +59,9 @@ export function Footer() {
           </button>
         </FooterLinks>
       </div>
-      {pathname !== "/" ? (
-        <div className="paper-wrap pb-10">
-          <ListingBadges />
-        </div>
-      ) : null}
+      <div className="paper-wrap pb-10">
+        <ListingBadges />
+      </div>
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
         <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
