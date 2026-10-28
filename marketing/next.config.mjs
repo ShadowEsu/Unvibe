@@ -72,14 +72,6 @@ const nextConfig = {
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
-        source: "/app",
-        headers: [{ key: "Cache-Control", value: "private, no-store" }],
-      },
-      {
-        source: "/app/:path*",
-        headers: [{ key: "Cache-Control", value: "private, no-store" }],
-      },
-      {
         source: "/waitlist-admin/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
