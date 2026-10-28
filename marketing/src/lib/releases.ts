@@ -1,7 +1,6 @@
 /**
- * Reads real desktop app releases straight from GitHub Releases so this page never
- * shows fabricated version history — it mirrors exactly what the app-release workflow
- * has actually published (see .github/workflows/app-release.yml).
+ * Reads the published desktop app releases from GitHub Releases. /releases uses the newest one
+ * for its header line; the change log itself is `src/data/milestones.ts`.
  */
 
 export const GITHUB_REPO = "ShadowEsu/Unvibe";
