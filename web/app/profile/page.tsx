@@ -24,7 +24,6 @@ export default async function ProfilePage() {
     ['Concepts seen', p.conceptsSeen],
     ['Concepts with passed checks', p.conceptsUnderstood],
     ['Concepts to review', p.conceptsNeedReview],
-    ['Current streak', `${p.currentStreakDays} day${p.currentStreakDays === 1 ? '' : 's'}`],
     ['Last active', p.lastActive ? new Date(p.lastActive).toLocaleString() : '—'],
   ];
 

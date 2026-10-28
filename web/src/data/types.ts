@@ -32,7 +32,6 @@ export interface ProfileSummary {
   conceptsFamiliar: number;
   conceptsStrong: number;
   conceptsNeedReview: number;
-  currentStreakDays: number;
   lastActive?: string;
 }
 

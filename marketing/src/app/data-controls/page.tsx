@@ -11,13 +11,13 @@ export default function DataControlsPage() {
   return (
     <LegalLayout
       title="Data controls"
-      updated="July 2026"
+      updated="October 2026"
       intro="What Unvibe keeps, where it lives, and how you stay in control. Private code contents are never written to analytics or application logs, and secrets in the code you send are filtered on-device before it is sent."
     >
       <LegalSection heading="What is stored and where">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong>Learning events</strong> (reviews, outcomes, concepts, streaks) live
+            <strong>Learning events</strong> (reviews, outcomes, concepts) live
             on your device and, if you are signed in, sync to our backend. A successful
             account deletion removes the associated primary database rows.
           </li>

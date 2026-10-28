@@ -78,7 +78,6 @@ async function HomeStats({ userId }: { userId: string }) {
     ['Understood', p.understood],
     ['Needs review', p.needsReview],
     ['Concepts with passed checks', p.conceptsUnderstood],
-    ['Streak', `${p.currentStreakDays}d`],
   ];
   if (p.totalReviews === 0) {
     return (
