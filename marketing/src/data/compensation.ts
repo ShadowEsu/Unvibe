@@ -1,4 +1,4 @@
-export type CompensationKind = "credits" | "cash";
+export type CompensationKind = "cash";
 
 export interface CompensationLine {
   name: string;
@@ -8,78 +8,8 @@ export interface CompensationLine {
   state: string;
 }
 
-/** Program credits and self-reported cash. Credits are not a funding round. */
+/** Public, self-reported committed cash only; not a complete account of company resources. */
 export const compensationLines: CompensationLine[] = [
-  {
-    name: "Mixpanel for Startups",
-    amountUsd: 144_000,
-    detail: "1 year Mixpanel Pro plan credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "PostHog for Startups",
-    amountUsd: 50_000,
-    detail: "PostHog credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "Claude for Startups",
-    amountUsd: 21_500,
-    detail: "Anthropic API credits, Claude Team for 12 months, and partner perks (ElevenLabs, ClickHouse, Moda, Firecrawl, Viktor and more). Low end of a $21.5K to $23K estimate",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "GitLab for Startups",
-    amountUsd: 23_700,
-    detail: "GitLab Ultimate credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "Salesforce Launchpad",
-    amountUsd: 13_500,
-    detail: "30 Starter Suite seats, confirmed 2-year program value",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "Linear",
-    amountUsd: 4_500,
-    detail: "Six months of Linear (startup value pack)",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "Google AI Startups",
-    amountUsd: 2_000,
-    detail: "Google Cloud credits, USD",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "OpenAI for Startups",
-    amountUsd: 1_200,
-    detail: "ChatGPT Business seat credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "Deepgram for Startups",
-    amountUsd: 1_000,
-    detail: "Deepgram API credits",
-    kind: "credits",
-    state: "Secured",
-  },
-  {
-    name: "MongoDB for Startups",
-    amountUsd: 500,
-    detail: "Program support",
-    kind: "credits",
-    state: "Secured",
-  },
   {
     name: "Own capital",
     amountUsd: 500,
@@ -96,6 +26,48 @@ export const compensationLines: CompensationLine[] = [
   },
 ];
 
+export interface StartupProgram {
+  /** Brand name as used in the one-line summary. */
+  brand: string;
+  /** Full program name, exactly as in the acceptance email. */
+  program: string;
+  /** Acceptance email date. */
+  accepted: string;
+  /** Official, unmodified logo file. Only programs whose brand rules allow it (PostHog); the rest are plain text. */
+  logo?: string;
+  /** Registered mark that takes "®" at its first use on each page (MongoDB Trademark Standard 3). */
+  registered?: string;
+}
+
+/**
+ * The startup programs Unvibe is in: only those with an acceptance email on file (BOSS inbox check, 28 Oct 2026).
+ * Names only. Never add credit amounts or a total; the homepage, /investors, /about, /kit and the milestones read this list.
+ */
+export const startupPrograms: readonly StartupProgram[] = [
+  { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", logo: "/sponsors/posthog-logo.svg" },
+  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18" },
+  { brand: "Salesforce Launchpad", program: "Salesforce Launchpad", accepted: "2026-08-26" },
+  { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19" },
+  { brand: "MongoDB", program: "MongoDB for Startups", accepted: "2026-07-21", registered: "MongoDB" },
+];
+
+/** Salesforce's required attribution, shown wherever the Salesforce name appears. */
+export const SALESFORCE_ATTRIBUTION = "Salesforce is a trademark of Salesforce, Inc.";
+
+/** `text` with the program's registered mark as "Mark®", for the first use of the name on a page. */
+export function withRegistration(text: string, program: StartupProgram): string {
+  return program.registered ? text.replace(program.registered, `${program.registered}®`) : text;
+}
+
+/**
+ * "In 5 startup programs: PostHog, Mixpanel, Salesforce Launchpad, Deepgram and MongoDB®".
+ * Always a first use of the names, so registered marks carry ®.
+ */
+export function startupProgramsLine(): string {
+  const names = startupPrograms.map((program) => withRegistration(program.brand, program));
+  return `In ${names.length} startup programs: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 export function formatUsd(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -108,23 +80,6 @@ export function compensationTotalUsd(): number {
   return compensationLines.reduce((sum, line) => sum + line.amountUsd, 0);
 }
 
-export function compensationCreditsUsd(): number {
-  return compensationLines
-    .filter((line) => line.kind === "credits")
-    .reduce((sum, line) => sum + line.amountUsd, 0);
-}
-
-export function compensationCashUsd(): number {
-  return compensationLines
-    .filter((line) => line.kind === "cash")
-    .reduce((sum, line) => sum + line.amountUsd, 0);
-}
-
 export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
-}
-
-/** Startup programs are the credit lines only. Own capital and angel cash are not programs. */
-export function compensationProgramCount(): number {
-  return compensationLines.filter((line) => line.kind === "credits").length;
 }

@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { ArrowRight, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
+import { ProgramList } from "@/components/paper/BackingStrip";
 import { Vibe } from "@/components/paper/Vibe";
 import {
-  compensationCashUsd,
-  compensationCreditsUsd,
   compensationLines,
-  compensationProgramCount,
   compensationTotalLabel,
   formatUsd,
+  startupPrograms,
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -17,7 +16,7 @@ import { pageMetadata } from "@/lib/pageMeta";
 export const metadata: Metadata = pageMetadata({
   path: "/investors",
   title: "Investors",
-  description: "Unvibe on one page: the thesis, what shipped, every line of startup support, what is next, and how to reach us.",
+  description: "Unvibe on one page: the thesis, what shipped, the startup programs we are in, public cash figures, what is next, and how to reach us.",
 });
 
 const pipeline = [
@@ -37,14 +36,11 @@ const roadmap: Array<[string, string, "shipped" | "next" | "later"]> = [
 ];
 
 export default function InvestorsPage() {
-  const credits = formatUsd(compensationCreditsUsd());
-  const cash = formatUsd(compensationCashUsd());
   const total = compensationTotalLabel();
   const sorted = [...compensationLines].sort((a, b) => b.amountUsd - a.amountUsd);
   const lead = sorted[0];
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   const company = milestones.filter((m) => m.category === "COMPANY" || m.category === "DISTRIBUTION").slice(0, 8);
-  const programs = compensationProgramCount();
 
   return (
     <article className="inv">
@@ -69,8 +65,8 @@ export default function InvestorsPage() {
       </header>
 
       <section className="inv-stats" aria-label="Unvibe at a glance">
-        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>startup support secured</span></div>
-        <div className="inv-stat inv-stat--sky"><b>{programs}</b><span>startup programs backing us</span></div>
+        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>self-reported committed cash</span></div>
+        <div className="inv-stat inv-stat--sky"><b>{compensationLines.length}</b><span>public cash sources</span></div>
         <div className="inv-stat inv-stat--sun"><b>{releases}+</b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
         <div className="inv-stat inv-stat--lilac"><b>Mac + Windows</b><span>beta, free to download</span></div>
       </section>
@@ -85,10 +81,16 @@ export default function InvestorsPage() {
         </div>
       </section>
 
+      <section className="inv-section" id="backing">
+        <p className="inv-eyebrow">Startup programs</p>
+        <h2>In {startupPrograms.length} startup <em>programs.</em></h2>
+        <ProgramList firstUse />
+      </section>
+
       <section className="inv-section" id="support">
-        <p className="inv-eyebrow" id="backing">Resource runway</p>
+        <p className="inv-eyebrow">Resource runway</p>
         <h2>Where the {total} <em>comes from.</em></h2>
-        <p className="inv-lead">Every program credit and self-reported cash line, by source. Program credits {credits} · cash {cash}. Credits are not cash, and this is not a funding round.</p>
+        <p className="inv-lead">Public, self-reported committed cash, by source. This is not a funding round or a complete account of company resources.</p>
         <div className="inv-table" role="table" aria-label="Support by source">
           <div className="inv-row inv-row--head" role="row">
             <span role="columnheader">Source</span><span role="columnheader">Amount</span><span role="columnheader">What it is</span><span role="columnheader">Status</span>

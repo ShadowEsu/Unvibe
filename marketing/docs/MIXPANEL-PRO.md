@@ -1,6 +1,6 @@
 # Mixpanel Pro (startup credits)
 
-Unvibe is on **Mixpanel for Startups** with **$144,000** of Mixpanel Pro plan credits (1 year). Use Pro features that the credit plan includes. Do not buy add-ons or upgrade to a paid SKU that would charge the card.
+Unvibe is on **Mixpanel for Startups** with Mixpanel Pro plan credits (1 year). Use Pro features that the credit plan includes. Do not buy add-ons or upgrade to a paid SKU that would charge the card.
 
 ## Included Pro usage we turn on
 

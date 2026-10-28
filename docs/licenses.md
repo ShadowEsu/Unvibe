@@ -41,6 +41,7 @@ Every photo or illustration we ship that we didn't make ourselves, with its sour
 | File | Where it's used | Source | Licence |
 |---|---|---|---|
 | `marketing/public/hero/golden-gate-band-1600.webp`, `-800.webp` | The photo band on /beta, /releases, /resources, /build and the 404 page | "Golden Gate Bridge at Purple sunset", Umer Sayyam, 2015: https://commons.wikimedia.org/wiki/File:Golden_Gate_Bridge_at_Purple_sunset.jpg (from https://unsplash.com/photos/SHP1t8EduMY) | CC0 1.0 (public domain dedication). Commons has reviewed the licence ("Files from external sources with reviewed licenses"). No credit required |
+| `marketing/public/sponsors/posthog-logo.svg` | The startup-programs list on the homepage, /investors and /about (PostHog for Startups) | PostHog's standard logo, downloaded unmodified from https://brand.posthog.com/logo/posthog-logo.svg on 2026-10-28 (sha256 f7f39027cb7e46fa06053be784b017dab6db80fc63d19badc0e4a71b34ce67a7) | PostHog trademark, used under its brand rules (https://posthog.com/handbook/brand/assets): unmodified only, never on a dark background, no hedgehog art, no wording that implies endorsement or partnership. The other programs are named in plain text only (no logo permission) |
 
 Made by us, no third-party source:
 - `marketing/public/hero/dusk-field.webp`, `dusk-field-800.webp` (site background, the unsubscribe page, /activate) and `app/src/renderer/{companion,widget}/dusk-field.webp` (app window backdrop): CSS gradients in the site palette, rendered to WebP. No photo is involved.

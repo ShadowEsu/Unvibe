@@ -1,70 +1,42 @@
-import { MotionInView } from "@/components/paper/MotionInView";
+import { SALESFORCE_ATTRIBUTION, startupPrograms, withRegistration } from "@/data/compensation";
 
-export const sponsors = [
-  { name: "Mixpanel", src: "/sponsors/mixpanel.svg" },
-  { name: "PostHog", src: "/sponsors/posthog.svg" },
-  { name: "Salesforce", src: "/sponsors/salesforce.svg" },
-  { name: "GitLab", src: "/sponsors/gitlab.svg" },
-  { name: "AWS", src: "/sponsors/aws.svg" },
-  { name: "Linear", src: "/sponsors/linear.svg" },
-  { name: "Google Cloud", src: "/sponsors/googlecloud.svg" },
-  { name: "OpenAI", src: "/sponsors/openai.svg" },
-  { name: "Deepgram", src: "/sponsors/deepgram.svg" },
-  { name: "MongoDB", src: "/sponsors/mongodb.svg" },
-] as const;
-
-/** One startup-program logo in the strip's ink tone; shared by the homepage strip and the /about backing block. */
-export function SponsorLogo({ sponsor }: { sponsor: (typeof sponsors)[number] }) {
+/**
+ * The startup programs by full name, plain text in our own type. Only PostHog shows its logo: its official,
+ * unmodified file, on a light chip in both themes. Shared by the homepage strip, /investors and /about.
+ * `firstUse`: this list is the first mention of the names on the page, so registered marks carry ®.
+ */
+export function ProgramList({ firstUse }: { firstUse: boolean }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- the same markup next/image gives an SVG
-    // (it never optimizes SVGs), without loading its client component on the home page's first paint
-    <img
-      className={`paper-partners__logo paper-partners__logo--${sponsor.name.toLowerCase().replace(/\s+/g, "-")}`}
-      src={sponsor.src}
-      alt={sponsor.name}
-      width={72}
-      height={72}
-      loading="lazy"
-      decoding="async"
-      style={{ color: "transparent" }}
-    />
+    <div className="program-list">
+      <ul className="program-list__items" aria-label="Startup programs">
+        {startupPrograms.map((program) => (
+          <li className="program-list__item" key={program.program}>
+            {program.logo ? (
+              <span className="program-list__logo">
+                {/* eslint-disable-next-line @next/next/no-img-element -- next/image never optimizes SVGs */}
+                <img src={program.logo} alt={program.brand} width={160} height={28} loading="lazy" decoding="async" />
+              </span>
+            ) : null}
+            <span className="program-list__name">{firstUse ? withRegistration(program.program, program) : program.program}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="program-list__fine">{SALESFORCE_ATTRIBUTION}</p>
+    </div>
   );
 }
 
-/**
- * Homepage trust strip: the startup programs Unvibe is in. Credit amounts live on /investors;
- * these are programs, not partnerships, so the label says so.
- */
+/** Homepage strip: the startup programs Unvibe is in. Programs, not partnerships, so the label says so. */
 export function BackingStrip() {
   return (
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
       <div className="paper-wrap u-sheet">
         <div className="sec-head">
           <p className="paper-meta">Behind Unvibe</p>
-          <h2 id="backing-title">Supported by <em>startup programs.</em></h2>
+          <h2 id="backing-title">Startup <em>programs.</em></h2>
+          <p className="paper-lead">Read the <a className="paper-text-link" href="/investors">investor overview</a> for the product thesis, public cash figures, and what comes next.</p>
         </div>
-        <div className="claude-startups">
-          <span className="claude-startups__tag">Startup program</span>
-          <p className="claude-startups__title">Unvibe is in <em>Claude for Startups.</em></p>
-          <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors">investors page</a>.</p>
-        </div>
-        <div className="paper-partners">
-          <p className="paper-meta">Also in the startup programs of</p>
-          {/* Focusable so keyboard users can pause the scroll (hover and focus pause it; reduced motion and lite mode stop it). */}
-          <MotionInView eagerImages className="paper-partners__viewport" tabIndex={0} role="region" aria-label="Startup program logos (focus to pause)">
-            <div className="paper-partners__track">
-              {[0, 1].map((copy) => (
-                <div className="paper-partners__group" aria-hidden={copy === 1} key={copy}>
-                  {sponsors.map((sponsor) => (
-                    <span className="paper-partners__item" key={`${copy}-${sponsor.name}`}>
-                      <SponsorLogo sponsor={sponsor} />
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </MotionInView>
-        </div>
+        <ProgramList firstUse={false} />
       </div>
     </section>
   );
