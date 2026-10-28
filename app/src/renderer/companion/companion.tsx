@@ -36,12 +36,11 @@ interface Profile {
   linesUnderstood: number; linesReviewed: number;
   conceptsSeen: number; conceptsDeveloping: number; conceptsFamiliar: number;
   conceptsStrong: number; conceptsNeedReview: number;
-  streak: number; bestStreak: number;
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 /** The daily goal from `learning:today`, derived from saved lessons on this computer. */
-interface TodayGoal { explained: boolean; answered: boolean; streak: number }
+interface TodayGoal { explained: boolean; answered: boolean }
 interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
@@ -254,7 +253,7 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
     { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
   ] },
   Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
-    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first week-long streak.' },
+    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
     { icon: IC.check, t: 'Evidence map', d: 'Concepts use cautious labels such as developing, familiar, strong, or needs review.' },
     { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
     { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
@@ -944,7 +943,6 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
     { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
     { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
     { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
-    { id: '06', title: 'Build your rhythm', copy: 'Return tomorrow and keep the streak.', icon: IC.progress, done: (today?.streak ?? 0) > 1, run: () => onNavigate('Progress') },
   ];
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
@@ -956,7 +954,6 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
     { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
     { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
   ].filter((chip) => chip.n > 0);
-  // The streak is shown once, on the Today card, so the greeting doesn't repeat it.
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
   const note = explainDisabled ? 'out of explains this month, catch you soon'
     : brief ? 'you changed some code, want the story?'
@@ -1066,14 +1063,13 @@ function GoalCheck({ done }: { done: boolean }) {
   return <span className={`today-goal__check${done ? ' is-done' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>{done ? '✓' : ''}</span>;
 }
 
-/** One quiet card: today's two steps and, from 1 day on, the streak. No celebration. */
+/** One quiet card: today's two steps. No count of days and no celebration. */
 function TodayGoalCard({ goal }: { goal: TodayGoal }) {
   return (
     <section className="today-goal" aria-label="Today's goal">
       <p className="today-goal__line">
         Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 question
       </p>
-      {goal.streak > 0 ? <p className="today-goal__streak">Streak: {goal.streak} {goal.streak === 1 ? 'day' : 'days'}</p> : null}
     </section>
   );
 }
@@ -1472,7 +1468,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
         }}>Sign out</button></div>
       <div className="setrow setrow--stack">
         <div className="sl sl--danger">Delete account</div>
-        <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review, concept and streak) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
+        <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review and concept) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
             <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />

@@ -27,11 +27,11 @@ Code selections, follow-up questions, and Chat messages are scanned for API keys
 
 ## Account and sync
 
-When you create an account, your learning history (reviews, concepts, streaks) is synced across your devices via Supabase. This data includes:
+When you create an account, your learning history (reviews and concepts) is synced across your devices via Supabase. This data includes:
 
 - Review timestamps and outcomes
 - Concepts encountered and understood
-- Streak and progress metrics
+- Progress metrics counted from them
 
 You can see your saved explanations and progress in the app at any time. The app has no export button yet; for a copy of your data, email **hello@unvibe.site**. To delete it, see Data deletion below.
 
