@@ -28,8 +28,9 @@ const schema = z.object({
   // The friend's code from their ?ref= link (app gift code or legacy waitlist code). Kept for
   // attribution only: Pro months come from entering the gift code in the signed-in app.
   referredBy: z.string().trim().regex(/^([a-f0-9]{8}|[A-Za-z0-9_-]{16})?$/).optional().default(""),
-  // The "Also email me one setup tip tomorrow" box. Only a literal true schedules the tip.
-  reminder: z.unknown().transform((value) => value === true),
+  // The "Also email me one setup tip tomorrow" box. Only a literal true schedules the tip; a
+  // missing field (older pages, other clients) is no, never a 422 (zod 4 makes a bare transform required).
+  reminder: z.unknown().optional().transform((value) => value === true),
 });
 
 const IP_LIMIT: RateLimitRule = { name: "beta-download-ip", windowSeconds: 60, max: 6 };
