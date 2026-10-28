@@ -7,6 +7,7 @@
  */
 import { loadEnvConfig } from "@next/env";
 import { BETA_INVITE_SUBJECT, betaInviteHtml, betaInviteText } from "../src/emails/betaInvite";
+import { betaInviteCandidates } from "../src/lib/betaInviteSelection";
 import { unsubscribeHeaders, unsubscribeUrl, withoutUnsubscribed } from "../src/lib/unsubscribe";
 import { listUninvitedWaitlistEntries, listUnsubscribedKeys, listWaitlistEntries, markBetaInviteSent } from "../src/lib/waitlistStore";
 
@@ -34,14 +35,15 @@ function matchesNeedle(entry: { email: string; firstName: string; lastName?: str
 }
 
 async function resolveInvitees(needle?: string): Promise<Invitee[]> {
+  // Newsletter-only signups never get a beta invite, even when named with --to.
   if (!needle) {
-    const uninvited = await listUninvitedWaitlistEntries();
+    const uninvited = betaInviteCandidates(await listUninvitedWaitlistEntries());
     return uninvited.map((entry) => ({ email: entry.email, firstName: entry.firstName, onWaitlist: true }));
   }
   const all = await listWaitlistEntries(10_000);
   const hits = all.filter((entry) => matchesNeedle(entry, needle));
   if (hits.length > 0) {
-    return hits.map((entry) => ({ email: entry.email, firstName: entry.firstName, onWaitlist: true }));
+    return betaInviteCandidates(hits).map((entry) => ({ email: entry.email, firstName: entry.firstName, onWaitlist: true }));
   }
   if (needle.includes("@")) {
     const local = needle.split("@")[0] ?? "there";
