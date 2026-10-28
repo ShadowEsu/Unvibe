@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import demo from "@/data/demoMedia.json";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
 import { DotGrid } from "@/components/paper/DotGrid";
 
 /** When the kicker's shortcut key has finished its press (vibe.css `uKeyPress`: 900 ms delay + ~110 ms down). */
 const KEY_PRESSED_AT = 1010;
 
-/** The real app, recorded in one session, directly under the hero promise. */
+/**
+ * The site demo cut (1920x1080, music only). Files in public/videos are named by the first 8 hex of the
+ * MP4's SHA-256: `.mp4`, `-poster.webp` (1280 wide), `-poster-720.webp` and `.en.vtt` captions.
+ * Source and licence: docs/licenses.md.
+ */
+const DEMO = "/videos/unvibe-demo-v1-36f2e404";
+
+/** Real app recordings and screenshots, directly under the hero promise. */
 export function AppTour() {
   const posterRef = useRef<HTMLImageElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
@@ -63,7 +69,7 @@ export function AppTour() {
       <div ref={windowRef} className={open ? "vtour__window is-open" : "vtour__window"}>
         <div className="vtour__bar" aria-hidden="true">
           <i /><i /><i />
-          <span>Unvibe {demo.version}</span>
+          <span>Unvibe 0.1.43 and 0.1.44</span>
         </div>
         <div className="vtour__media">
           {/* The poster at the size it renders (a <video poster> can't pick one). Until it loads, the video has no
@@ -74,24 +80,27 @@ export function AppTour() {
           <img
             ref={posterRef}
             className="vtour__poster"
-            src="/videos/unvibe-real-demo-poster.webp"
-            srcSet="/videos/unvibe-real-demo-poster-720.webp 720w, /videos/unvibe-real-demo-poster.webp 1280w"
+            src={`${DEMO}-poster.webp`}
+            srcSet={`${DEMO}-poster-720.webp 720w, ${DEMO}-poster.webp 1280w`}
             sizes="(max-width: 1120px) calc(100vw - 2.5rem), 1080px"
             width={1280}
-            height={800}
+            height={720}
             loading="lazy"
             alt=""
           />
           <AutoPlayVideo
-            src="/videos/unvibe-real-demo.mp4"
+            src={`${DEMO}.mp4`}
             poster={poster ?? undefined}
             controls={poster !== undefined}
             preload="none"
-            label="Screen recording of Unvibe: a code explanation streaming in, switching to Beginner depth, a follow-up question, then a Test me question"
+            width={1920}
+            height={1080}
+            captions={`${DEMO}.en.vtt`}
+            label="Unvibe demo with music and no voice: select code and press the shortcut, an explanation at different depths, a follow-up question, Test me, a React hook explained, a Change Brief (the brief is free; the AI explanation of a change is Pro), the Library, a saved lesson, a review quiz, Why does this exist?, the same panel on Windows, privacy settings, and Try it in the browser"
           />
         </div>
         <p className="vtour__caption">
-          Screen recording of Unvibe {demo.version} on a {demo.platform}. Every explanation was generated live; only the waits between steps are cut.
+          Unvibe 0.1.43 and 0.1.44 on Mac and Windows: explain at your depth, a follow-up, Test me, a Change Brief (free; the AI explanation of a change is Pro), the Library and a review quiz, Why does this exist?, privacy settings and Try it. Real screen recordings at 1x and real screenshots, waits cut, sample code. Music only.
         </p>
       </div>
     </section>

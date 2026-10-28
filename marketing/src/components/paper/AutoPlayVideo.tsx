@@ -13,6 +13,11 @@ interface AutoPlayVideoProps {
   loop?: boolean;
   controls?: boolean;
   preload?: "none" | "metadata" | "auto";
+  /** Intrinsic size, so the box is reserved before the file loads. */
+  width?: number;
+  height?: number;
+  /** English WebVTT captions, off until chosen in the player (they repeat the burned-in text). */
+  captions?: string;
 }
 
 /**
@@ -29,6 +34,9 @@ export function AutoPlayVideo({
   loop = true,
   controls = true,
   preload = "metadata",
+  width,
+  height,
+  captions,
 }: AutoPlayVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [autoplays, setAutoplays] = useState(false);
@@ -116,13 +124,17 @@ export function AutoPlayVideo({
         className={className}
         src={src}
         poster={poster}
+        width={width}
+        height={height}
         loop={loop}
         playsInline
         muted
         controls={controls}
         preload={preload}
         aria-label={label}
-      />
+      >
+        {captions ? <track kind="captions" srcLang="en" label="English" src={captions} /> : null}
+      </video>
       {autoplays ? (
         // A toggle keeps one name; aria-pressed (and the filled style) says whether sound is on.
         <button type="button" className="vtour__sound" aria-pressed={soundOn} onClick={toggleSound}>
