@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Learning records:</strong> which snippets you reviewed,
-            comprehension results, concepts, and streaks.
+            comprehension results, and concepts.
           </li>
           <li>
             <strong>Account data:</strong> your email for sign-in, your name from Google if you

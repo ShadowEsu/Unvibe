@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeStreak, dateInTimezone } from '../src/data/progress';
+import { computeProfile } from '../src/data/progress';
 import type { IncomingEvent } from '../src/data/types';
 
 function event(id: string, patch: Partial<IncomingEvent> = {}): IncomingEvent {
@@ -15,14 +15,6 @@ function event(id: string, patch: Partial<IncomingEvent> = {}): IncomingEvent {
     ...patch,
   };
 }
-
-test('server streak uses the immutable user-local activity date', () => {
-  assert.equal(computeStreak([event('one')], '2026-07-11'), 1);
-});
-
-test('current date is evaluated in the learner timezone across UTC midnight', () => {
-  assert.equal(dateInTimezone(new Date('2026-07-12T06:30:00Z'), 'America/Los_Angeles'), '2026-07-11');
-});
 
 test('profile requires repeated evidence for familiar and strong concepts', () => {
   const events = [
