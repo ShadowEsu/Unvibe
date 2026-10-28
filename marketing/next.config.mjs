@@ -1,3 +1,5 @@
+import { ENFORCED_CSP, REPORTING_ENDPOINTS, reportOnlyCsp } from "./src/lib/csp.mjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
@@ -32,6 +34,13 @@ const nextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           { key: "X-DNS-Prefetch-Control", value: "off" },
+          // Security C3: four directives enforced; the strict policy report-only until its reports are read.
+          { key: "Content-Security-Policy", value: ENFORCED_CSP },
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: reportOnlyCsp({ api: process.env.NEXT_PUBLIC_UNVIBE_API, supabase: process.env.NEXT_PUBLIC_SUPABASE_URL }),
+          },
+          { key: "Reporting-Endpoints", value: REPORTING_ENDPOINTS },
         ],
       },
       {
