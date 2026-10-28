@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/try/route';
 import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
+import { TRY_ROOMS, roomBucket, type TryRoom } from '../src/lib/tryRooms';
 
 // The real /api/v1/try handler; only the AI providers and PostgREST HTTP boundaries are local.
 const BASE_ENV = { ...process.env };
@@ -79,12 +80,12 @@ function production(extra: Record<string, string | undefined> = {}): void {
 }
 
 let ipSeq = 0;
-function tryRequest(ip = `198.51.100.${++ipSeq % 250}`): Request {
+function tryRequest(ip = `198.51.100.${++ipSeq % 250}`, extra: Record<string, unknown> = {}): Request {
   return new Request('http://localhost/api/v1/try', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
     // Both Try it boxes ticked, at the current version: these tests are about what happens after that.
-    body: JSON.stringify({ code: 'const a = 1 + 1;', level: 'beginner', consent: { v: TRY_CONSENT_VERSION, aiSend: true, age18: true } }),
+    body: JSON.stringify({ code: 'const a = 1 + 1;', level: 'beginner', consent: { v: TRY_CONSENT_VERSION, aiSend: true, age18: true }, ...extra }),
   });
 }
 
@@ -291,4 +292,78 @@ test('outside production the memory fallback stops one IP at 6 an hour and every
   assert.equal(res.status, 429);
   assert.match(await res.text(), /busy today/);
   assert.equal(calls.gemini, 500);
+});
+
+/** Runs `body` with one scheduled room (code "ROOM-TEST-1", 8 an hour) open from an hour ago. */
+async function withRoom(window: { start: number; end: number }, body: (room: TryRoom) => Promise<void>): Promise<void> {
+  const now = Date.now();
+  const room: TryRoom = {
+    id: 'test-room',
+    codeSha256: createHash('sha256').update('ROOMTEST1').digest('hex'),
+    start: new Date(now + window.start).toISOString(),
+    end: new Date(now + window.end).toISOString(),
+    perHour: 8,
+  };
+  const rooms = TRY_ROOMS as TryRoom[];
+  rooms.push(room);
+  try {
+    await body(room);
+  } finally {
+    rooms.splice(rooms.indexOf(room), 1);
+  }
+}
+
+test('an open room code counts against the room bucket and its cap, not the shared network\'s 6', async () => {
+  production();
+  await withRoom({ start: -3_600_000, end: 3_600_000 }, async (room) => {
+    const ip = '203.0.113.50';
+    for (let i = 0; i < 8; i += 1) {
+      const res = await POST(tryRequest(ip, { room: ' room-test-1 ' }));
+      assert.equal(res.status, 200);
+      assert.equal((await res.json() as { room?: string }).room, 'open');
+    }
+    const ninth = await POST(tryRequest(ip, { room: 'ROOM-TEST-1' }));
+    assert.equal(ninth.status, 429);
+    assert.match(await ninth.text(), /This room has used the demo/);
+    assert.ok(rpcCalls.every((args) => args.p_ip_hash === roomBucket(room) && args.p_ip_cap === 8));
+    // The network's own 6 are untouched by the room's requests.
+    assert.equal((await POST(tryRequest(ip))).status, 200);
+    assert.equal(calls.gemini, 9);
+  });
+});
+
+test('a room code that is wrong, early or late counts as an ordinary visit and says so', async () => {
+  production();
+  for (const [window, code] of [
+    [{ start: -3_600_000, end: 3_600_000 }, 'ROOM-TEST-2'],
+    [{ start: 60_000, end: 3_600_000 }, 'ROOM-TEST-1'],
+    [{ start: -3_600_000, end: -1 }, 'ROOM-TEST-1'],
+  ] as const) {
+    await withRoom(window, async (room) => {
+      rows = [];
+      rpcCalls = [];
+      const ip = '203.0.113.51';
+      for (let i = 0; i < 6; i += 1) {
+        const res = await POST(tryRequest(ip, { room: code }));
+        assert.equal(res.status, 200);
+        assert.equal((await res.json() as { room?: string }).room, 'not-open');
+      }
+      const seventh = await POST(tryRequest(ip, { room: code }));
+      assert.equal(seventh.status, 429);
+      assert.match(await seventh.text(), /You have used the demo/);
+      assert.ok(rpcCalls.every((args) => args.p_ip_hash !== roomBucket(room) && args.p_ip_cap === 6));
+    });
+  }
+});
+
+test('a room still stops at the site-wide 500 a day', async () => {
+  production();
+  await withRoom({ start: -60_000, end: 3_600_000 }, async () => {
+    const now = new Date().toISOString();
+    while (rows.length < 500) rows.push({ ip_hash: `other-${rows.length}`, created_at: now });
+    const res = await POST(tryRequest('203.0.113.52', { room: 'ROOM-TEST-1' }));
+    assert.equal(res.status, 429);
+    assert.match(await res.text(), /busy today/);
+    assert.equal(calls.gemini, 0);
+  });
 });
