@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -36,5 +37,14 @@ describe("link-preview cards", () => {
     assert.equal(og.images[0]?.url, EXPLAIN_CARD_FILES.cpp);
     assert.equal(og.images[0]?.alt, "Explain C++ code in plain English. Free for Mac and Windows.");
     assert.equal((meta.twitter as { card: string }).card, "summary_large_image");
+  });
+
+  it("every card file is named for its content, so the year-long immutable cache never serves a stale card", () => {
+    const cards = readdirSync(path.join(publicDir, "og"));
+    assert.ok(cards.length > 0);
+    for (const name of cards) {
+      const hash = createHash("sha256").update(readFileSync(path.join(publicDir, "og", name))).digest("hex").slice(0, 8);
+      assert.match(name, new RegExp(`-${hash}\\.png$`), `${name}: rename it to end in -${hash}.png`);
+    }
   });
 });
