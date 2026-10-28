@@ -46,7 +46,8 @@ const mono = JetBrains_Mono({
   adjustFontFallback: false,
 });
 
-const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown","keydown"];function use(){if(done)return;done=true;events.forEach(function(e){removeEventListener(e,use)});var s=document.createElement("style");s.textContent=${JSON.stringify(
+// jsonLdScript escapes "<", so nothing in the string can close this inline <script> (Security X-U31).
+const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown","keydown"];function use(){if(done)return;done=true;events.forEach(function(e){removeEventListener(e,use)});var s=document.createElement("style");s.textContent=${jsonLdScript(
   `:root{--font-mono-face:${mono.style.fontFamily}}`,
 )};document.head.appendChild(s)}events.forEach(function(e){addEventListener(e,use,{passive:true})});addEventListener("load",function(){setTimeout(use,4000)})})()`;
 
