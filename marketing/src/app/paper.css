@@ -556,8 +556,8 @@ h2 {
 }
 
 /* Startup programs (ProgramList in BackingStrip.tsx: homepage, /investors, /about). Names in our own type, no brand
-   colours. Only MongoDB shows a logo: its official file, unmodified (leaf included), on a white chip so its slate-blue
-   colourway keeps its contrast in both themes, and smaller than Unvibe's own mark (30px), as MongoDB asks. */
+   colours. Only MongoDB shows a logo: its official file, unmodified, on a white chip so the dark colourway keeps
+   its contrast in both themes, and smaller than Unvibe's own mark (30px), as MongoDB asks. */
 .program-list { text-align: center; }
 .paper-backing .program-list { margin-top: clamp(20px, 3vw, 32px); padding-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--u-line); }
 .program-list__items { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }

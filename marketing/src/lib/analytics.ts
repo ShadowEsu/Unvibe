@@ -292,7 +292,7 @@ export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
     person_profiles: "identified_only",
     capture_pageview: true,
     capture_pageleave: true,
-    // Uses PostHog startup credits: Error Tracking + Surveys need the SDK.
+    // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
     capture_exceptions: true,
     disable_session_recording: false,
     disable_surveys: false,

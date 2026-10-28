@@ -41,7 +41,8 @@ export default function AboutPage() {
           <p>AI writes code faster than anyone can understand it. Students copy it, builders merge it, and nobody owns it. Unvibe is the place to stop and read what your AI wrote: the code you select, explained at your level, then one question to check it stuck.</p>
           <ul className="founder-about__facts">
             <li><b>{releases}+</b> releases shipped</li>
-            <li><b>{compensationTotalLabel()}</b> in self-reported committed cash</li>
+            <li><b>{compensationTotalLabel()}</b> in startup support</li>
+            <li>In <b>Claude for Startups</b></li>
           </ul>
         </article>
         <article className="founder-about__card">

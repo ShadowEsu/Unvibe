@@ -1,4 +1,4 @@
-export type CompensationKind = "cash";
+export type CompensationKind = "credits" | "cash";
 
 export interface CompensationLine {
   name: string;
@@ -8,8 +8,76 @@ export interface CompensationLine {
   state: string;
 }
 
-/** Public, self-reported committed cash only; not a complete account of company resources. */
+export interface StartupProgram {
+  /** Short name for the one-line summaries. */
+  brand: string;
+  /** Full program name as shown in lists. */
+  program: string;
+  /** Acceptance date (the welcome email where there is one, else the date the earlier site gave). */
+  accepted: string;
+  /** Credit value as the earlier site listed it (self-reported). Credits are not cash. */
+  amountUsd: number;
+  detail: string;
+  /** Official, unmodified logo file, only where Security has cleared it (MongoDB); every other program is plain text. */
+  logo?: { src: string; width: number; height: number };
+  /** Mark that takes its notice ("®" registered, "™" otherwise) at its first use on each page. */
+  mark?: { name: string; symbol: "®" | "™" };
+}
+
+/** Salesforce's required attribution, shown wherever the Salesforce name appears. */
+export const SALESFORCE_ATTRIBUTION = "Salesforce is a trademark of Salesforce, Inc.";
+/** GitLab's required attribution (GitLab Trademark Guidelines 1.2.3), shown near the GitLab name. */
+export const GITLAB_ATTRIBUTION = "GITLAB is a trademark of GitLab Inc. in the United States and other countries and regions.";
+/** Every attribution line a named brand requires, for the fine print wherever the program list appears. */
+export const PROGRAM_NOTICES = [SALESFORCE_ATTRIBUTION, GITLAB_ATTRIBUTION] as const;
+
+/**
+ * The startup programs Unvibe is in, as the earlier site listed them (ledger 317, 28 Oct 2026). Amounts are
+ * self-reported; logos and notices follow Security's 28 Oct ruling (only MongoDB shows a logo).
+ * The homepage, /investors, /about, /kit and the milestones all read this list, so a change is one line.
+ */
+export const startupPrograms: readonly StartupProgram[] = [
+  {
+    brand: "Claude for Startups",
+    program: "Claude for Startups",
+    accepted: "2026-10-07",
+    amountUsd: 21_500,
+    detail: "Anthropic API credits, Claude Team for 12 months, and perks from other tools. Low end of a $21.5K to $23K estimate",
+  },
+  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18", amountUsd: 144_000, detail: "1 year Mixpanel Pro plan credits" },
+  { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", amountUsd: 50_000, detail: "PostHog credits" },
+  { brand: "GitLab", program: "GitLab for Startups", accepted: "2026-08-16", amountUsd: 23_700, detail: "GitLab Ultimate credits", mark: { name: "GitLab", symbol: "™" } },
+  {
+    brand: "Salesforce Launchpad",
+    program: "Salesforce Launchpad",
+    accepted: "2026-08-26",
+    amountUsd: 13_500,
+    detail: "30 Starter Suite seats, confirmed 2-year program value",
+  },
+  { brand: "Linear", program: "Linear startup pack", accepted: "2026-08-14", amountUsd: 4_500, detail: "Six months of Linear" },
+  { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-07-23", amountUsd: 2_000, detail: "Google Cloud credits, USD" },
+  { brand: "OpenAI", program: "OpenAI for Startups", accepted: "2026-08-16", amountUsd: 1_200, detail: "ChatGPT Business seat credits" },
+  { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", amountUsd: 1_000, detail: "Deepgram API credits" },
+  {
+    brand: "MongoDB",
+    program: "MongoDB for Startups",
+    accepted: "2026-07-21",
+    amountUsd: 500,
+    detail: "Program support",
+    logo: { src: "/sponsors/mongodb-logo.svg", width: 1102, height: 278 },
+    mark: { name: "MongoDB", symbol: "®" },
+  },
+];
+
+/** Program credits, then self-reported cash. Credits are not cash and not a funding round. */
 export const compensationLines: CompensationLine[] = [
+  ...startupPrograms.map((program): CompensationLine => ({
+    name: program.program,
+    amountUsd: program.amountUsd,
+    detail: program.detail,
+    kind: "credits",
+    state: "Secured",
+  })),
   {
     name: "Own capital",
     amountUsd: 500,
@@ -26,46 +94,18 @@ export const compensationLines: CompensationLine[] = [
   },
 ];
 
-export interface StartupProgram {
-  /** Brand name as used in the one-line summary. */
-  brand: string;
-  /** Full program name, exactly as in the acceptance email. */
-  program: string;
-  /** Acceptance email date. */
-  accepted: string;
-  /** Official, unmodified logo file. Only programs whose terms allow it (MongoDB); the rest are plain text. */
-  logo?: string;
-  /** Registered mark that takes "®" at its first use on each page (MongoDB Trademark Standard 3). */
-  registered?: string;
+/** `text` with the program's mark notice ("MongoDB®", "GitLab™"), for the first use of the name on a page. */
+export function withMark(text: string, program: StartupProgram): string {
+  return program.mark ? text.replace(program.mark.name, `${program.mark.name}${program.mark.symbol}`) : text;
 }
 
 /**
- * The startup programs Unvibe is in: only those with an acceptance email on file (BOSS inbox check, 28 Oct 2026).
- * Names only. Never add credit amounts or a total; the homepage, /investors, /about, /kit and the milestones read this list.
- */
-export const startupPrograms: readonly StartupProgram[] = [
-  { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17" },
-  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18" },
-  { brand: "Salesforce Launchpad", program: "Salesforce Launchpad", accepted: "2026-08-26" },
-  { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19" },
-  { brand: "MongoDB", program: "MongoDB for Startups", accepted: "2026-07-21", logo: "/sponsors/mongodb-logo.svg", registered: "MongoDB" },
-];
-
-/** Salesforce's required attribution, shown wherever the Salesforce name appears. */
-export const SALESFORCE_ATTRIBUTION = "Salesforce is a trademark of Salesforce, Inc.";
-
-/** `text` with the program's registered mark as "Mark®", for the first use of the name on a page. */
-export function withRegistration(text: string, program: StartupProgram): string {
-  return program.registered ? text.replace(program.registered, `${program.registered}®`) : text;
-}
-
-/**
- * "In 5 startup programs: PostHog, Mixpanel, Salesforce Launchpad, Deepgram and MongoDB®".
- * Always a first use of the names, so registered marks carry ®.
+ * "In Claude for Startups, plus Mixpanel, PostHog, GitLab™, …, Deepgram and MongoDB®" (about-mission.md). Always a
+ * first use of the names, so marks carry their notice.
  */
 export function startupProgramsLine(): string {
-  const names = startupPrograms.map((program) => withRegistration(program.brand, program));
-  return `In ${names.length} startup programs: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const [lead, ...rest] = startupPrograms.map((program) => withMark(program.brand, program));
+  return `In ${lead}, plus ${rest.slice(0, -1).join(", ")} and ${rest[rest.length - 1]}`;
 }
 
 export function formatUsd(amount: number): string {
@@ -76,10 +116,27 @@ export function formatUsd(amount: number): string {
   }).format(amount);
 }
 
+function sumUsd(kind?: CompensationKind): number {
+  return compensationLines.filter((line) => !kind || line.kind === kind).reduce((sum, line) => sum + line.amountUsd, 0);
+}
+
 export function compensationTotalUsd(): number {
-  return compensationLines.reduce((sum, line) => sum + line.amountUsd, 0);
+  return sumUsd();
+}
+
+export function compensationCreditsUsd(): number {
+  return sumUsd("credits");
+}
+
+export function compensationCashUsd(): number {
+  return sumUsd("cash");
 }
 
 export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
+}
+
+/** Startup programs are the credit lines only. Own capital and angel cash are not programs. */
+export function compensationProgramCount(): number {
+  return startupPrograms.length;
 }
