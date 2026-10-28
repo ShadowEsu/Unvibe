@@ -6,7 +6,7 @@ import { MacBuildLinks } from "@/components/paper/BetaInstall";
 import { faqItems } from "@/data/faq";
 import { BETA_MAC_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
-import { pageMetadata } from "@/lib/pageMeta";
+import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { explainMono } from "../explain/mono";
 import "../explain/explain.css";
@@ -18,6 +18,7 @@ const sentAnswer = faqItems.find((item) => item.id === "sent")?.answer ?? "";
 
 export const metadata: Metadata = pageMetadata({
   path: PATH,
+  card: OG_CARDS.mac,
   title: "Code Explainer for Mac: Unvibe, Free Desktop App",
   absolute: true,
   description: `Select code in Cursor, VS Code, Xcode, Terminal or a browser, press ${shortcut}, and Unvibe explains it in plain English beside your editor. Free for Mac.`,

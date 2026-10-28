@@ -26,8 +26,8 @@ export function generateMetadata({ params }: Params): Metadata {
     path: `/explain/${page.id}`,
     title: `Explain ${explainLanguage(page).name} code in plain English`,
     description: page.description,
-    // Link cards drawn from the page's own title, lead and sample; languages without one use the home card.
-    card: explainCard(page.id),
+    // The page's own sample with the shortcut and Vibe; no panel, since none explains these exact lines.
+    card: explainCard(page),
   });
 }
 

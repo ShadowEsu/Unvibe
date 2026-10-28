@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
-import { pageMetadata } from "@/lib/pageMeta";
+import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "./mono";
 import "./explain.css";
 
@@ -11,7 +11,7 @@ const title = "Explain code in plain English, free";
 const description =
   "Paste a snippet of code and Vibe explains what it does in plain English, at the depth you pick. Free online, no account.";
 
-export const metadata: Metadata = pageMetadata({ path: "/explain", title, description });
+export const metadata: Metadata = pageMetadata({ path: "/explain", title, description, card: OG_CARDS.explain });
 
 export default function ExplainIndexPage() {
   return (

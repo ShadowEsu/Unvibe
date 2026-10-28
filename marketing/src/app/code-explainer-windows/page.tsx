@@ -5,7 +5,7 @@ import { DownloadLink } from "@/components/paper/DownloadLink";
 import { BETA_WINDOWS_DIRECT_DOWNLOAD, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
-import { pageMetadata } from "@/lib/pageMeta";
+import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { explainMono } from "../explain/mono";
 import "../explain/explain.css";
@@ -16,6 +16,7 @@ const shortcut = SHORTCUTS.windows.anywhere;
 
 export const metadata: Metadata = pageMetadata({
   path: PATH,
+  card: OG_CARDS.windows,
   title: "Code Explainer for Windows: Unvibe, Free Desktop App",
   absolute: true,
   description: `Select code in VS Code, Cursor, Notepad or a browser, press ${shortcut}, and Unvibe explains it in plain English beside your editor. Free for Windows.`,

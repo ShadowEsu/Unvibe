@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { pricingCopy } from "@/lib/pricingCopy";
-import { pageMetadata } from "@/lib/pageMeta";
+import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 
 /** Re-read the API's payments status at most every 5 minutes (PAYMENTS_STATUS_REVALIDATE_SECONDS). */
 export const revalidate = 300;
@@ -10,6 +10,7 @@ export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     path: "/pricing",
+    card: OG_CARDS.pricing,
     // True whether payments are open or not; the description follows paymentsOpen through pricingCopy.
     title: "Unvibe Pricing: Free, with Pro for Expert Depth",
     absolute: true,
