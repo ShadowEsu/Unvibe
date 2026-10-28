@@ -8,38 +8,35 @@ function release(tag: string, name: string | null, draft = false) {
   return { tag_name: tag, name, published_at: "2026-10-25T00:00:00Z", body: null, html_url: `https://github.com/ShadowEsu/Unvibe/releases/tag/${tag}`, prerelease: true, draft, assets: [] };
 }
 
-/** Serves the given GitHub Releases payload to fetchReleases. */
-function serve(payload: unknown[]) {
-  globalThis.fetch = (async () => Response.json(payload)) as typeof fetch;
-}
-
 afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
 describe("fetchReleases", () => {
   it("keeps the public v* releases and older app-v* ones, and drops drafts and other tags", async () => {
-    serve([
+    const payload = [
       release("v0.1.45", "0.1.45", true),
       release("v0.1.44", "0.1.44"),
       release("v0.1.4-feedback-rewards", "Unvibe 0.1.4 feedback and beta rewards"),
       release("app-v0.0.9", null),
       release("extension-1.2.0", "Extension 1.2.0"),
       release("vscode", "Not a version"),
-    ]);
+    ];
+    globalThis.fetch = (async () => Response.json(payload)) as typeof fetch;
     const { releases, error } = await fetchReleases();
     assert.equal(error, null);
     assert.deepEqual(releases.map((r) => r.tagName), ["v0.1.44", "v0.1.4-feedback-rewards", "app-v0.0.9"]);
   });
 
   it("shows a bare version name or an app-v tag as v0.1.44, and keeps a written name", async () => {
-    serve([
+    const payload = [
       release("v0.1.44", "0.1.44"),
       release("v1.0.0", "Unvibe v1.0.0"),
       release("app-v0.0.9", null),
       release("app-v0.0.8", "app-v0.0.8"),
       release("v0.1.13", "  "),
-    ]);
+    ];
+    globalThis.fetch = (async () => Response.json(payload)) as typeof fetch;
     const { releases } = await fetchReleases();
     assert.deepEqual(releases.map((r) => r.name), ["v0.1.44", "Unvibe v1.0.0", "v0.0.9", "v0.0.8", "v0.1.13"]);
   });
