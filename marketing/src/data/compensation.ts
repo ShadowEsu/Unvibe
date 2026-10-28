@@ -33,7 +33,7 @@ export interface StartupProgram {
   program: string;
   /** Acceptance email date. */
   accepted: string;
-  /** Official, unmodified logo file. Only programs whose brand rules allow it (PostHog); the rest are plain text. */
+  /** Official, unmodified logo file. Only programs whose terms allow it (MongoDB); the rest are plain text. */
   logo?: string;
   /** Registered mark that takes "®" at its first use on each page (MongoDB Trademark Standard 3). */
   registered?: string;
@@ -44,11 +44,11 @@ export interface StartupProgram {
  * Names only. Never add credit amounts or a total; the homepage, /investors, /about, /kit and the milestones read this list.
  */
 export const startupPrograms: readonly StartupProgram[] = [
-  { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", logo: "/sponsors/posthog-logo.svg" },
+  { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17" },
   { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18" },
   { brand: "Salesforce Launchpad", program: "Salesforce Launchpad", accepted: "2026-08-26" },
   { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19" },
-  { brand: "MongoDB", program: "MongoDB for Startups", accepted: "2026-07-21", registered: "MongoDB" },
+  { brand: "MongoDB", program: "MongoDB for Startups", accepted: "2026-07-21", logo: "/sponsors/mongodb-logo.svg", registered: "MongoDB" },
 ];
 
 /** Salesforce's required attribution, shown wherever the Salesforce name appears. */

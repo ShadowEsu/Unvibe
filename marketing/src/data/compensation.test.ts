@@ -32,9 +32,12 @@ const PROGRAMS = [
   ["MongoDB for Startups", "2026-07-21"],
 ];
 const HEADLINE = "In 5 startup programs: PostHog, Mixpanel, Salesforce Launchpad, Deepgram and MongoDB®";
-/** PostHog's standard logo from brand.posthog.com/logo/posthog-logo.svg, unmodified. The only logo allowed. */
-const POSTHOG_LOGO = "/sponsors/posthog-logo.svg";
-const POSTHOG_LOGO_SHA256 = "f7f39027cb7e46fa06053be784b017dab6db80fc63d19badc0e4a71b34ce67a7";
+/**
+ * MongoDB's logo as served on mongodb.com/company/newsroom/brand-resources, unmodified. The only logo allowed:
+ * PostHog's brand files are PolyForm Strict (no commercial use), the others grant no logo use.
+ */
+const LOGO = "/sponsors/mongodb-logo.svg";
+const LOGO_SHA256 = "9f5435c8be18a834b2c2f8c4c03f117a997646c660fd6f28e3b6869a1bc2fcc1";
 /** Programs that are not ours to name (rejected, or no acceptance email), and any money figure for programs. */
 const NOT_OURS = /claude for startups|anthropic|\baws\b|activate credits|gitlab|openai|linear founder|linear startup|google ai startups|google cloud|salesforce for startups|\$262,700|\$261,900|\$144,000|\$50,000|\$21\.5K|\$23,700|\$13,500/i;
 const BANNED_WORDING = /\bpartner(s|ship)?\b|backed by|\bofficial\b|in partnership with|trusted by/i;
@@ -48,26 +51,27 @@ function section(markup: string, opening: RegExp): string {
   return markup.slice(start, end + "</section>".length);
 }
 
-/** Exactly the 5 names, the one PostHog logo and nothing else, and Salesforce's attribution. */
+/** Exactly the 5 names, the one MongoDB logo and nothing else, and Salesforce's attribution. */
 function assertProgramSection(markup: string, where: string) {
   for (const [name] of PROGRAMS) {
     const shown = name.replace("MongoDB", "MongoDB(®)?");
     assert.match(markup, new RegExp(shown), `${where}: ${name}`);
   }
   const images = Array.from(markup.matchAll(/<img\b[^>]*>/g), ([tag]) => tag);
-  assert.deepEqual(images.map((tag) => tag.match(/\bsrc="([^"]+)"/)?.[1]), [POSTHOG_LOGO], `${where}: the one logo is PostHog's`);
-  assert.match(images[0], /\balt="PostHog"/, `${where}: PostHog logo alt`);
-  assert.doesNotMatch(markup, /<svg\b|background-image|\/sponsors\/(?!posthog-logo\.svg)/i, `${where}: no other logo`);
+  assert.deepEqual(images.map((tag) => tag.match(/\bsrc="([^"]+)"/)?.[1]), [LOGO], `${where}: the one logo is MongoDB's`);
+  assert.match(images[0], /\balt="MongoDB"/, `${where}: MongoDB logo alt`);
+  assert.doesNotMatch(markup, /<svg\b|<picture\b|background-image|\/sponsors\/(?!mongodb-logo\.svg)/i, `${where}: no other logo`);
   assert.ok(markup.includes(SALESFORCE_ATTRIBUTION), `${where}: Salesforce attribution`);
   assert.doesNotMatch(markup, NOT_OURS, where);
   assert.doesNotMatch(markup, BANNED_WORDING, where);
 }
 
-/** MongoDB Trademark Standard 3: the first use of the name on each page carries ®. */
+/** MongoDB Trademark Standard 3: the first use of the name in each page's text carries ®. */
 function assertMongoRegisteredAtFirstUse(page: string, where: string) {
-  const first = page.indexOf("MongoDB");
+  const text = page.replace(/<[^>]+>/g, " ");
+  const first = text.indexOf("MongoDB");
   assert.ok(first >= 0, `${where} names MongoDB`);
-  assert.equal(page.slice(first, first + 8), "MongoDB®", `${where}: first MongoDB is MongoDB®`);
+  assert.equal(text.slice(first, first + 8), "MongoDB®", `${where}: first MongoDB is MongoDB®`);
 }
 
 describe("compensation", () => {
@@ -89,7 +93,7 @@ describe("startup programs", () => {
   it("lists exactly the 5 programs with acceptance emails, by full name and date, with no amounts", () => {
     assert.deepEqual(startupPrograms.map((program) => [program.program, program.accepted]), PROGRAMS);
     assert.deepEqual(startupPrograms.map((program) => program.brand), ["PostHog", "Mixpanel", "Salesforce Launchpad", "Deepgram", "MongoDB"]);
-    assert.deepEqual(startupPrograms.filter((program) => program.logo).map((program) => [program.brand, program.logo]), [["PostHog", POSTHOG_LOGO]]);
+    assert.deepEqual(startupPrograms.filter((program) => program.logo).map((program) => [program.brand, program.logo]), [["MongoDB", LOGO]]);
     for (const program of startupPrograms) {
       assert.deepEqual(Object.keys(program).filter((key) => !["brand", "program", "accepted", "logo", "registered"].includes(key)), [], program.program);
     }
@@ -100,13 +104,13 @@ describe("startup programs", () => {
     for (const name of Object.keys(compensation)) assert.doesNotMatch(name, /credit|programCount|support/i, name);
   });
 
-  it("ships only PostHog's official logo file, unmodified", () => {
+  it("ships only MongoDB's logo file, unmodified", () => {
     const dir = join(process.cwd(), "public/sponsors");
-    assert.deepEqual(readdirSync(dir), ["posthog-logo.svg"]);
-    assert.equal(createHash("sha256").update(readFileSync(join(dir, "posthog-logo.svg"))).digest("hex"), POSTHOG_LOGO_SHA256);
+    assert.deepEqual(readdirSync(dir), ["mongodb-logo.svg"]);
+    assert.equal(createHash("sha256").update(readFileSync(join(dir, "mongodb-logo.svg"))).digest("hex"), LOGO_SHA256);
   });
 
-  it("home: the hero line links to /investors#backing, and the strip shows the 5 names and only the PostHog logo", () => {
+  it("home: the hero line links to /investors#backing, and the strip shows the 5 names and only the MongoDB logo", () => {
     const home = render(HomePage);
     const hero = section(home.replace(/<p class="vhero__backing">([\s\S]*?)<\/p>/, '<section class="hero-line">$1</section>'), /<section class="hero-line">/);
     assert.ok(hero.includes(`<a href="/investors#backing">${HEADLINE}</a>`), hero);
@@ -115,14 +119,14 @@ describe("startup programs", () => {
     assertMongoRegisteredAtFirstUse(home, "home");
   });
 
-  it("/investors#backing shows the 5 names, only the PostHog logo, and no program amounts or total", () => {
+  it("/investors#backing shows the 5 names, only the MongoDB logo, and no program amounts or total", () => {
     const page = render(InvestorsPage);
     assertProgramSection(section(page, /<section class="inv-section" id="backing"/), "/investors#backing");
     assertMongoRegisteredAtFirstUse(page, "/investors");
     assert.doesNotMatch(page, NOT_OURS);
   });
 
-  it("/about shows the 5 names, only the PostHog logo, and the link to every line", () => {
+  it("/about shows the 5 names, only the MongoDB logo, and the link to every line", () => {
     const page = render(AboutPage);
     const block = section(page, /<section class="paper-wrap about-backing"/);
     assertProgramSection(block, "/about");
