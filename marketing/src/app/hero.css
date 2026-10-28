@@ -24,6 +24,14 @@
 }
 .vhero__trust a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .vhero a:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 3px; }
+/* The support headline under the CTA: same paper chip as the trust line, the whole chip is the link. */
+.vhero__backing { margin: 0; max-width: 100%; }
+.vhero__backing a {
+  display: inline-block; max-width: 100%; padding: 0.4rem 0.95rem; border-radius: 14px;
+  background: var(--u-sheet); color: var(--u-text); font-size: 0.9rem; font-weight: 550; line-height: 1.5; text-wrap: balance;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.vhero__backing b { font-weight: 800; }
 .vtour h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
 
 /* Tablets keep the speech bubble above Vibe (vibe.css), so they need the old headroom under the nav. */

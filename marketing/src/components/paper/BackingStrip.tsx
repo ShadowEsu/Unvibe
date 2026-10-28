@@ -1,6 +1,6 @@
 import { MotionInView } from "@/components/paper/MotionInView";
 
-const sponsors = [
+export const sponsors = [
   { name: "Mixpanel", src: "/sponsors/mixpanel.svg" },
   { name: "PostHog", src: "/sponsors/posthog.svg" },
   { name: "Salesforce", src: "/sponsors/salesforce.svg" },
@@ -12,6 +12,24 @@ const sponsors = [
   { name: "Deepgram", src: "/sponsors/deepgram.svg" },
   { name: "MongoDB", src: "/sponsors/mongodb.svg" },
 ] as const;
+
+/** One startup-program logo in the strip's ink tone; shared by the homepage strip and the /about backing block. */
+export function SponsorLogo({ sponsor }: { sponsor: (typeof sponsors)[number] }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- the same markup next/image gives an SVG
+    // (it never optimizes SVGs), without loading its client component on the home page's first paint
+    <img
+      className={`paper-partners__logo paper-partners__logo--${sponsor.name.toLowerCase().replace(/\s+/g, "-")}`}
+      src={sponsor.src}
+      alt={sponsor.name}
+      width={72}
+      height={72}
+      loading="lazy"
+      decoding="async"
+      style={{ color: "transparent" }}
+    />
+  );
+}
 
 /**
  * Homepage trust strip: the startup programs Unvibe is in. Credit amounts live on /investors;
@@ -39,18 +57,7 @@ export function BackingStrip() {
                 <div className="paper-partners__group" aria-hidden={copy === 1} key={copy}>
                   {sponsors.map((sponsor) => (
                     <span className="paper-partners__item" key={`${copy}-${sponsor.name}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- the same markup next/image gives an SVG
-                          (it never optimizes SVGs), without loading its client component on the home page's first paint */}
-                      <img
-                        className={`paper-partners__logo paper-partners__logo--${sponsor.name.toLowerCase().replace(/\s+/g, "-")}`}
-                        src={sponsor.src}
-                        alt={sponsor.name}
-                        width={72}
-                        height={72}
-                        loading="lazy"
-                        decoding="async"
-                        style={{ color: "transparent" }}
-                      />
+                      <SponsorLogo sponsor={sponsor} />
                     </span>
                   ))}
                 </div>

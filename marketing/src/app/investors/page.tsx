@@ -86,7 +86,7 @@ export default function InvestorsPage() {
       </section>
 
       <section className="inv-section" id="support">
-        <p className="inv-eyebrow">Resource runway</p>
+        <p className="inv-eyebrow" id="backing">Resource runway</p>
         <h2>Where the {total} <em>comes from.</em></h2>
         <p className="inv-lead">Every program credit and self-reported cash line, by source. Program credits {credits} · cash {cash}. Credits are not cash, and this is not a funding round.</p>
         <div className="inv-table" role="table" aria-label="Support by source">

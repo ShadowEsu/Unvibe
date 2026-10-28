@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Vibe } from "@/components/paper/Vibe";
+import { AboutBacking } from "@/components/paper/AboutBacking";
 import { compensationTotalLabel } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { pageMetadata } from "@/lib/pageMeta";
@@ -51,6 +52,9 @@ export default function AboutPage() {
           <p>Free explanations have a monthly limit. You don&apos;t need a card or an API key.</p>
         </article>
       </section>
+
+      {/* Startup-program backing: one self-contained block, moves into the rewritten /about as is. */}
+      <AboutBacking />
 
       <section className="paper-wrap founder-about__contact">
         <h2>Say hi.</h2>
