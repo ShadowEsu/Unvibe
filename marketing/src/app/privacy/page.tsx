@@ -181,10 +181,11 @@ export default function PrivacyPage() {
           <a href="mailto:support@unvibe.site">support@unvibe.site</a>. We don&apos;t sell it.
         </p>
         <p>
-          The footer shows badges from product directories. Five of them are served from
-          unvibe.site. The Tool Index badge loads from Tool Index&apos;s own server, which receives
-          your IP address and browser details; the address of the page you are on is not sent with
-          it.
+          The footer shows badges from product directories, served from unvibe.site. Only if you
+          press Allow on the analytics bar does the Tool Index verification badge load from
+          toolindex.net instead, a third-party service that then receives your IP address and browser
+          details; the address of the page you are on is not sent with it. If you press No thanks, now
+          or later, the copy from unvibe.site is shown.
         </p>
       </LegalSection>
 
@@ -206,6 +207,10 @@ export default function PrivacyPage() {
           <li><strong>Resend</strong> delivers sign-in and product emails.</li>
           <li><strong>GitHub</strong> hosts the installer downloads.</li>
           <li><strong>Mixpanel and PostHog</strong> measure website usage.</li>
+          <li>
+            <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
+            only after you press Allow on the analytics bar.
+          </li>
         </ul>
       </LegalSection>
 

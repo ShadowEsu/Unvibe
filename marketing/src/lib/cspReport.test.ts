@@ -34,15 +34,14 @@ describe("unvibe.site sends the C3 policies on every page (Security C3)", () => 
     assert.doesNotMatch(reportOnlyCsp({ api: "not a url", supabase: "" }), /not a url/);
   });
 
-  it("self-hosted badges exist, and img-src allows exactly the hot-linked badge origins", () => {
+  it("every badge is served from unvibe.site, and img-src allows exactly the after-Allow badge origins", () => {
     const imgSrc = reportOnlyCsp().split("; ").find((d) => d.startsWith("img-src ")) ?? "";
     const hosts = new Set<string>();
     for (const badge of listingBadges) {
-      if (badge.src.startsWith("/")) {
-        assert.ok(existsSync(path.join("public", badge.src)), `${badge.name}: public${badge.src} is missing`);
-        continue;
-      }
-      const host = new URL(badge.src).origin;
+      assert.ok(badge.src.startsWith("/badges/"), `${badge.name}: ${badge.src} is not self-hosted`);
+      assert.ok(existsSync(path.join("public", badge.src)), `${badge.name}: public${badge.src} is missing`);
+      if (!("remoteSrc" in badge)) continue;
+      const host = new URL(badge.remoteSrc).origin;
       hosts.add(host);
       assert.ok(imgSrc.includes(` ${host}`), badge.name);
     }

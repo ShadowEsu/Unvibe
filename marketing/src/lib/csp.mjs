@@ -17,8 +17,9 @@ export const CSP_REPORT_GROUP = "csp";
 const ANALYTICS_SCRIPT_HOSTS = ["https://us-assets.i.posthog.com", "https://cdn.mxpnl.com"];
 const ANALYTICS_CONNECT_HOSTS = ["https://us.i.posthog.com", "https://us-assets.i.posthog.com", "https://api-js.mixpanel.com"];
 /**
- * Hot-linked directory badge images in the footer (src/data/listings.ts). The others are served from
- * public/badges; a test keeps this list equal to the badge origins actually used.
+ * Directory badge images loaded from the directory itself, only after the visitor allowed analytics
+ * (`remoteSrc` in src/data/listings.ts). Every badge also has a copy in public/badges, shown before
+ * that; a test keeps this list equal to the remote badge origins.
  */
 export const LISTING_IMAGE_HOSTS = ["https://toolindex.net"];
 
