@@ -20,6 +20,7 @@ import {
 import { pricingCopy } from "./pricingCopy";
 import type { OptOutStorage } from "./trackingOptOut";
 import { analyticsEnabled } from "./analytics";
+import { ANALYTICS_CONSENT_KEY, analyticsConsentRecord } from "./analyticsConsent";
 
 after(restoreAnalyticsKeys);
 
@@ -38,8 +39,9 @@ interface Sent {
   properties: Props;
 }
 
+/** A browser that pressed Allow on the analytics bar. */
 function fakeStorage(): OptOutStorage {
-  const data = new Map<string, string>();
+  const data = new Map([[ANALYTICS_CONSENT_KEY, analyticsConsentRecord("allow", new Date("2026-10-28T09:00:00Z"))]]);
   return {
     getItem: (key) => data.get(key) ?? null,
     setItem: (key, value) => void data.set(key, value),
@@ -299,4 +301,12 @@ describe("opt-out", () => {
       assert.deepEqual(requests, []);
     });
   }
+
+  it("sends nothing before the visitor answers the analytics bar", () => {
+    installWindow({ storage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } });
+    trackDownloadClick("beta", "mac");
+    trackInstallHelpViewed();
+    assert.deepEqual(requests, []);
+    assert.deepEqual(dispatched, [DOWNLOADED_EVENT], "the download toast still opens");
+  });
 });

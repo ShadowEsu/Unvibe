@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import type { CaptureResult } from "posthog-js";
+import { ANALYTICS_CONSENT_KEY, analyticsConsentRecord } from "./analyticsConsent";
 import {
   INITIAL_REPLAY_STATE,
   POSTHOG_PRIVACY_CONFIG,
@@ -25,6 +26,8 @@ const EMAIL = "friend@example.com";
 const TOKEN = signEmail(EMAIL);
 const GIFT_CODE = "Ab3_x-9QzLmN0pR7";
 const STATS_KEY = "k".repeat(6) + "7Hq2";
+/** This browser pressed Allow on the analytics bar; the hooks drop everything without it. */
+const ALLOWED = analyticsConsentRecord("allow", new Date("2026-10-28T09:00:00Z"));
 
 /** Nothing that identifies the reader or works as a credential survives. */
 function assertClean(value: unknown): void {
@@ -479,7 +482,7 @@ describe("an opt-out after the SDKs started", () => {
   });
 
   it("both hooks drop the next event, including replay snapshots and events on later pages", () => {
-    const storage = new Map<string, string>();
+    const storage = new Map([[ANALYTICS_CONSENT_KEY, ALLOWED]]);
     const posthogEvent = (): CaptureResult => ({ uuid: "u4", event: "$pageview", properties: { $current_url: PUBLIC } });
     const mixpanelEvent = () => ({ event: "$mp_click", properties: { $current_url: PUBLIC } });
     installWindow("", storage);
@@ -493,6 +496,15 @@ describe("an opt-out after the SDKs started", () => {
     const snapshot: CaptureResult = { uuid: "u5", event: "$snapshot", properties: { $snapshot_data: [] } };
     assert.equal(posthogBeforeSend(snapshot), null, "PostHog replay snapshot on a later page");
     assert.equal(mixpanelBeforeSend(mixpanelEvent()), null, "Mixpanel event on a later page");
+  });
+
+  it("No thanks after Allow: both hooks drop the next event", () => {
+    const storage = new Map([[ANALYTICS_CONSENT_KEY, ALLOWED]]);
+    installWindow("", storage);
+    assert.ok(posthogBeforeSend({ uuid: "u7", event: "$pageview", properties: { $current_url: PUBLIC } }), "PostHog sends after Allow");
+    storage.set(ANALYTICS_CONSENT_KEY, analyticsConsentRecord("deny", new Date("2026-10-28T09:05:00Z")));
+    assert.equal(posthogBeforeSend({ uuid: "u8", event: "$pageview", properties: { $current_url: PUBLIC } }), null, "PostHog after No thanks");
+    assert.equal(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: PUBLIC } }), null, "Mixpanel after No thanks");
   });
 
   it("an SDK that finishes loading after the opt-out is not initialised", () => {
@@ -605,13 +617,15 @@ describe("a tab on a private page while another tab opts back in", () => {
     Reflect.set(globalThis, "window", realWindow);
   });
 
+  const allowedOnly = (key: string) => (key === ANALYTICS_CONSENT_KEY ? ALLOWED : null);
+
   it("both hooks drop every event while this tab shows /activate or /redeem, even one stamped with a public URL", () => {
     for (const pathname of ["/activate", "/redeem"]) {
-      // Tracking allowed in shared storage (no opt-out stored), this tab on a sign-in page.
+      // Analytics allowed and no opt-out in shared storage, this tab on a sign-in page.
       Reflect.set(globalThis, "window", {
         navigator: { webdriver: false },
         location: { href: `https://unvibe.site${pathname}`, pathname, search: "" },
-        localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+        localStorage: { getItem: allowedOnly, setItem: () => undefined, removeItem: () => undefined },
       });
       const posthogEvent: CaptureResult = { uuid: "u9", event: "$pageleave", properties: { $current_url: PUBLIC } };
       assert.equal(posthogBeforeSend(posthogEvent), null, `PostHog event sent while on ${pathname}`);
@@ -620,7 +634,7 @@ describe("a tab on a private page while another tab opts back in", () => {
     Reflect.set(globalThis, "window", {
       navigator: { webdriver: false },
       location: { href: PUBLIC, pathname: "/pricing", search: "" },
-      localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+      localStorage: { getItem: allowedOnly, setItem: () => undefined, removeItem: () => undefined },
     });
     assert.ok(posthogBeforeSend({ uuid: "u10", event: "$pageview", properties: { $current_url: PUBLIC } }), "public page sends");
     assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: PUBLIC } }), "public page sends");

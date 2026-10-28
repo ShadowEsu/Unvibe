@@ -993,6 +993,16 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border-top: 1px solid var(--u-line);
 }
 
+/* "Analytics settings" is a button (it opens the analytics bar) that reads like the links beside it. */
+.paper-footer__settings {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* The feedback pill sits in the bottom-left corner on desktop (20px up, 40px tall): the last row scrolls
    clear of it, and keyboard focus scrolls footer links above it instead of just into view under it. */
 @media (min-width: 768px) {

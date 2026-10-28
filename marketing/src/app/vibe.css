@@ -461,6 +461,18 @@ p { font-size: 1.02rem; }
 @media (prefers-reduced-motion: reduce) { .live__dot, .try__bob, .try__thinking > i, .fb-overlay, .fb-dialog, .remind { animation: none; } }
 @media (min-width: 821px) { .remind { bottom: 6.6rem; } }
 @media (min-width: 700px) { .remind { left: 3.4rem; } }
+
+/* Analytics bar (AnalyticsConsentBar): Allow and No thanks look the same, so neither is the default. */
+.consent-bar { position: fixed; left: 50%; bottom: calc(0.75rem + env(safe-area-inset-bottom)); z-index: 95; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; width: min(42rem, calc(100vw - 1.5rem)); padding: 0.9rem 1rem; border: 1.5px solid var(--v-ink); border-radius: 16px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); font-size: 0.95rem; line-height: 1.45; }
+.consent-bar:focus { outline: none; }
+.consent-bar:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 3px; }
+.consent-bar p { flex: 1 1 18rem; margin: 0; }
+.consent-bar .consent-bar__now { flex-basis: 100%; order: 1; color: var(--u-text-2); font-size: 0.88rem; }
+.consent-bar__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.consent-bar__actions a { margin-right: 0.35rem; color: var(--u-text); text-decoration: underline; text-underline-offset: 2px; }
+.consent-bar__btn { min-width: 6.5rem; min-height: 2.75rem; padding: 0 1rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--u-card); color: var(--u-text); font: 700 0.95rem var(--font-sans); cursor: pointer; }
+.consent-bar__btn:hover { background: var(--u-raise); }
+.consent-bar__btn:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 2px; }
 .fb-bonus { margin: 0.6rem 0 1rem; padding: 0.7rem 0.9rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--v-lime); font-size: 0.98rem; }
 
 /* Private stats page (/s/<key>) */
