@@ -483,7 +483,7 @@ export const milestones: Milestone[] = [
     date: "21 JUL 2026",
     category: "COMPANY",
     title: "MongoDB® for Startups",
-    summary: "Joined MongoDB for Startups as a program member. $500 in program support.",
+    summary: "Joined MongoDB for Startups as a program member. $500 in program credits.",
     figure: "$500",
   },
   {
