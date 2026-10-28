@@ -20,6 +20,7 @@ import { type AnalyticsEvent } from "@/lib/analyticsEvents";
 import {
   INITIAL_REPLAY_STATE,
   MIXPANEL_REPLAY_PERCENT,
+  POSTHOG_REPLAY_ENABLED,
   POSTHOG_PRIVACY_CONFIG,
   analyticsAllowedOnPath,
   initLoadedSdks,
@@ -288,7 +289,7 @@ export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
     capture_pageleave: true,
     // Error Tracking + Surveys need the SDK.
     capture_exceptions: true,
-    disable_session_recording: false,
+    disable_session_recording: !POSTHOG_REPLAY_ENABLED,
     disable_surveys: false,
     enable_heatmaps: true,
     capture_dead_clicks: true,
@@ -384,7 +385,7 @@ export function syncSessionRecording(): void {
   replayState = syncReplayForPage(
     replayState,
     { ...page, mixpanelSampled: mixpanelReplaySampled },
-    { posthog: posthogClient, mixpanel: mixpanelClient },
+    { posthog: POSTHOG_REPLAY_ENABLED ? posthogClient : null, mixpanel: mixpanelClient },
   );
   if (!replayState.mixpanelStopPending) {
     replayRechecks = 0;

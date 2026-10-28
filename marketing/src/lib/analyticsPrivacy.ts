@@ -244,8 +244,18 @@ export const POSTHOG_PRIVACY_CONFIG = {
   },
 } as const;
 
-/** Share of tracked sessions with a Mixpanel replay; `syncReplayForPage` applies it, not the SDK. */
-export const MIXPANEL_REPLAY_PERCENT = 100;
+/**
+ * Share of tracked sessions with a Mixpanel replay; `syncReplayForPage` applies it, not the SDK.
+ * 0 until the analytics opt-in ships: no visitor is recorded.
+ */
+export const MIXPANEL_REPLAY_PERCENT = 0;
+
+/**
+ * PostHog session replay. Off until the analytics opt-in ships: the SDK is initialised with
+ * recording disabled, and `syncSessionRecording` never resumes it (posthog-js
+ * `startSessionRecording` would turn it back on).
+ */
+export const POSTHOG_REPLAY_ENABLED = false;
 
 /**
  * Mixpanel replays take the page URL straight from the address bar with no hook, so a page
