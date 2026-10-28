@@ -9,7 +9,8 @@ import { changelogPreview } from "@/data/milestones";
 
 export const metadata: Metadata = {
   title: "Building Unvibe",
-  description: "Unvibe is out for Mac and Windows. Follow the build on Instagram, TikTok and LinkedIn.",
+  description: "Unvibe is out for Mac and Windows. Follow the build on Instagram and LinkedIn.",
+  alternates: { canonical: "/build" },
 };
 
 export default function BuildPage() {
@@ -22,7 +23,7 @@ export default function BuildPage() {
           <p className="paper-meta">Building in public</p>
           <h1>100%. Unvibe is out.</h1>
           <p>
-            Built in public, now live on Mac and Windows. Follow along on Instagram, TikTok and LinkedIn.
+            Built in public, now live on Mac and Windows. Follow along on Instagram and LinkedIn.
           </p>
           <div className="paper-meter" aria-label="100 percent: public release is live">
             <div className="paper-meter__track">

@@ -14,6 +14,7 @@ import { SHORTCUTS } from "@/lib/shortcuts";
 
 export const metadata: Metadata = {
   title: { absolute: "Unvibe: understand the code AI writes for you" },
+  alternates: { canonical: "/" },
 };
 
 const homeFaq = faqItems.filter((item) => ["what-is-it", "which-shortcut", "editors", "sent", "beta", "accuracy"].includes(item.id));

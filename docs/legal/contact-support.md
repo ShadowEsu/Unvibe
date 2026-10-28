@@ -5,7 +5,6 @@ _Last updated: [DATE]._
 - **Product:** Unvibe (codename; product name "Uncode")
 - **Operator:** [COMPANY / founder name]
 - **Support email:** support@unvibe.site
-- **Founder email:** preston@unvibe.site
 - **Privacy email:** support@unvibe.site
 - **Abuse reports:** [abuse@DOMAIN]
 - **Mailing address:** [ADDRESS — required for some app stores and privacy laws]

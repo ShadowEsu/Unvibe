@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Download Unvibe for Mac and Windows",
   description: "Download Unvibe free. No API key, no credit card. Available for Mac (Apple silicon and Intel) and Windows (x64).",
   robots: { index: true, follow: true },
+  alternates: { canonical: "/beta" },
 };
 
 const { mac, windows } = SHORTCUTS;

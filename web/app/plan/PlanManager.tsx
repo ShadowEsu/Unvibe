@@ -14,7 +14,7 @@ interface Props {
 }
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-const SUPPORT_MAIL = 'preston@unvibe.site';
+const SUPPORT_MAIL = 'support@unvibe.site';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });

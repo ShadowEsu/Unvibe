@@ -519,6 +519,351 @@ puts members.sort.map(&:name).inspect`,
     watchOut:
       "`Comparable` also defines `==` from `<=>`, so two different members with the same points count as equal: `Member.new(\"Al\", 5) == Member.new(\"Bo\", 5)` is `true`.",
   },
+  {
+    id: "java",
+    fileName: "Reports.java",
+    lead: "Paste Java, from a record to a stream pipeline, and Vibe explains what each step does and which types it works with.",
+    description:
+      "Paste Java code and get a plain English explanation, free online. The sample totals paid orders with a record, a stream and Collectors.groupingBy.",
+    sampleSummary: "A record for orders, a stream that totals paid orders per customer and a generic method that finds the top one.",
+    sample: `import java.util.*;
+import java.util.stream.Collectors;
+
+record Order(String customer, String status, int cents) {
+    Order {
+        if (cents < 0) throw new IllegalArgumentException("negative total: " + cents);
+    }
+}
+
+class Reports {
+    static Map<String, Integer> paidByCustomer(List<Order> orders) {
+        return orders.stream()
+                .filter(o -> o.status().equals("PAID"))
+                .collect(Collectors.groupingBy(Order::customer, TreeMap::new,
+                        Collectors.summingInt(Order::cents)));
+    }
+
+    static <K, V extends Comparable<V>> Optional<K> topKey(Map<K, V> map) {
+        return map.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
+    }
+}`,
+    shows: [
+      {
+        concept: "classes",
+        text: "`record Order(...)` declares a class from its three fields. Java writes the constructor, the accessors `customer()`, `status()` and `cents()`, and `equals`, `hashCode` and `toString`. The block inside is a compact constructor: it runs on every `new Order(...)` and throws `IllegalArgumentException` for a negative total.",
+      },
+      {
+        concept: "streams",
+        text: "`paidByCustomer` reads the list as a stream. `filter` keeps the paid orders, then `Collectors.groupingBy` puts them in a `TreeMap` keyed by customer and adds up their `cents` with `summingInt`. Paid orders of 1250 and 2750 for Ana and 3000 for Ben give `{Ana=4000, Ben=3000}`.",
+      },
+      {
+        concept: "generics",
+        text: "`topKey` works for any map whose values can be compared. The bound `V extends Comparable<V>` is what lets `Map.Entry.comparingByValue()` compile: with a plain `V`, javac rejects the method with an `incompatible types` error.",
+      },
+    ],
+    notes: [
+      "A customer with no paid orders is left out of the result, not listed with 0. A customer whose only order is `PENDING` never reaches `groupingBy`.",
+      "`TreeMap::new` keeps the customers in name order. Without it, `groupingBy` promises no particular map or order; the JDK hands back a `HashMap`.",
+      "`topKey` returns an `Optional` because an empty map has no top key: it gives `Optional.empty`, never `null`. The spec doesn't say which entry wins a tie; the JDK keeps the one `max` met first, which in a `TreeMap` is the name that sorts first.",
+      "`o.status().equals(\"PAID\")` throws `NullPointerException` on an order whose status is `null`. Written as `\"PAID\".equals(o.status())`, it skips that order instead.",
+    ],
+    watchOut:
+      "`summingInt` adds in an `int`, so a customer's total silently wraps around once it passes 2,147,483,647 cents, about 21.5 million dollars. Two paid orders of 2,000,000,000 cents add up to `-294967296`. Use `summingLong` for totals that can grow that large.",
+  },
+  {
+    id: "html",
+    fileName: "signup.html",
+    lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
+    description:
+      "Paste HTML and get a plain English explanation, free online. The sample is a sign-up form with labels, a required email field and radio buttons.",
+    sampleSummary: "A sign-up form with a labelled email field, a hint, a group of radio buttons and two buttons.",
+    sample: `<form action="/subscribe" method="post">
+  <h2>Get the weekly digest</h2>
+
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="email"
+         required aria-describedby="email-hint">
+  <p id="email-hint">One email a week. Unsubscribe any time.</p>
+
+  <fieldset>
+    <legend>Format</legend>
+    <label><input type="radio" name="format" value="html" checked> Full</label>
+    <label><input type="radio" name="format" value="text"> Plain text</label>
+  </fieldset>
+
+  <button>Subscribe</button>
+  <button type="button">Preview an issue</button>
+</form>`,
+    shows: [
+      {
+        concept: "forms",
+        text: "`required` and `type=\"email\"` make the browser check the field before anything is sent. With the field empty, or holding `ana@`, Subscribe sends nothing: the browser moves focus to the field and shows a message such as `Please fill out this field.`",
+      },
+      {
+        concept: "accessibility",
+        text: "`<label for=\"email\">` ties the word Email to the input whose `id` is `email`. That makes Email the field's accessible name, the one a screen reader announces, and clicking the word puts the cursor in the field. `aria-describedby` makes the hint below the field's description.",
+      },
+      {
+        concept: "semantics",
+        text: "`<fieldset>` and `<legend>` group the two radio buttons under the name Format, so a screen reader can say which question Full and Plain text answer. Wrapping each radio in its own `<label>` names it without a `for` or an `id`, and makes the words clickable too.",
+      },
+    ],
+    notes: [
+      "Only fields with a `name` are sent. Submitting `ana@example.com` posts `email=ana%40example.com&format=html` to `/subscribe`. The buttons have no `name`, so they add nothing.",
+      "A `<button>` inside a form submits it unless its `type` says otherwise. Preview an issue has `type=\"button\"`, so clicking it sends nothing until a script gives it a job.",
+      "Pressing Enter in the email field submits the form too, through the same check. Real `<button>` elements also work from the keyboard with no script: Tab to Subscribe and press Enter or Space.",
+      "The radio group is one Tab stop, on the checked option, and the arrow keys move between the options. Both share `name=\"format\"`, so checking Plain text unchecks Full.",
+    ],
+    watchOut:
+      "The browser only checks the format, and only when a person submits. `ana@example` passes even without a dot, and a script that calls `form.submit()` sends the form with the field empty. Check the address again on the server.",
+  },
+  {
+    id: "css",
+    fileName: "cards.css",
+    lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
+    description:
+      "Paste CSS and get a plain English explanation, free online. The sample lays out product cards with grid, flexbox and a custom property for the accent color.",
+    sampleSummary: "A grid of product cards, a flexbox column inside each card and a custom property for the sale color.",
+    sample: `.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.card.sale {
+  --accent: #dc2626;
+}
+
+.card .buy {
+  margin-top: auto;
+  background: var(--accent, #2563eb);
+}
+
+.buy {
+  background: gray;
+}`,
+    shows: [
+      {
+        concept: "grid",
+        text: "`repeat(auto-fill, minmax(220px, 1fr))` makes as many columns at least 220px wide as fit, then shares out the leftover space. A 960px container gets 4 columns of 228px, and one narrower than 456px gets a single column, with no media query.",
+      },
+      {
+        concept: "flexbox",
+        text: "Each `.card` is a flex column, and `margin-top: auto` on its `.buy` button takes all the free space above it. The grid stretches the cards in a row to one height, so the buttons in that row line up along the bottom, however long the text above them.",
+      },
+      {
+        concept: "custom properties",
+        text: "`.card.sale` sets `--accent`, and the button inside inherits it, so a sale card's button is red. Other cards don't set `--accent`, so `var(--accent, #2563eb)` falls back to blue.",
+      },
+      {
+        concept: "the cascade",
+        text: "Inside a card, `.card .buy` beats the `.buy` rule even though `.buy` comes later, because two classes are more specific than one. Source order only decides between equally specific selectors: a later `.card .buy { background: gray; }` would win.",
+      },
+    ],
+    notes: [
+      "A `.buy` button outside any card matches only the last rule, so it is gray and has no auto margin.",
+      "`gap: 16px` adds space between the cards only, never around the outside of the grid.",
+      "With `auto-fit` in place of `auto-fill`, empty columns collapse: two cards in a 960px container stretch to 472px each, where `auto-fill` keeps them at 228px.",
+      "Items in a flex column stretch across by default, so each `.buy` button fills its card's width. Add `align-self: start` to the button to keep it its natural size.",
+      "`margin-top: auto` pushes only because `.card` is a flex container. Make `.card` a plain block and it computes to 0, and the buttons no longer line up.",
+    ],
+    watchOut:
+      "The fallback in `var(--accent, #2563eb)` is used only when `--accent` isn't set at all. A card that sets `--accent: 12px` gets a button with no background: not red, not blue and not the gray from `.buy`, because the browser can't tell the value is wrong until it uses it.",
+  },
+  {
+    id: "go",
+    fileName: "counts.go",
+    lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",
+    description:
+      "Paste Go code and get a plain English explanation, free online. The sample parses lines in goroutines and collects their errors over a buffered channel.",
+    sampleSummary: "A function that parses each line in its own goroutine and returns the first error it receives over a buffered channel.",
+    sample: `package main
+
+import (
+	"fmt"
+	"strconv"
+)
+
+func parseCounts(raw []string) ([]int, error) {
+	counts := make([]int, len(raw))
+	errs := make(chan error, len(raw))
+	for i, text := range raw {
+		go func() {
+			n, err := strconv.Atoi(text)
+			counts[i] = n
+			errs <- err
+		}()
+	}
+	for range raw {
+		if err := <-errs; err != nil {
+			return nil, fmt.Errorf("parse counts: %w", err)
+		}
+	}
+	return counts, nil
+}`,
+    shows: [
+      {
+        concept: "goroutines",
+        text: "`go func() { ... }()` starts one goroutine per line, and each one writes only its own slot, `counts[i]`. Since Go 1.22 every loop iteration gets its own `i` and `text`, so each goroutine parses its own line. In a module that declares `go 1.21`, `go vet` reports `loop variable text captured by func literal`.",
+      },
+      {
+        concept: "channels",
+        text: "`errs` carries one result per line, `nil` or an error. The `for range raw` loop receives exactly that many, so by `return counts, nil` every goroutine has written its number; the race detector (`go build -race`) finds no race. `[\"3\", \"5\", \"8\"]` gives `[3 5 8]`.",
+      },
+      {
+        concept: "error values",
+        text: "`strconv.Atoi` returns its error as an ordinary value next to the number, and the function checks it with `err != nil`. `fmt.Errorf` with `%w` wraps it, so `\"7 \"` gives `parse counts: strconv.Atoi: parsing \"7 \": invalid syntax` and `errors.Is(err, strconv.ErrSyntax)` is still `true`.",
+      },
+    ],
+    notes: [
+      "One bad line means no counts at all: the function returns `nil` and the first error it receives. With no lines it returns an empty slice, not `nil`.",
+      "When several lines are bad, which error you get depends on the scheduler, not on line order. In 200 calls with `[\"3\", \"x\", \"y\"]`, a normal build returned the `\"y\"` error all 200 times; a build with the race detector returned `\"x\"` 91 times and `\"y\"` 109 times.",
+      "`Atoi` accepts a sign, so `\"+7\"` gives 7, but not a trailing space: `\"7 \"` is an error.",
+    ],
+    watchOut:
+      "The buffer in `make(chan error, len(raw))` is what makes the early `return` safe. With `make(chan error)`, the goroutines that haven't sent yet wait for a receiver that never comes: after a call with `[\"x\", \"y\", \"z\", \"4\"]`, 2 of them were still stuck 200 ms later, and nothing reports it.",
+  },
+  {
+    id: "rust",
+    fileName: "stock.rs",
+    lead: "Paste Rust and Vibe explains what each borrow allows, what a lifetime ties together and why the compiler accepts or rejects it.",
+    description:
+      "Paste Rust code and get a plain English explanation, free online. The sample picks and reserves stock with a trait, a lifetime and shared and mutable borrows.",
+    sampleSummary: "A trait for stock that can be sold, a function that borrows the first available item and one that reserves it.",
+    sample: `pub struct Stock {
+    pub sku: String,
+    pub quantity: u32,
+}
+
+pub trait Available {
+    fn available(&self) -> bool;
+}
+
+impl Available for Stock {
+    fn available(&self) -> bool { self.quantity > 0 }
+}
+
+pub fn first_available<'a, T: Available>(items: &'a [T]) -> Option<&'a T> {
+    items.iter().find(|item| item.available())
+}
+
+pub fn reserve(stock: &mut Stock) -> bool {
+    if stock.quantity == 0 { return false; }
+    stock.quantity -= 1;
+    true
+}`,
+    shows: [
+      {
+        concept: "traits",
+        text: "`Available` names one method, and `impl Available for Stock` gives `Stock` that method. `first_available` takes a slice of any type `T` that implements the trait; here that is `Stock`, and an item with a quantity of 0 doesn't count as available.",
+      },
+      {
+        concept: "lifetimes",
+        text: "`'a` ties the result to the slice: the `&'a T` that comes back points at the item inside `items` itself, not at a copy. Rust would infer the same lifetimes here: a version without `'a` compiles too, because only one reference goes in.",
+      },
+      {
+        concept: "borrowing",
+        text: "`first_available` takes `&[T]`, a shared borrow, and `reserve` takes `&mut Stock`, a mutable one. While the item `first_available(&items)` returned is still in use, `reserve(&mut items[0])` doesn't compile: rustc stops with error `E0502`, cannot borrow `items` as mutable because it is also borrowed as immutable.",
+      },
+    ],
+    notes: [
+      "With an empty item first, then `box` (quantity 2) and `bag` (quantity 1), `first_available` skips the empty one and returns `box`.",
+      "`reserve` returns `true` twice for `box`, then `false`, and the quantity stays at 0. The next `first_available` call returns `bag`.",
+      "`find` gives `None` for an empty slice or when nothing is available, so the caller has to handle the `Option` before it can read `sku`.",
+    ],
+    watchOut:
+      "The `if stock.quantity == 0` check matters because `quantity` is a `u32`, which can't go below 0. Without it, `stock.quantity -= 1` on 0 panics with `attempt to subtract with overflow` in a debug build, and in a build with `-O`, where overflow checks are off by default, it quietly wraps to `4294967295`.",
+  },
+  {
+    id: "csharp",
+    fileName: "Batches.cs",
+    lead: "Paste C#, LINQ queries and records included, and Vibe explains what each line returns and when the query actually runs.",
+    description:
+      "Paste C# code and get a plain English explanation, free online. The sample filters task batches with LINQ and copies a record with a with expression.",
+    sampleSummary: "A record for task batches, a LINQ query that keeps the long ones in name order and a with expression that renames a copy.",
+    sample: `using System.Collections.Generic;
+using System.Linq;
+
+sealed record TaskBatch(string Name, List<int> Minutes);
+
+static class Batches
+{
+    public static IEnumerable<TaskBatch> LongBatches(IEnumerable<TaskBatch> batches, int minimum)
+    {
+        return batches.Where(batch => batch.Minutes.Sum() >= minimum)
+                      .OrderBy(batch => batch.Name);
+    }
+
+    public static TaskBatch Rename(TaskBatch batch, string name) =>
+        batch with { Name = name };
+}`,
+    shows: [
+      {
+        concept: "LINQ",
+        text: "`Where` keeps the batches whose minutes add up to at least `minimum`, and `OrderBy` sorts what is left by name. With `beta` (20 minutes), `alpha` (10 and 5) and `tiny` (2) and a minimum of 15, the result is `alpha, beta`: `>=` keeps `alpha` at exactly 15.",
+      },
+      {
+        concept: "records",
+        text: "`sealed record TaskBatch(string Name, List<int> Minutes)` declares a class from its two values. C# writes the `Name` and `Minutes` properties, value equality and a `ToString` that lists each property, though for the list it prints only the type name, not the numbers.",
+      },
+    ],
+    notes: [
+      "`batch with { Name = name }` returns a new record and leaves the old one alone: renaming `alpha` to `copy` gives a second batch, and the original is still named `alpha`.",
+      "`with` copies the reference to the list, not the list. Add 7 minutes to the copy's `Minutes` and the original changes too: both now total 22.",
+      "Record equality compares each property with that property's own `Equals`. Two batches named `a` that share one list are equal, but with a new list of the same numbers they are not, because a `List<int>` is only equal to itself.",
+    ],
+    watchOut:
+      "`LongBatches` returns a query, not a list, and the query runs again every time you loop over it. Add a `delta` batch of 30 minutes to the source list after calling it and the same result now gives `alpha, beta, delta`, while a `ToList()` taken before still holds `alpha, beta`.",
+  },
+  {
+    id: "kotlin",
+    fileName: "Parcel.kt",
+    lead: "Paste Kotlin and Vibe explains where null can turn up, what a data class writes for you and where an extension function comes from.",
+    description:
+      "Paste Kotlin code and get a plain English explanation, free online. The sample labels parcels with a data class, two extension functions and safe calls.",
+    sampleSummary: "A data class for parcels with an optional note, two extension functions and a function that labels a list of parcels.",
+    sample: `data class Parcel(val code: String, val grams: Int, val note: String? = null)
+
+fun Parcel.label(): String {
+    val text = note?.trim() ?: "no note"
+    return "$code: $grams g ($text)"
+}
+
+fun Parcel.withExtra(extra: Int): Parcel = copy(grams = grams + extra)
+
+fun packingLabels(parcels: List<Parcel>): List<String> {
+    return parcels.map { it.label() }
+}`,
+    shows: [
+      {
+        concept: "null safety",
+        text: "`note` is a `String?`, so it may be null, and it is unless you pass one. `note?.trim()` calls `trim` only when there is a note, and `?: \"no note\"` fills in when there isn't. Write `note.trim()` and the compiler stops: only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type `String?`.",
+      },
+      {
+        concept: "extensions",
+        text: "`fun Parcel.label()` and `fun Parcel.withExtra()` add functions to `Parcel` from outside the class, so `packingLabels` can call `it.label()` as if it were a method. Inside them, `code`, `grams`, `note` and `copy` belong to the parcel they were called on.",
+      },
+      {
+        concept: "data classes",
+        text: "`data class` writes `equals`, `copy` and destructuring for the three properties. `withExtra(25)` returns a 525 g copy and leaves the 500 g original as it was, `original == original.copy()` is `true`, and `val (code, grams, note) = original` gives `BOX`, `500` and `null`.",
+      },
+    ],
+    notes: [
+      "`packingLabels` turns a 500 g `BOX` without a note and a 100 g `BAG` whose note is `fragile` with two spaces on each side into `BOX: 500 g (no note)` and `BAG: 100 g (fragile)`.",
+      "`withExtra` changes only `grams`: the copy keeps the original's `code` and `note`, and the two parcels are not equal.",
+      "An empty list of parcels gives an empty list of labels.",
+    ],
+    watchOut:
+      "`?:` only steps in for `null`. A note of three spaces trims to an empty string, which isn't null, so a 20 g `ENV` parcel with that note gets the label `ENV: 20 g ()`. `note?.trim()?.ifBlank { null } ?: \"no note\"` gives `no note` for it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */

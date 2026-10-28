@@ -2,7 +2,6 @@ import {
   INSTAGRAM_URL,
   LINKEDIN_URL,
   SUPPORT_EMAIL,
-  TIKTOK_URL,
   X_URL,
   supportMailto,
 } from "@/lib/contact";
@@ -40,17 +39,6 @@ function InstagramMark() {
       />
       <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <circle cx="17.2" cy="6.8" r="0.85" fill="currentColor" />
-    </svg>
-  );
-}
-
-function TikTokMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M16.2 3.2c.7 2.4 2.4 4.3 4.8 5v3.05a8.2 8.2 0 0 1-4.8-1.5v6.55A6.7 6.7 0 1 1 9.4 9.6c.4 0 .8.04 1.2.12v3.2A3.55 3.55 0 1 0 13.9 16V3.2h2.3Z"
-      />
     </svg>
   );
 }
@@ -108,28 +96,16 @@ function ColorInstagramMark() {
   );
 }
 
-function ColorTikTokMark() {
-  const note = "M16.2 3.2c.7 2.4 2.4 4.3 4.8 5v3.05a8.2 8.2 0 0 1-4.8-1.5v6.55A6.7 6.7 0 1 1 9.4 9.6c.4 0 .8.04 1.2.12v3.2A3.55 3.55 0 1 0 13.9 16V3.2h2.3Z";
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="var(--logo-tiktok-cyan)" transform="translate(-1.15 0.55)" d={note} />
-      <path fill="var(--logo-tiktok-pink)" transform="translate(1.15 -0.45)" d={note} />
-      <path fill="var(--logo-tiktok)" d={note} />
-    </svg>
-  );
-}
-
 const socialProfiles = [
-  // X is hidden until the handle is confirmed (x.com/unvibe_app is a 404).
+  // X and TikTok are hidden until their accounts exist (x.com/unvibe_app is a 404, and
+  // tiktok.com/@unvibe_app reports no such account).
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: LinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: InstagramMark },
-  { name: "TikTok", href: TIKTOK_URL, Mark: TikTokMark },
 ] as const;
 
 const followSum = [
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: ColorLinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: ColorInstagramMark },
-  { name: "TikTok", href: TIKTOK_URL, Mark: ColorTikTokMark },
 ] as const;
 
 interface SocialFollowLinksProps {
@@ -167,7 +143,7 @@ export function GrowthFollowLinks() {
           );
         })}
       </div>
-      <p className="paper-caption">Follow the build on LinkedIn, Instagram and TikTok.</p>
+      <p className="paper-caption">Follow the build on LinkedIn and Instagram.</p>
     </div>
   );
 }
