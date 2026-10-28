@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "Unvibe",
     images: [
       {
-        url: "/unvibe-social-preview-v6.png",
+        url: "/og/og-home.png",
         width: 1200,
         height: 630,
         alt: "Unvibe resources and guides",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "Resources and guides",
     description:
       "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
-    images: ["/unvibe-social-preview-v6.png"],
+    images: ["/og/og-home.png"],
   },
 };
 
@@ -34,7 +34,7 @@ export default function ResourcesPage() {
   return (
     <article className="launch-subpage paper-resources-page">
       <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate.png" alt="" />
+        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Resources</p>

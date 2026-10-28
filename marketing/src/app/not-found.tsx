@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <section className="nf">
-      <img src="/hero/golden-gate.png" alt="" />
+      <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
       <div className="paper-hero__veil" />
       <div className="nf__card paper-glass">
         <p className="paper-meta">Error 404</p>

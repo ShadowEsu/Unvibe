@@ -15,7 +15,7 @@ export default function BetaDownloadsPage() {
   return (
     <article className="beta-page">
       <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate.png" alt="" />
+        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Free for Mac and Windows</p>

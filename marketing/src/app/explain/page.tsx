@@ -10,7 +10,7 @@ const title = "Explain code in plain English, free";
 const description =
   "Paste a snippet of code and Vibe explains what it does in plain English, at the depth you pick. Free online, no account.";
 
-const image = "/unvibe-social-preview-v6.png";
+const image = "/og/og-home.png";
 
 export const metadata: Metadata = {
   title,

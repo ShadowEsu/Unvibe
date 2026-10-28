@@ -5,7 +5,7 @@ import {
 } from "@/lib/betaInstallScript";
 
 export const BETA_INSTALL_HOST = "https://unvibe.site";
-/** PostHog hosted survey (startup credits). Typeform kept as fallback only. */
+/** PostHog hosted survey. Typeform kept as fallback only. */
 export const BETA_SURVEY_URL =
   "https://us.posthog.com/external_surveys/01a03aa5-ab81-0000-b791-03561d8f4f7d";
 export const TYPEFORM_SURVEY_URL =

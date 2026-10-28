@@ -1,5 +1,3 @@
-import { compensationTotalLabel } from "./compensation";
-
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
 export interface Milestone {
@@ -87,13 +85,6 @@ export const milestones: Milestone[] = [
     title: "Ask Vibe model picker moved into the message box",
     summary: "The model label could cover the Ask Vibe greeting on some window sizes. It now sits inside the message box next to Speak, and its menu opens upward, so nothing overlaps.",
     figure: "v0.1.35",
-  },
-  {
-    date: "07 OCT 2026",
-    category: "COMPANY",
-    title: "Unvibe is in Claude for Startups",
-    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and partner perks worth about $21.5K to $23K. Startup support now totals ${compensationTotalLabel()} in credits and committed cash.`,
-    figure: "$21.5K",
   },
   {
     date: "07 OCT 2026",
@@ -263,33 +254,11 @@ export const milestones: Milestone[] = [
     pinned: true,
   },
   {
-    date: "26 AUG 2026",
-    category: "COMPANY",
-    title: "Salesforce for Startups",
-    summary: "Affiliated with Salesforce for Startups. Logo added beside the other program partners on the homepage backing strip.",
-    figure: "Salesforce",
-  },
-  {
-    date: "24 AUG 2026",
-    category: "COMPANY",
-    title: "Startup support total",
-    summary: `Program credits plus self-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 (18 Aug) and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
-    figure: compensationTotalLabel(),
-    pinned: true,
-  },
-  {
     date: "24 AUG 2026",
     category: "PRODUCT",
     title: "Current Mac app stills on the site",
     summary: "Homepage scroll story now uses live companion shots: welcome, Island, Home, History, Progress, Quiz, Privacy, and Mac access. Cursor demo stays the long walkthrough.",
     figure: "app stills",
-  },
-  {
-    date: "18 AUG 2026",
-    category: "COMPANY",
-    title: "Deepgram for Startups",
-    summary: "Secured $1,000 in Deepgram API credits. Not cash. Not a round.",
-    figure: "$1,000",
   },
   {
     date: "19 AUG 2026",
@@ -308,20 +277,6 @@ export const milestones: Milestone[] = [
     category: "PRODUCT",
     title: "Pricing checkout",
     summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site. Changed 22 Oct 2026: checkout is closed until payments open, and /pricing says so.",
-  },
-  {
-    date: "17 AUG 2026",
-    category: "COMPANY",
-    title: "Mixpanel for Startups",
-    summary: "Accepted into Mixpanel for Startups with $144,000 worth of Mixpanel Pro subscription credits for 1 year. Not cash. Not a round.",
-    figure: "$144,000",
-  },
-  {
-    date: "18 AUG 2026",
-    category: "COMPANY",
-    title: "PostHog for Startups",
-    summary: "Accepted into the program. $50,000 in PostHog credits. Not cash. Not a round.",
-    figure: "$50,000",
   },
   {
     date: "17 AUG 2026",
@@ -359,13 +314,6 @@ export const milestones: Milestone[] = [
     figure: "Waitlist + app",
   },
   {
-    date: "16 AUG 2026",
-    category: "COMPANY",
-    title: "GitLab for Startups",
-    summary: "Accepted into the program. GitLab Ultimate credits to secure, automate, and scale the developer pipeline. Not cash. Not a round.",
-    figure: "$23,700",
-  },
-  {
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Gift Unvibe page and a calmer companion",
@@ -385,20 +333,6 @@ export const milestones: Milestone[] = [
     title: "Almost here",
     summary: "Live testing is done. Feedback is done. Unvibe is at 75 percent to public release.",
     figure: "75%",
-  },
-  {
-    date: "16 AUG 2026",
-    category: "COMPANY",
-    title: "OpenAI for Startups",
-    summary: "Accepted into the program. One ChatGPT Business seat, $1,200 in credits. Not cash. Not a round.",
-    figure: "$1,200",
-  },
-  {
-    date: "14 AUG 2026",
-    category: "COMPANY",
-    title: "Linear Founder Value Pack",
-    summary: "Accepted into the pack. Six months of Linear, $4,500 value. Not cash. Not a round.",
-    figure: "$4,500",
   },
   {
     date: "3 AUG 2026",
@@ -467,24 +401,10 @@ export const milestones: Milestone[] = [
     summary: "The Island sits in the MacBook camera area, expands into a live learning dashboard, and morphs between compact modes.",
   },
   {
-    date: "23 JUL 2026",
-    category: "COMPANY",
-    title: "Google AI Startups",
-    summary: "Accepted into Google AI Startups. $2,000 in Google Cloud credits, USD.",
-    figure: "$2,000",
-  },
-  {
     date: "22 JUL 2026",
     category: "PRODUCT",
     title: "Native installer and Island",
     summary: "The Mac installer, desktop Island, learning surfaces, and referral beta flow shipped together.",
-  },
-  {
-    date: "21 JUL 2026",
-    category: "COMPANY",
-    title: "MongoDB for Startups",
-    summary: "Joined MongoDB for Startups as a program member. $500 in startup support.",
-    figure: "$500",
   },
   {
     date: "20 JUL 2026",

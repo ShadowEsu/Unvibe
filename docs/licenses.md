@@ -35,4 +35,17 @@ Regenerate with the license-scan commands in the repo history, or a tool like `l
 - **Action item:** ship a `THIRD-PARTY-NOTICES` file with the packaged app (aggregate the license
   texts). Recommended generator: `npx license-checker --production --files ./THIRD-PARTY`.
 
+## Images and media
+Every photo or illustration we ship that we didn't make ourselves, with its source and licence. Add a row before adding one.
+
+| File | Where it's used | Source | Licence |
+|---|---|---|---|
+| `marketing/public/hero/golden-gate-band-1600.webp`, `-800.webp` | The photo band on /beta, /releases, /resources, /build and the 404 page | "Golden Gate Bridge at Purple sunset", Umer Sayyam, 2015: https://commons.wikimedia.org/wiki/File:Golden_Gate_Bridge_at_Purple_sunset.jpg (from https://unsplash.com/photos/SHP1t8EduMY) | CC0 1.0 (public domain dedication). Commons has reviewed the licence ("Files from external sources with reviewed licenses"). No credit required |
+
+Made by us, no third-party source:
+- `marketing/public/hero/dusk-field.webp`, `dusk-field-800.webp` (site background, the unsubscribe page, /activate) and `app/src/renderer/{companion,widget}/dusk-field.webp` (app window backdrop): CSS gradients in the site palette, rendered to WebP. No photo is involved.
+- The link cards in `marketing/public/og/` and the generated `/opengraph-image`.
+
+Removed on 2026-10-27: a Golden Gate photo watermarked by its photographer, used without a licence, plus everything derived from it: two blurred backgrounds, `unvibe-social-preview-v6.png`, the app backdrops, a copy on the API's `/activate/` path, and eight unlinked app screenshots in `marketing/public/product/` that showed it as the window backdrop. The press screenshots in `marketing/public/press/site/` were re-shot from the fixed site, and the home demo video and its posters keep their frames with the backdrop behind the panel swapped for the colour field. Never ship an image whose source and licence aren't in this table.
+
 This report is informational and not a legal opinion. Have counsel confirm before launch.
