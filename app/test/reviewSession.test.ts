@@ -131,7 +131,7 @@ test('a file or brief built over a waiting link capture runs as the person\'s ow
   const { win, events } = panel();
   const s = { ...session('intermediate'), awaitingConfirm: true };
   applyBuiltReview(s, {
-    payload: { code: 'const picked = true;', level: 'advanced', scope: 'selection' } as ReviewRequestPayload,
+    payload: { scope: 'selection', level: 'advanced', context: { language: 'typescript', primaryFile: 'picked.ts', projectStructure: [], imports: [], code: 'const picked = true;' } },
     displayCode: 'const picked = true;',
     file: 'picked.ts',
     mode: 'selection',
