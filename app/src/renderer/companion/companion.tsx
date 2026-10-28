@@ -699,7 +699,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               Accessibility, is offered in step 4 once this has worked. */}
           {macPaste && (
             <>
-              <PasteTarget hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
+              <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
               {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
               <details className="ob2__more">
                 <summary>Use VS Code or Cursor? Add ⌘U there too</summary>
@@ -757,18 +757,34 @@ const OWN_CODE_HINT = "Copy a few lines from a file you didn't write. Pasting ex
 function useOwnCodePaste() {
   const [started, setStarted] = useState(false);
   const [fileError, setFileError] = useState('');
+  // Bumped to remount the paste target without its preview and "Explaining in the panel" pill.
+  const [attempt, setAttempt] = useState(0);
+  // A paste or file went to the panel and hasn't been explained yet.
+  const waiting = useRef(false);
   const explainPaste = () => {
     setFileError('');
     setStarted(true);
+    waiting.current = true;
     window.unvibe.explainClipboard();
   };
   const chooseFile = async () => {
     setFileError('');
     const result = await window.unvibe.companionPickFile();
-    if (result.ok) setStarted(true);
-    else if (result.error) setFileError(result.error);
+    if (result.ok) {
+      setStarted(true);
+      waiting.current = true;
+    } else if (result.error) setFileError(result.error);
   };
-  return { started, setStarted, fileError, explainPaste, chooseFile };
+  useEffect(() => window.unvibe.onOwnCodeDone(() => { waiting.current = false; }), []);
+  // The panel closed before explaining it (Cancel on the confirm sheet, say): ask again instead of
+  // saying it's opening.
+  useEffect(() => window.unvibe.onPanelClosed(() => {
+    if (!waiting.current) return;
+    waiting.current = false;
+    setStarted(false);
+    setAttempt((n) => n + 1);
+  }), []);
+  return { started, setStarted, fileError, explainPaste, chooseFile, attempt };
 }
 
 function LockGlyph() {
@@ -786,7 +802,7 @@ function LockGlyph() {
  * also names its shortcut. "Not now" goes to Today until the next open (ownCodeStep.ts).
  */
 function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: boolean; shortcut: string; onNotNow: () => void }) {
-  const { started, fileError, explainPaste, chooseFile } = useOwnCodePaste();
+  const { started, fileError, explainPaste, chooseFile, attempt } = useOwnCodePaste();
   const said = useVibeSays(started
     ? 'Got it. Your explanation is opening in the panel.'
     : 'Welcome back. Try it on your own code: copy a few lines, then paste them here.', soundEffects);
@@ -798,7 +814,7 @@ function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: bo
           <p className="ob2__speech" aria-live="polite">{said}</p>
         </div>
         <div className="ob__step ob2__body ob2__paste">
-          <PasteTarget hint={OWN_CODE_HINT}
+          <PasteTarget key={attempt} hint={OWN_CODE_HINT}
             onPaste={explainPaste} onChooseFile={() => void chooseFile()} />
           {fileError ? <p className="field-err" role="alert">{fileError}</p> : null}
           {isWindows ? <p className="ob__sub ob2__shortcut">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}

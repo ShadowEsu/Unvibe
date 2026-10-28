@@ -271,6 +271,8 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
     clearPanelSessions();
     normalBounds.delete(windowId);
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
+    // The companion's paste step stops saying the explanation is opening if none came.
+    if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
   });
   return { win, fresh: true };
 }

@@ -160,6 +160,12 @@ const api = {
     ipcRenderer.on('onboarding:ownCodeDone', listener);
     return () => { ipcRenderer.removeListener('onboarding:ownCodeDone', listener); };
   },
+  /** The review panel closed; returns an unsubscribe. */
+  onPanelClosed: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('panel:closed', listener);
+    return () => { ipcRenderer.removeListener('panel:closed', listener); };
+  },
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
   /** Whether this open leads with the paste step, before Today. */
   ownCodeStep: (): Promise<boolean> => ipcRenderer.invoke('ownCode:step'),
