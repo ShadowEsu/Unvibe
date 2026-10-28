@@ -32,7 +32,7 @@ for (const [name, command, args, cwd, extraEnv = {}] of checks) {
   console.log(`\n[verify:beta] ${name}`);
   const result = spawnSync(command, args, {
     cwd: resolve(root, cwd), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
-    env: { ...process.env, ...extraEnv, ANTHROPIC_API_KEY: '', STRIPE_SECRET_KEY: '' },
+    env: { ...process.env, ...extraEnv, GEMINI_API_KEY: '', GOOGLE_API_KEY: '', STRIPE_SECRET_KEY: '' },
   });
   process.stdout.write(result.stdout ?? '');
   process.stderr.write(result.stderr ?? '');

@@ -5,12 +5,6 @@ import { GeminiProvider } from './gemini';
 export { buildSystemPrompt, buildUserPrompt, buildComprehensionPrompt } from './prompt';
 export type { Provider, ModelProvider, ModelRoute } from './provider';
 export type { SpeechToTextProvider, TextToSpeechProvider, EmbeddingProvider } from './speech';
-export {
-  DEFAULT_OPENROUTER_MODEL,
-  FREE_CHAT_MODELS,
-  listFreeChatModels,
-  normalizeOpenRouterModel,
-} from './openrouterModels';
 
 /**
  * Consent and the privacy policy name Google Gemini. Never fall back to another

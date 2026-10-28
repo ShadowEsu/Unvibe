@@ -12,7 +12,7 @@ Stack:
 
 - Desktop: Electron + React, local JSON stores, OS `safeStorage` for session tokens
 - Backend: Next.js App Router, Supabase Postgres (service role) or in-memory store
-- AI: fetch-based `Provider` (OpenRouter, Anthropic, Gemini, mock). Desktop BYOK in `localAi.ts`
+- AI: fetch-based `Provider`, Google Gemini only (mock in development). Desktop BYOK in `localAi.ts`
 - Auth: device-code + opaque bearer, optional sealed trial token
 - Billing: Stripe workspaces; Teams checkout is still off
 
