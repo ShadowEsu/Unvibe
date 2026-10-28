@@ -16,8 +16,11 @@ import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
 import '../shared/tokens.css';
 
-/** `aiConsent`: the first-send agreement (sending code to Gemini, Terms, 18+); `consent`: a secret was found. */
-type Phase = 'boot' | 'ready' | 'aiConsent' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
+/**
+ * `aiConsent`: the first-send agreement (sending code to the provider, Terms, 18+);
+ * `confirm`: a link started this review, Explain sends it; `consent`: a secret was found.
+ */
+type Phase = 'boot' | 'ready' | 'aiConsent' | 'confirm' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
 interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
@@ -489,7 +492,9 @@ function Widget() {
               quiz: null,
               error: '',
               mock: false,
-              phase: ev.consentNeeded ? 'aiConsent' : ev.hasCode ? 'ready' : 'empty',
+              phase: ev.consentProvider ? 'aiConsent' : ev.hasCode ? (ev.confirm ? 'confirm' : 'ready') : 'empty',
+              consentProvider: ev.consentProvider ?? null,
+              confirmAfterConsent: Boolean(ev.confirm),
               level: ev.level,
             });
           }
@@ -677,7 +682,7 @@ function Widget() {
   };
 
   const phase = active.phase;
-  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
+  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
       <b>{active.meta.lines} lines</b>
@@ -892,6 +897,29 @@ function Widget() {
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               <div className="sub">Parsing your selection and generating the explanation.</div>
+            </div>
+          )}
+
+          {phase === 'confirm' && (
+            <div className="state ready-state" role="alertdialog" aria-labelledby="confirm-title">
+              <div className="big" id="confirm-title">Explain this code?</div>
+              <div className="detected">
+                <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
+                <span>{active.meta.lines ?? 0} lines</span>
+                {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
+              </div>
+              {active.meta.preview ? (
+                <section className="code-context" aria-label="Code from your clipboard">
+                  <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
+                </section>
+              ) : null}
+              <div className="sub">Your editor or a link asked Unvibe to explain what is on your clipboard. Nothing has been sent yet.</div>
+              <button className="btn" onClick={() => request({})}>
+                Explain
+              </button>
+              <button className="btn ghost" onClick={() => window.unvibe.closeWidget()}>
+                Cancel
+              </button>
             </div>
           )}
 

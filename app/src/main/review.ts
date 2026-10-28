@@ -30,9 +30,13 @@ import { productEvent } from '../core/productEvents';
 import { aiSendConsented } from './consent';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentNeeded?: boolean; mode?: string; level: ExplanationLevel }
-  /** The person hasn't agreed to sending their code to the AI provider: the panel asks first. */
-  | { type: 'consentNeeded'; tabId: string }
+  /**
+   * `consentProvider`: ask first, for this provider (the person hasn't agreed to sending code to it);
+   * `confirm`: a link started this review, and Explain must be pressed before anything is sent.
+   */
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; mode?: string; level: ExplanationLevel }
+  /** The person hasn't agreed to sending their code to this provider: the panel asks first. */
+  | { type: 'consentNeeded'; tabId: string; provider: ConsentProvider }
   | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
@@ -71,6 +75,11 @@ export interface ReviewSession {
   comprehension?: { asked: number; hasMissed: boolean; understood: boolean; loading: boolean };
   /** True while the session holds the built-in first-run sample rather than the user's own code. */
   isSample?: () => boolean;
+  /**
+   * True when an `unvibe://review` link captured this code: any web page can open that link, so
+   * nothing is sent until the person presses Explain in the panel (Security 10-22 LOW #8).
+   */
+  awaitingConfirm?: boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
   /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
@@ -153,6 +162,8 @@ export function applyBuiltReview(session: ReviewSession, built: {
   session.recorded = false;
   session.comprehension = undefined;
   session.pendingAnswer = undefined;
+  // Built from something the person picked (a file, a brief, a Study lesson), not a link capture.
+  session.awaitingConfirm = false;
 }
 
 function persistUnderstoodSnapshot(session: ReviewSession): void {
@@ -203,8 +214,9 @@ export function initWidget(
     language: code ? guessLanguage(code) : undefined,
     // Renderer-local only. The preview never leaves this process and is not persisted here.
     preview: code ? code.slice(0, 600) : undefined,
-    autoStart: Boolean(opts?.autoStart && code) && !needsConsent(session),
-    consentNeeded: needsConsent(session),
+    autoStart: Boolean(opts?.autoStart && code && !session.awaitingConfirm) && !consentProvider,
+    ...(consentProvider ? { consentProvider } : {}),
+    confirm: Boolean(session.awaitingConfirm && code),
     mode: session.mode,
     // The panel's depth row and every re-request it sends start from the session depth (the user's default).
     level: session.level,
@@ -306,11 +318,8 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
-  // Fails closed: nothing of the user's is sent before they agree (the panel shows the form).
-  if (needsConsent(session)) {
-    send(win, session, { type: 'consentNeeded' });
-    return;
-  }
+  // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
+  if (session.awaitingConfirm) return;
   if (!session.code && !session.payload) {
     send(win, session, { type: 'error', message: 'No code captured.' });
     return;

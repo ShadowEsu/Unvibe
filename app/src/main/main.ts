@@ -183,7 +183,7 @@ function parseExternalReviewUrl(rawUrl: string): { preferClipboard: boolean } | 
 function handleExternalReviewUrl(rawUrl: string): void {
   const request = parseExternalReviewUrl(rawUrl);
   if (!request) return;
-  if (app.isReady()) void startReview(request);
+  if (app.isReady()) void startReview({ ...request, confirm: true });
   else pendingExternalReview = request;
 }
 
@@ -277,16 +277,27 @@ function beginCaptureOnActiveTab(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
+  confirm = false,
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
   // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
   const session = makeSession(activeTabId, code, sourceApp, prev?.level);
+  if (confirm && code) session.awaitingConfirm = true;
   tabSessions.set(activeTabId, session);
   if (!panelReady) return;
-  // No selection → calm picker UI (never auto-error / auto-run).
-  initWidget(win, session, { autoStart: Boolean(code) });
-  if (code) void runReview(win, session, { level: session.level });
+  // No selection → calm picker UI (never auto-error / auto-run). A link-started capture waits for Explain.
+  const start = Boolean(code) && !session.awaitingConfirm;
+  initWidget(win, session, { autoStart: start });
+  if (start) void runReview(win, session, { level: session.level });
+}
+
+/** Trial builds count selected-code prompts on this computer. False, with a notice, once they're used up. */
+function allowSelectedCodePrompt(): boolean {
+  if (!trialBuildEnabled() || fullProductBuildEnabled()) return true;
+  if (store().consumeBetaSelectedCodePrompt().ok) return true;
+  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
+  return false;
 }
 
 const MAX_PICK_BYTES = 200_000;
@@ -304,6 +315,7 @@ function loadCodeIntoSession(
   session.sourceApp = sourceLabel;
   session.recorded = false;
   session.reviewId = randomUUID();
+  session.awaitingConfirm = false;
   session.payload = undefined;
   session.mode = 'selection';
   session.file = meta?.file;
@@ -525,7 +537,8 @@ const FIRST_RUN_SAMPLE = [
  */
 let pendingGrant: PendingGrant | null = null;
 
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
+/** `confirm`: an `unvibe://review` link asked for this; capture it, but send nothing until Explain is pressed. */
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -583,22 +596,20 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
-  if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
-    const quota = store().consumeBetaSelectedCodePrompt();
-    if (!quota.ok) {
-      notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
-      return;
-    }
-  }
+  // A link-started capture is counted when Explain is pressed (widget:request), not when the link arrives.
+  if (code && !options.confirm && !allowSelectedCodePrompt()) return;
+  if (code && options.confirm) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
   if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
-    tabSessions.set(activeTabId, makeSession(activeTabId, code, sourceApp));
+    const session = makeSession(activeTabId, code, sourceApp);
+    if (options.confirm && code) session.awaitingConfirm = true;
+    tabSessions.set(activeTabId, session);
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp);
+  beginCaptureOnActiveTab(win, code, sourceApp, options.confirm);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -755,7 +766,7 @@ app.whenReady().then(() => {
   if (pendingExternalReview) {
     const request = pendingExternalReview;
     pendingExternalReview = null;
-    void startReview(request);
+    void startReview({ ...request, confirm: true });
   }
 
   // --- bar / companion ---
@@ -838,8 +849,9 @@ app.whenReady().then(() => {
     panelReady = true;
     const session = sessionFor(activeTabId);
     if (!session) return;
-    initWidget(win, session, { autoStart: Boolean(session.code) });
-    if (session.code) void runReview(win, session, { level: session.level });
+    const start = Boolean(session.code) && !session.awaitingConfirm;
+    initWidget(win, session, { autoStart: start });
+    if (start) void runReview(win, session, { level: session.level });
   });
   ipcMain.on('widget:setActiveTab', (_e, tabId: string) => {
     if (typeof tabId !== 'string' || !tabId) return;
@@ -873,7 +885,13 @@ app.whenReady().then(() => {
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
     const session = sessionFor(activeTabId);
-    if (win && session) void runReview(win, session, opts);
+    if (!win || !session) return;
+    if (session.awaitingConfirm) {
+      // Explain on a link-started capture: the person chose to send it.
+      if (!allowSelectedCodePrompt()) return;
+      session.awaitingConfirm = false;
+    }
+    void runReview(win, session, opts);
   });
   ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);

@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { applyBuiltReview, gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 import { computeToday } from '../src/core/learning';
 
@@ -111,6 +111,34 @@ test('"Explain differently" applies to that request only', async () => {
   assert.match(lesson(s.reviewId)?.explanation ?? '', /\(different\)/);
   await runReview(win, s, { level: 'advanced' });
   assert.equal(reviewBodies().at(-1)?.variant, 'default');
+});
+
+test('a link-captured review sends nothing until Explain, then exactly one request', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = { ...session('intermediate'), awaitingConfirm: true };
+  initWidget(win, s, { autoStart: true });
+  const init = events.find((ev) => ev.type === 'init');
+  assert.deepEqual([init?.confirm, init?.autoStart], [true, false], 'the panel asks first, even when a caller asks to auto-start');
+  await runReview(win, s, { level: 'intermediate' });
+  assert.equal(reviewBodies().length, 0, 'nothing is sent while the panel waits for Explain');
+  s.awaitingConfirm = false; // what Explain (widget:request) does
+  await runReview(win, s, { level: 'intermediate' });
+  assert.equal(reviewBodies().length, 1);
+});
+
+test('a file or brief built over a waiting link capture runs as the person\'s own pick', () => {
+  const { win, events } = panel();
+  const s = { ...session('intermediate'), awaitingConfirm: true };
+  applyBuiltReview(s, {
+    payload: { scope: 'selection', level: 'advanced', context: { language: 'typescript', primaryFile: 'picked.ts', projectStructure: [], imports: [], code: 'const picked = true;' } },
+    displayCode: 'const picked = true;',
+    file: 'picked.ts',
+    mode: 'selection',
+  });
+  initWidget(win, s, { autoStart: true });
+  const init = events.find((ev) => ev.type === 'init');
+  assert.deepEqual([s.awaitingConfirm, init?.confirm, init?.autoStart], [false, false, true]);
 });
 
 test('a Test me failure stays in the quiz and leaves the finished explanation on screen', async () => {
