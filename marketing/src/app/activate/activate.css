@@ -95,6 +95,11 @@
   margin-top: 0.35rem;
 }
 
+/* Plain wrapping: the site-wide `li { text-wrap: pretty }` left "If someone else sent" alone on a short first line at 390 px (Design C2 P3). */
+.activate-check li {
+  text-wrap: wrap;
+}
+
 .activate-title {
   max-width: 22rem;
   margin: 0;

@@ -15,32 +15,32 @@ export type OgCard = { file: string; alt: string };
 const FREE = "Free for Mac and Windows.";
 
 export const OG_CARDS = {
-  home: { file: "/og/og-home-d1b32625.png", alt: `Understand the code your AI just wrote. ${FREE}` },
-  beta: { file: "/og/og-beta-d543983c.png", alt: `Download Unvibe. ${FREE}` },
-  pricing: { file: "/og/og-pricing-75d30607.png", alt: `Start free. No card needed. ${FREE}` },
-  mac: { file: "/og/og-mac-fcfb9c77.png", alt: `A code explainer for your Mac. ${FREE}` },
-  windows: { file: "/og/og-windows-bb36c9a6.png", alt: `A code explainer for Windows. ${FREE}` },
-  explain: { file: "/og/og-explain-59fccaef.png", alt: `Explain code in plain English. ${FREE}` },
+  home: { file: "/og/og-home-5d097d09.png", alt: `Understand the code your AI just wrote. ${FREE}` },
+  beta: { file: "/og/og-beta-7d194b93.png", alt: `Download Unvibe. ${FREE}` },
+  pricing: { file: "/og/og-pricing-9f940be2.png", alt: `Start free. No card needed. ${FREE}` },
+  mac: { file: "/og/og-mac-c241a9bf.png", alt: `A code explainer for your Mac. ${FREE}` },
+  windows: { file: "/og/og-windows-1d3f1db8.png", alt: `A code explainer for Windows. ${FREE}` },
+  explain: { file: "/og/og-explain-8fbfbcab.png", alt: `Explain code in plain English. ${FREE}` },
 } as const satisfies Record<string, OgCard>;
 
 /** Each language page's own card, by page id. */
 export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
-  python: "/og/og-explain-python-de920420.png",
-  javascript: "/og/og-explain-javascript-2fa7e1ba.png",
-  typescript: "/og/og-explain-typescript-18f9ebfc.png",
-  sql: "/og/og-explain-sql-163abe78.png",
-  bash: "/og/og-explain-bash-027ac2d6.png",
-  c: "/og/og-explain-c-444b75ab.png",
-  cpp: "/og/og-explain-cpp-492dd686.png",
-  swift: "/og/og-explain-swift-87b426d0.png",
-  ruby: "/og/og-explain-ruby-08d11955.png",
-  java: "/og/og-explain-java-b0447d64.png",
-  html: "/og/og-explain-html-764acaa4.png",
-  css: "/og/og-explain-css-8c2ce2de.png",
-  go: "/og/og-explain-go-02a02a72.png",
-  rust: "/og/og-explain-rust-892230ef.png",
-  csharp: "/og/og-explain-csharp-847efa88.png",
-  kotlin: "/og/og-explain-kotlin-7ecb2596.png",
+  python: "/og/og-explain-python-674f8424.png",
+  javascript: "/og/og-explain-javascript-f8878f58.png",
+  typescript: "/og/og-explain-typescript-9328f8c2.png",
+  sql: "/og/og-explain-sql-0d9df631.png",
+  bash: "/og/og-explain-bash-f04ec8df.png",
+  c: "/og/og-explain-c-fbf7085c.png",
+  cpp: "/og/og-explain-cpp-91334837.png",
+  swift: "/og/og-explain-swift-4c89d84c.png",
+  ruby: "/og/og-explain-ruby-6ea2946f.png",
+  java: "/og/og-explain-java-dbded452.png",
+  html: "/og/og-explain-html-2d46f438.png",
+  css: "/og/og-explain-css-a1736dc1.png",
+  go: "/og/og-explain-go-cf95e359.png",
+  rust: "/og/og-explain-rust-42bddce3.png",
+  csharp: "/og/og-explain-csharp-9e33a411.png",
+  kotlin: "/og/og-explain-kotlin-8d6079b3.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
