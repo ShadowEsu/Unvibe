@@ -24,7 +24,8 @@ export async function POST(req: Request): Promise<Response> {
 
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
-  const provider = selectProvider(payload.model);
+  const provider = selectProvider();
+  if (!provider) return Response.json({ error: 'The AI service is unavailable. Try again later.' }, { status: 503 });
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();
   }
