@@ -10,6 +10,7 @@ import "./pages.css";
 import "./system.css";
 import { Providers } from "@/components/providers/Providers";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
+import { OG_CARD_SIZE, OG_CARDS } from "@/lib/pageMeta";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
 import { SitePalette } from "@/components/paper/SitePalette";
 import { MobileDownloadBar } from "@/components/paper/MobileDownloadBar";
@@ -76,20 +77,23 @@ export const metadata: Metadata = {
   },
   description:
     "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+  // Fallback for pages without pageMetadata() (404, private pages). No og:url here: a page that
+  // inherited one would point its preview at the home page.
   openGraph: {
     type: "website",
-    url: siteUrl,
     title: "Unvibe: understand the code AI writes for you",
     description:
       "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
     siteName: "Unvibe",
     locale: "en_US",
+    images: [{ url: OG_CARDS.home.file, ...OG_CARD_SIZE, alt: OG_CARDS.home.alt }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe: understand the code AI writes for you",
     description:
       "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+    images: [{ url: OG_CARDS.home.file, alt: OG_CARDS.home.alt }],
   },
   robots: { index: true, follow: true },
   verification: {

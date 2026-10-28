@@ -3,12 +3,14 @@ import Link from "next/link";
 import { Vibe } from "@/components/paper/Vibe";
 import { compensationTotalLabel } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: { absolute: "About Unvibe: Understand the Code AI Writes" },
+export const metadata: Metadata = pageMetadata({
+  path: "/about",
+  title: "About Unvibe: Understand the Code AI Writes",
+  absolute: true,
   description: "What Unvibe is, why it exists, how explanations are made, and how to reach the team.",
-  alternates: { canonical: "/about" },
-};
+});
 
 export default function AboutPage() {
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;

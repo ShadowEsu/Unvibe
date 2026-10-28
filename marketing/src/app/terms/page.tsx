@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { pricingCopy } from "@/lib/pricingCopy";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/terms",
   title: "Terms",
   description:
     "The terms of using Unvibe during its beta, including AI limitations and the absence of any security guarantee.",
-  alternates: { canonical: "/terms" },
-};
+});
 
 /** The payments section says whether Pro is on sale; re-read every 5 minutes like /pricing. */
 export const revalidate = 300;

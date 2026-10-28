@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/data-controls",
   title: "Data controls",
   description:
     "What data Unvibe keeps, where it lives, how long it is retained, and how to get a copy or delete it.",
-  alternates: { canonical: "/data-controls" },
-};
+});
 
 export default function DataControlsPage() {
   return (

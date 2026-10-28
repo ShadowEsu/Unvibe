@@ -3,12 +3,14 @@ import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { InstallHelpViewed } from "@/components/paper/InstallHelpViewed";
 import { Vibe } from "@/components/paper/Vibe";
 import { BETA_INSTALL_SCRIPT_SOURCE_URL, BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: { absolute: "Open Unvibe the First Time on Mac and Windows" },
+export const metadata: Metadata = pageMetadata({
+  path: "/install-help",
+  title: "Open Unvibe the First Time on Mac and Windows",
+  absolute: true,
   description: "Mac says \"Unvibe Not Opened\"? Windows says \"Windows protected your PC\"? Here is exactly what to press the first time.",
-  alternates: { canonical: "/install-help" },
-};
+});
 
 export default function InstallHelpPage() {
   return (

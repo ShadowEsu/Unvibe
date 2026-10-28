@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { Reveal } from "@/components/redesign/Reveal";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = {
-  title: { absolute: "Download Unvibe: Free Code Explainer for Mac and Windows" },
-  description: "Download Unvibe free for Mac (Apple silicon and Intel) and Windows 10 or 11 (x64). No API key, no credit card.",
+  ...pageMetadata({
+    path: "/beta",
+    title: "Download Unvibe: Free Code Explainer for Mac and Windows",
+    absolute: true,
+    description: "Download Unvibe free for Mac (Apple silicon and Intel) and Windows 10 or 11 (x64). No API key, no credit card.",
+  }),
   robots: { index: true, follow: true },
-  alternates: { canonical: "/beta" },
 };
 
 const { mac, windows } = SHORTCUTS;

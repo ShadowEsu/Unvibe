@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "./mono";
 import "./explain.css";
 
@@ -10,15 +11,7 @@ const title = "Explain code in plain English, free";
 const description =
   "Paste a snippet of code and Vibe explains what it does in plain English, at the depth you pick. Free online, no account.";
 
-const image = "/og/og-home.png";
-
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: "/explain" },
-  openGraph: { type: "website", url: "/explain", title, description, siteName: "Unvibe", locale: "en_US", images: [{ url: image, width: 1200, height: 630, alt: title }] },
-  twitter: { card: "summary_large_image", title, description, images: [image] },
-};
+export const metadata: Metadata = pageMetadata({ path: "/explain", title, description });
 
 export default function ExplainIndexPage() {
   return (

@@ -5,6 +5,7 @@ import { DownloadLink } from "@/components/paper/DownloadLink";
 import { BETA_WINDOWS_DIRECT_DOWNLOAD, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
+import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { explainMono } from "../explain/mono";
 import "../explain/explain.css";
@@ -13,11 +14,12 @@ import "../code-explainer.css";
 const PATH = "/code-explainer-windows";
 const shortcut = SHORTCUTS.windows.anywhere;
 
-export const metadata: Metadata = {
-  title: { absolute: "Code Explainer for Windows: Unvibe, Free Desktop App" },
+export const metadata: Metadata = pageMetadata({
+  path: PATH,
+  title: "Code Explainer for Windows: Unvibe, Free Desktop App",
+  absolute: true,
   description: `Select code in VS Code, Cursor, Notepad or a browser, press ${shortcut}, and Unvibe explains it in plain English beside your editor. Free for Windows.`,
-  alternates: { canonical: PATH },
-};
+});
 
 /** A search landing page for people who want a Windows app, not a paste box: how it works on Windows, then the download. */
 export default function CodeExplainerWindowsPage() {

@@ -9,12 +9,13 @@ import {
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/investors",
   title: "Investors",
   description: "Unvibe on one page: the thesis, what shipped, public cash figures, what is next, and how to reach us.",
-  alternates: { canonical: "/investors" },
-};
+});
 
 const pipeline = [
   ["YC", "Application in progress"],

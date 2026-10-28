@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
+import { pageMetadata } from "@/lib/pageMeta";
 import "./activate.css";
 
 export const metadata: Metadata = {
-  title: { absolute: "Connect Unvibe" },
-  description: "Approve your desktop app and finish signing in with Google.",
+  ...pageMetadata({
+    path: "/activate",
+    title: "Connect Unvibe",
+    absolute: true,
+    description: "Approve your desktop app and finish signing in with Google.",
+  }),
   robots: { index: false, follow: false },
-  alternates: { canonical: "/activate" },
 };
 
 /** The page holds a sign-in session: its content is left out of any replay (see REPLAY_BLOCK_CLASS). */

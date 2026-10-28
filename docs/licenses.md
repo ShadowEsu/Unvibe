@@ -44,7 +44,7 @@ Every photo or illustration we ship that we didn't make ourselves, with its sour
 
 Made by us, no third-party source:
 - `marketing/public/hero/dusk-field.webp`, `dusk-field-800.webp` (site background, the unsubscribe page, /activate) and `app/src/renderer/{companion,widget}/dusk-field.webp` (app window backdrop): CSS gradients in the site palette, rendered to WebP. No photo is involved.
-- The link cards in `marketing/public/og/` and the generated `/opengraph-image`.
+- The link cards in `marketing/public/og/`, drawn by Design from the app's own screenshots and the site's fonts and gradient.
 
 Removed on 2026-10-27: a Golden Gate photo watermarked by its photographer, used without a licence, plus everything derived from it: two blurred backgrounds, `unvibe-social-preview-v6.png`, the app backdrops, a copy on the API's `/activate/` path, and eight unlinked app screenshots in `marketing/public/product/` that showed it as the window backdrop. The press screenshots in `marketing/public/press/site/` were re-shot from the fixed site, and the home demo video and its posters keep their frames with the backdrop behind the panel swapped for the colour field. Never ship an image whose source and licence aren't in this table.
 

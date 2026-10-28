@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/privacy",
   title: "Privacy",
   description:
     "How Unvibe handles code and learning data during the beta, including on-device secret filtering and cloud-provider disclosure.",
-  alternates: { canonical: "/privacy" },
-};
+});
 
 export default function PrivacyPage() {
   return (

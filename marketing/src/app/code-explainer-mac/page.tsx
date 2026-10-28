@@ -6,6 +6,7 @@ import { MacBuildLinks } from "@/components/paper/BetaInstall";
 import { faqItems } from "@/data/faq";
 import { BETA_MAC_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
+import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { explainMono } from "../explain/mono";
 import "../explain/explain.css";
@@ -15,11 +16,12 @@ const PATH = "/code-explainer-mac";
 const shortcut = SHORTCUTS.mac.anywhere;
 const sentAnswer = faqItems.find((item) => item.id === "sent")?.answer ?? "";
 
-export const metadata: Metadata = {
-  title: { absolute: "Code Explainer for Mac: Unvibe, Free Desktop App" },
+export const metadata: Metadata = pageMetadata({
+  path: PATH,
+  title: "Code Explainer for Mac: Unvibe, Free Desktop App",
+  absolute: true,
   description: `Select code in Cursor, VS Code, Xcode, Terminal or a browser, press ${shortcut}, and Unvibe explains it in plain English beside your editor. Free for Mac.`,
-  alternates: { canonical: PATH },
-};
+});
 
 /** A search landing page for people who want a Mac app, not a paste box: how it works on a Mac, then the download. */
 export default function CodeExplainerMacPage() {

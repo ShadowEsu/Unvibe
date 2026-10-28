@@ -14,12 +14,14 @@ import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: { absolute: "Unvibe: Code Explainer for Mac and Windows, Free" },
+export const metadata: Metadata = pageMetadata({
+  path: "/",
+  title: "Unvibe: Code Explainer for Mac and Windows, Free",
+  absolute: true,
   description: `Select code in any app, press ${SHORTCUTS.mac.anywhere} (${SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English beside your editor. Free, no API key.`,
-  alternates: { canonical: "/" },
-};
+});
 
 const homeFaq = faqItems.filter((item) => ["what-is-it", "which-shortcut", "editors", "sent", "beta", "accuracy"].includes(item.id));
 

@@ -6,12 +6,14 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GrowthFollowLinks } from "@/components/paper/SocialFollow";
 import { Reveal } from "@/components/redesign/Reveal";
 import { changelogPreview } from "@/data/milestones";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: { absolute: "Building Unvibe in Public" },
+export const metadata: Metadata = pageMetadata({
+  path: "/build",
+  title: "Building Unvibe in Public",
+  absolute: true,
   description: "Unvibe is out for Mac and Windows. Follow the build on Instagram and LinkedIn.",
-  alternates: { canonical: "/build" },
-};
+});
 
 export default function BuildPage() {
   return (
