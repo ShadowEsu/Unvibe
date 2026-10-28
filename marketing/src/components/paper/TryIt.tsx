@@ -227,7 +227,8 @@ export function TryIt({
           <button
             type="button"
             className="try__go"
-            disabled={state === "thinking" || !code.trim() || !consented}
+            disabled={state === "thinking" || !code.trim()}
+            aria-disabled={consented ? undefined : true}
             aria-describedby={consented ? undefined : "try-consent-hint"}
             onClick={() => void explain()}
           >
@@ -280,7 +281,7 @@ export function TryIt({
               <button
                 type="button"
                 className="try__retry"
-                disabled={!consented}
+                aria-disabled={consented ? undefined : true}
                 aria-describedby={consented ? undefined : "try-consent-hint"}
                 onClick={() => void explain()}
               >
