@@ -6,6 +6,7 @@ import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
+import { compensationProgramCount, compensationTotalLabel, startupPrograms } from "@/data/compensation";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
@@ -175,6 +176,11 @@ export function PhotoHero() {
         ) : (
           <DownloadForThisComputer device={device} actionsRef={actionsRef} />
         )}
+        <p className="vhero__backing">
+          <a href="/investors#backing">
+            <b>{compensationTotalLabel()} in startup-program credits and committed cash</b> · {compensationProgramCount()} programs, including {startupPrograms[0].program}
+          </a>
+        </p>
       </div>
     </section>
   );

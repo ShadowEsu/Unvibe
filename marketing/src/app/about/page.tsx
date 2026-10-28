@@ -4,6 +4,7 @@ import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { Vibe } from "@/components/paper/Vibe";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { changelogEntries } from "@/data/milestones";
+import { AboutBacking } from "@/components/paper/AboutBacking";
 import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = pageMetadata({
@@ -69,6 +70,9 @@ export default function AboutPage() {
           <NewsletterSignup id="about" />
         </article>
       </section>
+
+      {/* Startup-program backing: one self-contained block, moves into the rewritten /about as is. */}
+      <AboutBacking />
 
       <section className="paper-wrap founder-about__contact">
         <h2>Say hi.</h2>

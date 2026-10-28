@@ -576,6 +576,13 @@ p { font-size: 1.02rem; }
 .fos__cmd { min-width: 0; }
 .fos__cmd code { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
 
+/* Claude for Startups: one big, plain callout above the program list. */
+.claude-startups { display: grid; gap: 8px; margin: 0 0 28px; padding: clamp(22px, 4vw, 36px); border: 2px solid var(--u-line-strong); border-radius: 24px; background: var(--u-card); box-shadow: var(--u-lift-2); color: var(--u-text); text-align: center; }
+.claude-startups__tag { justify-self: center; padding: 3px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #d6f45a; color: #141414; font: 700 13px/1.4 Inter, sans-serif; letter-spacing: .02em; }
+.claude-startups__title { margin: 0; font: 800 clamp(28px, 5vw, 48px)/1.08 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.035em; color: var(--u-text); }
+.claude-startups__title em { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-style: italic; }
+.claude-startups__copy { margin: 0 auto; max-width: 560px; font-size: 16px; line-height: 1.5; color: var(--u-text-2); }
+
 /* Rewards: paper and ink like the rest of the site (the old dark panel hid its own heading). */
 .reward-page { background: color-mix(in srgb, var(--u-sheet) 88%, transparent) !important; color: var(--u-text) !important; }
 .reward-panel { background: var(--u-card) !important; border: 2px solid var(--u-line-strong) !important; border-radius: 24px; box-shadow: 6px 6px 0 var(--u-ink) !important; color: var(--u-text); }
@@ -619,6 +626,12 @@ p { font-size: 1.02rem; }
 .founder-about__item p { margin: 0; font-size: 15px; line-height: 1.55; color: #3b3b3b; }
 .founder-about__contact { margin-top: 40px; padding: 36px; border: 2px solid #141414; border-radius: 24px; background: #fff; box-shadow: 5px 5px 0 #141414; text-align: center; }
 .founder-about__contact p { margin: 0 0 18px; color: #3b3b3b; }
+/* /about startup programs (AboutBacking.tsx): self-contained so it can move with the component. */
+.about-backing { margin-top: 40px; padding: 32px 28px; border: 2px solid var(--v-ink); border-radius: 24px; background: var(--u-card); box-shadow: 5px 5px 0 var(--v-ink); color: var(--u-text); text-align: center; }
+.about-backing h2 { margin: 0 0 10px; font: 800 26px/1.15 "Bricolage Grotesque", Inter, sans-serif; letter-spacing: -0.03em; }
+.about-backing__lead { margin: 0 0 16px; line-height: 1.6; }
+.about-backing__more { margin: 16px 0 0; }
+.about-backing__more a { color: var(--u-text); font-weight: 700; text-decoration: underline; text-decoration-color: #d6f45a; text-decoration-thickness: 3px; text-underline-offset: 3px; }
 @media (max-width: 820px) {
   .founder-about__hero { grid-template-columns: 1fr; justify-items: start; }
   .founder-about__avatar { width: 120px; height: 120px; }
