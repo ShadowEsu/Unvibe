@@ -912,7 +912,7 @@ export const milestones: Milestone[] = [
     date: "11 JUL 2026",
     category: "PRODUCT",
     title: "Desktop-first pivot",
-    summary: "A floating bar and a streaming explanation panel with five depths, from New to Expert, with citations that point to the exact lines. Test me ran inside the panel, and results fed a local learning record with a streak and a heatmap. Email sign-in, sign-out and account deletion were available. The panel remembered its size and position and dimmed when you looked away; Settings covered bar position, quiet hours and launch at login.",
+    summary: "A floating bar and a streaming explanation panel with five depths, from New to Expert, with citations that point to the exact lines. Test me ran inside the panel, and results fed a local learning record and a heatmap. Email sign-in, sign-out and account deletion were available. The panel remembered its size and position and dimmed when you looked away; Settings covered bar position, quiet hours and launch at login.",
     figure: "v0.1.0",
   },
 ];

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
-import { NEWSLETTER_CONSENT_TEXT } from "@/lib/newsletterConsent";
+import { NEWSLETTER_CONSENT_VERSION } from "@/lib/newsletterConsent";
 import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
   recordWaitlistBetaEmail,
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     createdAt,
     // The schema already refused a newsletter post without `consent: true`.
     newsletterConsent: parsed.data.source === "newsletter"
-      ? { source: "newsletter", text: NEWSLETTER_CONSENT_TEXT, at: createdAt }
+      ? { source: "newsletter", consentVersion: NEWSLETTER_CONSENT_VERSION, at: createdAt }
       : undefined,
   };
 

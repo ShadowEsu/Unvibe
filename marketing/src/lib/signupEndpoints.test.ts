@@ -9,7 +9,7 @@ import * as waitlistRoute from "../app/api/waitlist/route";
 import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
 import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
-import { NEWSLETTER_CONSENT_TEXT } from "./newsletterConsent";
+import { NEWSLETTER_CONSENT_VERSION } from "./newsletterConsent";
 
 /**
  * Public signup endpoints against a fake Supabase (PostgREST) project, so the real supabase-js
@@ -551,7 +551,7 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     });
   }
 
-  it("stores a consented signup with the source, the exact box text and the time", async () => {
+  it("stores a consented signup with the source, the consent version and the time", async () => {
     const email = newsletterEmail();
     const before = Date.now();
     const { response } = await signUp({ email, source: "newsletter", consent: true });
@@ -559,7 +559,7 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     const row = waitlistRows.get(email);
     assert.ok(row, "the entry is stored");
     assert.equal(row.newsletter_consent_source, "newsletter");
-    assert.equal(row.newsletter_consent_text, NEWSLETTER_CONSENT_TEXT);
+    assert.equal(row.newsletter_consent_version, NEWSLETTER_CONSENT_VERSION);
     const at = Date.parse(String(row.newsletter_consent_at));
     assert.ok(at >= before && at <= Date.now(), "consent time is the signup time");
   });
@@ -588,7 +588,7 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     assert.deepEqual(again.mailedTo, [], "no second email of any kind");
     const row = waitlistRows.get(email);
     assert.equal(row?.newsletter_consent_source, "newsletter");
-    assert.equal(row?.newsletter_consent_text, NEWSLETTER_CONSENT_TEXT);
+    assert.equal(row?.newsletter_consent_version, NEWSLETTER_CONSENT_VERSION);
     assert.ok(row?.newsletter_consent_at);
   });
 });

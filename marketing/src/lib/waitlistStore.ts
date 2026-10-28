@@ -24,8 +24,8 @@ export interface WaitlistBetaEmailRecord {
 /** What a newsletter signup agreed to, kept with the entry (ledger 299: item, wording, time). */
 export interface NewsletterConsentRecord {
   source: "newsletter";
-  /** The exact checkbox label the person ticked. */
-  text: string;
+  /** Names the exact checkbox text ticked (NEWSLETTER_CONSENT_VERSION in newsletterConsent.ts). */
+  consentVersion: string;
   at: string;
 }
 
@@ -99,7 +99,7 @@ interface WaitlistRow {
   invited_at: string | null;
   // Added by 0010_waitlist_newsletter_consent.sql.
   newsletter_consent_source?: string | null;
-  newsletter_consent_text?: string | null;
+  newsletter_consent_version?: string | null;
   newsletter_consent_at?: string | null;
 }
 
@@ -155,8 +155,8 @@ function entryFromRow(row: WaitlistRow): WaitlistAdminEntry {
       }
       : undefined,
     betaInviteAt: row.invited_at ?? undefined,
-    newsletterConsent: row.newsletter_consent_source === "newsletter" && row.newsletter_consent_text && row.newsletter_consent_at
-      ? { source: "newsletter", text: row.newsletter_consent_text, at: row.newsletter_consent_at }
+    newsletterConsent: row.newsletter_consent_source === "newsletter" && row.newsletter_consent_version && row.newsletter_consent_at
+      ? { source: "newsletter", consentVersion: row.newsletter_consent_version, at: row.newsletter_consent_at }
       : undefined,
   };
 }
@@ -164,7 +164,7 @@ function entryFromRow(row: WaitlistRow): WaitlistAdminEntry {
 /** Only newsletter entries write these columns, so other signups never depend on the 0010 migration. */
 function newsletterConsentColumns(consent: NewsletterConsentRecord | undefined) {
   return consent
-    ? { newsletter_consent_source: consent.source, newsletter_consent_text: consent.text, newsletter_consent_at: consent.at }
+    ? { newsletter_consent_source: consent.source, newsletter_consent_version: consent.consentVersion, newsletter_consent_at: consent.at }
     : {};
 }
 

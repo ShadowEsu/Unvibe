@@ -25,7 +25,7 @@ export const waitlistSchema = z.object({
   // lets the server count the signup in PostHog, Mixpanel or the funnel (Security U-L1).
   analytics: z.unknown().optional().transform((value) => value === true),
   // The footer, /about and homepage newsletter forms. Only exactly `true` counts as the ticked box.
-  source: z.literal("newsletter").optional(),
+  source: z.enum(["newsletter"]).optional(),
   consent: z.unknown().optional().transform((value) => value === true),
 }).superRefine((input, ctx) => {
   // A newsletter signup needs the unticked-by-default consent box ticked; the server checks it too.
