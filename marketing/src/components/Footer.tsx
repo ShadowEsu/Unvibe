@@ -8,7 +8,6 @@ import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { observeMotion } from "@/lib/motionInView";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const product = [
   ["Product", "/#product"],
@@ -60,7 +59,6 @@ export function Footer() {
         <p className="paper-footer__status" ref={statusRef}>
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
         </p>
-        <ThemeToggle className="paper-footer__theme" />
       </div>
     </footer>
   );

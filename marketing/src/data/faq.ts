@@ -142,7 +142,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "teams",
     question: "Can educators or teams use it?",
-    answer: `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, for ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email preston@unvibe.site for seats, or about Enterprise if you need more than ${PRICING.teamsMaxSeats}.`,
+    answer: `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, for ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email support@unvibe.site for seats, or about Enterprise if you need more than ${PRICING.teamsMaxSeats}.`,
     category: "platform",
   },
   {

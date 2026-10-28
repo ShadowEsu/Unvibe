@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Unvibe resource kit",
   description: "Facts, pitch, brand, logos, banners and templates for talking about Unvibe.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "/kit" },
 };
 
 export default function KitPage() {

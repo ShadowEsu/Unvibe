@@ -1401,7 +1401,7 @@ app.whenReady().then(() => {
     const version = typeof context.version === 'string' ? context.version.slice(0, 48) : app.getVersion();
     const subject = encodeURIComponent('Unvibe beta feedback');
     const body = encodeURIComponent([
-      'Hi Preston,',
+      'Hi Unvibe team,',
       '',
       'What happened, and what were you trying to do?',
       '',

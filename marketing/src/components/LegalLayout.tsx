@@ -1,11 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import {
-  FOUNDER_EMAIL,
-  SUPPORT_EMAIL,
-  founderMailto,
-  supportMailto,
-} from "@/lib/contact";
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact";
 
 interface LegalLayoutProps {
   title: string;
@@ -38,11 +33,6 @@ export function LegalLayout({ title, updated, intro, children }: LegalLayoutProp
         This page summarizes our policies in plain language. Questions? Email{" "}
         <a href={supportMailto} className="text-fg underline underline-offset-2">
           {SUPPORT_EMAIL}
-        </a>
-        {" "}
-        or{" "}
-        <a href={founderMailto} className="text-fg underline underline-offset-2">
-          {FOUNDER_EMAIL}
         </a>
         .
       </div>

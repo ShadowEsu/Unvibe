@@ -103,7 +103,6 @@ export const metadata: Metadata = {
   verification: {
     google: "7KTQZKnFINspHj8_DOwYo9FnaD-9-nLZQ-adL2dgH6Q",
   },
-  alternates: { canonical: siteUrl },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "48x48" },
@@ -138,15 +137,15 @@ const organizationJsonLd = {
   url: siteUrl,
   logo: `${siteUrl}/icon.png`,
   email: "support@unvibe.site",
+  // Only profiles that exist: TikTok and X are left out until their accounts do.
   sameAs: [
     "https://www.linkedin.com/company/unvibeapp/",
     "https://www.instagram.com/unvibe_app/",
-    "https://www.tiktok.com/@unvibe_app",
   ],
 };
 
 export const viewport: Viewport = {
-  themeColor: "var(--paper)",
+  themeColor: "#ffe7e7",
 };
 
 export default function RootLayout({
@@ -159,7 +158,7 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
-        {/* Before first paint: the `js` class (motion start states) and the theme class (no light flash). */}
+        {/* Before first paint: the `js` class, which scopes the motion start states. */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
           type="application/ld+json"

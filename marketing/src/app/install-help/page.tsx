@@ -7,6 +7,7 @@ import { BETA_INSTALL_SCRIPT_SOURCE_URL, BETA_INSTALL_TAG } from "@/lib/betaInst
 export const metadata: Metadata = {
   title: "Install help",
   description: "How to open Unvibe the first time on Mac and Windows, and how to fix a download that will not open.",
+  alternates: { canonical: "/install-help" },
 };
 
 export default function InstallHelpPage() {

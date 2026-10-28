@@ -57,22 +57,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const jobs = [];
 for (const route of ROUTES) {
   for (const viewport of VIEWPORTS) {
-    for (const theme of ['light', 'dark']) jobs.push({ route, viewport, theme, reduced: false });
+    jobs.push({ route, viewport, theme: 'light', reduced: false });
   }
 }
 if (ROUTES.includes('/')) jobs.push({ route: '/', viewport: VIEWPORTS[0], theme: 'light', reduced: true });
-
-// The site's ThemeProvider pins light on mount, so dark is forced the same way it would apply it:
-// the `dark` class and color-scheme on <html>, re-applied whenever something removes them.
-function forceDark() {
-  const root = document.documentElement;
-  const apply = () => {
-    if (!root.classList.contains('dark')) root.classList.add('dark');
-    if (root.style.colorScheme !== 'dark') root.style.colorScheme = 'dark';
-  };
-  apply();
-  new MutationObserver(apply).observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
-}
 
 /** Scroll the whole page in steps so lazy images and intersection observers fire, then return to top. */
 async function scrollThrough(page) {
@@ -169,7 +157,6 @@ async function runJob(browser, job) {
     reducedMotion: reduced ? 'reduce' : 'no-preference',
     bypassCSP: true,
   });
-  if (theme === 'dark') await context.addInitScript(forceDark);
   const page = await context.newPage();
   const expect404 = route === '/nonexistent-404';
   const docUrl = `${BASE_URL}${route}`;
@@ -275,7 +262,7 @@ const md = [
   `# Site shots: ${BASE_URL}`,
   '',
   `${results.length} page checks, ${failing.length} failing. Screenshots and report.json are in \`${OUT_DIR}\`.`,
-  'Dark theme is forced through the `dark` class on `<html>` (the site itself currently pins light).',
+  'The site has one light theme for every visitor.',
   'Fails on: serious/critical axe violations, console errors, failed requests (analytics hosts excluded), horizontal overflow, or a page that could not be checked.',
   '',
   '## Failures',

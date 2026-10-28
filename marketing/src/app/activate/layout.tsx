@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Connect Unvibe",
   description: "Approve your desktop app and finish signing in with Google.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "/activate" },
 };
 
 /** The page holds a sign-in session: its content is left out of any replay (see REPLAY_BLOCK_CLASS). */
