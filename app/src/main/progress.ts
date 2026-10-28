@@ -2,7 +2,7 @@
  * Anonymous setup progress (instrumentation spec 2026-10-22 section 7, first-run spec section 4).
  * One write-once ping per step to POST /api/v1/trial/progress: body `{ "step": ... }`, the trial
  * token and the random install ID, never the session token, never code, files or email. Only sealed
- * trial builds send; dev and founder builds and the "Send anonymous setup progress" setting off send
+ * trial builds send; dev and founder builds and the "Send setup progress" setting off send
  * nothing. A step is marked sent on 2xx or 400 (a bad step is never retried); anything else (offline,
  * 409 no install row yet, 429, 5xx) is retried by `syncProgress` on the next launch.
  */

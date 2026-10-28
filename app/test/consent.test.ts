@@ -75,7 +75,8 @@ const form = { aiSend: true, terms: true, age18: true };
 
 test('CC-3: the consent screen words are pinned to the policy version', () => {
   // Changing any word of CONSENT_COPY must come with a new POLICY_VERSION (everyone is asked again).
-  const pinned: Record<string, string> = { '2026-10-28': 'efd06d3f9be7ce6c' };
+  // 2026-10-28 was re-pinned once before any release (QA: Chat messages, file and project name).
+  const pinned: Record<string, string> = { '2026-10-28': '5cd75bbf623bc0b0' };
   const hash = createHash('sha256').update(JSON.stringify(CONSENT_COPY)).digest('hex').slice(0, 16);
   assert.equal(hash, pinned[POLICY_VERSION], `CONSENT_COPY changed: bump POLICY_VERSION and pin ${hash}`);
 });

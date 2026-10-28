@@ -42,9 +42,9 @@ export function isConsentProvider(value: unknown): value is ConsentProvider {
 export const CONSENT_COPY = {
   title: 'Before Vibe explains your code',
   leadUnvibe:
-    'To write an explanation, Unvibe sends the code you select, paste or pick, the git changes you explain in Briefs, and your questions to {provider}, through Unvibe\'s server.',
+    'To write an explanation, Unvibe sends the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Chat messages to {provider}, through Unvibe\'s server.',
   leadOwnKey:
-    'You chose your own {provider} key, so the code you select, paste or pick, the git changes you explain in Briefs, and your questions go from this computer straight to {provider}, under your account with them.',
+    'You chose your own {provider} key, so the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Chat messages go from this computer straight to {provider}, under your account with them.',
   secrets: 'Unvibe looks for keys and tokens on this computer first and stops, or asks you, before sending one. Nothing has been sent yet.',
   aiSend: 'Send my code and questions to {provider} to explain them',
   termsBefore: 'I agree to the ',
