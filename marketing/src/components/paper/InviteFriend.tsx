@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { storedRef } from "@/lib/referral";
+import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
 /** Get a personal link to share Unvibe. Gift months come from the app's gift code (app 0.1.44 and later), never from the link. */
@@ -22,7 +23,7 @@ export function InviteFriend() {
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, firstName: "", lastName: "", referredBy: storedRef() }),
+        body: JSON.stringify({ email, firstName: "", lastName: "", referredBy: storedRef(), analytics: !browserTrackingDisabled() }),
       });
       const body = (await response.json().catch(() => ({}))) as { referralCode?: string; error?: string };
       if (!response.ok || !body.referralCode) throw new Error(body.error || "Could not make your link.");

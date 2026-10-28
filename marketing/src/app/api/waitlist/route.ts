@@ -99,18 +99,22 @@ export async function POST(req: Request) {
         error: welcome.error,
       }).catch((error) => console.error("welcome email status write failed", error));
     }
-    // Await so Vercel does not freeze the isolate before the capture request leaves.
-    const completionProps = {
-      duplicate: stored.duplicate,
-      storage: stored.storage,
-      has_referral: Boolean(referredBy),
-      has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
-    };
-    await Promise.all([
-      captureServerEvent("waitlist_completed", referralCode, completionProps),
-      captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
-      recordGrowthFunnelEvent("waitlist_completed", referralCode),
-    ]);
+    // Counted only when this browser allowed analytics (Security U-L1); otherwise nothing about the
+    // signup leaves for PostHog or Mixpanel, and the funnel doesn't record it.
+    if (parsed.data.analytics) {
+      const completionProps = {
+        duplicate: stored.duplicate,
+        storage: stored.storage,
+        has_referral: Boolean(referredBy),
+        has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
+      };
+      // Await so Vercel does not freeze the isolate before the capture request leaves.
+      await Promise.all([
+        captureServerEvent("waitlist_completed", referralCode, completionProps),
+        captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
+        recordGrowthFunnelEvent("waitlist_completed", referralCode),
+      ]);
+    }
     // The same answer whether or not the email was already listed, so this is no membership check.
     return NextResponse.json({ saved: true, referralCode });
   } catch (error) {

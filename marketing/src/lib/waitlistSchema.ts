@@ -21,6 +21,9 @@ export const waitlistSchema = z.object({
   utmSource: z.string().trim().max(64).optional().or(z.literal("")),
   utmMedium: z.string().trim().max(64).optional().or(z.literal("")),
   utmCampaign: z.string().trim().max(64).optional().or(z.literal("")),
+  // The browser's answer on the analytics bar. Only exactly `true` (Allow, no GPC, no ?notrack)
+  // lets the server count the signup in PostHog, Mixpanel or the funnel (Security U-L1).
+  analytics: z.unknown().optional().transform((value) => value === true),
 });
 
 export type WaitlistInput = z.infer<typeof waitlistSchema>;

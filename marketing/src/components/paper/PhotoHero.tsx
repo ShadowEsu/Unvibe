@@ -5,6 +5,7 @@ import { DownloadLink } from "@/components/paper/DownloadLink";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
+import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
@@ -38,6 +39,7 @@ function EmailMeLink() {
           utmSource: (params.get("utm_source") ?? "").slice(0, 64),
           utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
           utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
+          analytics: !browserTrackingDisabled(),
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { referralCode?: string; error?: string };
