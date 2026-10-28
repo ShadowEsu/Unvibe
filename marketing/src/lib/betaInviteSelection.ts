@@ -1,17 +1,17 @@
 import type { WaitlistEntry } from "@/lib/waitlistStore";
 
+type Selectable = Pick<WaitlistEntry, "createdAt" | "newsletterConsent" | "signupSource">;
+
 /**
- * True when the entry was created by a newsletter form: /api/waitlist stamps the consent with the
- * entry's own creation time. A waitlister who ticks the newsletter box later keeps an older
- * createdAt, so they still count as a beta signup. (Someone who subscribed first and then used a
- * beta form can't be told apart from a newsletter-only signup, and is skipped too.)
+ * True when a newsletter form created the entry. `signupSource` is written once, on insert, so a
+ * later newsletter post can't change it (Security R-1). Entries without it (older rows, waitlist and
+ * beta signups) are not newsletter-only, even if they ticked the newsletter box later.
  */
-export function isNewsletterOnly(entry: Pick<WaitlistEntry, "createdAt" | "newsletterConsent">): boolean {
-  const consent = entry.newsletterConsent;
-  return consent !== undefined && Date.parse(consent.at) === Date.parse(entry.createdAt);
+export function isNewsletterOnly(entry: Selectable): boolean {
+  return entry.signupSource === "newsletter";
 }
 
 /** Waitlist entries a beta invite may go to: never a newsletter-only signup (the newsletter mails nobody yet). */
-export function betaInviteCandidates<T extends Pick<WaitlistEntry, "createdAt" | "newsletterConsent">>(entries: readonly T[]): T[] {
+export function betaInviteCandidates<T extends Selectable>(entries: readonly T[]): T[] {
   return entries.filter((entry) => !isNewsletterOnly(entry));
 }

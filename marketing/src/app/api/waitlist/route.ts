@@ -88,6 +88,8 @@ export async function POST(req: Request) {
     newsletterConsent: parsed.data.source === "newsletter"
       ? { source: "newsletter", consentVersion: NEWSLETTER_CONSENT_VERSION, at: createdAt }
       : undefined,
+    // Stored only when this request creates the entry; beta invites skip newsletter-created entries.
+    signupSource: parsed.data.source,
   };
 
   try {

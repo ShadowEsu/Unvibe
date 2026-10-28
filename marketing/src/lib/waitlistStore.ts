@@ -47,6 +47,8 @@ export interface WaitlistEntry {
   betaEmail?: WaitlistBetaEmailRecord;
   betaInviteAt?: string;
   newsletterConsent?: NewsletterConsentRecord;
+  /** Which form created the entry. Written once, on insert, and only for newsletter signups; older entries have none. */
+  signupSource?: "newsletter";
 }
 
 export interface WaitlistAdminEntry extends WaitlistEntry {
@@ -101,6 +103,7 @@ interface WaitlistRow {
   newsletter_consent_source?: string | null;
   newsletter_consent_version?: string | null;
   newsletter_consent_at?: string | null;
+  signup_source?: string | null;
 }
 
 let cachedSupabase: SupabaseClient | null = null;
@@ -158,6 +161,7 @@ function entryFromRow(row: WaitlistRow): WaitlistAdminEntry {
     newsletterConsent: row.newsletter_consent_source === "newsletter" && row.newsletter_consent_version && row.newsletter_consent_at
       ? { source: "newsletter", consentVersion: row.newsletter_consent_version, at: row.newsletter_consent_at }
       : undefined,
+    signupSource: row.signup_source === "newsletter" ? "newsletter" : undefined,
   };
 }
 
@@ -315,9 +319,9 @@ async function writeLocal(entries: WaitlistEntry[]): Promise<void> {
 }
 
 /**
- * Adds a new entry, or reports a duplicate without changing it. A newsletter signup for an email
- * already on the list still records its consent on that entry, so the caller can answer both
- * cases the same way.
+ * Adds a new entry, or reports a duplicate. A newsletter signup for an email already on the list
+ * records its consent on that entry if it has none yet (the first consent stands), so the caller can
+ * answer both cases the same way. `signupSource` is written on insert only, never on a duplicate.
  */
 export async function saveWaitlistEntry(
   entry: WaitlistEntry,
@@ -339,6 +343,7 @@ export async function saveWaitlistEntry(
       utm_campaign: entry.utmCampaign ?? null,
       created_at: entry.createdAt,
       ...newsletterConsentColumns(consent),
+      ...(entry.signupSource ? { signup_source: entry.signupSource } : {}),
     });
     if (!error) return { duplicate: false, storage: "supabase" };
     if (error.code !== "23505") throw new Error(`Supabase waitlist insert failed: ${error.message}`);
@@ -346,7 +351,8 @@ export async function saveWaitlistEntry(
       const { error: consentError } = await supabaseClient()
         .from("waitlist_entries")
         .update(newsletterConsentColumns(consent))
-        .eq("email", entry.email.trim().toLowerCase());
+        .eq("email", entry.email.trim().toLowerCase())
+        .is("newsletter_consent_at", null);
       if (consentError) throw new Error(`Supabase newsletter consent update failed: ${consentError.message}`);
     }
     return { duplicate: true, storage: "supabase" };
@@ -360,7 +366,7 @@ export async function saveWaitlistEntry(
       if (consent) {
         const current = await readEntryBlob(found.url);
         if (!current) throw new Error("Waitlist entry was not readable while recording newsletter consent");
-        await putEntry({ ...current, newsletterConsent: consent });
+        if (!current.newsletterConsent) await putEntry({ ...current, newsletterConsent: consent });
       }
       return { duplicate: true, storage: "blob" };
     }
@@ -371,7 +377,7 @@ export async function saveWaitlistEntry(
   const entries = await readLocal();
   const existing = entries.find((item) => item.email === entry.email);
   if (existing) {
-    if (consent) {
+    if (consent && !existing.newsletterConsent) {
       existing.newsletterConsent = consent;
       await writeLocal(entries);
     }

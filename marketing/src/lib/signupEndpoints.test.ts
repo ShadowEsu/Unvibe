@@ -10,6 +10,8 @@ import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
 import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
 import { NEWSLETTER_CONSENT_VERSION } from "./newsletterConsent";
+import { betaInviteCandidates } from "./betaInviteSelection";
+import { listWaitlistEntries } from "./waitlistStore";
 
 /**
  * Public signup endpoints against a fake Supabase (PostgREST) project, so the real supabase-js
@@ -76,7 +78,9 @@ before(async () => {
       const email = url.searchParams.get("email")?.replace(/^eq\./, "");
       if (request.method === "PATCH") {
         const row = email ? waitlistRows.get(email) : undefined;
-        if (row) Object.assign(row, JSON.parse(body) as Record<string, unknown>);
+        // PostgREST `column=is.null` filters: the update only applies while those columns are empty.
+        const nullFilters = Array.from(url.searchParams).filter(([, value]) => value === "is.null").map(([column]) => column);
+        if (row && nullFilters.every((column) => row[column] == null)) Object.assign(row, JSON.parse(body) as Record<string, unknown>);
         return json(response, 200, [{ id: email }]);
       }
       const rows = Array.from(waitlistRows.values()).filter((row) => !email || row.email === email);
@@ -590,5 +594,33 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     assert.equal(row?.newsletter_consent_source, "newsletter");
     assert.equal(row?.newsletter_consent_version, NEWSLETTER_CONSENT_VERSION);
     assert.ok(row?.newsletter_consent_at);
+  });
+
+  it("a second newsletter post keeps the first consent and the entry stays out of beta invites (Security R-1)", async () => {
+    const email = newsletterEmail();
+    await signUp({ email, source: "newsletter", consent: true });
+    const row = waitlistRows.get(email);
+    assert.ok(row);
+    // An earlier first consent, so a rewrite by the second post would show.
+    const firstAt = "2026-10-01T00:00:00.000Z";
+    row.newsletter_consent_at = firstAt;
+    const again = await signUp({ email, source: "newsletter", consent: true });
+    assert.equal(again.response.status, 200);
+    assert.equal(row.signup_source, "newsletter");
+    assert.equal(row.newsletter_consent_at, firstAt, "the first consent time stands");
+    const listed = (await listWaitlistEntries(10_000)).filter((entry) => entry.email === email);
+    assert.equal(listed.length, 1);
+    assert.deepEqual(betaInviteCandidates(listed), []);
+  });
+
+  it("a waitlist signup that later ticks the newsletter box stays a beta invite candidate", async () => {
+    const email = newsletterEmail();
+    await signUp({ email });
+    await signUp({ email, source: "newsletter", consent: true });
+    const row = waitlistRows.get(email);
+    assert.equal(row?.signup_source, undefined, "a duplicate never writes signup_source");
+    assert.ok(row?.newsletter_consent_at, "the consent is recorded");
+    const listed = (await listWaitlistEntries(10_000)).filter((entry) => entry.email === email);
+    assert.deepEqual(betaInviteCandidates(listed).map((entry) => entry.email), [email]);
   });
 });
