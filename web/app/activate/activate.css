@@ -227,6 +227,8 @@
 .activate-agree input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--a-ink); }
 .activate-agree input:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
 .activate-agree a { color: var(--a-ink); text-decoration: underline; text-underline-offset: 2px; }
+/* "Tick both boxes first." belongs to the boxes: tucked under them, with room before the Google button (Design C2 P2). */
+.activate-agree .activate-note { margin: -2px 0 6px; }
 
 .activate-divider {
   display: flex;
