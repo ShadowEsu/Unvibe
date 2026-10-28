@@ -191,10 +191,9 @@ export default function PrivacyPage() {
 
       <LegalSection heading="Children">
         <p>
-          Unvibe is for people 18 or older: the app, Try it on this site and the sign-in page
-          each ask you to confirm it, because Google&apos;s terms for the Gemini API, which writes
-          the explanations, require users to be 18 or older. We do not knowingly collect personal
-          information from anyone younger.
+          Unvibe is for people 18 or older, because Google&apos;s terms for the Gemini API, which
+          writes the explanations, require it. Try it on this site asks you to confirm it. We do
+          not knowingly collect personal information from anyone younger.
           If you believe someone under 18 has given us data, email us and we will delete it.
         </p>
       </LegalSection>
