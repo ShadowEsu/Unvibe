@@ -20,6 +20,10 @@
 .try__foot { display: grid; gap: 0.55rem; padding: 0.9rem 1rem 1rem; border-top: 1px solid #2c2c29; }
 .try__foot .try__go { margin: 0; padding: 0 1.2rem; }
 .try__foot .try__fine { margin: 0; color: #c9c5bc; }
+/* The two Try consent boxes: Explain's lime, big enough to read as part of the form (Design TC-4 P2). */
+.try__foot .try__consent { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.try__consent input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--v-lime); }
+.try__consent label { cursor: pointer; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 .try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }
