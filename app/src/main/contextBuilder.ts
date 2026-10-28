@@ -100,10 +100,14 @@ export async function buildSelectionPayload(opts: {
   filePath?: string;
   repoRoot?: string | null;
   withNearby: boolean;
+  /** Attach no repository at all (the built-in sample). */
+  noRepo?: boolean;
   question?: string;
   variant?: 'default' | 'different';
 }): Promise<BuiltReview> {
-  const repoRoot = opts.repoRoot ?? (opts.filePath ? await resolveRepoRoot(path.dirname(opts.filePath)) : await resolveRepoRoot());
+  const repoRoot = opts.noRepo
+    ? null
+    : opts.repoRoot ?? (opts.filePath ? await resolveRepoRoot(path.dirname(opts.filePath)) : await resolveRepoRoot());
   const relFile = opts.filePath && repoRoot
     ? path.relative(repoRoot, opts.filePath)
     : opts.filePath ? path.basename(opts.filePath) : undefined;

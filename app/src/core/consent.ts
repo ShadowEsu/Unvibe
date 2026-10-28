@@ -111,3 +111,32 @@ export class ConsentRequiredError extends Error {
     this.name = 'ConsentRequiredError';
   }
 }
+
+/** The built-in first-run sample: Unvibe's own code, not the person's, so it needs no agreement. */
+export const FIRST_RUN_SAMPLE = [
+  'function debounce(fn, wait) {',
+  '  let timer;',
+  '  return (...args) => {',
+  '    clearTimeout(timer);',
+  '    timer = setTimeout(() => fn(...args), wait);',
+  '  };',
+  '}',
+].join('\n');
+
+/**
+ * Exempt only while the request carries nothing but the verbatim sample (Security CC-6): no typed
+ * question, no diff, no file, no surrounding code. Any edit, or anything added, needs the agreement.
+ */
+export function isFirstRunSamplePayload(payload: {
+  question?: string;
+  context: { code?: string; enclosing?: string; diffHunks?: unknown[]; primaryFile?: string; imports: string[]; projectStructure: string[] };
+}): boolean {
+  const { context } = payload;
+  return context.code === FIRST_RUN_SAMPLE
+    && !payload.question
+    && !context.enclosing
+    && !context.diffHunks?.length
+    && !context.primaryFile
+    && context.projectStructure.length === 0
+    && context.imports.every((line) => !line.startsWith('nearby:'));
+}

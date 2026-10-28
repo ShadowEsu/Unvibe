@@ -103,8 +103,10 @@ import {
   resolveRepoRoot,
 } from './contextBuilder';
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
-import { consentStatus, consentStore } from './consent';
-import { agreedItems } from '../core/consent';
+import { consentStatus, providerInUse } from './consent';
+import { codeConsented, consentStore, sendingSwitchedOff } from './consentStore';
+import { agreedItems, FIRST_RUN_SAMPLE } from '../core/consent';
+import { shortcutKeys } from '../core/shortcutKeys';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
@@ -403,8 +405,9 @@ function accessibilityGranted(prompt = false): boolean {
  * stays the same across updates (identical in v0.1.42 and v0.1.43, unsigned-install research
  * 2026-10-22) and macOS should keep the Accessibility grant. Local ad-hoc builds still change
  * identity, and macOS can then keep an entry that looks on but no longer applies. So, as a
- * fallback: after an update, if access was lost, clear the stale entry and ask again once, with a
- * clear note instead of a silent failure.
+ * fallback: after an update, if access was lost, clear the stale entry and say how to turn it on
+ * again. It never raises the macOS prompt by itself: Settings explains first what the shortcut
+ * does with a selection, and its button asks (Security U3, CC-4).
  */
 function repairAccessibilityAfterUpdate(): void {
   if (!isMac) return;
@@ -415,8 +418,7 @@ function repairAccessibilityAfterUpdate(): void {
   try { writeFileSync(file, current); } catch { /* still repair this launch */ }
   if (!last || last === current || accessibilityGranted(false)) return;
   execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => {
-    accessibilityGranted(true);
-    notify('Unvibe updated. Switch Unvibe on in Accessibility once more so the shortcut can read your selection.');
+    notify('Unvibe updated. To use the shortcut again, open Settings, General, and press Allow Accessibility.');
   });
 }
 
@@ -519,17 +521,6 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
-/** First-run sample. Kept in the main process so the renderer can't send arbitrary code this way. */
-const FIRST_RUN_SAMPLE = [
-  'function debounce(fn, wait) {',
-  '  let timer;',
-  '  return (...args) => {',
-  '    clearTimeout(timer);',
-  '    timer = setTimeout(() => fn(...args), wait);',
-  '  };',
-  '}',
-].join('\n');
-
 /**
  * The app a shortcut press came from while macOS had not allowed Accessibility yet, and when. Once
  * the grant shows up, the panel asks main to go back there and explain the selection already made;
@@ -537,7 +528,11 @@ const FIRST_RUN_SAMPLE = [
  */
 let pendingGrant: PendingGrant | null = null;
 
-/** `confirm`: an `unvibe://review` link asked for this; capture it, but send nothing until Explain is pressed. */
+/**
+ * `confirm`: an `unvibe://review` link asked for this; capture it, but send nothing until Explain is pressed.
+ * Before the person agrees to sending code, nothing is captured at all (Windows' synthetic copy would
+ * overwrite the clipboard): the panel opens on the agreement instead (Security CC-4, CC-5).
+ */
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
@@ -573,22 +568,24 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
+  const agreed = codeConsented(providerInUse(usage.remaining));
   const capture = options.sample
     ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' }
-    : options.captured ?? await captureSelection(options);
+    : options.captured ?? (agreed ? await captureSelection(options) : { code: null, sourceApp: null });
   const code = capture.code;
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
-  if (!code) pulseBar({ phase: 'error', label: 'Select code first' });
+  const captureFailed = !code && agreed;
+  if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
-  if (!code && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
-  if (!code && process.platform === 'win32' && !options.preferClipboard) {
+  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
+  if (captureFailed && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
   }
-  const needsGrant = !code && isMac && !options.preferClipboard && !accessibilityGranted(false);
+  const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
   if (needsGrant) {
     // The panel leads with its paste box; Turn on the shortcut asks for the grant.
     reportProgress('accessibility_asked');
@@ -614,9 +611,9 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
 
 function registerShortcut(accel: string): boolean {
   globalShortcut.unregisterAll();
-  // ⌃U is a spare chord on macOS (the IDE bridge owns ⌘U). On Windows Ctrl+U is the
-  // bridge's own key and a common app shortcut, so only the user's choice is grabbed there.
-  const keys = new Set<string>(isMac ? [accel, 'Control+U'] : [accel]);
+  const keys = shortcutKeys(accel, isMac, sendingSwitchedOff());
+  // None while sending is switched off in Settings, Privacy & Data; that isn't a "shortcut taken" failure.
+  if (keys.length === 0) return true;
   let any = false;
   for (const key of keys) {
     try {
@@ -821,24 +818,29 @@ app.whenReady().then(() => {
 
   // --- consent before the user's own code is sent (BOSS ledger 299) ---
   ipcMain.handle('consent:status', () => consentStatus());
-  // Only a form with all three boxes exactly true is an agreement; the time is set here, not by the renderer.
+  // Only a form with all three boxes exactly true, naming a provider Unvibe knows, is an agreement;
+  // the time is set here, not by the renderer.
   ipcMain.handle('consent:agree', (_e, form: unknown) => {
-    const items = agreedItems(form);
-    if (!items) return { ok: false as const, error: 'Tick all three boxes to continue.' };
+    const agreed = agreedItems(form);
+    if (!agreed) return { ok: false as const, error: 'Tick all three boxes to continue.' };
     try {
-      consentStore().agree(items);
+      consentStore().agree(agreed.items, agreed.provider);
     } catch {
       return { ok: false as const, error: 'Unvibe could not save your answer. Nothing was sent; try again.' };
     }
+    // Back from the off switch: the shortcuts come back too.
+    registerShortcut(settings().all().shortcut);
     return { ok: true as const, status: consentStatus() };
   });
-  // The off switch: every send checks it, so it applies to the next request at once.
+  // The off switch: every send checks the record, so it applies to the next request at once, and
+  // every global shortcut (the Mac's Control+U too) is unregistered.
   ipcMain.handle('consent:revoke', () => {
     try {
       consentStore().revoke();
     } catch {
       return { ok: false as const, error: 'Unvibe could not save that. Try again.' };
     }
+    registerShortcut(settings().all().shortcut);
     return { ok: true as const, status: consentStatus() };
   });
 
@@ -1445,6 +1447,8 @@ app.whenReady().then(() => {
     }
     if (!accessibilityGranted(false)) return { explained: false };
     pendingGrant = null;
+    // Turned off since the press: capture nothing.
+    if (!codeConsented(providerInUse())) return { explained: false };
     const capture = await captureSelection({ fromApp });
     if (!capture.code) return { explained: false };
     await startReview({ captured: { code: capture.code, sourceApp: fromApp } });

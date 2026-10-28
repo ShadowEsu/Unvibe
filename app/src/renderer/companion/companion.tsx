@@ -22,6 +22,7 @@ import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
+import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 
@@ -392,8 +393,8 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className="perm-title">Accessibility</span>
       </div>
       <div className="perm-why">{isWindows
-        ? 'Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app.'
-        : 'macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U. It never reads your keystrokes or your screen.'}</div>
+        ? 'Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to Google Gemini through Unvibe to explain it.'
+        : 'macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to Google Gemini through Unvibe to explain it. It never reads your keystrokes or your screen.'}</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
@@ -716,7 +717,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                   <h3 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h3>
                   <p>Select code in any app and press Control U. No copying, no pasting.</p>
                 </div>
-                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U. It never reads your keystrokes or your screen.</span></p>
+                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to Google Gemini through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
                 <div className="ob2__offer-acts">
                   <button type="button" className="field-btn ob2__lime" onClick={() => void turnOn()}>Turn on the shortcut</button>
                 </div>
@@ -1385,37 +1386,39 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
 }
 
 /**
- * The off switch for the first-send agreement (Security U15). Off takes effect on the next request:
- * every send checks the stored record. On asks with the same three boxes as the first time.
+ * The off switch for sending code (Security U36, CC-5). Off takes effect on the next request:
+ * every send checks the stored record, and the global shortcuts are unregistered. On asks with
+ * the same three boxes, naming the provider in use.
  */
 function AiSendRow() {
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<ConsentStatus | null>(null);
   const [error, setError] = useState('');
-  useEffect(() => {
-    void window.unvibe.consentStatus().then((status) => setAllowed(status.allowed));
-  }, []);
+  const refresh = () => void window.unvibe.consentStatus().then(setStatus);
+  useEffect(refresh, []);
   const toggle = async () => {
+    if (!status) return;
     setError('');
-    if (allowed) {
+    if (status.allowed) {
       const result = await window.unvibe.consentRevoke();
-      if (result.ok) setAllowed(false);
+      if (result.ok) setStatus(result.status);
       else setError(result.error);
       return;
     }
-    if (await askForConsent()) setAllowed(true);
+    if (await askForConsent(status.provider)) refresh();
   };
+  const name = status?.providerName ?? 'Google Gemini';
   return (
     <div className="setrow">
       <div>
-        <div className="sl">Send code to Google Gemini</div>
+        <div className="sl">Send code to {name}</div>
         <div className="sd">
-          {allowed === false
-            ? 'Off. Nothing you select, paste or ask is sent. Explaining code asks you again first.'
-            : 'On. The code you ask about and your questions go to Google Gemini to write explanations. Turn this off to stop sending at once.'}
+          {status?.allowed === false
+            ? `Off. Nothing you select, paste or ask is sent${status.switchedOff ? ', and the shortcut is off' : ''}. Explaining code asks you first.`
+            : `On. The code you ask about and your questions go to ${name}${status?.ownKey ? ' with your own key' : ''} to write explanations. Turn this off to stop sending at once.`}
           {error ? <> {error}</> : null}
         </div>
       </div>
-      {allowed === null ? null : <Toggle label="Send code to Google Gemini" on={allowed} onClick={() => void toggle()} />}
+      {status ? <Toggle label={`Send code to ${name}`} on={status.allowed} onClick={() => void toggle()} /> : null}
     </div>
   );
 }

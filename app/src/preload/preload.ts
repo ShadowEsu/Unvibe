@@ -1,4 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ConsentProvider } from '../core/consent';
+import type { ConsentStatus } from '../main/consent';
+
+type ConsentAnswer = { ok: true; status: ConsentStatus } | { ok: false; error: string };
 
 /** Bridge exposed to sandboxed renderers as window.unvibe. No node, no network. */
 const api = {
@@ -111,10 +115,10 @@ const api = {
   },
 
   // consent before the user's own code is sent: status, the three-box form, the off switch
-  consentStatus: (): Promise<{ allowed: boolean; policyVersion: string; agreedAt?: string }> => ipcRenderer.invoke('consent:status'),
-  consentAgree: (form: { aiSend: boolean; terms: boolean; age18: boolean }): Promise<{ ok: true; status: { allowed: boolean } } | { ok: false; error: string }> =>
+  consentStatus: (): Promise<ConsentStatus> => ipcRenderer.invoke('consent:status'),
+  consentAgree: (form: { aiSend: boolean; terms: boolean; age18: boolean; provider: ConsentProvider }): Promise<ConsentAnswer> =>
     ipcRenderer.invoke('consent:agree', form),
-  consentRevoke: (): Promise<{ ok: true; status: { allowed: boolean } } | { ok: false; error: string }> => ipcRenderer.invoke('consent:revoke'),
+  consentRevoke: (): Promise<ConsentAnswer> => ipcRenderer.invoke('consent:revoke'),
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),

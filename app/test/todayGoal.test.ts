@@ -17,6 +17,11 @@ import { deleteAccountAndLocalData } from '../src/main/accountDeletion';
 import { store } from '../src/main/store';
 import { mergeRemoteEvents } from '../src/core/syncModel';
 import { answerQuizCard, startQuizCard } from '../src/main/studyQuiz';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// Quiz cards ask Unvibe's server about the person's lessons, which needs their agreement.
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
 
 /** Local wall-clock time on the test computer (month is 1-based). */
 function local(year: number, month: number, day: number, hour = 12, minute = 0, second = 0, ms = 0): Date {

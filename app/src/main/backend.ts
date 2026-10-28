@@ -5,6 +5,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
+import { isFirstRunSamplePayload } from '../core/consent';
+import { requireCodeConsent } from './consentStore';
 import { serviceMessage } from '../core/serviceError';
 import { store } from './store';
 import { bakedTrialToken } from './trial';
@@ -356,7 +358,27 @@ export async function pullEvents(
   return [...byId.values()].sort((a, b) => a.ts.localeCompare(b.ts) || a.id.localeCompare(b.id));
 }
 
+/**
+ * The one way the person's code, diffs and questions reach Unvibe's server for an explanation
+ * (Unvibe's server uses Google Gemini). Refuses with ConsentRequiredError, before any request,
+ * without an agreement; only the verbatim built-in sample is exempt (Security CC-1, CC-6).
+ */
+export async function postReview(payload: ReviewRequestPayload, token: string | null | undefined, signal: AbortSignal): Promise<Response> {
+  if (!isFirstRunSamplePayload(payload)) requireCodeConsent('unvibe');
+  return networkFetch(`${BACKEND}/api/v1/reviews`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...aiAuthHeaders(token),
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+}
+
+/** A quiz question about the code: the code goes to Unvibe's server too, so the same agreement applies. */
 export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null, signal?: AbortSignal): Promise<ComprehensionQuestion> {
+  if (!isFirstRunSamplePayload(payload)) requireCodeConsent('unvibe');
   const res = await request(`${BACKEND}/api/v1/comprehension`, {
     method: 'POST',
     headers: {

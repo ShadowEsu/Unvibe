@@ -20,6 +20,13 @@ import { flush } from '../src/main/sync';
 import { abortChatAndStudy, answerQuizCard, askChat, askStudyAssistant, saveChatThread, startQuizCard } from '../src/main/studyQuiz';
 import { invalidateAppUsage } from '../src/main/usage';
 import type { LocalEvent } from '../src/core/learning';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// Chat, Study and quiz run here on the person's own lessons, through Unvibe and through their own
+// key (the default own-key provider, Gemini), so they have agreed to both.
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
+consentStore().agree([...CONSENT_ITEMS], 'gemini');
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
 const SETTINGS_FILE = path.join(userData, 'unvibe-settings.json');

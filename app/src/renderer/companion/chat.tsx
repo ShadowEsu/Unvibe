@@ -6,6 +6,7 @@ import type { ChangeBrief } from '../../core/changeBrief';
 import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 import { chatAskRequest } from './chatRequest';
 import { askForConsent } from '../shared/consentForm';
+import type { ConsentProvider } from '../../core/consent';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -271,7 +272,7 @@ export function Chat({
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question, ts: new Date().toISOString() }];
     setMessages(nextMessages);
     const result = await window.unvibe.chatAsk(chatAskRequest(nextMessages.slice(0, -1), question, threadGenRef.current)) as {
-      ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number;
+      ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; provider?: ConsentProvider; wipeGeneration?: number;
     };
     window.clearTimeout(thinkTimer);
     setBusy(false);
@@ -285,8 +286,8 @@ export function Chat({
         setError(result.error ?? '');
         return;
       }
-      // First send of the person's own words: ask, then send this message once they agree.
-      if (await askForConsent()) void send(question);
+      // First send to this provider: ask, then send this message once they agree.
+      if (result.provider && await askForConsent(result.provider)) void send(question);
       return;
     }
     if (!result.ok || !result.answer || result.wipeGeneration === undefined) {

@@ -14,6 +14,12 @@ import type { ReviewRequestPayload } from '../src/core/protocol';
 import { applyBuiltReview, gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 import { computeToday } from '../src/core/learning';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// These tests are about explaining the person's own code, so the person has agreed to sending it
+// (consent.test.ts covers what happens before that).
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
 
 /** Every request body the backend received, by path. */
 const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
@@ -256,7 +262,7 @@ test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; a
 });
 
 test('review streams forward only the token, done and error events the service sends', async () => {
-  const appOnly = ['init', 'understood', 'status', 'consent', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
+  const appOnly = ['init', 'understood', 'status', 'consent', 'consentNeeded', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
   const { win, events } = panel();
   // Forwarded events are rebuilt without extra fields, so the stream's own values mark them.
   reviewEvents = [...appOnly, 'token', 'error', 'unhandled', 'constructor', '', 'done'].map((type) => ({

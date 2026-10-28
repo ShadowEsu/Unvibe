@@ -14,6 +14,7 @@ import { UsageRings } from '../shared/usageRings';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
+import type { ConsentProvider } from '../../core/consent';
 import '../shared/tokens.css';
 
 /**
@@ -77,6 +78,12 @@ interface TabState {
   teachNote: string;
   teachChecks: Array<{ topic: string; mark: 'covered' | 'partial' | 'missed' }>;
   teachEvidence: string;
+  /** The provider the consent form names while phase is `aiConsent`. */
+  consentProvider: ConsentProvider | null;
+  /** A link started this review: after agreeing, show the confirm sheet, not an explanation. */
+  confirmAfterConsent: boolean;
+  /** Who Explain sends the code to, for the confirm sheet (Security U10). */
+  providerName: string;
 }
 
 const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
@@ -148,6 +155,9 @@ function newTab(id: string, label: string): TabState {
     teachNote: '',
     teachChecks: [],
     teachEvidence: '',
+    consentProvider: null,
+    confirmAfterConsent: false,
+    providerName: 'Google Gemini',
   };
 }
 
@@ -248,7 +258,7 @@ function EmptyPicker({
       <div className="state empty-picker empty-picker--paste">
         <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
         <div className="big">Paste the code here.</div>
-        <PasteTarget compact hint="Copy a few lines (⌘C) in your editor, then paste here. It explains right away."
+        <PasteTarget compact hint="Copy a few lines (⌘C) in your editor, then paste here to explain them."
           onPaste={(text) => window.unvibe.usePaste({ text, level })} />
         <div className="empty-actions">
           <button className="btn ghost" disabled={picking} onClick={() => void chooseFile()}>
@@ -257,7 +267,7 @@ function EmptyPicker({
         </div>
         {hint ? <div className="sub empty-hint">{hint}</div> : null}
         <div className="empty-or">or</div>
-        <div className="sub">To explain a selection straight from any app, turn on the shortcut. macOS asks once.</div>
+        <div className="sub">To explain a selection straight from any app, turn on the shortcut. Pressing it sends the selected code to Google Gemini through Unvibe. macOS asks once.</div>
         {guideOpen ? (
           <div className="access-note"><ShortcutGuide buttonClass="btn ghost" /></div>
         ) : (
@@ -495,6 +505,7 @@ function Widget() {
               phase: ev.consentProvider ? 'aiConsent' : ev.hasCode ? (ev.confirm ? 'confirm' : 'ready') : 'empty',
               consentProvider: ev.consentProvider ?? null,
               confirmAfterConsent: Boolean(ev.confirm),
+              providerName: ev.providerName,
               level: ev.level,
             });
           }
@@ -504,7 +515,7 @@ function Widget() {
             playTone('think');
             return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
           case 'consentNeeded':
-            return patchTab(prev, tabId, { phase: 'aiConsent' });
+            return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
             return patchTab(prev, tabId, { findings: ev.findings ?? [], phase: 'consent' });
           case 'blocked':
@@ -873,14 +884,19 @@ function Widget() {
             </div>
           )}
 
-          {phase === 'aiConsent' && (
+          {phase === 'aiConsent' && active.consentProvider && (
             <div className="state">
               <ConsentForm
+                key={active.consentProvider}
+                provider={active.consentProvider}
                 buttonClass="btn"
                 onAgreed={() => {
-                  // The captured code waited on this computer; explain it now. Nothing captured: the picker.
-                  if (active.meta.lines) request({});
-                  else setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'empty' }));
+                  // An explanation already on screen (a follow-up was refused): back to it, ask again from there.
+                  // A link capture: the confirm sheet, so the code is seen before it's sent.
+                  // Captured code that waited on this computer: explain it now. Nothing captured: the picker.
+                  const next: Phase | null = active.text ? 'done' : active.confirmAfterConsent ? 'confirm' : active.meta.lines ? null : 'empty';
+                  if (next) setTabs((prev) => patchTab(prev, activeRef.current, { phase: next, consentProvider: null }));
+                  else request({});
                 }}
                 onCancel={() => window.unvibe.closeWidget()}
               />
@@ -913,7 +929,7 @@ function Widget() {
                   <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
-              <div className="sub">Your editor or a link asked Unvibe to explain what is on your clipboard. Nothing has been sent yet.</div>
+              <div className="sub">Your editor or a link asked Unvibe to explain what is on your clipboard. Nothing has been sent yet. Explain sends it to {active.providerName}.</div>
               <button className="btn" onClick={() => request({})}>
                 Explain
               </button>

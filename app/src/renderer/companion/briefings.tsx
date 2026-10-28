@@ -113,7 +113,7 @@ export function Briefings() {
       {needsRepo && !busy && (
         <section className="briefings__empty">
           <h2>Your next change, made clear.</h2>
-          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}; AI explanations ask for your consent separately.</p>
+          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Understand Change and Explain the change send that git diff to Google Gemini (or your own key's provider), after you agree once.</p>
           <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}

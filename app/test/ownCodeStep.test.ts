@@ -17,6 +17,11 @@ import { noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from '../src/m
 import { runReview, type ReviewSession } from '../src/main/review';
 import { settings } from '../src/main/settings';
 import { store } from '../src/main/store';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// The own-code step ends after the person's own code is explained, which needs their agreement first.
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
 
 // The explanation service streams one short explanation; anything else is not found.
 net.fetch = async (input: string | URL | Request): Promise<Response> => {
