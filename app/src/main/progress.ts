@@ -47,7 +47,7 @@ export async function sendProgress(step: ProgressStep, deps: ProgressDeps): Prom
 }
 
 const liveDeps: ProgressDeps = {
-  enabled: () => trialBuildEnabled() && !fullProductBuildEnabled() && settings().all().shareSetupProgress,
+  enabled: () => trialBuildEnabled() && !fullProductBuildEnabled() && settings().all().shareSetupProgress === true,
   platform: process.platform,
   sent: (step) => store().progressSent(step),
   markSent: (step) => store().markProgressSent(step),
