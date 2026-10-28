@@ -22,8 +22,10 @@
   --ask: #111111;
   --ask-soft: #f3f3f3;
 }
+/* System dark applies to the ink panel only: the paper panel (data-panel="light", the default) keeps
+   its own light colours, or its dark ink text lands on a dark card (Design C1 P1: 1.1:1 rail labels). */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not([data-panel="light"]) {
     --bg: #111111;
     --fg: #f4f4f4;
     --muted: rgb(245 243 250 / 0.82);
@@ -44,7 +46,7 @@
     --ask-soft: #1c1c1c;
   }
 }
-:root[data-theme="dark"] {
+:root[data-theme="dark"]:not([data-panel="light"]) {
   --bg: #111111;
   --fg: #f4f4f4;
   --muted: rgb(245 243 250 / 0.82);
@@ -117,13 +119,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
 .card::before { content:""; position:absolute; left:32%; right:32%; top:0; height:2px; border-radius:0 0 2px 2px; background:var(--fg); opacity:.7; pointer-events:none; z-index:2; }
 .card::after { content: none; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .card {
+  :root:not([data-theme="light"]):not([data-panel="light"]) .card {
     background: var(--bg);
     backdrop-filter: blur(30px) saturate(1.25);
     box-shadow: 0 18px 48px rgb(0 0 0 / 0.5), inset 0 1px rgb(255 255 255 / 0.12);
   }
 }
-:root[data-theme="dark"] .card {
+:root[data-theme="dark"]:not([data-panel="light"]) .card {
   background: var(--bg);
   backdrop-filter: blur(30px) saturate(1.25);
   box-shadow: 0 18px 48px rgb(0 0 0 / 0.5), inset 0 1px rgb(255 255 255 / 0.12);
@@ -209,12 +211,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   backdrop-filter: blur(14px) saturate(1.15);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .head {
+  :root:not([data-theme="light"]):not([data-panel="light"]) .head {
     background: var(--bg);
     border-bottom-color: rgb(255 255 255 / 0.12);
   }
 }
-:root[data-theme="dark"] .head {
+:root[data-theme="dark"]:not([data-panel="light"]) .head {
   background: var(--bg);
   border-bottom-color: rgb(255 255 255 / 0.12);
 }
@@ -957,14 +959,14 @@ code.inline {
   backdrop-filter: none; animation-duration: .18s;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .card {
+  :root:not([data-theme="light"]):not([data-panel="light"]) .card {
     --bg: #1e1e20; --fg: #f2f2f3; --muted: #a1a1a6; --line: #343437;
     --chip-bg: #2a2a2d; --panel-tint: #242427; --fill: #f2f2f3; --fill-strong: #fff; --on-fill: #111;
     --plain-code-bg: #161618; --plain-code-fg: #e8e8ea;
     box-shadow: 0 10px 30px rgba(0,0,0,.45);
   }
 }
-:root[data-theme="dark"] .card {
+:root[data-theme="dark"]:not([data-panel="light"]) .card {
   --bg: #1e1e20; --fg: #f2f2f3; --muted: #a1a1a6; --line: #343437;
   --chip-bg: #2a2a2d; --panel-tint: #242427; --fill: #f2f2f3; --fill-strong: #fff; --on-fill: #111;
   --plain-code-bg: #161618; --plain-code-fg: #e8e8ea;
@@ -1573,8 +1575,13 @@ code.inline {
 .card .tab__x:hover, .card .tab__x:focus-visible { opacity: 1; background: var(--p-raised); }
 .card .tab-add { width: 30px; height: 30px; }
 
-/* Disabled controls stay legible as "not yet" instead of vanishing. */
-.card .widget-tools button:disabled { opacity: 0.55; }
+/* Disabled controls stay legible as "not yet" instead of vanishing. Rail labels are ink when the tool
+   is available or open; an unavailable tool keeps a muted label at full strength (4.5:1 or more on
+   paper and ink) and only its icon dims. */
+.card .widget-tools button b { color: var(--p-ink); }
+.card .widget-tools button:disabled { opacity: 1; }
+.card .widget-tools button:disabled b { color: var(--p-muted); }
+.card .widget-tools button:disabled .widget-tool-icon { opacity: 0.45; }
 .card .lvl:disabled { opacity: 0.55; cursor: default; }
 
 /* Saved note: a round dot that reads on paper and ink, not a lime square. */
