@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import nextConfig from "../../next.config.mjs";
+import apiConfig from "../../../web/next.config.mjs";
 import { ENFORCED_CSP, LISTING_IMAGE_HOSTS, REPORTING_ENDPOINTS, reportOnlyCsp } from "./csp.mjs";
 import { listingBadges } from "../data/listings";
 import { CSP_REPORT_MAX_BYTES, SITE_ROUTES, createCspCollector, violationsFrom } from "./cspReport";
@@ -26,6 +27,11 @@ describe("unvibe.site sends the C3 policies on every page (Security C3)", () => 
     assert.doesNotMatch(strict, /script-src[^;]*'unsafe-inline'/);
     assert.match(strict, /report-uri \/api\/csp-report/);
     assert.match(strict, /report-to csp/);
+  });
+
+  it("api.unvibe.site enforces the same four directives on every response", async () => {
+    const all = (await apiConfig.headers!()).find((rule) => rule.source === "/:path*")!.headers;
+    assert.equal(all.find((h) => h.key === "Content-Security-Policy")?.value, ENFORCED_CSP);
   });
 
   it("the strict policy names the API and Supabase origins it is given, and ignores junk", () => {

@@ -23,6 +23,9 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // Security C3: the same four directives unvibe.site enforces (marketing/src/lib/csp.mjs ENFORCED_CSP;
+          // a marketing test keeps the two equal). /activate, /plan and /invite leave by link or script, never by form.
+          { key: 'Content-Security-Policy', value: "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" },
         ],
       },
     ];
