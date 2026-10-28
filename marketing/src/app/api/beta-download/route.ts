@@ -28,6 +28,8 @@ const schema = z.object({
   // The friend's code from their ?ref= link (app gift code or legacy waitlist code). Kept for
   // attribution only: Pro months come from entering the gift code in the signed-in app.
   referredBy: z.string().trim().regex(/^([a-f0-9]{8}|[A-Za-z0-9_-]{16})?$/).optional().default(""),
+  // The "Also email me one setup tip tomorrow" box. Only a literal true schedules the tip.
+  reminder: z.unknown().transform((value) => value === true),
 });
 
 const IP_LIMIT: RateLimitRule = { name: "beta-download-ip", windowSeconds: 60, max: 6 };
@@ -57,10 +59,11 @@ export async function POST(request: Request) {
   if (ceiling) return ceiling;
   const existing = await findBetaDownload(email, release).catch(() => null);
   const code = existing?.referralCode || referralCode(email);
+  const setupTip = parsed.data.reminder;
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
-    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, release, setupTipFollows: true });
-  if (!existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
+    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, release, setupTipFollows: setupTip });
+  if (setupTip && !existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {
     firstName: parsed.data.firstName,

@@ -458,6 +458,10 @@ p { font-size: 1.02rem; }
 .remind__done { margin: 0 !important; font-weight: 700; }
 .remind__done em { font-family: var(--font-serif); font-weight: 400; }
 .remind__error { color: #b91c1c; font-size: 0.9rem; margin-top: 0.4rem !important; }
+.remind__check { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; font-size: 0.95rem; }
+.remind__check input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--v-ink); }
+.remind .remind__fine { margin: 0.5rem 0 0; font-size: 0.85rem; }
+.remind__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .live__dot, .try__bob, .try__thinking > i, .fb-overlay, .fb-dialog, .remind { animation: none; } }
 @media (min-width: 821px) { .remind { bottom: 6.6rem; } }
 @media (min-width: 700px) { .remind { left: 3.4rem; } }

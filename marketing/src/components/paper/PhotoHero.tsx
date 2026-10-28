@@ -82,7 +82,7 @@ function EmailMeLink() {
         </button>
       </form>
       {error ? <p className="vhero__error" id="hero-email-error" role="alert">{error}</p> : null}
-      <p className="vhero__fine" id="hero-email-note">One email with the download link for your Mac or PC. Unsubscribe any time.</p>
+      <p className="vhero__fine" id="hero-email-note">One email with the download link for your Mac or PC. Unsubscribe any time. <a href="/privacy">Privacy</a></p>
     </div>
   );
 }

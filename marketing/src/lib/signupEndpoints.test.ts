@@ -211,6 +211,59 @@ describe("beta-download hands out the pinned release", () => {
   });
 });
 
+describe("beta-download: the setup tip email is its own opt-in", () => {
+  /** Posts a download request and returns what would go to Resend. Only the fake Supabase is reachable. */
+  async function sentEmails(body: Record<string, unknown>): Promise<{ key: string | null; text: string; scheduledAt?: string }[]> {
+    const emails: { key: string | null; text: string; scheduledAt?: string }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url === "https://api.resend.com/emails") {
+        const sent = JSON.parse(String(init?.body)) as { text: string; scheduled_at?: string };
+        emails.push({ key: new Headers(init?.headers).get("idempotency-key"), text: sent.text, scheduledAt: sent.scheduled_at });
+        return Response.json({ id: `email-${emails.length}` });
+      }
+      if (process.env.SUPABASE_URL && url.startsWith(process.env.SUPABASE_URL)) return realFetch(input, init);
+      throw new Error(`unexpected network call from the test: ${url}`);
+    }) as typeof fetch;
+    try {
+      await withEnv({ RESEND_API_KEY: "resend-test-key" }, async () => {
+        // A fresh address each run: the local download store (.data) remembers who was already emailed.
+        const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `setup-tip-${randomUUID()}@example.com`, ...body }));
+        assert.equal(response.status, 200);
+      });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    return emails;
+  }
+
+  for (const [label, body] of [
+    ["no reminder field", {}],
+    ["reminder: false", { reminder: false }],
+    ['reminder: "true" (a string)', { reminder: "true" }],
+    ["reminder: 1", { reminder: 1 }],
+  ] as const) {
+    it(`schedules no setup tip with ${label}, and the welcome email doesn't promise one`, async () => {
+      const emails = await sentEmails(body);
+      assert.deepEqual(emails.filter((sent) => sent.key?.startsWith("unvibe-setup-reminder-")), [], "no setup tip scheduled");
+      assert.ok(emails.every((sent) => !sent.scheduledAt), "nothing scheduled for later");
+      const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
+      assert.ok(welcome, "the welcome email was still sent");
+      assert.ok(!welcome.text.includes("setup tip"), "the welcome email doesn't mention a setup tip");
+    });
+  }
+
+  it("schedules the setup tip for tomorrow only with reminder: true", async () => {
+    const emails = await sentEmails({ reminder: true });
+    const tips = emails.filter((sent) => sent.key?.startsWith("unvibe-setup-reminder-"));
+    assert.equal(tips.length, 1, "one setup tip scheduled");
+    assert.equal(tips[0]!.scheduledAt, "in 1 day");
+    const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
+    assert.ok(welcome?.text.includes("one setup tip tomorrow"), "the welcome email says the tip follows");
+  });
+});
+
 describe("the signup rate limit is shared across serverless instances", () => {
   it("waitlist: the 9th call from one IP is limited even when it lands on another instance", async () => {
     // A query-suffixed import loads a second, separate module instance, like a second serverless
