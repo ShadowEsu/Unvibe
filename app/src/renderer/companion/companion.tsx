@@ -513,7 +513,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const lines = [
     "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
     explained
-      ? "That's me, explaining it in the panel. Read it, then press Test me there."
+      ? "That's me, explaining it in the panel. Read it, then press Test me."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
     isWindows
       ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
