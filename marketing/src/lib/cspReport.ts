@@ -32,13 +32,23 @@ function blockedOrigin(raw: unknown): string {
   }
 }
 
-/** The page's path only: no query, no fragment. */
+/**
+ * The page's route shape only: no query, no fragment, and no values. The first segment is kept when
+ * it looks like a route name; every later segment (the /s/ stats key, an explain id, a token) and any
+ * other first segment becomes `:param`, so a credential in a URL never reaches the logs (Security C3-M1).
+ */
 function pagePath(raw: unknown): string {
+  let pathname: string;
   try {
-    return capped(new URL(typeof raw === "string" ? raw : "").pathname);
+    pathname = new URL(typeof raw === "string" ? raw : "").pathname;
   } catch {
     return "unknown";
   }
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) return "/";
+  const [first, ...rest] = segments;
+  const head = /^[a-z0-9-]{1,40}$/.test(first) ? first : ":param";
+  return `/${[head, ...rest.map(() => ":param")].join("/")}`;
 }
 
 /** The directive's name only (a `violated-directive` may carry its whole source list). */

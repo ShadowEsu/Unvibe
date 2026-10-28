@@ -93,6 +93,27 @@ describe("/api/csp-report keeps only directive, origin and path (Security C3 con
     ]);
   });
 
+  it("the stats key, explain ids and other URL values never reach a log line (Security C3-M1)", () => {
+    const key = "Zq8rT3vYk2LmN9pW";
+    const urls = [
+      `https://unvibe.site/s/${key}`,
+      `https://unvibe.site/s/${key}/`,
+      "https://unvibe.site/explain/python-list-comprehension",
+      "https://unvibe.site/invite/abc123TOKEN",
+      "https://unvibe.site/Someone@Example.com",
+      "https://unvibe.site/pricing",
+    ];
+    const lines: string[] = [];
+    const collector = createCspCollector({ log: (line) => lines.push(line) });
+    const got = urls.flatMap((url) =>
+      violationsFrom(legacy({ "document-uri": url, "violated-directive": "script-src-elem", "blocked-uri": "inline" }), "application/csp-report"));
+    assert.deepEqual(got.map((v) => v.path), ["/s/:param", "/s/:param", "/explain/:param", "/invite/:param", "/:param", "/pricing"]);
+    collector.add(got, 0);
+    collector.flush();
+    assert.ok(lines.length > 0);
+    for (const line of lines) assert.doesNotMatch(line, new RegExp(`${key}|comprehension|TOKEN|Someone|Example`));
+  });
+
   it("logs one line per (directive, blocked, path) per minute, with counts", () => {
     const lines: string[] = [];
     const collector = createCspCollector({ log: (line) => lines.push(line) });
