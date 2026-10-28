@@ -2,6 +2,7 @@ import { createHash, createHmac } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/try/route';
+import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
 
 // The real /api/v1/try handler; only the AI providers and PostgREST HTTP boundaries are local.
 const BASE_ENV = { ...process.env };
@@ -82,7 +83,8 @@ function tryRequest(ip = `198.51.100.${++ipSeq % 250}`): Request {
   return new Request('http://localhost/api/v1/try', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
-    body: JSON.stringify({ code: 'const a = 1 + 1;', level: 'beginner' }),
+    // Both Try it boxes ticked, at the current version: these tests are about what happens after that.
+    body: JSON.stringify({ code: 'const a = 1 + 1;', level: 'beginner', consent: { v: TRY_CONSENT_VERSION, aiSend: true, age18: true } }),
   });
 }
 
