@@ -33,8 +33,12 @@ export default function PrivacyPage() {
             comprehension results, concepts, and streaks.
           </li>
           <li>
-            <strong>Account data:</strong> your email for sign-in and an
-            authentication token.
+            <strong>Account data:</strong> your email for sign-in, your name from Google if you
+            sign in with Google, and an authentication token. Before you sign in, the sign-in page
+            asks you to agree to the Terms and this policy and to confirm you&apos;re 18 or older.
+            If you start a Google or email sign-in but never approve the app, our sign-in provider
+            (Supabase) still keeps that email and name as a sign-in record, with no Unvibe account
+            and no app access. Email support@unvibe.site to have it deleted.
           </li>
           <li>
             <strong>Feedback you send:</strong> your star rating and message, where it
