@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/try/route';
 import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
-import { TRY_ROOMS, roomBucket, type TryRoom } from '../src/lib/tryRooms';
+import { TRY_ROOMS, roomBucket, roomCodeMac, type TryRoom } from '../src/lib/tryRooms';
 
 // The real /api/v1/try handler; only the AI providers and PostgREST HTTP boundaries are local.
 const BASE_ENV = { ...process.env };
@@ -101,6 +101,7 @@ beforeEach(() => {
     SUPABASE_URL: undefined,
     SUPABASE_SERVICE_ROLE_KEY: undefined,
     TRY_IP_SALT: undefined,
+    TRY_ROOM_KEY: undefined,
   });
   calls.gemini = 0;
   calls.openrouter = 0;
@@ -294,12 +295,15 @@ test('outside production the memory fallback stops one IP at 6 an hour and every
   assert.equal(calls.gemini, 500);
 });
 
-/** Runs `body` with one scheduled room (code "ROOM-TEST-1", 8 an hour) open from an hour ago. */
+const ROOM_KEY = 'local-room-key-0123456789abcdef0123456789abcdef';
+
+/** Runs `body` with TRY_ROOM_KEY set and one scheduled room (code "ROOM-TEST-1", 8 an hour) in `window`. */
 async function withRoom(window: { start: number; end: number }, body: (room: TryRoom) => Promise<void>): Promise<void> {
+  setEnv({ TRY_ROOM_KEY: ROOM_KEY });
   const now = Date.now();
   const room: TryRoom = {
     id: 'test-room',
-    codeSha256: createHash('sha256').update('ROOMTEST1').digest('hex'),
+    codeMac: roomCodeMac('ROOM-TEST-1', ROOM_KEY),
     start: new Date(now + window.start).toISOString(),
     end: new Date(now + window.end).toISOString(),
     perHour: 8,
@@ -365,5 +369,16 @@ test('a room still stops at the site-wide 500 a day', async () => {
     assert.equal(res.status, 429);
     assert.match(await res.text(), /busy today/);
     assert.equal(calls.gemini, 0);
+  });
+});
+
+test('without TRY_ROOM_KEY the right code opens nothing and counts as an ordinary visit', async () => {
+  production();
+  await withRoom({ start: -60_000, end: 3_600_000 }, async (room) => {
+    setEnv({ TRY_ROOM_KEY: undefined });
+    const res = await POST(tryRequest('203.0.113.53', { room: 'ROOM-TEST-1' }));
+    assert.equal(res.status, 200);
+    assert.equal((await res.json() as { room?: string }).room, 'not-open');
+    assert.ok(rpcCalls.every((args) => args.p_ip_hash !== roomBucket(room) && args.p_ip_cap === 6));
   });
 });

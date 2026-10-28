@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
  * Group sessions ("Rooms"): a room shares one network, so the per-network cap of Try it
@@ -6,14 +6,17 @@ import { createHash, timingSafeEqual } from 'node:crypto';
  * inside the room's window, requests with that code count against the room's own hourly bucket
  * instead. The site-wide daily cap still applies.
  *
- * Only sha256 hashes of the codes are committed, never the codes. A leaked code is good only
- * until its window ends and only up to its cap.
+ * The repository is public, and a code people can say out loud is short, so a plain hash of it
+ * would give the code away. Each row holds an HMAC-SHA256 of the code under TRY_ROOM_KEY, a server
+ * secret that is never committed (Security R-M1). Without the key no code opens a room.
+ * `web/scripts/try-room-code.mjs` makes a random code and its row; the code goes to the host
+ * privately and never into git, a PR, a request file or a log.
  */
 export type TryRoom = {
   /** Short label, e.g. "2026-11-03-a". Never shown to members. */
   id: string;
-  /** sha256 hex of the normalized code (see `normalizeRoomCode`). */
-  codeSha256: string;
+  /** HMAC-SHA256 hex of the normalized code under TRY_ROOM_KEY (see `roomCodeMac`). */
+  codeMac: string;
   /** ISO times; the code works from `start` until just before `end`. */
   start: string;
   end: string;
@@ -28,28 +31,42 @@ export const TRY_ROOMS: readonly TryRoom[] = [];
 export const TRY_ROOM_MAX_HOURS = 3;
 /** Highest hourly cap a room may have. */
 export const TRY_ROOM_MAX_PER_HOUR = 60;
+/** Shortest key accepted: 32 characters (the script asks for 32 random bytes, 64 hex). */
+const MIN_KEY_LENGTH = 32;
 
 /** Codes are typed by people: ignore case, spaces and dashes. */
 export function normalizeRoomCode(code: string): string {
   return code.toUpperCase().replace(/[\s-]+/g, '');
 }
 
-function sha256Hex(text: string): string {
-  return createHash('sha256').update(text).digest('hex');
+/** The server secret rooms are keyed with, or null when it is missing or too short. */
+export function roomKey(): string | null {
+  const key = process.env.TRY_ROOM_KEY?.trim() ?? '';
+  return key.length >= MIN_KEY_LENGTH ? key : null;
+}
+
+/** HMAC-SHA256 hex of the normalized code under `key`: the value a room row stores. */
+export function roomCodeMac(code: string, key: string): string {
+  return createHmac('sha256', key).update(normalizeRoomCode(code)).digest('hex');
 }
 
 /**
- * The open room for this code at `now`, or null. Anything that isn't a short string, an unknown
- * code, a closed window, or a row that breaks the window or cap limits gives null, and the
- * request then counts as an ordinary visitor's.
+ * The open room for this code at `now`, or null. No key, anything that isn't a string of 8 to 32
+ * characters, an unknown code, a closed window, or a row that breaks the window or cap limits gives
+ * null, and the request then counts as an ordinary visitor's.
  */
-export function openRoom(code: unknown, now: Date, rooms: readonly TryRoom[] = TRY_ROOMS): TryRoom | null {
-  if (typeof code !== 'string') return null;
+export function openRoom(
+  code: unknown,
+  now: Date,
+  rooms: readonly TryRoom[] = TRY_ROOMS,
+  key: string | null = roomKey(),
+): TryRoom | null {
+  if (!key || typeof code !== 'string') return null;
   const normalized = normalizeRoomCode(code);
-  if (normalized.length < 6 || normalized.length > 32) return null;
-  const given = Buffer.from(sha256Hex(normalized), 'hex');
+  if (normalized.length < 8 || normalized.length > 32) return null;
+  const given = Buffer.from(roomCodeMac(normalized, key), 'hex');
   for (const room of rooms) {
-    const expected = Buffer.from(room.codeSha256, 'hex');
+    const expected = Buffer.from(room.codeMac, 'hex');
     if (expected.length !== given.length || !timingSafeEqual(expected, given)) continue;
     const start = Date.parse(room.start);
     const end = Date.parse(room.end);
@@ -66,5 +83,5 @@ export function openRoom(code: unknown, now: Date, rooms: readonly TryRoom[] = T
  * `reserve_try_request` requires, from a prefix that visitor hashes never use.
  */
 export function roomBucket(room: TryRoom): string {
-  return sha256Hex(`unvibe-try-room:${room.id}`).slice(0, 32);
+  return createHash('sha256').update(`unvibe-try-room:${room.id}`).digest('hex').slice(0, 32);
 }
