@@ -8,6 +8,7 @@ import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
+import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, type TryConsentTicks } from "@/lib/tryConsent";
 import type { DownloadSurface } from "@/lib/downloadTracking";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
@@ -98,11 +99,33 @@ export function TryIt({
   const [phone, setPhone] = useState(false);
   // Request start to the whole answer received, for the last explanation that succeeded.
   const [tookMs, setTookMs] = useState(0);
+  // Both boxes start unticked; a tick of the current consent version is remembered in localStorage.
+  const [ticks, setTicks] = useState<TryConsentTicks>({ aiSend: false, age18: false });
+  const consented = ticks.aiSend && ticks.age18;
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
     setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone");
+    try {
+      setTicks(storedTryConsent(localStorage.getItem(TRY_CONSENT_KEY)));
+    } catch {
+      // Storage blocked: the boxes stay unticked.
+    }
   }, []);
+
+  const tick = (box: keyof TryConsentTicks, on: boolean) => {
+    const next = { ...ticks, [box]: on };
+    setTicks(next);
+    try {
+      if (next.aiSend || next.age18) {
+        localStorage.setItem(TRY_CONSENT_KEY, JSON.stringify({ v: TRY_CONSENT_VERSION, ...next, at: new Date().toISOString() }));
+      } else {
+        localStorage.removeItem(TRY_CONSENT_KEY);
+      }
+    } catch {
+      // Storage blocked: the tick holds for this visit only.
+    }
+  };
 
   useEffect(() => {
     if (state !== "thinking") return;
@@ -129,6 +152,8 @@ export function TryIt({
   }, [answer]);
 
   const explain = async (depth: Level = level) => {
+    // Nothing is sent to Gemini until both boxes are ticked.
+    if (!consented) return;
     setState("thinking");
     setError("");
     setAnswer("");
@@ -138,7 +163,7 @@ export function TryIt({
       const response = await fetch(`${API}/api/v1/try`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, level: depth }),
+        body: JSON.stringify({ code, level: depth, consent: { v: TRY_CONSENT_VERSION, aiSend: ticks.aiSend, age18: ticks.age18 } }),
       });
       const body = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
       if (!response.ok || !body.text) throw new Error(body.error || FALLBACK_ERROR);
@@ -162,7 +187,7 @@ export function TryIt({
   };
 
   const onEditorKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim()) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim() && consented) {
       event.preventDefault();
       void explain();
     }
@@ -191,9 +216,25 @@ export function TryIt({
           onKeyDown={onEditorKey}
         />
         <div className="try__foot">
-          <button type="button" className="try__go" disabled={state === "thinking" || !code.trim()} onClick={() => void explain()}>
+          <p className="try__fine">
+            <input type="checkbox" id="try-consent-send" checked={ticks.aiSend} onChange={(e) => tick("aiSend", e.target.checked)} />{" "}
+            <label htmlFor="try-consent-send">Send this code to Google Gemini to explain it</label>
+          </p>
+          <p className="try__fine">
+            <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />{" "}
+            <label htmlFor="try-consent-age">I&apos;m 18 or older</label>
+          </p>
+          <button
+            type="button"
+            className="try__go"
+            disabled={state === "thinking" || !code.trim()}
+            aria-disabled={consented ? undefined : true}
+            aria-describedby={consented ? undefined : "try-consent-hint"}
+            onClick={() => void explain()}
+          >
             {state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
           </button>
+          {consented ? null : <p className="try__fine" id="try-consent-hint">Tick both boxes to explain.</p>}
           <p className="try__fine" id="try-fine">
             Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Google Gemini to write the
             explanation. Don&apos;t paste keys or passwords. Common key formats are refused.
@@ -237,7 +278,15 @@ export function TryIt({
             <div className="try__state">
               <Vibe size={60} follow={false} />
               <p className="try__error">{error}</p>
-              <button type="button" className="try__retry" onClick={() => void explain()}>Try again</button>
+              <button
+                type="button"
+                className="try__retry"
+                aria-disabled={consented ? undefined : true}
+                aria-describedby={consented ? undefined : "try-consent-hint"}
+                onClick={() => void explain()}
+              >
+                Try again
+              </button>
               <GetIt phone={phone} surface={errorSurface} emailHref={emailHref} />
             </div>
           ) : (

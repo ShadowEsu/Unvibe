@@ -374,9 +374,9 @@ p { font-size: 1.02rem; }
 .try__levels button { padding: 0.35rem 0.85rem; border: 1.5px solid #3a3a36; border-radius: 999px; background: transparent; color: #cfccc3; font: 600 0.9rem var(--font-sans); cursor: pointer; }
 .try__levels button.is-on { border-color: var(--v-lime); background: var(--v-lime); color: var(--v-ink); }
 .try__go { margin: 0.9rem 1rem 0.4rem; min-height: 3.4rem; border: 0; border-radius: 14px; background: var(--v-lime); color: var(--v-ink); font: 800 1.15rem var(--font-display); letter-spacing: -0.02em; cursor: pointer; box-shadow: 0 4px 0 #6f8a12; transition: transform 160ms var(--v-press), box-shadow 160ms var(--v-press); }
-.try__go:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 #6f8a12; }
-.try__go:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
-.try__go:disabled { opacity: 0.6; cursor: wait; }
+.try__go:hover:not(:disabled):not([aria-disabled="true"]) { transform: translateY(-2px); box-shadow: 0 6px 0 #6f8a12; }
+.try__go:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(4px); box-shadow: none; }
+.try__go:disabled, .try__go[aria-disabled="true"], .try__retry[aria-disabled="true"] { opacity: 0.6; cursor: wait; }
 .try__fine { margin: 0 1rem 0.9rem; color: #c9c5bc; font-size: 0.82rem !important; }
 .try__bob { animation: vBob 1.1s ease-in-out infinite; }
 .try__error { margin: 0; color: #9a3412; font-weight: 600; }
