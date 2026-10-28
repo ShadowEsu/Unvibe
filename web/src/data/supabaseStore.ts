@@ -134,6 +134,12 @@ export class SupabaseStore implements Store {
     if (error) throw new Error(`Could not save profile name: ${error.message}`);
   }
 
+  async recordConsents(userId: string, kinds: string[], policyVersion: string, agreedAt: Date): Promise<void> {
+    const rows = kinds.map((kind) => ({ user_id: userId, kind, policy_version: policyVersion, agreed_at: agreedAt.toISOString() }));
+    const { error } = await this.db.from('consents').insert(rows);
+    if (error) throw new Error(`Could not record the agreement: ${error.message}`);
+  }
+
   async userIdForEmail(email: string): Promise<string | null> {
     const normalized = email.trim().toLowerCase();
     const { data } = await this.db.from('users').select('id').eq('email', normalized).maybeSingle();

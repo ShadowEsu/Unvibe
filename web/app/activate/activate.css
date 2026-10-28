@@ -200,15 +200,33 @@
   cursor: pointer;
   transition: background 120ms ease, opacity 120ms ease;
 }
-.activate-btn:hover:not(:disabled) { background: #2b2925; }
-.activate-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.activate-btn:hover:not(:disabled):not([aria-disabled="true"]) { background: #2b2925; }
+.activate-btn:disabled,
+.activate-btn[aria-disabled="true"] { opacity: 0.38; cursor: not-allowed; }
 .activate-btn--google,
 .activate-btn--ghost { background: #fff; color: var(--a-ink); border-color: var(--a-line-strong); }
-.activate-btn--google:hover:not(:disabled),
-.activate-btn--ghost:hover:not(:disabled) { background: var(--a-soft); }
+.activate-btn--google:hover:not(:disabled):not([aria-disabled="true"]),
+.activate-btn--ghost:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--a-soft); }
 .activate-btn:focus-visible,
 .activate-codechip button:focus-visible,
-.activate-links a:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
+.activate-links a:focus-visible,
+.activate-agree a:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
+
+/* Two separate unticked boxes before any sign-in starts (Terms and Privacy; 18 or older). */
+.activate-agree { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.activate-agree label {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--a-ink);
+  font-size: 14px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.activate-agree input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--a-ink); }
+.activate-agree input:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
+.activate-agree a { color: var(--a-ink); text-decoration: underline; text-underline-offset: 2px; }
 
 .activate-divider {
   display: flex;
