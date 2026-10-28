@@ -33,9 +33,20 @@ function blockedOrigin(raw: unknown): string {
 }
 
 /**
- * The page's route shape only: no query, no fragment, and no values. The first segment is kept when
- * it looks like a route name; every later segment (the /s/ stats key, an explain id, a token) and any
- * other first segment becomes `:param`, so a credential in a URL never reaches the logs (Security C3-M1).
+ * The site's top-level page routes (every folder under src/app with a page, `api` aside). A test
+ * keeps this equal to the folders, so a new page is logged by name and nothing else is.
+ */
+export const SITE_ROUTES: ReadonlySet<string> = new Set([
+  "about", "account-deletion", "activate", "app", "beta", "build", "code-explainer-mac",
+  "code-explainer-windows", "data-controls", "explain", "founder", "install-help", "investors", "kit",
+  "pricing", "privacy", "redeem", "releases", "resources", "rewards", "s", "terms", "waitlist",
+]);
+
+/**
+ * The page's route shape only: no query, no fragment, and no values. The first segment is kept only
+ * when it is one of the site's routes; every later segment (the /s/ stats key, an explain id, a
+ * token) and any other first segment (a mistyped name on a 404) becomes `:param`, so nothing a
+ * person typed or a credential in a URL reaches the logs (Security C3-M1).
  */
 function pagePath(raw: unknown): string {
   let pathname: string;
@@ -47,7 +58,7 @@ function pagePath(raw: unknown): string {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) return "/";
   const [first, ...rest] = segments;
-  const head = /^[a-z0-9-]{1,40}$/.test(first) ? first : ":param";
+  const head = SITE_ROUTES.has(first) ? first : ":param";
   return `/${[head, ...rest.map(() => ":param")].join("/")}`;
 }
 

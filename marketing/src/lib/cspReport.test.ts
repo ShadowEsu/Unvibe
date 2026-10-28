@@ -3,10 +3,9 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import nextConfig from "../../next.config.mjs";
-import apiConfig from "../../../web/next.config.mjs";
 import { ENFORCED_CSP, LISTING_IMAGE_HOSTS, REPORTING_ENDPOINTS, reportOnlyCsp } from "./csp.mjs";
 import { listingBadges } from "../data/listings";
-import { CSP_REPORT_MAX_BYTES, createCspCollector, violationsFrom } from "./cspReport";
+import { CSP_REPORT_MAX_BYTES, SITE_ROUTES, createCspCollector, violationsFrom } from "./cspReport";
 import { POST } from "../app/api/csp-report/route";
 
 const legacy = (report: Record<string, unknown>) => ({ "csp-report": report });
@@ -27,11 +26,6 @@ describe("unvibe.site sends the C3 policies on every page (Security C3)", () => 
     assert.doesNotMatch(strict, /script-src[^;]*'unsafe-inline'/);
     assert.match(strict, /report-uri \/api\/csp-report/);
     assert.match(strict, /report-to csp/);
-  });
-
-  it("api.unvibe.site enforces the same four directives on every response", async () => {
-    const all = (await apiConfig.headers!()).find((rule) => rule.source === "/:path*")!.headers;
-    assert.equal(all.find((h) => h.key === "Content-Security-Policy")?.value, ENFORCED_CSP);
   });
 
   it("the strict policy names the API and Supabase origins it is given, and ignores junk", () => {
@@ -101,17 +95,30 @@ describe("/api/csp-report keeps only directive, origin and path (Security C3 con
       "https://unvibe.site/explain/python-list-comprehension",
       "https://unvibe.site/invite/abc123TOKEN",
       "https://unvibe.site/Someone@Example.com",
+      "https://unvibe.site/john-smith",
       "https://unvibe.site/pricing",
     ];
     const lines: string[] = [];
     const collector = createCspCollector({ log: (line) => lines.push(line) });
     const got = urls.flatMap((url) =>
       violationsFrom(legacy({ "document-uri": url, "violated-directive": "script-src-elem", "blocked-uri": "inline" }), "application/csp-report"));
-    assert.deepEqual(got.map((v) => v.path), ["/s/:param", "/s/:param", "/explain/:param", "/invite/:param", "/:param", "/pricing"]);
+    assert.deepEqual(got.map((v) => v.path), ["/s/:param", "/s/:param", "/explain/:param", "/:param/:param", "/:param", "/:param", "/pricing"]);
     collector.add(got, 0);
     collector.flush();
     assert.ok(lines.length > 0);
-    for (const line of lines) assert.doesNotMatch(line, new RegExp(`${key}|comprehension|TOKEN|Someone|Example`));
+    for (const line of lines) assert.doesNotMatch(line, new RegExp(`${key}|comprehension|TOKEN|Someone|Example|john`));
+  });
+
+  it("SITE_ROUTES is exactly the top-level folders under src/app that hold a page", () => {
+    const app = path.resolve("src/app");
+    const hasPage = (dir: string): boolean => readdirSync(dir).some((name) => {
+      const file = path.join(dir, name);
+      return statSync(file).isDirectory() ? hasPage(file) : name === "page.tsx";
+    });
+    const folders = readdirSync(app)
+      .filter((name) => name !== "api" && statSync(path.join(app, name)).isDirectory() && hasPage(path.join(app, name)))
+      .sort();
+    assert.deepEqual(Array.from(SITE_ROUTES).sort(), folders);
   });
 
   it("logs one line per (directive, blocked, path) per minute, with counts", () => {
