@@ -297,7 +297,7 @@ function EmptyPicker({
       <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
       <div className="big">Ready when you are.</div>
       <div className="sub">
-        Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
+        Let’s make that code click. Select a snippet and press {shortcut}, or paste it below.
       </div>
       {grantNote ? <div className="access-note" role="status">{grantNote}</div> : null}
       <div className="empty-actions">
