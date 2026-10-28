@@ -63,8 +63,8 @@ const PAGES: readonly FlexAccordionItem[] = [
     id: "momentum",
     label: "Momentum",
     title: "Momentum",
-    body: "Coverage, freshness and the days you learned, counted from what you actually did on this computer.",
-    image: appShot("momentum", "The Unvibe Momentum page with understanding coverage and a calendar of the days you learned"),
+    body: "Coverage, freshness and the days you explained code, counted from what you actually did on this computer.",
+    image: appShot("momentum", "The Unvibe Momentum page with understanding coverage and a calendar of the days you explained code"),
   },
   {
     id: "quiz",
