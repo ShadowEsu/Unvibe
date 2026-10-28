@@ -1090,8 +1090,10 @@ function Progress({ profile }: { profile: Profile | null }) {
   const coverage = profile && profile.linesReviewed > 0
     ? `${Math.round((profile.linesUnderstood / profile.linesReviewed) * 100)}%`
     : null;
+  const currentKnowledge = knowledge ? knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length : 0;
+  // Like coverage: the share as the figure, the count under it (Design P3: the card repeated "5 of 6 current").
   const freshness = knowledge && knowledge.length
-    ? `${knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length} of ${knowledge.length} current`
+    ? { share: `${Math.round((currentKnowledge / knowledge.length) * 100)}%`, count: `${currentKnowledge} of ${knowledge.length} current` }
     : null;
   return (
     <>
@@ -1099,7 +1101,7 @@ function Progress({ profile }: { profile: Profile | null }) {
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
         <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{freshness?.share ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness?.count ?? 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{profile ? profile.reviews : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
       </div>
