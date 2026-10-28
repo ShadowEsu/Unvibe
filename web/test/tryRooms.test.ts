@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { TRY_ROOMS, normalizeRoomCode, openRoom, roomBucket, roomCodeMac, type TryRoom } from '../src/lib/tryRooms';
+import { TRY_ROOMS, normalizeRoomCode, openRoom, roomBucket, roomCodeMac, roomKey, type TryRoom } from '../src/lib/tryRooms';
 
 const KEY = 'unit-room-key-0123456789abcdef0123456789abcdef';
 const NOW = new Date('2026-11-03T18:30:00Z');
@@ -26,6 +26,24 @@ test('a room opens for its code typed any way, only inside its window', () => {
 test('without the key, or with a different key, the right code opens nothing (Security R-M1)', () => {
   assert.equal(openRoom('BLUEFOX42', NOW, [room()], null), null);
   assert.equal(openRoom('BLUEFOX42', NOW, [room()], 'another-key-0123456789abcdef0123456789'), null);
+});
+
+test('TRY_ROOM_KEY counts only at 32 characters or more, trimmed (Security R6)', () => {
+  const env = process.env as Record<string, string | undefined>;
+  const before = env.TRY_ROOM_KEY;
+  try {
+    delete env.TRY_ROOM_KEY;
+    assert.equal(roomKey(), null);
+    env.TRY_ROOM_KEY = 'k'.repeat(31);
+    assert.equal(roomKey(), null);
+    env.TRY_ROOM_KEY = `  ${'k'.repeat(31)}  `;
+    assert.equal(roomKey(), null);
+    env.TRY_ROOM_KEY = `  ${'k'.repeat(32)}\n`;
+    assert.equal(roomKey(), 'k'.repeat(32));
+  } finally {
+    if (before === undefined) delete env.TRY_ROOM_KEY;
+    else env.TRY_ROOM_KEY = before;
+  }
 });
 
 test('a row holding the plain sha256 of the code opens nothing', () => {

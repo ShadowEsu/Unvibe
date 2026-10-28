@@ -382,3 +382,16 @@ test('without TRY_ROOM_KEY the right code opens nothing and counts as an ordinar
     assert.ok(rpcCalls.every((args) => args.p_ip_hash !== roomBucket(room) && args.p_ip_cap === 6));
   });
 });
+
+test('a TRY_ROOM_KEY under 32 characters opens nothing, even for a row made with that key', async () => {
+  production();
+  const shortKey = 'k'.repeat(31);
+  await withRoom({ start: -60_000, end: 3_600_000 }, async (room) => {
+    room.codeMac = roomCodeMac('ROOM-TEST-1', shortKey);
+    setEnv({ TRY_ROOM_KEY: shortKey });
+    const res = await POST(tryRequest('203.0.113.54', { room: 'ROOM-TEST-1' }));
+    assert.equal(res.status, 200);
+    assert.equal((await res.json() as { room?: string }).room, 'not-open');
+    assert.ok(rpcCalls.every((args) => args.p_ip_hash !== roomBucket(room) && args.p_ip_cap === 6));
+  });
+});
