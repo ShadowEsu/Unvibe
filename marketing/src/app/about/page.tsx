@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { Vibe } from "@/components/paper/Vibe";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { changelogEntries } from "@/data/milestones";
@@ -61,6 +62,11 @@ export default function AboutPage() {
             <li>Every explanation is generated live by cloud AI after a secret scan on your computer. The <Link href="/privacy">privacy page</Link> says exactly what is sent.</li>
             <li>Free explanations have a monthly limit. No card, no API key.</li>
           </ul>
+        </article>
+        <article className="founder-about__card">
+          <h2>Get the newsletter</h2>
+          <p>One email when something ships. No spam.</p>
+          <NewsletterSignup id="about" />
         </article>
       </section>
 

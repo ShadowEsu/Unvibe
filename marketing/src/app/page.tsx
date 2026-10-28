@@ -8,6 +8,7 @@ import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { DownloadCta } from "@/components/paper/DownloadCta";
+import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
@@ -114,6 +115,18 @@ export default function HomePage() {
 
       <section className="paper-section" id="invite" aria-labelledby="invite-title">
         <div className="paper-wrap"><InviteFriend /></div>
+      </section>
+
+      <section className="paper-section" id="newsletter" aria-labelledby="newsletter-title">
+        <div className="paper-wrap u-sheet">
+          <div className="sec-head">
+            <h2 id="newsletter-title">Get the <em>newsletter.</em></h2>
+            <p className="paper-lead">One email when something ships. No spam.</p>
+          </div>
+          <div className="newsletter-home">
+            <NewsletterSignup id="home" />
+          </div>
+        </div>
       </section>
 
       <section className="paper-section">

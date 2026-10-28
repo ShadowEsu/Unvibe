@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
+import { NEWSLETTER_CONSENT_TEXT } from "@/lib/newsletterConsent";
 import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
   recordWaitlistBetaEmail,
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
     ? (await referralCodeForEmail(referralInput).catch(() => undefined)) ?? referralInput.toLowerCase()
     : referralInput?.toLowerCase() || undefined;
   const promoCode = parsed.data.promoCode?.trim().toUpperCase();
+  const createdAt = new Date().toISOString();
   const entry: WaitlistEntry = {
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,
@@ -81,23 +83,31 @@ export async function POST(req: Request) {
     utmSource: parsed.data.utmSource || undefined,
     utmMedium: parsed.data.utmMedium || undefined,
     utmCampaign: parsed.data.utmCampaign || undefined,
-    createdAt: new Date().toISOString(),
+    createdAt,
+    // The schema already refused a newsletter post without `consent: true`.
+    newsletterConsent: parsed.data.source === "newsletter"
+      ? { source: "newsletter", text: NEWSLETTER_CONSENT_TEXT, at: createdAt }
+      : undefined,
   };
 
   try {
+    // Records the newsletter consent on an existing entry too.
     const stored = await saveWaitlistEntry(entry);
     if (!stored.duplicate) {
       const notification = await notifyFounder({ ...entry, duplicate: false });
       await recordWaitlistNotification(email, notification).catch((error) => {
         console.error("waitlist notification status write failed", error);
       });
-      const welcome = await sendWelcomeEmail({ email, referralCode });
-      await recordWaitlistBetaEmail(email, {
-        status: welcome.sent ? "sent" : "failed",
-        at: new Date().toISOString(),
-        messageId: welcome.messageId,
-        error: welcome.error,
-      }).catch((error) => console.error("welcome email status write failed", error));
+      // Newsletter signups get no email until the newsletter has a postal address (CAN-SPAM).
+      if (!entry.newsletterConsent) {
+        const welcome = await sendWelcomeEmail({ email, referralCode });
+        await recordWaitlistBetaEmail(email, {
+          status: welcome.sent ? "sent" : "failed",
+          at: new Date().toISOString(),
+          messageId: welcome.messageId,
+          error: welcome.error,
+        }).catch((error) => console.error("welcome email status write failed", error));
+      }
     }
     // Counted only when this browser allowed analytics (Security U-L1); otherwise nothing about the
     // signup leaves for PostHog or Mixpanel, and the funnel doesn't record it.

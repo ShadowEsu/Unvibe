@@ -9,6 +9,7 @@ import * as waitlistRoute from "../app/api/waitlist/route";
 import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
 import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
+import { NEWSLETTER_CONSENT_TEXT } from "./newsletterConsent";
 
 /**
  * Public signup endpoints against a fake Supabase (PostgREST) project, so the real supabase-js
@@ -72,8 +73,12 @@ before(async () => {
         response.writeHead(201).end();
         return;
       }
-      if (request.method === "PATCH") return json(response, 200, [{ id: url.searchParams.get("email") }]);
       const email = url.searchParams.get("email")?.replace(/^eq\./, "");
+      if (request.method === "PATCH") {
+        const row = email ? waitlistRows.get(email) : undefined;
+        if (row) Object.assign(row, JSON.parse(body) as Record<string, unknown>);
+        return json(response, 200, [{ id: email }]);
+      }
       const rows = Array.from(waitlistRows.values()).filter((row) => !email || row.email === email);
       if (String(request.headers.accept ?? "").includes("vnd.pgrst.object")) {
         if (rows.length === 0) return json(response, 406, { code: "PGRST116", message: "no rows" });
@@ -501,5 +506,89 @@ describe("a waitlist signup is counted in analytics only when the browser allowe
     assert.equal(await signUp({ analytics: true }), 200);
     assert.deepEqual([...analyticsHits].sort(), ["/i/v0/e/", "/track"]);
     assert.ok(funnelHits > 0);
+  });
+});
+
+describe("newsletter signups need the consent box and send no email (ledger 299)", () => {
+  const newsletterEmail = () => `news-${randomUUID().slice(0, 8)}@unvibe-mail.test`;
+
+  /** Posts to /api/waitlist with Resend configured and returns the response plus every address Resend was asked to mail. */
+  async function signUp(body: Record<string, unknown>): Promise<{ response: Response; mailedTo: string[] }> {
+    const mailedTo: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url === "https://api.resend.com/emails") {
+        const sent: unknown = JSON.parse(String(init?.body));
+        if (sent && typeof sent === "object" && "to" in sent && Array.isArray(sent.to)) mailedTo.push(...sent.to.map(String));
+        return Response.json({ id: `email-${mailedTo.length}` });
+      }
+      if (process.env.SUPABASE_URL && url.startsWith(process.env.SUPABASE_URL)) return realFetch(input, init);
+      throw new Error(`unexpected network call from the test: ${url}`);
+    }) as typeof fetch;
+    try {
+      const response = await withEnv({ RESEND_API_KEY: "resend-test-key" }, () => waitlistRoute.POST(post("/api/waitlist", body)));
+      return { response, mailedTo };
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  }
+
+  for (const [label, extra] of [
+    ["no consent field", {}],
+    ["consent: false", { consent: false }],
+    ['consent: "true" (a string)', { consent: "true" }],
+    ["consent: 1", { consent: 1 }],
+  ] as const) {
+    it(`refuses a newsletter post with ${label} (422) and stores nothing`, async () => {
+      const email = newsletterEmail();
+      const { response, mailedTo } = await signUp({ email, source: "newsletter", ...extra });
+      assert.equal(response.status, 422);
+      const answer: unknown = await response.json();
+      assert.ok(answer && typeof answer === "object" && "issues" in answer && answer.issues && typeof answer.issues === "object" && "consent" in answer.issues);
+      assert.equal(waitlistRows.has(email), false);
+      assert.deepEqual(mailedTo, []);
+    });
+  }
+
+  it("stores a consented signup with the source, the exact box text and the time", async () => {
+    const email = newsletterEmail();
+    const before = Date.now();
+    const { response } = await signUp({ email, source: "newsletter", consent: true });
+    assert.equal(response.status, 200);
+    const row = waitlistRows.get(email);
+    assert.ok(row, "the entry is stored");
+    assert.equal(row.newsletter_consent_source, "newsletter");
+    assert.equal(row.newsletter_consent_text, NEWSLETTER_CONSENT_TEXT);
+    const at = Date.parse(String(row.newsletter_consent_at));
+    assert.ok(at >= before && at <= Date.now(), "consent time is the signup time");
+  });
+
+  it("sends the subscriber no welcome email (a waitlist signup still gets one)", async () => {
+    const newsletter = newsletterEmail();
+    const subscribed = await signUp({ email: newsletter, source: "newsletter", consent: true });
+    assert.equal(subscribed.response.status, 200);
+    assert.equal(subscribed.mailedTo.includes(newsletter), false, "nothing mailed to the subscriber");
+    assert.equal(waitlistRows.get(newsletter)?.beta_email_status, undefined, "no welcome email attempt recorded");
+
+    const waitlister = newsletterEmail();
+    const joined = await signUp({ email: waitlister });
+    assert.equal(joined.response.status, 200);
+    assert.ok(joined.mailedTo.includes(waitlister), "the harness does see a welcome email");
+    assert.equal(waitlistRows.get(waitlister)?.newsletter_consent_at, undefined, "a waitlist signup records no newsletter consent");
+  });
+
+  it("records consent for an email already on the waitlist and answers exactly as for a new one", async () => {
+    const email = newsletterEmail();
+    const first = await signUp({ email });
+    assert.equal(waitlistRows.get(email)?.newsletter_consent_at, undefined);
+    const again = await signUp({ email, source: "newsletter", consent: true });
+    assert.equal(again.response.status, first.response.status);
+    assert.deepEqual(await again.response.json(), await first.response.json());
+    assert.deepEqual(again.mailedTo, [], "no second email of any kind");
+    const row = waitlistRows.get(email);
+    assert.equal(row?.newsletter_consent_source, "newsletter");
+    assert.equal(row?.newsletter_consent_text, NEWSLETTER_CONSENT_TEXT);
+    assert.ok(row?.newsletter_consent_at);
   });
 });
