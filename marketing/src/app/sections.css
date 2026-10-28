@@ -133,6 +133,14 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
 .vtour__window:focus-within { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 .vtour__window video:focus-within { outline: 3px solid #3c2fb8; outline-offset: -3px; }
+/* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. Filled when sound is on. */
+.vtour__sound {
+  position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.4rem;
+  min-height: 2.5rem; padding: 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
+  font: 700 0.9rem var(--font-sans); box-shadow: 0 2px 0 #141414; cursor: pointer;
+}
+.vtour__sound[aria-pressed="true"] { background: var(--v-lime); }
+.vtour__sound:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
 
 /* ── Newsletter signup (footer, /about, homepage): field and button on one row, the consent box under them. ── */
 .newsletter { display: grid; gap: 0.6rem; width: min(30rem, 100%); }
