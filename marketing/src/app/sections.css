@@ -24,6 +24,10 @@
 /* Border #77756f: 3.97:1 on the #151514 panel, 3.58:1 on the field's own fill (input edges need 3:1). */
 .try__room input { width: 11rem; min-height: 2.25rem; padding: 0.3rem 0.6rem; border: 1px solid #77756f; border-radius: 6px; background: #1f1f1d; color: #f4f2ea; font: 0.95rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
 .try__room input:focus-visible { border-color: #a9a69c; outline: 3px solid var(--v-lime); outline-offset: 2px; }
+/* The two Try consent boxes: Explain's lime, big enough to read as part of the form (Design TC-4 P2). */
+.try__foot .try__consent { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.try__consent input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--v-lime); }
+.try__consent label { cursor: pointer; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 .try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }

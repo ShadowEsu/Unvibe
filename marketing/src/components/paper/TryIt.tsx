@@ -229,12 +229,12 @@ export function TryIt({
           onKeyDown={onEditorKey}
         />
         <div className="try__foot">
-          <p className="try__fine">
-            <input type="checkbox" id="try-consent-send" checked={ticks.aiSend} onChange={(e) => tick("aiSend", e.target.checked)} />{" "}
+          <p className="try__fine try__consent">
+            <input type="checkbox" id="try-consent-send" checked={ticks.aiSend} onChange={(e) => tick("aiSend", e.target.checked)} />
             <label htmlFor="try-consent-send">Send this code to Google Gemini to explain it</label>
           </p>
-          <p className="try__fine">
-            <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />{" "}
+          <p className="try__fine try__consent">
+            <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />
             <label htmlFor="try-consent-age">I&apos;m 18 or older</label>
           </p>
           {roomField ? (
