@@ -155,6 +155,8 @@ export function applyBuiltReview(session: ReviewSession, built: {
   session.recorded = false;
   session.comprehension = undefined;
   session.pendingAnswer = undefined;
+  // Built from something the person picked (a file, a brief, a Study lesson), not a link capture.
+  session.awaitingConfirm = false;
 }
 
 function persistUnderstoodSnapshot(session: ReviewSession): void {
@@ -303,6 +305,8 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
+  if (session.awaitingConfirm) return;
   if (!session.code && !session.payload) {
     send(win, session, { type: 'error', message: 'No code captured.' });
     return;

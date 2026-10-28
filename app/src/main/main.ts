@@ -350,7 +350,6 @@ async function startBuiltReview(
     session.abort?.abort();
     session.sourceApp = sourceLabel;
     session.reviewId = randomUUID();
-    session.awaitingConfirm = false;
     applyBuiltReview(session, built);
     // A panel that is still loading starts this tab itself on widget:ready.
     if (!panelReady) return { ok: true };
@@ -1267,7 +1266,6 @@ app.whenReady().then(() => {
       applyBuiltReview(session, built);
       session.sourceApp = 'Study';
       session.reviewId = randomUUID();
-      session.awaitingConfirm = false;
       // A panel that is still loading starts this tab itself on widget:ready.
       if (!panelReady) return { ok: true as const };
       initWidget(win, session, { autoStart: true });
