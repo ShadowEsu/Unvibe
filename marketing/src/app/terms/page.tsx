@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Terms",
   description:
     "The terms of using Unvibe during its beta, including AI limitations and the absence of any security guarantee.",
+  alternates: { canonical: "/terms" },
 };
 
 /** The payments section says whether Pro is on sale; re-read every 5 minutes like /pricing. */

@@ -148,9 +148,6 @@
   transform: translateY(-1px);
 }
 
-.dark .paper-center > .paper-text-link { border-color: var(--u-line); background: var(--u-card); }
-.dark .paper-center > .paper-text-link:hover { background: var(--u-raise); }
-
 .paper-center > .paper-text-link:hover::after {
   transform: translateX(3px);
 }
@@ -803,11 +800,6 @@ html[data-performance="lite"] .paper-hero > img {
   gap: 0.35rem;
   margin: 0;
   font-size: 0.8rem;
-}
-
-/* The theme control needs JS (the boot script adds .js); without it the page is light and the control does nothing. */
-html:not(.js) .paper-footer__theme {
-  display: none;
 }
 
 .paper-footer__dot {

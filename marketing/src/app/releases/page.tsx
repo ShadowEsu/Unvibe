@@ -7,6 +7,7 @@ import { fetchReleases } from "@/lib/releases";
 export const metadata: Metadata = {
   title: "Change Log",
   description: "Unvibe product change log and company milestones.",
+  alternates: { canonical: "/releases" },
 };
 
 export const revalidate = 300;

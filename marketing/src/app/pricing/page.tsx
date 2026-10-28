@@ -7,7 +7,11 @@ import { pricingCopy } from "@/lib/pricingCopy";
 export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Pricing", description: pricingCopy(await fetchPaymentsOpen()).description };
+  return {
+    title: "Pricing",
+    description: pricingCopy(await fetchPaymentsOpen()).description,
+    alternates: { canonical: "/pricing" },
+  };
 }
 
 /** One heading, then the tier cards: the first viewport answers "how much" at 1440 and on a phone. */

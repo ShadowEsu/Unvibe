@@ -33,7 +33,7 @@ describe("notifyFounder", () => {
         "unvibe-waitlist-abc12345",
       );
       const body = JSON.parse(String(request?.options?.body)) as { to: string[] };
-      assert.deepEqual(body.to, ["preston@unvibe.site"]);
+      assert.deepEqual(body.to, ["support@unvibe.site"]);
     } finally {
       global.fetch = originalFetch;
       if (previousKey === undefined) delete process.env.RESEND_API_KEY;

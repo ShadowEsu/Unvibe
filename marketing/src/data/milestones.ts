@@ -276,7 +276,7 @@ export const milestones: Milestone[] = [
     date: "18 AUG 2026",
     category: "PRODUCT",
     title: "Pricing checkout",
-    summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still writes preston@unvibe.site. Changed 22 Oct 2026: checkout is closed until payments open, and /pricing says so.",
+    summary: "Pro and Team start Stripe checkout from /pricing. Free goes to the beta install. Enterprise still starts by email. Changed 22 Oct 2026: checkout is closed until payments open, and /pricing says so.",
   },
   {
     date: "17 AUG 2026",

@@ -13,6 +13,7 @@ import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 export const metadata: Metadata = {
   title: "Investors",
   description: "Unvibe on one page: the thesis, what shipped, public cash figures, what is next, and how to reach us.",
+  alternates: { canonical: "/investors" },
 };
 
 const pipeline = [
@@ -49,7 +50,7 @@ export default function InvestorsPage() {
             changed, checks that it stuck, and keeps the knowledge fresh as the code moves.
           </p>
           <div className="inv-actions">
-            <a className="inv-btn" href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation">
+            <a className="inv-btn" href="mailto:support@unvibe.site?subject=Unvibe%20investment%20conversation">
               <Mail size={17} /> Talk to us
             </a>
           </div>
@@ -136,7 +137,7 @@ export default function InvestorsPage() {
         <h2>Let&apos;s <em>talk.</em></h2>
         <p className="inv-lead">Demo and numbers. Everything above is current as of {BETA_INSTALL_VERSION}.</p>
         <div className="inv-actions inv-actions--center">
-          <a className="inv-btn inv-btn--ink" href="mailto:preston@unvibe.site?subject=Unvibe%20investment%20conversation"><Mail size={17} /> preston@unvibe.site</a>
+          <a className="inv-btn inv-btn--ink" href="mailto:support@unvibe.site?subject=Unvibe%20investment%20conversation"><Mail size={17} /> support@unvibe.site</a>
         </div>
       </section>
 
