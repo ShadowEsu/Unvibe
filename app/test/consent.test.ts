@@ -205,3 +205,15 @@ test('CC-5: the off switch stops the next send at once and keeps the record', as
   assert.deepEqual(shortcutKeys('Control+Alt+U', true, sendingSwitchedOff()), ['Control+Alt+U', 'Control+U']);
   assert.deepEqual(shortcutKeys('Control+Alt+U', false, sendingSwitchedOff()), ['Control+Alt+U']);
 });
+
+test('the off switch withdraws every provider\'s agreement, not only the newest (Security K14)', async () => {
+  consentStore().agree([...CONSENT_ITEMS], 'unvibe');
+  consentStore().agree([...CONSENT_ITEMS], 'anthropic');
+  consentStore().revoke();
+  sent.length = 0;
+  await refused(() => postReview(payload('const total = 1;'), null, new AbortController().signal), 'unvibe');
+  await refused(() => streamLocalAi({ provider: 'anthropic', apiKey: 'k', system: 's', user: 'u', onToken: () => undefined }), 'anthropic');
+  assert.deepEqual(sent, []);
+  assert.ok(consentStore().all().every((record) => record.revokedAt));
+  consentStore().agree([...CONSENT_ITEMS], 'unvibe');
+});
