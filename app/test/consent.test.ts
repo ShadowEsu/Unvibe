@@ -21,6 +21,7 @@ import {
   ConsentRequiredError,
   FIRST_RUN_SAMPLE,
   isFirstRunSamplePayload,
+  reviewCapture,
   POLICY_VERSION,
   type ConsentRecord,
 } from '../src/core/consent';
@@ -70,6 +71,21 @@ function ownCode(): ReviewSession {
 async function refused(run: () => Promise<unknown>, provider: string): Promise<void> {
   await assert.rejects(run, (error: unknown) => error instanceof ConsentRequiredError && error.provider === provider);
 }
+
+test('a review reads nothing of the person\'s before they agree, and reads once after (CC-4)', async () => {
+  let reads = 0;
+  const read = async () => {
+    reads += 1;
+    return { code: 'mine()' };
+  };
+  assert.deepEqual(await reviewCapture({}, false, read), { code: null, sourceApp: null });
+  assert.equal(reads, 0, 'no selection or clipboard read before the agreement');
+  assert.deepEqual(await reviewCapture({}, true, read), { code: 'mine()' });
+  assert.equal(reads, 1);
+  // The built-in sample needs no agreement and reads nothing of the person's.
+  assert.deepEqual(await reviewCapture({ sample: true }, false, read), { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' });
+  assert.equal(reads, 1);
+});
 
 const form = { aiSend: true, terms: true, age18: true };
 

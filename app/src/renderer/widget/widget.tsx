@@ -82,6 +82,10 @@ interface TabState {
   consentProvider: ConsentProvider | null;
   /** A link started this review: after agreeing, show the confirm sheet, not an explanation. */
   confirmAfterConsent: boolean;
+  /** Agree was just pressed with nothing captured; main is reading the clipboard it asked for. */
+  agreedJustNow: boolean;
+  /** The confirm sheet shows the clipboard read right after Agree, not a link's capture. */
+  confirmAfterAgree: boolean;
   /** Who Explain sends the code to, for the confirm sheet (Security U10). */
   providerName: string;
 }
@@ -157,6 +161,8 @@ function newTab(id: string, label: string): TabState {
     teachEvidence: '',
     consentProvider: null,
     confirmAfterConsent: false,
+    agreedJustNow: false,
+    confirmAfterAgree: false,
     providerName: 'Google Gemini',
   };
 }
@@ -505,6 +511,8 @@ function Widget() {
               phase: ev.consentProvider ? 'aiConsent' : ev.hasCode ? (ev.confirm ? 'confirm' : 'ready') : 'empty',
               consentProvider: ev.consentProvider ?? null,
               confirmAfterConsent: Boolean(ev.confirm),
+              confirmAfterAgree: Boolean(ev.confirm) && tab.agreedJustNow,
+              agreedJustNow: false,
               providerName: ev.providerName,
               level: ev.level,
             });
@@ -894,12 +902,13 @@ function Widget() {
                   // An explanation already on screen (a follow-up was refused): back to it, ask again from there.
                   // A link capture: the confirm sheet, so the code is seen before it's sent.
                   // Captured code that waited on this computer: explain it now. Nothing captured: a
-                  // clipboard explain asked for just before agreeing runs now (QA F1), otherwise the picker.
+                  // clipboard explain asked for just before agreeing is read now and shown on the confirm
+                  // sheet (QA F1, Security U-F1-L2), otherwise the picker.
                   const next: Phase | null = active.text ? 'done' : active.confirmAfterConsent ? 'confirm' : active.meta.lines ? null : 'empty';
                   if (next === 'empty') {
-                    setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'boot', consentProvider: null }));
+                    setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'boot', consentProvider: null, agreedJustNow: true }));
                     void window.unvibe.explainAfterConsent().then((result) => {
-                      if (!result.explained) setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'empty' }));
+                      if (!result.explained) setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'empty', agreedJustNow: false }));
                     });
                   } else if (next) setTabs((prev) => patchTab(prev, activeRef.current, { phase: next, consentProvider: null }));
                   else request({});
@@ -935,7 +944,12 @@ function Widget() {
                   <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
-              <div className="sub">Your editor or a link asked Unvibe to explain what is on your clipboard. Nothing has been sent yet. Explain sends it to {active.providerName}.</div>
+              <div className="sub">
+                {active.confirmAfterAgree
+                  ? 'This is what is on your clipboard now.'
+                  : 'Your editor or a link asked Unvibe to explain what is on your clipboard.'}{' '}
+                Nothing has been sent yet. Explain sends it to {active.providerName}.
+              </div>
               <button className="btn" onClick={() => request({})}>
                 Explain
               </button>

@@ -124,6 +124,21 @@ export const FIRST_RUN_SAMPLE = [
 ].join('\n');
 
 /**
+ * What a review starts from (Security CC-4): the built-in sample, code already captured, or a fresh
+ * read of the person's selection or clipboard, and that read only once they have agreed to sending
+ * code. Before the agreement nothing is read at all; the panel asks first.
+ */
+export async function reviewCapture<T extends { code: string | null; sourceApp?: string | null }>(
+  options: { sample?: boolean; captured?: { code: string; sourceApp: string } },
+  agreed: boolean,
+  read: () => Promise<T>,
+): Promise<T | { code: string | null; sourceApp: string | null }> {
+  if (options.sample) return { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' };
+  if (options.captured) return options.captured;
+  return agreed ? read() : { code: null, sourceApp: null };
+}
+
+/**
  * Exempt only while the request carries nothing but the verbatim sample (Security CC-6): no typed
  * question, no diff, no file, no surrounding code. Any edit, or anything added, needs the agreement.
  */

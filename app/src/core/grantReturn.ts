@@ -22,12 +22,11 @@ export function grantReturnApp(pending: PendingGrant | null, now: number): strin
 /**
  * A clipboard explain (setup's paste or Explain my clipboard, or an editor link) asked for before
  * the person agreed to send their code. Nothing was read then; once they agree, the panel asks main
- * to run it. The same window applies, so a late agreement never sends a clipboard copied long after
- * the request.
+ * to read the clipboard and show it on the confirm sheet, so nothing leaves before Explain is pressed
+ * (Security: the clipboard may have changed since). The same window applies, so a late agreement
+ * never brings up a clipboard copied long after the request.
  */
 export interface HeldClipboardReview {
-  /** An editor link asked: show the confirm sheet, and send nothing until Explain is pressed. */
-  confirm: boolean;
   /** When it was asked for, in ms since the epoch. */
   at: number;
 }
