@@ -15,6 +15,10 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      media_script:
+        description: "Media capture script in app/e2e (marketing-media.mjs or rls-panel-capture.mjs)"
+        required: false
+        default: "marketing-media.mjs"
 
 permissions:
   contents: read
@@ -231,9 +235,11 @@ jobs:
           # A fresh install per run: one reused id spends its 50 free explanations and then every
           # capture shows the limit instead of an answer. The next step flags it as QA.
           MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          MEDIA_SCRIPT: ${{ inputs.media_script || 'marketing-media.mjs' }}
         run: |
-          cp app/e2e/marketing-media.mjs "$RUNNER_TEMP/pw/marketing-media.mjs"
-          cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
+          case "$MEDIA_SCRIPT" in marketing-media.mjs|rls-panel-capture.mjs) ;; *) echo "unknown media script"; exit 1;; esac
+          cp "app/e2e/$MEDIA_SCRIPT" "$RUNNER_TEMP/pw/$MEDIA_SCRIPT"
+          cd "$RUNNER_TEMP/pw" && node "$MEDIA_SCRIPT"
 
       - name: Flag the media install as QA (Mac)
         if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
