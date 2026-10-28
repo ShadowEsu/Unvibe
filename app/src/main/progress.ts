@@ -1,5 +1,5 @@
 /**
- * Anonymous setup progress (instrumentation spec 2026-10-22 section 7, first-run spec section 4).
+ * Setup progress, off by default (instrumentation spec 2026-10-22 section 7, first-run spec section 4).
  * One write-once ping per step to POST /api/v1/trial/progress: body `{ "step": ... }`, the trial
  * token and the random install ID, never the session token, never code, files or email. Only sealed
  * trial builds send; dev and founder builds and the "Send setup progress" setting off send
