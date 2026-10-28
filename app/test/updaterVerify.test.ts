@@ -144,7 +144,25 @@ test('electron-builder publishing a Mac release cannot find a signing identity o
   assert.deepEqual(run.autoDiscovery, ['false'], 'electron-builder runs with CSC_IDENTITY_AUTO_DISCOVERY=false, so the signature scripts/afterPackHook.cjs checked is the one uploaded');
 });
 
-test('the packaging hook checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {
+/** Electron's fuse sentinel, then version 1, 9 fuses, and Electron 36's default wire. */
+const FUSE_SENTINEL = 'dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX';
+const DEFAULT_FUSE_WIRE = '101100011';
+
+function fakeElectronFramework(app: string, wire = DEFAULT_FUSE_WIRE): string {
+  const dir = path.join(app, 'Contents', 'Frameworks', 'Electron Framework.framework');
+  mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'Electron Framework');
+  writeFileSync(file, Buffer.concat([Buffer.from('binary before'), Buffer.from(FUSE_SENTINEL), Buffer.from([1, wire.length]), Buffer.from(wire), Buffer.from('binary after')]));
+  return file;
+}
+
+function fuseWire(file: string): string {
+  const bytes = readFileSync(file);
+  const at = bytes.indexOf(FUSE_SENTINEL) + FUSE_SENTINEL.length;
+  return bytes.subarray(at + 2, at + 2 + bytes[at + 1]).toString();
+}
+
+test('the packaging hook turns the Node fuses off, then checks the pinned requirement when the stable identity signs, before anything is uploaded', { skip: process.platform === 'win32' }, async () => {
   const root = mkdtempSync(path.join(tmpdir(), 'unvibe-afterpack-test-'));
   const bin = path.join(root, 'bin');
   const log = path.join(root, 'codesign.log');
@@ -155,6 +173,7 @@ test('the packaging hook checks the pinned requirement when the stable identity 
   const afterPack = require(path.resolve(__dirname, '..', 'scripts', 'afterPackHook.cjs')) as (context: unknown) => Promise<void>;
   const context = { electronPlatformName: 'darwin', appOutDir: root, packager: { appInfo: { productFilename: 'Unvibe' }, projectDir: root } };
   const app = path.join(root, 'Unvibe.app');
+  const framework = fakeElectronFramework(app);
   const names = ['PATH', 'UNVIBE_SIGN_IDENTITY', 'UNVIBE_SIGN_KEYCHAIN', 'CSC_LINK', 'CSC_NAME'] as const;
   const saved = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
@@ -162,6 +181,8 @@ test('the packaging hook checks the pinned requirement when the stable identity 
     process.env.PATH = `${bin}:${saved.PATH}`;
     process.env.UNVIBE_SIGN_IDENTITY = 'Unvibe Self Signed';
     await afterPack(context);
+    // RunAsNode (0), NODE_OPTIONS (2) and --inspect (3) are off; every other fuse keeps Electron's default.
+    assert.equal(fuseWire(framework), '000000011');
     delete process.env.UNVIBE_SIGN_IDENTITY;
     await afterPack(context);
     const verifies = readFileSync(log, 'utf8').trim().split('\n').filter((call) => call.startsWith('--verify'));
@@ -174,6 +195,34 @@ test('the packaging hook checks the pinned requirement when the stable identity 
       if (saved[name] === undefined) delete process.env[name];
       else process.env[name] = saved[name];
     }
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a build whose fuses cannot be set is never signed', { skip: process.platform === 'win32' }, async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unvibe-afterpack-test-'));
+  const bin = path.join(root, 'bin');
+  const log = path.join(root, 'codesign.log');
+  mkdirSync(bin);
+  writeFileSync(path.join(bin, 'codesign'), `#!/bin/bash\nprintf '%s\\n' "$*" >> '${log}'\n`);
+  chmodSync(path.join(bin, 'codesign'), 0o755);
+  const afterPack = require(path.resolve(__dirname, '..', 'scripts', 'afterPackHook.cjs')) as (context: unknown) => Promise<void>;
+  const context = { electronPlatformName: 'darwin', appOutDir: root, packager: { appInfo: { productFilename: 'Unvibe' }, projectDir: root } };
+  const app = path.join(root, 'Unvibe.app');
+  const framework = path.join(app, 'Contents', 'Frameworks', 'Electron Framework.framework', 'Electron Framework');
+  mkdirSync(path.dirname(framework), { recursive: true });
+  const savedPath = process.env.PATH;
+  try {
+    process.env.PATH = `${bin}:${savedPath}`;
+    // An Electron binary without a fuse wire (Electron older than 12, or a damaged build).
+    writeFileSync(framework, 'no fuse wire here');
+    await assert.rejects(afterPack(context), /sentinel/);
+    // A wire too short to hold the inspect fuse: the flip can't turn it off.
+    writeFileSync(framework, Buffer.concat([Buffer.from(FUSE_SENTINEL), Buffer.from([1, 3]), Buffer.from('101')]));
+    await assert.rejects(afterPack(context));
+    assert.equal(existsSync(log), false, 'codesign never ran');
+  } finally {
+    process.env.PATH = savedPath;
     rmSync(root, { recursive: true, force: true });
   }
 });
