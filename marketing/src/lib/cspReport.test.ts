@@ -4,7 +4,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import nextConfig from "../../next.config.mjs";
 import apiConfig from "../../../web/next.config.mjs";
-import { ENFORCED_CSP, REPORTING_ENDPOINTS, reportOnlyCsp } from "./csp.mjs";
+import { ENFORCED_CSP, LISTING_IMAGE_HOSTS, REPORTING_ENDPOINTS, reportOnlyCsp } from "./csp.mjs";
+import { listingBadges } from "../data/listings";
 import { CSP_REPORT_MAX_BYTES, createCspCollector, violationsFrom } from "./cspReport";
 import { POST } from "../app/api/csp-report/route";
 
@@ -37,6 +38,14 @@ describe("unvibe.site sends the C3 policies on every page (Security C3)", () => 
     const strict = reportOnlyCsp({ api: "https://api.example.test/", supabase: "https://abc.supabase.co" });
     assert.match(strict, /connect-src 'self' https:\/\/api\.example\.test https:\/\/abc\.supabase\.co /);
     assert.doesNotMatch(reportOnlyCsp({ api: "not a url", supabase: "" }), /not a url/);
+  });
+
+  it("every footer listing badge's image origin is allowed in img-src", () => {
+    const imgSrc = reportOnlyCsp().split("; ").find((d) => d.startsWith("img-src ")) ?? "";
+    for (const badge of listingBadges) {
+      const host = new URL(badge.src).origin;
+      assert.ok(LISTING_IMAGE_HOSTS.includes(host) && imgSrc.includes(` ${host}`), badge.name);
+    }
   });
 
   it("no form on either site posts to another origin (form-action 'self' would block it)", () => {

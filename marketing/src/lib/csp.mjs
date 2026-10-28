@@ -16,6 +16,18 @@ export const CSP_REPORT_GROUP = "csp";
 /** Analytics hosts, loaded only after Allow: the SDKs send events and load their replay recorders here. */
 const ANALYTICS_SCRIPT_HOSTS = ["https://us-assets.i.posthog.com", "https://cdn.mxpnl.com"];
 const ANALYTICS_CONNECT_HOSTS = ["https://us.i.posthog.com", "https://us-assets.i.posthog.com", "https://api-js.mixpanel.com"];
+/**
+ * Directory listing badges in the footer (src/data/listings.ts). A test keeps every badge's origin
+ * here; www.aitooldiscovery.com is where aitooldiscovery.com redirects the image.
+ */
+export const LISTING_IMAGE_HOSTS = [
+  "https://smolstartup.com",
+  "https://toolindex.net",
+  "https://devrove.com",
+  "https://aitooldiscovery.com",
+  "https://www.aitooldiscovery.com",
+  "https://launchbuff.com",
+];
 
 /** An env URL's origin, or nothing when it is unset or not a URL. */
 function origin(url) {
@@ -36,7 +48,7 @@ export function reportOnlyCsp({ api = "https://api.unvibe.site", supabase = "" }
     "default-src 'self'",
     `script-src 'self' ${ANALYTICS_SCRIPT_HOSTS.join(" ")}`,
     `connect-src ${connect.join(" ")}`,
-    "img-src 'self' data: blob:",
+    `img-src 'self' data: blob: ${LISTING_IMAGE_HOSTS.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
     "media-src 'self'",
