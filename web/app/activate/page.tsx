@@ -272,7 +272,7 @@ export default function ActivatePage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@school.edu"
+                  placeholder="you@example.com"
                   aria-label="Email address"
                 />
                 <button
