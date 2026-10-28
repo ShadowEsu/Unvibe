@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ANALYTICS_CONSENT_CHANGED } from "@/lib/analyticsConsent";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 const ANON_KEY = "unvibe_anon_id";
@@ -29,17 +30,27 @@ function anonId(): string {
   }
 }
 
-/** Anonymous page-view beacon for founder stats.html — no PII, no code. */
+/**
+ * Anonymous page-view beacon for founder stats.html — no PII, no code. Sent only once the visitor
+ * has allowed analytics, including when they press Allow on this page.
+ */
 export function VisitBeacon() {
   useEffect(() => {
-    if (shouldSkip(window.location.pathname) || browserTrackingDisabled()) return;
-    const visitorId = anonId();
-    void fetch("/api/stats/hit", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ visitorId }),
-      keepalive: true,
-    }).catch(() => undefined);
+    let sent = false;
+    const send = () => {
+      if (sent || shouldSkip(window.location.pathname) || browserTrackingDisabled()) return;
+      sent = true;
+      const visitorId = anonId();
+      void fetch("/api/stats/hit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ visitorId }),
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+    send();
+    window.addEventListener(ANALYTICS_CONSENT_CHANGED, send);
+    return () => window.removeEventListener(ANALYTICS_CONSENT_CHANGED, send);
   }, []);
 
   return null;

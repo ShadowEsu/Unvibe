@@ -2,7 +2,8 @@
 import { ANALYTICS_KEYS, restoreAnalyticsKeys } from "./testWithoutAnalyticsKeys";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { analyticsEnabled, recordBetaSiteEvent, track } from "./analytics";
+import { analyticsEnabled, recordBetaSiteEvent, setAnalyticsConsent, track } from "./analytics";
+import { ANALYTICS_CONSENT_KEY, analyticsConsentRecord } from "./analyticsConsent";
 import { NOTRACK_STORAGE_KEY, trackingDisabled, type OptOutStorage } from "./trackingOptOut";
 
 after(restoreAnalyticsKeys);
@@ -75,12 +76,14 @@ describe("analytics respects the opt-out", () => {
   const realWindow: unknown = Reflect.get(globalThis, "window");
   const realFetch = globalThis.fetch;
   let calls: string[] = [];
+  const allowed = () => fakeStorage({ [ANALYTICS_CONSENT_KEY]: analyticsConsentRecord("allow", new Date("2026-10-28T09:00:00Z")) });
 
-  function installWindow(webdriver: boolean, search: string, storage: OptOutStorage = fakeStorage()) {
+  function installWindow(webdriver: boolean, search: string, storage: OptOutStorage = allowed(), globalPrivacyControl?: boolean) {
     Reflect.set(globalThis, "window", {
-      navigator: { webdriver },
+      navigator: { webdriver, globalPrivacyControl },
       location: { href: `https://unvibe.site/${search}`, pathname: "/", search },
       localStorage: storage,
+      dispatchEvent: () => true,
     });
   }
 
@@ -98,10 +101,39 @@ describe("analytics respects the opt-out", () => {
     globalThis.fetch = realFetch;
   });
 
-  it("sends a funnel event for a normal visitor", () => {
+  it("sends a funnel event for a visitor who allowed analytics", () => {
     installWindow(false, "");
     track("waitlist_completed");
     assert.ok(calls.length > 0, "expected at least one analytics request");
+  });
+
+  it("sends nothing before the visitor answers the analytics bar", () => {
+    installWindow(false, "", fakeStorage());
+    track("waitlist_completed");
+    recordBetaSiteEvent("copied");
+    assert.deepEqual(calls, []);
+  });
+
+  it("sends nothing with Global Privacy Control, even after Allow", () => {
+    installWindow(false, "", allowed(), true);
+    track("waitlist_completed");
+    recordBetaSiteEvent("copied");
+    assert.deepEqual(calls, []);
+  });
+
+  it("Allow starts sending, No thanks stops it at once, and the answer is stored", () => {
+    const storage = fakeStorage();
+    installWindow(false, "", storage);
+    setAnalyticsConsent("allow");
+    assert.equal(JSON.parse(storage.data.get(ANALYTICS_CONSENT_KEY) ?? "{}").choice, "allow");
+    track("waitlist_completed");
+    assert.ok(calls.length > 0, "sends after Allow");
+    calls = [];
+    setAnalyticsConsent("deny");
+    assert.equal(JSON.parse(storage.data.get(ANALYTICS_CONSENT_KEY) ?? "{}").choice, "deny");
+    track("waitlist_completed");
+    recordBetaSiteEvent("copied");
+    assert.deepEqual(calls, [], "nothing after No thanks");
   });
 
   it("sends nothing from an automated browser", () => {

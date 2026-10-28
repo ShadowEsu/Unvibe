@@ -140,8 +140,12 @@ export default function PrivacyPage() {
 
       <LegalSection heading="This website">
         <p>
-          unvibe.site uses Mixpanel and PostHog to understand how visitors use the site,
-          including page views, clicks, and session replays. Both receive your IP address with
+          If you press Allow on the analytics bar, unvibe.site uses Mixpanel and PostHog to
+          understand how visitors use the site, including page views, clicks, and session replays.
+          Until you press Allow, and if you press No thanks, ignore the bar, or your browser sends
+          Global Privacy Control, neither loads and nothing is recorded. Analytics settings at the
+          bottom of every page changes your answer, and No thanks stops recording at once. Both
+          receive your IP address with
           each event and use it to estimate a rough location. Replays hide all page text and
           everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
           codes) are removed from page addresses before they are sent. Admin pages and private
@@ -149,7 +153,8 @@ export default function PrivacyPage() {
           recording stops, no analytics events from that page are sent, and the page&apos;s
           content is left out of any replay. Automated browsers send no
           analytics, and neither does a browser where you have opened any page with ?notrack=1
-          added to the address; ?notrack=0 turns analytics back on. We
+          added to the address; ?notrack=0 lifts that, and analytics then runs only if you pressed
+          Allow. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The

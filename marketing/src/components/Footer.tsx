@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { ListingBadges } from "@/components/paper/ListingBadges";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
+import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { observeMotion } from "@/lib/motionInView";
 
@@ -49,7 +50,11 @@ export function Footer() {
           <SocialFollowLinks includeMail />
         </div>
         <FooterLinks heading="Product" links={product} />
-        <FooterLinks heading="Company" links={company} />
+        <FooterLinks heading="Company" links={company}>
+          <button type="button" className="paper-footer__settings text-left text-sm hover:text-[color:var(--ink)]" onClick={openAnalyticsSettings}>
+            Analytics settings
+          </button>
+        </FooterLinks>
       </div>
       {pathname !== "/" ? (
         <div className="paper-wrap pb-10">
@@ -68,13 +73,14 @@ export function Footer() {
 }
 
 /** The download page link counts as a download call to action. */
-export function FooterLinks({ heading, links }: { heading: string; links: readonly string[][] }) {
+export function FooterLinks({ heading, links, children }: { heading: string; links: readonly string[][]; children?: React.ReactNode }) {
   return (
     <nav aria-label={heading} className="grid content-start gap-2">
       <strong className="mb-1 text-sm text-[color:var(--ink)]">{heading}</strong>
       {links.map(([label, href]) => (
         <Link key={href} href={href!} className="text-sm hover:text-[color:var(--ink)]" onClick={href === "/beta" ? () => trackDownloadPageClick("footer") : undefined}>{label}</Link>
       ))}
+      {children}
     </nav>
   );
 }
