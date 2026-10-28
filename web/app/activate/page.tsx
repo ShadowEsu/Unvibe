@@ -3,6 +3,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from '@/lib/deviceCode';
+import { ACCOUNT_POLICY_VERSION } from '@/lib/accountConsent';
+
+/** The two ticks, kept only across the Google or email round trip and only for this policy version. */
+const AGREEMENT_KEY = 'unvibe.activateAgreement';
+
+function storedAgreement(store: Storage | null): { terms: boolean; age18: boolean } {
+  try {
+    const saved = JSON.parse(store?.getItem(AGREEMENT_KEY) ?? 'null') as { v?: unknown; terms?: unknown; age18?: unknown } | null;
+    if (saved?.v !== ACCOUNT_POLICY_VERSION) return { terms: false, age18: false };
+    return { terms: saved.terms === true, age18: saved.age18 === true };
+  } catch {
+    return { terms: false, age18: false };
+  }
+}
+
+function storeAgreement(store: Storage | null, terms: boolean, age18: boolean): void {
+  try {
+    if (terms || age18) store?.setItem(AGREEMENT_KEY, JSON.stringify({ v: ACCOUNT_POLICY_VERSION, terms, age18 }));
+    else store?.removeItem(AGREEMENT_KEY);
+  } catch {
+    /* storage blocked: the boxes are asked again after the round trip */
+  }
+}
 
 function localStore(): Storage | null {
   try {
@@ -40,6 +63,10 @@ export default function ActivatePage() {
   const [authMessage, setAuthMessage] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [terms, setTerms] = useState(false);
+  const [age18, setAge18] = useState(false);
+  const [agreeNote, setAgreeNote] = useState(false);
+  const agreed = terms && age18;
   const configured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
@@ -69,6 +96,27 @@ export default function ActivatePage() {
       window.history.replaceState({}, '', `${window.location.pathname}${pending.cleanSearch}${window.location.hash}`);
     }
   }, []);
+
+  useEffect(() => {
+    const saved = storedAgreement(localStore());
+    setTerms(saved.terms);
+    setAge18(saved.age18);
+  }, []);
+
+  function tick(which: 'terms' | 'age18', value: boolean) {
+    const next = { terms, age18, [which]: value };
+    setTerms(next.terms);
+    setAge18(next.age18);
+    if (next.terms && next.age18) setAgreeNote(false);
+    storeAgreement(localStore(), next.terms, next.age18);
+  }
+
+  /** Every way to sign an app in starts here: nothing is sent until both boxes are ticked. */
+  function needsAgreement(): boolean {
+    if (agreed) return false;
+    setAgreeNote(true);
+    return true;
+  }
 
   useEffect(() => {
     if (!client) {
@@ -112,6 +160,7 @@ export default function ActivatePage() {
   }, [client]);
 
   async function approve() {
+    if (needsAgreement()) return;
     setStatus('working');
     setMessage('');
     try {
@@ -121,7 +170,7 @@ export default function ActivatePage() {
           'content-type': 'application/json',
           ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ userCode: code.trim() }),
+        body: JSON.stringify({ userCode: code.trim(), agreement: { terms, age18, policyVersion: ACCOUNT_POLICY_VERSION } }),
       });
       if (!res.ok) {
         setStatus('error');
@@ -130,11 +179,14 @@ export default function ActivatePage() {
             ? 'Sign in with Google first, then approve.'
             : res.status === 404
               ? 'That code was not recognised. Check the desktop app and try again.'
-              : 'Something went wrong. Please try again.',
+              : res.status === 400
+                ? 'Tick both boxes above, then approve.'
+                : 'Something went wrong. Please try again.',
         );
         return;
       }
       clearDeviceCode(localStore());
+      storeAgreement(localStore(), false, false);
       setStatus('done');
     } catch {
       setStatus('error');
@@ -143,7 +195,7 @@ export default function ActivatePage() {
   }
 
   async function signInWithGoogle() {
-    if (!client) return;
+    if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage('');
     try {
@@ -171,7 +223,7 @@ export default function ActivatePage() {
   }
 
   async function sendMagicLink() {
-    if (!client) return;
+    if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage('');
     try {
@@ -239,6 +291,25 @@ export default function ActivatePage() {
               </section>
             )}
 
+            <fieldset className="activate-agree">
+              <legend className="activate-label">Before you sign in</legend>
+              <label htmlFor="activate-agree-terms">
+                <input id="activate-agree-terms" type="checkbox" checked={terms} onChange={(e) => tick('terms', e.target.checked)} />
+                <span>
+                  I agree to the{' '}
+                  <a href="https://unvibe.site/terms" target="_blank" rel="noreferrer">Terms</a> and the{' '}
+                  <a href="https://unvibe.site/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>
+                </span>
+              </label>
+              <label htmlFor="activate-agree-age">
+                <input id="activate-agree-age" type="checkbox" checked={age18} onChange={(e) => tick('age18', e.target.checked)} />
+                <span>I'm 18 or older</span>
+              </label>
+              {agreeNote && !agreed && (
+                <p className="activate-note activate-note--error" role="status">Tick both boxes first.</p>
+              )}
+            </fieldset>
+
             {!accessToken && (
               <div className="activate-section">
                 <button
@@ -246,6 +317,7 @@ export default function ActivatePage() {
                   type="button"
                   onClick={signInWithGoogle}
                   disabled={!configured || authBusy || bootstrapping}
+                  aria-disabled={!agreed}
                 >
                   <GoogleMark />
                   {authBusy ? 'Opening Google…' : 'Continue with Google'}
@@ -272,7 +344,7 @@ export default function ActivatePage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@school.edu"
+                  placeholder="you@example.com"
                   aria-label="Email address"
                 />
                 <button
@@ -280,6 +352,7 @@ export default function ActivatePage() {
                   type="button"
                   onClick={sendMagicLink}
                   disabled={!configured || !email || authBusy}
+                  aria-disabled={!agreed}
                 >
                   {authBusy ? 'Sending link…' : 'Email me a secure sign-in link'}
                 </button>
@@ -318,6 +391,7 @@ export default function ActivatePage() {
                 disabled={
                   status === 'working' || code.length < 4 || !accessToken || bootstrapping
                 }
+                aria-disabled={!agreed}
               >
                 {status === 'working' ? 'Approving…' : 'Approve sign-in'}
               </button>

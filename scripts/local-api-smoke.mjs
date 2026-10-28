@@ -9,7 +9,9 @@ const server = spawn('node_modules/.bin/next', ['dev', '-p', String(port)], {
   env: {
     ...process.env,
     NODE_ENV: 'development', APP_ENV: 'development', UNCODE_ALLOW_MEMORY_STORE: 'true',
-    SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '', ANTHROPIC_API_KEY: '',
+    SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '',
+    // The labelled mock, never a real AI call: the only provider is Gemini, so its keys are blanked.
+    ENABLE_MOCK_AI: 'true', GEMINI_API_KEY: '', GOOGLE_API_KEY: '',
   },
 });
 let logs = '';

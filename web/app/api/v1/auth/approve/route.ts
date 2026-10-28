@@ -1,12 +1,19 @@
 import { getStore } from '@/data/store';
+import { accountAgreement, consentsTableOn } from '@/lib/accountConsent';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as { userCode?: string; email?: string };
+  const body = (await req.json().catch(() => ({}))) as { userCode?: string; email?: string; agreement?: unknown };
   if (!body.userCode) {
     return Response.json({ error: 'missing userCode' }, { status: 400 });
+  }
+  // No app is signed in with an account until the person has ticked both boxes on /activate (Terms
+  // and Privacy; 18 or older). Checked here too, so a request that skips the page is refused.
+  const agreement = accountAgreement(body);
+  if (!agreement) {
+    return Response.json({ error: 'agree to the Terms and Privacy Policy and confirm you are 18 or older' }, { status: 400 });
   }
   const authHeader = req.headers.get('authorization') ?? '';
   const accessToken = /^Bearer\s+(.+)$/i.exec(authHeader)?.[1];
@@ -21,6 +28,16 @@ export async function POST(req: Request): Promise<Response> {
   const token = await getStore().approveDeviceCode(body.userCode, data.user.id, data.user.email);
   if (!token) {
     return Response.json({ error: 'unknown code' }, { status: 404 });
+  }
+  if (consentsTableOn()) {
+    // The user row exists only after the approve, so the record follows it; with no record the new
+    // session is withdrawn, so no app stays signed in without a stored agreement.
+    try {
+      await getStore().recordConsents(data.user.id, agreement.kinds, agreement.policyVersion, new Date());
+    } catch {
+      await getStore().revokeToken(token).catch(() => undefined);
+      return Response.json({ error: 'could not save your agreement; try again' }, { status: 503 });
+    }
   }
   // Keep the Google profile name so the app can greet people without asking again.
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;

@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
-import { clearDeviceCode, opensForSignIn, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
+import {
+  ACCOUNT_POLICY_VERSION,
+  clearDeviceCode,
+  opensForSignIn,
+  pendingDeviceCode,
+  saveAgreement,
+  saveDeviceCode,
+  storedAgreement,
+} from "@/lib/deviceApproval";
 
 function sessionStore(): Storage | null {
   try {
@@ -42,6 +50,10 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
   const [authMessage, setAuthMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [terms, setTerms] = useState(false);
+  const [age18, setAge18] = useState(false);
+  const [agreeNote, setAgreeNote] = useState(false);
+  const agreed = terms && age18;
   const config = publicSupabase();
   const configured = Boolean(config);
   const supabaseUrl = config?.url;
@@ -69,6 +81,27 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
       window.history.replaceState({}, "", `${window.location.pathname}${pending.cleanSearch}${window.location.hash}`);
     }
   }, []);
+
+  useEffect(() => {
+    const saved = storedAgreement(sessionStore());
+    setTerms(saved.terms);
+    setAge18(saved.age18);
+  }, []);
+
+  function tick(which: "terms" | "age18", value: boolean) {
+    const next = { terms, age18, [which]: value };
+    setTerms(next.terms);
+    setAge18(next.age18);
+    if (next.terms && next.age18) setAgreeNote(false);
+    saveAgreement(next, sessionStore());
+  }
+
+  /** Every way to sign an app in starts here: nothing is sent until both boxes are ticked. */
+  function needsAgreement(): boolean {
+    if (agreed) return false;
+    setAgreeNote(true);
+    return true;
+  }
 
   useEffect(() => {
     if (!client) {
@@ -109,6 +142,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
   }, [client]);
 
   async function approve() {
+    if (needsAgreement()) return;
     setStatus("working");
     setMessage("");
     try {
@@ -118,7 +152,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
           "content-type": "application/json",
           ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ userCode: code.trim() }),
+        body: JSON.stringify({ userCode: code.trim(), agreement: { terms, age18, policyVersion: ACCOUNT_POLICY_VERSION } }),
       });
       if (!res.ok) {
         setStatus("error");
@@ -127,11 +161,14 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
             ? "Sign in first, then approve."
             : res.status === 404
               ? "That code was not recognised. Check the desktop app and try again."
-              : "Something went wrong. Please try again.",
+              : res.status === 400
+                ? "Tick both boxes above, then approve."
+                : "Something went wrong. Please try again.",
         );
         return;
       }
       clearDeviceCode(sessionStore());
+      saveAgreement({ terms: false, age18: false }, sessionStore());
       setStatus("done");
     } catch {
       setStatus("error");
@@ -140,7 +177,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
   }
 
   async function signInWithGoogle() {
-    if (!client) return;
+    if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage("");
     try {
@@ -167,7 +204,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
   }
 
   async function sendMagicLink() {
-    if (!client) return;
+    if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage("");
     try {
@@ -191,7 +228,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
     event.preventDefault();
     const field = emailField.current;
     if (field && !field.checkValidity()) {
-      setEmailError(field.validity.valueMissing ? "Enter your email." : "Enter a full email address, like you@school.edu.");
+      setEmailError(field.validity.valueMissing ? "Enter your email." : "Enter a full email address, like you@example.com.");
       field.focus();
       return;
     }
@@ -218,6 +255,21 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
           </ul>
         </section>
       )}
+      <fieldset className="activate-agree">
+        <legend className="activate-label">Before you sign in</legend>
+        <label htmlFor="activate-agree-terms">
+          <input id="activate-agree-terms" type="checkbox" checked={terms} onChange={(event) => tick("terms", event.target.checked)} />
+          <span>
+            I agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms</a> and the{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>
+          </span>
+        </label>
+        <label htmlFor="activate-agree-age">
+          <input id="activate-agree-age" type="checkbox" checked={age18} onChange={(event) => tick("age18", event.target.checked)} />
+          <span>I&apos;m 18 or older</span>
+        </label>
+        {agreeNote && !agreed && <p className="activate-note activate-note--error" role="status">Tick both boxes first.</p>}
+      </fieldset>
       {!accessToken && (
         <div>
           <button
@@ -225,6 +277,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
             type="button"
             onClick={() => void signInWithGoogle()}
             disabled={!configured || authBusy || bootstrapping}
+            aria-disabled={!agreed}
           >
             {authBusy ? "Opening Google…" : "Continue with Google"}
           </button>
@@ -244,7 +297,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
                 setEmail(event.target.value);
                 setEmailError("");
               }}
-              placeholder="you@school.edu"
+              placeholder="you@example.com"
               aria-invalid={Boolean(emailError)}
               aria-describedby={emailError ? "activate-email-error" : undefined}
             />
@@ -257,6 +310,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
               className="activate-btn activate-btn--ghost"
               type="submit"
               disabled={!configured || authBusy}
+              aria-disabled={!agreed}
             >
               {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
             </button>
@@ -280,6 +334,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
           type="button"
           onClick={() => void approve()}
           disabled={status === "working" || code.length < 4 || !accessToken || bootstrapping}
+          aria-disabled={!agreed}
         >
           {status === "working" ? "Approving…" : "Approve sign-in"}
         </button>
