@@ -40,7 +40,7 @@ const PROGRAMS: Array<[string, string, number]> = [
   ["Deepgram Startup Program", "2026-08-19", 1_000],
   ["MongoDB for Startups", "2026-07-21", 500],
 ];
-const HERO = "$262,700 in startup support · 10 programs, including Claude for Startups";
+const HERO = "$262,700 in startup-program credits and committed cash · 10 programs, including Claude for Startups";
 const SUMMARY =
   "In Claude for Startups, plus Mixpanel, PostHog, GitLab™, Salesforce Launchpad, Linear, Google for Startups, OpenAI, Deepgram and MongoDB®";
 /**
@@ -50,7 +50,12 @@ const SUMMARY =
 const LOGO = "/sponsors/mongodb-logo.svg";
 const LOGO_SHA256 = "9f5435c8be18a834b2c2f8c4c03f117a997646c660fd6f28e3b6869a1bc2fcc1";
 const NO_AWS = /\baws\b|amazon web services/i;
-const BANNED_WORDING = /\bpartner(s|ship)?\b|backed by|\bofficial\b|in partnership with|trusted by|\bsponsor(s|ed|ship)?\b/i;
+const BANNED_WORDING = /\bpartner(s|ship)?\b|backed by|supported by|\bofficial\b|in partnership with|trusted by|\bsponsor(s|ed|ship)?\b/i;
+/**
+ * Wording that read as brands sponsoring us (Security W-1, W-2): checked on every whole page, the data, the
+ * milestones and the kit. The $800 is our own and angel cash, so the total is "credits and committed cash".
+ */
+const SPONSOR_READING = /supported by|startup support/i;
 /** Names the earlier copy used that the rulings replaced. */
 const RETIRED_NAMES = /founder value pack|google ai startups|salesforce for startups|linear app\b/i;
 
@@ -91,7 +96,7 @@ function assertMarksAtFirstUse(markup: string, where: string) {
   }
 }
 
-describe("startup support", () => {
+describe("startup programs", () => {
   it("lists every program the earlier site listed except AWS, with its date and credit value", () => {
     assert.deepEqual(startupPrograms.map((program) => [program.program, program.accepted, program.amountUsd]), PROGRAMS);
     assert.equal(compensationProgramCount(), 10);
@@ -111,11 +116,15 @@ describe("startup support", () => {
     assert.equal(compensationLines.reduce((sum, line) => sum + line.amountUsd, 0), 262_700);
   });
 
-  it("never publishes AWS: no line, program, milestone or kit text", () => {
+  it("never publishes AWS, or wording that reads as sponsorship: no line, program, milestone or kit text", () => {
     assert.equal(compensationLines.some((line) => /aws/i.test(`${line.name} ${line.detail}`)), false);
-    assert.doesNotMatch(JSON.stringify(startupPrograms), NO_AWS);
-    assert.doesNotMatch(JSON.stringify(milestones), NO_AWS);
-    assert.doesNotMatch(kitMarkdown(), NO_AWS);
+    for (const [what, data] of [["programs", JSON.stringify(startupPrograms)], ["lines", JSON.stringify(compensationLines)], ["milestones", JSON.stringify(milestones)], ["kit", kitMarkdown()]]) {
+      assert.doesNotMatch(data, NO_AWS, what);
+      assert.doesNotMatch(data, SPONSOR_READING, what);
+    }
+    // Text fields only: the logo path is /sponsors/…, which is a folder name, not copy.
+    for (const program of startupPrograms) assert.doesNotMatch(`${program.brand} ${program.program} ${program.detail}`, BANNED_WORDING);
+    for (const line of compensationLines) assert.doesNotMatch(`${line.name} ${line.detail}`, BANNED_WORDING);
   });
 
   it("ships only MongoDB's logo file, unmodified", () => {
@@ -133,29 +142,33 @@ describe("startup support", () => {
     assertProgramSection(strip, "home strip");
     assert.match(text(strip), /Unvibe is in Claude for Startups\./);
     assertMarksAtFirstUse(home, "home");
+    assert.match(text(strip), /Startup programs we're in\./);
+    assert.doesNotMatch(text(home), SPONSOR_READING);
   });
 
   it("/investors shows the total, the count, the 10 names in #backing and every line with its amount", () => {
     const page = render(InvestorsPage);
     assertProgramSection(section(page, /<section class="inv-section" id="backing"/), "/investors#backing");
     const words = text(page);
-    assert.match(words, /\$262,700 startup support secured/);
+    assert.match(words, /\$262,700 in startup-program credits and committed cash/);
     assert.match(words, /10 startup programs we're in/);
     assert.match(words, /Program credits \$261,900 · cash \$800/);
     for (const line of compensationLines) assert.ok(words.includes(`${line.name} ${formatUsd(line.amountUsd)}`), line.name);
     assertMarksAtFirstUse(page, "/investors");
     assert.doesNotMatch(words, NO_AWS);
+    assert.doesNotMatch(words, SPONSOR_READING);
   });
 
   it("/about shows the total with the count, the summary, the 10 names and the investors link", () => {
     const page = render(AboutPage);
     const block = section(page, /<section class="paper-wrap about-backing"/);
     assertProgramSection(block, "/about");
-    assert.match(text(block), /\$262,700 in startup support \(10 programs plus committed cash\)\./);
+    assert.match(text(block), /Startup programs we're in \$262,700 in startup-program credits and committed cash \(10 programs\)\./);
     assert.ok(text(block).includes(`${SUMMARY}.`));
     assert.match(block, /<a href="\/investors#backing">More on the investors page\.<\/a>/);
     assertMarksAtFirstUse(page, "/about");
     assert.doesNotMatch(text(page), NO_AWS);
+    assert.doesNotMatch(text(page), SPONSOR_READING);
   });
 
   it("the milestones name each program on its date, with the notices and none of the retired names", () => {
@@ -169,13 +182,13 @@ describe("startup support", () => {
       const found = company.filter((m) => m.title.replace(/[™®]/g, "").includes(name));
       assert.deepEqual(found.map((m) => iso(m.date)), [date], name);
     }
-    const programMilestones = company.filter((m) => PROGRAMS.some(([name]) => m.title.replace(/[™®]/g, "").includes(name)) || m.title === "Startup support total");
+    const programMilestones = company.filter((m) => PROGRAMS.some(([name]) => m.title.replace(/[™®]/g, "").includes(name)) || m.title === "Startup-program credits and committed cash");
     assert.equal(programMilestones.length, 11);
     for (const m of programMilestones) assert.doesNotMatch(`${m.title} ${m.summary}`, BANNED_WORDING, m.title);
     for (const m of milestones) assert.doesNotMatch(`${m.title} ${m.summary}`, RETIRED_NAMES, m.title);
     assert.ok(milestones.find((m) => m.title === "Salesforce Launchpad")?.summary.includes(SALESFORCE_ATTRIBUTION));
     assert.ok(milestones.find((m) => m.title === "GitLab™ for Startups")?.summary.includes(GITLAB_ATTRIBUTION));
-    assert.equal(milestones.find((m) => m.title === "Startup support total")?.figure, "$262,700");
+    assert.equal(milestones.find((m) => m.title === "Startup-program credits and committed cash")?.figure, "$262,700");
   });
 
   it("the kit names the programs with the notices and the marks", () => {
@@ -185,5 +198,7 @@ describe("startup support", () => {
     assert.ok(kit.includes(GITLAB_ATTRIBUTION));
     assertMarksAtFirstUse(kit, "kit");
     assert.doesNotMatch(kit, RETIRED_NAMES);
+    const investors = kit.slice(kit.indexOf(SUMMARY) - 200, kit.indexOf(SUMMARY) + SUMMARY.length + 400);
+    assert.doesNotMatch(investors.replace(/nothing stronger.*$/m, ""), BANNED_WORDING);
   });
 });

@@ -34,7 +34,7 @@ export function BackingStrip() {
       <div className="paper-wrap u-sheet">
         <div className="sec-head">
           <p className="paper-meta">Behind Unvibe</p>
-          <h2 id="backing-title">Supported by <em>startup programs.</em></h2>
+          <h2 id="backing-title">Startup programs <em>we&apos;re in.</em></h2>
         </div>
         <div className="claude-startups">
           <span className="claude-startups__tag">Startup program</span>

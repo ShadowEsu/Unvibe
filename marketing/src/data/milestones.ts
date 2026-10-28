@@ -92,7 +92,7 @@ export const milestones: Milestone[] = [
     date: "07 OCT 2026",
     category: "COMPANY",
     title: "Unvibe is in Claude for Startups",
-    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and perks from other tools worth about $21.5K to $23K. Startup support now totals ${compensationTotalLabel()} in credits and committed cash.`,
+    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and perks from other tools worth about $21.5K to $23K. Startup-program credits and committed cash now total ${compensationTotalLabel()}.`,
     figure: "$21.5K",
   },
   {
@@ -272,7 +272,7 @@ export const milestones: Milestone[] = [
   {
     date: "24 AUG 2026",
     category: "COMPANY",
-    title: "Startup support total",
+    title: "Startup-program credits and committed cash",
     summary: `Program credits plus self-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
     figure: compensationTotalLabel(),
     pinned: true,
@@ -483,7 +483,7 @@ export const milestones: Milestone[] = [
     date: "21 JUL 2026",
     category: "COMPANY",
     title: "MongoDB® for Startups",
-    summary: "Joined MongoDB for Startups as a program member. $500 in startup support.",
+    summary: "Joined MongoDB for Startups as a program member. $500 in program support.",
     figure: "$500",
   },
   {

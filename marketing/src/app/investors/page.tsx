@@ -18,7 +18,7 @@ import { pageMetadata } from "@/lib/pageMeta";
 export const metadata: Metadata = pageMetadata({
   path: "/investors",
   title: "Investors",
-  description: "Unvibe on one page: the thesis, what shipped, every line of startup support, what is next, and how to reach us.",
+  description: "Unvibe on one page: the thesis, what shipped, every startup-program credit and committed cash line, what is next, and how to reach us.",
 });
 
 const pipeline = [
@@ -70,7 +70,7 @@ export default function InvestorsPage() {
       </header>
 
       <section className="inv-stats" aria-label="Unvibe at a glance">
-        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>startup support secured</span></div>
+        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>in startup-program credits and committed cash</span></div>
         <div className="inv-stat inv-stat--sky"><b>{programs}</b><span>startup programs we&apos;re in</span></div>
         <div className="inv-stat inv-stat--sun"><b>{releases}+</b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
         <div className="inv-stat inv-stat--lilac"><b>Mac + Windows</b><span>beta, free to download</span></div>

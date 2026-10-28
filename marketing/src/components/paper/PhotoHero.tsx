@@ -178,7 +178,7 @@ export function PhotoHero() {
         )}
         <p className="vhero__backing">
           <a href="/investors#backing">
-            <b>{compensationTotalLabel()} in startup support</b> · {compensationProgramCount()} programs, including {startupPrograms[0].program}
+            <b>{compensationTotalLabel()} in startup-program credits and committed cash</b> · {compensationProgramCount()} programs, including {startupPrograms[0].program}
           </a>
         </p>
       </div>
