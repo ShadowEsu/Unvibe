@@ -10,6 +10,7 @@ import { TypingFaq } from "@/components/paper/TypingFaq";
 import { DownloadCta } from "@/components/paper/DownloadCta";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
+import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -42,6 +43,15 @@ export default function HomePage() {
       <PhotoHero />
 
       <AppTour />
+
+      <section className="paper-section" aria-labelledby="who-title">
+        <div className="paper-wrap u-sheet">
+          <div className="sec-head">
+            <h2 id="who-title">Who it&apos;s <em>for.</em></h2>
+          </div>
+          <WhoItsForCards />
+        </div>
+      </section>
 
       <HowItWorks />
 
