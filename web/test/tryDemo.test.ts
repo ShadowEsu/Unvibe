@@ -1,19 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { looksSecret, trySystemPrompt, validateTry } from '../src/lib/tryDemo';
+import { TRY_CONSENT_VERSION, looksSecret, trySystemPrompt, validateTry } from '../src/lib/tryDemo';
 
-test('try demo accepts a small snippet and defaults the level', () => {
-  const result = validateTry({ code: 'const a = 1;' });
+const consent = { v: TRY_CONSENT_VERSION, aiSend: true, age18: true };
+const REFUSED = { ok: false, error: 'Tick both boxes to send this code to Gemini.' };
+
+test('try demo accepts a small snippet with both ticks and defaults the level', () => {
+  const result = validateTry({ code: 'const a = 1;', consent });
   assert.ok(result.ok);
   if (result.ok) assert.equal(result.level, 'intermediate');
 });
 
 test('try demo rejects empty, huge and secret-bearing input', () => {
-  assert.equal(validateTry({ code: '   ' }).ok, false);
-  assert.equal(validateTry({ code: 'x'.repeat(2_000) }).ok, false);
-  assert.equal(validateTry({ code: Array(80).fill('a').join('\n') }).ok, false);
-  assert.equal(validateTry({ code: 'const key = "sk-abcdefghijklmnopqrstu";' }).ok, false);
+  assert.equal(validateTry({ code: '   ', consent }).ok, false);
+  assert.equal(validateTry({ code: 'x'.repeat(2_000), consent }).ok, false);
+  assert.equal(validateTry({ code: Array(80).fill('a').join('\n'), consent }).ok, false);
+  assert.equal(validateTry({ code: 'const key = "sk-abcdefghijklmnopqrstu";', consent }).ok, false);
   assert.equal(validateTry(null).ok, false);
+});
+
+test('try demo refuses code unless both boxes were ticked for the current version', () => {
+  const code = 'const a = 1;';
+  assert.equal(TRY_CONSENT_VERSION, '2026-10-28');
+  assert.deepEqual(validateTry({ code }), REFUSED, 'missing consent');
+  assert.deepEqual(validateTry({ code, consent: TRY_CONSENT_VERSION }), REFUSED, 'a bare version string');
+  assert.deepEqual(validateTry({ code, consent: { ...consent, v: '2026-01-01' } }), REFUSED, 'wrong version');
+  assert.deepEqual(validateTry({ code, consent: { ...consent, aiSend: false } }), REFUSED, 'aiSend false');
+  assert.deepEqual(validateTry({ code, consent: { v: TRY_CONSENT_VERSION, aiSend: true } }), REFUSED, 'age18 missing');
+  assert.deepEqual(validateTry({ code, consent: { ...consent, age18: 'true' } }), REFUSED, 'age18 not exactly true');
+  assert.deepEqual(validateTry({ code, consent }), { ok: true, code, level: 'intermediate' });
 });
 
 test('secret patterns catch common key shapes but not normal code', () => {
