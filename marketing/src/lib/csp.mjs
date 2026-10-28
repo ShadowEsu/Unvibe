@@ -17,17 +17,10 @@ export const CSP_REPORT_GROUP = "csp";
 const ANALYTICS_SCRIPT_HOSTS = ["https://us-assets.i.posthog.com", "https://cdn.mxpnl.com"];
 const ANALYTICS_CONNECT_HOSTS = ["https://us.i.posthog.com", "https://us-assets.i.posthog.com", "https://api-js.mixpanel.com"];
 /**
- * Directory listing badges in the footer (src/data/listings.ts). A test keeps every badge's origin
- * here; www.aitooldiscovery.com is where aitooldiscovery.com redirects the image.
+ * Hot-linked directory badge images in the footer (src/data/listings.ts). The others are served from
+ * public/badges; a test keeps this list equal to the badge origins actually used.
  */
-export const LISTING_IMAGE_HOSTS = [
-  "https://smolstartup.com",
-  "https://toolindex.net",
-  "https://devrove.com",
-  "https://aitooldiscovery.com",
-  "https://www.aitooldiscovery.com",
-  "https://launchbuff.com",
-];
+export const LISTING_IMAGE_HOSTS = ["https://toolindex.net"];
 
 /** An env URL's origin, or nothing when it is unset or not a URL. */
 function origin(url) {

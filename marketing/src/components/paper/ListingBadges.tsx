@@ -21,7 +21,7 @@ function ListingBadge({ badge }: { badge: Badge }) {
   if (failed) return null;
   return (
     <a href={badge.href} target="_blank" rel="noopener noreferrer" title={badge.alt} aria-label={badge.alt}>
-      <img ref={image} src={badge.src} alt={badge.alt} width={badge.width} height={badge.height} onError={() => setFailed(true)} />
+      <img ref={image} src={badge.src} alt={badge.alt} width={badge.width} height={badge.height} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
     </a>
   );
 }

@@ -1,8 +1,13 @@
+/**
+ * Badge images are copies in public/badges, so a page view sends nothing to the directories. The
+ * one exception is Tool Index's verification badge: its listing checks for its own hosted image, so
+ * it stays hot-linked (sent without a referrer).
+ */
 export const listingBadges = [
   {
     name: "Smol Startup",
     href: "https://smolstartup.com/projects/unvibe",
-    src: "https://smolstartup.com/smolstartup/images/badges/top1-dark.svg",
+    src: "/badges/smolstartup-top1-dark.svg",
     alt: "Smol Startup Top 1 Daily Winner",
     width: 195,
     height: 54,
@@ -10,7 +15,7 @@ export const listingBadges = [
   {
     name: "Tool Index",
     href: "https://toolindex.net/tools/unvibe?ref=badge",
-    src: "https://toolindex.net/badge/unvibe/medium.svg",
+    src: "/badges/toolindex-unvibe-medium.svg",
     alt: "Unvibe listed on Tool Index",
     width: 180,
     height: 50,
@@ -26,7 +31,7 @@ export const listingBadges = [
   {
     name: "DevRove",
     href: "https://devrove.com/tools/unvibe-site",
-    src: "https://devrove.com/light.svg",
+    src: "/badges/devrove-light.svg",
     alt: "Unvibe featured on DevRove",
     width: 156,
     height: 50,
@@ -34,7 +39,7 @@ export const listingBadges = [
   {
     name: "AI Tool Discovery",
     href: "https://www.aitooldiscovery.com/tools/aih_unvibe",
-    src: "https://aitooldiscovery.com/badges/featured-1.svg",
+    src: "/badges/aitooldiscovery-featured-1.svg",
     alt: "Featured on AI Tool Discovery",
     width: 200,
     height: 54,
@@ -42,7 +47,7 @@ export const listingBadges = [
   {
     name: "LaunchBuff",
     href: "https://launchbuff.com/products/unvibe-8ayflt",
-    src: "https://launchbuff.com/badge-featured-dark.svg",
+    src: "/badges/launchbuff-featured-dark.svg",
     alt: "Featured on LaunchBuff",
     width: 256,
     height: 80,
@@ -62,7 +67,6 @@ export const listingLinks = [
   { name: "ToolIndex on Replit", href: "https://strategic-flow-audit.replit.app/directory/unvibe-185" },
   { name: "TinyLaunch", href: "https://tinylaunch.com/launch/27829-unvibe" },
   { name: "Uneed", href: "https://www.uneed.best/tool/unvibe" },
-  { name: "F6S", href: "https://www.f6s.com/company/unvibe" },
   { name: "FounderMag", href: "https://foundermag.co/products/unvibe/" },
   { name: "KrispiTech product showcase", href: "https://krispitech.com/the-hidden-cost-of-vibe-coding-and-how-unvibe-helps-you-actually-own-your-codebase/" },
   { name: "vibecoding.app", href: "https://vibecoding.app/tools/unvibe" },
