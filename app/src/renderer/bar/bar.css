@@ -51,8 +51,7 @@ button { font: inherit; }
   display: grid; place-items: center; cursor: pointer; transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 .island__tool:hover { color: #fff; border-color: rgba(167,139,250,.5); background: #17151e; }
-.island__streak { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 650; white-space: nowrap; }
-.island__flame { color: #ff7448; flex: 0 0 auto; filter: drop-shadow(0 0 4px rgba(255,92,52,.4)); }
+.island__left { display: flex; align-items: baseline; gap: 4px; font-size: 13px; font-weight: 650; white-space: nowrap; }
 .island__status { color: #efeff2; font-size: 12px; line-height: 1; font-weight: 560; letter-spacing: 0; white-space: nowrap; text-transform: lowercase; }
 .island--small .island__status { font-size: 11px; }
 .island--large .island__status { font-size: 14px; }
@@ -83,7 +82,6 @@ button { font: inherit; }
 .island__header strong { font-size: 17px; line-height: 25px; font-weight: 650; letter-spacing: 0; }
 .island__header div:first-child span { color: #9999a2; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .island__header-actions { display:flex; align-items:center; gap:13px; flex:0 0 auto; }
-.island__header-streak { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 650; padding-top: 3px; }
 .island__settings { display:grid;place-items:center;width:26px;height:26px;padding:0;border:1px solid rgba(255,255,255,.17);border-radius:7px;background:#101012;color:#b8b8c0;cursor:pointer; }
 .island__settings:hover { background:#1e1a27;color:#fff;border-color:#8e74e2; }
 .island__metrics { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 5px; padding: 10px 0 8px; font-size: 12px; color: #b0b0b8; white-space: nowrap; }
@@ -134,7 +132,7 @@ button { font: inherit; }
 .island__mark .buddy { --vibe-ink: #0b0b0a; }
 .island__tool { width: 23px; height: 23px; border-radius: 7px; background: #1e1e1c; border-color: rgba(255,255,255,.12); color: #b7b4ab; }
 .island__tool:hover { background: #d6f45a; border-color: #d6f45a; color: #141414; }
-.island__streak, .island__header-streak { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+.island__left b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
 .island__status { font-weight: 600; }
 .island__dots i { background: #d6f45a; }
 .island__header strong { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.03em; }
@@ -158,17 +156,12 @@ button { font: inherit; }
 .island__actions button:active { transform: translateY(2px); box-shadow: none; }
 .island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline-color: #d6f45a; }
 
-/* Vibe Island life: flame flicker, a hop when an answer lands, a +1 when the streak grows. */
-.island__flame { animation: island-flicker 2.6s ease-in-out infinite; transform-origin: 50% 90%; }
-@keyframes island-flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.08, .94) rotate(-4deg); } 60% { transform: scale(.95, 1.06) rotate(3deg); } }
-.island__streak { position: relative; }
-.island__plus { position: absolute; right: -4px; top: -2px; font: 800 11px "Bricolage Grotesque", sans-serif; font-style: normal; color: #d6f45a; animation: island-plus 1.6s ease-out forwards; pointer-events: none; }
-@keyframes island-plus { 0% { opacity: 0; transform: translateY(4px) scale(.6); } 20% { opacity: 1; transform: translateY(-4px) scale(1.15); } 100% { opacity: 0; transform: translateY(-16px) scale(1); } }
-.island--phase-ready .island__mark, .island--phase-understood .island__mark, .island--streak-up .island__mark { animation: island-hop .7s cubic-bezier(.3,1.6,.5,1) 2; }
+/* Vibe Island life: a hop when an answer lands. */
+.island--phase-ready .island__mark, .island--phase-understood .island__mark { animation: island-hop .7s cubic-bezier(.3,1.6,.5,1) 2; }
 .island--phase-thinking .island__mark, .island--phase-generating .island__mark, .island--phase-analyzing .island__mark, .island--phase-contextualizing .island__mark { animation: island-think 1.2s ease-in-out infinite; }
 @keyframes island-hop { 0%, 100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.08, .94); } 60% { transform: translateY(0) scale(.94, 1.06); } }
 @keyframes island-think { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
-@media (prefers-reduced-motion: reduce) { .island__flame, .island__mark, .island__plus { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .island__mark { animation: none !important; } }
 
 /* Polish: bigger invisible hit areas inside the notch row, readable activity dots, steady numbers, a dusk rule. */
 .island__tool, .island__settings { position: relative; }
@@ -176,6 +169,6 @@ button { font: inherit; }
 .island__actions button { height: 32px; }
 .island__dots { width: 22px; gap: 3px; }
 .island__dots i { width: 3px; height: 3px; }
-.island__streak b, .island__header-streak b, .island__metrics b, .island__allowance b { font-variant-numeric: tabular-nums; }
+.island__left b, .island__metrics b, .island__allowance b { font-variant-numeric: tabular-nums; }
 .island__header { border-bottom: 1px solid; border-image: linear-gradient(90deg, rgb(249 151 143 / .6), rgb(180 156 240 / .6), rgb(105 158 252 / .6)) 1; }
 @media (prefers-reduced-motion: reduce) { .island__dots i { opacity: .85; } }

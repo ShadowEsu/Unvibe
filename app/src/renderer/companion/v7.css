@@ -288,7 +288,6 @@
     border: 1.5px solid var(--v-faint); border-radius: 5px; color: var(--v-ink); font: 800 11px var(--font-sans);
   }
   & .today-goal__check.is-done { border-color: var(--v-ink); background: var(--lime); }
-  & .today-goal__streak { color: var(--v-muted); font: 600 13px var(--font-sans); }
 
   & .today-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; align-items: start; }
   /* One track sized to the column; an implicit track grows to max-content and spills into the next column. */

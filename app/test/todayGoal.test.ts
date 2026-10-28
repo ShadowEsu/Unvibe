@@ -53,40 +53,21 @@ test('the day ends at the computer\'s local midnight, not at UTC midnight', () =
   // 23:59:59.999 on Oct 26 in Los Angeles is already Oct 27 in UTC.
   const lastMoment = local(2026, 10, 26, 23, 59, 59, 999);
   const events = [goalMet(lastMoment)];
-  assert.deepEqual(computeToday(events, lastMoment), { explained: true, answered: true, streak: 1 }, 'still Oct 26 one millisecond before midnight');
+  assert.deepEqual(computeToday(events, lastMoment), { explained: true, answered: true }, 'still Oct 26 one millisecond before midnight');
   const midnight = local(2026, 10, 27, 0, 0, 0, 0);
-  assert.deepEqual(computeToday(events, midnight), { explained: false, answered: false, streak: 1 }, 'at midnight Oct 27 starts empty, yesterday keeps the streak');
+  assert.deepEqual(computeToday(events, midnight), { explained: false, answered: false }, 'at midnight Oct 27 starts empty');
   // The other side of midnight: an answer at 00:00 counts for the new day only.
   const early = lesson(local(2026, 10, 26, 9), [midnight]);
   assert.deepEqual(early.answeredOn, ['2026-10-27'], 'an answer at local midnight belongs to the new day');
 });
 
-test('a streak counts consecutive met days ending today', () => {
-  const today = local(2026, 10, 26, 18);
-  const events = [goalMet(local(2026, 10, 24, 9)), goalMet(local(2026, 10, 25, 22)), goalMet(local(2026, 10, 26, 8))];
-  assert.deepEqual(computeToday(events, today), { explained: true, answered: true, streak: 3 });
-});
-
-test('a streak met only through yesterday is still alive until tonight\'s midnight', () => {
-  const events = [goalMet(local(2026, 10, 24, 9)), goalMet(local(2026, 10, 25, 22))];
-  assert.deepEqual(computeToday(events, local(2026, 10, 26, 23, 59, 59, 999)), { explained: false, answered: false, streak: 2 }, 'alive at 23:59 today');
-  assert.equal(computeToday(events, local(2026, 10, 27, 0, 0, 0, 0)).streak, 0, 'gone once today ends unmet');
-});
-
-test('a missed day resets the streak', () => {
-  const before = [goalMet(local(2026, 10, 22, 9)), goalMet(local(2026, 10, 23, 9)), goalMet(local(2026, 10, 24, 9))];
-  // Oct 25 missed.
-  assert.equal(computeToday(before, local(2026, 10, 26, 12)).streak, 0, 'nothing today and a gap yesterday');
-  assert.equal(computeToday([...before, goalMet(local(2026, 10, 26, 8))], local(2026, 10, 26, 12)).streak, 1, 'today starts a new streak of 1');
-});
-
-test('a day with only an explanation or only an answer does not meet the goal', () => {
+test('an explanation and an answer are each counted on their own day', () => {
   const explainedOnly = lesson(local(2026, 10, 24, 10)); // never answered
   const answeredLater = lesson(local(2026, 10, 23, 10), [local(2026, 10, 25, 10)]); // Oct 23 explained only, Oct 25 answered only
   const events = [explainedOnly, answeredLater];
-  assert.equal(computeToday(events, local(2026, 10, 25, 20)).streak, 0, 'Oct 23, 24 and 25 each have only one of the two');
-  assert.deepEqual(computeToday([lesson(local(2026, 10, 26, 9))], local(2026, 10, 26, 20)), { explained: true, answered: false, streak: 0 }, 'explained today, not answered');
-  assert.deepEqual(computeToday([lesson(local(2026, 10, 20, 9), [local(2026, 10, 26, 9)])], local(2026, 10, 26, 20)), { explained: false, answered: true, streak: 0 }, 'answered today, nothing explained today');
+  assert.deepEqual(computeToday(events, local(2026, 10, 25, 20)), { explained: false, answered: true }, 'Oct 25: answered only');
+  assert.deepEqual(computeToday([lesson(local(2026, 10, 26, 9))], local(2026, 10, 26, 20)), { explained: true, answered: false }, 'explained today, not answered');
+  assert.deepEqual(computeToday([lesson(local(2026, 10, 20, 9), [local(2026, 10, 26, 9)])], local(2026, 10, 26, 20)), { explained: false, answered: true }, 'answered today, nothing explained today');
 });
 
 test('answer days stay on this computer: never in what sync uploads, kept when the cloud copy comes back', () => {
@@ -110,13 +91,13 @@ test('a quiz card answer, right or wrong, counts as today\'s answer', { timeout:
     assert.equal(started.ok, true);
     const result = answerQuizCard(event.id, 1);
     assert.deepEqual(result.ok && result.correct, false, 'a wrong pick');
-    assert.deepEqual(computeToday(store().events(), new Date()), { explained: true, answered: true, streak: 1 }, 'the wrong pick still answered today');
+    assert.deepEqual(computeToday(store().events(), new Date()), { explained: true, answered: true }, 'the wrong pick still answered today');
   } finally {
     globalThis.fetch = original;
   }
 });
 
-test('Erase everything and account deletion leave streak 0 and nothing today', async () => {
+test('Erase everything and account deletion leave nothing today', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -132,19 +113,19 @@ test('Erase everything and account deletion leave streak 0 and nothing today', a
     const todays = lesson(now);
     store().recordReview(todays);
     store().setOutcome(todays.id, 'understood', 'map', 'Array map', now);
-    assert.deepEqual(computeToday(store().events(), new Date()), { explained: true, answered: true, streak: 2 }, 'seeded: met yesterday and today');
+    assert.deepEqual(computeToday(store().events(), new Date()), { explained: true, answered: true }, 'seeded: met yesterday and today');
   };
   try {
     seed();
     const erased = await deleteAccountAndLocalData(() => undefined);
     assert.deepEqual(erased, { ok: true, status: 'erased_locally' });
-    assert.deepEqual(computeToday(store().events(), new Date()), { explained: false, answered: false, streak: 0 }, 'after Erase everything');
+    assert.deepEqual(computeToday(store().events(), new Date()), { explained: false, answered: false }, 'after Erase everything');
 
     seed();
     store().setAccount('user-1', 'person@example.com', 'session-token');
     const deleted = await deleteAccountAndLocalData(() => undefined);
     assert.deepEqual(deleted, { ok: true, status: 'deleted' });
-    assert.deepEqual(computeToday(store().events(), new Date()), { explained: false, answered: false, streak: 0 }, 'after account deletion');
+    assert.deepEqual(computeToday(store().events(), new Date()), { explained: false, answered: false }, 'after account deletion');
   } finally {
     globalThis.fetch = original;
   }
