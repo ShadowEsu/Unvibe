@@ -59,7 +59,7 @@ import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
 import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
-import { grantReturnApp, type PendingGrant } from '../core/grantReturn';
+import { grantReturnApp, heldReviewToRun, type HeldClipboardReview, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { reportProgress, syncProgress } from './progress';
@@ -527,6 +527,12 @@ function asset(...parts: string[]): string {
  * `grantReturnApp` drops presses older than five minutes (Security L2).
  */
 let pendingGrant: PendingGrant | null = null;
+/**
+ * A clipboard explain asked for before the person agreed to sending code (QA F1): nothing was read
+ * then. After Agree, the panel asks main to run it; `heldReviewToRun` drops requests older than five
+ * minutes. Any other review started meanwhile replaces or clears it.
+ */
+let heldClipboardReview: HeldClipboardReview | null = null;
 
 /**
  * `confirm`: an `unvibe://review` link asked for this; capture it, but send nothing until Explain is pressed.
@@ -569,6 +575,9 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
   const agreed = codeConsented(providerInUse(usage.remaining));
+  if (!options.sample && !options.captured) {
+    heldClipboardReview = !agreed && options.preferClipboard ? { confirm: Boolean(options.confirm), at: Date.now() } : null;
+  }
   const capture = options.sample
     ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' }
     : options.captured ?? (agreed ? await captureSelection(options) : { code: null, sourceApp: null });
@@ -830,6 +839,15 @@ app.whenReady().then(() => {
     // Back from the off switch: the shortcuts come back too.
     registerShortcut(settings().all().shortcut);
     return { ok: true as const, status: consentStatus() };
+  });
+  // After Agree in the panel: run the clipboard explain that waited on the agreement (QA F1). An
+  // editor link still shows its confirm sheet; startReview checks the agreement again itself.
+  ipcMain.handle('consent:explainHeld', async () => {
+    const held = heldReviewToRun(heldClipboardReview, Date.now());
+    heldClipboardReview = null;
+    if (!held || !codeConsented(providerInUse())) return { explained: false };
+    await startReview({ preferClipboard: true, confirm: held.confirm });
+    return { explained: true };
   });
   // The off switch: every send checks the record, so it applies to the next request at once, and
   // every global shortcut (the Mac's Control+U too) is unregistered.

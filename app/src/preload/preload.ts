@@ -119,6 +119,8 @@ const api = {
   consentAgree: (form: { aiSend: boolean; terms: boolean; age18: boolean; provider: ConsentProvider }): Promise<ConsentAnswer> =>
     ipcRenderer.invoke('consent:agree', form),
   consentRevoke: (): Promise<ConsentAnswer> => ipcRenderer.invoke('consent:revoke'),
+  /** After Agree in the panel: run the clipboard explain asked for before agreeing, if it is recent. */
+  explainAfterConsent: (): Promise<{ explained: boolean }> => ipcRenderer.invoke('consent:explainHeld'),
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),

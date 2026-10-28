@@ -893,9 +893,15 @@ function Widget() {
                 onAgreed={() => {
                   // An explanation already on screen (a follow-up was refused): back to it, ask again from there.
                   // A link capture: the confirm sheet, so the code is seen before it's sent.
-                  // Captured code that waited on this computer: explain it now. Nothing captured: the picker.
+                  // Captured code that waited on this computer: explain it now. Nothing captured: a
+                  // clipboard explain asked for just before agreeing runs now (QA F1), otherwise the picker.
                   const next: Phase | null = active.text ? 'done' : active.confirmAfterConsent ? 'confirm' : active.meta.lines ? null : 'empty';
-                  if (next) setTabs((prev) => patchTab(prev, activeRef.current, { phase: next, consentProvider: null }));
+                  if (next === 'empty') {
+                    setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'boot', consentProvider: null }));
+                    void window.unvibe.explainAfterConsent().then((result) => {
+                      if (!result.explained) setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'empty' }));
+                    });
+                  } else if (next) setTabs((prev) => patchTab(prev, activeRef.current, { phase: next, consentProvider: null }));
                   else request({});
                 }}
                 onCancel={() => window.unvibe.closeWidget()}
