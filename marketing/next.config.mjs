@@ -44,6 +44,12 @@ const nextConfig = {
         ],
       },
       {
+        // Link-preview cards are named for their content (a test checks name = sha256 prefix), so a
+        // changed card always gets a new URL and the old one can be cached for good (Security OG-6).
+        source: "/og/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
         source: "/founder",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
