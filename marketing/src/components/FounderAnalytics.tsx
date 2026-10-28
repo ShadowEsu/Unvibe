@@ -239,7 +239,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
       ) : null}
 
       {!data && loading ? (
-        <div className="founder-analytics__loading" aria-label="Loading analytics">
+        <div className="founder-analytics__loading" role="status" aria-label="Loading analytics">
           <span /><span /><span /><span />
         </div>
       ) : null}
