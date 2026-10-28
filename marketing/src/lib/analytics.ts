@@ -1,8 +1,8 @@
 /**
  * Privacy respecting analytics abstraction.
  *
- * Mixpanel loads via mixpanel-browser (autocapture + session replay).
- * PostHog loads via posthog-js when
+ * Mixpanel loads via mixpanel-browser (autocapture + session replay inside
+ * Mixpanel Pro startup credits). PostHog loads via posthog-js when
  * NEXT_PUBLIC_POSTHOG_KEY is set — named events, exception autocapture for
  * Error Tracking, and Surveys. We never send code contents, emails, or other
  * personal data: replays mask all text and inputs, and emails, tokens and codes
@@ -292,7 +292,7 @@ export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
     person_profiles: "identified_only",
     capture_pageview: true,
     capture_pageleave: true,
-    // Error Tracking + Surveys need the SDK.
+    // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
     capture_exceptions: true,
     disable_session_recording: false,
     disable_surveys: false,
@@ -326,6 +326,7 @@ function startMixpanel(): void {
 export function initMixpanel(mixpanel: MixpanelClient, token = MIXPANEL_BROWSER_TOKEN): void {
   if (!token) return;
   removeStoredMixpanelBatches();
+  // Mixpanel for Startups Pro credits: autocapture + session replay are included.
   mixpanel.init(token, {
     ...mixpanelPrivacyConfig(),
     persistence: "localStorage",

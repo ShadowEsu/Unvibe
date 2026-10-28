@@ -54,10 +54,13 @@
 }
 
 /* Focusable scroll areas whose ring the page hid or washed out (390 keyboard walk). Focused state only.
+   - Startup logo strip: its edge-fade mask also masks the outline drawn outside it, so no ring showed. While it
+     has focus the marquee is paused anyway, so the fade goes and the ring shows whole.
    - /resources code sample: the code window clips everything outside the <pre> (overflow: hidden), and the
      indigo ring that is left sits on near-black. The ring moves inside, in the light ring colour, in both themes.
    - /resources shortcuts table: the card sits straight on the colour field, so the ring outside it lands on the
      field (pink to blue) and is under 3:1 on half its length. The ring moves inside, onto the card. */
+.paper-partners__viewport:focus-visible { -webkit-mask-image: none; mask-image: none; }
 .resources-code-pre:focus-visible { outline: 2px solid #c4b5fd; outline-offset: -3px; }
 .resources-shortcuts-table:focus-visible { outline-offset: -3px; }
 
@@ -106,6 +109,9 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
 
 /* Inside a sheet, nested stickers flatten to hairline rows: one surface, one primary object per view.
    (Install card, FAQ rows and the closing card carry vibe.css card rules marked !important.) */
+.u-sheet :is(.claude-startups, .paper-partners) { margin: 0; padding: clamp(20px, 3vw, 32px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.u-sheet .paper-partners { margin-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--u-line); }
+.u-sheet .claude-startups { padding-top: 0; }
 .u-sheet .paper-beta { width: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
 .u-sheet .paper-faq { gap: 0; max-width: none; }
 .u-sheet .paper-faq details {
