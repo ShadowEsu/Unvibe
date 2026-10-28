@@ -281,10 +281,18 @@ const shortcutRegistered = await app.evaluate(({ globalShortcut }, accelerator) 
 log(shortcutRegistered, 'Configured global shortcut is registered', shortcut);
 const sample = 'function total(items) {\n  return items.reduce((sum, item) => sum + item.price * item.qty, 0);\n}';
 
-async function waitForExplanation(label, expectedCode) {
+async function waitForExplanation(label, expectedCode, { confirm = false } = {}) {
   const panel = await windowWith(app, 'widget.html', 20000);
   if (!panel) return { ok: false, why: 'review panel did not open' };
   try {
+    if (confirm) {
+      // A link-started review waits for Explain (Security LOW #8): nothing may stream before the click.
+      await panel.locator('#confirm-title').waitFor({ timeout: 30000 });
+      await sleep(1500);
+      assert.equal(await panel.locator('.stage').count(), 0, 'a link-started review must not start before Explain');
+      await shot(panel, `${label}-confirm`);
+      await panel.getByRole('button', { name: 'Explain', exact: true }).click();
+    }
     const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });
     await preview.waitFor({ timeout: 30000 });
     assert.equal((await preview.innerText()).trim(), expectedCode.trim());
@@ -310,8 +318,8 @@ try {
   await app.evaluate(({ clipboard }, code) => clipboard.writeText(code), sample);
   if (os === 'mac') execFileSync('open', ['unvibe://review?source=ide']);
   else execFileSync('cmd', ['/c', 'start', '', 'unvibe://review?source=ide']);
-  const r = await waitForExplanation('editor-bridge-explanation', sample);
-  log(r.ok, 'Editor shortcut path explains code', r.why);
+  const r = await waitForExplanation('editor-bridge-explanation', sample, { confirm: true });
+  log(r.ok, 'Editor shortcut path waits for Explain, then explains code', r.why);
 } catch (e) { log(false, 'Editor shortcut path explains code', e.message.split('\n')[0]); }
 
 // --- Global shortcut in another app ------------------------------------------------------------

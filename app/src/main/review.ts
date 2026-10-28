@@ -29,7 +29,7 @@ import { noteOwnCodeExplained } from './ownCodeStep';
 import { productEvent } from '../core/productEvents';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; confirm?: boolean; mode?: string; level: ExplanationLevel }
   | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
@@ -68,6 +68,11 @@ export interface ReviewSession {
   comprehension?: { asked: number; hasMissed: boolean; understood: boolean; loading: boolean };
   /** True while the session holds the built-in first-run sample rather than the user's own code. */
   isSample?: () => boolean;
+  /**
+   * True when an `unvibe://review` link captured this code: any web page can open that link, so
+   * nothing is sent until the person presses Explain in the panel (Security 10-22 LOW #8).
+   */
+  awaitingConfirm?: boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
   /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
@@ -200,7 +205,8 @@ export function initWidget(
     language: code ? guessLanguage(code) : undefined,
     // Renderer-local only. The preview never leaves this process and is not persisted here.
     preview: code ? code.slice(0, 600) : undefined,
-    autoStart: Boolean(opts?.autoStart && code),
+    autoStart: Boolean(opts?.autoStart && code && !session.awaitingConfirm),
+    confirm: Boolean(session.awaitingConfirm && code),
     mode: session.mode,
     // The panel's depth row and every re-request it sends start from the session depth (the user's default).
     level: session.level,
