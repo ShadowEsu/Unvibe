@@ -44,7 +44,7 @@ export const milestones: Milestone[] = [
     date: "25 OCT 2026",
     category: "PRODUCT",
     title: "Your own code in the first minute, and typed questions filtered for secrets",
-    summary: "The first run now ends on your own code: select a few lines in any app and press the shortcut. On a Mac, Accessibility is asked the first time you press it, and after Unvibe explains your own code once, it asks whether to open when you log in. While payments are closed, the upgrade offer says Pro isn't open yet instead of showing prices. The setup sample no longer counts as a streak day on the computer where you ran it. Follow-up questions, lesson questions and Chat messages go through the same secret filter as selected code. Signed-in friends can enter your gift code on their Share page, and you each get a month of Pro. The app now sends setup progress tied to a random install ID (never your code or email), with a switch in Settings to turn it off.",
+    summary: "The first run now ends on your own code: select a few lines in any app and press the shortcut. On a Mac, Accessibility is asked the first time you press it, and after Unvibe explains your own code once, it asks whether to open when you log in. While payments are closed, the upgrade offer says Pro isn't open yet instead of showing prices. The setup sample no longer counts as your own activity on the computer where you ran it. Follow-up questions, lesson questions and Chat messages go through the same secret filter as selected code. Signed-in friends can enter your gift code on their Share page, and you each get a month of Pro. The app now sends setup progress tied to a random install ID (never your code or email), with a switch in Settings to turn it off.",
     figure: "v0.1.44",
   },
   {
@@ -312,7 +312,7 @@ export const milestones: Milestone[] = [
     date: "06 OCT 2026",
     category: "PRODUCT",
     title: "Answers start instantly, quiz me on everything, a livelier Island",
-    summary: "Explanations now stream word by word the moment the AI starts writing, instead of waiting for the whole answer. Quick Quiz has a new Quiz me on everything run: up to ten questions across your saved lessons, revisit ones first, with a score at the end. On the Island, Vibe hops when an answer lands, the streak flame flickers, and a +1 pops when your streak grows. Investors can now page through the pitch deck right on unvibe.site/investors.",
+    summary: "Explanations now stream word by word the moment the AI starts writing, instead of waiting for the whole answer. Quick Quiz has a new Quiz me on everything run: up to ten questions across your saved lessons, revisit ones first, with a score at the end. On the Island, Vibe hops when an answer lands. Investors can now page through the pitch deck right on unvibe.site/investors.",
     figure: "v0.1.28",
   },
   {
