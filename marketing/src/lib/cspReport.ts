@@ -37,7 +37,7 @@ function blockedOrigin(raw: unknown): string {
  * keeps this equal to the folders, so a new page is logged by name and nothing else is.
  */
 export const SITE_ROUTES: ReadonlySet<string> = new Set([
-  "about", "account-deletion", "activate", "app", "beta", "build", "code-explainer-mac",
+  "about", "account-deletion", "activate", "beta", "build", "code-explainer-mac",
   "code-explainer-windows", "data-controls", "explain", "founder", "install-help", "investors", "kit",
   "pricing", "privacy", "redeem", "releases", "resources", "rewards", "s", "terms", "waitlist",
 ]);
