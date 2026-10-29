@@ -1,7 +1,6 @@
 /**
- * Reads real desktop app releases straight from GitHub Releases so this page never
- * shows fabricated version history — it mirrors exactly what the app-release workflow
- * has actually published (see .github/workflows/app-release.yml).
+ * Reads the published desktop app releases from GitHub Releases. /releases uses the newest one
+ * for its header line; the change log itself is `src/data/milestones.ts`.
  */
 
 export const GITHUB_REPO = "ShadowEsu/Unvibe";
@@ -62,7 +61,7 @@ export async function fetchReleases(): Promise<{
     }
     const data = (await res.json()) as GithubRelease[];
     const releases = data
-      .filter((r) => !r.draft && r.tag_name.startsWith("app-v"))
+      .filter((r) => !r.draft && RELEASE_TAG.test(r.tag_name))
       .map(toReleaseNote);
     return { releases, error: null };
   } catch {
@@ -70,10 +69,19 @@ export async function fetchReleases(): Promise<{
   }
 }
 
+/** Public releases are tagged `v0.1.44`; older app builds used `app-v…`. */
+const RELEASE_TAG = /^(?:app-)?v\d/;
+
+/** "0.1.44" (how GitHub names most releases) or a bare `app-v` tag reads as "v0.1.44". */
+function displayName(release: GithubRelease): string {
+  const name = release.name?.trim() || release.tag_name.replace(/^app-/, "");
+  return /^\d+\.\d+/.test(name) ? `v${name}` : name.replace(/^app-v/, "v");
+}
+
 function toReleaseNote(release: GithubRelease): ReleaseNote {
   return {
     tagName: release.tag_name,
-    name: release.name || release.tag_name.replace(/^app-v/, "v"),
+    name: displayName(release),
     publishedAt: release.published_at,
     body: release.body || "",
     htmlUrl: release.html_url,

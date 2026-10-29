@@ -244,7 +244,10 @@ export const POSTHOG_PRIVACY_CONFIG = {
   },
 } as const;
 
-/** Share of tracked sessions with a Mixpanel replay; `syncReplayForPage` applies it, not the SDK. */
+/**
+ * Share of tracked sessions with a Mixpanel replay; `syncReplayForPage` applies it, not the SDK.
+ * Tracked means the visitor pressed Allow on the analytics bar.
+ */
 export const MIXPANEL_REPLAY_PERCENT = 100;
 
 /**

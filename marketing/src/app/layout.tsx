@@ -10,6 +10,7 @@ import "./pages.css";
 import "./system.css";
 import { Providers } from "@/components/providers/Providers";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
+import { OG_CARD_SIZE, OG_CARDS } from "@/lib/pageMeta";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
 import { SitePalette } from "@/components/paper/SitePalette";
 import { MobileDownloadBar } from "@/components/paper/MobileDownloadBar";
@@ -21,6 +22,7 @@ import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { BOOT_SCRIPT } from "@/lib/theme";
 import { jsonLdScript } from "@/lib/jsonLd";
+import { SITE_URL } from "@/lib/siteUrl";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -44,7 +46,8 @@ const mono = JetBrains_Mono({
   adjustFontFallback: false,
 });
 
-const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown","keydown"];function use(){if(done)return;done=true;events.forEach(function(e){removeEventListener(e,use)});var s=document.createElement("style");s.textContent=${JSON.stringify(
+// jsonLdScript escapes "<", so nothing in the string can close this inline <script> (Security X-U31).
+const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown","keydown"];function use(){if(done)return;done=true;events.forEach(function(e){removeEventListener(e,use)});var s=document.createElement("style");s.textContent=${jsonLdScript(
   `:root{--font-mono-face:${mono.style.fontFamily}}`,
 )};document.head.appendChild(s)}events.forEach(function(e){addEventListener(e,use,{passive:true})});addEventListener("load",function(){setTimeout(use,4000)})})()`;
 
@@ -65,12 +68,7 @@ const serif = Instrument_Serif({
   preload: false,
 });
 
-const siteUrlRaw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-const siteUrl =
-  siteUrlRaw && /^https?:\/\//i.test(siteUrlRaw) && !siteUrlRaw.includes("[SENSITIVE]")
-    ? siteUrlRaw
-    : "https://unvibe.site";
-
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -80,26 +78,28 @@ export const metadata: Metadata = {
   },
   description:
     "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+  // Fallback for pages without pageMetadata() (404, private pages). No og:url here: a page that
+  // inherited one would point its preview at the home page.
   openGraph: {
     type: "website",
-    url: siteUrl,
     title: "Unvibe: understand the code AI writes for you",
     description:
       "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
     siteName: "Unvibe",
     locale: "en_US",
+    images: [{ url: OG_CARDS.home.file, ...OG_CARD_SIZE, alt: OG_CARDS.home.alt }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Unvibe: understand the code AI writes for you",
     description:
       "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+    images: [{ url: OG_CARDS.home.file, alt: OG_CARDS.home.alt }],
   },
   robots: { index: true, follow: true },
   verification: {
     google: "7KTQZKnFINspHj8_DOwYo9FnaD-9-nLZQ-adL2dgH6Q",
   },
-  alternates: { canonical: siteUrl },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "48x48" },
@@ -115,7 +115,8 @@ const softwareJsonLd = {
   name: "Unvibe",
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS, Windows",
-  softwareVersion: BETA_INSTALL_VERSION,
+  // The release the site installs (betaInstallScript.test pins it to the install tag), without the tag's "v".
+  softwareVersion: BETA_INSTALL_VERSION.replace(/^v/, ""),
   downloadUrl: `${siteUrl}/beta`,
   description:
     "A desktop overlay for Mac and Windows that explains selected AI-generated code in place.",
@@ -134,15 +135,15 @@ const organizationJsonLd = {
   url: siteUrl,
   logo: `${siteUrl}/icon.png`,
   email: "support@unvibe.site",
+  // Only profiles that exist: TikTok and X are left out until their accounts do.
   sameAs: [
     "https://www.linkedin.com/company/unvibeapp/",
     "https://www.instagram.com/unvibe_app/",
-    "https://www.tiktok.com/@unvibe_app",
   ],
 };
 
 export const viewport: Viewport = {
-  themeColor: "var(--paper)",
+  themeColor: "#ffe7e7",
 };
 
 export default function RootLayout({
@@ -155,7 +156,7 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable} ${serif.variable}`}
     >
       <head>
-        {/* Before first paint: the `js` class (motion start states) and the theme class (no light flash). */}
+        {/* Before first paint: the `js` class, which scopes the motion start states. */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
           type="application/ld+json"

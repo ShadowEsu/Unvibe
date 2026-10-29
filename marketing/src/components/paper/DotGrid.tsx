@@ -27,10 +27,9 @@ export function DotGrid() {
     let pointer: { x: number; y: number } | null = null;
     let frame = 0;
 
-    const ink = () => (document.documentElement.classList.contains("dark") ? "242, 238, 249" : "28, 26, 23");
     const draw = () => {
       frame = 0;
-      const rgb = ink();
+      const rgb = "28, 26, 23";
       ctx.clearRect(0, 0, width, height);
       for (let y = SPACING / 2; y < height; y += SPACING) {
         for (let x = SPACING / 2; x < width; x += SPACING) {

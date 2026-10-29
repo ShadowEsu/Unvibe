@@ -83,8 +83,8 @@ APP_ENV=production
 WEB_BASE_URL=https://api.unvibe.site
 ```
 
-The API picks OpenRouter first, then Anthropic, then Gemini (`selectProvider` in
-`web/src/ai/index.ts`), so leave `OPENROUTER_API_KEY` and `ANTHROPIC_API_KEY` unset on production.
+Every AI route uses only Google Gemini (`selectProvider` in `web/src/ai/index.ts`), as the consent
+screen and privacy policy say; other provider keys are never read.
 
 Apply every migration in `web/supabase/migrations` that production does not have yet, only after
 it has passed on a separate staging project.

@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
+import { pageMetadata } from "@/lib/pageMeta";
 import "./activate.css";
 
 export const metadata: Metadata = {
-  title: "Connect Unvibe",
-  description: "Approve your desktop app and finish signing in with Google.",
+  ...pageMetadata({
+    path: "/activate",
+    title: "Connect Unvibe",
+    absolute: true,
+    description: "Approve your desktop app and finish signing in with Google.",
+  }),
   robots: { index: false, follow: false },
 };
 

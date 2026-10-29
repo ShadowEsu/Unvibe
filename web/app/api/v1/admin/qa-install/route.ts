@@ -1,4 +1,4 @@
-import { isAdminStatsRequest } from '@/lib/adminStats';
+import { isAdminStatsRequest, isQaFlagRequest } from '@/lib/adminStats';
 import { serviceSupabase } from '@/lib/serviceSupabase';
 import { trialInstallKey } from '@/lib/trialAccess';
 
@@ -7,10 +7,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * The real-device test calls this after its walkthrough so its install is left out of founder
- * stats. Requires UNVIBE_ADMIN_STATS_TOKEN. Body: { installId } (the app's random install ID).
+ * stats. Accepts the CI-only UNVIBE_QA_FLAG_TOKEN, or the admin token until CI no longer holds it.
+ * Body: { installId } (the app's random install ID).
  */
 export async function POST(req: Request): Promise<Response> {
-  if (!isAdminStatsRequest(req)) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  if (!isQaFlagRequest(req) && !isAdminStatsRequest(req)) return Response.json({ error: 'unauthorized' }, { status: 401 });
   const body = (await req.json().catch(() => null)) as { installId?: unknown } | null;
   const installId = typeof body?.installId === 'string' ? body.installId.trim() : '';
   if (!/^[a-zA-Z0-9_-]{8,128}$/.test(installId)) return Response.json({ error: 'bad installId' }, { status: 400 });

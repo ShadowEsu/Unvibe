@@ -1,0 +1,55 @@
+/* /code-explainer-mac and /code-explainer-windows only. They reuse the /explain reading cards
+   (explain.css) and add a text-and-screenshot row, the download row and the PowerShell line. */
+
+.os-how {
+  display: grid;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .os-how {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  }
+}
+
+.os-shot {
+  margin: 0;
+}
+
+.os-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1.5px solid var(--v-ink);
+  border-radius: 14px;
+  box-shadow: var(--v-shadow);
+}
+
+.os-shot figcaption {
+  margin-top: 0.6rem;
+  color: var(--explain-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.os-get {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.2rem;
+}
+
+/* Wraps instead of scrolling: a sideways-scrolling box at 390 px would need its own keyboard focus. */
+.explain-card .os-cmd {
+  display: block;
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: #151514;
+  color: #f4f1ea;
+  font: 500 0.95rem / 1.4 var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

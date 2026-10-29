@@ -95,6 +95,11 @@
   margin-top: 0.35rem;
 }
 
+/* Plain wrapping: the site-wide `li { text-wrap: pretty }` left "If someone else sent" alone on a short first line at 390 px (Design C2 P3). */
+.activate-check li {
+  text-wrap: wrap;
+}
+
 .activate-title {
   max-width: 22rem;
   margin: 0;
@@ -191,9 +196,49 @@
   cursor: pointer;
 }
 
-.activate-btn:disabled {
+.activate-btn:disabled,
+.activate-btn[aria-disabled="true"] {
   opacity: 0.42;
   cursor: not-allowed;
+}
+
+/* Two separate unticked boxes before any sign-in starts (Terms and Privacy; 18 or older). */
+.activate-agree {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  border: 0;
+}
+
+.activate-agree label {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.activate-agree input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--ink);
+}
+
+.activate-agree input:focus-visible,
+.activate-agree a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.activate-agree a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .activate-btn--google,

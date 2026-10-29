@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
+import { pageMetadata } from "@/lib/pageMeta";
 import "./redeem.css";
 
 export const metadata: Metadata = {
-  title: "Redeem a promo code",
-  description: "Sign in and add the Pro months from your promo code to your Unvibe account.",
+  ...pageMetadata({
+    path: "/redeem",
+    title: "Redeem a promo code",
+    description: "Sign in and add the Pro months from your promo code to your Unvibe account.",
+  }),
   robots: { index: false, follow: false },
 };
 

@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Code shows the characters a person would type: no `=>` drawn as one arrow glyph or `===` as one
+ * bar in JetBrains Mono (Design P3). !important because many code selectors use the `font:`
+ * shorthand, which resets ligatures. `.font-mono` covers code shown in Tailwind divs (the home demo).
+ */
+pre, code, kbd, samp, textarea, .font-mono {
+  font-variant-ligatures: none !important;
+}
+
 .product-loop {
   position: relative;
   overflow: hidden;
@@ -338,9 +347,6 @@
   --logo-ig-gold: #f9ce34;
   --logo-ig-pink: #ee2a7b;
   --logo-ig-violet: #6228d7;
-  --logo-tiktok: #111111;
-  --logo-tiktok-cyan: #25f4ee;
-  --logo-tiktok-pink: #fe2c55;
   --row-hover: rgb(111 69 210 / 0.05);
   --nav-blur: rgb(245 242 246 / 0.72);
   --nav-menu-fill: rgb(255 255 255 / 0.88);
@@ -402,45 +408,6 @@
   --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
 
   color-scheme: light;
-}
-
-.dark {
-  --bg: 15 10 23;
-  --surface: 24 17 34;
-  --surface-2: 35 24 49;
-  --fg: 245 240 249;
-  --fg-muted: 193 179 200;
-  --fg-faint: 150 132 158;
-  --line: 64 48 76;
-  --line-strong: 83 63 98;
-
-  --primary: 176 151 255;
-  --primary-strong: 203 184 255;
-  --primary-soft: 45 32 73;
-  --on-primary: 20 12 32;
-
-  --blue: 96 165 250;
-  --green: 52 211 153;
-  --orange: 251 191 36;
-  --red: 248 113 113;
-
-  --focus: 176 151 255;
-
-  --cream: #100a19;
-  --lavender: #251834;
-  --purple: #b097ff;
-  --purple-strong: #d0c0ff;
-  --charcoal-purple: #100a19;
-  --ink: #f2eef9;
-  --paper: #181020;
-  --page-background: radial-gradient(ellipse 78% 58% at -12% -10%, rgba(112, 68, 207, .72) 0%, rgba(112, 68, 207, .26) 34%, transparent 67%), radial-gradient(ellipse 76% 66% at 105% 105%, rgba(202, 109, 57, .48) 0%, rgba(202, 109, 57, .16) 38%, transparent 70%), #100a19;
-  --hero-background: radial-gradient(ellipse 72% 82% at -12% -8%, rgba(124, 73, 220, .52), transparent 60%), radial-gradient(ellipse 68% 78% at 108% 108%, rgba(202, 105, 56, .38), transparent 62%), linear-gradient(135deg, #160d25, #25153d 52%, #3c211e);
-  --soft-field: linear-gradient(135deg, rgba(20, 13, 29, .98), rgba(27, 17, 39, .98) 52%, rgba(39, 22, 40, .98));
-  --feature-field: linear-gradient(135deg, #21122d, #291a3d 50%, #3c211e);
-  --deep-field: linear-gradient(135deg, #100a19, #241238 54%, #45241d);
-  --final-field-bg: linear-gradient(135deg, #2e176d, #6343c1 50%, #aa5732);
-
-  color-scheme: dark;
 }
 
 * {
@@ -618,10 +585,6 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 
 .web-workspace {
   background: radial-gradient(ellipse 72% 65% at 4% -10%, rgba(221, 206, 255, .8), transparent 55%), radial-gradient(ellipse 70% 65% at 105% 108%, rgba(255, 218, 190, .6), transparent 58%), #fcf9ff;
-}
-
-.dark .web-workspace {
-  background: radial-gradient(ellipse 72% 65% at 4% -10%, rgba(130, 78, 220, .55), transparent 55%), radial-gradient(ellipse 70% 65% at 105% 108%, rgba(204, 107, 59, .42), transparent 58%), #120b1b;
 }
 
 /* Founder-only waitlist view */
@@ -915,17 +878,12 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
   .product-story__visual { min-height: 270px; margin: 12px; }
 }
 
-/* Light by default; html.dark (set before paint from the stored choice or the system) is the night theme. */
+/* One light theme for every visitor (Preston, 27 Oct): no automatic or chosen dark theme. */
 html {
   color-scheme: light;
 }
 
-html.dark {
-  color-scheme: dark;
-}
-
-html body,
-html.dark body {
+html body {
   background: var(--paper);
   color: var(--ink);
 }
@@ -983,42 +941,6 @@ html.dark body {
   inset: 0;
   pointer-events: none;
   box-shadow: inset 0 0 0 1px rgba(199, 174, 255, .08);
-}
-
-/* Dark surfaces for forms, plans and private-beta utilities. */
-.dark .marketing-billing-toggle,
-.dark .marketing-plan-card,
-.dark .pricing-compare-table,
-.dark .pricing-perks section,
-.dark .waitlist-card,
-.dark .referral-offer,
-.dark .referral-success,
-.dark .admin-login,
-.dark .admin-stats article,
-.dark .admin-table-wrap {
-  border-color: rgba(199, 174, 255, .16);
-  background: rgba(20, 14, 29, .84);
-  color: #f6f0fa;
-  box-shadow: none;
-}
-
-.dark .marketing-plan-card.featured {
-  border-color: rgba(180, 146, 255, .48);
-  background:
-    radial-gradient(420px 260px at 0% 0%, rgba(119, 72, 218, .25), transparent 70%),
-    rgba(24, 16, 35, .92);
-}
-
-.dark :is(
-  .form-field input,
-  .optional-details select,
-  .optional-details textarea,
-  .referral-offer input,
-  .admin-login input
-) {
-  border-color: rgba(199, 174, 255, .18);
-  background: #100b18;
-  color: #f5eff8;
 }
 
 .beta-download-panel,

@@ -1,7 +1,17 @@
-import { compensationLines, compensationTotalLabel, formatUsd } from "@/data/compensation";
+import {
+  compensationCashUsd,
+  compensationCreditsUsd,
+  compensationLines,
+  compensationProgramCount,
+  compensationTotalLabel,
+  formatUsd,
+  PROGRAM_NOTICES,
+  startupProgramsLine,
+} from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
+import { OG_CARDS } from "@/lib/pageMeta";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
 /**
@@ -36,7 +46,7 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "App icon 1024", path: "/brand/icon-1024.png", use: "The Mac and Windows app icon, app store style", kind: "image" },
   { name: "Outreach email banner", path: "/email/outreach-banner.png", use: "Top of cold outreach emails", kind: "image" },
   { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Top of waitlist and download emails", kind: "image" },
-  { name: "Social preview", path: "/og.png", use: "Link previews, social posts", kind: "image" },
+  { name: "Social preview", path: OG_CARDS.home.file, use: "Link previews, social posts", kind: "image" },
   { name: "Product demo video", path: "/videos/unvibe-real-demo.mp4", use: "A real recorded session: explain, depth, follow-up, Test me", kind: "video" },
   { name: "Screenshot: home", path: "/product/v3/home-today.jpg", use: "What the app looks like", kind: "image" },
   { name: "Screenshot: after agent review", path: "/product/v3/after-agent-review.jpg", use: "Reviewing what Cursor or Claude changed", kind: "image" },
@@ -81,6 +91,7 @@ export function kitSections(): KitSection[] {
         "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
+        "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, perks from other tools worth about $21.5K to $23K).",
       ],
     },
     {
@@ -100,12 +111,13 @@ export function kitSections(): KitSection[] {
     {
       id: "investors",
       title: "Persuading investors",
-      intro: `Unvibe is live, free, and shipping fast. Public, self-reported committed cash: ${total}. This is not a priced round or a complete account of company resources.`,
+      intro: `Unvibe is live, free, and shipping fast. Support secured: ${total}, of which ${formatUsd(compensationCreditsUsd())} is credits from ${compensationProgramCount()} startup programs and ${formatUsd(compensationCashUsd())} is committed cash. Credits are not cash, and this is not a priced round. Never say it is.`,
       bullets: [
         "Problem: developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment code changes.",
         "Product: select code, press one key, get an in-place explanation at five depths, a quiz, a saved lesson, and a review of what the agent changed.",
         "Wedge: a desktop layer beside every editor and agent, neutral across Cursor, Claude Code, VS Code and Terminal.",
         "Next on the roadmap: Instant Selection Bubble, Ask the codebase, Impact trace. After that: GitHub PR intelligence and shared team knowledge.",
+        `${startupProgramsLine()}. Say "in Claude for Startups" and call them startup programs, nothing stronger. ${PROGRAM_NOTICES.join(" ")}`,
         "In progress: YC application. Listed on product directories including Product Hunt, LaunchKiwi and DevRove.",
         `Investor page: ${SITE}/investors`,
       ],
@@ -128,7 +140,7 @@ export function kitSections(): KitSection[] {
       bullets: [
         "Voice: warm, direct, short and plain, in first person plural (we).",
         "Mascot: Vibe, a lilac blob with an ink outline. One short line in a speech bubble at most.",
-        "Colours: paper #f6f1e7, ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe), sky #9fd8ff, sun #ffd84d. Flat colour, ink outlines, small offset shadows. No gradients or glow.",
+        "Colours: paper #f6f1e7, ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe), sky #9fd8ff, sun #ffd84d. Flat colour, ink outlines, small offset shadows. One gradient, pink to blue (#e470b5 to #9672ed to #5069f9), used only behind the homepage hero and on link previews. No glow.",
         "Type: bold grotesque headings (Bricolage Grotesque), one italic serif accent phrase (Instrument Serif Italic), Inter for body.",
         "Never: dashes in the middle of sentences, hype words, fake urgency, made up numbers or testimonials, unreleased features as if they exist.",
       ],
@@ -145,7 +157,7 @@ export function kitSections(): KitSection[] {
         `About: ${SITE}/about`,
         `Changelog: ${SITE}/releases`,
         `Gift link format, from app 0.1.44: ${SITE}/?ref=CODE (CODE = the 16 character gift code from the Share page in the app; the friend enters it in the app after signing in). App 0.1.43 and older show an 8 character invite link code instead, which counts who joined and grants no Pro.`,
-        "Email: preston@unvibe.site",
+        "Email: support@unvibe.site",
       ],
     },
   ];

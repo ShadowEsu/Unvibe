@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
+import { explainCard, pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "../mono";
 import "../explain.css";
 
@@ -13,9 +15,6 @@ interface Params {
 
 export const dynamicParams = false;
 
-const OG_CARDS: Record<string, string> = { sql: "/og/og-explain-sql.png", bash: "/og/og-explain-bash.png" };
-const OG_DEFAULT = "/og/og-home.png";
-
 export function generateStaticParams(): Params["params"][] {
   return explainPages.map(({ id }) => ({ id }));
 }
@@ -23,17 +22,13 @@ export function generateStaticParams(): Params["params"][] {
 export function generateMetadata({ params }: Params): Metadata {
   const page = explainPages.find(({ id }) => id === params.id);
   if (!page) return {};
-  const title = `Explain ${explainLanguage(page).name} code in plain English`;
-  const url = `/explain/${page.id}`;
-  // Link cards drawn from the page's own title, lead and sample; languages without one use the home card.
-  const image = OG_CARDS[page.id] ?? OG_DEFAULT;
-  return {
-    title,
+  return pageMetadata({
+    path: `/explain/${page.id}`,
+    title: `Explain ${explainLanguage(page).name} code in plain English`,
     description: page.description,
-    alternates: { canonical: url },
-    openGraph: { type: "website", url, title, description: page.description, siteName: "Unvibe", locale: "en_US", images: [{ url: image, width: 1200, height: 630, alt: title }] },
-    twitter: { card: "summary_large_image", title, description: page.description, images: [image] },
-  };
+    // The page's own sample with the shortcut and Vibe; no panel, since none explains these exact lines.
+    card: explainCard(page),
+  });
 }
 
 /** A search landing page: the Try it box with a checked sample first, then notes on that sample, then the app. */
@@ -45,6 +40,12 @@ export default function ExplainLanguagePage({ params }: Params) {
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(breadcrumbJsonLd([{ name: "Explain code", path: "/explain" }, { name, path: `/explain/${page.id}` }])),
+        }}
+      />
       <header className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}

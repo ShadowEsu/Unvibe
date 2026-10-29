@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
-import {
-  FOUNDER_EMAIL,
-  SUPPORT_EMAIL,
-  founderMailto,
-  supportMailto,
-} from "@/lib/contact";
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/account-deletion",
   title: "Account deletion",
   description:
     "How to delete your Unvibe account, what deletion removes, and the timeline for local and backend data.",
-};
+});
 
 export default function AccountDeletionPage() {
   return (
@@ -64,9 +61,6 @@ export default function AccountDeletionPage() {
         <p>
           Email{" "}
           <a href={supportMailto}>{SUPPORT_EMAIL}</a>
-          {" "}
-          or{" "}
-          <a href={founderMailto}>{FOUNDER_EMAIL}</a>
           {" "}
           and we will help you delete your account or data.
         </p>

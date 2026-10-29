@@ -6,11 +6,14 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GrowthFollowLinks } from "@/components/paper/SocialFollow";
 import { Reveal } from "@/components/redesign/Reveal";
 import { changelogPreview } from "@/data/milestones";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: "Building Unvibe",
-  description: "Unvibe is out for Mac and Windows. Follow the build on Instagram, TikTok and LinkedIn.",
-};
+export const metadata: Metadata = pageMetadata({
+  path: "/build",
+  title: "Building Unvibe in Public",
+  absolute: true,
+  description: "Unvibe is out for Mac and Windows. Follow the build on Instagram and LinkedIn.",
+});
 
 export default function BuildPage() {
   return (
@@ -22,7 +25,7 @@ export default function BuildPage() {
           <p className="paper-meta">Building in public</p>
           <h1>100%. Unvibe is out.</h1>
           <p>
-            Built in public, now live on Mac and Windows. Follow along on Instagram, TikTok and LinkedIn.
+            Built in public, now live on Mac and Windows. Follow along on Instagram and LinkedIn.
           </p>
           <div className="paper-meter" aria-label="100 percent: public release is live">
             <div className="paper-meter__track">

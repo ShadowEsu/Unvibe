@@ -188,7 +188,7 @@ export function BetaInstall({
       </ol>
 
       <p className="paper-beta__update">
-        <b>Updating?</b> From v0.1.30 on, Unvibe updates itself.{" "}
+        <b>Updating?</b> From v0.1.30 on, Unvibe updates from inside the app with one click.{" "}
         {os === "windows"
           ? "On an older version, quit it from the tray icon, then run the new .exe."
           : "On an older version, quit it from the menu bar, drag the new one into Applications and choose Replace."}

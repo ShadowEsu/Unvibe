@@ -11,10 +11,10 @@ secret store or an untracked `web/.env.local`; never put them in `app/` or rende
 | `SUPABASE_URL` | staging/prod | web | no | memory store is development-only |
 | `SUPABASE_SERVICE_ROLE_KEY` | staging/prod | web | **never** | backend-only database access |
 | `SUPABASE_ANON_KEY` | future direct Supabase client | web | only if intentionally public | currently unused; do not add to renderer |
-| `ANTHROPIC_API_KEY` | real AI | web | **never** | labelled mock AI only in development |
-| `UNCODE_MODEL` | optional | web | no | defaults in provider |
+| `GEMINI_API_KEY` | real AI | web | **never** | AI routes answer 503; the labelled mock only in development with `ENABLE_MOCK_AI=true` |
+| `GEMINI_MODEL` | optional | web | no | `gemini-3.1-flash-lite` |
 | `AI_REQUEST_TIMEOUT_MS` / `AI_MAX_TOKENS` | optional | web | no | provider defaults |
-| `ENABLE_MOCK_AI` | dev only | web | no | must be false for staging/prod |
+| `ENABLE_MOCK_AI` | dev only | web | no | ignored in production |
 | `UNCODE_ALLOW_DEV_EMAIL_AUTH` | dev only | web | no | false; never enable outside local development |
 | `DEEP_LINK_SCHEME` | future verified callback | app | scheme only | `unvibe` |
 

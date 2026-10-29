@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clearDeviceCode, opensForSignIn, pendingDeviceCode, saveDeviceCode } from "./deviceApproval";
+import {
+  ACCOUNT_POLICY_VERSION,
+  clearDeviceCode,
+  opensForSignIn,
+  pendingDeviceCode,
+  saveAgreement,
+  saveDeviceCode,
+  storedAgreement,
+} from "./deviceApproval";
 
 function memoryStorage() {
   const items = new Map<string, string>();
@@ -69,5 +77,27 @@ describe("what /activate opens with", () => {
     assert.equal(opensForSignIn({ utm_source: "x", notrack: "1" }), false);
     assert.equal(opensForSignIn({ user_code: "  ", code: "" }), false);
     assert.equal(opensForSignIn({ user_code: [] }), false);
+  });
+});
+
+describe("the /activate agreement across the sign-in round trip", () => {
+  it("starts unticked and comes back as the person left it", () => {
+    const storage = memoryStorage();
+    assert.deepEqual(storedAgreement(storage), { terms: false, age18: false });
+    saveAgreement({ terms: true, age18: true }, storage);
+    assert.deepEqual(storedAgreement(storage), { terms: true, age18: true });
+    saveAgreement({ terms: false, age18: false }, storage);
+    assert.deepEqual(storedAgreement(storage), { terms: false, age18: false });
+  });
+
+  it("asks again for an older policy version, a non-true value or a broken entry", () => {
+    const storage = memoryStorage();
+    storage.setItem("unvibe_activate_agreement", JSON.stringify({ v: "2026-01-01", terms: true, age18: true }));
+    assert.deepEqual(storedAgreement(storage), { terms: false, age18: false });
+    storage.setItem("unvibe_activate_agreement", JSON.stringify({ v: ACCOUNT_POLICY_VERSION, terms: "true", age18: 1 }));
+    assert.deepEqual(storedAgreement(storage), { terms: false, age18: false });
+    storage.setItem("unvibe_activate_agreement", "{not json");
+    assert.deepEqual(storedAgreement(storage), { terms: false, age18: false });
+    assert.deepEqual(storedAgreement(null), { terms: false, age18: false });
   });
 });

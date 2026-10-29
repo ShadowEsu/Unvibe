@@ -34,7 +34,7 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 |---|---|
 | `BLOB_READ_WRITE_TOKEN` | Server-only Vercel Blob credential for durable production waitlist storage. |
 | `WAITLIST_ADMIN_TOKEN` | Long random server-only secret for admin access and waitlist encryption. |
-| `WAITLIST_NOTIFY_EMAIL` | Legacy configuration only. Signup notifications are intentionally locked to `preston@unvibe.site`. |
+| `WAITLIST_NOTIFY_EMAIL` | Legacy configuration only. Signup notifications are intentionally locked to `support@unvibe.site`. |
 | `RESEND_API_KEY` | Recommended server-only Resend credential for reliable signup email. |
 | `WAITLIST_FROM_EMAIL` | Verified sender used by Resend. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL for metadata, sitemap, robots, referral links. |
@@ -65,7 +65,7 @@ long random value. Entries are AES-256-GCM encrypted before upload and the admin
 bearer-token protected. The old `supabase/migrations/0001_waitlist.sql` is retained for history,
 but the current marketing storage adapter does not use it.
 
-Configure Resend for founder notifications (`WAITLIST_NOTIFY_EMAIL`, default `preston@unvibe.site`).
+Configure Resend for signup notifications (they always go to `support@unvibe.site`; `WAITLIST_NOTIFY_EMAIL` is ignored).
 Failed deliveries remain visible and retryable in `/waitlist`. Signups are still saved when
 email delivery fails.
 

@@ -25,6 +25,7 @@ export type PlanCopy = {
 
 export type PricingCopy = {
   heading: { lead: string; emphasis: string; tail: string };
+  /** The /pricing meta description (search results cut at about 160 characters). Not shown on the page. */
   description: string;
   plans: readonly PlanCopy[];
   disclosure: string;
@@ -59,7 +60,7 @@ const free: PlanCopy = {
 
 const OPEN: PricingCopy = {
   heading: { lead: "Start free. Upgrade when it ", emphasis: "earns a place", tail: " in your day." },
-  description: `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
+  description: `Unvibe is free to download and use, with no card. Pro adds the Expert depth for $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year.`,
   plans: [
     free,
     { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
@@ -71,7 +72,7 @@ const OPEN: PricingCopy = {
 
 const CLOSED: PricingCopy = {
   heading: { lead: "Start free today. Pro and Teams ", emphasis: "open soon", tail: "." },
-  description: `Download Unvibe free today. Pro opens soon at $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`,
+  description: `Unvibe is free to download and use, with no card. Pro adds the Expert depth for $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year; payments open soon.`,
   plans: [
     free,
     { id: "pro", name: "Pro", badge: "Opens soon", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Pro opens soon. Your Free plan keeps working until then.", features: FEATURES.pro, cta: "Download free", href: "/beta", featured: true, primary: false },

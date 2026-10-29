@@ -24,28 +24,6 @@ export default async function HomePage() {
         {userId ? <HomeStats userId={userId} /> : <SignInPrompt />}
       </section>
 
-      <section className="screenshots">
-        <h2 className="section-title">See it in action</h2>
-        <div className="screenshots__grid">
-          <figure className="screenshots__card">
-            <img src="/screenshots/progress-light.webp" alt="Progress dashboard" loading="lazy" className="screenshots__img" />
-            <figcaption>Dashboard — progress at a glance</figcaption>
-          </figure>
-          <figure className="screenshots__card">
-            <img src="/screenshots/study-light.webp" alt="Study mode" loading="lazy" className="screenshots__img" />
-            <figcaption>Study — review concepts and test yourself</figcaption>
-          </figure>
-          <figure className="screenshots__card">
-            <img src="/screenshots/projects-light.webp" alt="Projects view" loading="lazy" className="screenshots__img" />
-            <figcaption>Projects — organisation per repo</figcaption>
-          </figure>
-          <figure className="screenshots__card">
-            <img src="/screenshots/notebook-light.webp" alt="Notebook" loading="lazy" className="screenshots__img" />
-            <figcaption>Notebook — save insights as you learn</figcaption>
-          </figure>
-        </div>
-      </section>
-
       <section className="features">
         <h2 className="section-title">What you get</h2>
         <div className="features__grid">
@@ -78,7 +56,6 @@ async function HomeStats({ userId }: { userId: string }) {
     ['Understood', p.understood],
     ['Needs review', p.needsReview],
     ['Concepts with passed checks', p.conceptsUnderstood],
-    ['Streak', `${p.currentStreakDays}d`],
   ];
   if (p.totalReviews === 0) {
     return (

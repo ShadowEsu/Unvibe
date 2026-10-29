@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BillingInterval, WorkspaceAccess, WorkspaceInvitation, WorkspaceMember } from '@/billing/types';
 import type { PublicBillingOverview as BillingOverview } from '@/billing/presentation';
 import { priceFor, TEAMS_MAX_SEATS } from '@/billing/plans';
+import { stripeRedirect } from '@/billing/stripeRedirect';
 
 interface Props {
   initialOverview: BillingOverview;
@@ -14,7 +15,7 @@ interface Props {
 }
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-const SUPPORT_MAIL = 'preston@unvibe.site';
+const SUPPORT_MAIL = 'support@unvibe.site';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
@@ -131,7 +132,9 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
     try {
       void fetch('/api/v1/billing/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event: 'upgrade_prompt.clicked', workspaceId: overview.workspace.id, plan: 'pro', interval: nextInterval }) });
       const data = await requestJson<{ url: string }>('/api/v1/billing/checkout', { method: 'POST', body: JSON.stringify({ plan: 'pro', interval: nextInterval, seats: 1 }) });
-      window.location.assign(data.url);
+      const target = stripeRedirect(data.url);
+      if (!target) throw new Error('Checkout could not start.');
+      window.location.assign(target);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Checkout could not start.'); setBusy(false); }
   };
 
@@ -139,7 +142,9 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
     setBusy(true); setNotice('');
     try {
       const data = await requestJson<{ url: string }>('/api/v1/billing/portal', { method: 'POST', body: JSON.stringify({ workspaceId: overview.workspace.id }) });
-      window.location.assign(data.url);
+      const target = stripeRedirect(data.url);
+      if (!target) throw new Error('Billing portal could not open.');
+      window.location.assign(target);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Billing portal could not open.'); setBusy(false); }
   };
 

@@ -1,34 +1,15 @@
 import type { Metadata } from "next";
 import { ResourcesHub } from "@/components/paper/ResourcesHub";
+import { pageMetadata } from "@/lib/pageMeta";
 import "./resources.css";
 
-export const metadata: Metadata = {
-  title: "Resources and guides",
+export const metadata: Metadata = pageMetadata({
+  path: "/resources",
+  title: "Unvibe Guide: Depths, Shortcuts and Privacy",
+  absolute: true,
   description:
-    "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
-  openGraph: {
-    title: "Resources and guides",
-    description:
-      "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
-    url: "https://unvibe.site/resources",
-    siteName: "Unvibe",
-    images: [
-      {
-        url: "/og/og-home.png",
-        width: 1200,
-        height: 630,
-        alt: "Unvibe resources and guides",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Resources and guides",
-    description:
-      "Get started with Unvibe: the five explanation depths, keyboard shortcuts, how your code is handled, and brand colors.",
-    images: ["/og/og-home.png"],
-  },
-};
+    "How to use Unvibe: the explanation depths, the Mac and Windows shortcuts, and exactly what is sent when you explain code.",
+});
 
 export default function ResourcesPage() {
   return (

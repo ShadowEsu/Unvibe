@@ -3,11 +3,14 @@ import { ChangelogList } from "@/components/paper/ChangelogList";
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { changelogEntries } from "@/data/milestones";
 import { fetchReleases } from "@/lib/releases";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: "Change Log",
-  description: "Unvibe product change log and company milestones.",
-};
+export const metadata: Metadata = pageMetadata({
+  path: "/releases",
+  title: "Unvibe Change Log: What Shipped",
+  absolute: true,
+  description: "Every Unvibe release and product change, newest first, with the date of each update for Mac and Windows.",
+});
 
 export const revalidate = 300;
 

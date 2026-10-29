@@ -4,15 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ListingBadges } from "@/components/paper/ListingBadges";
+import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
+import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { observeMotion } from "@/lib/motionInView";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const product = [
   ["Product", "/#product"],
   ["Explain code", "/explain"],
+  ["Code explainer for Mac", "/code-explainer-mac"],
+  ["Code explainer for Windows", "/code-explainer-windows"],
   ["Download", "/beta"],
   ["Pricing", "/pricing"],
   ["Change log", "/releases"],
@@ -45,36 +48,40 @@ export function Footer() {
           <p className="mt-4 text-sm leading-relaxed">
             Select code in any app and Vibe explains it beside your editor, at your level. Free for Mac and Windows.
           </p>
+          <p className="mb-2 mt-5 text-sm font-semibold text-[color:var(--ink)]">Get the newsletter. One email when something ships.</p>
+          <NewsletterSignup id="footer" />
           <SocialFollowLinks includeMail />
         </div>
         <FooterLinks heading="Product" links={product} />
-        <FooterLinks heading="Company" links={company} />
+        <FooterLinks heading="Company" links={company}>
+          <button type="button" className="paper-footer__settings text-left text-sm hover:text-[color:var(--ink)]" onClick={openAnalyticsSettings}>
+            Analytics settings
+          </button>
+        </FooterLinks>
       </div>
-      {pathname !== "/" ? (
-        <div className="paper-wrap pb-10">
-          <ListingBadges />
-        </div>
-      ) : null}
+      <div className="paper-wrap pb-10">
+        <ListingBadges />
+      </div>
       <div className="paper-footer__legal paper-wrap py-5 text-sm">
-        <p>© {new Date().getFullYear()} Unvibe. Pleasant Hill, California.</p>
+        <p>© {new Date().getFullYear()} Unvibe.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
         <p className="paper-footer__status" ref={statusRef}>
           <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
         </p>
-        <ThemeToggle className="paper-footer__theme" />
       </div>
     </footer>
   );
 }
 
 /** The download page link counts as a download call to action. */
-export function FooterLinks({ heading, links }: { heading: string; links: readonly string[][] }) {
+export function FooterLinks({ heading, links, children }: { heading: string; links: readonly string[][]; children?: React.ReactNode }) {
   return (
     <nav aria-label={heading} className="grid content-start gap-2">
       <strong className="mb-1 text-sm text-[color:var(--ink)]">{heading}</strong>
       {links.map(([label, href]) => (
         <Link key={href} href={href!} className="text-sm hover:text-[color:var(--ink)]" onClick={href === "/beta" ? () => trackDownloadPageClick("footer") : undefined}>{label}</Link>
       ))}
+      {children}
     </nav>
   );
 }
