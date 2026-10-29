@@ -115,3 +115,12 @@ public/           brand + product screenshots
   and every moving element pauses (hover, off-viewport, or `prefers-reduced-motion`).
 - Copy reflects the product honestly: Mac first, no screen recording or OCR, cloud
   explanations with on-device secret filtering, no local-only mode yet, no fake certs.
+
+## Post-release site details
+
+- Newsletter consent uses a 20 px ink checkbox aligned to the first label line; the label remains clickable.
+- The hero programs total is the only underlined text within one link. At 480 px and below, the program count and trust items use separate lines without separators.
+- The home programs pills are capped at 50 rem, with a 32 px Claude for Startups subheading.
+- About card lists use 18 px text, no indent and 9 px gaps. Footer analytics settings shares the link row sizing.
+- The tour keeps its responsive poster over the video until `playing`, without intercepting controls or changing reduced-motion playback.
+- The backend `/activate` agreement note keeps its top spacing and leaves 14 px below it before sign-in.

@@ -21,6 +21,7 @@ export function AppTour() {
   // undefined until the poster image settles; then its chosen file (or null if it failed).
   const [poster, setPoster] = useState<string | null>();
   const [open, setOpen] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   // The window opens once a quarter of it is on screen, but never before the hero's key press lands.
   useEffect(() => {
@@ -71,10 +72,10 @@ export function AppTour() {
           <i /><i /><i />
           <span>Unvibe 0.1.43 and 0.1.44</span>
         </div>
-        <div className="vtour__media">
-          {/* The poster at the size it renders (a <video poster> can't pick one). Until it loads, the video has no
-              controls and no poster, so it stays transparent over it. Then the video takes the same, already cached
-              file as its poster and shows its controls. The video itself loads only once it is on screen.
+        <div className={playing ? "vtour__media is-playing" : "vtour__media"} onPlayingCapture={() => setPlaying(true)}>
+          {/* Keep the responsive poster above the video until playing confirms a decoded frame. It does not
+              intercept controls, so reduced-motion visitors can still start playback themselves.
+              Once the image settles, the video uses its already cached file for the native poster too.
               loading="lazy": on phones the headline, not the poster, is the largest paint, so the poster waits for
               layout instead of sharing the first round trips with the stylesheets and fonts (still fetched at once when on screen). */}
           <img

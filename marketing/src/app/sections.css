@@ -91,6 +91,8 @@ html[data-performance="lite"] .try__bob { animation: none; }
 
 /* ── Startup programs ── */
 .paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
+.paper-backing .program-list__items { max-width: 50rem; margin-inline: auto; }
+.paper-backing .claude-startups__title { font-size: 32px; }
 .claude-startups__tag { color: #141414; }
 .claude-startups__copy a { color: var(--u-text); font-weight: 700; }
 
@@ -118,8 +120,8 @@ html[data-performance="lite"] .try__bob { animation: none; }
 
 /* ── Footer ── */
 .paper-footer nav { gap: 0; }
-.paper-footer nav a { display: flex; align-items: center; min-height: 2.75rem; }
-.paper-footer nav a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.paper-footer nav a, .paper-footer nav .paper-footer__settings { display: flex; align-items: center; min-height: 2.75rem; padding: 0; }
+.paper-footer nav a:focus-visible, .paper-footer__settings:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
 
 /* ── GetUnvibe: the download for this computer, the other system as a pill; phones get the emailed link ── */
 .get-unvibe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
@@ -143,6 +145,9 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
 .vtour__window:focus-within { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 .vtour__window video:focus-within { outline: 3px solid #3c2fb8; outline-offset: -3px; }
+/* Keep the responsive poster above undecoded video frames, without blocking the native controls. */
+.vtour__media:not(.is-playing) .vtour__poster { z-index: 1; pointer-events: none; }
+.vtour__media.is-playing .vtour__poster { visibility: hidden; }
 /* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. Filled when sound is on. */
 .vtour__sound {
   position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.4rem;
@@ -167,7 +172,8 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
 .newsletter__row button[aria-disabled="true"] { background: var(--u-card); color: var(--u-text); cursor: not-allowed; }
 .newsletter input:focus-visible, .newsletter button:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 2px; }
 .newsletter__consent { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0; font-size: 0.9rem; line-height: 1.45; color: var(--u-text); }
-.newsletter__consent input { flex: none; width: 18px; height: 18px; margin: 0.1rem 0 0; accent-color: #141414; }
+.newsletter__consent input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ink); }
+.newsletter__consent label { min-height: 24px; cursor: pointer; }
 .newsletter__note { margin: 0; font-size: 0.9rem; font-weight: 600; color: #8a1c1c; }
 .newsletter__done { margin: 0; font-weight: 700; color: var(--u-text); }
 .newsletter-home { display: grid; justify-items: center; }
