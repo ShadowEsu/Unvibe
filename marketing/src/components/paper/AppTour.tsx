@@ -13,6 +13,8 @@ const KEY_PRESSED_AT = 1010;
  * Source and licence: docs/licenses.md.
  */
 const DEMO = "/videos/unvibe-demo-v1-36f2e404";
+/** The cut opens on its bare background; the title is on screen from about 0.5 s (ffmpeg). */
+const TITLE_FRAME_AT = 0.6;
 
 /** Real app recordings and screenshots, directly under the hero promise. */
 export function AppTour() {
@@ -72,10 +74,22 @@ export function AppTour() {
           <i /><i /><i />
           <span>Unvibe 0.1.43 and 0.1.44</span>
         </div>
-        <div className={playing ? "vtour__media is-playing" : "vtour__media"} onPlayingCapture={() => setPlaying(true)}>
-          {/* Keep the responsive poster above the video until playing confirms a decoded frame. It does not
-              intercept controls, so reduced-motion visitors can still start playback themselves.
-              Once the image settles, the video uses its already cached file for the native poster too.
+        <div
+          className={playing ? "vtour__media is-playing" : "vtour__media"}
+          onTimeUpdateCapture={(event) => {
+            if ((event.target as HTMLVideoElement).currentTime >= TITLE_FRAME_AT) setPlaying(true);
+          }}
+          onPauseCapture={(event) => {
+            if ((event.target as HTMLVideoElement).currentTime < TITLE_FRAME_AT) setPlaying(false);
+          }}
+          onEndedCapture={() => setPlaying(false)}
+          onEmptiedCapture={() => setPlaying(false)}
+        >
+          {/* The responsive poster stays above the video until playback is past the cut's first frames, which
+              are the bare background (the title lands at about 0.5 s), and comes back whenever the video stops
+              before that point or ends. It does not intercept controls, so reduced-motion visitors can still
+              start playback themselves. Once the image settles, the video uses its already cached file for the
+              native poster too.
               loading="lazy": on phones the headline, not the poster, is the largest paint, so the poster waits for
               layout instead of sharing the first round trips with the stylesheets and fonts (still fetched at once when on screen). */}
           <img

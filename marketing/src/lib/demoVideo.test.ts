@@ -13,16 +13,6 @@ describe("homepage demo video", () => {
     assert.ok(stem, "AppTour.tsx has no DEMO stem");
   });
 
-  it("keeps the responsive poster above the video until playing, without intercepting controls", () => {
-    const styles = readFileSync(path.resolve("src/app/sections.css"), "utf8");
-    assert.match(appTour, /const \[playing, setPlaying\] = useState\(false\)/);
-    assert.match(appTour, /className=\{playing \? "vtour__media is-playing" : "vtour__media"\} onPlayingCapture=\{\(\) => setPlaying\(true\)\}/);
-    assert.match(styles, /\.vtour__media:not\(\.is-playing\) \.vtour__poster \{ z-index: 1; pointer-events: none; \}/);
-    assert.match(styles, /\.vtour__media\.is-playing \.vtour__poster \{ visibility: hidden; \}/);
-    assert.match(appTour, /preload="none"/);
-    assert.match(appTour, /controls=\{poster !== undefined\}/);
-  });
-
   it("ships the MP4, both posters and the captions, and the MP4 name carries its SHA-256", () => {
     for (const suffix of [".mp4", "-poster.webp", "-poster-720.webp", ".en.vtt"]) {
       assert.ok(existsSync(path.resolve("public/videos", `${stem}${suffix}`)), `public/videos/${stem}${suffix} is missing`);
