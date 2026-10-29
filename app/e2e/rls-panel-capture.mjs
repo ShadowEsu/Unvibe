@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601) and 'flag' (ep03, request 20261028-2155).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -125,7 +125,10 @@ try {
     await sleep(600);
     const text = await panel.locator('.body').innerText();
     const whole = await panel.locator('body').innerText();
-    const cut = (s) => (preset.scanUntil && s.includes(preset.scanUntil) ? s.slice(0, s.indexOf(preset.scanUntil)) : s);
+    const cut = (s) => {
+      const at = preset.scanUntil ? s.toLowerCase().indexOf(preset.scanUntil.toLowerCase()) : -1;
+      return at >= 0 ? s.slice(0, at) : s;
+    };
     const banned = preset.banned.test(cut(text)) || /\b(in)?secure\b|vulnerab|danger/i.test(cut(whole));
     await panel.screenshot({ path: path.join(shots, `panel-${NAME}-take${take}.png`), animations: 'disabled' });
     writeFileSync(path.join(shots, `panel-${NAME}-take${take}.txt`), `level=${level}\nbanned=${banned}\n\n${whole}\n`);
