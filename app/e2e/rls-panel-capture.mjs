@@ -65,7 +65,9 @@ const PRESETS = {
     match: '!user',
     level: 'beginner',
     scanUntil: 'Why it is here',
-    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b/i,
+    // Marketing (ep07): an exact panel. 'empty' is not falsy for {} or [], so any take that calls a
+    // value empty, or lists falsy values as a partial set, is retaken.
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bempty\b(?!\s+(string|text)\b)|falsy"?\s*\((?![^)]*\b0\b)[^)]*\)/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
