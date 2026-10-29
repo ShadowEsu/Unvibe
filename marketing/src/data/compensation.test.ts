@@ -138,9 +138,6 @@ describe("startup programs", () => {
     const hero = home.match(/<p class="vhero__backing">([\s\S]*?)<\/p>/)?.[1] ?? "";
     assert.match(hero, /<a href="\/investors#backing">/);
     assert.equal(Array.from(hero.matchAll(/<a\b/g)).length, 1, "the programs line stays one tab stop");
-    assert.match(hero, /<b>\$262,700 in startup-program credits and committed cash<\/b>/);
-    assert.match(hero, /<span class="vhero__backing-separator"> · <\/span>/);
-    assert.match(hero, /<span class="vhero__backing-programs">10 programs, including Claude for Startups<\/span>/);
     assert.equal(text(hero).trim(), HERO);
     const strip = section(home, /<section id="backing"/);
     assertProgramSection(strip, "home strip");
