@@ -24,6 +24,8 @@ export function AppTour() {
   const [poster, setPoster] = useState<string | null>();
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
+  // Server HTML assumes autoplay; AutoPlayVideo corrects it for lite visitors and refused autoplay.
+  const [autoplays, setAutoplays] = useState(true);
 
   // The window opens once a quarter of it is on screen, but never before the hero's key press lands.
   useEffect(() => {
@@ -75,7 +77,7 @@ export function AppTour() {
           <span>Unvibe 0.1.43 and 0.1.44</span>
         </div>
         <div
-          className={playing ? "vtour__media is-playing" : "vtour__media"}
+          className={["vtour__media", autoplays && "is-auto", playing && "is-playing"].filter(Boolean).join(" ")}
           onTimeUpdateCapture={(event) => {
             if ((event.target as HTMLVideoElement).currentTime >= TITLE_FRAME_AT) setPlaying(true);
           }}
@@ -85,11 +87,11 @@ export function AppTour() {
           onEndedCapture={() => setPlaying(false)}
           onEmptiedCapture={() => setPlaying(false)}
         >
-          {/* The responsive poster stays above the video until playback is past the cut's first frames, which
-              are the bare background (the title lands at about 0.5 s), and comes back whenever the video stops
-              before that point or ends. It does not intercept controls, so reduced-motion visitors can still
-              start playback themselves. Once the image settles, the video uses its already cached file for the
-              native poster too.
+          {/* When the video autoplays, the responsive poster stays above it until playback is past the cut's
+              first frames, which are the bare background (the title lands at about 0.5 s), and comes back
+              whenever the video stops before that point or ends; it lets clicks through. When it doesn't
+              autoplay (lite visitors, refused autoplay) the poster stays under the player, so its controls show.
+              Once the image settles, the video uses its already cached file for the native poster too.
               loading="lazy": on phones the headline, not the poster, is the largest paint, so the poster waits for
               layout instead of sharing the first round trips with the stylesheets and fonts (still fetched at once when on screen). */}
           <img
@@ -111,6 +113,7 @@ export function AppTour() {
             width={1920}
             height={1080}
             captions={`${DEMO}.en.vtt`}
+            onAutoplayChange={setAutoplays}
             label="Unvibe demo with music and no voice: select code and press the shortcut, an explanation at different depths, a follow-up question, Test me, a React hook explained, a Change Brief (the brief is free; the AI explanation of a change is Pro), the Library, a saved lesson, a review quiz, Why does this exist?, the same panel on Windows, privacy settings, and Try it in the browser"
           />
         </div>

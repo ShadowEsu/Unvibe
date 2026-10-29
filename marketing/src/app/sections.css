@@ -145,8 +145,9 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
 .vtour__window:focus-within { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 .vtour__window video:focus-within { outline: 3px solid #3c2fb8; outline-offset: -3px; }
-/* Keep the responsive poster above undecoded video frames, without blocking the native controls. */
-.vtour__media:not(.is-playing) .vtour__poster { z-index: 1; pointer-events: none; }
+/* While the video autoplays, keep the responsive poster above its undecoded first frames, letting clicks through.
+   Without autoplay (lite visitors, refused autoplay) it stays under the player, so the native controls show. */
+.vtour__media.is-auto:not(.is-playing) .vtour__poster { z-index: 1; pointer-events: none; }
 .vtour__media.is-playing .vtour__poster { visibility: hidden; }
 /* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. Filled when sound is on. */
 .vtour__sound {
