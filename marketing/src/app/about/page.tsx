@@ -53,7 +53,7 @@ export default function AboutPage() {
             <li><b>Explain the code you&apos;re actually looking at,</b> not a tutorial about something else.</li>
             <li><b>At your level.</b> Five depths, from New to Expert. The first four are free.</li>
             <li><b>Check it stuck.</b> Test me asks about the code you just read, and a wrong answer comes back for review.</li>
-            <li><b>Say exactly what is sent.</b> Only what you ask about: the code you selected, its file name and language, and any question you type (on Pro, also nearby code, or git changes you ask it to explain). Keys and tokens are filtered on your computer first. Your repo is never uploaded.</li>
+            <li><b>Say exactly what is sent.</b> Only what you ask about: the code you selected, its language, the file&apos;s path inside your project and your project folder&apos;s name when Unvibe knows them, and any question you type (on Pro, also nearby code, or git changes you ask it to explain). Keys and tokens are filtered on your computer first. Your repo is never uploaded.</li>
           </ul>
         </article>
         <article className="founder-about__card">

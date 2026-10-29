@@ -25,13 +25,17 @@ export default function PrivacyPage() {
             scanned on-device for secrets, and detected credentials block or warn first.
           </li>
           <li>
-            <strong>Repository metadata</strong> such as file paths, structure, and git
-            diffs, only when you explicitly review those scopes. Unvibe does not read
-            your repository in the background.
+            <strong>File and project names.</strong> Each explanation includes the file&apos;s path
+            inside your project (for example <code>src/lib/retry.ts</code>) when Unvibe knows which
+            file the code came from, and the name of the project folder you last worked in with
+            Unvibe. The full path on your computer is not sent. <strong>Git diffs</strong> are sent
+            only when you ask a Brief to explain them. Unvibe does not read your repository in the
+            background.
           </li>
           <li>
-            <strong>Learning records:</strong> which snippets you reviewed,
-            comprehension results, and concepts.
+            <strong>Learning records:</strong> which snippets you reviewed (with the file&apos;s
+            path inside your project and the project folder&apos;s name), comprehension results,
+            and concepts.
           </li>
           <li>
             <strong>Account data:</strong> your email for sign-in, your name from Google if you

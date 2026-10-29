@@ -62,7 +62,7 @@ export const faqItems: FaqItem[] = [
     id: "app-or-extension",
     question: "Is it an extension or an app?",
     answer:
-      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection, plus the file name and language. Briefs read the git changes of a project on your computer. Keys and tokens in that code are filtered on your computer before it is sent.",
+      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection. It sends that with its language and, when Unvibe knows them, the file's path inside your project and your project folder's name. Briefs read the git changes of a project on your computer. Keys and tokens in that code are filtered on your computer before it is sent.",
     category: "product",
   },
   {
@@ -76,7 +76,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code with its file name and language (with Pro, some nearby code for context), or, on Pro, the git changes you ask the AI to explain, plus any question you type. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Chat messages. Your repo is never uploaded.",
+      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Chat messages. Your repo is never uploaded.",
     category: "privacy",
   },
   {
