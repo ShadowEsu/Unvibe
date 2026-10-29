@@ -6,23 +6,22 @@ import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
 import { trialCounterUsed, trialGlobalDayKey, trialGlobalMonthKey, trialInstallKey, trialUsageLine } from '../src/lib/trialAccess';
 import type { UsageKind } from '../src/billing/types';
+import { ANTHROPIC_HOST, anthropicStream } from './anthropicStub';
 
 // Real route handlers, memory stores; only the remote AI HTTP boundary is local.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.OPENROUTER_API_KEY;
-delete process.env.ANTHROPIC_API_KEY;
 delete process.env.ENABLE_MOCK_AI;
-process.env.GEMINI_API_KEY = 'local-gemini-key';
+process.env.ANTHROPIC_API_KEY = 'local-anthropic-key';
 process.env.UNVIBE_TRIAL_TOKEN = 'local-trial-token-abcdefghijklmnop';
 
 let aiCalls = 0;
 globalThis.fetch = (async (input: RequestInfo | URL) => {
   const url = new URL(String(input));
-  if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
+  if (url.hostname !== ANTHROPIC_HOST) throw new Error(`Unexpected request: ${url}`);
   aiCalls += 1;
-  const chunk = { candidates: [{ content: { parts: [{ text: 'This change renames a helper.' }] } }] };
-  return new Response(`data: ${JSON.stringify(chunk)}\n\n`, { headers: { 'content-type': 'text/event-stream' } });
+  return anthropicStream(['This change renames a helper.']);
 }) as typeof fetch;
 
 const code = 'const identity = (x: number) => x;';

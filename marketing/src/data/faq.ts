@@ -104,7 +104,7 @@ export const faqItems: FaqItem[] = [
     id: "training",
     question: "Will my code be used for training?",
     answer:
-      "Unvibe doesn't build a training dataset from your code. During the beta, explanations come from the Google Gemini API, and Google's Gemini API terms decide how Google may use that content. The secret filter catches common keys and tokens, but no filter can promise to find every sensitive value.",
+      "Unvibe doesn't build a training dataset from your code. During the beta, explanations come from Anthropic's Claude API, and Anthropic's Commercial Terms decide how it handles that data. The secret filter catches common keys and tokens, but no filter can promise to find every sensitive value.",
     category: "privacy",
   },
   {

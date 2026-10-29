@@ -1,6 +1,6 @@
 /**
  * Sealed desktop trial access. The shared trial token is NOT a provider API key —
- * Gemini/Anthropic keys stay server-side. Each install receives a hard 30-day AI and follow-up budget.
+ * Anthropic keys stay server-side. Each install receives a hard 30-day AI and follow-up budget.
  *
  * The token ships in the app and install ids are chosen by the client, so per-install counters alone
  * do not bound spend. Every trial AI request also counts against:
@@ -11,7 +11,7 @@
  *
  * AI cost is measured by two more shared rows per UTC day and kind, `__tokens_in__:YYYY-MM-DD` and
  * `__tokens_out__:YYYY-MM-DD`: provider-reported token totals for all trial requests, never per
- * install and never text (`recordTrialTokens`). chars/4 estimates (Gemini accepted the request but
+ * install and never text (`recordTrialTokens`). chars/4 estimates (the provider accepted the request but
  * reported no usage, e.g. a cut-off stream) go to `__tokens_est_in__` / `__tokens_est_out__`, so
  * measured and estimated totals are never blended.
  *

@@ -6,7 +6,7 @@ export type ModelRoute = 'LOCAL' | 'CLOUD' | 'BYOK';
  * Token counts for one request. Counts only: never prompt, code or answer text. `outputTokens`
  * includes hidden thinking tokens, which are billed as output. `estimated` is set when the provider
  * answered but reported no usage, so the counts are chars/4 of the prompt and of what was delivered
- * (https://ai.google.dev/gemini-api/docs/tokens); measured counts never carry it.
+ * (a rough rule of thumb for English and code); measured counts never carry it.
  */
 export interface TokenUsage {
   inputTokens: number;
@@ -20,9 +20,23 @@ export interface Completion {
   usage?: TokenUsage;
 }
 
-/** chars/4, rounded up: Google's rule of thumb for Gemini tokens. */
+/** chars/4, rounded up: a rough tokens-per-character rule of thumb. */
 export function estimateTokens(chars: number): number {
   return Math.ceil(chars / 4);
+}
+
+/** Our own provider errors: fixed text with an HTTP status and Anthropic's error type at most. */
+const OWN_PROVIDER_MESSAGE = /^Anthropic API (\d{3}: [a-z_]{1,60}|stream error: [a-z_]{1,60}|stream had no body)$/;
+
+/**
+ * What may be logged about a failed provider call: the error's class, plus its message only when it
+ * is one of ours. Anything else (network errors, SDK or runtime messages) could quote a request,
+ * a header or a key, so it is reduced to the class name.
+ */
+export function providerErrorSummary(error: unknown): string {
+  if (!(error instanceof Error)) return typeof error;
+  const name = /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : 'Error';
+  return OWN_PROVIDER_MESSAGE.test(error.message) ? `${name}: ${error.message}` : name;
 }
 
 /**

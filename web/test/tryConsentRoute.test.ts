@@ -2,19 +2,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { POST as tryRoute } from '../app/api/v1/try/route';
 import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
+import { ANTHROPIC_HOST, anthropicMessage } from './anthropicStub';
 
-// Real route handler and the in-memory limiter; only Google's HTTP endpoint is local, and counted.
+// Real route handler and the in-memory limiter; only Anthropic's HTTP endpoint is local, and counted.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.ENABLE_MOCK_AI;
-process.env.GEMINI_API_KEY = 'local-gemini-key';
+process.env.ANTHROPIC_API_KEY = 'local-anthropic-key';
 
 let providerCalls = 0;
 globalThis.fetch = (async (input: RequestInfo | URL) => {
   const url = new URL(String(input));
-  if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
+  if (url.hostname !== ANTHROPIC_HOST) throw new Error(`Unexpected request: ${url}`);
   providerCalls += 1;
-  return Response.json({ candidates: [{ content: { parts: [{ text: '**Sets a to 1.**' }] } }] });
+  return anthropicMessage('**Sets a to 1.**');
 }) as typeof fetch;
 
 const code = 'const a = 1;';
@@ -28,7 +29,7 @@ function post(body: unknown): Promise<Response> {
   }));
 }
 
-test('a body without both ticks is a 400 and never reaches Gemini', async () => {
+test('a body without both ticks is a 400 and never reaches Anthropic', async () => {
   const refused = [
     { code },
     { code, consent: { ...consent, v: '2026-01-01' } },
@@ -38,7 +39,7 @@ test('a body without both ticks is a 400 and never reaches Gemini', async () => 
   for (const body of refused) {
     const response = await post(body);
     assert.equal(response.status, 400, JSON.stringify(body));
-    assert.deepEqual(await response.json(), { error: 'Tick both boxes to send this code to Gemini.' });
+    assert.deepEqual(await response.json(), { error: 'Tick both boxes to send this code to Claude.' });
   }
   assert.equal(providerCalls, 0);
 });

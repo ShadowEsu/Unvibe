@@ -1,6 +1,6 @@
 /**
  * The agreement /activate asks for before an Unvibe app is signed in with an account: the Terms and
- * Privacy Policy, and being 18 or older (Google Gemini's API terms are 18+). The page asks with two
+ * Privacy Policy, and being 18 or older (Unvibe's Terms are 18+). The page asks with two
  * separate unticked boxes; /api/v1/auth/approve refuses without both, so a request that skips the
  * page still can't sign an app in. The version matches the app's consent screen (app/src/core/consent.ts).
  */

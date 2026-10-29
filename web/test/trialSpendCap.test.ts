@@ -13,6 +13,7 @@ import {
   trialUsageLine,
 } from '../src/lib/trialAccess';
 import { clientIp } from '../src/lib/tryDemo';
+import { ANTHROPIC_HOST, anthropicAnswer, anthropicError } from './anthropicStub';
 
 /** The per-IP key where one exists (a server secret, or the per-process key outside production). */
 function trialIpKey(ip: string, now: Date): string {
@@ -31,18 +32,15 @@ let supabase: ((url: URL, init?: RequestInit) => Promise<Response>) | null = nul
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(String(input));
-  if (url.hostname === 'generativelanguage.googleapis.com') {
+  if (url.hostname === ANTHROPIC_HOST) {
     aiCalls += 1;
     // The provider forwards the caller's signal; a request the client already dropped aborts here.
     init?.signal?.throwIfAborted();
-    if (upstream === 'fail') return new Response('upstream unavailable', { status: 503 });
+    if (upstream === 'fail') return anthropicError();
     const text = upstream === 'question'
       ? JSON.stringify({ question: 'What does it return?', options: ['Its input', 'Nothing'], answerIndex: 0, rationale: 'identity', concept: 'functions', conceptLabel: 'Functions' })
       : upstream === 'empty' ? '' : 'This function returns its input.';
-    const chunk = { candidates: [{ content: { parts: [{ text }] } }] };
-    return url.pathname.endsWith(':streamGenerateContent')
-      ? new Response(`data: ${JSON.stringify(chunk)}\n\n`, { headers: { 'content-type': 'text/event-stream' } })
-      : Response.json(chunk);
+    return anthropicAnswer(init, text);
   }
   if (supabase && url.hostname === 'trial.supabase.test') return supabase(url, init);
   throw new Error(`Unexpected request: ${url}`);
@@ -53,14 +51,13 @@ beforeEach(() => {
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.OPENROUTER_API_KEY;
-  delete process.env.ANTHROPIC_API_KEY;
+  process.env.ANTHROPIC_API_KEY = 'local-anthropic-key';
   delete process.env.ENABLE_MOCK_AI;
   delete process.env.UNVIBE_TRIAL_IP_DAILY_LIMIT;
   delete process.env.UNVIBE_TRIAL_GLOBAL_MONTHLY_LIMIT;
   delete process.env.UNVIBE_TRIAL_GLOBAL_DAILY_LIMIT;
   delete process.env.UNVIBE_TRIAL_EXPLANATION_LIMIT;
   delete process.env.UNVIBE_TRIAL_FOLLOW_UP_LIMIT;
-  process.env.GEMINI_API_KEY = 'local-gemini-key';
   process.env.UNVIBE_TRIAL_TOKEN = TOKEN;
   upstream = 'answer';
   aiCalls = 0;

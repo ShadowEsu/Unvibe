@@ -14,6 +14,7 @@ describe("Try it boxes come back ticked only from this version's own answer (Sec
     const unticked = { aiSend: false, age18: false };
     for (const raw of [
       record({ v: "2026-01-01", aiSend: true, age18: true }),
+      record({ v: "2026-10-28", aiSend: true, age18: true }), // the version before the box named Anthropic
       record({ aiSend: true, age18: true }),
       record({ v: TRY_CONSENT_VERSION, aiSend: "true", age18: 1 }),
       record(null),
