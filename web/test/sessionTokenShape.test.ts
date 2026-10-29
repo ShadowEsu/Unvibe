@@ -45,9 +45,9 @@ test('a non-UUID bearer or session cookie is a 401, not a 500', async () => {
   const requests: string[] = [];
   globalThis.fetch = postgrest(requests);
   resetStoreCacheForTests();
-  for (const headers of [{ authorization: 'Bearer not-a-uuid' }, { cookie: 'uncode_session=not-a-uuid' }]) {
   const cases: Array<Record<string, string>> = [{ authorization: 'Bearer not-a-uuid' }, { cookie: 'uncode_session=not-a-uuid' }];
   for (const headers of cases) {
+    const response = await profile(new Request('http://localhost/api/v1/profile', { headers }));
     assert.equal(response.status, 401, JSON.stringify(headers));
   }
   assert.deepEqual(requests, []);
