@@ -31,23 +31,23 @@ const PRESETS = {
     level: 'beginner',
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|should (be )?remove|\bremove (it|this|the)\b|dead code/i,
   },
-  // ep04 (request 20261029-0005): the frame is cropped above "Risks and Edge Cases", so only the text
+  // ep04 (request 20261029-0005): the frame is cropped above the Risks heading, so only the text
   // before that heading is checked.
   workflow: {
     file: '.github/workflows/ci.yml',
     code: '      - run: npm ci\n',
     match: 'npm ci',
     level: 'beginner',
-    scanUntil: 'Risks and Edge Cases',
+    cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b/i,
   },
-  // ep05 (request 20261029-0040): cropped above "Why it is here" (which comes before the Risks section).
+  // ep05 (request 20261029-0040): cropped above the first "Why …" heading (it comes before the Risks section).
   lint: {
     file: 'src/utils.js',
     code: '// eslint-disable-next-line no-unused-vars\n',
     match: 'eslint-disable',
     level: 'beginner',
-    scanUntil: 'Why it is here',
+    cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bhid(e|es|ing|den)\b/i,
   },
   // Request 20261029-0100: '?' returns the error to the caller; a take that says it panics or crashes is wrong.
@@ -56,7 +56,7 @@ const PRESETS = {
     code: 'let config = load_config()?;\n',
     match: 'load_config',
     level: 'beginner',
-    scanUntil: 'Why it is here',
+    cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bcrash|\bpanic/i,
   },
   ifreturn: {
@@ -64,7 +64,7 @@ const PRESETS = {
     code: 'if (!user) return;\n',
     match: '!user',
     level: 'beginner',
-    scanUntil: 'Why it is here',
+    cropAtHeading: true,
     // Marketing (ep07): an exact panel. 'empty' is not falsy for {} or [], so any take that calls a
     // value empty, or lists falsy values as a partial set, is retaken.
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bempty\b(?!\s+(string|text)\b)|falsy"?\s*\((?![^)]*\b0\b)[^)]*\)/i,
@@ -75,7 +75,7 @@ const PRESETS = {
     code: 'const isZip = /^\\d{5}$/.test(input);\n',
     match: 'isZip',
     level: 'beginner',
-    scanUntil: 'Why it is here',
+    cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|unicode/i,
   },
   // ep09: `not items` is True for every falsy value; a take that names a partial set in parentheses as if
@@ -85,7 +85,7 @@ const PRESETS = {
     code: 'if not items: return []\n',
     match: 'not items',
     level: 'beginner',
-    scanUntil: 'Why it is here',
+    cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\braises?\b|\bonly (if|when) (items|the list) is (empty|None)\b/i,
   },
   // ep10: Java int overflow wraps silently (never throws), and int division truncates (rounds down for
@@ -95,7 +95,7 @@ const PRESETS = {
     code: 'int mid = start + (end - start) / 2;\n',
     match: 'int mid',
     level: 'beginner',
-    scanUntil: 'Why it is here',
+    cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bthrows?\b|exception|\brounds? up\b|rounding up|\bfor any (numbers?|integers?|values?)\b/i,
   },
 };
@@ -182,8 +182,11 @@ try {
     await sleep(600);
     const text = await panel.locator('.body').innerText();
     const whole = await panel.locator('body').innerText();
+    // Marketing crops the frame above the first section heading that starts with "Why" or "Risks"; the
+    // model words it differently per answer ("Why it is here", "Why this formula is used"), so match any.
+    // Multi-word only: the sidebar's single-word "Why" button sits above the answer in the panel text.
     const cut = (s) => {
-      const at = preset.scanUntil ? s.toLowerCase().indexOf(preset.scanUntil.toLowerCase()) : -1;
+      const at = preset.cropAtHeading ? s.search(/^[ \t]*(why|risks)\b[^\n]*?[ \t]\S/im) : -1;
       return at >= 0 ? s.slice(0, at) : s;
     };
     const banned = preset.banned.test(cut(text)) || /\b(in)?secure\b|vulnerab|danger/i.test(cut(whole));
