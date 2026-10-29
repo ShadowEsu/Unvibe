@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345), 'goptr' (ep13).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -119,6 +119,17 @@ const PRESETS = {
     cropAtHeading: true,
     maxTakes: 2,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|\balways\b|\bnever (fails?|crash(es)?|errors?|raises?|breaks?)\b|\bguarantee|\bensures?\b|\bmakes? sure\b|\bno (chance|way) (of|for) an? (error|crash)\b/i,
+  },
+  // ep13: &users[i] is the address of the slice element itself, not a copy, and the line has no loop
+  // variable in it. A take that calls it a copy or talks about loop/range variables is retaken once, then dropped.
+  goptr: {
+    file: 'internal/users/list.go',
+    code: 'ptrs = append(ptrs, &users[i])\n',
+    match: 'append(ptrs',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 2,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\b(makes?|creates?|takes?|stores?|adds?|appends?|saves?|gets?) an? (new |separate |fresh )?copy\b|&users\[i\]`?,? (is|gives|returns|holds) an? copy|\bcopy of (each|every) (user|element)\b|\b(loop|range|iteration) variables?\b|\bcaptur(e|es|ed|ing)\b|Go 1\.22/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
