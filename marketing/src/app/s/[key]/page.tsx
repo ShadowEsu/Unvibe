@@ -6,7 +6,7 @@ import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Unvibe numbers",
+  title: { absolute: "Unvibe numbers" },
   robots: { index: false, follow: false, nocache: true },
   referrer: "no-referrer",
 };

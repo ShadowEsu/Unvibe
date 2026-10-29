@@ -76,7 +76,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code with its file name and language (with Pro, some nearby code for context), or the git changes in a Brief, plus any question you type. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Chat messages. Your repo is never uploaded.",
+      "Only what you ask about: the selected code with its file name and language (with Pro, some nearby code for context), or, on Pro, the git changes you ask the AI to explain, plus any question you type. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Chat messages. Your repo is never uploaded.",
     category: "privacy",
   },
   {

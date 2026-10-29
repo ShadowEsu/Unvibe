@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
 import { TryIt } from "@/components/paper/TryIt";
@@ -7,17 +8,28 @@ import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { DownloadCta } from "@/components/paper/DownloadCta";
+import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
+import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
+import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
-  title: { absolute: "Unvibe: understand the code AI writes for you" },
-  alternates: { canonical: "/" },
-};
+export const metadata: Metadata = pageMetadata({
+  path: "/",
+  title: "Unvibe: Code Explainer for Mac and Windows, Free",
+  absolute: true,
+  description: `Select code in any app, press ${SHORTCUTS.mac.anywhere} (${SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English beside your editor. Free, no API key.`,
+});
 
 const homeFaq = faqItems.filter((item) => ["what-is-it", "which-shortcut", "editors", "sent", "beta", "accuracy"].includes(item.id));
+
+/** The language pages linked from the Try it section, so search engines reach them from the homepage. */
+const HOME_LANGUAGES = ["python", "javascript", "typescript", "sql", "bash"];
+const homeLanguagePages = HOME_LANGUAGES.map((id) => explainPages.find((page) => page.id === id)).filter((page) => page !== undefined);
 
 export const revalidate = 300;
 
@@ -28,9 +40,19 @@ export const revalidate = 300;
 export default function HomePage() {
   return (
     <div className="home-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteJsonLd) }} />
       <PhotoHero />
 
       <AppTour />
+
+      <section className="paper-section" aria-labelledby="who-title">
+        <div className="paper-wrap u-sheet">
+          <div className="sec-head">
+            <h2 id="who-title">Who it&apos;s <em>for.</em></h2>
+          </div>
+          <WhoItsForCards />
+        </div>
+      </section>
 
       <HowItWorks />
 
@@ -54,6 +76,17 @@ export default function HomePage() {
             </p>
           </div>
           <TryIt />
+          <p className="home-langs">
+            By programming language:{" "}
+            {homeLanguagePages.map((page, index) => (
+              <span key={page.id}>
+                {index > 0 ? ", " : null}
+                <Link className="paper-text-link" href={`/explain/${page.id}`}>
+                  Explain {explainLanguage(page).name} code
+                </Link>
+              </span>
+            ))}
+          </p>
         </div>
       </section>
 
@@ -82,6 +115,18 @@ export default function HomePage() {
 
       <section className="paper-section" id="invite" aria-labelledby="invite-title">
         <div className="paper-wrap"><InviteFriend /></div>
+      </section>
+
+      <section className="paper-section" id="newsletter" aria-labelledby="newsletter-title">
+        <div className="paper-wrap u-sheet">
+          <div className="sec-head">
+            <h2 id="newsletter-title">Get the <em>newsletter.</em></h2>
+            <p className="paper-lead">One email when something ships. No spam.</p>
+          </div>
+          <div className="newsletter-home">
+            <NewsletterSignup id="home" />
+          </div>
+        </div>
       </section>
 
       <section className="paper-section">

@@ -14,7 +14,7 @@ export interface WelcomeInput {
   downloadUrl?: string;
   /** Signed unsubscribe link for the footer, see lib/unsubscribe. */
   unsubscribeUrl: string;
-  /** True on the download path, where scheduleSetupReminder sends one tip the next day. */
+  /** True when the visitor ticked "Also email me one setup tip tomorrow"; scheduleSetupReminder then sends it. */
   setupTipFollows?: boolean;
   siteUrl?: string;
 }

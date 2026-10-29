@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import { ArrowRight, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
+import { ProgramList } from "@/components/paper/BackingStrip";
 import { Vibe } from "@/components/paper/Vibe";
 import {
+  compensationCashUsd,
+  compensationCreditsUsd,
   compensationLines,
+  compensationProgramCount,
   compensationTotalLabel,
   formatUsd,
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/investors",
   title: "Investors",
-  description: "Unvibe on one page: the thesis, what shipped, public cash figures, what is next, and how to reach us.",
-  alternates: { canonical: "/investors" },
-};
+  description: "Unvibe on one page: the thesis, what shipped, every startup-program credit and committed cash line, what is next, and how to reach us.",
+});
 
 const pipeline = [
   ["YC", "Application in progress"],
@@ -34,6 +39,9 @@ const roadmap: Array<[string, string, "shipped" | "next" | "later"]> = [
 
 export default function InvestorsPage() {
   const total = compensationTotalLabel();
+  const credits = formatUsd(compensationCreditsUsd());
+  const cash = formatUsd(compensationCashUsd());
+  const programs = compensationProgramCount();
   const sorted = [...compensationLines].sort((a, b) => b.amountUsd - a.amountUsd);
   const lead = sorted[0];
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
@@ -62,8 +70,8 @@ export default function InvestorsPage() {
       </header>
 
       <section className="inv-stats" aria-label="Unvibe at a glance">
-        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>self-reported committed cash</span></div>
-        <div className="inv-stat inv-stat--sky"><b>{compensationLines.length}</b><span>public cash sources</span></div>
+        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>in startup-program credits and committed cash</span></div>
+        <div className="inv-stat inv-stat--sky"><b>{programs}</b><span>startup programs we&apos;re in</span></div>
         <div className="inv-stat inv-stat--sun"><b>{releases}+</b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
         <div className="inv-stat inv-stat--lilac"><b>Mac + Windows</b><span>beta, free to download</span></div>
       </section>
@@ -78,10 +86,16 @@ export default function InvestorsPage() {
         </div>
       </section>
 
+      <section className="inv-section" id="backing">
+        <p className="inv-eyebrow">Startup programs</p>
+        <h2>In {programs} startup <em>programs.</em></h2>
+        <ProgramList firstUse />
+      </section>
+
       <section className="inv-section" id="support">
         <p className="inv-eyebrow">Resource runway</p>
         <h2>Where the {total} <em>comes from.</em></h2>
-        <p className="inv-lead">Public, self-reported committed cash, by source. This is not a funding round or a complete account of company resources.</p>
+        <p className="inv-lead">Every program credit and self-reported cash line, by source. Program credits {credits} · cash {cash}. Credits are not cash, and this is not a funding round.</p>
         <div className="inv-table" role="table" aria-label="Support by source">
           <div className="inv-row inv-row--head" role="row">
             <span role="columnheader">Source</span><span role="columnheader">Amount</span><span role="columnheader">What it is</span><span role="columnheader">Status</span>

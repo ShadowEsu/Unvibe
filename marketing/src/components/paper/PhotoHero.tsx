@@ -5,6 +5,8 @@ import { DownloadLink } from "@/components/paper/DownloadLink";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
+import { browserTrackingDisabled } from "@/lib/trackingOptOut";
+import { compensationProgramCount, compensationTotalLabel, startupPrograms } from "@/data/compensation";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
@@ -38,6 +40,7 @@ function EmailMeLink() {
           utmSource: (params.get("utm_source") ?? "").slice(0, 64),
           utmMedium: (params.get("utm_medium") ?? "").slice(0, 64),
           utmCampaign: (params.get("utm_campaign") ?? "").slice(0, 64),
+          analytics: !browserTrackingDisabled(),
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { referralCode?: string; error?: string };
@@ -82,7 +85,7 @@ function EmailMeLink() {
         </button>
       </form>
       {error ? <p className="vhero__error" id="hero-email-error" role="alert">{error}</p> : null}
-      <p className="vhero__fine" id="hero-email-note">One email with the download link for your Mac or PC. Unsubscribe any time.</p>
+      <p className="vhero__fine" id="hero-email-note">One email with the download link for your Mac or PC. Unsubscribe any time. <a href="/privacy">Privacy</a></p>
     </div>
   );
 }
@@ -173,6 +176,11 @@ export function PhotoHero() {
         ) : (
           <DownloadForThisComputer device={device} actionsRef={actionsRef} />
         )}
+        <p className="vhero__backing">
+          <a href="/investors#backing">
+            <b>{compensationTotalLabel()} in startup-program credits and committed cash</b> · {compensationProgramCount()} programs, including {startupPrograms[0].program}
+          </a>
+        </p>
       </div>
     </section>
   );

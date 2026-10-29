@@ -7,7 +7,7 @@ Owner: business owner or authorized infrastructure operator. Do not reuse produc
 1. Create a new Supabase project whose ref is not the production ref. Record region and project ref.
 2. Apply `web/supabase/migrations/0001_init.sql` through `0007_skills_and_history_pagination.sql` in order using the Supabase CLI migration workflow. Save CLI output and the migration history table result.
 3. Create a staging Vercel project linked only to that Supabase project. Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and public auth settings in the staging scope only.
-4. Leave `ANTHROPIC_API_KEY`, Stripe, and Apple variables absent for the first pass. The mock AI path is the credential-free gate.
+4. Leave `GEMINI_API_KEY`, Stripe, and Apple variables absent for the first pass. Without a Gemini key the AI routes answer 503 (staging is a production build, so the mock is off); everything else is the credential-free gate.
 5. Copy `.env.staging.example` to a secure ignored location and fill staging-only values. Never paste it into an issue, chat, log, or commit.
 6. Set `STAGING_ALLOW_DESTRUCTIVE_TESTS=true` only for a disposable test window, then run `npm run verify:staging` from the repository root.
 

@@ -179,7 +179,7 @@ export default function RedeemPage() {
     event.preventDefault();
     const field = emailField.current;
     if (field && !field.checkValidity()) {
-      setEmailError(field.validity.valueMissing ? "Enter your email." : "Enter a full email address, like you@school.edu.");
+      setEmailError(field.validity.valueMissing ? "Enter your email." : "Enter a full email address, like you@example.com.");
       field.focus();
       return;
     }
@@ -229,7 +229,7 @@ export default function RedeemPage() {
                   setEmail(event.target.value);
                   setEmailError("");
                 }}
-                placeholder="you@school.edu"
+                placeholder="you@example.com"
                 aria-invalid={Boolean(emailError)}
                 aria-describedby={emailError ? "redeem-email-error" : undefined}
               />

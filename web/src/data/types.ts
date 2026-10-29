@@ -32,7 +32,6 @@ export interface ProfileSummary {
   conceptsFamiliar: number;
   conceptsStrong: number;
   conceptsNeedReview: number;
-  currentStreakDays: number;
   lastActive?: string;
 }
 
@@ -99,6 +98,8 @@ export interface Store {
   accountInfo(userId: string): Promise<{ userId: string; email?: string; name?: string }>;
   /** The profile name from the sign-in provider (Google), stored in users.settings. */
   rememberName(userId: string, name: string): Promise<void>;
+  /** One public.consents row per kind, for an account that just agreed on /activate. */
+  recordConsents(userId: string, kinds: string[], policyVersion: string, agreedAt: Date): Promise<void>;
   userIdForEmail(email: string): Promise<string | null>;
   deleteAccount(userId: string): Promise<void>; // App Store requirement: full account+data removal
 

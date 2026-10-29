@@ -1,19 +1,21 @@
 /**
  * Privacy respecting analytics abstraction.
  *
- * Mixpanel loads via mixpanel-browser (autocapture + session replay).
- * PostHog loads via posthog-js when
+ * Mixpanel loads via mixpanel-browser (autocapture + session replay inside
+ * Mixpanel Pro startup credits). PostHog loads via posthog-js when
  * NEXT_PUBLIC_POSTHOG_KEY is set — named events, exception autocapture for
  * Error Tracking, and Surveys. We never send code contents, emails, or other
  * personal data: replays mask all text and inputs, and emails, tokens and codes
  * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
- * An anonymous id is kept in localStorage. Automated browsers, visitors who
- * opted out with ?notrack=1 (trackingOptOut.ts), and admin, capability and
- * sign-in pages (/activate, /redeem) load no SDK and send nothing. An SDK that
+ * An anonymous id is kept in localStorage. Nothing loads or is sent until the
+ * visitor presses Allow on the analytics bar (analyticsConsent.ts); Global
+ * Privacy Control counts as No thanks. Automated browsers, visitors who opted
+ * out with ?notrack=1 (trackingOptOut.ts), and admin, capability and sign-in
+ * pages (/activate, /redeem) load no SDK and send nothing either. An SDK that
  * finishes loading after an opt-out or a client navigation into one of those
- * pages waits uninitialised. An opt-out after the SDKs started, or a client
- * navigation into one of those pages, turns their capture and replay off
- * there (syncSessionRecording).
+ * pages waits uninitialised. No thanks or an opt-out after the SDKs started,
+ * or a client navigation into one of those pages, turns their capture and
+ * replay off there (syncSessionRecording).
  */
 
 import { type AnalyticsEvent } from "@/lib/analyticsEvents";
@@ -33,6 +35,7 @@ import {
   type PosthogReplay,
   type ReplayState,
 } from "@/lib/analyticsPrivacy";
+import { storeAnalyticsConsent, type AnalyticsChoice } from "@/lib/analyticsConsent";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export type { AnalyticsEvent };
@@ -225,7 +228,10 @@ function recordFunnelEvent(event: AnalyticsEvent): void {
   }).catch(() => undefined);
 }
 
-/** Nothing is sent on the server, for opted-out or automated browsers, or on admin and capability pages. */
+/**
+ * Nothing is sent on the server, before the visitor allows analytics, for opted-out or automated
+ * browsers, or on admin and capability pages.
+ */
 function analyticsOff(): boolean {
   return typeof window === "undefined" || browserTrackingDisabled() || !analyticsAllowedOnPath(window.location.pathname);
 }
@@ -286,7 +292,7 @@ export function initPosthog(posthog: PosthogClient, token = POSTHOG_KEY): void {
     person_profiles: "identified_only",
     capture_pageview: true,
     capture_pageleave: true,
-    // Error Tracking + Surveys need the SDK.
+    // Uses $50k PostHog startup credits: Error Tracking + Surveys need the SDK.
     capture_exceptions: true,
     disable_session_recording: false,
     disable_surveys: false,
@@ -320,6 +326,7 @@ function startMixpanel(): void {
 export function initMixpanel(mixpanel: MixpanelClient, token = MIXPANEL_BROWSER_TOKEN): void {
   if (!token) return;
   removeStoredMixpanelBatches();
+  // Mixpanel for Startups Pro credits: autocapture + session replay are included.
   mixpanel.init(token, {
     ...mixpanelPrivacyConfig(),
     persistence: "localStorage",
@@ -354,6 +361,16 @@ export function initAnalytics(): void {
   if (analyticsOff()) return;
   startPosthog();
   startMixpanel();
+}
+
+/**
+ * The analytics bar's buttons. Allow loads the SDKs. No thanks after an earlier Allow turns both
+ * SDKs' capture and replay off at once (the same opt-out calls `?notrack=1` makes).
+ */
+export function setAnalyticsConsent(choice: AnalyticsChoice): void {
+  storeAnalyticsConsent(choice);
+  initAnalytics();
+  syncSessionRecording();
 }
 
 /**

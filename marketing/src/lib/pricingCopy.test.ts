@@ -29,7 +29,7 @@ describe("pricing copy while payments are closed", () => {
 
   it("keeps the real prices visible", () => {
     assert.match(closed.description, new RegExp(`\\$${PRICING.proMonthly} a month or \\$${PRICING.proAnnual} a year`));
-    assert.match(closed.description, new RegExp(`\\$${PRICING.teamsSeatMonthly} per seat per month`));
+    assert.match(closed.description, /; payments open soon\.$/);
   });
 
   it("has no button that leads to a dead end", () => {
@@ -66,7 +66,14 @@ describe("pricing copy in both states", () => {
     assert.ok(free.includes("“Why does this exist?” from your Git history"));
     assert.ok(pro.includes("AI explanations of Git diffs and change Briefs"));
     for (const feature of pro) if (/brief|diff/i.test(feature)) assert.match(feature, /^AI explanations of /, feature);
-    for (const paymentsOpen of [false, true]) assert.match(pricingCopy(paymentsOpen).description, /adds Expert depth, AI explanations of Git diffs and nearby-file context\./);
+  });
+
+  it("gives search results a description that fits and keeps retired Teams wording out", () => {
+    for (const paymentsOpen of [false, true]) {
+      const { description } = pricingCopy(paymentsOpen);
+      assert.ok(description.length <= 160, `${description.length} characters: ${description}`);
+      assert.doesNotMatch(description, /founding pilot|Teams/i);
+    }
   });
 });
 
@@ -76,7 +83,8 @@ describe("pricing copy once payments open", () => {
   it("keeps today's wording", () => {
     assert.equal(`${open.heading.lead}${open.heading.emphasis}${open.heading.tail}`, "Start free. Upgrade when it earns a place in your day.");
     assert.equal(open.heading.emphasis, "earns a place");
-    assert.equal(open.description, `Download Unvibe free. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year and adds Expert depth, AI explanations of Git diffs and nearby-file context. Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month.`);
+    assert.match(open.description, new RegExp(`\\$${PRICING.proMonthly} a month or \\$${PRICING.proAnnual} a year\\.$`));
+    assert.doesNotMatch(open.description, /open soon/);
     assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [

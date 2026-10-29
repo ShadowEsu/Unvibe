@@ -11,7 +11,8 @@ const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activat
 
 /**
  * One small email ask. Opens when a friend's invite link brings you here (with an app gift code,
- * it tells you where to enter it) or right after a download click (setup guide plus a nudge tomorrow).
+ * it tells you where to enter it) or right after a download click (setup guide). A setup tip the
+ * next day is its own unticked box; only a ticked box asks the server for it.
  */
 export function ReminderToast() {
   const pathname = usePathname() ?? "/";
@@ -20,6 +21,7 @@ export function ReminderToast() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const [setupTip, setSetupTip] = useState(false);
 
   useEffect(() => {
     rememberRef();
@@ -62,7 +64,7 @@ export function ReminderToast() {
       const response = await fetch("/api/beta-download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, referredBy: invited ? ref : "" }),
+        body: JSON.stringify({ email, referredBy: invited ? ref : "", ...(setupTip ? { reminder: true } : {}) }),
       });
       const body = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(body.error || "Could not send that.");
@@ -91,13 +93,18 @@ export function ReminderToast() {
           ) : invited ? (
             <p><b>A friend invited you.</b> Want the download link and setup guide by email?</p>
           ) : (
-            <p><b>Downloading!</b> First time opening it? <a href="/install-help">See how to approve it</a>. Want the setup guide and a nudge tomorrow too?</p>
+            <p><b>Downloading!</b> First time opening it? <a href="/install-help">See how to approve it</a>. Want the setup guide by email?</p>
           )}
+          <div className="remind__check">
+            <input id="remind-setup-tip" type="checkbox" checked={setupTip} onChange={(e) => setSetupTip(e.target.checked)} />
+            <label htmlFor="remind-setup-tip">Also email me one setup tip tomorrow</label>
+          </div>
           <div className="remind__row">
             <input type="email" required maxLength={240} autoComplete="email" placeholder="you@example.com" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <button type="submit" disabled={state === "sending"}>{state === "sending" ? "…" : "Send it"}</button>
           </div>
           {error ? <p className="remind__error" role="alert">{error}</p> : null}
+          <p className="remind__fine"><a href="/privacy">Privacy</a></p>
         </form>
       )}
     </div>

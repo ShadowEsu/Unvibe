@@ -19,10 +19,9 @@ currently intended to be `https://api.unvibe.site`).
 | `APP_ENV` | `production` only after staging has passed. | Yes |
 | `WEB_BASE_URL` | The backend's public HTTPS URL, for example `https://api.unvibe.site`. | Yes |
 | `PUBLIC_APP_URL` | The trusted HTTPS return URL for Billing Checkout/Portal. Use the public web app origin that hosts `/plan`. | Yes for billing |
-| `ENABLE_MOCK_AI` | `false` for real explanations. | Yes |
-| `GEMINI_API_KEY` | Production AI key: production runs on Gemini. Start with a restricted key and a spend limit. | Yes |
-| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY` | Leave unset on production: when set, either is chosen before Gemini for the app's AI routes (`selectProvider` in `web/src/ai/index.ts`). The website's Try it uses only Gemini and never these keys. | No |
-| `UNCODE_MODEL` or `GEMINI_MODEL` / `OPENROUTER_MODEL` | The approved model name for the selected provider. | Yes |
+| `ENABLE_MOCK_AI` | Development only; production ignores it. | No |
+| `GEMINI_API_KEY` | Production AI key: every AI route uses only Google Gemini (`selectProvider` in `web/src/ai/index.ts`), as the consent screen and privacy policy say. Start with a restricted key and a spend limit. | Yes |
+| `GEMINI_MODEL` | The approved Gemini model name (default `gemini-3.1-flash-lite`). | Recommended |
 | `SUPABASE_URL` | Your production Supabase project URL. | Yes |
 | `SUPABASE_ANON_KEY` | The Supabase publishable/anon key. | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | The server-only Supabase service-role key. Never expose it to a browser or Electron. | Yes |

@@ -9,6 +9,9 @@ import * as waitlistRoute from "../app/api/waitlist/route";
 import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
 import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
+import { NEWSLETTER_CONSENT_VERSION } from "./newsletterConsent";
+import { betaInviteCandidates } from "./betaInviteSelection";
+import { listWaitlistEntries } from "./waitlistStore";
 
 /**
  * Public signup endpoints against a fake Supabase (PostgREST) project, so the real supabase-js
@@ -26,6 +29,10 @@ const limiterHits = new Map<string, number>();
 /** Every bucket the routes asked the store to count, in order. */
 const limiterBuckets: string[] = [];
 let limiterFails = false;
+/** PostHog (/i/v0/e/) and Mixpanel (/track) captures, when a test points their hosts here. */
+const analyticsHits: string[] = [];
+/** Writes to the growth funnel's sentinel row. */
+let funnelHits = 0;
 let server: Server;
 
 async function readBody(request: IncomingMessage): Promise<string> {
@@ -42,6 +49,11 @@ before(async () => {
   server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     const body = await readBody(request);
+    if (url.pathname === "/i/v0/e/" || url.pathname === "/track") {
+      analyticsHits.push(url.pathname);
+      return json(response, 200, 1);
+    }
+    if (`${url.search} ${body}`.includes("growth-funnel%40unvibe.internal") || body.includes("growth-funnel@unvibe.internal")) funnelHits += 1;
     if (request.headers.apikey !== SERVICE_KEY) return json(response, 401, { message: "bad key" });
 
     if (url.pathname === "/rest/v1/rpc/consume_rate_limit") {
@@ -63,8 +75,14 @@ before(async () => {
         response.writeHead(201).end();
         return;
       }
-      if (request.method === "PATCH") return json(response, 200, [{ id: url.searchParams.get("email") }]);
       const email = url.searchParams.get("email")?.replace(/^eq\./, "");
+      if (request.method === "PATCH") {
+        const row = email ? waitlistRows.get(email) : undefined;
+        // PostgREST `column=is.null` filters: the update only applies while those columns are empty.
+        const nullFilters = Array.from(url.searchParams).filter(([, value]) => value === "is.null").map(([column]) => column);
+        if (row && nullFilters.every((column) => row[column] == null)) Object.assign(row, JSON.parse(body) as Record<string, unknown>);
+        return json(response, 200, [{ id: email }]);
+      }
       const rows = Array.from(waitlistRows.values()).filter((row) => !email || row.email === email);
       if (String(request.headers.accept ?? "").includes("vnd.pgrst.object")) {
         if (rows.length === 0) return json(response, 406, { code: "PGRST116", message: "no rows" });
@@ -208,6 +226,59 @@ describe("beta-download hands out the pinned release", () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+describe("beta-download: the setup tip email is its own opt-in", () => {
+  /** Posts a download request and returns what would go to Resend. Only the fake Supabase is reachable. */
+  async function sentEmails(body: Record<string, unknown>): Promise<{ key: string | null; text: string; scheduledAt?: string }[]> {
+    const emails: { key: string | null; text: string; scheduledAt?: string }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url === "https://api.resend.com/emails") {
+        const sent = JSON.parse(String(init?.body)) as { text: string; scheduled_at?: string };
+        emails.push({ key: new Headers(init?.headers).get("idempotency-key"), text: sent.text, scheduledAt: sent.scheduled_at });
+        return Response.json({ id: `email-${emails.length}` });
+      }
+      if (process.env.SUPABASE_URL && url.startsWith(process.env.SUPABASE_URL)) return realFetch(input, init);
+      throw new Error(`unexpected network call from the test: ${url}`);
+    }) as typeof fetch;
+    try {
+      await withEnv({ RESEND_API_KEY: "resend-test-key" }, async () => {
+        // A fresh address each run: the local download store (.data) remembers who was already emailed.
+        const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `setup-tip-${randomUUID()}@example.com`, ...body }));
+        assert.equal(response.status, 200);
+      });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    return emails;
+  }
+
+  for (const [label, body] of [
+    ["no reminder field", {}],
+    ["reminder: false", { reminder: false }],
+    ['reminder: "true" (a string)', { reminder: "true" }],
+    ["reminder: 1", { reminder: 1 }],
+  ] as const) {
+    it(`schedules no setup tip with ${label}, and the welcome email doesn't promise one`, async () => {
+      const emails = await sentEmails(body);
+      assert.deepEqual(emails.filter((sent) => sent.key?.startsWith("unvibe-setup-reminder-")), [], "no setup tip scheduled");
+      assert.ok(emails.every((sent) => !sent.scheduledAt), "nothing scheduled for later");
+      const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
+      assert.ok(welcome, "the welcome email was still sent");
+      assert.ok(!welcome.text.includes("setup tip"), "the welcome email doesn't mention a setup tip");
+    });
+  }
+
+  it("schedules the setup tip for tomorrow only with reminder: true", async () => {
+    const emails = await sentEmails({ reminder: true });
+    const tips = emails.filter((sent) => sent.key?.startsWith("unvibe-setup-reminder-"));
+    assert.equal(tips.length, 1, "one setup tip scheduled");
+    assert.equal(tips[0]!.scheduledAt, "in 1 day");
+    const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
+    assert.ok(welcome?.text.includes("one setup tip tomorrow"), "the welcome email says the tip follows");
   });
 });
 
@@ -406,5 +477,150 @@ describe("scripted signups are capped per network, per day and overall", () => {
       const withSecret = await waitlistRoute.POST(post("/api/waitlist", {}));
       assert.equal(withSecret.status, 422);
     });
+  });
+});
+
+describe("a waitlist signup is counted in analytics only when the browser allowed it (Security U-L1)", () => {
+  async function signUp(extra: Record<string, unknown>): Promise<number> {
+    const local = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    return withEnv(
+      { POSTHOG_PROJECT_API_KEY: "phc_test", POSTHOG_HOST: local, MIXPANEL_TOKEN: "mp_test", MIXPANEL_HOST: local },
+      async () => (await waitlistRoute.POST(post("/api/waitlist", { email: `consent-${randomUUID().slice(0, 8)}@unvibe-mail.test`, ...extra }))).status,
+    );
+  }
+
+  for (const [name, extra] of [
+    ["no answer sent", {}],
+    ["analytics false", { analytics: false }],
+    ["the string \"true\"", { analytics: "true" }],
+    ["the number 1", { analytics: 1 }],
+  ] as const) {
+    it(`${name}: the signup is saved and nothing goes to PostHog, Mixpanel or the funnel`, async () => {
+      analyticsHits.length = 0;
+      funnelHits = 0;
+      assert.equal(await signUp(extra), 200);
+      assert.deepEqual(analyticsHits, []);
+      assert.equal(funnelHits, 0);
+    });
+  }
+
+  it("analytics true: one PostHog and one Mixpanel event, and the funnel counts it", async () => {
+    analyticsHits.length = 0;
+    funnelHits = 0;
+    assert.equal(await signUp({ analytics: true }), 200);
+    assert.deepEqual([...analyticsHits].sort(), ["/i/v0/e/", "/track"]);
+    assert.ok(funnelHits > 0);
+  });
+});
+
+describe("newsletter signups need the consent box and send no email (ledger 299)", () => {
+  const newsletterEmail = () => `news-${randomUUID().slice(0, 8)}@unvibe-mail.test`;
+
+  /** Posts to /api/waitlist with Resend configured and returns the response plus every address Resend was asked to mail. */
+  async function signUp(body: Record<string, unknown>): Promise<{ response: Response; mailedTo: string[] }> {
+    const mailedTo: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url === "https://api.resend.com/emails") {
+        const sent: unknown = JSON.parse(String(init?.body));
+        if (sent && typeof sent === "object" && "to" in sent && Array.isArray(sent.to)) mailedTo.push(...sent.to.map(String));
+        return Response.json({ id: `email-${mailedTo.length}` });
+      }
+      if (process.env.SUPABASE_URL && url.startsWith(process.env.SUPABASE_URL)) return realFetch(input, init);
+      throw new Error(`unexpected network call from the test: ${url}`);
+    }) as typeof fetch;
+    try {
+      const response = await withEnv({ RESEND_API_KEY: "resend-test-key" }, () => waitlistRoute.POST(post("/api/waitlist", body)));
+      return { response, mailedTo };
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  }
+
+  for (const [label, extra] of [
+    ["no consent field", {}],
+    ["consent: false", { consent: false }],
+    ['consent: "true" (a string)', { consent: "true" }],
+    ["consent: 1", { consent: 1 }],
+  ] as const) {
+    it(`refuses a newsletter post with ${label} (422) and stores nothing`, async () => {
+      const email = newsletterEmail();
+      const { response, mailedTo } = await signUp({ email, source: "newsletter", ...extra });
+      assert.equal(response.status, 422);
+      const answer: unknown = await response.json();
+      assert.ok(answer && typeof answer === "object" && "issues" in answer && answer.issues && typeof answer.issues === "object" && "consent" in answer.issues);
+      assert.equal(waitlistRows.has(email), false);
+      assert.deepEqual(mailedTo, []);
+    });
+  }
+
+  it("stores a consented signup with the source, the consent version and the time", async () => {
+    const email = newsletterEmail();
+    const before = Date.now();
+    const { response } = await signUp({ email, source: "newsletter", consent: true });
+    assert.equal(response.status, 200);
+    const row = waitlistRows.get(email);
+    assert.ok(row, "the entry is stored");
+    assert.equal(row.newsletter_consent_source, "newsletter");
+    assert.equal(row.newsletter_consent_version, NEWSLETTER_CONSENT_VERSION);
+    const at = Date.parse(String(row.newsletter_consent_at));
+    assert.ok(at >= before && at <= Date.now(), "consent time is the signup time");
+  });
+
+  it("sends the subscriber no welcome email (a waitlist signup still gets one)", async () => {
+    const newsletter = newsletterEmail();
+    const subscribed = await signUp({ email: newsletter, source: "newsletter", consent: true });
+    assert.equal(subscribed.response.status, 200);
+    assert.equal(subscribed.mailedTo.includes(newsletter), false, "nothing mailed to the subscriber");
+    assert.equal(waitlistRows.get(newsletter)?.beta_email_status, undefined, "no welcome email attempt recorded");
+
+    const waitlister = newsletterEmail();
+    const joined = await signUp({ email: waitlister });
+    assert.equal(joined.response.status, 200);
+    assert.ok(joined.mailedTo.includes(waitlister), "the harness does see a welcome email");
+    assert.equal(waitlistRows.get(waitlister)?.newsletter_consent_at, undefined, "a waitlist signup records no newsletter consent");
+  });
+
+  it("records consent for an email already on the waitlist and answers exactly as for a new one", async () => {
+    const email = newsletterEmail();
+    const first = await signUp({ email });
+    assert.equal(waitlistRows.get(email)?.newsletter_consent_at, undefined);
+    const again = await signUp({ email, source: "newsletter", consent: true });
+    assert.equal(again.response.status, first.response.status);
+    assert.deepEqual(await again.response.json(), await first.response.json());
+    assert.deepEqual(again.mailedTo, [], "no second email of any kind");
+    const row = waitlistRows.get(email);
+    assert.equal(row?.newsletter_consent_source, "newsletter");
+    assert.equal(row?.newsletter_consent_version, NEWSLETTER_CONSENT_VERSION);
+    assert.ok(row?.newsletter_consent_at);
+  });
+
+  it("a second newsletter post keeps the first consent and the entry stays out of beta invites (Security R-1)", async () => {
+    const email = newsletterEmail();
+    await signUp({ email, source: "newsletter", consent: true });
+    const row = waitlistRows.get(email);
+    assert.ok(row);
+    // An earlier first consent, so a rewrite by the second post would show.
+    const firstAt = "2026-10-01T00:00:00.000Z";
+    row.newsletter_consent_at = firstAt;
+    const again = await signUp({ email, source: "newsletter", consent: true });
+    assert.equal(again.response.status, 200);
+    assert.equal(row.signup_source, "newsletter");
+    assert.equal(row.newsletter_consent_at, firstAt, "the first consent time stands");
+    const listed = (await listWaitlistEntries(10_000)).filter((entry) => entry.email === email);
+    assert.equal(listed.length, 1);
+    assert.deepEqual(betaInviteCandidates(listed), []);
+  });
+
+  it("a waitlist signup that later ticks the newsletter box stays a beta invite candidate", async () => {
+    const email = newsletterEmail();
+    await signUp({ email });
+    await signUp({ email, source: "newsletter", consent: true });
+    const row = waitlistRows.get(email);
+    assert.equal(row?.signup_source, undefined, "a duplicate never writes signup_source");
+    assert.ok(row?.newsletter_consent_at, "the consent is recorded");
+    const listed = (await listWaitlistEntries(10_000)).filter((entry) => entry.email === email);
+    assert.deepEqual(betaInviteCandidates(listed).map((entry) => entry.email), [email]);
   });
 });

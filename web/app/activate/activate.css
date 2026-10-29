@@ -71,11 +71,11 @@
 .activate-progress span {
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1px solid var(--a-line-strong);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 .activate-progress li.is-current { border-top-color: var(--a-ink); color: var(--a-ink); }
@@ -200,15 +200,35 @@
   cursor: pointer;
   transition: background 120ms ease, opacity 120ms ease;
 }
-.activate-btn:hover:not(:disabled) { background: #2b2925; }
-.activate-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.activate-btn:hover:not(:disabled):not([aria-disabled="true"]) { background: #2b2925; }
+.activate-btn:disabled,
+.activate-btn[aria-disabled="true"] { opacity: 0.38; cursor: not-allowed; }
 .activate-btn--google,
 .activate-btn--ghost { background: #fff; color: var(--a-ink); border-color: var(--a-line-strong); }
-.activate-btn--google:hover:not(:disabled),
-.activate-btn--ghost:hover:not(:disabled) { background: var(--a-soft); }
+.activate-btn--google:hover:not(:disabled):not([aria-disabled="true"]),
+.activate-btn--ghost:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--a-soft); }
 .activate-btn:focus-visible,
 .activate-codechip button:focus-visible,
-.activate-links a:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
+.activate-links a:focus-visible,
+.activate-agree a:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
+
+/* Two separate unticked boxes before any sign-in starts (Terms and Privacy; 18 or older). */
+.activate-agree { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.activate-agree label {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--a-ink);
+  font-size: 14px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.activate-agree input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--a-ink); }
+.activate-agree input:focus-visible { outline: 2px solid var(--a-ink); outline-offset: 2px; }
+.activate-agree a { color: var(--a-ink); text-decoration: underline; text-underline-offset: 2px; }
+/* "Tick both boxes first." belongs to the boxes: tucked under them, with room before the Google button (Design C2 P2). */
+.activate-agree .activate-note { margin: -2px 0 6px; }
 
 .activate-divider {
   display: flex;
@@ -283,6 +303,6 @@
   .activate-card { padding: 28px 22px 24px; border-radius: 16px; }
   .activate-title { font-size: 29px; }
   /* Equal-width steps that wrap, so "Back to the app" stays inside the card at 320px. */
-  .activate-progress li { min-width: 0; align-items: flex-start; font-size: 11.5px; line-height: 1.35; white-space: normal; }
+  .activate-progress li { min-width: 0; align-items: flex-start; font-size: 12px; line-height: 1.35; white-space: normal; }
   .activate-progress span { flex: none; }
 }

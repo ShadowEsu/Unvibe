@@ -18,7 +18,7 @@ The header/footer `Logo` component redraws the mark inline as SVG with `currentC
 
 | File | Use |
 |---|---|
-| `og.png` | Open Graph / Twitter preview (1200×630). |
+| `og/og-<key>-<hash>.png` | Link-preview cards (1200×630), one per page group; `src/lib/pageMeta.ts` maps pages to cards. |
 
 ## Product screenshots — `public/unvibe/`
 

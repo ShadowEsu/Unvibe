@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/privacy",
   title: "Privacy",
   description:
     "How Unvibe handles code and learning data during the beta, including on-device secret filtering and cloud-provider disclosure.",
-  alternates: { canonical: "/privacy" },
-};
+});
 
 export default function PrivacyPage() {
   return (
@@ -30,11 +31,15 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Learning records:</strong> which snippets you reviewed,
-            comprehension results, concepts, and streaks.
+            comprehension results, and concepts.
           </li>
           <li>
-            <strong>Account data:</strong> your email for sign-in and an
-            authentication token.
+            <strong>Account data:</strong> your email for sign-in, your name from Google if you
+            sign in with Google, and an authentication token. Before you sign in, the sign-in page
+            asks you to agree to the Terms and this policy and to confirm you&apos;re 18 or older.
+            If you start a Google or email sign-in but never approve the app, our sign-in provider
+            (Supabase) still keeps that email and name as a sign-in record, with no Unvibe account
+            and no app access. Email support@unvibe.site to have it deleted.
           </li>
           <li>
             <strong>Feedback you send:</strong> your star rating and message, where it
@@ -116,16 +121,19 @@ export default function PrivacyPage() {
           explanations carry your sign-in token instead of the install ID.
         </p>
         <p>
-          From version 0.1.44, the app also sends anonymous setup progress, one message per step the first time it
+          From version 0.1.44, the app can also send setup progress, one message per step the first time it
           happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, the
           explanation level question answered, and the question about opening Unvibe when you log in
           shown and answered yes. Each message carries the step name with the same
           random install ID, system and app version as above, never your sign-in token. We keep only
           the step and the time it arrived (for signing in, only the day), never your code, file
           names, email or IP address. A step that does not get through is sent
-          again on a later launch. To turn this off, open Settings, then Privacy &amp; Data, and switch
-          off Send anonymous setup progress. That switch does not cover the install ID, dates and
-          counts in the paragraph above, which come with requests the app makes anyway.
+          again on a later launch. From version 0.1.45 this is off unless you turn it on, and updating
+          to 0.1.45 switches it off once even if it was on before. Version 0.1.44 sends it until you
+          switch it off. To turn it on or off, open Settings, then Privacy &amp; Data, and use Send setup
+          progress (in version 0.1.44 the switch reads Send anonymous setup progress). That switch does
+          not cover the install ID, dates and counts in the paragraph above, which come with requests
+          the app makes anyway.
         </p>
         <p>
           If you redeem a promo code at <a href="/redeem">/redeem</a>, we keep a redemption record: a
@@ -139,8 +147,12 @@ export default function PrivacyPage() {
 
       <LegalSection heading="This website">
         <p>
-          unvibe.site uses Mixpanel and PostHog to understand how visitors use the site,
-          including page views, clicks, and session replays. Both receive your IP address with
+          If you press Allow on the analytics bar, unvibe.site uses Mixpanel and PostHog to
+          understand how visitors use the site, including page views, clicks, and session replays.
+          Until you press Allow, and if you press No thanks, ignore the bar, or your browser sends
+          Global Privacy Control, neither loads and nothing is recorded. The Analytics settings link
+          at the bottom of every page changes your answer, and No thanks stops recording at once. Both
+          receive your IP address with
           each event and use it to estimate a rough location. Replays hide all page text and
           everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
           codes) are removed from page addresses before they are sent. Admin pages and private
@@ -148,17 +160,32 @@ export default function PrivacyPage() {
           recording stops, no analytics events from that page are sent, and the page&apos;s
           content is left out of any replay. Automated browsers send no
           analytics, and neither does a browser where you have opened any page with ?notrack=1
-          added to the address; ?notrack=0 turns analytics back on. We
+          added to the address; ?notrack=0 lifts that, and analytics then runs only if you pressed
+          Allow. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
-          install scripts send one anonymous &apos;installed&apos; count to unvibe.site when
-          they finish, with no code or personal data. If you use the Try it box on the site,
+          install scripts send one &apos;installed&apos; count to unvibe.site when they finish,
+          with no ID, code or personal data. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Google Gemini to write the explanation. To limit how often the box can be used,
           Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
           26 October 2026 that hash is keyed with a server secret, so it can&apos;t be matched to an
           address without that secret; requests from before then kept a plain hash, which is weaker.
+        </p>
+        <p>
+          If you tick the newsletter box, we keep your email, that you signed up through the
+          newsletter form, the version of the box&apos;s wording, and when you agreed. We use it only
+          for Unvibe product emails, and none have been sent yet. You can unsubscribe any time with
+          the link in each email or by emailing{" "}
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>. We don&apos;t sell it.
+        </p>
+        <p>
+          The footer shows badges from product directories, served from unvibe.site. Only if you
+          press Allow on the analytics bar does the Tool Index verification badge load from
+          toolindex.net instead, a third-party service that then receives your IP address and browser
+          details; the address of the page you are on is not sent with it. If you press No thanks, now
+          or later, the copy from unvibe.site is shown.
         </p>
       </LegalSection>
 
@@ -180,14 +207,21 @@ export default function PrivacyPage() {
           <li><strong>Resend</strong> delivers sign-in and product emails.</li>
           <li><strong>GitHub</strong> hosts the installer downloads.</li>
           <li><strong>Mixpanel and PostHog</strong> measure website usage.</li>
+          <li>
+            <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
+            only after you press Allow on the analytics bar.
+          </li>
         </ul>
       </LegalSection>
 
       <LegalSection heading="Children">
         <p>
-          Unvibe is not directed at children under 13, and we do not knowingly collect
-          their personal information. If you believe a child has given us data, email us
-          and we will delete it.
+          Unvibe is for people 18 or older, because Google&apos;s terms for the Gemini API, which
+          writes the explanations, require it. Try it on this site, and the app from version 0.1.45,
+          ask you to confirm it before any of your own code is sent, and the sign-in page asks
+          before you sign in. We do
+          not knowingly collect personal information from anyone younger.
+          If you believe someone under 18 has given us data, email us and we will delete it.
         </p>
       </LegalSection>
 

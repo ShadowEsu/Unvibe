@@ -137,6 +137,13 @@ export class MemoryStore implements Store {
     this.names.set(userId, name);
   }
 
+  /** Agreements per account, as the consents table keeps them (dev and tests). */
+  readonly consents: Array<{ userId: string; kind: string; policyVersion: string; agreedAt: Date }> = [];
+
+  async recordConsents(userId: string, kinds: string[], policyVersion: string, agreedAt: Date): Promise<void> {
+    for (const kind of kinds) this.consents.push({ userId, kind, policyVersion, agreedAt });
+  }
+
   async deleteAccount(userId: string): Promise<void> {
     this.data.events = this.data.events.filter((e) => e.userId !== userId);
     for (const [token, record] of [...this.data.tokens.entries()]) {
@@ -150,6 +157,7 @@ export class MemoryStore implements Store {
       }
     }
     this.data.users.delete(userId);
+    for (let i = this.consents.length - 1; i >= 0; i--) if (this.consents[i].userId === userId) this.consents.splice(i, 1);
   }
 
   async userIdForEmail(email: string): Promise<string | null> {

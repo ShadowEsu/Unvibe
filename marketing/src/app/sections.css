@@ -8,6 +8,9 @@
 .sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: var(--u-sheet); }
 .sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 .sec-head > .paper-lead .paper-text-link { font-size: inherit; }
+/* Home: the language pages under Try it. Underlined, since the links sit inside a sentence. */
+.home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-wrap: pretty; }
+.home-langs .paper-text-link { font-size: inherit; text-decoration: underline; text-underline-offset: 0.18em; }
 
 /* ── Try it: editor on the left, Vibe panel on the right ── */
 .try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
@@ -17,6 +20,14 @@
 .try__foot { display: grid; gap: 0.55rem; padding: 0.9rem 1rem 1rem; border-top: 1px solid #2c2c29; }
 .try__foot .try__go { margin: 0; padding: 0 1.2rem; }
 .try__foot .try__fine { margin: 0; color: #c9c5bc; }
+.try__room { display: flex; align-items: center; gap: 0.5rem; }
+/* Border #77756f: 3.97:1 on the #151514 panel, 3.58:1 on the field's own fill (input edges need 3:1). */
+.try__room input { width: 11rem; min-height: 2.25rem; padding: 0.3rem 0.6rem; border: 1px solid #77756f; border-radius: 6px; background: #1f1f1d; color: #f4f2ea; font: 0.95rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.try__room input:focus-visible { border-color: #a9a69c; outline: 3px solid var(--v-lime); outline-offset: 2px; }
+/* The two Try consent boxes: Explain's lime, big enough to read as part of the form (Design TC-4 P2). */
+.try__foot .try__consent { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.try__consent input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--v-lime); }
+.try__consent label { cursor: pointer; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 .try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }
@@ -78,6 +89,11 @@ html[data-performance="lite"] .try__bob { animation: none; }
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
 .paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
 
+/* ── Startup programs ── */
+.paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
+.claude-startups__tag { color: #141414; }
+.claude-startups__copy a { color: var(--u-text); font-weight: 700; }
+
 /* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
 .paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }
 .paper-faq details { padding: 1.1rem 1.3rem; }
@@ -127,3 +143,31 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
 .vtour__window:focus-within { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 .vtour__window video:focus-within { outline: 3px solid #3c2fb8; outline-offset: -3px; }
+/* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. Filled when sound is on. */
+.vtour__sound {
+  position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.4rem;
+  min-height: 2.5rem; padding: 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
+  font: 700 0.9rem var(--font-sans); box-shadow: 0 2px 0 #141414; cursor: pointer;
+}
+.vtour__sound[aria-pressed="true"] { background: var(--v-lime); }
+.vtour__sound:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
+
+/* ── Newsletter signup (footer, /about, homepage): field and button on one row, the consent box under them. ── */
+.newsletter { display: grid; gap: 0.6rem; width: min(30rem, 100%); }
+.newsletter__row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.newsletter__row input {
+  flex: 1 1 12rem; min-width: 0; min-height: 2.75rem; padding: 0 0.9rem; border: 1.5px solid var(--u-line-strong); border-radius: 12px;
+  background: var(--u-card); color: var(--u-text); font: 500 1rem var(--font-sans);
+}
+.newsletter__row input::placeholder { color: var(--u-text-2); opacity: 1; }
+.newsletter__row button {
+  min-height: 2.75rem; padding: 0 1.1rem; border: 1.5px solid #141414; border-radius: 12px; background: #141414; color: #fff;
+  font: 700 0.95rem var(--font-sans); cursor: pointer;
+}
+.newsletter__row button[aria-disabled="true"] { background: var(--u-card); color: var(--u-text); cursor: not-allowed; }
+.newsletter input:focus-visible, .newsletter button:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 2px; }
+.newsletter__consent { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0; font-size: 0.9rem; line-height: 1.45; color: var(--u-text); }
+.newsletter__consent input { flex: none; width: 18px; height: 18px; margin: 0.1rem 0 0; accent-color: #141414; }
+.newsletter__note { margin: 0; font-size: 0.9rem; font-weight: 600; color: #8a1c1c; }
+.newsletter__done { margin: 0; font-weight: 700; color: var(--u-text); }
+.newsletter-home { display: grid; justify-items: center; }

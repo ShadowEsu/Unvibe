@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { pricingCopy } from "@/lib/pricingCopy";
+import { pageMetadata } from "@/lib/pageMeta";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/terms",
   title: "Terms",
   description:
     "The terms of using Unvibe during its beta, including AI limitations and the absence of any security guarantee.",
-  alternates: { canonical: "/terms" },
-};
+});
 
 /** The payments section says whether Pro is on sale; re-read every 5 minutes like /pricing. */
 export const revalidate = 300;
@@ -18,7 +19,7 @@ export default async function TermsPage() {
   return (
     <LegalLayout
       title="Terms of use"
-      updated="September 2026"
+      updated="October 2026"
       intro="Plain-language terms for using Unvibe during its beta. Using the product means you agree to these. This is a summary and may be superseded by a full agreement as the product matures."
     >
       <LegalSection heading="The service">
@@ -31,6 +32,7 @@ export default async function TermsPage() {
 
       <LegalSection heading="Your responsibilities">
         <ul className="list-disc space-y-2 pl-5">
+          <li>You must be 18 or older to use Unvibe, including Try it on this site.</li>
           <li>
             You are responsible for the code you choose to submit and for having the
             right to submit it to a third-party AI provider.

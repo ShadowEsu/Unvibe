@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Code shows the characters a person would type: no `=>` drawn as one arrow glyph or `===` as one
+ * bar in JetBrains Mono (Design P3). !important because many code selectors use the `font:`
+ * shorthand, which resets ligatures. `.font-mono` covers code shown in Tailwind divs (the home demo).
+ */
+pre, code, kbd, samp, textarea, .font-mono {
+  font-variant-ligatures: none !important;
+}
+
 .product-loop {
   position: relative;
   overflow: hidden;

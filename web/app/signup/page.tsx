@@ -39,7 +39,7 @@ export default function SignupPage() {
           className="field"
           type="email"
           autoComplete="email"
-          placeholder="you@school.edu"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required

@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { KIT_ASSETS, kitSections } from "@/lib/kit";
+import { pageMetadata } from "@/lib/pageMeta";
 import { Vibe } from "@/components/paper/Vibe";
 
 export const metadata: Metadata = {
-  title: "Unvibe resource kit",
-  description: "Facts, pitch, brand, logos, banners and templates for talking about Unvibe.",
+  ...pageMetadata({
+    path: "/kit",
+    title: "Unvibe resource kit",
+    absolute: true,
+    description: "Facts, pitch, brand, logos, banners and templates for talking about Unvibe.",
+  }),
   robots: { index: false, follow: false },
-  alternates: { canonical: "/kit" },
 };
 
 export default function KitPage() {

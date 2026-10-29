@@ -1,6 +1,6 @@
 # Model providers
 
-Server `Provider` (`web/src/ai/provider.ts`) is the cloud interface: `stream` and `complete`. Live adapters: OpenRouter, Anthropic, Gemini, mock. `ModelProvider` is an alias. `ModelRoute` documents LOCAL / CLOUD / BYOK.
+Server `Provider` (`web/src/ai/provider.ts`) is the cloud interface: `stream` and `complete`. Live adapter: Google Gemini only, because the consent screen and the privacy policy name it; the labelled mock runs only in development with `ENABLE_MOCK_AI=true`. `ModelProvider` is an alias. `ModelRoute` documents LOCAL / CLOUD / BYOK.
 
 Desktop BYOK lives in `app/src/main/localAi.ts` and uses the user’s stored key.
 
