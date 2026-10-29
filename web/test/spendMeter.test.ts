@@ -11,6 +11,7 @@ import {
   SupabaseSpendStore,
   TOTAL_CAP_NANO_USD,
   costNanoUsd,
+  maxInputTokens,
   worstCaseNanoUsd,
   type MeterableProvider,
   type SpendStore,
@@ -43,13 +44,34 @@ class SpyProvider implements MeterableProvider {
 
 const sum = (store: MemorySpendStore) => [...store.days.values()].reduce((a, b) => a + b, 0);
 
-test('prices are $0.10 / $0.50 per million tokens, and a worst case covers chars/3 of the prompt plus the whole output budget', () => {
-  assert.equal(costNanoUsd({ inputTokens: 1_000_000, outputTokens: 0 }), 100_000_000); // $0.10
+test('prices are $0.10 / $0.50 per million tokens, and the whole request moves to $0.50 / $2.50 past 100,000 input tokens', () => {
+  assert.equal(costNanoUsd({ inputTokens: 1_000_000 / 10, outputTokens: 0 }), 10_000_000); // 100k in = $0.01
   assert.equal(costNanoUsd({ inputTokens: 0, outputTokens: 1_000_000 }), 500_000_000); // $0.50
-  assert.equal(worstCaseNanoUsd(3001, 2048), 1001 * 100 + 2048 * 500);
-  // The largest call the API accepts (120k chars) reserves about half a cent, so $1 a day covers
-  // at least 190 of them even before settling.
-  assert.ok(Math.floor(DAY_CAP_NANO_USD / worstCaseNanoUsd(120_000, 2048)) >= 190);
+  assert.equal(costNanoUsd({ inputTokens: 100_000, outputTokens: 1000 }), 100_000 * 100 + 1000 * 500);
+  assert.equal(costNanoUsd({ inputTokens: 100_001, outputTokens: 1000 }), 100_001 * 500 + 1000 * 2500);
+});
+
+test('the hold bounds input by UTF-8 bytes, so CJK and emoji can never be held below their cost', () => {
+  assert.equal(maxInputTokens('ab', 'c'), 3 + 64);
+  assert.equal(maxInputTokens('', '漢'), 3 + 64);
+  assert.equal(maxInputTokens('', '😀'), 4 + 64);
+  // A 120k-character CJK paste (the API's size cap counts UTF-16 length) is 360k bytes: held at the
+  // long tier. Even if every character were a token and a half, the hold covers the real cost.
+  const cjk = '漢'.repeat(120_000);
+  const held = worstCaseNanoUsd('system prompt', cjk, 2048);
+  assert.equal(held, (Buffer.byteLength('system prompt') + 360_000 + 64) * 500 + 2048 * 2500);
+  assert.ok(held >= costNanoUsd({ inputTokens: 180_000, outputTokens: 2048 }));
+  const emoji = '😀'.repeat(60_000); // 120k UTF-16 units, 240k bytes
+  assert.ok(worstCaseNanoUsd('', emoji, 2048) >= costNanoUsd({ inputTokens: 120_000, outputTokens: 2048 }));
+  // Ordinary code under 100k bytes stays at the short tier: about a fifth of a cent at most.
+  assert.equal(worstCaseNanoUsd('', 'x'.repeat(99_000), 2048), (99_000 + 64) * 100 + 2048 * 500);
+});
+
+test('a long-tier call settles at the long-tier price', async () => {
+  const store = new MemorySpendStore();
+  const inner = new SpyProvider({ usage: { inputTokens: 150_000, outputTokens: 900 } });
+  await new MeteredProvider(inner, store).complete('', '漢'.repeat(60_000));
+  assert.equal(sum(store), 150_000 * 500 + 900 * 2500);
 });
 
 test('a call reserves its worst case first, then settles to the measured cost', async () => {
@@ -62,7 +84,7 @@ test('a call reserves its worst case first, then settles to the measured cost', 
     return original();
   };
   await new MeteredProvider(inner, store).complete('s'.repeat(30), 'u'.repeat(30));
-  assert.equal(reservedDuringCall, worstCaseNanoUsd(60, 2048));
+  assert.equal(reservedDuringCall, worstCaseNanoUsd('s'.repeat(30), 'u'.repeat(30), 2048));
   assert.equal(sum(store), 1000 * 100 + 200 * 500);
 });
 
@@ -71,7 +93,7 @@ test('a call without measured usage, or one that failed after it was sent, keeps
     const store = new MemorySpendStore();
     const metered = new MeteredProvider(new SpyProvider(outcome), store);
     await metered.stream('sys', 'user', () => {}).catch(() => undefined);
-    assert.equal(sum(store), worstCaseNanoUsd(7, 2048), JSON.stringify(outcome));
+    assert.equal(sum(store), worstCaseNanoUsd('sys', 'user', 2048), JSON.stringify(outcome));
   }
 });
 
@@ -95,7 +117,7 @@ test('past the daily stop the call is refused before the provider is reached, an
 
 test('the total stop holds on a new day and refuses the call that would cross it', async () => {
   const store = new MemorySpendStore(() => new Date('2026-11-02T08:00:00Z'));
-  store.days.set('2026-11-01', TOTAL_CAP_NANO_USD - worstCaseNanoUsd(2, 2048) + 1);
+  store.days.set('2026-11-01', TOTAL_CAP_NANO_USD - worstCaseNanoUsd('s', 'u', 2048) + 1);
   const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
   const error = await new MeteredProvider(inner, store).complete('s', 'u').catch((e: unknown) => e);
   assert.ok(error instanceof AiPausedError);
@@ -123,7 +145,7 @@ test('a failed settle keeps the worst case counted and still returns the answer'
   const store: SpendStore = { reserve: (n) => memory.reserve(n), settle: async () => { throw new Error('timeout'); } };
   const { text } = await new MeteredProvider(new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } }), store).complete('s', 'u');
   assert.equal(text, 'answer');
-  assert.equal(sum(memory), worstCaseNanoUsd(2, 2048));
+  assert.equal(sum(memory), worstCaseNanoUsd('s', 'u', 2048));
 });
 
 test('the Supabase store accepts only a well-formed answer; anything else pauses AI', async () => {

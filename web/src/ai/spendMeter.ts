@@ -5,16 +5,26 @@ import type { Completion, Provider, TokenUsage } from './provider';
  * Hard spend stops for the hosted AI (BOSS ledger 339, caps confirmed by Money 2026-10-29):
  * $1 per UTC day and $20 in total, on the database so every serverless instance shares one count.
  *
- * Each call reserves its worst case before the request leaves (prompt chars / 3 as input tokens,
- * plus the full output budget) and settles afterwards from the usage Anthropic measured. A call that
- * failed or was cut off without measured usage keeps its whole reservation, so nothing billed can go
- * uncounted. Amounts are integer nano-dollars (1e-9 USD): the per-token prices are whole numbers in
- * that unit, so there are no float sums. The caps live here, never in a request.
+ * Each call reserves its worst case before the request leaves and settles afterwards from the usage
+ * Anthropic measured. A call that failed or was cut off without measured usage keeps its whole
+ * reservation, so nothing billed can go uncounted. Amounts are integer nano-dollars (1e-9 USD): the
+ * per-token prices are whole numbers in that unit, so there are no float sums. The caps live here,
+ * never in a request.
  */
 export const SPEND_METER = 'anthropic';
-/** Claude Haiku 5.5: $0.10 per 1M input tokens, $0.50 per 1M output tokens (Anthropic pricing, Money 2026-10-29). */
+/**
+ * Claude Haiku 5.5 list prices (platform.claude.com pricing, Money 2026-10-29): $0.10 / $0.50 per
+ * 1M input / output tokens, and $0.50 / $2.50 for the whole request once its input passes 100,000
+ * tokens. Cache reads and writes are counted as input at the same tier price, which is never less
+ * than their real price; the app sends no cache_control.
+ */
 export const NANO_USD_PER_INPUT_TOKEN = 100;
 export const NANO_USD_PER_OUTPUT_TOKEN = 500;
+export const LONG_CONTEXT_INPUT_TOKENS = 100_000;
+export const LONG_NANO_USD_PER_INPUT_TOKEN = 500;
+export const LONG_NANO_USD_PER_OUTPUT_TOKEN = 2_500;
+/** Room for the Messages API's own framing tokens around the system prompt and the user turn. */
+const FRAMING_TOKENS = 64;
 export const DAY_CAP_NANO_USD = 1_000_000_000; // $1 per UTC day
 export const TOTAL_CAP_NANO_USD = 20_000_000_000; // $20, never resets
 
@@ -29,13 +39,25 @@ export class AiPausedError extends Error {
   }
 }
 
-/** Worst-case cost of one call: every prompt char counted as a third of a token, plus the full output budget. */
-export function worstCaseNanoUsd(promptChars: number, maxOutputTokens: number): number {
-  return Math.ceil(promptChars / 3) * NANO_USD_PER_INPUT_TOKEN + maxOutputTokens * NANO_USD_PER_OUTPUT_TOKEN;
+/** The price of `inputTokens` in and `outputTokens` out, at the tier the input puts the whole request in. */
+function priceNanoUsd(inputTokens: number, outputTokens: number): number {
+  const long = inputTokens > LONG_CONTEXT_INPUT_TOKENS;
+  return inputTokens * (long ? LONG_NANO_USD_PER_INPUT_TOKEN : NANO_USD_PER_INPUT_TOKEN)
+    + outputTokens * (long ? LONG_NANO_USD_PER_OUTPUT_TOKEN : NANO_USD_PER_OUTPUT_TOKEN);
+}
+
+/** The most input tokens a prompt can be: Claude's tokenizer never makes more tokens than UTF-8 bytes. */
+export function maxInputTokens(system: string, user: string): number {
+  return Buffer.byteLength(system, 'utf8') + Buffer.byteLength(user, 'utf8') + FRAMING_TOKENS;
+}
+
+/** Worst-case cost of one call: the byte bound as input plus the full output budget, at its tier. */
+export function worstCaseNanoUsd(system: string, user: string, maxOutputTokens: number): number {
+  return priceNanoUsd(maxInputTokens(system, user), maxOutputTokens);
 }
 
 export function costNanoUsd(usage: TokenUsage): number {
-  return usage.inputTokens * NANO_USD_PER_INPUT_TOKEN + usage.outputTokens * NANO_USD_PER_OUTPUT_TOKEN;
+  return priceNanoUsd(usage.inputTokens, usage.outputTokens);
 }
 
 export type Reservation = { day: string; nanoUsd: number };
@@ -146,7 +168,7 @@ export class MeteredProvider implements Provider {
 
   private async metered<T>(system: string, user: string, call: () => Promise<{ result: T; usage: TokenUsage | undefined }>): Promise<T> {
     if (!this.store) throw new AiPausedError('unavailable');
-    const worst = worstCaseNanoUsd(system.length + user.length, this.inner.maxOutputTokens);
+    const worst = worstCaseNanoUsd(system, user, this.inner.maxOutputTokens);
     let reservation: Reservation | 'day_cap' | 'total_cap';
     try {
       reservation = await this.store.reserve(worst);
