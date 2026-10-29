@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import { ANTHROPIC_MAX_TOKENS, ANTHROPIC_MODEL, AnthropicProvider, TRUNCATED_NOTE } from '../src/ai/anthropic';
-import { BilledProviderError, billedUsage, providerErrorSummary } from '../src/ai/provider';
+import { BilledProviderError, ProviderRejectedError, billedUsage, providerErrorSummary } from '../src/ai/provider';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
@@ -97,13 +97,25 @@ test('complete joins text blocks only and returns measured usage', async () => {
 test('an HTTP error keeps only status and error type; the body text and the key never reach the message or the log summary', async () => {
   globalThis.fetch = (async () => new Response(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: `invalid x-api-key ${FAKE_KEY}` } }), { status: 401 })) as typeof fetch;
   const error = await new AnthropicProvider(FAKE_KEY).complete('s', 'u').catch((e: unknown) => e);
-  assert.ok(error instanceof Error);
+  assert.ok(error instanceof ProviderRejectedError);
+  assert.equal(error.status, 401);
   assert.equal(error.message, 'Anthropic API 401: authentication_error');
-  assert.equal(providerErrorSummary(error), 'Error: Anthropic API 401: authentication_error');
+  assert.equal(providerErrorSummary(error), 'ProviderRejectedError: Anthropic API 401: authentication_error');
 
   globalThis.fetch = (async () => new Response('<html>upstream said sk-ant-api03-LEAK</html>', { status: 502 })) as typeof fetch;
   const opaque = await new AnthropicProvider(FAKE_KEY).stream('s', 'u', () => {}).catch((e: unknown) => e);
   assert.equal((opaque as Error).message, 'Anthropic API 502: error');
+});
+
+test('the request never follows a redirect, so the key only ever goes to api.anthropic.com', async () => {
+  let init: RequestInit | undefined;
+  globalThis.fetch = (async (url: RequestInfo | URL, options?: RequestInit) => {
+    init = options;
+    assert.equal(String(url), 'https://api.anthropic.com/v1/messages');
+    return Response.json({ content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } });
+  }) as typeof fetch;
+  await new AnthropicProvider(FAKE_KEY).complete('s', 'u');
+  assert.equal(init?.redirect, 'error');
 });
 
 test('a network error is summarised to its class, so a message quoting a key is never logged', () => {

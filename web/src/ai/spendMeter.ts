@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Completion, Provider, TokenUsage } from './provider';
+import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
  * Hard spend stops for the hosted AI (BOSS ledger 339, caps confirmed by Money 2026-10-29):
@@ -178,14 +178,26 @@ export class MeteredProvider implements Provider {
     }
     if (reservation === 'day_cap' || reservation === 'total_cap') throw new AiPausedError(reservation);
 
-    // From here the request may be billed. Only usage Anthropic measured replaces the worst case.
-    const { result, usage } = await call();
-    if (usage && !usage.estimated) {
-      await this.store.settle(reservation.day, costNanoUsd(usage) - reservation.nanoUsd).catch((error: unknown) => {
-        // The worst case stays counted, which is the safe side.
-        console.error('ai spend settle failed', error instanceof Error ? error.message : 'unknown');
-      });
+    // From here the request may be billed. Only usage Anthropic measured replaces the worst case,
+    // and only an error status it answered with (not billed) releases it. A dropped connection or a
+    // cut stream keeps the whole worst case.
+    let outcome: { result: T; usage: TokenUsage | undefined };
+    try {
+      outcome = await call();
+    } catch (error) {
+      if (error instanceof ProviderRejectedError) await this.adjust(reservation, -reservation.nanoUsd);
+      throw error;
     }
+    const { result, usage } = outcome;
+    if (usage && !usage.estimated) await this.adjust(reservation, costNanoUsd(usage) - reservation.nanoUsd);
     return result;
+  }
+
+  private async adjust(reservation: Reservation, deltaNanoUsd: number): Promise<void> {
+    if (!this.store) return;
+    await this.store.settle(reservation.day, deltaNanoUsd).catch((error: unknown) => {
+      // The worst case stays counted, which is the safe side.
+      console.error('ai spend settle failed', error instanceof Error ? error.message : 'unknown');
+    });
   }
 }

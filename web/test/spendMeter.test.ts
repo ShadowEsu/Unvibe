@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
-import type { Completion, TokenUsage } from '../src/ai/provider';
+import { BilledProviderError, ProviderRejectedError, type Completion, type TokenUsage } from '../src/ai/provider';
 import {
   AI_PAUSED,
   AI_PAUSED_TODAY,
@@ -89,11 +89,22 @@ test('a call reserves its worst case first, then settles to the measured cost', 
 });
 
 test('a call without measured usage, or one that failed after it was sent, keeps its whole worst case', async () => {
-  for (const outcome of [{}, { usage: { inputTokens: 1, outputTokens: 1, estimated: true as const } }, { fail: new Error('socket hang up') }]) {
+  const billed = new BilledProviderError(new Error('stream cut'), { inputTokens: 1, outputTokens: 1, estimated: true });
+  for (const outcome of [{}, { usage: { inputTokens: 1, outputTokens: 1, estimated: true as const } }, { fail: new Error('socket hang up') }, { fail: billed }]) {
     const store = new MemorySpendStore();
     const metered = new MeteredProvider(new SpyProvider(outcome), store);
     await metered.stream('sys', 'user', () => {}).catch(() => undefined);
     assert.equal(sum(store), worstCaseNanoUsd('sys', 'user', 2048), JSON.stringify(outcome));
+  }
+});
+
+test('an error status Anthropic answered with (not billed) releases the whole hold', async () => {
+  for (const status of [400, 401, 429, 529]) {
+    const store = new MemorySpendStore();
+    const inner = new SpyProvider({ fail: new ProviderRejectedError(status, `Anthropic API ${status}: error`) });
+    const error = await new MeteredProvider(inner, store).complete('sys', 'user').catch((e: unknown) => e);
+    assert.ok(error instanceof ProviderRejectedError);
+    assert.equal(sum(store), 0, String(status));
   }
 });
 

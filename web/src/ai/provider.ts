@@ -50,6 +50,17 @@ export class BilledProviderError extends Error {
   }
 }
 
+/**
+ * The provider answered with an error status before doing any work (auth, rate limit, overload,
+ * bad request). Such a request is not billed, so the spend meter releases its hold.
+ */
+export class ProviderRejectedError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'ProviderRejectedError';
+  }
+}
+
 /** The usage a failed provider call may still be billed for, or undefined if it never reached the provider. */
 export function billedUsage(error: unknown): TokenUsage | undefined {
   return error instanceof BilledProviderError ? error.usage : undefined;

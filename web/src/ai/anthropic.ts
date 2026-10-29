@@ -1,4 +1,4 @@
-import { BilledProviderError, estimateTokens, type Completion, type TokenUsage } from './provider';
+import { BilledProviderError, ProviderRejectedError, estimateTokens, type Completion, type TokenUsage } from './provider';
 import type { MeterableProvider } from './spendMeter';
 
 /** The spend meter's prices are for this model; changing it means changing them too. */
@@ -149,8 +149,10 @@ export class AnthropicProvider implements MeterableProvider {
         stream,
       }),
       signal,
+      // The key goes to api.anthropic.com only: a redirect is a failure, never followed.
+      redirect: 'error',
     });
-    if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await errorType(res)}`);
+    if (!res.ok) throw new ProviderRejectedError(res.status, `Anthropic API ${res.status}: ${await errorType(res)}`);
     return res;
   }
 }
