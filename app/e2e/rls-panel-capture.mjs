@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -98,6 +98,17 @@ const PRESETS = {
     cropAtHeading: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bthrows?\b|exception|\brounds? up\b|rounding up|\bfor any (numbers?|integers?|values?)\b/i,
   },
+  // ep11: strip() trims only the ends (not spaces inside), and lower() only changes case. Neither makes a
+  // username unique, safe or valid. A take that claims any of that is retaken once (maxTakes 2), then dropped.
+  pylower: {
+    file: 'app/users.py',
+    code: 'username = username.strip().lower()\n',
+    match: 'username.strip',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 2,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bunique\b|\bsafe(ly|r)?\b|sanitiz|validat|\binjection\b|\bprevents?\b|\ball (the )?(spaces|whitespace)\b|spaces? (inside|in the middle|between)/i,
+  },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
 if (!preset) throw new Error(`unknown CAPTURE_PRESET ${process.env.CAPTURE_PRESET}`);
@@ -167,7 +178,7 @@ try {
   writeFileSync(file, preset.code);
   await app.evaluate(({ dialog }, picked) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] }); }, file);
 
-  for (let take = 1; take <= 3; take += 1) {
+  for (let take = 1; take <= (preset.maxTakes ?? 3); take += 1) {
     const picked = await (await windowWith('widget.html')).evaluate(() => window.unvibe.pickFile());
     if (!picked?.ok) throw new Error(`file pick failed: ${picked?.error ?? 'cancelled'}`);
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: preset.match }).first().waitFor({ timeout: 30000 });
