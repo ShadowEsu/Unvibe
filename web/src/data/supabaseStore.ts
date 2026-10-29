@@ -12,6 +12,9 @@ import type {
 import { computeProfile, computeProjects } from './progress';
 import { EventOwnershipError } from './eventOwnership';
 
+/** Session tokens are minted with randomUUID() and stored in a uuid column. */
+const SESSION_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Production store backed by Supabase (Postgres + RLS). Uses the service-role key on the
  * server. Schema + RLS live in supabase/migrations/0001_init.sql.
@@ -66,6 +69,9 @@ export class SupabaseStore implements Store {
   }
 
   async userForToken(token: string): Promise<string | null> {
+    // tokens.token is a uuid column: any other string makes Postgres reject the query (a 500),
+    // and it can't match a session anyway.
+    if (!SESSION_TOKEN.test(token)) return null;
     const { data, error } = await this.db
       .from('tokens')
       .select('user_id')
@@ -77,6 +83,7 @@ export class SupabaseStore implements Store {
   }
 
   async revokeToken(token: string): Promise<void> {
+    if (!SESSION_TOKEN.test(token)) return;
     const { error } = await this.db.from('tokens').delete().eq('token', token);
     if (error) throw new Error(`Could not revoke session: ${error.message}`);
   }
