@@ -163,7 +163,7 @@ const PRESETS = {
     level: 'beginner',
     cropAtHeading: true,
     maxTakes: 2,
-    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n't|not|never|no) )\b(validates?|validating|sanitiz\w*)\b|(?<!(n't|not|never) )\bhandles?\b[^.]{0,40}\b(missing|undefined|null|non-?numer\w*|invalid|NaN)\b|(?<!(n't|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(validates?|validating|sanitiz\w*)\b|(?<!(n['’]t|not|never) )\bhandles?\b[^.]{0,40}\b(missing|undefined|null|non-?numer\w*|invalid|NaN)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
