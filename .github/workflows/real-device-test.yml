@@ -20,7 +20,7 @@ on:
         required: false
         default: "marketing-media.mjs"
       capture_preset:
-        description: "Preset for rls-panel-capture.mjs (rls or flag)"
+        description: "Preset for rls-panel-capture.mjs (rls, flag or workflow)"
         required: false
         default: "rls"
 

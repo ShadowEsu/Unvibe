@@ -31,6 +31,16 @@ const PRESETS = {
     level: 'beginner',
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|should (be )?remove|\bremove (it|this|the)\b|dead code/i,
   },
+  // ep04 (request 20261029-0005): the frame is cropped above "Risks and Edge Cases", so only the text
+  // before that heading is checked.
+  workflow: {
+    file: '.github/workflows/ci.yml',
+    code: '      - run: npm ci\n',
+    match: 'npm ci',
+    level: 'beginner',
+    scanUntil: 'Risks and Edge Cases',
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b/i,
+  },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
 if (!preset) throw new Error(`unknown CAPTURE_PRESET ${process.env.CAPTURE_PRESET}`);
@@ -96,6 +106,7 @@ try {
   // The episode's code card, exactly as the request gives it.
   const dir = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-capture-src-')));
   const file = path.join(dir, preset.file);
+  mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, preset.code);
   await app.evaluate(({ dialog }, picked) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] }); }, file);
 
@@ -114,7 +125,8 @@ try {
     await sleep(600);
     const text = await panel.locator('.body').innerText();
     const whole = await panel.locator('body').innerText();
-    const banned = preset.banned.test(text) || /\b(in)?secure\b|vulnerab|danger/i.test(whole);
+    const cut = (s) => (preset.scanUntil && s.includes(preset.scanUntil) ? s.slice(0, s.indexOf(preset.scanUntil)) : s);
+    const banned = preset.banned.test(cut(text)) || /\b(in)?secure\b|vulnerab|danger/i.test(cut(whole));
     await panel.screenshot({ path: path.join(shots, `panel-${NAME}-take${take}.png`), animations: 'disabled' });
     writeFileSync(path.join(shots, `panel-${NAME}-take${take}.txt`), `level=${level}\nbanned=${banned}\n\n${whole}\n`);
     result.takes.push({ take, level, banned, chars: text.length });
