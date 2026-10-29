@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -108,6 +108,17 @@ const PRESETS = {
     cropAtHeading: true,
     maxTakes: 2,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bunique\b|\bsafe(ly|r)?\b|sanitiz|validat|\binjection\b|\bprevents?\b|\ball (the )?(spaces|whitespace)\b|spaces? (inside|in the middle|between)/i,
+  },
+  // ep12: the file can vanish between exists() and remove() (a race), so the check doesn't make remove()
+  // safe or error-free. A take that says safe, always/never, guarantees or ensures is retaken once, then dropped.
+  pyexists: {
+    file: 'app/cleanup.py',
+    code: 'if os.path.exists(path): os.remove(path)\n',
+    match: 'os.path.exists',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 2,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|\balways\b|\bnever (fails?|crash(es)?|errors?|raises?|breaks?)\b|\bguarantee|\bensures?\b|\bmakes? sure\b|\bno (chance|way) (of|for) an? (error|crash)\b/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
