@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -68,6 +68,15 @@ const PRESETS = {
     // Marketing (ep07): an exact panel. 'empty' is not falsy for {} or [], so any take that calls a
     // value empty, or lists falsy values as a partial set, is retaken.
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bempty\b(?!\s+(string|text)\b)|falsy"?\s*\((?![^)]*\b0\b)[^)]*\)/i,
+  },
+  // ep08: in JavaScript \d without the u flag is ASCII 0-9 only, so any Unicode-digit claim is wrong.
+  regex: {
+    file: 'src/forms/address.js',
+    code: 'const isZip = /^\\d{5}$/.test(input);\n',
+    match: 'isZip',
+    level: 'beginner',
+    scanUntil: 'Why it is here',
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|unicode/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
