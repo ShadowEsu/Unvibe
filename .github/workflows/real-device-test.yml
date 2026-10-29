@@ -20,7 +20,7 @@ on:
         required: false
         default: "marketing-media.mjs"
       capture_preset:
-        description: "Preset for rls-panel-capture.mjs (rls, flag, workflow, lint or rust)"
+        description: "Preset for rls-panel-capture.mjs (rls, flag, workflow, lint, rust or ifreturn)"
         required: false
         default: "rls"
 
