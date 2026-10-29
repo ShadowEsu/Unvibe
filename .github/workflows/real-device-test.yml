@@ -35,6 +35,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Every install this run makes must be flagged as QA, or it counts as a real install in the
+      # funnel (29 Oct: a deleted secret made the flag steps skip and 12 CI installs counted as real).
+      # So a missing token fails the run here, before anything is installed (BOSS 29 Oct).
+      - name: Require the QA flag token
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then
+            echo "::error::UNVIBE_QA_FLAG_TOKEN is not set, so this run's installs couldn't be flagged as QA. Nothing was installed."
+            exit 1
+          fi
+          echo "QA flag token present"
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -199,7 +213,7 @@ jobs:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
-          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: skipped, no token'; exit 0 }
+          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           foreach ($name in 'walkthrough-profile', 'portable-profile') {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
@@ -243,7 +257,7 @@ jobs:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
           MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo 'QA install flag (media): skipped, no token'; exit 0; fi
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo 'QA install flag (media): no token, so this install counts as real'; exit 1; fi
           # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
           code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
             -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
