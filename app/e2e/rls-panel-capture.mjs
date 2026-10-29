@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -87,6 +87,16 @@ const PRESETS = {
     level: 'beginner',
     scanUntil: 'Why it is here',
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\braises?\b|\bonly (if|when) (items|the list) is (empty|None)\b/i,
+  },
+  // ep10: Java int overflow wraps silently (never throws), and int division truncates (rounds down for
+  // non-negative values). A take that says it throws, rounds up, or works for any numbers is retaken.
+  javamid: {
+    file: 'src/main/java/demo/Search.java',
+    code: 'int mid = start + (end - start) / 2;\n',
+    match: 'int mid',
+    level: 'beginner',
+    scanUntil: 'Why it is here',
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bthrows?\b|exception|\brounds? up\b|rounding up|\bfor any (numbers?|integers?|values?)\b/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
