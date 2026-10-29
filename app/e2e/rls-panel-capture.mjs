@@ -1,9 +1,9 @@
-// One real panel capture for Marketing's code-history ep02 reel (request 20261028-1601): the released
-// app explaining a two-line Postgres row-level-security policy at the default free depth.
+// Real panel captures for Marketing's code-history reels: the released app explaining one code card.
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601) and 'flag' (ep03, request 20261028-2155).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
-// It takes up to 3 takes (each a fresh explanation of the same file) and saves each take's panel and
-// text, so a take whose wording calls the policy secure or vulnerable can be discarded.
-//   UNVIBE_EXE=... MEDIA_DIR=... MEDIA_INSTALL_ID=... node rls-panel-capture.mjs
+// Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
+// a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
+//   UNVIBE_EXE=... MEDIA_DIR=... MEDIA_INSTALL_ID=... CAPTURE_PRESET=rls|flag node rls-panel-capture.mjs
 import { _electron as electron } from 'playwright';
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -15,7 +15,26 @@ const out = path.resolve(process.env.MEDIA_DIR ?? 'media');
 const shots = path.join(out, 'shots');
 mkdirSync(shots, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const BANNED = /\b(in)?secure\b|vulnerab/i;
+const PRESETS = {
+  rls: {
+    file: 'profiles_policy.sql',
+    code: 'create policy "Users read own rows" on profiles\nfor select using ( (select auth.uid()) = user_id );\n',
+    match: 'auth.uid()',
+    level: null,
+    banned: /\b(in)?secure\b|vulnerab/i,
+  },
+  // Beginner: the Intermediate answer carries a standard "Potential Risks" section the reel can't show.
+  flag: {
+    file: 'trade.js',
+    code: 'if (flag) runLegacy();\n',
+    match: 'runLegacy',
+    level: 'beginner',
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|should (be )?remove|\bremove (it|this|the)\b|dead code/i,
+  },
+};
+const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
+if (!preset) throw new Error(`unknown CAPTURE_PRESET ${process.env.CAPTURE_PRESET}`);
+const NAME = process.env.CAPTURE_PRESET ?? 'rls';
 
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-rls-'));
 writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId: process.env.MEDIA_INSTALL_ID ?? 'rlscapture0001' }));
@@ -75,24 +94,29 @@ try {
   await settledPanel();
 
   // The episode's code card, exactly as the request gives it.
-  const dir = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-rls-src-')));
-  const file = path.join(dir, 'profiles_policy.sql');
-  writeFileSync(file, 'create policy "Users read own rows" on profiles\nfor select using ( (select auth.uid()) = user_id );\n');
+  const dir = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-capture-src-')));
+  const file = path.join(dir, preset.file);
+  writeFileSync(file, preset.code);
   await app.evaluate(({ dialog }, picked) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] }); }, file);
 
   for (let take = 1; take <= 3; take += 1) {
     const picked = await (await windowWith('widget.html')).evaluate(() => window.unvibe.pickFile());
     if (!picked?.ok) throw new Error(`file pick failed: ${picked?.error ?? 'cancelled'}`);
-    await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: 'auth.uid()' }).first().waitFor({ timeout: 30000 });
-    const panel = await settledPanel();
+    await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: preset.match }).first().waitFor({ timeout: 30000 });
+    let panel = await settledPanel();
+    if (preset.level) {
+      await panel.locator(`.lvl[data-level="${preset.level}"]`).click();
+      await sleep(1500);
+      panel = await settledPanel();
+    }
     const level = await panel.locator('.lvl[aria-pressed="true"], .lvl.is-active, .lvl[aria-checked="true"]').first().getAttribute('data-level').catch(() => null);
     await panel.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
     await sleep(600);
     const text = await panel.locator('.body').innerText();
     const whole = await panel.locator('body').innerText();
-    const banned = BANNED.test(whole);
-    await panel.screenshot({ path: path.join(shots, `panel-rls-take${take}.png`), animations: 'disabled' });
-    writeFileSync(path.join(shots, `panel-rls-take${take}.txt`), `level=${level}\nbanned=${banned}\n\n${whole}\n`);
+    const banned = preset.banned.test(text) || /\b(in)?secure\b|vulnerab|danger/i.test(whole);
+    await panel.screenshot({ path: path.join(shots, `panel-${NAME}-take${take}.png`), animations: 'disabled' });
+    writeFileSync(path.join(shots, `panel-${NAME}-take${take}.txt`), `level=${level}\nbanned=${banned}\n\n${whole}\n`);
     result.takes.push({ take, level, banned, chars: text.length });
     console.log(`take ${take}: level=${level} banned=${banned} chars=${text.length}`);
     if (!banned) break;
@@ -102,6 +126,6 @@ try {
   console.log(`FAIL ${result.error}`);
 }
 await app.close();
-writeFileSync(path.join(out, 'rls-result.json'), JSON.stringify(result, null, 2));
+writeFileSync(path.join(out, `${NAME}-result.json`), JSON.stringify({ preset: NAME, ...result }, null, 2));
 console.log(JSON.stringify(result));
 process.exit(result.error || !result.takes.some((t) => !t.banned) ? 1 : 0);

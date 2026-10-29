@@ -19,6 +19,10 @@ on:
         description: "Media capture script in app/e2e (marketing-media.mjs or rls-panel-capture.mjs)"
         required: false
         default: "marketing-media.mjs"
+      capture_preset:
+        description: "Preset for rls-panel-capture.mjs (rls or flag)"
+        required: false
+        default: "rls"
 
 permissions:
   contents: read
@@ -236,6 +240,7 @@ jobs:
           # capture shows the limit instead of an answer. The next step flags it as QA.
           MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
           MEDIA_SCRIPT: ${{ inputs.media_script || 'marketing-media.mjs' }}
+          CAPTURE_PRESET: ${{ inputs.capture_preset || 'rls' }}
         run: |
           case "$MEDIA_SCRIPT" in marketing-media.mjs|rls-panel-capture.mjs) ;; *) echo "unknown media script"; exit 1;; esac
           cp "app/e2e/$MEDIA_SCRIPT" "$RUNNER_TEMP/pw/$MEDIA_SCRIPT"
