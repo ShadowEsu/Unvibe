@@ -30,3 +30,10 @@ test('rich text escapes HTML and keeps fenced code literal', () => {
   assert.match(html, /&lt;img src=x onerror=alert\(/);
   assert.match(html, /\)&gt;<\/pre>/);
 });
+
+test('inline code inside a bold list label renders as code, with no raw backticks', () => {
+  const html = markup('1. **The check (`!user`):** flips the truthiness.\n2. **`load_config()`**: reads the settings.');
+  assert.match(html, /<strong>The check \(<code class="inline">!user<\/code>\):<\/strong>/);
+  assert.match(html, /<strong><code class="inline">load_config\(\)<\/code><\/strong>/);
+  assert.doesNotMatch(html, /`/);
+});

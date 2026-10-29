@@ -86,7 +86,8 @@ export function renderInline(text: string): ReactNode[] {
         </code>,
       );
     } else {
-      out.push(<strong key={k++}>{m[4]}</strong>);
+      // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too.
+      out.push(<strong key={k++}>{renderInline(m[4]!)}</strong>);
     }
     last = m.index + m[0].length;
   }
