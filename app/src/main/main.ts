@@ -25,7 +25,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { userInfo } from 'node:os';
+import { homedir, userInfo } from 'node:os';
 import {
   applyWidgetResize,
   createBar,
@@ -112,7 +112,7 @@ import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
 import { deleteAccountAndLocalData } from './accountDeletion';
-import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, type BriefScope } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
@@ -1181,7 +1181,7 @@ app.whenReady().then(() => {
       const brief = buildChangeBrief({ repo: root, scope, hunks });
       productEvent('change_brief_opened', { files: brief.filesChanged });
       pulseBar({ phase: 'ready', label: 'Ready' });
-      return { ok: true, brief, branch: head.branch, detached: head.detached };
+      return { ok: true, brief, repoLabel: briefRepoLabel(root, homedir()), branch: head.branch, detached: head.detached };
     } catch (error) {
       pulseBar({ phase: 'error', label: 'Issue' });
       return { ok: false, error: error instanceof Error ? error.message : 'Could not read git changes.' };

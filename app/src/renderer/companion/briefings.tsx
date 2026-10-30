@@ -17,6 +17,7 @@ export function Briefings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [branch, setBranch] = useState('');
+  const [repoLabel, setRepoLabel] = useState('');
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [needsRepo, setNeedsRepo] = useState(false);
@@ -39,6 +40,7 @@ export function Briefings() {
         needsRepo?: boolean;
         error?: string;
         brief?: ChangeBrief;
+        repoLabel?: string;
         branch?: string;
         detached?: boolean;
       };
@@ -51,6 +53,7 @@ export function Briefings() {
         return;
       }
       setBrief(result.brief);
+      setRepoLabel(result.repoLabel ?? '');
       setBranch(result.detached ? 'detached HEAD' : (result.branch ?? ''));
     } catch {
       setError('Unvibe could not complete this request. Try again.');
@@ -131,7 +134,7 @@ export function Briefings() {
       {brief && !brief.empty ? (
         <article className="briefings__card">
           <div className="briefings__meta">
-            {brief.repo ? <span>{brief.repo}</span> : null}
+            {repoLabel ? <span>{repoLabel}</span> : null}
             {branch ? <span>{branch}</span> : null}
             <strong>{brief.filesChanged} files changed</strong>
             <span>+{brief.insertions} / -{brief.deletions}</span>
