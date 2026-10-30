@@ -56,7 +56,8 @@ export default function PrivacyPage() {
           <li>
             <strong>Survey answers:</strong> if you answer the short in-app survey and press Send,
             your answers, the app version and your random install ID. Kept 12 months. The team reads
-            them and may use AI tools that don&apos;t train on your data to summarise them.
+            them and may use AI tools that don&apos;t train on your data to summarise them. To have
+            them deleted, email support@unvibe.site with the install ID the app shows after Send.
           </li>
         </ul>
       </LegalSection>
