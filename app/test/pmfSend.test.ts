@@ -110,7 +110,7 @@ test('length caps: each text is cut to 2,000 characters before it is saved or se
   const long = 'Students learning to code who want plain answers. ';
   await sendPmfAnswer({ q1: 'somewhat', q2: long.repeat(60), q3: 'b'.repeat(2000), q4: 7, extra: 'dropped' }, install.deps);
   const body = install.posts[0]!;
-  assert.equal(body.q2.length, 2000);
+  assert.equal(body.q2, long.repeat(60).slice(0, 2000).trim(), 'cut to 2,000, then trimmed for sending');
   assert.equal(body.q3.length, 2000);
   assert.equal(body.q4, '');
   assert.deepEqual(Object.keys(body).sort(), ['appVersion', 'consent', 'q1', 'q2', 'q3', 'q4']);
