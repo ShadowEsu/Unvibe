@@ -859,7 +859,8 @@ code.inline {
   .quota { flex-basis:auto; margin-left:auto; }
   .quota .usage-ring__copy { display:none; }
   .body { padding:18px; }
-  .levels { flex-wrap:nowrap; overflow-x:auto; }
+  /* Wrap instead of scrolling sideways: at 420 px a one-line row hid Expert behind a scrollbar (Design P3). */
+  .levels { flex-wrap:wrap; row-gap:6px; }
   .lvl { flex:0 0 auto; }
 }
 @container widget (max-width:455px) {
