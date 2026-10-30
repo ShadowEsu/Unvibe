@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   PMF_CONSENT_LINE,
   PMF_MAX_ANSWER_CHARS,
@@ -30,12 +31,26 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
   onClose: () => void;
 }) {
   const { draft, stage, error } = model;
+  // Same clipboard call and "copied" timing as CodeBlock in shared/richText.tsx.
+  const [copied, setCopied] = useState(false);
   if (stage === 'thanks') {
     return (
       <section className="pmf-card pmf-card--thanks" aria-label="Unvibe survey" aria-live="off">
         <p role="status">
           Thanks. Your answers help us decide what to improve in Unvibe. To delete them later, email
-          support@unvibe.site with this install ID: <code className="pmf-card__id">{model.installId}</code>
+          support@unvibe.site with this install ID: <code className="pmf-card__id">{model.installId}</code>{' '}
+          <button
+            type="button"
+            className="btn ghost pmf-card__copy"
+            aria-label="Copy install ID"
+            onClick={() => {
+              void navigator.clipboard.writeText(model.installId);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1200);
+            }}
+          >
+            {copied ? 'Copied' : 'Copy'}
+          </button>
         </p>
         <button type="button" className="pmf-card__close" aria-label="Close" title="Close" onClick={onClose}>×</button>
       </section>
