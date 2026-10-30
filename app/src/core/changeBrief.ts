@@ -103,3 +103,16 @@ export function buildChangeBrief(input: {
     empty,
   };
 }
+
+/**
+ * The project path as the Brief shows it: inside the home folder it starts with `~`, so the
+ * person's account name never shows on screen (or in screenshots). Display only; `repo` keeps
+ * the full path for git and saved state.
+ */
+export function briefRepoLabel(repo: string, home: string): string {
+  const base = home.replace(/[\\/]+$/, '');
+  if (!base) return repo;
+  if (repo === base) return '~';
+  const next = repo.charAt(base.length);
+  return repo.startsWith(base) && (next === '/' || next === '\\') ? `~${repo.slice(base.length)}` : repo;
+}
