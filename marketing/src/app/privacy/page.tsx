@@ -147,6 +147,14 @@ export default function PrivacyPage() {
           your account, the record stays so the code still counts as used, but the link to your
           account and the email are removed.
         </p>
+        <p>
+          The app may show a short optional survey once, with 4 questions about Unvibe. Your answers,
+          how many explanations you have had and how many days since you installed the app are sent
+          only when you press Send. We store them under a pseudonymous install key, a hash made only
+          for this survey, not the raw install ID, and use them to decide what to improve. To have
+          your answers deleted, email{" "}
+          <a href="mailto:support@unvibe.site">support@unvibe.site</a>.
+        </p>
       </LegalSection>
 
       <LegalSection heading="This website">
