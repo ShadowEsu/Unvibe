@@ -37,3 +37,23 @@ test('inline code inside a bold list label renders as code, with no raw backtick
   assert.match(html, /<strong><code class="inline">load_config\(\)<\/code><\/strong>/);
   assert.doesNotMatch(html, /`/);
 });
+
+test('a bold label around code that holds an asterisk renders as bold code', () => {
+  const html = markup('2. **`n * n`**: squares each number.');
+  assert.match(html, /<strong><code class="inline">n \* n<\/code><\/strong>/);
+  assert.doesNotMatch(html, /\*\*/);
+});
+
+test('streaming renders an unclosed trailing code span or bold label without raw markers', () => {
+  assert.match(markup('It checks `isAdu', true), /<code class="inline">isAdu<\/code>/);
+  assert.match(markup('1. **The Condition (`if', true), /<strong>The Condition \(<code class="inline">if<\/code><\/strong>/);
+  for (const partial of ['1. **The Condition (`if', 'It checks `isAdu', 'Next: **', 'Next: `']) {
+    assert.doesNotMatch(markup(partial, true), /`|\*\*/, partial);
+  }
+});
+
+test('streaming leaves finished lines and open fenced blocks alone', () => {
+  const finished = markup('Use a ` mark like this.\nAnd go on', true);
+  assert.match(finished, /Use a ` mark like this\./);
+  assert.match(markup('```js\nconst a = `x', true), /const a = `x/);
+});

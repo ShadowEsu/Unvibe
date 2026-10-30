@@ -65,7 +65,10 @@ export function renderInline(text: string): ReactNode[] {
       return `\u0000CITE:${m[1]}:${m[2]}\u0000`;
     });
 
-  const re = /\u0000CITE:([^:\u0000]+):(\d+(?:-\d+)?)\u0000|`([^`\n]+)`|\*\*([^*\n]+)\*\*/g;
+  // Bold text may hold code spans, and a code span may hold `*` (e.g. **`n * n`**); a bare `*` still ends
+  // the match, so the inner renderInline pass can't find bold again. The two alternatives share no
+  // character (a backtick only opens a code span), so a failed match stays linear on long streamed lines.
+  const re = /\u0000CITE:([^:\u0000]+):(\d+(?:-\d+)?)\u0000|`([^`\n]+)`|\*\*((?:`[^`\n]+`|[^*`\n])+)\*\*/g;
   const out: ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
@@ -147,6 +150,32 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
   return nodes;
 }
 
+/**
+ * While an answer streams, its last line can end inside `code` or **bold** whose closing marker hasn't
+ * arrived. Close it so it renders as code/bold now instead of flashing raw markers; an opener with nothing
+ * after it yet is dropped. Earlier lines are complete, so a lone marker there stays literal. Inside an
+ * open fenced block nothing changes.
+ */
+function closeStreamingMarkers(text: string): string {
+  if ((text.match(/```/g) ?? []).length % 2 === 1) return text;
+  const nl = text.lastIndexOf('\n');
+  const head = text.slice(0, nl + 1);
+  let line = text.slice(nl + 1);
+  const tick = (line.match(/`/g) ?? []).length % 2 === 1 ? line.lastIndexOf('`') : -1;
+  const bold = (line.match(/\*\*/g) ?? []).length % 2 === 1 ? line.lastIndexOf('**') : -1;
+  let close = '';
+  if (tick >= 0) {
+    if (line.slice(tick + 1).trim()) close += '`';
+    else line = line.slice(0, tick);
+  }
+  // An opener after an open backtick sits inside the code span, so it isn't bold.
+  if (bold >= 0 && (tick < 0 || bold < tick)) {
+    if (line.slice(bold + 2).trim()) close += '**';
+    else line = line.slice(0, bold);
+  }
+  return head + line + close;
+}
+
 /** Markdown-ish body: lists, bold, inline code, fenced blocks, calm citation chips. */
 export function renderRich(raw: string, streaming = false): ReactNode[] {
   let text = raw.replace(/\r\n/g, '\n');
@@ -155,6 +184,7 @@ export function renderRich(raw: string, streaming = false): ReactNode[] {
       .replace(/\[\[(?:c(?:i(?:t(?:e(?::[^\]]*)?)?)?)?)?$/, '')
       .replace(/\{\{[^}]*$/, '')
       .replace(/(^|\n)#{1,6}\s*$/, '$1');
+    text = closeStreamingMarkers(text);
   }
 
   const nodes: ReactNode[] = [];
