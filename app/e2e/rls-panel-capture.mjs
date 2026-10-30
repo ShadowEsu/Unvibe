@@ -203,6 +203,11 @@ const PRESETS = {
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
 if (!preset) throw new Error(`unknown CAPTURE_PRESET ${process.env.CAPTURE_PRESET}`);
 const NAME = process.env.CAPTURE_PRESET ?? 'rls';
+// CAPTURE_RECORD=1: also record each window (Playwright recordVideo) and time the Beginner answer, one take
+// only, for a short clip trimmed afterwards (L350 pilot). The stills and the text file are made as usual.
+const RECORD = process.env.CAPTURE_RECORD === '1';
+const t0 = Date.now();
+const since = () => +((Date.now() - t0) / 1000).toFixed(2);
 
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-rls-'));
 writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId: process.env.MEDIA_INSTALL_ID ?? 'rlscapture0001' }));
@@ -210,8 +215,14 @@ const app = await electron.launch({
   executablePath: exe,
   args: ['--force-device-scale-factor=2'],
   env: { ...process.env, UNVIBE_USER_DATA: userData },
+  ...(RECORD ? { recordVideo: { dir: path.join(out, 'raw'), size: { width: 1120, height: 1440 } } } : {}),
   timeout: 90000,
 });
+// When each window opened, in seconds since t0: a window's video starts then.
+const opened = new Map();
+const track = (p) => { if (!opened.has(p)) opened.set(p, since()); };
+app.on('window', track);
+app.windows().forEach(track);
 const version = await app.evaluate(({ app }) => app.getVersion());
 console.log(`app open ${version}`);
 
@@ -268,14 +279,33 @@ try {
   writeFileSync(file, preset.code);
   await app.evaluate(({ dialog }, picked) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] }); }, file);
 
-  for (let take = 1; take <= (preset.maxTakes ?? 3); take += 1) {
+  for (let take = 1; take <= (RECORD ? 1 : (preset.maxTakes ?? 3)); take += 1) {
     const picked = await (await windowWith('widget.html')).evaluate(() => window.unvibe.pickFile());
     if (!picked?.ok) throw new Error(`file pick failed: ${picked?.error ?? 'cancelled'}`);
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: preset.match }).first().waitFor({ timeout: 30000 });
     let panel = await settledPanel();
     if (preset.level) {
+      const before = await panel.locator('.body').innerText().catch(() => '');
+      const clickAt = since();
       await panel.locator(`.lvl[data-level="${preset.level}"]`).click();
-      await sleep(1500);
+      if (RECORD) {
+        // For the clip: when the new answer first differs from the old one, when a Why/Risks heading first
+        // shows in it (the clip ends before that), and when it finishes. Seconds since t0.
+        let changedAt = null;
+        let whyAt = null;
+        const stopBy = Date.now() + 120000;
+        while (Date.now() < stopBy) {
+          const t = await panel.locator('.body').innerText().catch(() => before);
+          if (t !== before) {
+            changedAt ??= since();
+            if (whyAt === null && /^[ \t]*(why|risks)\b[^\n]*?[ \t]\S/im.test(t)) whyAt = since();
+            if (await panel.locator('.card--done .local-save-note').count() && !(await panel.locator('.body .cursor').count())) break;
+          }
+          await sleep(100);
+        }
+        result.record = { clickAt, changedAt, whyAt, doneAt: since(), panelOpenedAt: opened.get(panel) ?? null };
+        console.log(`record: ${JSON.stringify(result.record)}`);
+      } else await sleep(1500);
       panel = await settledPanel();
     }
     const level = await panel.locator('.lvl[aria-pressed="true"], .lvl.is-active, .lvl[aria-checked="true"]').first().getAttribute('data-level').catch(() => null);
@@ -302,6 +332,13 @@ try {
   console.log(`FAIL ${result.error}`);
 }
 await app.close();
+if (RECORD) {
+  result.videos = [];
+  for (const [p, at] of opened) {
+    const v = p.video();
+    result.videos.push({ window: p.url().split('/').pop()?.split('?')[0] ?? null, openedAt: at, path: v ? await v.path().catch(() => null) : null });
+  }
+}
 writeFileSync(path.join(out, `${NAME}-result.json`), JSON.stringify({ preset: NAME, ...result }, null, 2));
 console.log(JSON.stringify(result));
 process.exit(result.error || !result.takes.some((t) => !t.banned) ? 1 : 0);
