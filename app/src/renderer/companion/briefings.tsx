@@ -4,6 +4,7 @@ import type { KnowledgeObject } from '../../core/knowledge';
 import { buildAgentReview, type AgentReview } from '../../core/agentReview';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
+import { CONSENT_PROVIDERS } from '../../core/consent';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -116,7 +117,7 @@ export function Briefings() {
       {needsRepo && !busy && (
         <section className="briefings__empty">
           <h2>Your next change, made clear.</h2>
-          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Understand Change and Explain the change send that git diff to Google Gemini (or your own key's provider), after you agree.</p>
+          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Understand Change and Explain the change send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
           <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}

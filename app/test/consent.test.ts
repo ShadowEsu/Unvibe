@@ -1,14 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { app, net, netCalls, safeStorage } from './electronStub';
 
-// The consent record, settings and key live under userData; this file gets its own, starting empty.
+// The consent record, settings and key live under userData; this file gets its own. It starts with
+// one agreement from 0.1.45/0.1.46, given under policy 2026-10-28 when the label said "Google Gemini",
+// before the server moved to Anthropic (Security U-G2): it must not count.
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-consent-'));
 app.getPath = (): string => userData;
+const OLD_AGREEMENT = { items: ['ai_send', 'terms', 'age_18'], provider: 'unvibe', policyVersion: '2026-10-28', agreedAt: '2026-10-30T12:00:00.000Z' };
+writeFileSync(path.join(userData, 'unvibe-consent.json'), JSON.stringify({ records: [OLD_AGREEMENT] }), { mode: 0o600 });
 // The keychain stand-in "works", so an own API key can be saved.
 safeStorage.isEncryptionAvailable = (): boolean => true;
 
@@ -18,6 +22,7 @@ import {
   aiSendAllowed,
   CONSENT_COPY,
   CONSENT_ITEMS,
+  CONSENT_PROVIDERS,
   ConsentRequiredError,
   FIRST_RUN_SAMPLE,
   isFirstRunSamplePayload,
@@ -89,12 +94,33 @@ test('a review reads nothing of the person\'s before they agree, and reads once 
 
 const form = { aiSend: true, terms: true, age18: true };
 
-test('CC-3: the consent screen words are pinned to the policy version', () => {
-  // Changing any word of CONSENT_COPY must come with a new POLICY_VERSION (everyone is asked again).
-  // 2026-10-28 was re-pinned once before any release (QA: Chat messages, file and project name).
-  const pinned: Record<string, string> = { '2026-10-28': '5cd75bbf623bc0b0' };
+test('CC-3 and U-G3: the consent words and the server\'s AI provider are pinned to the policy version', () => {
+  // Changing any word of CONSENT_COPY, or who Unvibe's server sends code to, must come with a new
+  // POLICY_VERSION, so everyone is asked again. 2026-10-30: the server moved from Google Gemini to
+  // Anthropic (Claude); the words stayed the same. If the server's provider changes (web/src/ai,
+  // set by the API's environment), change CONSENT_PROVIDERS.unvibe, bump the version and pin both here.
+  const pinned: Record<string, { copy: string; server: string }> = {
+    '2026-10-30': { copy: '5cd75bbf623bc0b0', server: 'Anthropic (Claude)' },
+  };
   const hash = createHash('sha256').update(JSON.stringify(CONSENT_COPY)).digest('hex').slice(0, 16);
-  assert.equal(hash, pinned[POLICY_VERSION], `CONSENT_COPY changed: bump POLICY_VERSION and pin ${hash}`);
+  assert.deepEqual({ copy: hash, server: CONSENT_PROVIDERS.unvibe }, pinned[POLICY_VERSION], 'consent changed: bump POLICY_VERSION and pin it');
+});
+
+test('U-G2: an agreement from the Google Gemini wording asks again, names Anthropic, and sends nothing', async () => {
+  assert.deepEqual(consentStore().all(), [OLD_AGREEMENT], 'the old agreement is read from disk');
+  const status = consentStatus();
+  assert.deepEqual([status.allowed, status.provider, status.providerName], [false, 'unvibe', 'Anthropic (Claude)']);
+  sent.length = 0;
+  await refused(() => postReview(payload('const secretPlan = 1;'), null, new AbortController().signal), 'unvibe');
+  await refused(() => fetchQuestion(payload('const secretPlan = 1;')), 'unvibe');
+  const chat = await askChat({ question: 'what does this do?' });
+  assert.equal(!chat.ok && chat.provider, 'unvibe');
+  const { win, events } = panel();
+  const s = ownCode();
+  initWidget(win, s, { autoStart: true });
+  await runReview(win, s, { level: 'intermediate' });
+  assert.deepEqual(events.filter((ev) => ev.type === 'consentNeeded').map((ev) => ev.provider), ['unvibe']);
+  assert.deepEqual(contentSent(), [], 'nothing of the person\'s left before the new agreement');
 });
 
 test('the form counts only three boxes that are exactly true, for a provider Unvibe knows', () => {
@@ -169,7 +195,7 @@ test('Chat with no agreement names the provider and sends nothing', async () => 
   assert.deepEqual(contentSent(), []);
 });
 
-test('CC-2: agreeing to Google Gemini through Unvibe does not cover an own key\'s provider', async () => {
+test('CC-2: agreeing to Anthropic (Claude) through Unvibe does not cover an own key\'s provider', async () => {
   consentStore().agree([...CONSENT_ITEMS], 'unvibe');
   sent.length = 0;
   const res = await postReview(payload('const total = 1;'), null, new AbortController().signal);
