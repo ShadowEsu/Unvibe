@@ -120,6 +120,8 @@ function runPublishStep(opts: { runnerOs: 'macOS' | 'Windows'; platformFlag: '--
   }
 }
 
+const MAC_PUBLISH = ['electron-builder --mac dmg:arm64 zip:arm64 --publish always', 'electron-builder --mac dmg:x64 zip:x64 --publish always'];
+
 test('a Mac publish without the stable signing identity stops before electron-builder runs', { skip: process.platform === 'win32' }, () => {
   for (const [label, identity] of [['unset', undefined], ['empty', '']] as const) {
     const run = runPublishStep({ runnerOs: 'macOS', platformFlag: '--mac', identity });
@@ -129,7 +131,8 @@ test('a Mac publish without the stable signing identity stops before electron-bu
   }
   const signed = runPublishStep({ runnerOs: 'macOS', platformFlag: '--mac', identity: 'Unvibe Self Signed' });
   assert.equal(signed.status, 0, 'with the identity the step goes ahead');
-  assert.deepEqual(signed.npx, ['electron-builder --mac --publish always'], 'with the identity electron-builder publishes');
+  // One electron-builder run per Mac architecture (44f3222a): both DMGs mount as "Install Unvibe".
+  assert.deepEqual(signed.npx, MAC_PUBLISH, 'with the identity electron-builder publishes');
   const windows = runPublishStep({ runnerOs: 'Windows', platformFlag: '--win' });
   assert.equal(windows.status, 0, 'the check is Mac only');
   assert.deepEqual(windows.npx, ['electron-builder --win --publish always'], 'a Windows publish, which has no Mac identity, still reaches electron-builder');
@@ -140,8 +143,8 @@ test('electron-builder publishing a Mac release cannot find a signing identity o
   const publish = workflow.slice(workflow.indexOf('- name: Package (publish to release)'), workflow.indexOf('        run: |', workflow.indexOf('- name: Package (publish to release)')));
   assert.match(publish, /\n {10}CSC_IDENTITY_AUTO_DISCOVERY: "false"\n/, 'the publish step\'s env turns identity auto-discovery off');
   const run = runPublishStep({ runnerOs: 'macOS', platformFlag: '--mac', identity: 'Unvibe Self Signed' });
-  assert.deepEqual(run.npx, ['electron-builder --mac --publish always']);
-  assert.deepEqual(run.autoDiscovery, ['false'], 'electron-builder runs with CSC_IDENTITY_AUTO_DISCOVERY=false, so the signature scripts/afterPackHook.cjs checked is the one uploaded');
+  assert.deepEqual(run.npx, MAC_PUBLISH);
+  assert.deepEqual(run.autoDiscovery, ['false', 'false'], 'electron-builder runs with CSC_IDENTITY_AUTO_DISCOVERY=false, so the signature scripts/afterPackHook.cjs checked is the one uploaded');
 });
 
 /** Electron's fuse sentinel, then version 1, 9 fuses, and Electron 36's default wire. */
