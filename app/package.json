@@ -1,6 +1,6 @@
 {
   "name": "unvibe-app",
-  "version": "0.1.47",
+  "version": "0.1.48",
   "private": true,
   "description": "Unvibe desktop — floating learning layer for code",
   "main": "dist/main/main.cjs",
