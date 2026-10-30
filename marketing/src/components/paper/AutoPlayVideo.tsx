@@ -18,6 +18,8 @@ interface AutoPlayVideoProps {
   height?: number;
   /** English WebVTT captions, off until chosen in the player (they repeat the burned-in text). */
   captions?: string;
+  /** Told whether the video will autoplay: false for lite visitors and when the browser refuses even muted play. */
+  onAutoplayChange?: (autoplays: boolean) => void;
 }
 
 /**
@@ -37,6 +39,7 @@ export function AutoPlayVideo({
   width,
   height,
   captions,
+  onAutoplayChange,
 }: AutoPlayVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [autoplays, setAutoplays] = useState(false);
@@ -56,11 +59,21 @@ export function AutoPlayVideo({
 
     if (prefersLiteExperience() || !active) {
       setAutoplays(false);
+      onAutoplayChange?.(false);
       video.pause();
       video.muted = true;
       return;
     }
     setAutoplays(true);
+    onAutoplayChange?.(true);
+
+    // Even muted autoplay can be refused (iOS Low Power Mode): then the visitor starts it, so the
+    // "Sound on" toggle goes and the caller stops covering the player.
+    const refused = (error: unknown) => {
+      if ((error as DOMException | undefined)?.name !== "NotAllowedError") return;
+      setAutoplays(false);
+      onAutoplayChange?.(false);
+    };
 
     let visible = false;
     let playToken = 0;
@@ -71,11 +84,17 @@ export function AutoPlayVideo({
       if (!video.paused && !video.ended) return;
       try {
         await video.play();
-      } catch {
-        // Playing with sound was refused: fall back to muted, which every browser allows.
-        if (token !== playToken || video.muted) return;
+      } catch (error) {
+        if (token !== playToken) return;
+        if (video.muted) {
+          refused(error);
+          return;
+        }
+        // Playing with sound was refused: fall back to muted, which most browsers allow.
         video.muted = true;
-        await video.play().catch(() => undefined);
+        await video.play().catch((mutedError: unknown) => {
+          if (token === playToken) refused(mutedError);
+        });
       }
     };
 
@@ -101,7 +120,7 @@ export function AutoPlayVideo({
       video.removeEventListener("waiting", onWaiting);
       video.pause();
     };
-  }, [active, src]);
+  }, [active, src, onAutoplayChange]);
 
   const toggleSound = () => {
     const video = videoRef.current;

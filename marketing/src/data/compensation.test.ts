@@ -137,6 +137,7 @@ describe("startup programs", () => {
     const home = render(HomePage);
     const hero = home.match(/<p class="vhero__backing">([\s\S]*?)<\/p>/)?.[1] ?? "";
     assert.match(hero, /<a href="\/investors#backing">/);
+    assert.equal(Array.from(hero.matchAll(/<a\b/g)).length, 1, "the programs line stays one tab stop");
     assert.equal(text(hero).trim(), HERO);
     const strip = section(home, /<section id="backing"/);
     assertProgramSection(strip, "home strip");
