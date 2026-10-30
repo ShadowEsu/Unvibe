@@ -11,6 +11,7 @@ import { withAnswerDay, type LocalEvent, type Outcome } from '../core/learning';
 import type { ProgressStep } from './progress';
 import { openToken, sealToken } from '../core/tokenVault';
 import { mergeRemoteEvents } from '../core/syncModel';
+import { cleanPmfDraft, earliestFirstRun, type PmfDraft, type PmfStatus } from '../core/pmf';
 
 interface AccountData {
   userId: string;
@@ -63,6 +64,10 @@ interface Data {
   progressSent?: Partial<Record<ProgressStep, true>>;
   /** The launch-at-login question was shown (either answer), so it is never asked again. */
   loginPromptAsked?: true;
+  /** This install's first run (ISO). Set once, never later than the store's own records show. */
+  firstRunAt?: string;
+  /** The PMF survey card (FE-09): sent or closed for good, and the unsent answers. Local only. */
+  pmf?: { status?: PmfStatus; draft?: PmfDraft };
 }
 
 const CHAT_THREAD_CAP = 30;
@@ -363,6 +368,40 @@ class Store {
     this.save();
   }
 
+  /**
+   * When this install first ran. Stored on first call (main.ts asks at launch); an install that
+   * updated into this version gets the earliest of its trial start and oldest saved explanation.
+   */
+  firstRunAt(now = new Date()): string {
+    const stored = this.data.firstRunAt;
+    if (stored && !Number.isNaN(Date.parse(stored))) return stored;
+    const oldest = this.data.events.reduce<string | undefined>((min, e) => (!min || e.ts < min ? e.ts : min), undefined);
+    this.data.firstRunAt = earliestFirstRun([this.data.trialStartedAt, oldest], now);
+    this.save();
+    return this.data.firstRunAt;
+  }
+
+  pmfStatus(): PmfStatus | undefined {
+    return this.data.pmf?.status;
+  }
+
+  pmfDraft(): PmfDraft {
+    return cleanPmfDraft(this.data.pmf?.draft);
+  }
+
+  /** Unsent answers stay in this file until Send succeeds; ignored once the survey is closed. */
+  savePmfDraft(draft: PmfDraft): void {
+    if (this.data.pmf?.status) return;
+    this.data.pmf = { draft };
+    this.save();
+  }
+
+  /** Sent or closed: the card never shows again and the draft is deleted. */
+  setPmfStatus(status: PmfStatus): void {
+    this.data.pmf = { status };
+    this.save();
+  }
+
   signOut(): void {
     // Keep local learning and its identity-bound outbox so the same account can resume later.
     delete this.data.account;
@@ -371,7 +410,11 @@ class Store {
 
   wipeEverything(): void {
     // Save first: when the file can't be written, memory keeps matching what is on disk.
+    // The first-run time and a closed or sent survey survive, so Erase everything never brings the
+    // survey card back early; survey answers not yet sent are erased with everything else.
     const empty: Data = { events: [], outbox: [], snapshots: [], deletedIds: [] };
+    if (this.data.firstRunAt) empty.firstRunAt = this.data.firstRunAt;
+    if (this.data.pmf?.status) empty.pmf = { status: this.data.pmf.status };
     this.save(empty);
     this.data = empty;
     this.wipes += 1;

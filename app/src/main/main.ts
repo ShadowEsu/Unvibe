@@ -709,6 +709,12 @@ app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
+  try {
+    // Records this install's first run once (the PMF survey's 3-day rule); a full disk only delays it.
+    store().firstRunAt();
+  } catch {
+    // Asked again when the survey card checks eligibility.
+  }
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
