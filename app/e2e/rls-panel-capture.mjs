@@ -328,7 +328,11 @@ try {
     let panel = await settledPanel();
     if (preset.noLigatures) {
       // Capture-time style only: turns off font ligatures (and contextual alternates) in the panel window.
-      await panel.addStyleTag({ content: '*, *::before, *::after { font-variant-ligatures: none !important; font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important; }' });
+      // The panel's CSP refuses inline <style>, so the main process adds it with insertCSS.
+      await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('widget.html'));
+        await win?.webContents.insertCSS('*, *::before, *::after { font-variant-ligatures: none !important; font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important; }');
+      });
     }
     if (preset.level) {
       const before = await panel.locator('.body').innerText().catch(() => '');
