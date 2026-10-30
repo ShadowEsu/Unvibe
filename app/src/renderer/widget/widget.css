@@ -1523,6 +1523,8 @@ code.inline {
 :root[data-panel="light"] .card .ask-sandbox { background: #ffffff; }
 :root[data-panel="light"] .card .askrow input { color: #141414; }
 :root[data-panel="light"] .card .paste-box { background: #ffffff; color: #141414; }
+/* The Teach box takes --p-code, which stays dark in the light panel, so typed text was #141414 on #141413. */
+:root[data-panel="light"] .card .teach-box { background: #ffffff; color: #141414; }
 :root[data-panel="light"] .card .opt { box-shadow: 0 2px 0 #e4dfd3; color: #141414; }
 :root[data-panel="light"] .card .quiz__kicker { color: #1d6fa5; }
 :root[data-panel="light"] .card .head__status i { box-shadow: 0 0 0 3px rgb(20 20 20 / 0.08); }
