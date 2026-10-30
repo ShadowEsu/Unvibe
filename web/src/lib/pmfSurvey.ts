@@ -84,7 +84,8 @@ export function parsePmfAnswer(body: unknown): { answer: PmfAnswer } | { invalid
   if (typeof b.q1 !== 'string' || !(PMF_Q1 as readonly string[]).includes(b.q1)) return { invalid: 'q1' };
   const texts: Record<(typeof TEXT_KEYS)[number], string> = { q2: '', q3: '', q4: '' };
   for (const key of TEXT_KEYS) {
-    const value = b[key] ?? '';
+    // Missing means empty; null, numbers and anything else that isn't a string are refused.
+    const value = key in b ? b[key] : '';
     if (typeof value !== 'string') return { invalid: key };
     const trimmed = value.trim();
     if (trimmed.length > PMF_MAX_TEXT_CHARS) return { invalid: key };
