@@ -87,7 +87,7 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
         <label key={key} className="pmf-card__q">
           <span>{PMF_QUESTIONS[key]}</span>
           <textarea
-            className="teach-box"
+            className="pmf-card__field"
             rows={2}
             maxLength={PMF_MAX_ANSWER_CHARS}
             disabled={sending}

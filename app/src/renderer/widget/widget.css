@@ -1629,7 +1629,10 @@ code.inline {
 .pmf-card__options { display: grid; gap: 6px; }
 .pmf-card .opt { cursor: pointer; font-weight: 500; }
 .pmf-card .opt input { margin: 2px 0 0; accent-color: var(--test); }
-.pmf-card .teach-box { font-weight: 400; }
+/* Its own field, not .teach-box: that one takes --p-code, which stays dark in the light panel
+   (Design MUST on #103). Same fill, border and radius as the answer rows; the focus ring is
+   the panel's 2px --p-focus outline. */
+.card .pmf-card__field { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid var(--p-line); border-radius: 12px; background: var(--p-surface); color: var(--p-ink); font: 400 13px/1.45 var(--font-sans); resize: vertical; }
 .pmf-card__error { margin: 0; font-size: 12.5px; color: var(--uv-danger); }
 .pmf-card--thanks { grid-template-columns: 1fr auto; align-items: center; }
 .pmf-card--thanks p { margin: 0; font-size: 13px; line-height: 1.45; }
