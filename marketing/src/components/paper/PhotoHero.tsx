@@ -112,10 +112,15 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
         <TryInBrowser device={device} />
       </div>
       <p className="vhero__trust">
-        Free for Mac + Windows · No API key · Keys and tokens filtered on your computer ·{" "}
-        <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
-          {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
-        </a>
+        <span className="vhero__trust-item">Free for Mac + Windows</span>{" "}
+        <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>No API key</span>{" "}
+        <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>Keys and tokens filtered on your computer</span>{" "}
+        <span className="vhero__trust-item">
+          <span className="vhero__trust-separator">· </span>
+          <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
+            {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
+          </a>
+        </span>
       </p>
     </div>
   );
@@ -170,7 +175,11 @@ export function PhotoHero() {
         {device === "phone" ? (
           <>
             <EmailMeLink />
-            <p className="vhero__fine">Free for Mac + Windows · No API key · Keys and tokens filtered on your computer</p>
+            <p className="vhero__fine">
+              <span className="vhero__trust-item">Free for Mac + Windows</span>{" "}
+              <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>No API key</span>{" "}
+              <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>Keys and tokens filtered on your computer</span>
+            </p>
             <TryInBrowser device={device} />
           </>
         ) : (
@@ -178,7 +187,9 @@ export function PhotoHero() {
         )}
         <p className="vhero__backing">
           <a href="/investors#backing">
-            <b>{compensationTotalLabel()} in startup-program credits and committed cash</b> · {compensationProgramCount()} programs, including {startupPrograms[0].program}
+            <b>{compensationTotalLabel()} in startup-program credits and committed cash</b>
+            <span className="vhero__backing-separator"> · </span>
+            <span className="vhero__backing-programs">{compensationProgramCount()} programs, including {startupPrograms[0].program}</span>
           </a>
         </p>
       </div>

@@ -203,7 +203,15 @@ if (userCode) {
     await page.goto(`https://unvibe.site/activate?user_code=${encodeURIComponent(userCode)}`, { waitUntil: 'networkidle', timeout: 60000 });
     await sleep(1500);
     await shot(page, 'google-signin-approval-page');
-    await page.getByRole('button', { name: /Continue with Google/i }).first().click({ timeout: 15000 });
+    // Consent comes first: Google stays disabled until the Terms box and the 18+ box are both ticked.
+    const google = page.getByRole('button', { name: /Continue with Google/i }).first();
+    assert.equal(await google.isDisabled(), true, 'Continue with Google is disabled before the two consent boxes');
+    assert.equal(await page.locator('#activate-agree-terms').isChecked(), false, 'the Terms box starts unticked');
+    assert.equal(await page.locator('#activate-agree-age').isChecked(), false, 'the 18+ box starts unticked');
+    await page.locator('#activate-agree-terms').check();
+    assert.equal(await google.isDisabled(), true, 'Continue with Google stays disabled with only the Terms box');
+    await page.locator('#activate-agree-age').check();
+    await google.click({ timeout: 15000 });
     await page.waitForURL(/accounts\.google\.com/, { timeout: 30000 });
     await sleep(2500);
     await shot(page, 'google-signin-google-account-page');
