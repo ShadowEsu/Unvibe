@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="31 October 2026"
+      updated="1 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -161,8 +161,11 @@ export default function PrivacyPage() {
           If you press Allow on the analytics bar, unvibe.site uses Mixpanel and PostHog to
           understand how visitors use the site, including page views, clicks, and session replays.
           Until you press Allow, and if you press No thanks, ignore the bar, or your browser sends
-          Global Privacy Control, neither loads and nothing is recorded. The Analytics settings link
-          at the bottom of every page changes your answer, and No thanks stops recording at once. Both
+          Global Privacy Control, neither loads. When you press Allow or No thanks, unvibe.site adds
+          one to that day&apos;s count of that answer. The count has no ID, IP address, cookie, time or
+          page address, so it can&apos;t be linked to you. Nothing else is recorded. The Analytics
+          settings link at the bottom of every page changes your answer, and No thanks stops
+          recording at once. Both
           receive your IP address with
           each event and use it to estimate a rough location. Replays hide all page text and
           everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
