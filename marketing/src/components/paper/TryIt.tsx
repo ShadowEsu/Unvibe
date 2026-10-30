@@ -158,7 +158,7 @@ export function TryIt({
   }, [answer]);
 
   const explain = async (depth: Level = level) => {
-    // Nothing is sent to Gemini until both boxes are ticked.
+    // Nothing is sent to Anthropic until both boxes are ticked.
     if (!consented) return;
     setState("thinking");
     setError("");
@@ -231,7 +231,7 @@ export function TryIt({
         <div className="try__foot">
           <p className="try__fine try__consent">
             <input type="checkbox" id="try-consent-send" checked={ticks.aiSend} onChange={(e) => tick("aiSend", e.target.checked)} />
-            <label htmlFor="try-consent-send">Send this code to Google Gemini to explain it</label>
+            <label htmlFor="try-consent-send">Send this code to Anthropic&apos;s Claude API to explain it</label>
           </p>
           <p className="try__fine try__consent">
             <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />
@@ -267,7 +267,7 @@ export function TryIt({
           </button>
           {consented ? null : <p className="try__fine" id="try-consent-hint">Tick both boxes to explain.</p>}
           <p className="try__fine" id="try-fine">
-            Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Google Gemini to write the
+            Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Anthropic to write the
             explanation. Don&apos;t paste keys or passwords. Common key formats are refused.
           </p>
         </div>

@@ -4,6 +4,7 @@ import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
+import { AiPausedError } from '@/ai/spendMeter';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
@@ -39,9 +40,11 @@ export async function POST(req: Request): Promise<Response> {
     recordTokens = (usage) => recordTrialTokens('project_question', usage);
   }
   const { system, user } = buildComprehensionPrompt(payload);
-  // A failure after Gemini accepted the request still carries its (estimated) usage.
+  // A failure after Anthropic accepted the request still carries its (estimated) usage.
   let usage: TokenUsage | undefined;
+  let paused: AiPausedError | undefined;
   const completion = await provider.complete(system, user, req.signal).catch((error: unknown) => {
+    if (error instanceof AiPausedError) paused = error;
     usage = billedUsage(error);
     return null;
   });
@@ -52,6 +55,8 @@ export async function POST(req: Request): Promise<Response> {
   if (!question) {
     // Spent only on a question the person can answer; a client that disconnected keeps the charge.
     if (!req.signal.aborted) await release?.();
+    // The spend meter refused before anything was sent: nothing was asked of any provider.
+    if (paused) return Response.json({ error: 'ai_paused', message: paused.message }, { status: 503 });
     return Response.json(
       { error: 'question_unavailable', message: 'Could not write a question about this code just now. Try again in a moment.' },
       { status: 502 },

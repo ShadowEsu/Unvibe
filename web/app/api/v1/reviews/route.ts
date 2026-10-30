@@ -2,7 +2,8 @@ import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
-import { billedUsage, type TokenUsage } from '@/ai/provider';
+import { billedUsage, providerErrorSummary, type TokenUsage } from '@/ai/provider';
+import { AiPausedError } from '@/ai/spendMeter';
 import { proRequired, recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
@@ -89,9 +90,14 @@ export async function POST(req: Request): Promise<Response> {
           });
         }
       } catch (err) {
-        if (!req.signal.aborted) console.error('review provider failed', err);
-        send({ type: 'error', message: PROVIDER_FAILURE });
-        // Gemini accepted the request before it failed (e.g. the stream was cut off): record the estimate.
+        if (err instanceof AiPausedError) {
+          // The spend meter refused before anything was sent; no other provider is tried.
+          send({ type: 'error', message: err.message });
+        } else {
+          if (!req.signal.aborted) console.error('review provider failed', providerErrorSummary(err));
+          send({ type: 'error', message: PROVIDER_FAILURE });
+        }
+        // Anthropic accepted the request before it failed (e.g. the stream was cut off): record the estimate.
         const billed = billedUsage(err);
         if (billed) await recordTokens?.(billed);
       }

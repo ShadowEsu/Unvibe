@@ -8,14 +8,14 @@ import { getBillingStore } from '../src/billing/store';
 import { monthWindow } from '../src/billing/plans';
 import { trialCounterUsed, trialGlobalMonthKey, trialInstallKey, trialUsageLine } from '../src/lib/trialAccess';
 import type { UsageKind } from '../src/billing/types';
+import { ANTHROPIC_HOST, anthropicAnswer, anthropicError } from './anthropicStub';
 
 // Real route handlers, memory stores; only the remote AI HTTP boundary is local.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.OPENROUTER_API_KEY;
-delete process.env.ANTHROPIC_API_KEY;
 delete process.env.ENABLE_MOCK_AI;
-process.env.GEMINI_API_KEY = 'local-gemini-key';
+process.env.ANTHROPIC_API_KEY = 'local-anthropic-key';
 process.env.UNVIBE_TRIAL_TOKEN = 'local-trial-token-abcdefghijklmnop';
 
 type Upstream = 'answer' | 'fail' | 'empty' | 'question' | 'not-json';
@@ -26,16 +26,13 @@ const QUESTION = { question: 'What does it return?', options: ['Its input', 'Not
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(String(input));
-  if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
+  if (url.hostname !== ANTHROPIC_HOST) throw new Error(`Unexpected request: ${url}`);
   // The provider forwards the caller's signal; a request the client already dropped aborts here.
   init?.signal?.throwIfAborted();
   await duringUpstream?.();
-  if (upstream === 'fail') return new Response('upstream unavailable', { status: 503 });
+  if (upstream === 'fail') return anthropicError();
   const text = upstream === 'empty' ? '' : upstream === 'question' ? JSON.stringify(QUESTION) : upstream === 'not-json' ? 'Sorry, I cannot.' : 'This function returns its input.';
-  const chunk = { candidates: [{ content: { parts: [{ text }] } }] };
-  return url.pathname.endsWith(':streamGenerateContent')
-    ? new Response(`data: ${JSON.stringify(chunk)}\n\n`, { headers: { 'content-type': 'text/event-stream' } })
-    : Response.json(chunk);
+  return anthropicAnswer(init, text);
 }) as typeof fetch;
 
 const context = { language: 'typescript', projectStructure: [], imports: [], code: 'const identity = (x: number) => x;' };

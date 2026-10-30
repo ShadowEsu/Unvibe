@@ -6,45 +6,38 @@ import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { trialDailyTokens } from '../src/lib/trialAccess';
+import { ANTHROPIC_HOST, anthropicMessage, anthropicStream, streamBody, wantsStream } from './anthropicStub';
 
-// Real route handlers and memory stores; only the remote Gemini HTTP boundary is stubbed.
+// Real route handlers and memory stores; only the remote Anthropic HTTP boundary is stubbed.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.OPENROUTER_API_KEY;
-delete process.env.ANTHROPIC_API_KEY;
 delete process.env.ENABLE_MOCK_AI;
-process.env.GEMINI_API_KEY = 'local-gemini-key';
+process.env.ANTHROPIC_API_KEY = 'local-anthropic-key';
 process.env.UNVIBE_TRIAL_TOKEN = 'local-trial-token-abcdefghijklmnop';
 
 type Upstream = 'with-usage' | 'no-usage' | 'hang-after-first-chunk';
 let upstream: Upstream = 'with-usage';
-const USAGE = { promptTokenCount: 812, candidatesTokenCount: 140, thoughtsTokenCount: 0, totalTokenCount: 952 };
+const USAGE = { input_tokens: 812, output_tokens: 140 };
 const QUESTION = { question: 'What does it return?', options: ['Its input', 'Nothing'], answerIndex: 0, rationale: 'identity', concept: 'functions', conceptLabel: 'Functions' };
-
-function chunk(text: string, withUsage: boolean): Record<string, unknown> {
-  return { candidates: [{ content: { parts: [{ text }] } }], ...(withUsage ? { usageMetadata: USAGE } : {}) };
-}
 
 const stubbedFetch: typeof fetch = async (input, init) => {
   const url = new URL(String(input));
-  if (url.hostname !== 'generativelanguage.googleapis.com') throw new Error(`Unexpected request: ${url}`);
+  if (url.hostname !== ANTHROPIC_HOST) throw new Error(`Unexpected request: ${url}`);
   init?.signal?.throwIfAborted();
-  if (!url.pathname.endsWith(':streamGenerateContent')) {
-    return Response.json(chunk(JSON.stringify(QUESTION), upstream === 'with-usage'));
-  }
+  const usage = upstream === 'with-usage' ? USAGE : null;
+  if (!wantsStream(init)) return anthropicMessage(JSON.stringify(QUESTION), usage);
   if (upstream === 'hang-after-first-chunk') {
     // First words arrive, then the client goes away: the body errors like a real aborted fetch.
     const signal = init?.signal;
     return new Response(new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk('This function', false))}\n\n`));
+        controller.enqueue(new TextEncoder().encode(streamBody(['This function'], null, false)));
         signal?.addEventListener('abort', () => controller.error(new DOMException('The operation was aborted.', 'AbortError')));
       },
     }), { headers: { 'content-type': 'text/event-stream' } });
   }
-  const body = `data: ${JSON.stringify(chunk('This function', false))}\n\n`
-    + `data: ${JSON.stringify(chunk(' returns its input.', upstream === 'with-usage'))}\n\n`;
-  return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+  return anthropicStream(['This function', ' returns its input.'], usage);
 };
 globalThis.fetch = stubbedFetch;
 
@@ -71,7 +64,7 @@ function memoryBilling(): MemoryBillingStore {
   return store;
 }
 
-test('a signed-in explanation writes Gemini token counts onto its reserved usage row', async () => {
+test('a signed-in explanation writes Anthropic token counts onto its reserved usage row', async () => {
   upstream = 'with-usage';
   const user = await signedIn();
   const response = await review(post('/api/v1/reviews', user.headers));
@@ -88,7 +81,7 @@ test('a signed-in explanation writes Gemini token counts onto its reserved usage
 /** chars/4 rounded up, the estimate rule. */
 const quarter = (chars: number): number => Math.ceil(chars / 4);
 
-test('without usageMetadata the row gets a chars/4 estimate marked as estimated, and the request still succeeds', async () => {
+test('without usage the row gets a chars/4 estimate marked as estimated, and the request still succeeds', async () => {
   upstream = 'no-usage';
   const user = await signedIn();
   const response = await review(post('/api/v1/reviews', user.headers));
@@ -146,7 +139,7 @@ test('an aborted trial stream adds to the estimate totals and leaves the measure
   assert.equal(estimatedAfter.outputTokens, estimatedBefore.outputTokens + quarter('This function'.length));
 });
 
-test('a request refused before reaching Gemini records nothing', async () => {
+test('a request refused before reaching Anthropic records nothing', async () => {
   upstream = 'with-usage';
   const user = await signedIn();
   const billing = getBillingStore();

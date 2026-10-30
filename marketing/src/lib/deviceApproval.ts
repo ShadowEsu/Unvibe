@@ -84,7 +84,7 @@ export function clearDeviceCode(storage: SessionStore | null): void {
 
 /**
  * What /activate asks before any sign-in starts: the Terms and Privacy Policy, and 18 or older
- * (Google Gemini's API terms are 18+). The API's approve refuses without both and this version
+ * (Unvibe's Terms are 18+). The API's approve refuses without both and this version
  * (web/src/lib/accountConsent.ts; the app's consent screen uses the same one).
  */
 export const ACCOUNT_POLICY_VERSION = "2026-10-28";

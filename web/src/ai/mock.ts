@@ -23,12 +23,12 @@ export class MockProvider implements Provider {
     const text =
       `[MOCK EXPLANATION: development mock is enabled]\n\n` +
       `Visible: the request concerns ${cite} (${lang}). The service received the constructed ` +
-      `context (imports, diff/selection, project structure) and would normally send it to Google Gemini.\n\n` +
+      `context (imports, diff/selection, project structure) and would normally send it to Anthropic's Claude API.\n\n` +
       `Inferred: with a real key, you'd get a levelled explanation here that distinguishes what ` +
       `the code shows from what is inferred, cites references like ${cite}, and ends with what ` +
       `would break if the code were removed.\n\n` +
       `Uncertain: nothing further can be said without the model.\n\n` +
-      `To enable real analysis: set GEMINI_API_KEY in web/.env.local, turn off ENABLE_MOCK_AI, and restart.`;
+      `To enable real analysis: set ANTHROPIC_API_KEY in web/.env.local, turn off ENABLE_MOCK_AI, and restart.`;
 
     for (const chunk of text.match(/.{1,24}/gs) ?? []) {
       if (signal?.aborted) {
@@ -53,7 +53,7 @@ export class MockProvider implements Provider {
         'It is documentation only',
       ],
       answerIndex: 0,
-      rationale: '(Mock) With a real GEMINI_API_KEY the question would test the specific behaviour of the reviewed code.',
+      rationale: '(Mock) With a real ANTHROPIC_API_KEY the question would test the specific behaviour of the reviewed code.',
       concept: 'code-comprehension',
       conceptLabel: 'Code comprehension',
     });

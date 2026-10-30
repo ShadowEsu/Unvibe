@@ -2,7 +2,7 @@
  * The Try it consent version, sent as `consent.v` with every request to /api/v1/try.
  * Must equal `TRY_CONSENT_VERSION` in web/src/lib/tryDemo.ts, or the API refuses every request.
  */
-export const TRY_CONSENT_VERSION = "2026-10-28";
+export const TRY_CONSENT_VERSION = "2026-10-29";
 
 /** localStorage key holding `{"v":TRY_CONSENT_VERSION,"aiSend":true,"age18":true,"at":<ISO time>}`. */
 export const TRY_CONSENT_KEY = "unvibe.tryConsent";
