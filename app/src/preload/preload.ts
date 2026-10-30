@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ConsentProvider } from '../core/consent';
+import type { PmfDraft } from '../core/pmf';
 import type { ConsentStatus } from '../main/consent';
 
 type ConsentAnswer = { ok: true; status: ConsentStatus } | { ok: false; error: string };
@@ -70,6 +71,10 @@ const api = {
   openPlan: () => ipcRenderer.send('companion:openPlan'),
   openUrl: (url: string) => ipcRenderer.invoke('app:openUrl', url),
   sendFeedback: (input: { rating: number; message: string; email?: string }) => ipcRenderer.invoke('feedback:send', input),
+  pmfState: (): Promise<{ show: boolean; draft: PmfDraft }> => ipcRenderer.invoke('pmf:state'),
+  pmfSaveDraft: (draft: PmfDraft) => ipcRenderer.send('pmf:draft', draft),
+  pmfDismiss: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('pmf:dismiss'),
+  pmfSend: (draft: PmfDraft): Promise<{ ok: true } | { ok: false; error: string }> => ipcRenderer.invoke('pmf:send', draft),
   onShowPage: (cb: (page: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, page: string) => cb(page);
     ipcRenderer.on('companion:showPage', listener);

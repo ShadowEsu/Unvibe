@@ -15,6 +15,8 @@ import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import type { PmfDraft } from '../../core/pmf';
+import { PmfCard, type PmfCardModel } from './pmfCard';
 import '../shared/tokens.css';
 
 /**
@@ -431,6 +433,11 @@ function Widget() {
   const [revealedText, setRevealedText] = useState('');
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
   const [listening, setListening] = useState(false);
+  /** The PMF survey card (FE-09) while it is open in this panel; null when hidden or closed. */
+  const [pmf, setPmf] = useState<PmfCardModel | null>(null);
+  const pmfClosed = useRef(false);
+  const pmfSaveTimer = useRef<number | undefined>(undefined);
+  const pmfPending = useRef<PmfDraft | null>(null);
 
   useEffect(() => {
     const refreshUsage = () => {
@@ -716,6 +723,56 @@ function Widget() {
 
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
+  // The survey card waits until an explanation has fully finished, typing included, and is asked
+  // for again after each one until it is sent or closed. Main decides eligibility.
+  const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
+  useEffect(() => {
+    if (!pmfReady || pmf || pmfClosed.current) return;
+    let live = true;
+    void window.unvibe.pmfState().then((state) => {
+      if (live && state.show && !pmfClosed.current) setPmf({ draft: state.draft, stage: 'form', error: '' });
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [pmfReady, pmf]);
+  // After the thanks, the next explanation starts without the card.
+  useEffect(() => {
+    if (phase === 'streaming' && pmf?.stage === 'thanks') {
+      pmfClosed.current = true;
+      setPmf(null);
+    }
+  }, [phase, pmf?.stage]);
+  const flushPmfDraft = () => {
+    window.clearTimeout(pmfSaveTimer.current);
+    if (pmfPending.current) window.unvibe.pmfSaveDraft(pmfPending.current);
+    pmfPending.current = null;
+  };
+  // Answers are saved on this computer as they are typed (batched), and once more on close.
+  useEffect(() => () => flushPmfDraft(), []);
+  const changePmf = (draft: PmfDraft) => {
+    setPmf((current) => (current ? { ...current, draft } : current));
+    pmfPending.current = draft;
+    window.clearTimeout(pmfSaveTimer.current);
+    pmfSaveTimer.current = window.setTimeout(flushPmfDraft, 400);
+  };
+  const dismissPmf = () => {
+    window.clearTimeout(pmfSaveTimer.current);
+    pmfPending.current = null;
+    pmfClosed.current = true;
+    setPmf(null);
+    void window.unvibe.pmfDismiss();
+  };
+  const sendPmf = () => {
+    if (!pmf || pmf.stage === 'sending') return;
+    window.clearTimeout(pmfSaveTimer.current);
+    pmfPending.current = null;
+    const { draft } = pmf;
+    setPmf({ draft, stage: 'sending', error: '' });
+    void window.unvibe.pmfSend(draft)
+      .catch(() => ({ ok: false as const, error: 'Could not send. Your answers are still here, so you can try again.' }))
+      .then((result) => {
+        setPmf((current) => (current ? { ...current, stage: result.ok ? 'thanks' : 'form', error: result.ok ? '' : result.error } : current));
+      });
+  };
 
   const askWhy = () => {
     void window.unvibe.lookupOrigin().then((raw) => {
@@ -1045,6 +1102,15 @@ function Widget() {
                 : (
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
+              {pmf && pmfReady ? (
+                <PmfCard
+                  model={pmf}
+                  onChange={changePmf}
+                  onSend={sendPmf}
+                  onDismiss={dismissPmf}
+                  onClose={() => { pmfClosed.current = true; setPmf(null); }}
+                />
+              ) : null}
             </div>
             {active.quiz && !active.quizHidden && (
               <aside className="quiz-rail" aria-label="Test me">

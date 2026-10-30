@@ -1615,3 +1615,21 @@ code.inline {
 .card .empty-or::before, .card .empty-or::after { content: ""; flex: 1; height: 1px; background: var(--p-line); }
 .card .empty-picker--paste .access-note { width: 100%; max-width: 420px; box-sizing: border-box; margin: 0; padding: 14px; }
 .card .access-note .shortcut-guide__steps li { font-size: 13.5px; }
+
+/* The PMF survey card (FE-09): inline under a finished explanation, styled like the limit strip
+   and the Test me options so it reads as part of the panel, never as a pop-up. */
+.pmf-card { position: relative; display: grid; gap: 12px; margin: 18px 0 4px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.pmf-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pmf-card__head .quiz__kicker { margin-bottom: 4px; }
+.pmf-card__sub, .pmf-card__consent { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.pmf-card__close { flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.pmf-card__close:hover:not(:disabled) { color: var(--fg); background: var(--chip-bg); }
+.pmf-card__q { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; font-size: 13px; font-weight: 650; line-height: 1.4; }
+.pmf-card__q legend { padding: 0; margin-bottom: 8px; }
+.pmf-card__options { display: grid; gap: 6px; }
+.pmf-card .opt { cursor: pointer; font-weight: 500; }
+.pmf-card .opt input { margin: 2px 0 0; accent-color: var(--test); }
+.pmf-card .teach-box { font-weight: 400; }
+.pmf-card__error { margin: 0; font-size: 12.5px; color: var(--uv-danger); }
+.pmf-card--thanks { grid-template-columns: 1fr auto; align-items: center; }
+.pmf-card--thanks p { margin: 0; font-size: 13px; line-height: 1.45; }
