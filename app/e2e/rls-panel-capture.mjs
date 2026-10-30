@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345), 'goptr' (ep13), 'pyassert' (ep14), 'pyresub' (ep15), 'jsreduce' (ep16), 'pyfstring' (ep17), 'jsternary' (ep18), 'pysum' (ep19), 'jslegacy' (ep63, L358).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345), 'goptr' (ep13), 'pyassert' (ep14), 'pyresub' (ep15), 'jsreduce' (ep16), 'pyfstring' (ep17), 'jsternary' (ep18), 'pysum' (ep19), 'jslegacy' (ep63, L358), 'jsadult' (ep71), 'pysquares' (ep72), 'jsinitials' (ep73).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -209,6 +209,34 @@ const PRESETS = {
     cropAtHeading: true,
     maxTakes: 1,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|\bdead\b|\bunused\b|\bnever (runs?|used|called|executes?)\b/i,
+  },
+  // L358 neutral lines (Security I15-2), one recorded take each: ep71, ep72, ep73.
+  jsadult: {
+    file: 'src/profile.js',
+    code: 'const isAdult = age >= 18;\n',
+    match: 'isAdult',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 1,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(validates?|validating|validation|sanitiz\w*)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
+  },
+  pysquares: {
+    file: 'stats.py',
+    code: 'squares = [n * n for n in numbers]\n',
+    match: 'squares',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 1,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(validates?|validating|validation|sanitiz\w*)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
+  },
+  jsinitials: {
+    file: 'src/avatar.js',
+    code: 'const initials = name.slice(0, 2).toUpperCase();\n',
+    match: 'initials',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 1,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(validates?|validating|validation|sanitiz\w*)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
