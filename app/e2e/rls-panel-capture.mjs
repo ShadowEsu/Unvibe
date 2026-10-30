@@ -218,6 +218,9 @@ const PRESETS = {
     level: 'beginner',
     cropAtHeading: true,
     maxTakes: 1,
+    // ep71 is about look-alike characters (Security A71-1): the code font's ligatures would draw '>=' as one
+    // '≥' glyph, so the card and the panel must show the same two characters.
+    noLigatures: true,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(validates?|validating|validation|sanitiz\w*)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
   },
   pysquares: {
@@ -323,6 +326,10 @@ try {
     if (!picked?.ok) throw new Error(`file pick failed: ${picked?.error ?? 'cancelled'}`);
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: preset.match }).first().waitFor({ timeout: 30000 });
     let panel = await settledPanel();
+    if (preset.noLigatures) {
+      // Capture-time style only: turns off font ligatures (and contextual alternates) in the panel window.
+      await panel.addStyleTag({ content: '*, *::before, *::after { font-variant-ligatures: none !important; font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important; }' });
+    }
     if (preset.level) {
       const before = await panel.locator('.body').innerText().catch(() => '');
       const clickAt = since();
