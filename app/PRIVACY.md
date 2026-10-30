@@ -55,7 +55,7 @@ From version 0.1.45 this is off unless you turn it on, and updating to 0.1.45 sw
 
 When you send feedback from the app or the website, Unvibe stores your star rating and message, where it came from (the app version or the page), and your email only if you add it. Your IP address is used only in the server's memory, to stop repeated sends, and is not stored with your feedback. Each send is also counted as one PostHog event that carries only the star rating and where it came from, under a random ID that is new each time.
 
-From version 0.1.47 the app may show a short optional survey once, with 4 questions about Unvibe. Your answers stay on your computer until you press Send; then they go to Unvibe with how many explanations you have had, how many days since you installed the app and the app version. The server stores them under a pseudonymous install key, a hash made only for this survey, not the raw install ID, and they are used to decide what to improve. Not now or × closes the survey for good. To have your answers deleted, email **hello@unvibe.site**.
+**Survey answers:** from version 0.1.47 the app may show a short optional survey once, with 4 questions about Unvibe. If you answer it and press Send, your answers, the app version and your random install ID go to Unvibe's server; nothing is sent before you press Send, and closing it sends nothing. Answers are checked on your computer first, and any that look like a key or password are not sent. The server stores the install ID only as a keyed hash. Answers are kept 12 months. The team reads them and may use AI tools that don't train on your data to summarise them. To have your answers deleted, email **hello@unvibe.site**.
 
 ## Third-party services
 

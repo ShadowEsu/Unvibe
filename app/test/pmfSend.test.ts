@@ -1,16 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PMF_CONSENT_LINE, PMF_QUESTIONS, PMF_Q1_OPTIONS, type PmfDraft, type PmfRequestBody, type PmfStatus } from '../src/core/pmf';
-import { PMF_SEND_FAILED, pmfCardState, sendPmfAnswer, type PmfDeps } from '../src/main/pmf';
+import {
+  PMF_CONSENT_LINE,
+  PMF_QUESTIONS,
+  PMF_Q1_OPTIONS,
+  PMF_SECRET_BLOCKED,
+  cleanPmfDraft,
+  type PmfDraft,
+  type PmfRequestBody,
+  type PmfStatus,
+} from '../src/core/pmf';
+import { PMF_SEND_FAILED, dismissPmf, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from '../src/main/pmf';
 import { postPmfAnswer, trialAuthHeaders } from '../src/main/backend';
 import { netCalls } from './electronStub';
 
 const DAY = 86_400_000;
 const NOW = new Date('2026-11-10T12:00:00.000Z');
+const EMPTY: PmfDraft = { q1: '', q2: '', q3: '', q4: '' };
 
 /** A fake install: `saved` stands in for unvibe-store.json; `answer` is what the server replies. */
 function fakeInstall(options: { explanations?: number; firstRunDaysAgo?: number; status?: PmfStatus; draft?: PmfDraft; answer?: number | null | 'throw'; canSend?: boolean } = {}) {
-  const saved: { status?: PmfStatus; draft: PmfDraft } = { status: options.status, draft: options.draft ?? { q1: '', q2: '', q3: '', q4: '' } };
+  const saved: { status?: PmfStatus; draft: PmfDraft } = { status: options.status, draft: options.draft ?? { ...EMPTY } };
   const posts: PmfRequestBody[] = [];
   let answer = options.answer === undefined ? 201 : options.answer;
   const deps: PmfDeps = {
@@ -20,7 +30,7 @@ function fakeInstall(options: { explanations?: number; firstRunDaysAgo?: number;
     status: () => saved.status,
     draft: () => saved.draft,
     saveDraft: (draft) => { saved.draft = draft; },
-    setStatus: (status) => { saved.status = status; saved.draft = { q1: '', q2: '', q3: '', q4: '' }; },
+    setStatus: (status) => { saved.status = status; saved.draft = { ...EMPTY }; },
     post: options.canSend === false ? null : async (body) => {
       posts.push(body);
       if (answer === 'throw') throw new Error('offline');
@@ -42,12 +52,29 @@ test('the card shows only when eligible and the build can send, with the saved d
   assert.equal(pmfCardState(fakeInstall({ canSend: false }).deps).show, false, 'no trial token: answers could never leave, so no card');
 });
 
-test('Send posts the exact body once, then the survey is done and the draft deleted', async () => {
+test('nothing is sent before Send: showing the card and typing only save on this computer', () => {
+  const install = fakeInstall();
+  pmfCardState(install.deps);
+  savePmfDraft({ q1: 'somewhat', q2: 'Students', q3: '', q4: '' }, install.deps);
+  savePmfDraft({ ...answers }, install.deps);
+  assert.deepEqual(install.saved.draft, answers);
+  assert.equal(install.posts.length, 0);
+});
+
+test('close (Not now or ×) sends nothing, deletes the draft and the card never shows again', () => {
+  const install = fakeInstall({ draft: answers });
+  dismissPmf(install.deps);
+  assert.equal(install.posts.length, 0);
+  assert.equal(install.saved.status, 'dismissed');
+  assert.deepEqual(install.saved.draft, EMPTY);
+  assert.equal(pmfCardState(install.deps).show, false);
+});
+
+test('Send posts only the answers, the version and the consent marker, once; then the survey is done', async () => {
   const install = fakeInstall();
   assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true });
   assert.deepEqual(install.posts, [{
-    q1: 'very', q2: 'Bootcamp students', q3: 'I can read what the AI wrote', q4: '',
-    explanations: 5, daysSinceInstall: 4, appVersion: '0.1.47', consent: 'pmf-v1',
+    q1: 'very', q2: 'Bootcamp students', q3: 'I can read what the AI wrote', q4: '', appVersion: '0.1.47', consent: 'pmf-v1',
   }]);
   assert.equal(install.saved.status, 'sent');
   assert.equal(pmfCardState(install.deps).show, false, 'never shown again');
@@ -55,14 +82,43 @@ test('Send posts the exact body once, then the survey is done and the draft dele
   assert.equal(install.posts.length, 1, 'a second press sends nothing');
 });
 
-test('409 (already answered within 90 days) also finishes the survey', async () => {
+test('409 (the server says this install is not due for 90 days) also finishes the survey', async () => {
   const install = fakeInstall({ answer: 409 });
   assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true });
   assert.equal(install.saved.status, 'sent');
 });
 
+test('the secret filter blocks Send with Security\'s wording; nothing is posted and the draft stays', async () => {
+  for (const [key, text] of [
+    // AWS's documented example key and generated look-alikes, so no key-shaped literal sits in the repo.
+    ['q2', 'AKIAIOSFODNN7EXAMPLE'],
+    ['q3', `my key is sk-proj-${'a1B2'.repeat(12)}`],
+    ['q4', `-----BEGIN ${'RSA'} PRIVATE KEY-----`],
+  ] as const) {
+    const install = fakeInstall();
+    const draft = { ...answers, [key]: text };
+    assert.deepEqual(await sendPmfAnswer(draft, install.deps), { ok: false, error: PMF_SECRET_BLOCKED }, key);
+    assert.equal(PMF_SECRET_BLOCKED, 'That looks like a key or password. Take it out and try again.');
+    assert.equal(install.posts.length, 0, key);
+    assert.equal(install.saved.status, undefined);
+    assert.equal(install.saved.draft[key], text, 'kept on this computer so it can be edited');
+  }
+});
+
+test('length caps: each text is cut to 2,000 characters before it is saved or sent', async () => {
+  const install = fakeInstall();
+  const long = 'Students learning to code who want plain answers. ';
+  await sendPmfAnswer({ q1: 'somewhat', q2: long.repeat(60), q3: 'b'.repeat(2000), q4: 7, extra: 'dropped' }, install.deps);
+  const body = install.posts[0]!;
+  assert.equal(body.q2.length, 2000);
+  assert.equal(body.q3.length, 2000);
+  assert.equal(body.q4, '');
+  assert.deepEqual(Object.keys(body).sort(), ['appVersion', 'consent', 'q1', 'q2', 'q3', 'q4']);
+  assert.equal(cleanPmfDraft({ q2: 'x'.repeat(2001) }).q2.length, 2000);
+});
+
 test('a failed send keeps the draft, shows a retry, and is never retried by itself', async () => {
-  for (const failure of [null, 'throw', 500, 503, 400, 401, 413] as const) {
+  for (const failure of [null, 'throw', 500, 503, 401, 413] as const) {
     const install = fakeInstall({ answer: failure });
     const result = await sendPmfAnswer(answers, install.deps);
     assert.deepEqual(result, { ok: false, error: PMF_SEND_FAILED }, String(failure));
@@ -73,10 +129,13 @@ test('a failed send keeps the draft, shows a retry, and is never retried by itse
     assert.deepEqual(await sendPmfAnswer(install.saved.draft, install.deps), { ok: true }, 'the person retries');
     assert.equal(install.saved.status, 'sent');
   }
-  const limited = fakeInstall({ answer: 429 });
-  const result = await sendPmfAnswer(answers, limited.deps);
-  assert.equal(result.ok, false);
-  assert.deepEqual(limited.saved.draft, answers);
+  for (const code of [400, 429]) {
+    const install = fakeInstall({ answer: code });
+    const result = await sendPmfAnswer(answers, install.deps);
+    assert.equal(result.ok, false);
+    assert.equal(install.saved.status, undefined);
+    assert.deepEqual(install.saved.draft, answers);
+  }
 });
 
 test('nothing is sent without a Q1 answer, after Not now, or from a build that cannot send', async () => {
@@ -88,16 +147,6 @@ test('nothing is sent without a Q1 answer, after Not now, or from a build that c
   assert.equal((await sendPmfAnswer(answers, dismissed.deps)).ok, false);
   assert.equal(dismissed.posts.length, 0);
   assert.equal((await sendPmfAnswer(answers, fakeInstall({ canSend: false }).deps)).ok, false);
-});
-
-test('renderer input is cleaned before it is saved or sent', async () => {
-  const install = fakeInstall();
-  await sendPmfAnswer({ q1: 'somewhat', q2: 'x'.repeat(1500), q3: 7, q4: ['a'], extra: 'dropped' }, install.deps);
-  const body = install.posts[0]!;
-  assert.equal(body.q2.length, 1000);
-  assert.equal(body.q3, '');
-  assert.equal(body.q4, '');
-  assert.deepEqual(Object.keys(body).sort(), ['appVersion', 'consent', 'daysSinceInstall', 'explanations', 'q1', 'q2', 'q3', 'q4']);
 });
 
 test('the request goes through the backend helper with trial headers, and never without them', async () => {
@@ -119,19 +168,20 @@ test('the request goes through the backend helper with trial headers, and never 
     assert.equal(seen[0]!.body, '{"q1":"very","consent":"pmf-v1"}');
     assert.equal(seen[0]!.headers.get('authorization'), 'Bearer trial-token');
     assert.equal(seen[0]!.headers.get('x-unvibe-install-id'), 'install123abc');
+    assert.equal(seen[0]!.headers.get('content-type'), 'application/json');
   } finally {
     globalThis.fetch = previousFetch;
   }
 });
 
-test('the card copy is the spec wording with Unvibe, the consent line is exact, and no dashes', () => {
+test('the card copy is the spec wording with Unvibe, Security\'s consent line, and no dashes', () => {
   assert.equal(PMF_QUESTIONS.q1, 'How would you feel if you could no longer use Unvibe?');
   assert.equal(PMF_QUESTIONS.q2, 'What type of people do you think would most benefit from Unvibe?');
   assert.equal(PMF_QUESTIONS.q3, 'What is the main benefit you receive from Unvibe?');
   assert.equal(PMF_QUESTIONS.q4, 'How can we improve Unvibe for you?');
   assert.deepEqual(PMF_Q1_OPTIONS.map((o) => o.label), ['Very disappointed', 'Somewhat disappointed', 'Not disappointed', 'N/A, I no longer use it']);
-  assert.equal(PMF_CONSENT_LINE, "Send shares these answers, how many explanations you've had and how many days since install with Unvibe, under an anonymous install ID. Nothing leaves your Mac until you press Send.");
-  const copy = [...Object.values(PMF_QUESTIONS), ...PMF_Q1_OPTIONS.map((o) => o.label), PMF_CONSENT_LINE, PMF_SEND_FAILED].join(' ');
+  assert.equal(PMF_CONSENT_LINE, "Your answers and a random install ID go to Unvibe's server so the team can read them. Nothing is sent until you press Send. Don't include passwords, keys or other people's personal details.");
+  const copy = [...Object.values(PMF_QUESTIONS), ...PMF_Q1_OPTIONS.map((o) => o.label), PMF_CONSENT_LINE, PMF_SEND_FAILED, PMF_SECRET_BLOCKED].join(' ');
   assert.equal(/[\u2013\u2014]/.test(copy), false);
   assert.equal(/partner|official|trusted by/i.test(copy), false);
 });

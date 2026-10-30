@@ -83,8 +83,8 @@ import {
   aiAuthHeaders,
   postPmfAnswer,
 } from './backend';
-import { PMF_SEND_FAILED, pmfCardState, sendPmfAnswer, type PmfDeps } from './pmf';
-import { cleanPmfDraft, completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
+import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
+import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
@@ -1446,14 +1446,14 @@ app.whenReady().then(() => {
   });
   ipcMain.on('pmf:draft', (_event, input: unknown) => {
     try {
-      store().savePmfDraft(cleanPmfDraft(input));
+      savePmfDraft(input, pmfDeps());
     } catch {
       // The panel keeps the answers on screen; the next change or Send saves again.
     }
   });
   ipcMain.handle('pmf:dismiss', () => {
     try {
-      store().setPmfStatus('dismissed');
+      dismissPmf(pmfDeps());
       return { ok: true };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Could not save that.' };

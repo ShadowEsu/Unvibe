@@ -12,7 +12,6 @@ app.getPath = (): string => userData;
 import type { LocalEvent } from '../src/core/learning';
 import {
   completedExplanations,
-  daysSinceFirstRun,
   earliestFirstRun,
   pmfEligible,
   type PmfEligibilityInput,
@@ -52,13 +51,6 @@ test('a missing or unreadable first-run timestamp is not eligible', () => {
   assert.equal(pmfEligible({ ...base, firstRunAt: undefined }), false);
   assert.equal(pmfEligible({ ...base, firstRunAt: '' }), false);
   assert.equal(pmfEligible({ ...base, firstRunAt: 'not a date' }), false);
-});
-
-test('days since install is whole days, clamped to what the server accepts', () => {
-  assert.equal(daysSinceFirstRun(daysAgo(2.9), NOW), 2);
-  assert.equal(daysSinceFirstRun(daysAgo(3), NOW), 3);
-  assert.equal(daysSinceFirstRun(new Date(NOW.getTime() + DAY).toISOString(), NOW), 0, 'a clock set back never goes negative');
-  assert.equal(daysSinceFirstRun(daysAgo(5000), NOW), 3650);
 });
 
 test('only explanations the person asked for count: not the first-run sample or day markers', () => {
