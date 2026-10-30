@@ -20,7 +20,7 @@ on:
         required: false
         default: "marketing-media.mjs"
       capture_preset:
-        description: "Preset for rls-panel-capture.mjs (rls, flag, workflow, lint, rust, ifreturn, regex, pyguard, javamid, pylower, pyexists, goptr, pyassert, pyresub, jsreduce, pyfstring or jsternary)"
+        description: "Preset for rls-panel-capture.mjs (rls, flag, workflow, lint, rust, ifreturn, regex, pyguard, javamid, pylower, pyexists, goptr, pyassert, pyresub, jsreduce, pyfstring, jsternary or pysum)"
         required: false
         default: "rls"
 

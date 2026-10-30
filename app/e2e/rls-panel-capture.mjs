@@ -1,5 +1,5 @@
 // Real panel captures for Marketing's code-history reels: the released app explaining one code card.
-// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345), 'goptr' (ep13), 'pyassert' (ep14), 'pyresub' (ep15), 'jsreduce' (ep16), 'pyfstring' (ep17), 'jsternary' (ep18).
+// Presets (CAPTURE_PRESET): 'rls' (ep02, request 20261028-1601), 'flag' (ep03, 20261028-2155), 'workflow' (ep04, 20261029-0005), 'lint' (ep05, 20261029-0040), 'rust' (20261029-0100), 'ifreturn' (20261029-0105), 'regex' (20261029-0016), 'pyguard' (ep09, 20261029-0112), 'javamid' (ep10, 20261029-0346), 'pylower' (ep11, 20261029-1340), 'pyexists' (ep12, 20261029-1345), 'goptr' (ep13), 'pyassert' (ep14), 'pyresub' (ep15), 'jsreduce' (ep16), 'pyfstring' (ep17), 'jsternary' (ep18), 'pysum' (ep19).
 // Same method as marketing-media.mjs: the installed release build and the hosted AI; nothing mocked.
 // Up to 3 takes (each a fresh explanation of the same file); each take's panel and text are saved, and
 // a take whose answer uses a banned word (it would imply detection) is discarded and retaken.
@@ -186,6 +186,18 @@ const PRESETS = {
     cropAtHeading: true,
     maxTakes: 2,
     banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(checks?|checking|detects?|detecting|tests?|testing|verif(y|ies|ying)|pings?|pinging|monitors?|monitoring|queries|querying|measures?)\b[^.]{0,25}\b(network|connection|connectivity|internet|server|wi-?fi|online status)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
+  },
+  // ep19: sum() over item.price doesn't validate prices or handle missing items/prices (a missing attribute
+  // raises AttributeError, None raises TypeError). A take that claims it does is retaken once, then dropped.
+  // Negated phrasing passes; "an empty cart gives 0" is true and passes.
+  pysum: {
+    file: 'app/cart.py',
+    code: 'total = sum(item.price for item in cart)\n',
+    match: 'sum(item.price',
+    level: 'beginner',
+    cropAtHeading: true,
+    maxTakes: 2,
+    banned: /\bbugs?\b|\bbuggy\b|\brisk|danger|vulnerab|\b(in)?secure\b|\bsafe(ly|r|ty)?\b|(?<!(n['’]t|not|never|no) )\b(validates?|validating|validation|sanitiz\w*)\b|(?<!(n['’]t|not|never) )\b(handles?|skips?|ignores?)\b[^.]{0,40}\b(missing|None|null|invalid|non-?numer\w*|bad|no|without)\b|(?<!(n['’]t|not|never) )\b(ensures?|guarantees?|makes? sure)\b/i,
   },
 };
 const preset = PRESETS[process.env.CAPTURE_PRESET ?? 'rls'];
