@@ -1623,3 +1623,36 @@ code.inline {
 .card .empty-or::before, .card .empty-or::after { content: ""; flex: 1; height: 1px; background: var(--p-line); }
 .card .empty-picker--paste .access-note { width: 100%; max-width: 420px; box-sizing: border-box; margin: 0; padding: 14px; }
 .card .access-note .shortcut-guide__steps li { font-size: 13.5px; }
+
+/* The PMF survey card (FE-09): inline under a finished explanation, styled like the limit strip
+   and the Test me options so it reads as part of the panel, never as a pop-up. */
+.pmf-card { position: relative; display: grid; gap: 12px; margin: 18px 0 4px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.pmf-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pmf-card__head .quiz__kicker { margin-bottom: 4px; }
+.pmf-card__sub, .pmf-card__consent { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.pmf-card__close { flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.pmf-card__close:hover:not(:disabled) { color: var(--fg); background: var(--chip-bg); }
+.pmf-card__q { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; font-size: 13px; font-weight: 650; line-height: 1.4; }
+.pmf-card__q legend { padding: 0; margin-bottom: 8px; }
+.pmf-card__options { display: grid; gap: 6px; }
+.pmf-card .opt { cursor: pointer; font-weight: 500; }
+.pmf-card .opt input { margin: 2px 0 0; accent-color: var(--test); }
+/* Its own field, not .teach-box: that one takes --p-code, which stays dark in the light panel
+   (Design MUST on #103). Same fill, border and radius as the answer rows; the focus ring is
+   the panel's 2px --p-focus outline. */
+.card .pmf-card__field { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid var(--p-line); border-radius: 12px; background: var(--p-surface); color: var(--p-ink); font: 400 13px/1.45 var(--font-sans); resize: vertical; }
+/* --uv-danger (#e08b82) is about 2.5:1 on the light panel's white; #a1291f (the companion's error
+   red) is about 7.3:1 there. Dark keeps --uv-danger. */
+.card .pmf-card { --pmf-danger: var(--uv-danger); }
+:root[data-panel="light"] .card .pmf-card { --pmf-danger: #a1291f; }
+.pmf-card__error { margin: 0; font-size: 12.5px; }
+/* Above '.card .body p' (dark, 0,2,1) and its light rule (0,4,1), which otherwise set the text grey. */
+:root .card.card .body p.pmf-card__error { color: var(--pmf-danger, var(--uv-danger)); }
+.pmf-card__error--field { display: flex; align-items: flex-start; gap: 6px; margin-top: -4px; }
+.pmf-card__error-icon { flex: none; display: inline-grid; place-items: center; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; background: var(--pmf-danger, var(--uv-danger)); color: var(--p-surface); font: 700 10px/1 var(--font-sans); }
+.card .pmf-card__field[aria-invalid="true"] { border-color: var(--pmf-danger); }
+.pmf-card .btn.ghost:disabled { opacity: 0.5; cursor: default; }
+.pmf-card--thanks { grid-template-columns: 1fr auto; align-items: center; }
+.pmf-card--thanks p { margin: 0; font-size: 13px; line-height: 1.45; }
+.pmf-card__id { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; cursor: text; }
+.pmf-card .btn.pmf-card__copy { min-width: 24px; min-height: 24px; margin-left: 2px; padding: 3px 9px; border-radius: 7px; font-size: 11.5px; line-height: 16px; vertical-align: baseline; }
