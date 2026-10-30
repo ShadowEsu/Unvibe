@@ -158,6 +158,7 @@ export function Chat({
   const [copied, setCopied] = useState<number | null>(null);
   const [modelName, setModelName] = useState('');
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
+  const [repoLabel, setRepoLabel] = useState('');
   const [saved, setSaved] = useState<SavedThread[]>([]);
   const [showVoice, setShowVoice] = useState(voiceTip);
   const threadRef = useRef(newThreadId());
@@ -209,8 +210,11 @@ export function Chat({
     areaRef.current?.focus();
     loadSaved();
     void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
-      const next = result as { ok?: boolean; brief?: ChangeBrief; branch?: string };
-      if (next?.ok && next.brief && !next.brief.empty) setBrief(next.brief);
+      const next = result as { ok?: boolean; brief?: ChangeBrief; repoLabel?: string; branch?: string };
+      if (next?.ok && next.brief && !next.brief.empty) {
+        setBrief(next.brief);
+        setRepoLabel(next.repoLabel ?? '');
+      }
     });
   }, []);
 
@@ -335,7 +339,7 @@ export function Chat({
             <h2>{greetName(userName)}</h2>
             <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
             <div className="chat-context">
-              {brief?.repo ? <span>Repository {brief.repo}</span> : <span>Repository on this {deviceName}</span>}
+              {repoLabel ? <span>Repository {repoLabel}</span> : <span>Repository on this {deviceName}</span>}
               <span>{brief ? `${brief.filesChanged} files in the working tree` : 'No current change'}</span>
               {brief?.files[0] ? <span>Current file {brief.files[0].path}</span> : null}
             </div>

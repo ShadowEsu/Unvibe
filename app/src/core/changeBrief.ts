@@ -105,14 +105,17 @@ export function buildChangeBrief(input: {
 }
 
 /**
- * The project path as the Brief shows it: inside the home folder it starts with `~`, so the
+ * The project path as the app shows it: inside the home folder it starts with `~`, so the
  * person's account name never shows on screen (or in screenshots). Display only; `repo` keeps
- * the full path for git and saved state.
+ * the full path for git and saved state. Git for Windows prints `C:/Users/sam/app` while the
+ * home folder is `C:\Users\sam`, so both sides compare with `/`, and Windows paths ignore case.
  */
 export function briefRepoLabel(repo: string, home: string): string {
-  const base = home.replace(/[\\/]+$/, '');
+  const slash = (p: string) => p.replace(/\\/g, '/');
+  const base = slash(home).replace(/\/+$/, '');
   if (!base) return repo;
-  if (repo === base) return '~';
-  const next = repo.charAt(base.length);
-  return repo.startsWith(base) && (next === '/' || next === '\\') ? `~${repo.slice(base.length)}` : repo;
+  const full = slash(repo);
+  const fold = /^[A-Za-z]:\//.test(base) ? (p: string) => p.toLowerCase() : (p: string) => p;
+  if (fold(full) === fold(base)) return '~';
+  return fold(full).startsWith(`${fold(base)}/`) ? `~${full.slice(base.length)}` : repo;
 }

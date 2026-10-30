@@ -73,7 +73,10 @@ test('the brief shows a project under the home folder as ~/…, never the accoun
   assert.equal(briefRepoLabel('/Users/sam/code/app', '/Users/sam'), '~/code/app');
   assert.equal(briefRepoLabel('/Users/sam/code/app', '/Users/sam/'), '~/code/app');
   assert.equal(briefRepoLabel('/Users/sam', '/Users/sam'), '~');
-  assert.equal(briefRepoLabel('C:\\Users\\sam\\code\\app', 'C:\\Users\\sam'), '~\\code\\app');
+  // Git for Windows prints forward slashes while the home folder uses backslashes; case is ignored.
+  assert.equal(briefRepoLabel('C:/Users/sam/app', 'C:\\Users\\sam'), '~/app');
+  assert.equal(briefRepoLabel('C:\\Users\\sam\\code\\app', 'C:\\Users\\sam'), '~/code/app');
+  assert.equal(briefRepoLabel('c:/users/Sam/app', 'C:\\Users\\sam'), '~/app');
   // A sibling folder that only shares the prefix is not inside home.
   assert.equal(briefRepoLabel('/Users/samuel/app', '/Users/sam'), '/Users/samuel/app');
   assert.equal(briefRepoLabel('/srv/app', '/Users/sam'), '/srv/app');
