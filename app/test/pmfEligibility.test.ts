@@ -21,7 +21,7 @@ import { store } from '../src/main/store';
 const DAY = 86_400_000;
 const NOW = new Date('2026-11-10T12:00:00.000Z');
 const daysAgo = (days: number) => new Date(NOW.getTime() - days * DAY).toISOString();
-const base: PmfEligibilityInput = { explanations: 3, firstRunAt: daysAgo(3), status: undefined, now: NOW };
+const base: PmfEligibilityInput = { explanations: 3, firstRunAt: daysAgo(3), status: undefined, shownThisRun: false, now: NOW };
 
 function lesson(id: string, ts: string, extra: Partial<LocalEvent> = {}): LocalEvent {
   return { id, ts, eventType: 'explanation_completed', scope: 'selection', level: 'beginner', outcome: 'reviewed', lines: 3, ...extra };
@@ -41,10 +41,18 @@ test('3 full days since the first run is eligible, 2.9 days is not', () => {
   assert.equal(pmfEligible({ ...base, firstRunAt: daysAgo(30) }), true);
 });
 
-test('dismissed or sent is never eligible again', () => {
+test('dismissed or sent is never eligible again, even in the run that showed it', () => {
   assert.equal(pmfEligible({ ...base, status: 'dismissed' }), false);
   assert.equal(pmfEligible({ ...base, status: 'sent' }), false);
   assert.equal(pmfEligible({ ...base, status: 'sent', explanations: 500, firstRunAt: daysAgo(400) }), false);
+  assert.equal(pmfEligible({ ...base, status: 'dismissed', shownThisRun: true }), false);
+  assert.equal(pmfEligible({ ...base, status: 'sent', shownThisRun: true }), false);
+});
+
+test('shown: eligible only in the same run (memory flag set), never after a restart', () => {
+  assert.equal(pmfEligible({ ...base, status: 'shown', shownThisRun: true }), true);
+  assert.equal(pmfEligible({ ...base, status: 'shown', shownThisRun: false }), false);
+  assert.equal(pmfEligible({ ...base, status: 'shown', shownThisRun: true, explanations: 2 }), false);
 });
 
 test('a missing or unreadable first-run timestamp is not eligible', () => {
@@ -90,6 +98,11 @@ test('store: the draft stays until the survey is sent or closed, and a closed su
   assert.equal(s.pmfStatus(), undefined);
   s.savePmfDraft({ q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster' });
   assert.deepEqual(s.pmfDraft(), { q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster' });
+  s.setPmfStatus('shown');
+  assert.deepEqual(s.pmfDraft(), { q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster' }, 'shown keeps the draft for this run');
+  s.savePmfDraft({ q1: 'very', q2: 'Students', q3: '', q4: 'Faster' });
+  assert.equal(s.pmfStatus(), 'shown');
+  assert.equal(s.pmfDraft().q1, 'very', 'typing while shown still saves');
   s.setPmfStatus('dismissed');
   assert.equal(s.pmfStatus(), 'dismissed');
   assert.deepEqual(s.pmfDraft(), { q1: '', q2: '', q3: '', q4: '' }, 'closing deletes the draft');

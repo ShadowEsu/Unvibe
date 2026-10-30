@@ -11,6 +11,8 @@ export interface PmfCardModel {
   draft: PmfDraft;
   stage: 'form' | 'sending' | 'thanks';
   error: string;
+  /** After Send: the install ID the answers are filed under, for a deletion request. */
+  installId: string;
 }
 
 const TEXT_QUESTIONS = ['q2', 'q3', 'q4'] as const;
@@ -31,7 +33,10 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
   if (stage === 'thanks') {
     return (
       <section className="pmf-card pmf-card--thanks" aria-label="Unvibe survey" aria-live="off">
-        <p role="status">Thanks. Your answers help us decide what to improve in Unvibe.</p>
+        <p role="status">
+          Thanks. Your answers help us decide what to improve in Unvibe. To delete them later, email
+          support@unvibe.site with this install ID: <code className="pmf-card__id">{model.installId}</code>
+        </p>
         <button type="button" className="pmf-card__close" aria-label="Close" title="Close" onClick={onClose}>×</button>
       </section>
     );

@@ -40,8 +40,11 @@ export const PMF_CONSENT_LINE =
 /** Security's wording when the app's secret filter finds anything in a text answer. */
 export const PMF_SECRET_BLOCKED = 'That looks like a key or password. Take it out and try again.';
 
-/** `sent`: the server has the answer (201, or 409 already answered). `dismissed`: Not now or ×. */
-export type PmfStatus = 'sent' | 'dismissed';
+/**
+ * `shown`: the card appeared in some run of the app; it stays for that run only (one panel session).
+ * `sent`: the server has the answer (201, or 409 already answered). `dismissed`: Not now or ×.
+ */
+export type PmfStatus = 'shown' | 'sent' | 'dismissed';
 
 export interface PmfDraft {
   q1: PmfQ1 | '';
@@ -57,12 +60,17 @@ export interface PmfEligibilityInput {
   /** ISO time of this install's first run; missing or unreadable means not eligible. */
   firstRunAt: string | undefined;
   status: PmfStatus | undefined;
+  /** The card was shown earlier in this run of the app (memory only; a restart clears it). */
+  shownThisRun: boolean;
   now: Date;
 }
 
-/** At least 3 completed explanations, at least 3 full days since the first run, never sent or dismissed. */
-export function pmfEligible({ explanations, firstRunAt, status, now }: PmfEligibilityInput): boolean {
-  if (status) return false;
+/**
+ * At least 3 completed explanations, at least 3 full days since the first run, and either never
+ * shown, or shown in this same run. Never after Send or close, and never in a later run.
+ */
+export function pmfEligible({ explanations, firstRunAt, status, shownThisRun, now }: PmfEligibilityInput): boolean {
+  if (status && !(status === 'shown' && shownThisRun)) return false;
   if (explanations < PMF_MIN_EXPLANATIONS) return false;
   const first = firstRunAt ? Date.parse(firstRunAt) : Number.NaN;
   if (Number.isNaN(first)) return false;

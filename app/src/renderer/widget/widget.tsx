@@ -730,7 +730,7 @@ function Widget() {
     if (!pmfReady || pmf || pmfClosed.current) return;
     let live = true;
     void window.unvibe.pmfState().then((state) => {
-      if (live && state.show && !pmfClosed.current) setPmf({ draft: state.draft, stage: 'form', error: '' });
+      if (live && state.show && !pmfClosed.current) setPmf({ draft: state.draft, stage: 'form', error: '', installId: '' });
     }).catch(() => undefined);
     return () => { live = false; };
   }, [pmfReady, pmf]);
@@ -766,11 +766,16 @@ function Widget() {
     window.clearTimeout(pmfSaveTimer.current);
     pmfPending.current = null;
     const { draft } = pmf;
-    setPmf({ draft, stage: 'sending', error: '' });
+    setPmf({ draft, stage: 'sending', error: '', installId: '' });
     void window.unvibe.pmfSend(draft)
       .catch(() => ({ ok: false as const, error: 'Could not send. Your answers are still here, so you can try again.' }))
       .then((result) => {
-        setPmf((current) => (current ? { ...current, stage: result.ok ? 'thanks' : 'form', error: result.ok ? '' : result.error } : current));
+        setPmf((current) => {
+          if (!current) return current;
+          return result.ok
+            ? { ...current, stage: 'thanks', error: '', installId: result.installId }
+            : { ...current, stage: 'form', error: result.error };
+        });
       });
   };
 

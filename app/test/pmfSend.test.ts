@@ -18,9 +18,14 @@ const DAY = 86_400_000;
 const NOW = new Date('2026-11-10T12:00:00.000Z');
 const EMPTY: PmfDraft = { q1: '', q2: '', q3: '', q4: '' };
 
-/** A fake install: `saved` stands in for unvibe-store.json; `answer` is what the server replies. */
+/**
+ * A fake install: `saved` stands in for unvibe-store.json (drafts are ignored once sent or closed,
+ * as in store.ts), `run` for this run of the app's memory, and `answer` is what the server replies.
+ * A "restart" is a new fakeInstall given the old `saved` values.
+ */
 function fakeInstall(options: { explanations?: number; firstRunDaysAgo?: number; status?: PmfStatus; draft?: PmfDraft; answer?: number | null | 'throw'; canSend?: boolean } = {}) {
   const saved: { status?: PmfStatus; draft: PmfDraft } = { status: options.status, draft: options.draft ?? { ...EMPTY } };
+  const run = { shown: false };
   const posts: PmfRequestBody[] = [];
   let answer = options.answer === undefined ? 201 : options.answer;
   const deps: PmfDeps = {
@@ -29,8 +34,12 @@ function fakeInstall(options: { explanations?: number; firstRunDaysAgo?: number;
     firstRunAt: () => new Date(NOW.getTime() - (options.firstRunDaysAgo ?? 4.5) * DAY).toISOString(),
     status: () => saved.status,
     draft: () => saved.draft,
-    saveDraft: (draft) => { saved.draft = draft; },
-    setStatus: (status) => { saved.status = status; saved.draft = { ...EMPTY }; },
+    saveDraft: (draft) => { if (saved.status !== 'sent' && saved.status !== 'dismissed') saved.draft = draft; },
+    // Only the status: clearing the draft is pmf.ts's job, so these tests prove it does.
+    setStatus: (status) => { saved.status = status; },
+    shownThisRun: () => run.shown,
+    markShownThisRun: () => { run.shown = true; },
+    installId: () => 'install123abc',
     post: options.canSend === false ? null : async (body) => {
       posts.push(body);
       if (answer === 'throw') throw new Error('offline');
@@ -38,7 +47,7 @@ function fakeInstall(options: { explanations?: number; firstRunDaysAgo?: number;
     },
     appVersion: '0.1.47',
   };
-  return { deps, saved, posts, reply: (next: number | null | 'throw') => { answer = next; } };
+  return { deps, saved, run, posts, reply: (next: number | null | 'throw') => { answer = next; } };
 }
 
 const answers: PmfDraft = { q1: 'very', q2: '  Bootcamp students ', q3: 'I can read what the AI wrote', q4: '' };
@@ -50,6 +59,18 @@ test('the card shows only when eligible and the build can send, with the saved d
   assert.equal(pmfCardState(fakeInstall({ status: 'dismissed' }).deps).show, false);
   assert.equal(pmfCardState(fakeInstall({ status: 'sent' }).deps).show, false);
   assert.equal(pmfCardState(fakeInstall({ canSend: false }).deps).show, false, 'no trial token: answers could never leave, so no card');
+});
+
+test('shown in one run only: still shown later in the same run, never after a restart', () => {
+  const install = fakeInstall();
+  assert.equal(pmfCardState(install.deps).show, true);
+  assert.equal(install.saved.status, 'shown', 'persisted the first time it shows');
+  assert.equal(install.run.shown, true);
+  savePmfDraft(answers, install.deps);
+  assert.deepEqual(pmfCardState(install.deps), { show: true, draft: answers }, 'same run: still shown, with the draft');
+  const restarted = fakeInstall({ status: install.saved.status, draft: install.saved.draft });
+  assert.equal(pmfCardState(restarted.deps).show, false, 'after a restart it never comes back');
+  assert.equal(restarted.posts.length + install.posts.length, 0);
 });
 
 test('nothing is sent before Send: showing the card and typing only save on this computer', () => {
@@ -66,26 +87,29 @@ test('close (Not now or ×) sends nothing, deletes the draft and the card never 
   dismissPmf(install.deps);
   assert.equal(install.posts.length, 0);
   assert.equal(install.saved.status, 'dismissed');
-  assert.deepEqual(install.saved.draft, EMPTY);
+  assert.deepEqual(install.saved.draft, EMPTY, 'draft() is empty after close');
+  assert.deepEqual(install.deps.draft(), EMPTY);
   assert.equal(pmfCardState(install.deps).show, false);
 });
 
 test('Send posts only the answers, the version and the consent marker, once; then the survey is done', async () => {
-  const install = fakeInstall();
-  assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true });
+  const install = fakeInstall({ draft: answers });
+  assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true, installId: 'install123abc' }, 'the result carries the install ID for deletion requests');
   assert.deepEqual(install.posts, [{
     q1: 'very', q2: 'Bootcamp students', q3: 'I can read what the AI wrote', q4: '', appVersion: '0.1.47', consent: 'pmf-v1',
   }]);
   assert.equal(install.saved.status, 'sent');
+  assert.deepEqual(install.deps.draft(), EMPTY, 'draft() is empty after a sent answer');
   assert.equal(pmfCardState(install.deps).show, false, 'never shown again');
-  assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true });
+  assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true, installId: 'install123abc' });
   assert.equal(install.posts.length, 1, 'a second press sends nothing');
 });
 
 test('409 (the server says this install is not due for 90 days) also finishes the survey', async () => {
   const install = fakeInstall({ answer: 409 });
-  assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true });
+  assert.deepEqual(await sendPmfAnswer(answers, install.deps), { ok: true, installId: 'install123abc' });
   assert.equal(install.saved.status, 'sent');
+  assert.deepEqual(install.deps.draft(), EMPTY);
 });
 
 test('the secret filter blocks Send with Security\'s wording; nothing is posted and the draft stays', async () => {
@@ -126,7 +150,7 @@ test('a failed send keeps the draft, shows a retry, and is never retried by itse
     assert.deepEqual(install.saved.draft, answers, 'the answers stay on this computer');
     assert.equal(install.posts.length, 1, 'exactly one attempt per press; pmf.ts schedules no timer, so nothing retries later');
     install.reply(201);
-    assert.deepEqual(await sendPmfAnswer(install.saved.draft, install.deps), { ok: true }, 'the person retries');
+    assert.deepEqual(await sendPmfAnswer(install.saved.draft, install.deps), { ok: true, installId: 'install123abc' }, 'the person retries');
     assert.equal(install.saved.status, 'sent');
   }
   for (const code of [400, 429]) {

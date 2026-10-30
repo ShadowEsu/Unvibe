@@ -74,7 +74,7 @@ const api = {
   pmfState: (): Promise<{ show: boolean; draft: PmfDraft }> => ipcRenderer.invoke('pmf:state'),
   pmfSaveDraft: (draft: PmfDraft) => ipcRenderer.send('pmf:draft', draft),
   pmfDismiss: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('pmf:dismiss'),
-  pmfSend: (draft: PmfDraft): Promise<{ ok: true } | { ok: false; error: string }> => ipcRenderer.invoke('pmf:send', draft),
+  pmfSend: (draft: PmfDraft): Promise<{ ok: true; installId: string } | { ok: false; error: string }> => ipcRenderer.invoke('pmf:send', draft),
   onShowPage: (cb: (page: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, page: string) => cb(page);
     ipcRenderer.on('companion:showPage', listener);

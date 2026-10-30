@@ -1426,6 +1426,8 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('feedback:send', (_event, input: FeedbackInput | undefined) => sendFeedback(input, { fetcher: networkFetch, appVersion: app.getVersion() }));
   // The PMF survey card in the panel (FE-09). Nothing is sent until pmf:send, which the Send button calls.
+  // Shown in one run of the app only: this flag lives in memory, so a restart never brings it back.
+  let pmfShownThisRun = false;
   const pmfDeps = (): PmfDeps => ({
     now: () => new Date(),
     explanations: () => completedExplanations(store().events()),
@@ -1434,6 +1436,9 @@ app.whenReady().then(() => {
     draft: () => store().pmfDraft(),
     saveDraft: (draft) => store().savePmfDraft(draft),
     setStatus: (status) => store().setPmfStatus(status),
+    shownThisRun: () => pmfShownThisRun,
+    markShownThisRun: () => { pmfShownThisRun = true; },
+    installId: () => store().installId(),
     post: trialBuildEnabled() ? (body) => postPmfAnswer(body, aiAuthHeaders(null)) : null,
     appVersion: app.getVersion(),
   });

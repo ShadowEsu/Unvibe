@@ -389,16 +389,18 @@ class Store {
     return cleanPmfDraft(this.data.pmf?.draft);
   }
 
-  /** Unsent answers stay in this file until Send succeeds; ignored once the survey is closed. */
+  /** Unsent answers stay in this file until Send succeeds; ignored once the survey is sent or closed. */
   savePmfDraft(draft: PmfDraft): void {
-    if (this.data.pmf?.status) return;
-    this.data.pmf = { draft };
+    const status = this.data.pmf?.status;
+    if (status === 'sent' || status === 'dismissed') return;
+    this.data.pmf = status ? { status, draft } : { draft };
     this.save();
   }
 
-  /** Sent or closed: the card never shows again and the draft is deleted. */
+  /** `shown` keeps the draft for this run; sent or closed never shows again and drops any draft. */
   setPmfStatus(status: PmfStatus): void {
-    this.data.pmf = { status };
+    const draft = this.data.pmf?.draft;
+    this.data.pmf = status === 'shown' && draft ? { status, draft } : { status };
     this.save();
   }
 
