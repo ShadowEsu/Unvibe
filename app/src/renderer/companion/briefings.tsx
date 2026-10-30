@@ -5,6 +5,7 @@ import { buildAgentReview, type AgentReview } from '../../core/agentReview';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
+import { BriefsProCard, briefsAiLabel } from './briefsPro';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -13,7 +14,8 @@ const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'branch', label: 'Branch vs base' },
 ];
 
-export function Briefings() {
+/** `plan` is the account's plan once usage has loaded (null before); `onPlan` opens Plan & usage. */
+export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () => void }) {
   const [scope, setScope] = useState<BriefScope>('working');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +25,8 @@ export function Briefings() {
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [needsRepo, setNeedsRepo] = useState(false);
   const [openFile, setOpenFile] = useState<string | null>(null);
+  const [needsPro, setNeedsPro] = useState(false);
+  const [proOpen, setProOpen] = useState(false);
 
   const loadKnowledge = async () => {
     try {
@@ -68,11 +72,17 @@ export function Briefings() {
     void build(false);
   }, [scope]);
 
+  useEffect(() => {
+    void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)).catch(() => setProOpen(false));
+  }, []);
+
   const understand = async () => {
     setBusy(true);
+    setNeedsPro(false);
     try {
-      const result = await window.unvibe.explainDiff({ brief: true, scope }) as { ok?: boolean; cancelled?: boolean; error?: string };
-      if (!result?.ok && !result?.cancelled) setError(result?.error ?? 'Could not start that review.');
+      const result = await window.unvibe.explainDiff({ brief: true, scope }) as { ok?: boolean; cancelled?: boolean; error?: string; proRequired?: boolean };
+      if (result?.proRequired) setNeedsPro(true);
+      else if (!result?.ok && !result?.cancelled) setError(result?.error ?? 'Could not start that review.');
     } catch {
       setError('Unvibe could not complete this request. Try again.');
     } finally {
@@ -113,6 +123,7 @@ export function Briefings() {
       </div>
 
       {error ? <div className="briefings__empty" role="alert">{error}</div> : null}
+      {needsPro ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
       {busy && <p className="briefings__busy" role="status">Reading your project…</p>}
       {needsRepo && !busy && (
         <section className="briefings__empty">
@@ -127,6 +138,7 @@ export function Briefings() {
           review={buildAgentReview(brief, knowledge)}
           repo={brief.repo}
           busy={busy}
+          explainLabel={briefsAiLabel('Explain the change', plan)}
           onExplain={() => void understand()}
           onRefreshKnowledge={(id) => void window.unvibe.refreshKnowledge(id).then(() => loadKnowledge())}
         />
@@ -150,7 +162,7 @@ export function Briefings() {
             {brief.understandBeforeCommit.map((line) => <li key={line}>{line}</li>)}
           </ol>
           <p className="briefings__note">{brief.provenanceNote}</p>
-          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand()}>Understand Change</button>
+          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand()}>{briefsAiLabel('Understand Change', plan)}</button>
           <h2>Files</h2>
           <ul className="briefings__files">
             {brief.files.map((file) => (
@@ -214,10 +226,11 @@ export function Briefings() {
 const SIZE_LABEL: Record<AgentReview['size'], string> = { small: 'Small change', medium: 'Medium change', large: 'Big change' };
 
 /** After-Agent Review: what an agent (or you) just changed, ranked by what deserves a human look. */
-function AgentReviewCard({ review, repo, busy, onExplain, onRefreshKnowledge }: {
+function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, onRefreshKnowledge }: {
   review: AgentReview;
   repo: string;
   busy: boolean;
+  explainLabel: string;
   onExplain: () => void;
   onRefreshKnowledge: (id: string) => void;
 }) {
@@ -245,7 +258,7 @@ function AgentReviewCard({ review, repo, busy, onExplain, onRefreshKnowledge }: 
           <h2>{review.headline}</h2>
           <p className="agent-review__sub">{SIZE_LABEL[review.size]}{repo ? ` in ${repo.split(/[\\/]/).filter(Boolean).pop()}` : ''}. Here is what deserves your eyes first.</p>
         </div>
-        <button type="button" className="primary-btn" disabled={busy} onClick={onExplain}>Explain the change</button>
+        <button type="button" className="primary-btn" disabled={busy} onClick={onExplain}>{explainLabel}</button>
       </header>
       <div className="agent-review__grid">
         <section>

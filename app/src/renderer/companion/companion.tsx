@@ -2267,7 +2267,7 @@ function App() {
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
-                : page === 'Briefings' ? <Briefings />
+                : page === 'Briefings' ? <Briefings plan={usageLine?.plan ?? null} onPlan={() => setPage('Plan')} />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>

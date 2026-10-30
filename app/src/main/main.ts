@@ -102,7 +102,6 @@ import {
   buildComparePayload,
   buildDiffPayload,
   buildSelectionPayload,
-  isProPlan,
   sendNearbyFiles,
   resolveRepoRoot,
 } from './contextBuilder';
@@ -121,6 +120,7 @@ import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
+import { isProPlan } from '../core/plan';
 
 function osUserName(): string {
   try {
@@ -1145,11 +1145,11 @@ app.whenReady().then(() => {
     const brief = Boolean(opts?.brief);
     const feature = brief ? 'Change briefs' : 'Git diff explanations';
     // Plan check first, so a Free user is never asked to pick a folder for a feature they cannot use.
-    // Only the panel renders the upgrade prompt; Briefs shows the returned error and gets no panel.
+    // Only the panel renders the upgrade prompt; Briefs gets `proRequired` and shows its own Pro card.
     const panel = currentWidget();
     const askedFromPanel = panel !== null && widgetOf(e) === panel;
     if (!(await requireProOrError(askedFromPanel ? panel : null, activeTabId, feature))) {
-      return { ok: false, error: 'Pro required' };
+      return { ok: false, error: 'Pro required', proRequired: true };
     }
     let root = await resolveRepoRoot();
     if (!root) {

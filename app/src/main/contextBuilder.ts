@@ -10,6 +10,7 @@ import type { DiffHunk, ExplanationLevel, ReviewRequestPayload, ReviewScope } fr
 import { store } from './store';
 import { settings } from './settings';
 import { fenceBlock } from './promptFence';
+import { isProPlan } from '../core/plan';
 
 const MAX_NEARBY_CHARS = 8_000;
 const MAX_SNAPSHOT_CHARS = 12_000;
@@ -275,10 +276,6 @@ export async function buildComparePayload(opts: {
     language: payload.context.language,
     mode: 'compare',
   };
-}
-
-export function isProPlan(plan: string): boolean {
-  return plan === 'pro' || plan === 'teams' || plan === 'full';
 }
 
 /** Pro's nearby files go only when the person turned them on in Settings › Privacy & Data (Security U13). */
