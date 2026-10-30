@@ -55,5 +55,5 @@ test('streaming renders an unclosed trailing code span or bold label without raw
 test('streaming leaves finished lines and open fenced blocks alone', () => {
   const finished = markup('Use a ` mark like this.\nAnd go on', true);
   assert.match(finished, /Use a ` mark like this\./);
-  assert.match(markup('```js\nconst a = `x', true), /const a = `x/);
+  assert.match(markup('```js\nconst a = `x', true), / a = `x<\/pre>/);
 });
