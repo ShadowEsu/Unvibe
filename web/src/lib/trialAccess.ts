@@ -167,8 +167,11 @@ export function trialInstallKey(installId: string): string {
   return createHash('sha256').update(`unvibe-trial-install:${installId}`).digest('hex');
 }
 
-/** Validate Bearer trial token + install header. Returns install key or null. */
-export function trialInstallFromRequest(req: Request): string | null {
+/**
+ * Validate Bearer trial token + install header. Returns the raw install id or null. Callers must
+ * hash it before storing it (`trialInstallKey`, or a feature-specific prefix like the PMF survey).
+ */
+export function trialInstallIdFromRequest(req: Request): string | null {
   const secret = trialSecret();
   if (!secret) return null;
   const header = req.headers.get('authorization') ?? '';
@@ -176,8 +179,13 @@ export function trialInstallFromRequest(req: Request): string | null {
   const token = match?.[1]?.trim();
   if (!token || !safeEqual(token, secret)) return null;
   const installId = req.headers.get('x-unvibe-install-id')?.trim() ?? '';
-  if (!INSTALL_ID_RE.test(installId)) return null;
-  return trialInstallKey(installId);
+  return INSTALL_ID_RE.test(installId) ? installId : null;
+}
+
+/** Validate Bearer trial token + install header. Returns install key or null. */
+export function trialInstallFromRequest(req: Request): string | null {
+  const installId = trialInstallIdFromRequest(req);
+  return installId ? trialInstallKey(installId) : null;
 }
 
 function memoryBucket(): Map<string, TrialCounter> {
@@ -482,10 +490,22 @@ export async function reserveTrialAction(
  * secret for the per-IP key; 503).
  */
 export async function reserveTrialProgressPing(ip: string, now = new Date()): Promise<'ok' | 'limited' | 'unavailable'> {
+  return reserveIpPing('__progress_ip__:', limitFromEnv('UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT', 500), ip, now);
+}
+
+/**
+ * Rate limit for `POST /api/v1/feedback/pmf`, the same per-network daily counter as progress pings
+ * under `__pmf_ip__:YYYY-MM-DD:<hmac>` (UNVIBE_PMF_IP_DAILY_LIMIT, default 50; each install answers
+ * at most once per 90 days, so a classroom NAT stays far below it). Same results as above.
+ */
+export async function reservePmfSubmission(ip: string, now = new Date()): Promise<'ok' | 'limited' | 'unavailable'> {
+  return reserveIpPing('__pmf_ip__:', limitFromEnv('UNVIBE_PMF_IP_DAILY_LIMIT', 50), ip, now);
+}
+
+async function reserveIpPing(prefix: string, limit: number, ip: string, now: Date): Promise<'ok' | 'limited' | 'unavailable'> {
   const ipKey = trialIpKey(ip, now);
   if (!ipKey) return 'unavailable';
-  const key = ipKey.replace(/^__ip__:/, '__progress_ip__:');
-  const reserved = await reserveUnit(key, SHARED_COUNTER_KIND, limitFromEnv('UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT', 500));
+  const reserved = await reserveUnit(ipKey.replace(/^__ip__:/, prefix), SHARED_COUNTER_KIND, limit);
   if (reserved === null) return 'unavailable';
   return reserved === -1 ? 'limited' : 'ok';
 }
