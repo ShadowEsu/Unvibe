@@ -69,12 +69,25 @@ export function aiAuthHeaders(sessionToken?: string | null): Record<string, stri
 }
 
 /** One setup-progress ping (see progress.ts). Returns the HTTP status, or null when nothing came back. */
-export async function postTrialProgress(step: string, headers: Record<string, string>): Promise<number | null> {
+export function postTrialProgress(step: string, headers: Record<string, string>): Promise<number | null> {
+  return postForStatus('/api/v1/trial/progress', { step }, headers);
+}
+
+/**
+ * One PMF survey answer (pmf.ts), sent only when the person presses Send. Always the trial headers
+ * (`aiAuthHeaders(null)`), signed in or not: the server keys answers by a hash of the install ID.
+ * Returns the HTTP status, or null when nothing came back. Never retried automatically.
+ */
+export function postPmfAnswer(body: unknown, headers: Record<string, string>): Promise<number | null> {
+  return postForStatus('/api/v1/feedback/pmf', body, headers);
+}
+
+async function postForStatus(route: string, body: unknown, headers: Record<string, string>): Promise<number | null> {
   if (!headers.authorization) return null;
-  const res = await request(`${BACKEND}/api/v1/trial/progress`, {
+  const res = await request(`${BACKEND}${route}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify({ step }),
+    body: JSON.stringify(body),
   }).catch(() => null);
   await res?.body?.cancel().catch(() => undefined);
   return res?.status ?? null;
