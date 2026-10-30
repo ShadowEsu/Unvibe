@@ -314,7 +314,7 @@ export function ResourcesHub() {
             <div className="resources-arch-specs">
               <div className="resources-spec-item">
                 <strong>No repository upload</strong>
-                <p>Unvibe does not clone or index your repository. It sends the code you select plus limited context such as file name and language.</p>
+                <p>Unvibe does not clone or index your repository. It sends the code you select plus limited context: its language, and the file&apos;s path inside your project and your project folder&apos;s name when Unvibe knows them.</p>
               </div>
               <div className="resources-spec-item">
                 <strong>No training set built from your code</strong>
