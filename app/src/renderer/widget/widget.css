@@ -1414,6 +1414,8 @@ code.inline {
 .card .body li::marker { color: var(--p-lime); }
 .card .body a { color: var(--p-sky); }
 .card .body :not(pre) > code { background: var(--p-raised); color: var(--p-sun); }
+/* A code chip inside a bold label keeps the label's lime band running through it (Design P3-1). */
+.card .body strong > code { background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.28) 62%), var(--p-raised); }
 .card .code-context, .card .cb { border-radius: 12px; border-color: var(--p-line); }
 .card .tk-k { color: var(--p-lilac); } .card .tk-s { color: var(--p-lime); } .card .tk-c { color: #6f6c64; } .card .tk-n { color: var(--p-sun); }
 
@@ -1496,6 +1498,7 @@ code.inline {
 :root[data-panel="light"] .card .body p { color: #2e2e2e; }
 :root[data-panel="light"] .card .body strong { color: #141414; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%); }
 :root[data-panel="light"] .card .body :not(pre) > code { background: #f1eee6; color: #9a3412; }
+:root[data-panel="light"] .card .body strong > code { background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%), #f1eee6; }
 :root[data-panel="light"] .card .body a { color: #1d6fa5; }
 /* List numbers and bullets are text: lime on cream was 1.29:1; #4d5c00 is 7.08:1 on the light panel. */
 :root[data-panel="light"] .card .body li::marker { color: #4d5c00; }
