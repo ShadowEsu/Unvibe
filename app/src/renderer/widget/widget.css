@@ -1209,6 +1209,9 @@ code.inline {
 .card .askrow .btn-ask:disabled { background: var(--p-raised); color: var(--p-faint); }
 .card .teach-panel, .card .origin-panel { padding: 10px 12px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-surface); }
 .card .teach-box { border: 1px solid var(--p-line); border-radius: 10px; background: var(--p-code); color: var(--p-ink); }
+/* Chromium's default placeholder grey was 4.2:1 on the dark field; --p-muted is about 8.9:1 there
+   and 6.6:1 on the light panel's white (Design P3). */
+.card .teach-box::placeholder, .card .paste-box::placeholder { color: var(--p-muted); }
 
 /* Empty, error and consent states */
 .card .state .big { color: var(--p-ink); font-size: 15px; font-weight: 650; }
