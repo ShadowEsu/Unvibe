@@ -1633,7 +1633,15 @@ code.inline {
    (Design MUST on #103). Same fill, border and radius as the answer rows; the focus ring is
    the panel's 2px --p-focus outline. */
 .card .pmf-card__field { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid var(--p-line); border-radius: 12px; background: var(--p-surface); color: var(--p-ink); font: 400 13px/1.45 var(--font-sans); resize: vertical; }
-.pmf-card__error { margin: 0; font-size: 12.5px; color: var(--uv-danger); }
+/* --uv-danger (#e08b82) is about 2.5:1 on the light panel's white; #a1291f (the companion's error
+   red) is about 7.3:1 there. Dark keeps --uv-danger. */
+.card .pmf-card { --pmf-danger: var(--uv-danger); }
+:root[data-panel="light"] .card .pmf-card { --pmf-danger: #a1291f; }
+.pmf-card__error { margin: 0; font-size: 12.5px; color: var(--pmf-danger, var(--uv-danger)); }
+.pmf-card__error--field { display: flex; align-items: flex-start; gap: 6px; margin-top: -4px; }
+.pmf-card__error-icon { flex: none; display: inline-grid; place-items: center; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; background: var(--pmf-danger, var(--uv-danger)); color: var(--p-surface); font: 700 10px/1 var(--font-sans); }
+.card .pmf-card__field[aria-invalid="true"] { border-color: var(--pmf-danger); }
+.pmf-card .btn.ghost:disabled { opacity: 0.5; cursor: default; }
 .pmf-card--thanks { grid-template-columns: 1fr auto; align-items: center; }
 .pmf-card--thanks p { margin: 0; font-size: 13px; line-height: 1.45; }
 .pmf-card__id { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; cursor: text; }

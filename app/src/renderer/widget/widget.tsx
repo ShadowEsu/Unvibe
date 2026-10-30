@@ -768,13 +768,13 @@ function Widget() {
     const { draft } = pmf;
     setPmf({ draft, stage: 'sending', error: '', installId: '' });
     void window.unvibe.pmfSend(draft)
-      .catch(() => ({ ok: false as const, error: 'Could not send. Your answers are still here, so you can try again.' }))
+      .catch(() => ({ ok: false as const, error: 'Could not send. Your answers are still here, so you can try again.', field: undefined, retry: true as const }))
       .then((result) => {
         setPmf((current) => {
           if (!current) return current;
           return result.ok
             ? { ...current, stage: 'thanks', error: '', installId: result.installId }
-            : { ...current, stage: 'form', error: result.error };
+            : { ...current, stage: 'form', error: result.error, errorField: result.field, retry: result.retry === true };
         });
       });
   };

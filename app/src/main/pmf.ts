@@ -10,12 +10,13 @@ import {
   EMPTY_PMF_DRAFT,
   PMF_MAX_BODY_BYTES,
   PMF_SECRET_BLOCKED,
-  pmfDraftHasSecret,
+  pmfSecretField,
   pmfEligible,
   pmfRequestBody,
   type PmfDraft,
   type PmfRequestBody,
   type PmfStatus,
+  type PmfTextKey,
 } from '../core/pmf';
 
 export interface PmfDeps {
@@ -41,7 +42,10 @@ export interface PmfCardState {
   draft: PmfDraft;
 }
 
-export type PmfSendResult = { ok: true; installId: string } | { ok: false; error: string };
+/** A failure names the flagged answer for a secret block; `retry` marks a network failure. */
+export type PmfSendResult =
+  | { ok: true; installId: string }
+  | { ok: false; error: string; field?: PmfTextKey; retry?: true };
 
 export const PMF_SEND_FAILED = 'Could not send. Your answers are still here, so you can try again.';
 
@@ -91,7 +95,8 @@ export async function sendPmfAnswer(input: unknown, deps: PmfDeps): Promise<PmfS
   deps.saveDraft(draft);
   const body = pmfRequestBody(draft, deps.appVersion);
   if (!body) return { ok: false, error: 'Pick an answer to the first question.' };
-  if (pmfDraftHasSecret(draft)) return { ok: false, error: PMF_SECRET_BLOCKED };
+  const field = pmfSecretField(draft);
+  if (field) return { ok: false, error: PMF_SECRET_BLOCKED, field };
   if (Buffer.byteLength(JSON.stringify(body)) > PMF_MAX_BODY_BYTES) return { ok: false, error: 'Your answers are a little too long. Shorten them and try again.' };
   const code = await deps.post(body).catch(() => null);
   if (code === 201 || code === 409) {
@@ -101,6 +106,6 @@ export async function sendPmfAnswer(input: unknown, deps: PmfDeps): Promise<PmfS
   }
   // The app checks everything the server does, so a 400 is almost always its own key detector.
   if (code === 400) return { ok: false, error: 'Unvibe could not accept these answers. Take out anything that looks like a key or password and try again.' };
-  if (code === 429) return { ok: false, error: 'Too many answers from this network right now. Your answers are still here; try again later.' };
-  return { ok: false, error: PMF_SEND_FAILED };
+  if (code === 429) return { ok: false, error: 'Too many answers from this network right now. Your answers are still here; try again later.', retry: true };
+  return { ok: false, error: PMF_SEND_FAILED, retry: true };
 }

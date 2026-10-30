@@ -121,7 +121,7 @@ test('the secret filter blocks Send with Security\'s wording; nothing is posted 
   ] as const) {
     const install = fakeInstall();
     const draft = { ...answers, [key]: text };
-    assert.deepEqual(await sendPmfAnswer(draft, install.deps), { ok: false, error: PMF_SECRET_BLOCKED }, key);
+    assert.deepEqual(await sendPmfAnswer(draft, install.deps), { ok: false, error: PMF_SECRET_BLOCKED, field: key }, key);
     assert.equal(PMF_SECRET_BLOCKED, 'That looks like a key or password. Take it out and try again.');
     assert.equal(install.posts.length, 0, key);
     assert.equal(install.saved.status, undefined);
@@ -145,7 +145,7 @@ test('a failed send keeps the draft, shows a retry, and is never retried by itse
   for (const failure of [null, 'throw', 500, 503, 401, 413] as const) {
     const install = fakeInstall({ answer: failure });
     const result = await sendPmfAnswer(answers, install.deps);
-    assert.deepEqual(result, { ok: false, error: PMF_SEND_FAILED }, String(failure));
+    assert.deepEqual(result, { ok: false, error: PMF_SEND_FAILED, retry: true }, String(failure));
     assert.equal(install.saved.status, undefined);
     assert.deepEqual(install.saved.draft, answers, 'the answers stay on this computer');
     assert.equal(install.posts.length, 1, 'exactly one attempt per press; pmf.ts schedules no timer, so nothing retries later');
@@ -157,6 +157,8 @@ test('a failed send keeps the draft, shows a retry, and is never retried by itse
     const install = fakeInstall({ answer: code });
     const result = await sendPmfAnswer(answers, install.deps);
     assert.equal(result.ok, false);
+    // 429 is a "try again later"; a 400 needs the answers changed, so the button stays Send.
+    assert.equal(!result.ok && result.retry === true, code === 429, String(code));
     assert.equal(install.saved.status, undefined);
     assert.deepEqual(install.saved.draft, answers);
   }

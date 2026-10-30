@@ -113,16 +113,21 @@ export function cleanPmfDraft(input: unknown): PmfDraft {
   return { q1, q2: cappedText(raw.q2), q3: cappedText(raw.q3), q4: cappedText(raw.q4) };
 }
 
+/** The 3 free-text answers, in the order the card shows them. */
+export type PmfTextKey = 'q2' | 'q3' | 'q4';
+
 /**
  * The app's secret filter (the one explanations and typed questions go through) over the 3 text
  * answers. Any finding, a known credential or a high-entropy string, blocks Send, as for Chat.
+ * Returns the first flagged answer, so the card can show the message under it, or null.
  */
-export function pmfDraftHasSecret(draft: PmfDraft): boolean {
-  return scanBlocks([
+export function pmfSecretField(draft: PmfDraft): PmfTextKey | null {
+  const findings = scanBlocks([
     { file: 'q2', text: draft.q2 },
     { file: 'q3', text: draft.q3 },
     { file: 'q4', text: draft.q4 },
-  ]).length > 0;
+  ]);
+  return (['q2', 'q3', 'q4'] as const).find((key) => findings.some((f) => f.file === key)) ?? null;
 }
 
 /** Only the answers and the app version; the install ID travels in the trial header. */

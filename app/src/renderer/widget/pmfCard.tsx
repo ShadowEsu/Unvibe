@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import {
   PMF_CONSENT_LINE,
   PMF_MAX_ANSWER_CHARS,
   PMF_Q1_OPTIONS,
   PMF_QUESTIONS,
   type PmfDraft,
+  type PmfTextKey,
 } from '../../core/pmf';
 
 /** `form`: answering (a failed send shows `error` and a retry); `sending`; `thanks`: sent. */
@@ -12,6 +13,10 @@ export interface PmfCardModel {
   draft: PmfDraft;
   stage: 'form' | 'sending' | 'thanks';
   error: string;
+  /** A secret block: the answer the filter flagged, so the message sits under it. */
+  errorField?: PmfTextKey;
+  /** A network failure: the button offers Try again instead of Send. */
+  retry?: boolean;
   /** After Send: the install ID the answers are filed under, for a deletion request. */
   installId: string;
 }
@@ -30,7 +35,7 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
   /** After the thanks: hides the card (the survey is already sent). */
   onClose: () => void;
 }) {
-  const { draft, stage, error } = model;
+  const { draft, stage, error, errorField, retry } = model;
   // Same clipboard call and "copied" timing as CodeBlock in shared/richText.tsx.
   const [copied, setCopied] = useState(false);
   if (stage === 'thanks') {
@@ -83,24 +88,37 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
           ))}
         </div>
       </fieldset>
-      {TEXT_QUESTIONS.map((key) => (
-        <label key={key} className="pmf-card__q">
-          <span>{PMF_QUESTIONS[key]}</span>
-          <textarea
-            className="pmf-card__field"
-            rows={2}
-            maxLength={PMF_MAX_ANSWER_CHARS}
-            disabled={sending}
-            value={draft[key]}
-            onChange={(e) => onChange({ ...draft, [key]: e.target.value })}
-          />
-        </label>
-      ))}
+      {TEXT_QUESTIONS.map((key) => {
+        const flagged = Boolean(error) && errorField === key;
+        return (
+          <Fragment key={key}>
+            <label className="pmf-card__q">
+              <span>{PMF_QUESTIONS[key]}</span>
+              <textarea
+                className="pmf-card__field"
+                rows={2}
+                maxLength={PMF_MAX_ANSWER_CHARS}
+                disabled={sending}
+                value={draft[key]}
+                aria-invalid={flagged || undefined}
+                aria-describedby={flagged ? `pmf-error-${key}` : undefined}
+                onChange={(e) => onChange({ ...draft, [key]: e.target.value })}
+              />
+            </label>
+            {flagged ? (
+              <p id={`pmf-error-${key}`} className="pmf-card__error pmf-card__error--field" role="alert">
+                <span className="pmf-card__error-icon" aria-hidden="true">!</span>
+                {error}
+              </p>
+            ) : null}
+          </Fragment>
+        );
+      })}
       <p className="pmf-card__consent">{PMF_CONSENT_LINE}</p>
-      {error ? <p className="pmf-card__error" role="alert">{error}</p> : null}
+      {error && !errorField ? <p className="pmf-card__error" role="alert">{error}</p> : null}
       <div className="quiz__actions">
         <button type="button" className="btn" disabled={sending || !draft.q1} onClick={onSend}>
-          {sending ? 'Sending…' : error ? 'Try again' : 'Send'}
+          {sending ? 'Sending…' : error && retry ? 'Try again' : 'Send'}
         </button>
         <button type="button" className="btn ghost" disabled={sending} onClick={onDismiss}>
           Not now
