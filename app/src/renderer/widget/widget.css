@@ -1637,7 +1637,9 @@ code.inline {
    red) is about 7.3:1 there. Dark keeps --uv-danger. */
 .card .pmf-card { --pmf-danger: var(--uv-danger); }
 :root[data-panel="light"] .card .pmf-card { --pmf-danger: #a1291f; }
-.pmf-card__error { margin: 0; font-size: 12.5px; color: var(--pmf-danger, var(--uv-danger)); }
+.pmf-card__error { margin: 0; font-size: 12.5px; }
+/* Above '.card .body p' (dark, 0,2,1) and its light rule (0,4,1), which otherwise set the text grey. */
+:root .card.card .body p.pmf-card__error { color: var(--pmf-danger, var(--uv-danger)); }
 .pmf-card__error--field { display: flex; align-items: flex-start; gap: 6px; margin-top: -4px; }
 .pmf-card__error-icon { flex: none; display: inline-grid; place-items: center; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; background: var(--pmf-danger, var(--uv-danger)); color: var(--p-surface); font: 700 10px/1 var(--font-sans); }
 .card .pmf-card__field[aria-invalid="true"] { border-color: var(--pmf-danger); }
