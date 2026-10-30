@@ -9,6 +9,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'local-service-key';
 process.env.GIFT_CODE_SECRET = 'test-gift-secret-0123456789abcdefghijklmnop';
 
 const USER_ID = '00000000-0000-4000-8000-000000000001';
+/** Session tokens are uuids; the store refuses any other shape before querying. */
+const SESSION_TOKEN = '00000000-0000-4000-8000-0000000000aa';
 // What PostgREST returns when a grant or table is wrong: table names, roles, hints.
 const STORE_DETAIL = 'permission denied for table gift_codes';
 
@@ -41,7 +43,7 @@ async function withLogs(call: () => Promise<Response>): Promise<{ status: number
 
 test('a gift store error on Share returns a plain 503, and the detail stays in the server log', async () => {
   const { status, body, logged } = await withLogs(() => mineRoute(new Request('https://api.example.test/api/v1/gifts/mine', {
-    headers: { authorization: 'Bearer session-token' },
+    headers: { authorization: `Bearer ${SESSION_TOKEN}` },
   })));
   assert.equal(status, 503);
   assert.equal(body.error, 'gift_error');
@@ -53,7 +55,7 @@ test('a gift store error on Share returns a plain 503, and the detail stays in t
 test('a gift store error on claim returns a plain 503, and the detail stays in the server log', async () => {
   const { status, body, logged } = await withLogs(() => claimRoute(new Request('https://api.example.test/api/v1/gifts/claim', {
     method: 'POST',
-    headers: { authorization: 'Bearer session-token', 'content-type': 'application/json', 'x-forwarded-for': '10.9.0.1' },
+    headers: { authorization: `Bearer ${SESSION_TOKEN}`, 'content-type': 'application/json', 'x-forwarded-for': '10.9.0.1' },
     body: JSON.stringify({ code: 'Ab3_x-9QzLmN0pR7' }),
   })));
   assert.equal(status, 503);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { POST } from '../app/api/v1/reviews/route';
 import { recordActivation } from '../src/lib/activation';
+import { ANTHROPIC_HOST, anthropicAnswer, anthropicError, spendMeterRpc } from './anthropicStub';
 
 // Exercise the real review stream; only the remote AI and database HTTP boundaries are local.
 test('activation requires a completed, non-empty selection explanation', async () => {
@@ -10,22 +11,21 @@ test('activation requires a completed, non-empty selection explanation', async (
   process.env.UNVIBE_TRIAL_TOKEN = 'local-trial-token-abcdefghijklmnop';
   process.env.SUPABASE_URL = 'https://activation.supabase.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'local-service-key';
-  process.env.GEMINI_API_KEY = 'local-gemini-key';
+  process.env.ANTHROPIC_API_KEY = 'local-anthropic-key';
   delete process.env.OPENROUTER_API_KEY;
-  delete process.env.ANTHROPIC_API_KEY;
   delete process.env.ENABLE_MOCK_AI;
 
   const markers: Array<{ kind: string }> = [];
   let outcome: 'complete' | 'fail' | 'empty' = 'fail';
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
-    if (url.hostname === 'generativelanguage.googleapis.com') {
-      if (outcome === 'fail') return new Response('upstream unavailable', { status: 503 });
-      const chunk = { candidates: [{ content: { parts: [{ text: outcome === 'empty' ? '' : 'This function returns its input.' }] } }] };
-      return url.pathname.endsWith(':streamGenerateContent')
-        ? new Response(`data: ${JSON.stringify(chunk)}\n\n`, { headers: { 'content-type': 'text/event-stream' } })
-        : Response.json(chunk);
+    if (url.hostname === ANTHROPIC_HOST) {
+      if (outcome === 'fail') return anthropicError();
+      return anthropicAnswer(init, outcome === 'empty' ? '' : 'This function returns its input.');
     }
+    // The spend meter reserves before each AI call and settles after it.
+    const meter = spendMeterRpc(url);
+    if (meter) return meter;
     if (url.pathname === '/rest/v1/trial_installs') {
       return init?.method === 'POST'
         ? new Response(null, { status: 201 })

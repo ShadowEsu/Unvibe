@@ -10,6 +10,8 @@ const originalFetch = globalThis.fetch;
 let requests: string[] = [];
 let consentRows: unknown[] = [];
 let consentsTableFails = false;
+/** Session tokens are uuids (approve_device_code mints them with gen_random_uuid()). */
+const SESSION_TOKEN = '6f1c2a4e-8b3d-4c5e-9f70-1a2b3c4d5e6f';
 
 beforeEach(() => {
   process.env = { ...originalEnv, NODE_ENV: 'test', SUPABASE_URL: 'https://db.example.test', SUPABASE_SERVICE_ROLE_KEY: 'service-role' };
@@ -23,7 +25,7 @@ beforeEach(() => {
     const url = new URL(request.url);
     requests.push(`${request.method} ${url.pathname}`);
     if (url.pathname === '/auth/v1/user') return Response.json({ id: '00000000-0000-4000-8000-000000000001', email: 'person@example.com', user_metadata: {} });
-    if (url.pathname === '/rest/v1/rpc/approve_device_code') return Response.json('session-token-1');
+    if (url.pathname === '/rest/v1/rpc/approve_device_code') return Response.json(SESSION_TOKEN);
     if (url.pathname === '/rest/v1/consents') {
       if (consentsTableFails) return Response.json({ message: 'relation "public.consents" does not exist' }, { status: 404 });
       consentRows.push(...(await request.json()));
@@ -68,7 +70,7 @@ for (const [name, agreement] of [
 test('both boxes sign the app in; with the consents table off nothing is written to it', async () => {
   const response = await call(both);
   assert.equal(response.status, 200);
-  assert.match(response.headers.get('set-cookie') ?? '', /^uncode_session=session-token-1;/);
+  assert.match(response.headers.get('set-cookie') ?? '', new RegExp(`^uncode_session=${SESSION_TOKEN};`));
   assert.ok(requests.includes('POST /rest/v1/rpc/approve_device_code'));
   assert.equal(requests.filter((r) => r.includes('/consents')).length, 0);
 });

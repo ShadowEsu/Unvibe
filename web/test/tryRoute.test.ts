@@ -4,6 +4,7 @@ import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/try/route';
 import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
 import { TRY_ROOMS, roomBucket, roomCodeMac, type TryRoom } from '../src/lib/tryRooms';
+import { ANTHROPIC_HOST, anthropicMessage, spendMeterRpc } from './anthropicStub';
 
 // The real /api/v1/try handler; only the AI providers and PostgREST HTTP boundaries are local.
 const BASE_ENV = { ...process.env };
@@ -11,7 +12,9 @@ const STORE_HOST = 'try.supabase.test';
 
 type Row = { ip_hash: string; created_at: string };
 type RpcArgs = { p_ip_hash: string; p_ip_cap: number; p_day_cap: number };
-const calls = { gemini: 0, openrouter: 0, anthropic: 0 };
+const calls = { anthropic: 0, openrouter: 0 };
+/** The spend meter's RPCs on the store (reserve before each model call, settle after), in order. */
+let spendCalls: string[] = [];
 let rows: Row[] = [];
 /** Every `reserve_try_request` call's arguments, in order. */
 let rpcCalls: RpcArgs[] = [];
@@ -25,17 +28,20 @@ let rpcAnswer: (() => Response) | null = null;
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
-  if (url.hostname === 'generativelanguage.googleapis.com') {
-    calls.gemini += 1;
-    return Response.json({ candidates: [{ content: { parts: [{ text: 'Gemini says it adds one.' }] } }] });
+  if (url.hostname === ANTHROPIC_HOST) {
+    calls.anthropic += 1;
+    return anthropicMessage('Claude says it adds one.');
   }
   if (url.hostname === 'openrouter.ai') {
     calls.openrouter += 1;
     return Response.json({ choices: [{ message: { content: 'OpenRouter answer.' } }] });
   }
-  if (url.hostname === 'api.anthropic.com') {
-    calls.anthropic += 1;
-    return Response.json({ content: [{ type: 'text', text: 'Anthropic answer.' }] });
+  if (url.hostname === STORE_HOST) {
+    const meter = spendMeterRpc(url);
+    if (meter) {
+      spendCalls.push(url.pathname.replace('/rest/v1/rpc/', ''));
+      return meter;
+    }
   }
   if (url.hostname === STORE_HOST && url.pathname === '/rest/v1/rpc/reserve_try_request' && init?.method === 'POST') {
     return reserve(JSON.parse(String(init.body)) as RpcArgs);
@@ -68,11 +74,11 @@ function setEnv(vars: Record<string, string | undefined>): void {
   }
 }
 
-/** Production with the store configured and only a Gemini key, like api.unvibe.site. */
+/** Production with the store configured and an Anthropic key, like api.unvibe.site. */
 function production(extra: Record<string, string | undefined> = {}): void {
   setEnv({
     NODE_ENV: 'production',
-    GEMINI_API_KEY: 'local-gemini-key',
+    ANTHROPIC_API_KEY: 'local-anthropic-key',
     SUPABASE_URL: `https://${STORE_HOST}`,
     SUPABASE_SERVICE_ROLE_KEY: 'local-service-role-key',
     ...extra,
@@ -96,16 +102,14 @@ beforeEach(() => {
     ENABLE_MOCK_AI: undefined,
     OPENROUTER_API_KEY: undefined,
     ANTHROPIC_API_KEY: undefined,
-    GEMINI_API_KEY: undefined,
-    GOOGLE_API_KEY: undefined,
     SUPABASE_URL: undefined,
     SUPABASE_SERVICE_ROLE_KEY: undefined,
     TRY_IP_SALT: undefined,
     TRY_ROOM_KEY: undefined,
   });
-  calls.gemini = 0;
-  calls.openrouter = 0;
   calls.anthropic = 0;
+  calls.openrouter = 0;
+  spendCalls = [];
   rows = [];
   rpcCalls = [];
   tableCalls = [];
@@ -118,33 +122,34 @@ afterEach(() => {
   assert.deepEqual(tableCalls, []);
 });
 
-test('Try uses Gemini even when OpenRouter and Anthropic keys are set too', async () => {
-  production({ OPENROUTER_API_KEY: 'local-openrouter-key', ANTHROPIC_API_KEY: 'local-anthropic-key' });
+test('Try uses Anthropic even when an OpenRouter key is set too, metered through the store', async () => {
+  production({ OPENROUTER_API_KEY: 'local-openrouter-key' });
   const res = await POST(tryRequest());
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /"text":"Gemini says it adds one\."/);
-  assert.deepEqual(calls, { gemini: 1, openrouter: 0, anthropic: 0 });
+  assert.match(await res.text(), /"text":"Claude says it adds one\."/);
+  assert.deepEqual(calls, { anthropic: 1, openrouter: 0 });
+  assert.deepEqual(spendCalls, ['reserve_ai_spend', 'settle_ai_spend']);
 });
 
 test('Try in production with only an OpenRouter key answers 503 and calls no model', async () => {
-  production({ GEMINI_API_KEY: undefined, OPENROUTER_API_KEY: 'local-openrouter-key' });
+  production({ ANTHROPIC_API_KEY: undefined, OPENROUTER_API_KEY: 'local-openrouter-key' });
   const res = await POST(tryRequest());
   assert.equal(res.status, 503);
-  assert.deepEqual(calls, { gemini: 0, openrouter: 0, anthropic: 0 });
+  assert.deepEqual(calls, { anthropic: 0, openrouter: 0 });
 });
 
-test('Try in production ignores ENABLE_MOCK_AI: no Gemini key is 503, a Gemini key answers', async () => {
-  production({ GEMINI_API_KEY: undefined, ANTHROPIC_API_KEY: 'local-anthropic-key', ENABLE_MOCK_AI: 'true' });
+test('Try in production ignores ENABLE_MOCK_AI: no Anthropic key is 503, an Anthropic key answers', async () => {
+  production({ ANTHROPIC_API_KEY: undefined, OPENROUTER_API_KEY: 'local-openrouter-key', ENABLE_MOCK_AI: 'true' });
   assert.equal((await POST(tryRequest())).status, 503);
-  setEnv({ GEMINI_API_KEY: 'local-gemini-key' });
+  setEnv({ ANTHROPIC_API_KEY: 'local-anthropic-key' });
   assert.equal((await POST(tryRequest())).status, 200);
-  assert.deepEqual(calls, { gemini: 1, openrouter: 0, anthropic: 0 });
+  assert.deepEqual(calls, { anthropic: 1, openrouter: 0 });
 });
 
 test('outside production ENABLE_MOCK_AI selects the labelled mock, which Try never shows as an answer', async () => {
-  setEnv({ ENABLE_MOCK_AI: 'true', GEMINI_API_KEY: 'local-gemini-key' });
+  setEnv({ ENABLE_MOCK_AI: 'true', ANTHROPIC_API_KEY: 'local-anthropic-key' });
   assert.equal((await POST(tryRequest())).status, 503);
-  assert.deepEqual(calls, { gemini: 0, openrouter: 0, anthropic: 0 });
+  assert.deepEqual(calls, { anthropic: 0, openrouter: 0 });
 });
 
 function storedHash(): string {
@@ -178,7 +183,7 @@ test('production with neither TRY_IP_SALT nor the service-role key answers 503 a
   production({ SUPABASE_SERVICE_ROLE_KEY: undefined, TRY_IP_SALT: undefined });
   const res = await POST(tryRequest());
   assert.equal(res.status, 503);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
   assert.equal(rpcCalls.length, 0);
 });
 
@@ -191,7 +196,7 @@ test('each POST makes exactly one reserve_try_request call with the hash and bot
   }
   const hash = createHmac('sha256', 'local-service-role-key').update(`unvibe-try:${ip}`).digest('hex').slice(0, 32);
   assert.deepEqual(rpcCalls.at(-1), { p_ip_hash: hash, p_ip_cap: 6, p_day_cap: 500 });
-  assert.equal(calls.gemini, 3);
+  assert.equal(calls.anthropic, 3);
 });
 
 test('the RPC answering ok calls the model once and answers 200', async () => {
@@ -199,9 +204,9 @@ test('the RPC answering ok calls the model once and answers 200', async () => {
   rpcAnswer = () => Response.json('ok');
   const res = await POST(tryRequest());
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /"text":"Gemini says it adds one\."/);
+  assert.match(await res.text(), /"text":"Claude says it adds one\."/);
   assert.equal(rpcCalls.length, 1);
-  assert.equal(calls.gemini, 1);
+  assert.equal(calls.anthropic, 1);
 });
 
 test('the RPC answering hour_cap or day_cap answers 429 with that message and calls no model', async () => {
@@ -213,7 +218,7 @@ test('the RPC answering hour_cap or day_cap answers 429 with that message and ca
     assert.match(await res.text(), message);
   }
   assert.equal(rpcCalls.length, 2);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
 });
 
 test('an RPC error (500, missing function 404, permission 401) answers 503 with zero model calls', async () => {
@@ -228,7 +233,7 @@ test('an RPC error (500, missing function 404, permission 401) answers 503 with 
     assert.equal((await POST(tryRequest())).status, 503);
   }
   assert.equal(rpcCalls.length, errors.length);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
 });
 
 test('an RPC answering null or no body (200, bodyless 404) answers 503 with zero model calls', async () => {
@@ -239,7 +244,7 @@ test('an RPC answering null or no body (200, bodyless 404) answers 503 with zero
     assert.equal((await POST(tryRequest())).status, 503);
   }
   assert.equal(rpcCalls.length, answers.length);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
 });
 
 test('an unexpected RPC value (other text, wrong case, array, object, number, true) answers 503 with zero model calls', async () => {
@@ -253,13 +258,13 @@ test('an unexpected RPC value (other text, wrong case, array, object, number, tr
   rpcAnswer = () => Response.json([], { status: 404 });
   assert.equal((await POST(tryRequest())).status, 503);
   assert.equal(rpcCalls.length, values.length + 1);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
 });
 
 test('a limiter that throws (malformed SUPABASE_URL) answers 503 with zero model calls', async () => {
   production({ SUPABASE_URL: 'not a url' });
   assert.equal((await POST(tryRequest())).status, 503);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
 });
 
 test('the store caps one IP at 6 an hour and everyone at 500 a day', async () => {
@@ -272,17 +277,17 @@ test('the store caps one IP at 6 an hour and everyone at 500 a day', async () =>
   assert.equal((await POST(tryRequest())).status, 429);
   assert.equal(rows.length, 500);
   assert.equal(rpcCalls.length, 8);
-  assert.equal(calls.gemini, 6);
+  assert.equal(calls.anthropic, 6);
 });
 
 test('production without a store answers 503 instead of using process memory', async () => {
   production({ SUPABASE_URL: undefined });
   assert.equal((await POST(tryRequest())).status, 503);
-  assert.equal(calls.gemini, 0);
+  assert.equal(calls.anthropic, 0);
 });
 
 test('outside production the memory fallback stops one IP at 6 an hour and everyone at 500 a day', async () => {
-  setEnv({ GEMINI_API_KEY: 'local-gemini-key' });
+  setEnv({ ANTHROPIC_API_KEY: 'local-anthropic-key' });
   const ip = '203.0.113.10';
   for (let i = 0; i < 6; i += 1) assert.equal((await POST(tryRequest(ip))).status, 200);
   assert.equal((await POST(tryRequest(ip))).status, 429);
@@ -292,7 +297,7 @@ test('outside production the memory fallback stops one IP at 6 an hour and every
   const res = await POST(tryRequest('10.9.9.9'));
   assert.equal(res.status, 429);
   assert.match(await res.text(), /busy today/);
-  assert.equal(calls.gemini, 500);
+  assert.equal(calls.anthropic, 500);
 });
 
 const ROOM_KEY = 'local-room-key-0123456789abcdef0123456789abcdef';
@@ -332,7 +337,7 @@ test('an open room code counts against the room bucket and its cap, not the shar
     assert.ok(rpcCalls.every((args) => args.p_ip_hash === roomBucket(room) && args.p_ip_cap === 8));
     // The network's own 6 are untouched by the room's requests.
     assert.equal((await POST(tryRequest(ip))).status, 200);
-    assert.equal(calls.gemini, 9);
+    assert.equal(calls.anthropic, 9);
   });
 });
 
@@ -368,7 +373,7 @@ test('a room still stops at the site-wide 500 a day', async () => {
     const res = await POST(tryRequest('203.0.113.52', { room: 'ROOM-TEST-1' }));
     assert.equal(res.status, 429);
     assert.match(await res.text(), /busy today/);
-    assert.equal(calls.gemini, 0);
+    assert.equal(calls.anthropic, 0);
   });
 });
 

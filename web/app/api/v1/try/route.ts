@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { selectProvider } from '@/ai';
+import { AiPausedError } from '@/ai/spendMeter';
 import {
   TRY_ALLOWED_ORIGINS,
   TRY_GLOBAL_PER_DAY,
@@ -125,7 +126,9 @@ export async function POST(req: Request): Promise<Response> {
       AbortSignal.timeout(25_000),
     );
     return Response.json({ ok: true, text: text.trim().slice(0, 2_000), level: checked.level, ...roomAnswer }, { headers });
-  } catch {
+  } catch (error) {
+    // The spend meter refused before anything was sent; no other provider is tried.
+    if (error instanceof AiPausedError) return Response.json({ error: error.message }, { status: 503, headers });
     return Response.json({ error: 'Vibe could not answer just now. Try again in a moment.' }, { status: 502, headers });
   }
 }

@@ -16,8 +16,8 @@ export const TRY_GLOBAL_PER_DAY = 500;
  * The Try it consent version: unvibe.site sends `consent: { v, aiSend: true, age18: true }` once the
  * visitor ticks both boxes. `TRY_CONSENT_VERSION` in marketing/src/lib/tryConsent.ts must match.
  */
-export const TRY_CONSENT_VERSION = '2026-10-28';
-export const TRY_CONSENT_ERROR = 'Tick both boxes to send this code to Gemini.';
+export const TRY_CONSENT_VERSION = '2026-10-29';
+export const TRY_CONSENT_ERROR = 'Tick both boxes to send this code to Claude.';
 
 export const TRY_ALLOWED_ORIGINS = new Set([
   'https://unvibe.site',
@@ -45,7 +45,7 @@ export function looksSecret(code: string): boolean {
 export function validateTry(input: unknown): { ok: true; code: string; level: TryLevel } | { ok: false; error: string } {
   if (!input || typeof input !== 'object') return { ok: false, error: 'Paste some code first.' };
   const { code, level, consent } = input as { code?: unknown; level?: unknown; consent?: unknown };
-  // Nothing goes to Gemini without both ticks from the current consent version.
+  // Nothing goes to Anthropic without both ticks from the current consent version.
   const ticked =
     typeof consent === 'object' && consent !== null &&
     'v' in consent && consent.v === TRY_CONSENT_VERSION &&
