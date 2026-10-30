@@ -490,22 +490,10 @@ export async function reserveTrialAction(
  * secret for the per-IP key; 503).
  */
 export async function reserveTrialProgressPing(ip: string, now = new Date()): Promise<'ok' | 'limited' | 'unavailable'> {
-  return reserveIpPing('__progress_ip__:', limitFromEnv('UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT', 500), ip, now);
-}
-
-/**
- * Rate limit for `POST /api/v1/feedback/pmf`, the same per-network daily counter as progress pings
- * under `__pmf_ip__:YYYY-MM-DD:<hmac>` (UNVIBE_PMF_IP_DAILY_LIMIT, default 50; each install answers
- * at most once per 90 days, so a classroom NAT stays far below it). Same results as above.
- */
-export async function reservePmfSubmission(ip: string, now = new Date()): Promise<'ok' | 'limited' | 'unavailable'> {
-  return reserveIpPing('__pmf_ip__:', limitFromEnv('UNVIBE_PMF_IP_DAILY_LIMIT', 50), ip, now);
-}
-
-async function reserveIpPing(prefix: string, limit: number, ip: string, now: Date): Promise<'ok' | 'limited' | 'unavailable'> {
   const ipKey = trialIpKey(ip, now);
   if (!ipKey) return 'unavailable';
-  const reserved = await reserveUnit(ipKey.replace(/^__ip__:/, prefix), SHARED_COUNTER_KIND, limit);
+  const key = ipKey.replace(/^__ip__:/, '__progress_ip__:');
+  const reserved = await reserveUnit(key, SHARED_COUNTER_KIND, limitFromEnv('UNVIBE_TRIAL_PROGRESS_IP_DAILY_LIMIT', 500));
   if (reserved === null) return 'unavailable';
   return reserved === -1 ? 'limited' : 'ok';
 }
