@@ -1,6 +1,6 @@
-export const BETA_INSTALL_TAG = "v0.1.45";
-export const BETA_INSTALL_ASSET = "Unvibe-0.1.45-mac-arm64.dmg";
-export const BETA_WINDOWS_ASSET = "Unvibe-0.1.45-win-x64-portable.exe";
+export const BETA_INSTALL_TAG = "v0.1.46";
+export const BETA_INSTALL_ASSET = "Unvibe-0.1.46-mac-arm64.dmg";
+export const BETA_WINDOWS_ASSET = "Unvibe-0.1.46-win-x64-portable.exe";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 export const BETA_INSTALL_HELP_URL = "https://unvibe.site/install-help";
 /** Where both install scripts live, so people can read them before running them. */
