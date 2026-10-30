@@ -4,24 +4,25 @@
  *
  * Three separate, unticked agreements, all required before Unvibe sends any code, diff or question
  * of the user's to an AI provider: sending it to that provider, the Terms and Privacy Policy, and
- * being 18 or older (Google's Gemini API terms are 18+). The agreement names the provider that
- * actually receives the code: Google Gemini through Unvibe, or the provider of the user's own key.
+ * being 18 or older. The agreement names the provider that actually receives the code: Anthropic
+ * (Claude) through Unvibe, or the provider of the user's own key.
  * A different provider, or a new POLICY_VERSION, asks again. The off switch takes effect at once.
  * The built-in first-run sample, verbatim, isn't the user's content and needs none.
  */
 
-/** Bump when what Unvibe sends, where, the screen's words, or the Terms/Privacy change. */
-export const POLICY_VERSION = '2026-10-28';
+/** Bump when what Unvibe sends, where, the screen's words, or the Terms/Privacy change.
+ * 2026-10-30: Unvibe's server moved from Google Gemini to Anthropic (Claude), so everyone agrees again. */
+export const POLICY_VERSION = '2026-10-30';
 
 export const CONSENT_ITEMS = ['ai_send', 'terms', 'age_18'] as const;
 export type ConsentItem = (typeof CONSENT_ITEMS)[number];
 
 /**
- * Who receives the code: `unvibe` is Unvibe's server, which uses Google Gemini; the rest are the
+ * Who receives the code: `unvibe` is Unvibe's server, which uses Anthropic (Claude); the rest are the
  * user's own key, sent straight from this computer (main/localAi.ts provider ids).
  */
 export const CONSENT_PROVIDERS = {
-  unvibe: 'Google Gemini',
+  unvibe: 'Anthropic (Claude)',
   gemini: 'Google Gemini',
   anthropic: 'Anthropic',
   openai: 'OpenAI',

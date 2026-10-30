@@ -14,7 +14,7 @@ import { UsageRings } from '../shared/usageRings';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
-import type { ConsentProvider } from '../../core/consent';
+import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
 import '../shared/tokens.css';
@@ -165,7 +165,7 @@ function newTab(id: string, label: string): TabState {
     confirmAfterConsent: false,
     agreedJustNow: false,
     confirmAfterAgree: false,
-    providerName: 'Google Gemini',
+    providerName: CONSENT_PROVIDERS.unvibe,
   };
 }
 
@@ -275,7 +275,7 @@ function EmptyPicker({
         </div>
         {hint ? <div className="sub empty-hint">{hint}</div> : null}
         <div className="empty-or">or</div>
-        <div className="sub">To explain a selection straight from any app, turn on the shortcut. Pressing it sends the selected code to Google Gemini through Unvibe. macOS asks once.</div>
+        <div className="sub">To explain a selection straight from any app, turn on the shortcut. Pressing it sends the selected code to {CONSENT_PROVIDERS.unvibe} through Unvibe. macOS asks once.</div>
         {guideOpen ? (
           <div className="access-note"><ShortcutGuide buttonClass="btn ghost" /></div>
         ) : (

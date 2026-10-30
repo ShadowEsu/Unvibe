@@ -6,7 +6,7 @@ import { settings } from './settings';
 /**
  * Who would receive the code right now: the person's own key's provider when "Use my own AI" is on,
  * or when the free allowance is used up and a key is saved (the automatic switch); otherwise
- * Google Gemini through Unvibe. With `remaining` unknown the automatic switch isn't assumed; the
+ * Anthropic (Claude) through Unvibe. With `remaining` unknown the automatic switch isn't assumed; the
  * check at the sender still catches it.
  */
 export function providerInUse(remaining?: number): ConsentProvider {

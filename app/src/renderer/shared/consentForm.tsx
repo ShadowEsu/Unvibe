@@ -19,7 +19,7 @@ export function ConsentForm({
   onCancel,
   autoFocus = false,
 }: {
-  /** Who receives the code: Unvibe's server (Google Gemini) or the provider of the person's own key. */
+  /** Who receives the code: Unvibe's server (CONSENT_PROVIDERS.unvibe) or the provider of the person's own key. */
   provider: ConsentProvider;
   /** The calling window's primary button class (panel `btn`, companion `field-btn`). */
   buttonClass: string;

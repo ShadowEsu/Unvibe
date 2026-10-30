@@ -373,7 +373,7 @@ export async function pullEvents(
 
 /**
  * The one way the person's code, diffs and questions reach Unvibe's server for an explanation
- * (Unvibe's server uses Google Gemini). Refuses with ConsentRequiredError, before any request,
+ * (Unvibe's server uses Anthropic (Claude)). Refuses with ConsentRequiredError, before any request,
  * without an agreement; only the verbatim built-in sample is exempt (Security CC-1, CC-6).
  */
 export async function postReview(payload: ReviewRequestPayload, token: string | null | undefined, signal: AbortSignal): Promise<Response> {

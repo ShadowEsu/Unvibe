@@ -22,6 +22,7 @@ import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
+import { CONSENT_PROVIDERS } from '../../core/consent';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
@@ -392,8 +393,8 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className="perm-title">Accessibility</span>
       </div>
       <div className="perm-why">{isWindows
-        ? 'Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to Google Gemini through Unvibe to explain it.'
-        : 'macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to Google Gemini through Unvibe to explain it. It never reads your keystrokes or your screen.'}</div>
+        ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
+        : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
@@ -716,7 +717,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                   <h3 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h3>
                   <p>Select code in any app and press Control U. No copying, no pasting.</p>
                 </div>
-                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to Google Gemini through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
+                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
                 <div className="ob2__offer-acts">
                   <button type="button" className="field-btn ob2__lime" onClick={() => void turnOn()}>Turn on the shortcut</button>
                 </div>
@@ -1420,7 +1421,7 @@ function AiSendRow() {
     }
     if (await askForConsent(status.provider)) refresh();
   };
-  const name = status?.providerName ?? 'Google Gemini';
+  const name = status?.providerName ?? CONSENT_PROVIDERS.unvibe;
   return (
     <div className="setrow">
       <div>
@@ -2266,7 +2267,7 @@ function App() {
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
-                : page === 'Briefings' ? <Briefings />
+                : page === 'Briefings' ? <Briefings plan={usageLine?.plan ?? null} onPlan={() => setPage('Plan')} />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>
