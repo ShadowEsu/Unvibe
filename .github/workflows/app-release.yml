@@ -138,9 +138,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Publish as a visible pre-release instead of a hidden draft, so site download links work.
-          EP_DRAFT: "false"
-          EP_PRE_RELEASE: "true"
+          # Upload into a hidden draft. Security's R-1 and QA's packaged check read the draft, then a
+          # person publishes it as a pre-release (the updater skips drafts). With EP_DRAFT "false" and no
+          # draft found, electron-builder created a public pre-release at once (0.1.45, 30 Oct).
+          EP_DRAFT: "true"
           # A Developer ID certificate. A Mac release with it set stops in "Prepare stable Mac
           # signing identity": the app's updater and install.sh only accept the pinned certificate.
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
