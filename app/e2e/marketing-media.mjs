@@ -120,17 +120,23 @@ async function resize(page, width, height, { center = false } = {}) {
 /**
  * Answers the app's native "Choose a file to explain" dialog with `file` (macOS): waits for the
  * dialog, brings Unvibe forward, and types Go to Folder + path + Open only while Unvibe is the
- * frontmost app, so no keystroke can land in another app.
+ * frontmost app, so no keystroke can land in another app. The app opens it with a parent window,
+ * so macOS shows it as a sheet on that window, not as a window of its own.
  */
 function answerOpenPanel(file) {
   // Async: the pickFile call that opens the dialog has to reach the app while this waits for it.
   return new Promise((resolve, reject) => execFile('osascript', ['-e', `tell application "System Events"
   set p to first process whose unix id is ${app.process.pid}
+  set found to false
   repeat 40 times
-    if exists (first window of p whose name is "Choose a file to explain") then exit repeat
+    if exists (first window of p whose name is "Choose a file to explain") then set found to true
+    repeat with w in (windows of p)
+      if exists sheet 1 of w then set found to true
+    end repeat
+    if found then exit repeat
     delay 0.25
   end repeat
-  if not (exists (first window of p whose name is "Choose a file to explain")) then error "the file dialog did not open"
+  if not found then error "the file dialog did not open"
   set frontmost of p to true
   delay 0.5
   if unix id of (first process whose frontmost is true) is not ${app.process.pid} then error "Unvibe is not in front"
@@ -142,7 +148,7 @@ function answerOpenPanel(file) {
   delay 1
   if unix id of (first process whose frontmost is true) is not ${app.process.pid} then error "Unvibe lost focus"
   key code 36
-end tell`], { encoding: 'utf8', timeout: 30000 }, (error) => (error ? reject(error) : resolve())));
+end tell`], { encoding: 'utf8', timeout: 30000 }, (error, _out, stderr) => (error ? reject(new Error(`osascript: ${(stderr || '').trim() || error.message}`)) : resolve())));
 }
 const version = (await (await app.windowWith('companion.html', 60000)).evaluate(() => window.unvibe.appInfo())).version;
 
