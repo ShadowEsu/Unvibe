@@ -203,7 +203,8 @@ if (userCode) {
   try {
     browser = await chromium.launch();
     const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
-    await page.goto(`https://unvibe.site/activate?user_code=${encodeURIComponent(userCode)}`, { waitUntil: 'networkidle', timeout: 60000 });
+    // The page the app's hand-off opens (the API's verificationUri), not unvibe.site/activate (BOSS 31 Oct).
+    await page.goto(`https://api.unvibe.site/activate?user_code=${encodeURIComponent(userCode)}`, { waitUntil: 'networkidle', timeout: 60000 });
     await sleep(1500);
     await shot(page, 'google-signin-approval-page');
     // Consent comes first: Google stays disabled until the Terms box and the 18+ box are both ticked.
