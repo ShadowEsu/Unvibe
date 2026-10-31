@@ -1,4 +1,4 @@
-import { compensationTotalLabel, SALESFORCE_ATTRIBUTION } from "./compensation";
+import { compensationTotalLabel, creditSourcesLabel, SALESFORCE_ATTRIBUTION } from "./compensation";
 
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
@@ -293,7 +293,7 @@ export const milestones: Milestone[] = [
     date: "07 OCT 2026",
     category: "COMPANY",
     title: "Unvibe is in Claude for Startups",
-    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and perks from other tools worth about $21.5K to $23K. Startup-program credits and committed cash now total ${compensationTotalLabel()}.`,
+    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and perks from other tools worth about $21.5K to $23K. ${creditSourcesLabel()} credits and committed cash now total ${compensationTotalLabel()}.`,
     figure: "$21.5K",
   },
   {
@@ -618,8 +618,7 @@ export const milestones: Milestone[] = [
     date: "26 AUG 2026",
     category: "COMPANY",
     title: "Salesforce Launchpad",
-    summary: `Accepted into Salesforce Launchpad. 30 Starter Suite seats, $13,500 of confirmed 2-year program value. Not cash. Not a round. ${SALESFORCE_ATTRIBUTION}`,
-    figure: "$13,500",
+    summary: `Accepted into Salesforce Launchpad: Starter Suite free for 12 months, then 50% off the second year. Not cash. Not a round. ${SALESFORCE_ATTRIBUTION}`,
   },
   {
     date: "25 AUG 2026",
@@ -630,8 +629,8 @@ export const milestones: Milestone[] = [
   {
     date: "24 AUG 2026",
     category: "COMPANY",
-    title: "Startup-program credits and committed cash",
-    summary: `Program credits plus self-reported cash now total ${compensationTotalLabel()}. Includes Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
+    title: `${creditSourcesLabel()} credits and committed cash`,
+    summary: `${creditSourcesLabel()} credits plus self-reported cash now total ${compensationTotalLabel()}. The other startup programs Unvibe is in are listed by name with no amount. Credits are not cash. Not a round.`,
     figure: compensationTotalLabel(),
     pinned: true,
   },
@@ -688,8 +687,7 @@ export const milestones: Milestone[] = [
     date: "18 AUG 2026",
     category: "COMPANY",
     title: "Mixpanel for Startups",
-    summary: "Accepted into Mixpanel for Startups with $144,000 worth of Mixpanel Pro subscription credits for 1 year. Not cash. Not a round.",
-    figure: "$144,000",
+    summary: "Accepted into Mixpanel for Startups: the first year free on the Startup Plan. Not cash. Not a round.",
   },
   {
     date: "17 AUG 2026",
@@ -923,8 +921,7 @@ export const milestones: Milestone[] = [
     date: "21 JUL 2026",
     category: "COMPANY",
     title: "MongoDB® for Startups",
-    summary: "Joined MongoDB for Startups as a program member. $500 in program credits.",
-    figure: "$500",
+    summary: "Joined MongoDB for Startups as a program member.",
   },
   {
     date: "20 JUL 2026",

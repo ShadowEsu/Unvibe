@@ -47,14 +47,13 @@ export const startupPrograms: readonly StartupProgram[] = [
     amountUsd: 21_500,
     detail: "Anthropic API credits, Claude Team for 12 months, and perks from other tools. Low end of a $21.5K to $23K estimate",
   },
-  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18", amountUsd: 144_000, detail: "1 year Mixpanel Pro plan credits" },
+  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18", detail: "First year free on the Startup Plan" },
   { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", amountUsd: 50_000, detail: "PostHog credits" },
   {
     brand: "Salesforce Launchpad",
     program: "Salesforce Launchpad",
     accepted: "2026-08-26",
-    amountUsd: 13_500,
-    detail: "30 Starter Suite seats, confirmed 2-year program value",
+    detail: "Starter Suite free for 12 months, then 50% off the second year",
   },
   { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-07-23", detail: "Program member" },
   { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", detail: "Deepgram API credits" },
@@ -62,14 +61,13 @@ export const startupPrograms: readonly StartupProgram[] = [
     brand: "MongoDB",
     program: "MongoDB for Startups",
     accepted: "2026-07-21",
-    amountUsd: 500,
-    detail: "Program support",
+    detail: "Program member",
     logo: { src: "/sponsors/mongodb-logo.svg", width: 1102, height: 278 },
     mark: { name: "MongoDB", symbol: "®" },
   },
 ];
 
-/** Program credits where an amount is supported, then self-reported cash. Credits are not cash and not a funding round. */
+/** Program credits where an amount is on record, then self-reported cash. Credits are not cash and not a funding round. */
 export const compensationLines: CompensationLine[] = [
   ...startupPrograms.flatMap((program): CompensationLine[] =>
     program.amountUsd === undefined
@@ -132,6 +130,44 @@ export function compensationCashUsd(): number {
 
 export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
+}
+
+/** "Claude and PostHog": the programs whose credits the total counts (brand without "for Startups"). */
+export function creditSourcesLabel(): string {
+  const names = startupPrograms.filter((program) => program.amountUsd !== undefined).map((program) => program.brand.replace(/ for Startups$/, ""));
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * What the total is, after the amount: "in Claude and PostHog credits and committed cash". Most programs have no
+ * amount on record, so the total is never presented as the value of every program (Security CL-T1, 31 Oct).
+ */
+export function compensationTotalPhrase(): string {
+  return `in ${creditSourcesLabel()} credits and committed cash`;
+}
+
+/** Programs listed by name with their terms but no amount. */
+export function programsWithoutAmountCount(): number {
+  return startupPrograms.filter((program) => program.amountUsd === undefined).length;
+}
+
+export interface SupportRow {
+  name: string;
+  /** "$50,000", or "No amount" for a program whose terms are on record without a figure. */
+  amount: string;
+  detail: string;
+  state: string;
+}
+
+/** Every source for the investors table and the kit: money lines by amount, then the programs with no amount. */
+export function supportRows(): SupportRow[] {
+  const money = [...compensationLines]
+    .sort((a, b) => b.amountUsd - a.amountUsd)
+    .map((line) => ({ name: line.name, amount: formatUsd(line.amountUsd), detail: line.detail, state: line.state }));
+  const terms = startupPrograms
+    .filter((program) => program.amountUsd === undefined)
+    .map((program) => ({ name: program.program, amount: "No amount", detail: program.detail, state: "Member" }));
+  return [...money, ...terms];
 }
 
 /** Startup programs are the credit lines only. Own capital and angel cash are not programs. */
