@@ -30,7 +30,7 @@ export const milestones: Milestone[] = [
     date: "30 OCT 2026",
     category: "PRODUCT",
     title: "The app asks before your code first leaves the computer",
-    summary: "Before the first explanation of your own code, the app asked for your agreement to send it, recorded the answer on your computer for that AI provider, and checked it before every send; turning the switch off withdrew it. Setup progress was off unless you turned it on, and updating switched it off once for existing installs. On a Mac, the first run started with pasting your own code, then offered the shortcut. A review started from a link waited for you to press Explain. Today showed a daily goal with one streak, and the panel's Teach box became readable in the light look. The app's Electron build turned off running as plain Node, NODE_OPTIONS and the --inspect debugger.",
+    summary: "Before the first explanation of your own code, the app asked for your agreement to send it, recorded the answer on your computer for that AI provider, and checked it before every send; turning the switch off withdrew it. Setup progress was off unless you turned it on, and updating switched it off once for existing installs. On a Mac, the first run started with pasting your own code, then offered the shortcut. A review started from a link waited for you to press Explain. Today showed a daily goal, and the streak counters were removed. The panel's Teach box became readable in the light look. The app's Electron build turned off running as plain Node, NODE_OPTIONS and the --inspect debugger.",
     figure: "v0.1.45",
   },
   {
