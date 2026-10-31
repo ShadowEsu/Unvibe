@@ -472,6 +472,11 @@ await sleep(1000);
 desktopShot('final');
 log(runtimeErrors.length === 0, 'No console or uncaught errors in Unvibe windows', runtimeErrors.length ? `${runtimeErrors.length} found` : '');
 for (const line of runtimeErrors) report.push(`      ${line}`);
+// One line per explanation request from the app (1.0+: request id, status, first-token and total
+// time, outcome), so a stalled or slow explanation can be matched to the server's request logs.
+const traces = mainLog.join('').split(/\r?\n/).filter((line) => /^\[unvibe-review\] /.test(line));
+report.push(traces.length ? `NOTE  explanation requests (${traces.length}):` : 'NOTE  explanation requests: no [unvibe-review] lines (this build does not log them)');
+for (const line of traces) report.push(`      ${line}`);
 writeFileSync(path.join(out, 'main-process.log'), mainLog.join(''));
 writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
 await app.close().catch(() => {});
