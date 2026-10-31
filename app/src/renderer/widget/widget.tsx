@@ -17,6 +17,7 @@ import { ConsentForm } from '../shared/consentForm';
 import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
+import { PanelHeader } from './panelHeader';
 import { actionRow, errorView, limitState, showsLimit, statusLabel, statusTone, type LimitState, type Phase } from './panelModel';
 import '../shared/tokens.css';
 
@@ -106,7 +107,7 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
     return () => { window.clearTimeout(a); window.clearTimeout(b); };
   }, []);
   const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
-  const notes = [hasCode ? 'hmm, let me read this…' : 'one sec, reading…', 'checking the rest of your project', 'okay, writing it up for you'];
+  const notes = [hasCode ? 'Hmm, let me read this…' : 'One sec, reading…', 'Checking the rest of your project', 'Okay, writing it up for you'];
   return (
     <div className="thinking" role="status" aria-live="polite" aria-label="Generating explanation">
       <div className="thinking__vibe"><Buddy mood={step === 2 ? 'reading' : 'thinking'} size={46} label="Vibe is thinking" /></div>
@@ -123,7 +124,7 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
   );
 }
 
-function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' | 'why' | 'teach' }) {
+function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' | 'why' | 'teach' | 'sun' | 'moon' }) {
   const paths = {
     explain: 'M7 4 3 8l4 4 M13 4l4 4-4 4 M11 2 9 14',
     depth: 'M3 4h14 M5 8h10 M7 12h6',
@@ -132,6 +133,8 @@ function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'libr
     library: 'M4 3h10a2 2 0 0 1 2 2v11H6a2 2 0 0 0-2 2V3z M6 16h10',
     why: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M10 6v5 M10 13.5v.5',
     teach: 'M3 7l7-3 7 3-7 3-7-3z M6 8.5V12c0 1.5 2 2.5 4 2.5s4-1 4-2.5V8.5',
+    sun: 'M10 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M10 2v2 M10 16v2 M2 10h2 M16 10h2 M4.3 4.3l1.4 1.4 M14.3 14.3l1.4 1.4 M4.3 15.7l1.4-1.4 M14.3 5.7l1.4-1.4',
+    moon: 'M16 12.5A6.5 6.5 0 0 1 7.5 4a6.5 6.5 0 1 0 8.5 8.5z',
   } as const;
   return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
 }
@@ -440,6 +443,7 @@ function Widget() {
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -646,6 +650,15 @@ function Widget() {
     };
   }, [active.text, active.phase, activeTabId]);
 
+  // First focus goes to the explanation (Design A9, P5), not a header control: on open, for a new
+  // review and when the words arrive. Focus the person put somewhere else in the panel stays there.
+  useEffect(() => {
+    const current = document.activeElement;
+    const idle = !current || current === document.body || current === mainRef.current
+      || (current instanceof HTMLButtonElement && current.disabled) || (current instanceof HTMLInputElement && current.disabled);
+    if (idle) (bodyRef.current ?? mainRef.current)?.focus({ preventScroll: true });
+  }, [active.phase, activeTabId]);
+
   // Autoscroll while streaming on the active tab.
   useEffect(() => {
     if (active.phase === 'streaming' && bodyRef.current) {
@@ -810,40 +823,15 @@ function Widget() {
   return (
     <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
-      <div className="head">
-        <span className="head__mark head__mark--vibe" aria-hidden="true">
-          <Buddy mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={26} label="Vibe" />
-        </span>
-        <div className="head__context">
-          <span className="head__product">Unvibe</span>
-          {src}
-        </div>
-        <span className={`head__status head__status--${statusTone(phase, { limited, errorCode: active.errorCode })}`} role="status"><i aria-hidden="true" />{statusLabel(phase, { limited, errorCode: active.errorCode, proGate })}</span>
-        <div className="head__actions">
-          {usage && (
-            <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
-              {usage.remaining} left
-            </span>
-          )}
-          <button
-            className="head__theme"
-            aria-label={panelTheme === 'dark' ? 'Switch panel to light mode' : 'Switch panel to dark mode'}
-            title={panelTheme === 'dark' ? 'Light mode' : 'Dark mode'}
-            onClick={() => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-          >
-            {panelTheme === 'dark' ? '☀' : '☾'}
-          </button>
-          <button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
-            Saved
-          </button>
-          <button className="head__glyph" aria-label={collapsed ? 'Expand panel' : 'Collapse panel'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
-            <span aria-hidden="true">{collapsed ? '▾' : '▴'}</span>
-          </button>
-          <button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
-            <span aria-hidden="true">✕</span>
-          </button>
-        </div>
-      </div>
+      <PanelHeader
+        mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'}
+        source={src}
+        status={{ label: statusLabel(phase, { limited, errorCode: active.errorCode, proGate }), tone: statusTone(phase, { limited, errorCode: active.errorCode }) }}
+        usage={usage}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+        onClose={() => window.unvibe.closeWidget()}
+      />
 
       {!collapsed ? (
         <div className="widget-workspace">
@@ -852,23 +840,32 @@ function Widget() {
               setActiveTool('explain');
               document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}><ToolIcon name="explain" /><b>Explain</b></button>
-            <button className={`tool--depth${activeTool === 'depth' ? ' on' : ''}`} type="button" title="Difficulty" onClick={() => {
+            <button className={`tool--depth${activeTool === 'depth' ? ' on' : ''}`} type="button" title="Depth" onClick={() => {
               setActiveTool('depth');
               document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }}><ToolIcon name="depth" /><b>Depth</b></button>
-            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => openQuiz()}><ToolIcon name="quiz" /><b>Quiz</b></button>
-            <button className={`tool--ask${activeTool === 'ask' ? ' on' : ''}`} type="button" title="Ask a follow-up" onClick={() => {
+            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Test me" disabled={phase !== 'done' || stillTyping} onClick={() => openQuiz()}><ToolIcon name="quiz" /><b>Test me</b></button>
+            <button className={`tool--ask${activeTool === 'ask' ? ' on' : ''}`} type="button" title="Ask Vibe about this code" onClick={() => {
               setActiveTool('ask');
               requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
-            }}><ToolIcon name="ask" /><b>Ask</b></button>
+            }}><ToolIcon name="ask" /><b>Ask Vibe</b></button>
             {features.whyExists ? (
-              <button type="button" className="tool--why" title="Why does this exist" disabled={phase !== 'done' || stillTyping} onClick={askWhy}><ToolIcon name="why" /><b>Why</b></button>
+              <button type="button" className="tool--why" title="Why does this exist?" disabled={phase !== 'done' || stillTyping} onClick={askWhy}><ToolIcon name="why" /><b>Why</b></button>
             ) : null}
             {features.teachBack ? (
               <button type="button" className={`tool--teach${teachOpen ? ' on' : ''}`} title="Teach it back" aria-expanded={teachOpen} disabled={phase !== 'done' || stillTyping} onClick={() => setTeachOpen((open) => !open)}><ToolIcon name="teach" /><b>Teach</b></button>
             ) : null}
             <div className="widget-tools__spacer" />
-            <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
+            <button type="button" className="tool--saved" title="Open Library" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Library</b></button>
+            <button
+              type="button"
+              className="tool--look"
+              aria-label={panelTheme === 'dark' ? 'Switch the panel to light' : 'Switch the panel to dark'}
+              title={panelTheme === 'dark' ? 'Light panel' : 'Dark panel'}
+              onClick={() => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            >
+              <ToolIcon name={panelTheme === 'dark' ? 'sun' : 'moon'} /><b>{panelTheme === 'dark' ? 'Light' : 'Dark'}</b>
+            </button>
             {usage && (
               <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
                 <span>Available</span>
@@ -876,7 +873,7 @@ function Widget() {
               </div>
             )}
           </aside>
-          <section className="widget-main">
+          <section className="widget-main" ref={mainRef} tabIndex={-1} aria-label="Explanation area">
 
       {!collapsed && (
         <div className="tabs" role="group" aria-label="Review tabs">
@@ -1354,7 +1351,7 @@ function Widget() {
                 </div>
               ) : null}
               <div className="ask-sandbox">
-                <div className="ask-sandbox__label">Ask a follow-up</div>
+                <div className="ask-sandbox__label">Ask Vibe</div>
                 <div className="askrow">
                   <input
                     placeholder="Why does this exist? What breaks if I remove it?"

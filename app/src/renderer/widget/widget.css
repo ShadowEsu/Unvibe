@@ -1542,7 +1542,6 @@ code.inline {
 :root[data-panel="light"] .card .quiz__kicker { color: #1d6fa5; }
 :root[data-panel="light"] .card .head__status i { box-shadow: 0 0 0 3px rgb(20 20 20 / 0.08); }
 :root[data-panel="light"] .card .head__actions button { color: #5f5c55; background: #fff; }
-.card .head__theme { font-size: 13px; }
 
 /* Buttons never flip to black on hover or press: they keep their colour and just lift or sink. */
 .card .btn:not(:disabled):hover, .card .btn:not(:disabled):focus-visible, .card .btn:not(:disabled):active { background: var(--p-lime); color: #141413; border-color: transparent; filter: none; }
@@ -1575,7 +1574,7 @@ code.inline {
 
 /* Header controls: 30px targets, glyphs large enough to read. */
 .card .head__actions button { min-height: 30px; min-width: 30px; }
-.card .head__actions .head__glyph, .card .head__actions .head__theme { width: 30px; padding: 0; display: grid; place-items: center; font-size: 15px; line-height: 1; }
+.card .head__actions .head__glyph { width: 30px; padding: 0; display: grid; place-items: center; font-size: 15px; line-height: 1; }
 
 /* Review tabs: the close control is its own keyboard-reachable button. */
 .card .tab { display: inline-flex; align-items: center; gap: 0; max-width: 180px; min-height: 30px; padding: 0 3px 0 0; }
@@ -1703,3 +1702,12 @@ code.inline {
 
 /* Design A4, P10: Offline, Paused and Error never show the lime "ready" dot. */
 .card .head__status.head__status--offline i, .card .head__status.head__status--paused i, .card .head__status.head__status--error i { background: var(--p-muted); box-shadow: none; animation: none; }
+
+/* Design A9, P5: first focus lands on the explanation, ringed inside its edge; the content area
+   that holds focus before any words arrive is a landmark, not a control, so it draws no ring. */
+.card .stage > .body:focus-visible { outline: 2px solid var(--p-focus); outline-offset: -2px; border-radius: 10px; }
+.card .widget-main:focus, .card .widget-main:focus-visible { outline: none; }
+/* The panel look moved out of the header to the foot of the rail, as a smaller tool. */
+.card .widget-tools .tool--look { min-height: 40px; }
+.card .widget-tools .tool--look .widget-tool-icon { width: 24px; height: 24px; }
+@media (max-height: 540px) { .card .widget-tools button { min-height: 40px; } }

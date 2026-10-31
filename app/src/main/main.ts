@@ -1054,7 +1054,8 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
-  ipcMain.on('widget:openStudy', () => openCompanion());
+  // The panel's Library tool: the companion's Learn page, which its nav names Library.
+  ipcMain.on('widget:openStudy', () => openCompanionPage('Learn'));
   ipcMain.on('companion:openPlan', () => openCompanionPage('Plan'));
   // The panel's limit state: "Use my own key" opens Settings › AI (the companion's 'Settings:AI' page).
   ipcMain.on('widget:openAiSettings', () => openCompanionPage('Settings:AI'));
