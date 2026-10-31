@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { clearDeviceCode, pendingDeviceCode, saveDeviceCode } from '@/lib/deviceCode';
 import { ACCOUNT_POLICY_VERSION } from '@/lib/accountConsent';
+import { SIGN_IN_DID_NOT_FINISH, signInReturnFailed } from '@/lib/oauthReturn';
 
 /** The two ticks, kept only across the Google or email round trip and only for this policy version. */
 const AGREEMENT_KEY = 'unvibe.activateAgreement';
@@ -61,6 +62,7 @@ export default function ActivatePage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [authMessage, setAuthMessage] = useState('');
+  const [signInFailed, setSignInFailed] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [terms, setTerms] = useState(false);
@@ -128,14 +130,17 @@ export default function ActivatePage() {
     let cancelled = false;
 
     async function bootstrap() {
+      // Cancel at Google or any sign-in error comes back as error= in the query or hash: say so, show none of it.
+      if (signInReturnFailed(window.location.search, window.location.hash)) {
+        if (!cancelled) setSignInFailed(true);
+        window.history.replaceState({}, '', activateOrigin());
+      }
       const params = new URLSearchParams(window.location.search);
       const oauthCode = params.get('code');
       // OAuth auth codes are distinct from the user_code query parameter.
       if (oauthCode && oauthCode.length > 16) {
         const { error } = await client!.auth.exchangeCodeForSession(oauthCode);
-        if (error && !cancelled) {
-          setAuthMessage('Google sign-in did not finish. Try Continue with Google again.');
-        }
+        if (error && !cancelled) setSignInFailed(true);
         // Drop the OAuth code from the address bar; keep /activate clean.
         const clean = activateOrigin();
         window.history.replaceState({}, '', clean);
@@ -198,6 +203,7 @@ export default function ActivatePage() {
     if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage('');
+    setSignInFailed(false);
     try {
       saveDeviceCode(code, codeFromLink, localStore());
       const { error } = await client.auth.signInWithOAuth({
@@ -329,8 +335,17 @@ export default function ActivatePage() {
                         ? 'activate-note--ok'
                         : 'activate-note--error'
                     }`}
+                    role={authMessage.startsWith('Check') ? 'status' : 'alert'}
                   >
                     {authMessage}
+                  </p>
+                )}
+                {signInFailed && (
+                  <p className="activate-note activate-note--error" role="alert">
+                    {SIGN_IN_DID_NOT_FINISH}{' '}
+                    <button className="activate-retry" type="button" onClick={signInWithGoogle} disabled={!configured || authBusy}>
+                      Try again with Google
+                    </button>
                   </p>
                 )}
                 <div className="activate-divider">or email a link</div>
