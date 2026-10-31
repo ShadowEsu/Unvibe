@@ -34,3 +34,12 @@
   font-style: normal;
   font-display: swap;
 }
+/*
+ * Code shows the characters a person would type: no `=>` drawn as one arrow glyph or `===` as one
+ * bar, whichever monospace font the system picks (Design P3, every code block in every window).
+ * !important because many code selectors set the `font:` shorthand, which resets ligatures.
+ * The onboarding sample shows code in divs, so they are listed too.
+ */
+pre, code, kbd, samp, .ob__sample-code, .ob__scene-code {
+  font-variant-ligatures: none !important;
+}

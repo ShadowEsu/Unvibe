@@ -1,7 +1,7 @@
 /**
  * Launch at login (first-run spec, "not in the three"). Asked once, after the user's first
- * explanation of their own code. A login launch starts quietly in the tray, and it is never a
- * return or a streak day: it opens no window and records nothing. Pure rules; main.ts wires them.
+ * explanation of their own code. A login launch starts quietly in the tray, and it is never
+ * counted as a return: it opens no window and records nothing. Pure rules; main.ts wires them.
  */
 
 /** Windows hands this to a login launch so it can tell itself apart from a click. */

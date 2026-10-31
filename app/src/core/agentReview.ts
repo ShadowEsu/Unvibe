@@ -120,7 +120,12 @@ export function buildAgentReview(brief: ChangeBrief, knowledge: KnowledgeObject[
   if (configFiles.length) reviewFirst.push(`Check ${configFiles.map((f) => f.path).slice(0, 2).join(' and ')}. New dependencies or settings change what runs.`);
   if (codeFiles.length >= 2 && testFiles.length === 0) reviewFirst.push(`${codeFiles.length} code files changed with no test changes. Decide whether tests should move too.`);
   if (stale.length) reviewFirst.push(`${stale.length} saved explanation${stale.length === 1 ? '' : 's'} cover files that changed. Refresh them so they stay true.`);
-  if (areas.length >= 3) reviewFirst.push(`The change spans ${areas.length} areas (${areas.slice(0, 3).map((a) => a.name).join(', ')}). Check the seams between them.`);
+  if (areas.length >= 3) {
+    // Name every area when there are exactly 3; otherwise the 3 names are a sample, so say "including".
+    const names = areas.slice(0, 3).map((a) => a.name);
+    const list = `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    reviewFirst.push(`The change spans ${areas.length} areas (${areas.length === 3 ? '' : 'including '}${list}). Check the seams between them.`);
+  }
   if (reviewFirst.length === 0 && ranked[0]) reviewFirst.push(`Start with ${ranked[0].path}. It carries the most weight in this change.`);
 
   return {

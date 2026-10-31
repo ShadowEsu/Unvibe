@@ -1,0 +1,35 @@
+/* PasteTarget (pasteTarget.tsx): one focused paste box in the app's ink, lime and paper. */
+.paste-target { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; width: 100%; }
+.paste-target__box {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-sizing: border-box;
+  width: 100%; min-height: 190px; padding: 22px; border: 2px dashed rgb(28 24 20 / 0.32); border-radius: 16px;
+  background: #fbfaf7; color: #141414; text-align: center; cursor: text; outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.paste-target__box:focus, .paste-target__box:focus-visible { border-style: solid; border-color: #141414; box-shadow: 0 0 0 4px rgb(214 244 90 / 0.65); }
+.paste-target__box.is-compact { min-height: 150px; padding: 18px; }
+/* The compact preview keeps its first 4 lines, so the panel's empty state still fits. */
+.paste-target__box.is-compact pre { max-height: calc(6.4em + 26px); }
+.paste-target__keys { display: flex; gap: 8px; }
+.paste-target__key {
+  display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 10px; box-sizing: border-box;
+  border: 2px solid #141414; border-radius: 10px; background: #fff; box-shadow: 0 3px 0 #141414;
+  color: #141414; font: 650 19px/1 var(--font-sans);
+}
+.paste-target__box b { font: 650 19px/1.3 var(--font-sans); letter-spacing: -0.01em; }
+.paste-target__hint { max-width: 30em; color: #5c5854; font: 500 14px/1.45 var(--font-sans); }
+.paste-target__box pre {
+  align-self: stretch; margin: 0; padding: 12px 14px; overflow: hidden; border: 1px solid rgb(28 24 20 / 0.12); border-radius: 10px;
+  background: #fff; color: #24212a; text-align: left; white-space: pre; font: 500 13px/1.6 var(--font-mono); font-variant-ligatures: none;
+}
+.paste-target__pill {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border: 1.5px solid #141414; border-radius: 999px;
+  background: #fff; color: #141414; font: 650 13px/1 var(--font-sans);
+}
+.paste-target__pill i { width: 9px; height: 9px; border-radius: 50%; background: #6f45d2; box-shadow: 0 0 0 4px rgb(111 69 210 / 0.22); }
+.paste-target__or { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0; color: #5c5854; font: 500 14px/1.4 var(--font-sans); }
+.paste-target__link {
+  padding: 0; border: 0; background: none; color: #141414; cursor: pointer;
+  font: 650 14px/1.4 var(--font-sans); text-decoration: underline; text-underline-offset: 3px;
+}
+.paste-target__error { margin: 0; color: #b42318; text-align: center; font: 600 13.5px/1.45 var(--font-sans); }

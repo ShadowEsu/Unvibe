@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
-import type { ExplanationLevel } from '../../core/protocol';
+import type { ExplanationLevel, QuizMode } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
@@ -11,9 +11,19 @@ import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { UsageRings } from '../shared/usageRings';
+import { PasteTarget } from '../shared/pasteTarget';
+import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
+import { ConsentForm } from '../shared/consentForm';
+import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
+import type { PmfDraft } from '../../core/pmf';
+import { PmfCard, type PmfCardModel } from './pmfCard';
 import '../shared/tokens.css';
 
-type Phase = 'boot' | 'ready' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
+/**
+ * `aiConsent`: the first-send agreement (sending code to the provider, Terms, 18+);
+ * `confirm`: a link started this review, Explain sends it; `consent`: a secret was found.
+ */
+type Phase = 'boot' | 'ready' | 'aiConsent' | 'confirm' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
 interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
@@ -26,6 +36,10 @@ interface Quiz {
   correct?: boolean;
   answerIndex?: number;
   rationale?: string;
+  index?: number;
+  total?: number;
+  mode?: QuizMode;
+  hasMissed?: boolean;
 }
 
 interface EntryMeta {
@@ -56,6 +70,7 @@ interface TabState {
   mock: boolean;
   ask: string;
   quiz: Quiz | null;
+  quizHidden?: boolean;
   history: HistoryEntry[];
   originOpen: boolean;
   originError: string;
@@ -65,6 +80,16 @@ interface TabState {
   teachNote: string;
   teachChecks: Array<{ topic: string; mark: 'covered' | 'partial' | 'missed' }>;
   teachEvidence: string;
+  /** The provider the consent form names while phase is `aiConsent`. */
+  consentProvider: ConsentProvider | null;
+  /** A link started this review: after agreeing, show the confirm sheet, not an explanation. */
+  confirmAfterConsent: boolean;
+  /** Agree was just pressed with nothing captured; main is reading the clipboard it asked for. */
+  agreedJustNow: boolean;
+  /** The confirm sheet shows the clipboard read right after Agree, not a link's capture. */
+  confirmAfterAgree: boolean;
+  /** Who Explain sends the code to, for the confirm sheet (Security U10). */
+  providerName: string;
 }
 
 const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
@@ -136,6 +161,11 @@ function newTab(id: string, label: string): TabState {
     teachNote: '',
     teachChecks: [],
     teachEvidence: '',
+    consentProvider: null,
+    confirmAfterConsent: false,
+    agreedJustNow: false,
+    confirmAfterAgree: false,
+    providerName: CONSENT_PROVIDERS.unvibe,
   };
 }
 
@@ -175,7 +205,8 @@ function ResizeGrips() {
 
 /**
  * Calm fallback when ⌘U finds no selection: pick a source, never hard-error. On a Mac without
- * Accessibility it is the one-button pre-permission screen instead (first-run spec, change 2).
+ * Accessibility it leads with a focused paste box (⌘V explains right away) and a file, then offers
+ * the shortcut, whose guide shows here while System Settings is open.
  */
 function EmptyPicker({
   shortcut,
@@ -190,7 +221,7 @@ function EmptyPicker({
   const [picking, setPicking] = useState(false);
   // On macOS the shortcut copies your selection through Accessibility. Without it the shortcut lands here.
   const [needsAccess, setNeedsAccess] = useState(false);
-  const [asked, setAsked] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [grantNote, setGrantNote] = useState('');
   useEffect(() => {
     let alive = true;
@@ -213,39 +244,10 @@ function EmptyPicker({
     const timer = window.setInterval(() => { if (missing) check(); }, 2000);
     return () => { alive = false; window.clearInterval(timer); };
   }, [shortcut]);
-  const allowAccess = async () => {
-    setAsked(true);
-    await window.unvibe.promptAccessibility();
-    await window.unvibe.openAccessibility();
+  const openGuide = async () => {
+    setGuideOpen(true);
+    await turnOnShortcut(window.unvibe);
   };
-
-  if (needsAccess) {
-    return (
-      <div className="state empty-picker">
-        <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
-        <div className="big">{shortcut} can’t read your selection yet.</div>
-        <div className="sub">Unvibe needs Accessibility to copy what you selected. macOS asks once, and Unvibe never reads your keystrokes or your screen.</div>
-        <div className="empty-actions">
-          <button className="btn" onClick={() => void allowAccess()}>Continue</button>
-        </div>
-        {asked ? (
-          <div className="access-note" role="status">
-            In the list that opened, switch <b>Unvibe</b> on. This panel then explains your selection.
-            <div><b>Switched it on and nothing happened?</b> macOS may hold an old Unvibe entry from a previous version. Press Fix it, switch Unvibe on again, restart Unvibe, then press {shortcut} again.</div>
-            <div className="empty-actions">
-              <button className="btn ghost" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
-              <button className="btn ghost" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
-            </div>
-          </div>
-        ) : null}
-        <div className="empty-actions">
-          <button className="btn ghost" onClick={() => window.unvibe.useClipboard({ level })}>
-            Explain my clipboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const chooseFile = async () => {
     setHint('');
@@ -258,6 +260,32 @@ function EmptyPicker({
       setPicking(false);
     }
   };
+
+  if (needsAccess) {
+    return (
+      <div className="state empty-picker empty-picker--paste">
+        <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
+        <div className="big">Paste the code here.</div>
+        <PasteTarget compact hint="Copy a few lines (⌘C) in your editor, then paste here to explain them."
+          onPaste={(text) => window.unvibe.usePaste({ text, level })} />
+        <div className="empty-actions">
+          <button className="btn ghost" disabled={picking} onClick={() => void chooseFile()}>
+            {picking ? 'Opening…' : 'Choose a file…'}
+          </button>
+        </div>
+        {hint ? <div className="sub empty-hint">{hint}</div> : null}
+        <div className="empty-or">or</div>
+        <div className="sub">To explain a selection straight from any app, turn on the shortcut. Pressing it sends the selected code to {CONSENT_PROVIDERS.unvibe} through Unvibe. macOS asks once.</div>
+        {guideOpen ? (
+          <div className="access-note"><ShortcutGuide buttonClass="btn ghost" /></div>
+        ) : (
+          <div className="empty-actions">
+            <button className="btn ghost" onClick={() => void openGuide()}>Turn on the shortcut</button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const runPro = async (kind: 'diff' | 'brief' | 'compare') => {
     setPicking(true);
@@ -277,7 +305,7 @@ function EmptyPicker({
       <div className="state__vibe"><Buddy mood="wave" size={58} follow label="Vibe" /></div>
       <div className="big">Ready when you are.</div>
       <div className="sub">
-        Let’s make that code click. Select a snippet and press {shortcut}, or drop it here.
+        Let’s make that code click. Select a snippet and press {shortcut}, or paste it below.
       </div>
       {grantNote ? <div className="access-note" role="status">{grantNote}</div> : null}
       <div className="empty-actions">
@@ -405,6 +433,11 @@ function Widget() {
   const [revealedText, setRevealedText] = useState('');
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
   const [listening, setListening] = useState(false);
+  /** The PMF survey card (FE-09) while it is open in this panel; null when hidden or closed. */
+  const [pmf, setPmf] = useState<PmfCardModel | null>(null);
+  const pmfClosed = useRef(false);
+  const pmfSaveTimer = useRef<number | undefined>(undefined);
+  const pmfPending = useRef<PmfDraft | null>(null);
 
   useEffect(() => {
     const refreshUsage = () => {
@@ -482,7 +515,12 @@ function Widget() {
               quiz: null,
               error: '',
               mock: false,
-              phase: ev.hasCode ? 'ready' : 'empty',
+              phase: ev.consentProvider ? 'aiConsent' : ev.hasCode ? (ev.confirm ? 'confirm' : 'ready') : 'empty',
+              consentProvider: ev.consentProvider ?? null,
+              confirmAfterConsent: Boolean(ev.confirm),
+              confirmAfterAgree: Boolean(ev.confirm) && tab.agreedJustNow,
+              agreedJustNow: false,
+              providerName: ev.providerName,
               level: ev.level,
             });
           }
@@ -490,7 +528,9 @@ function Widget() {
             return prev;
           case 'status':
             playTone('think');
-            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: null });
+            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+          case 'consentNeeded':
+            return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
             return patchTab(prev, tabId, { findings: ev.findings ?? [], phase: 'consent' });
           case 'blocked':
@@ -522,6 +562,9 @@ function Widget() {
                 question: ev.question,
                 options: ev.options,
                 conceptLabel: ev.conceptLabel,
+                index: ev.index,
+                total: ev.total,
+                mode: ev.mode,
               },
             });
           case 'graded':
@@ -534,6 +577,7 @@ function Widget() {
                     correct: ev.correct,
                     answerIndex: ev.answerIndex,
                     rationale: ev.rationale,
+                    hasMissed: ev.hasMissed,
                   }
                 : tab.quiz,
             });
@@ -612,6 +656,16 @@ function Widget() {
     window.unvibe.request({ level: active.level, ...opts });
   };
 
+  const openQuiz = (another = false) => {
+    setActiveTool('quiz');
+    if (!another && active.quiz && active.quiz.phase !== 'failed') {
+      setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: false }));
+      return;
+    }
+    setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' }, quizHidden: false }));
+    window.unvibe.testMe();
+  };
+
   const pick = (l: ExplanationLevel) => {
     if (outOfExplanations) return;
     setTabs((prev) => patchTab(prev, activeRef.current, { level: l }));
@@ -654,7 +708,7 @@ function Widget() {
   };
 
   const phase = active.phase;
-  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
+  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
       <b>{active.meta.lines} lines</b>
@@ -669,6 +723,61 @@ function Widget() {
 
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
+  // The survey card waits until an explanation has fully finished, typing included, and is asked
+  // for again after each one until it is sent or closed. Main decides eligibility.
+  const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
+  useEffect(() => {
+    if (!pmfReady || pmf || pmfClosed.current) return;
+    let live = true;
+    void window.unvibe.pmfState().then((state) => {
+      if (live && state.show && !pmfClosed.current) setPmf({ draft: state.draft, stage: 'form', error: '', installId: '' });
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [pmfReady, pmf]);
+  // After the thanks, the next explanation starts without the card.
+  useEffect(() => {
+    if (phase === 'streaming' && pmf?.stage === 'thanks') {
+      pmfClosed.current = true;
+      setPmf(null);
+    }
+  }, [phase, pmf?.stage]);
+  const flushPmfDraft = () => {
+    window.clearTimeout(pmfSaveTimer.current);
+    if (pmfPending.current) window.unvibe.pmfSaveDraft(pmfPending.current);
+    pmfPending.current = null;
+  };
+  // Answers are saved on this computer as they are typed (batched), and once more on close.
+  useEffect(() => () => flushPmfDraft(), []);
+  const changePmf = (draft: PmfDraft) => {
+    setPmf((current) => (current ? { ...current, draft } : current));
+    pmfPending.current = draft;
+    window.clearTimeout(pmfSaveTimer.current);
+    pmfSaveTimer.current = window.setTimeout(flushPmfDraft, 400);
+  };
+  const dismissPmf = () => {
+    window.clearTimeout(pmfSaveTimer.current);
+    pmfPending.current = null;
+    pmfClosed.current = true;
+    setPmf(null);
+    void window.unvibe.pmfDismiss();
+  };
+  const sendPmf = () => {
+    if (!pmf || pmf.stage === 'sending') return;
+    window.clearTimeout(pmfSaveTimer.current);
+    pmfPending.current = null;
+    const { draft } = pmf;
+    setPmf({ draft, stage: 'sending', error: '', installId: '' });
+    void window.unvibe.pmfSend(draft)
+      .catch(() => ({ ok: false as const, error: 'Could not send. Your answers are still here, so you can try again.', field: undefined, retry: true as const }))
+      .then((result) => {
+        setPmf((current) => {
+          if (!current) return current;
+          return result.ok
+            ? { ...current, stage: 'thanks', error: '', installId: result.installId }
+            : { ...current, stage: 'form', error: result.error, errorField: result.field, retry: result.retry === true };
+        });
+      });
+  };
 
   const askWhy = () => {
     void window.unvibe.lookupOrigin().then((raw) => {
@@ -687,7 +796,7 @@ function Widget() {
   };
 
   return (
-    <div className={`card card--${phase}${active.quiz ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
@@ -735,11 +844,7 @@ function Widget() {
               setActiveTool('depth');
               document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }}><ToolIcon name="depth" /><b>Depth</b></button>
-            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => {
-              setActiveTool('quiz');
-              setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
-              window.unvibe.testMe();
-            }}><ToolIcon name="quiz" /><b>Quiz</b></button>
+            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => openQuiz()}><ToolIcon name="quiz" /><b>Quiz</b></button>
             <button className={`tool--ask${activeTool === 'ask' ? ' on' : ''}`} type="button" title="Ask a follow-up" onClick={() => {
               setActiveTool('ask');
               requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
@@ -849,6 +954,32 @@ function Widget() {
             </div>
           )}
 
+          {phase === 'aiConsent' && active.consentProvider && (
+            <div className="state">
+              <ConsentForm
+                key={active.consentProvider}
+                provider={active.consentProvider}
+                buttonClass="btn"
+                onAgreed={() => {
+                  // An explanation already on screen (a follow-up was refused): back to it, ask again from there.
+                  // A link capture: the confirm sheet, so the code is seen before it's sent.
+                  // Captured code that waited on this computer: explain it now. Nothing captured: a
+                  // clipboard explain asked for just before agreeing is read now and shown on the confirm
+                  // sheet (QA F1, Security U-F1-L2), otherwise the picker.
+                  const next: Phase | null = active.text ? 'done' : active.confirmAfterConsent ? 'confirm' : active.meta.lines ? null : 'empty';
+                  if (next === 'empty') {
+                    setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'boot', consentProvider: null, agreedJustNow: true }));
+                    void window.unvibe.explainAfterConsent().then((result) => {
+                      if (!result.explained) setTabs((prev) => patchTab(prev, activeRef.current, { phase: 'empty', agreedJustNow: false }));
+                    });
+                  } else if (next) setTabs((prev) => patchTab(prev, activeRef.current, { phase: next, consentProvider: null }));
+                  else request({});
+                }}
+                onCancel={() => window.unvibe.closeWidget()}
+              />
+            </div>
+          )}
+
           {phase === 'ready' && (
             <div className="state ready-state">
               <div className="container-progress" aria-label="Explanation progress"><span className="on">1 · captured</span><span className="on">2 · filtered</span><span>3 · explaining</span></div>
@@ -859,6 +990,34 @@ function Widget() {
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               <div className="sub">Parsing your selection and generating the explanation.</div>
+            </div>
+          )}
+
+          {phase === 'confirm' && (
+            <div className="state ready-state" role="alertdialog" aria-labelledby="confirm-title">
+              <div className="big" id="confirm-title">Explain this code?</div>
+              <div className="detected">
+                <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
+                <span>{active.meta.lines ?? 0} lines</span>
+                {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
+              </div>
+              {active.meta.preview ? (
+                <section className="code-context" aria-label="Code from your clipboard">
+                  <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
+                </section>
+              ) : null}
+              <div className="sub">
+                {active.confirmAfterAgree
+                  ? 'This is what is on your clipboard now.'
+                  : 'Your editor or a link asked Unvibe to explain what is on your clipboard.'}{' '}
+                Nothing has been sent yet. Explain sends it to {active.providerName}.
+              </div>
+              <button className="btn" onClick={() => request({})}>
+                Explain
+              </button>
+              <button className="btn ghost" onClick={() => window.unvibe.closeWidget()}>
+                Cancel
+              </button>
             </div>
           )}
 
@@ -948,8 +1107,17 @@ function Widget() {
                 : (
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
+              {pmf && pmfReady ? (
+                <PmfCard
+                  model={pmf}
+                  onChange={changePmf}
+                  onSend={sendPmf}
+                  onDismiss={dismissPmf}
+                  onClose={() => { pmfClosed.current = true; setPmf(null); }}
+                />
+              ) : null}
             </div>
-            {active.quiz && (
+            {active.quiz && !active.quizHidden && (
               <aside className="quiz-rail" aria-label="Test me">
                 {active.quiz.phase === 'loading' && (
                   <div className="quiz-rail__wait" role="status">
@@ -964,16 +1132,13 @@ function Widget() {
                     <div className="quiz__actions">
                       <button
                         className="btn"
-                        onClick={() => {
-                          setTabs((prev) => patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }));
-                          window.unvibe.testMe();
-                        }}
+                        onClick={() => openQuiz()}
                       >
                         Try again
                       </button>
                       <button
                         className="btn ghost"
-                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
                       >
                         Hide
                       </button>
@@ -982,7 +1147,12 @@ function Widget() {
                 )}
                 {active.quiz.phase !== 'loading' && active.quiz.phase !== 'failed' && (
                   <div className="quiz">
-                    <div className="quiz__kicker">Test me</div>
+                    <div className="quiz__kicker">
+                      Test me{(active.quiz.index ?? 1) > 1 ? ` · ${active.quiz.index} of ${active.quiz.total}` : ''}
+                    </div>
+                    {active.quiz.mode !== 'quick-check' && active.quiz.mode && (
+                      <div className="quiz__concept">{active.quiz.mode === 'scenario' ? 'Prove it' : 'Recall'}</div>
+                    )}
                     {active.quiz.conceptLabel && (
                       <div className="quiz__concept">{active.quiz.conceptLabel}</div>
                     )}
@@ -1021,17 +1191,33 @@ function Widget() {
                     {active.quiz.phase === 'graded' ? (
                       <>
                         <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`} role="status">
-                          {active.quiz.correct ? 'Correct. That one is understood.' : 'Not quite. Saved to revisit.'}
+                          {active.quiz.correct
+                            ? active.quiz.hasMissed ? 'Correct. Earlier misses are saved to revisit.' : 'Correct. That one is understood.'
+                            : 'Not quite. Saved to revisit.'}
                         </div>
                         {active.quiz.rationale && (
                           <div className="quiz__why">{active.quiz.rationale}</div>
                         )}
-                        <button
-                          className="btn ghost"
-                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
-                        >
-                          Hide question
-                        </button>
+                        {(active.quiz.index ?? 1) >= (active.quiz.total ?? 3) && (
+                          <div className="quiz__why">
+                            {active.quiz.hasMissed
+                              ? "That's all three for this code. Missed ones come back in your review queue."
+                              : 'All three right.'}
+                          </div>
+                        )}
+                        <div className="quiz__actions">
+                          {(active.quiz.index ?? 1) < (active.quiz.total ?? 3) && (
+                            <button className="btn" onClick={() => openQuiz(true)}>
+                              Another question
+                            </button>
+                          )}
+                          <button
+                            className="btn ghost"
+                            onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
+                          >
+                            Hide question
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <div className="quiz__actions">
@@ -1051,7 +1237,7 @@ function Widget() {
                         </button>
                         <button
                           className="btn ghost"
-                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quiz: null }))}
+                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
                         >
                           Cancel
                         </button>
@@ -1105,12 +1291,7 @@ function Widget() {
                 <button
                   className="chip chip--test"
                   disabled={stillTyping}
-                  onClick={() => {
-                    setTabs((prev) =>
-                      patchTab(prev, activeTabId, { quiz: { phase: 'loading' } }),
-                    );
-                    window.unvibe.testMe();
-                  }}
+                  onClick={() => openQuiz()}
                 >
                   Test me
                 </button>

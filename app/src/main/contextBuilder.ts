@@ -10,6 +10,7 @@ import type { DiffHunk, ExplanationLevel, ReviewRequestPayload, ReviewScope } fr
 import { store } from './store';
 import { settings } from './settings';
 import { fenceBlock } from './promptFence';
+import { isProPlan } from '../core/plan';
 
 const MAX_NEARBY_CHARS = 8_000;
 const MAX_SNAPSHOT_CHARS = 12_000;
@@ -100,10 +101,14 @@ export async function buildSelectionPayload(opts: {
   filePath?: string;
   repoRoot?: string | null;
   withNearby: boolean;
+  /** Attach no repository at all (the built-in sample). */
+  noRepo?: boolean;
   question?: string;
   variant?: 'default' | 'different';
 }): Promise<BuiltReview> {
-  const repoRoot = opts.repoRoot ?? (opts.filePath ? await resolveRepoRoot(path.dirname(opts.filePath)) : await resolveRepoRoot());
+  const repoRoot = opts.noRepo
+    ? null
+    : opts.repoRoot ?? (opts.filePath ? await resolveRepoRoot(path.dirname(opts.filePath)) : await resolveRepoRoot());
   const relFile = opts.filePath && repoRoot
     ? path.relative(repoRoot, opts.filePath)
     : opts.filePath ? path.basename(opts.filePath) : undefined;
@@ -226,7 +231,8 @@ export async function buildComparePayload(opts: {
       level: opts.level,
       filePath: opts.filePath,
       repoRoot,
-      withNearby: true,
+      // A Pro-only flow; nearby files still need the person's own switch (Security U13).
+      withNearby: settings().all().nearbyFiles === true,
       question: prior
         ? 'You marked this file understood before, but no local snapshot was kept. Explain the current file and note what to re-check.'
         : 'First pass on this file. Explain it clearly, then tap Got it so future compares have a baseline.',
@@ -272,8 +278,9 @@ export async function buildComparePayload(opts: {
   };
 }
 
-export function isProPlan(plan: string): boolean {
-  return plan === 'pro' || plan === 'teams' || plan === 'full';
+/** Pro's nearby files go only when the person turned them on in Settings › Privacy & Data (Security U13). */
+export function sendNearbyFiles(plan: string): boolean {
+  return isProPlan(plan) && settings().all().nearbyFiles === true;
 }
 
 export function scopeLabel(scope: ReviewScope | ReviewMode): string {

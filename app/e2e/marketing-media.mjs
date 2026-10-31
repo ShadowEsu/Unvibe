@@ -100,14 +100,16 @@ await app.evaluate(({ BrowserWindow }) => {
 mark(`app open ${version}`);
 
 // --- First run: the real onboarding and the first explanation ---------------------------------
+// A Mac's setup has 4 steps (paste your own code, then the shortcut offer); Windows has 3.
+const steps = process.platform === 'win32' ? 3 : 4;
 const firstRun = await step('onboarding', async () => {
-  await companion.locator('.ob2__count').filter({ hasText: '1 / 3' }).waitFor({ timeout: 20000 });
+  await companion.locator('.ob2__count').filter({ hasText: `1 / ${steps}` }).waitFor({ timeout: 20000 });
   await sleep(800);
   await shot(companion, 'onboarding-hello');
   // A neutral name: the greeting and sidebar show it in every published frame and screenshot.
   await companion.getByPlaceholder('Your name').pressSequentially('Sam', { delay: 70 });
   await button(companion, "Let's go").click();
-  await companion.locator('.ob2__count').filter({ hasText: '2 / 3' }).waitFor();
+  await companion.locator('.ob2__count').filter({ hasText: `2 / ${steps}` }).waitFor();
   await sleep(1200);
   await shot(companion, 'onboarding-try-it');
   await button(companion, 'Explain this code').click();
@@ -222,10 +224,11 @@ await step('today', async () => {
   await companion.bringToFront();
   if (await companion.locator('.ob2__count').count()) {
     await button(companion, 'Next').click();
-    await companion.locator('.ob2__count').filter({ hasText: '3 / 3' }).waitFor();
+    await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).waitFor();
     await sleep(1000);
     await shot(companion, 'onboarding-anywhere');
-    await button(companion, 'Start using Unvibe').click();
+    // On a Mac step 3 is the paste target; nothing is pasted here, so Skip for now finishes setup.
+    await button(companion, steps === 3 ? 'Start using Unvibe' : 'Skip for now').click();
   }
   await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
   await sleep(1800);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { app, safeStorage, sessionCalls } from './electronStub';
+import { app, safeStorage, session, sessionCalls } from './electronStub';
 
 // Everything under userData belongs to this file only. The keychain stand-in "works" so a session and
 // an API key can be saved the way they are on a real computer.
@@ -20,6 +20,13 @@ import { flush } from '../src/main/sync';
 import { abortChatAndStudy, answerQuizCard, askChat, askStudyAssistant, saveChatThread, startQuizCard } from '../src/main/studyQuiz';
 import { invalidateAppUsage } from '../src/main/usage';
 import type { LocalEvent } from '../src/core/learning';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// Chat, Study and quiz run here on the person's own lessons, through Unvibe and through their own
+// key (the default own-key provider, Gemini), so they have agreed to both.
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
+consentStore().agree([...CONSENT_ITEMS], 'gemini');
 
 const KEY_FILE = path.join(userData, 'unvibe-ai-key.bin');
 const SETTINGS_FILE = path.join(userData, 'unvibe-settings.json');
@@ -373,6 +380,49 @@ test('signed out, Erase everything also clears renderer storage, the HTTP cache 
   assert.deepEqual(knowledgeStore().teachBacks(), []);
 });
 
+test('signed out, a project folder picked while renderer storage is clearing is still forgotten', async () => {
+  signedInWithData();
+  store().signOut();
+  const clearStorage = session.defaultSession.clearStorageData;
+  const picked = mock.method(session.defaultSession, 'clearStorageData', async (options?: Electron.ClearStorageDataOptions) => {
+    // A folder pick lands while the erase is awaiting this clear.
+    settings().set({ lastProjectRoot: path.join(userData, 'picked-during-erase') });
+    await clearStorage(options);
+  });
+  try {
+    const result = await deleteAccountAndLocalData(stopReviews);
+    assert.deepEqual(result, { ok: true, status: 'erased_locally' });
+    assert.equal(picked.mock.callCount(), 1);
+  } finally {
+    picked.mock.restore();
+  }
+  assert.equal(settings().all().lastProjectRoot, undefined);
+  const onDisk = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Record<string, unknown>;
+  assert.equal('lastProjectRoot' in onDisk, false);
+});
+
+test('signed in, a project folder picked while local learning is clearing is still forgotten', async () => {
+  signedInWithData();
+  const service = serviceAnswers({ status: 200, body: { ok: true, status: 'deleted' } });
+  const clearStorage = session.defaultSession.clearStorageData;
+  const picked = mock.method(session.defaultSession, 'clearStorageData', async (options?: Electron.ClearStorageDataOptions) => {
+    // A folder pick lands after forgetPerson, while the erase is awaiting this clear.
+    settings().set({ lastProjectRoot: path.join(userData, 'picked-during-delete') });
+    await clearStorage(options);
+  });
+  try {
+    const result = await deleteAccountAndLocalData(stopReviews);
+    assert.deepEqual(result, { ok: true, status: 'deleted' });
+    assert.equal(picked.mock.callCount(), 1);
+  } finally {
+    picked.mock.restore();
+    service.restore();
+  }
+  assert.equal(settings().all().lastProjectRoot, undefined);
+  const onDisk = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Record<string, unknown>;
+  assert.equal('lastProjectRoot' in onDisk, false);
+});
+
 /**
  * Answers the sync routes and DELETE. GET /history (the pull) waits for `release`; with `honourAbort`
  * it ends when its request is aborted, the way a real network request does.
@@ -691,6 +741,65 @@ test('a Chat reply whose usage refresh outlives a wipe is not ok, and its conver
     assert.deepEqual(store().chatThreads().map((thread) => thread.id), ['thread-after']);
   } finally {
     releaseRefresh();
+    globalThis.fetch = original;
+  }
+});
+
+test('Chat refuses a conversation stamped before a wipe before any network call, and a current stamp still answers', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  const stamp = store().wipeGeneration();
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    calls += 1;
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A reply.' }] } }] })}\n\n`);
+    }
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    store().wipeEverything();
+    const stale = await askChat({ question: 'What did that erased code do?', messages: [{ role: 'user', content: 'const erased = 1;' }], wipeGeneration: stamp });
+    assert.deepEqual(stale, { ok: false, error: 'The learning on this computer was erased while this was running, so nothing was saved.' });
+    assert.equal(calls, 0, 'no usage check and no provider request');
+    assert.deepEqual(store().events(), [], 'no Chat lesson recorded');
+    const current = await askChat({ question: 'What does map do?', wipeGeneration: store().wipeGeneration() });
+    assert.equal(current.ok, true);
+    assert.ok(calls > 0);
+    assert.equal(store().events().length, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('Chat refuses a string or null stamp before any network call, and a missing stamp still answers', { timeout: 10_000 }, async () => {
+  signedInWithData();
+  invalidateAppUsage();
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    calls += 1;
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A reply.' }] } }] })}\n\n`);
+    }
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  try {
+    // IPC carries whatever the renderer sends, so the stamp's type is not guaranteed.
+    for (const stamp of [String(store().wipeGeneration()), null, Number.NaN] as unknown as number[]) {
+      const refused = await askChat({ question: 'What does map do?', wipeGeneration: stamp });
+      assert.deepEqual(refused, { ok: false, error: 'The learning on this computer was erased while this was running, so nothing was saved.' }, String(stamp));
+    }
+    assert.equal(calls, 0, 'nothing was sent for a refused stamp');
+    assert.equal(store().events().length, 1, 'only the lesson from setup');
+    const missing = await askChat({ question: 'What does map do?' });
+    assert.equal(missing.ok, true, 'no stamp: answers as before');
+    assert.ok(calls > 0);
+    assert.equal(store().events().length, 2);
+  } finally {
     globalThis.fetch = original;
   }
 });

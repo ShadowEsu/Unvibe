@@ -1,4 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ConsentProvider } from '../core/consent';
+import type { PmfDraft, PmfTextKey } from '../core/pmf';
+import type { ConsentStatus } from '../main/consent';
+
+type ConsentAnswer = { ok: true; status: ConsentStatus } | { ok: false; error: string };
 
 /** Bridge exposed to sandboxed renderers as window.unvibe. No node, no network. */
 const api = {
@@ -54,6 +59,7 @@ const api = {
   snoozeLive: (hours: number) => ipcRenderer.invoke('live:snooze', hours),
   pickProjectRoot: () => ipcRenderer.invoke('project:pickRoot'),
   reviewQueue: (limit: number) => ipcRenderer.invoke('learning:queue', limit),
+  learningToday: () => ipcRenderer.invoke('learning:today'),
   reopenLearningItem: (item: unknown) => ipcRenderer.invoke('review:reopenItem', item),
   testMe: () => ipcRenderer.send('widget:testMe'),
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),
@@ -65,6 +71,10 @@ const api = {
   openPlan: () => ipcRenderer.send('companion:openPlan'),
   openUrl: (url: string) => ipcRenderer.invoke('app:openUrl', url),
   sendFeedback: (input: { rating: number; message: string; email?: string }) => ipcRenderer.invoke('feedback:send', input),
+  pmfState: (): Promise<{ show: boolean; draft: PmfDraft }> => ipcRenderer.invoke('pmf:state'),
+  pmfSaveDraft: (draft: PmfDraft) => ipcRenderer.send('pmf:draft', draft),
+  pmfDismiss: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('pmf:dismiss'),
+  pmfSend: (draft: PmfDraft): Promise<{ ok: true; installId: string } | { ok: false; error: string; field?: PmfTextKey; retry?: true }> => ipcRenderer.invoke('pmf:send', draft),
   onShowPage: (cb: (page: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, page: string) => cb(page);
     ipcRenderer.on('companion:showPage', listener);
@@ -88,7 +98,7 @@ const api = {
   quizStatus: () => ipcRenderer.invoke('quiz:status'),
   quizStart: (input: { eventId: string; mode?: 'quick-check' | 'recall' | 'scenario' }) => ipcRenderer.invoke('quiz:start', input),
   quizAnswer: (input: { eventId: string; choice: number }) => ipcRenderer.invoke('quiz:answer', input),
-  chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+  chatAsk: (input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string; wipeGeneration?: number }) =>
     ipcRenderer.invoke('chat:ask', input),
   chatThreads: () => ipcRenderer.invoke('chat:threads'),
   saveChatThread: (thread: {
@@ -109,6 +119,13 @@ const api = {
     return () => { ipcRenderer.removeListener('learning:changed', listener); };
   },
 
+  // consent before the user's own code is sent: status, the three-box form, the off switch
+  consentStatus: (): Promise<ConsentStatus> => ipcRenderer.invoke('consent:status'),
+  consentAgree: (form: { aiSend: boolean; terms: boolean; age18: boolean; provider: ConsentProvider }): Promise<ConsentAnswer> =>
+    ipcRenderer.invoke('consent:agree', form),
+  consentRevoke: (): Promise<ConsentAnswer> => ipcRenderer.invoke('consent:revoke'),
+  /** After Agree in the panel: run the clipboard explain asked for before agreeing, if it is recent. */
+  explainAfterConsent: (): Promise<{ explained: boolean }> => ipcRenderer.invoke('consent:explainHeld'),
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
@@ -142,7 +159,31 @@ const api = {
     ipcRenderer.on('onboarding:sampleDone', listener);
     return () => { ipcRenderer.removeListener('onboarding:sampleDone', listener); };
   },
+  /** Setup is still open and the user's own code was just explained; returns an unsubscribe. */
+  onOwnCodeDone: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('onboarding:ownCodeDone', listener);
+    return () => { ipcRenderer.removeListener('onboarding:ownCodeDone', listener); };
+  },
+  /** The review panel closed; returns an unsubscribe. */
+  onPanelClosed: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('panel:closed', listener);
+    return () => { ipcRenderer.removeListener('panel:closed', listener); };
+  },
   onShortcutFired: (cb: () => void) => ipcRenderer.on('shortcut:fired', () => cb()),
+  /** Whether this open leads with the paste step, before Today. */
+  ownCodeStep: (): Promise<boolean> => ipcRenderer.invoke('ownCode:step'),
+  /** The paste step's "Choose a file…": explains the chosen file in the panel. */
+  companionPickFile: (): Promise<{ ok: boolean; cancelled?: boolean; error?: string }> => ipcRenderer.invoke('companion:pickFile'),
+  /** "Not now": hides the step until the next open. */
+  ownCodeNotNow: (): Promise<void> => ipcRenderer.invoke('ownCode:notNow'),
+  /** The companion was brought back from minimized, a new open; returns an unsubscribe. */
+  onOwnCodeChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('ownCode:changed', listener);
+    return () => { ipcRenderer.removeListener('ownCode:changed', listener); };
+  },
 
   // account
   account: () => ipcRenderer.invoke('account:get'),
