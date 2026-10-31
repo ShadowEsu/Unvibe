@@ -96,16 +96,25 @@ app.onWindow((page) => { void record(page); });
 /**
  * Window size (and optionally centre) without the main process: Electron applies a page's
  * window.resizeTo/moveTo to its BrowserWindow ('content-bounds-updated'; the app doesn't block it).
- * CDP's Browser.setWindowBounds is not available in Electron.
+ * CDP's Browser.setWindowBounds is not available in Electron. macOS keeps a window inside the screen,
+ * so on a smaller display (GitHub's macOS runners: 1024x768) the page's viewport is emulated at the
+ * size the wanted window would give it, and screenshots and the screencast render at that size.
  */
 async function resize(page, width, height, { center = false } = {}) {
   await page.evaluate(([w, h, c]) => {
     window.resizeTo(w, h);
-    if (c) window.moveTo(Math.round(screen.availLeft + (screen.availWidth - w) / 2), Math.round(screen.availTop + (screen.availHeight - h) / 2));
+    if (c) window.moveTo(Math.round(screen.availLeft + Math.max(0, (screen.availWidth - w) / 2)), Math.round(screen.availTop + Math.max(0, (screen.availHeight - h) / 2)));
   }, [width, height, center]);
   await sleep(400);
-  const size = await page.evaluate(() => [window.outerWidth, window.outerHeight]);
-  if (Math.abs(size[0] - width) > 2 || Math.abs(size[1] - height) > 2) throw new Error(`window is ${size.join('x')}, wanted ${width}x${height}`);
+  const m = await page.evaluate(() => ({ outer: [window.outerWidth, window.outerHeight], inner: [window.innerWidth, window.innerHeight], avail: [screen.availWidth, screen.availHeight] }));
+  if (Math.abs(m.outer[0] - width) <= 2 && Math.abs(m.outer[1] - height) <= 2) return;
+  if (m.avail[0] >= width && m.avail[1] >= height) throw new Error(`window is ${m.outer.join('x')}, wanted ${width}x${height}`);
+  const viewport = { width: width - (m.outer[0] - m.inner[0]), height: height - (m.outer[1] - m.inner[1]) };
+  await page.setViewportSize(viewport);
+  await sleep(300);
+  const inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
+  if (inner[0] !== viewport.width || inner[1] !== viewport.height) throw new Error(`viewport is ${inner.join('x')}, wanted ${viewport.width}x${viewport.height}`);
+  console.log(`NOTE screen ${m.avail.join('x')} is smaller than a ${width}x${height} window: page viewport emulated at ${viewport.width}x${viewport.height}`);
 }
 
 /**
