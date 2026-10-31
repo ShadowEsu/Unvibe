@@ -53,7 +53,7 @@ From version 0.1.45 this is off unless you turn it on, and updating to 0.1.45 sw
 
 ## Feedback
 
-When you send feedback from the app or the website, Unvibe stores your star rating and message, where it came from (the app version or the page), and your email only if you add it. Your IP address is used only in the server's memory, to stop repeated sends, and is not stored with your feedback. No analytics event is sent for a feedback send.
+When you send feedback from the app or the website, Unvibe stores your star rating and message, where it came from (the app version or the page), and your email only if you add it. Your IP address is used only in the server's memory, to stop repeated sends, and is not stored with your feedback. The server and the app send no analytics event for it; on the website, if you pressed Allow on the analytics bar, the site records one Mixpanel event with the star rating.
 
 **Survey answers:** from version 0.1.47 the app may show a short optional survey once, with 4 questions about Unvibe. If you answer it and press Send, your answers, the app version and your random install ID go to Unvibe's server; nothing is sent before you press Send, and closing it sends nothing. Answers are checked on your computer first, and any that look like a key or password are not sent. The server stores the install ID only as a keyed hash. Answers are kept 12 months. The team reads them and may use AI tools that don't train on your data to summarise them. To delete them later, email **support@unvibe.site** with the install ID the app shows after you press Send.
 

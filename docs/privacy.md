@@ -33,7 +33,9 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   this change still hold one until someone clears the column). The rate limit (5
   sends per 10 minutes) keys an in-memory map in each server instance on a SHA-256 of the client
   IP (`hashIp`); that key is never stored or sent, and it lasts until the instance restarts or the
-  map passes 5,000 keys. No analytics event is sent for a feedback send.
+  map passes 5,000 keys. The server and the desktop app send no analytics event for a feedback send;
+  on the website, if the visitor pressed Allow on the analytics bar, `FeedbackWidget` records one
+  Mixpanel `feedback_submitted` event with the star rating.
 
 ## Not implemented or not verified
 

@@ -46,7 +46,7 @@ const NO_AMOUNT_TERMS: Array<[string, string]> = [
   ["Mixpanel for Startups", "First year free on the Startup Plan"],
   ["Salesforce Launchpad", "Starter Suite free for 12 months, then 50% off the second year"],
   ["Google for Startups", "Program member"],
-  ["Deepgram Startup Program", "Deepgram API credits"],
+  ["Deepgram Startup Program", "Program member"],
   ["MongoDB for Startups", "Program member"],
 ];
 const HERO = "$72,300 in Claude and PostHog credits and committed cash · 7 programs, including Claude for Startups";
