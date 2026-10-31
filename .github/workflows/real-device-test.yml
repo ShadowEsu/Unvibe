@@ -190,7 +190,7 @@ jobs:
         run: |
           # Nothing left over from the walkthrough may count towards the memory totals.
           if [ "$UNVIBE_OS" = mac ]; then pkill -f "/Applications/Unvibe.app/" || true
-          else powershell -NoProfile -Command "Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force"; fi
+          else powershell -NoProfile -Command "Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force" || true; fi
           sleep 3
           cp app/e2e/perf.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node perf.mjs
