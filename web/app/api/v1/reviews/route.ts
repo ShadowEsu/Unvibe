@@ -47,19 +47,20 @@ export async function POST(req: Request): Promise<Response> {
   let release: (() => Promise<void>) | null = null;
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   let trialStartedAt: string | undefined;
+  // A follow-up question or "Explain differently" is a follow-up, for accounts and the no-account trial alike.
+  const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
   if (!provider.mock && userId) {
-    const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
     const reserved = await reserveMeteredAction(userId, kind, req, { proOnly });
     if (reserved instanceof Response) return reserved;
     release = () => releaseMeteredAction(userId, kind, reserved);
     recordTokens = (usage) => recordMeteredTokens(userId, kind, usage);
   } else if (!provider.mock && trialInstall) {
     if (proOnly) return proRequired();
-    const trial = await reserveTrialAction(trialInstall, 'ai_explanation', clientIp(req), new Date(), trialInstallMeta(req));
+    const trial = await reserveTrialAction(trialInstall, kind, clientIp(req), new Date(), trialInstallMeta(req));
     if (trial.denied) return trial.denied;
     release = trial.release;
     trialStartedAt = trial.startedAt;
-    recordTokens = (usage) => recordTrialTokens('ai_explanation', usage);
+    recordTokens = (usage) => recordTrialTokens(kind, usage);
   }
 
   const system = buildSystemPrompt(payload);

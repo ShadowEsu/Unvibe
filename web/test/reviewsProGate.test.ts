@@ -181,7 +181,8 @@ test('a Free account and a trial install keep selection explanations, follow-up 
   }
   assert.equal(await used(free.userId, 'ai_explanation'), 1);
   assert.equal(await used(free.userId, 'project_question'), 2);
-  assert.equal((await trialUsageLine(trialInstallKey(installId), 'ai_explanation')).used, 3);
+  assert.equal((await trialUsageLine(trialInstallKey(installId), 'ai_explanation')).used, 1);
+  assert.equal((await trialUsageLine(trialInstallKey(installId), 'project_question')).used, 2);
 });
 
 test('a Pro-only payload fails closed with 503 when the plan cannot be checked', async () => {
