@@ -258,10 +258,16 @@ jobs:
               kill "$pid"; wait "$pid" 2>/dev/null || true
               if [ -n "$UNVIBE_QA_FLAG_TOKEN" ]; then
                 # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
-                code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+                answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
                   -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
-                  --data "{\"installId\":\"$RELEASE_INSTALL_ID\"}") || code="curl failed"
-                echo "QA install flag ($RELEASE_INSTALL_ID): $code"
+                  --data "{\"installId\":\"$RELEASE_INSTALL_ID\"}") || answer=$'\ncurl failed'
+                code=$(printf '%s' "$answer" | tail -n 1)
+                matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2 || true)
+                echo "QA install flag ($RELEASE_INSTALL_ID): $code matched=${matched:-none}"
+                # A counting problem, not a broken build: warn so the person publishing checks trial_installs by hand.
+                if [ "$code" != 200 ] || [ "$matched" != true ]; then
+                  echo "::warning::QA install flag for $RELEASE_INSTALL_ID: $code matched=${matched:-none}; check trial_installs before publishing"
+                fi
               else
                 echo "QA install flag: no token, so $RELEASE_INSTALL_ID counts as real until it is flagged by hand"
               fi
