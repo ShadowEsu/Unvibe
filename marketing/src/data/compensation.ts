@@ -34,8 +34,8 @@ export const PROGRAM_NOTICES = [SALESFORCE_ATTRIBUTION] as const;
 
 /**
  * The startup programs Unvibe is in, as the earlier site listed them (ledger 317, 28 Oct 2026), minus the lines
- * the record does not support (Security 31 Oct, requests/security/20261031-0208: GitLab and Linear removed,
- * Deepgram without an amount). Amounts are self-reported; logos and notices follow Security's 28 Oct ruling
+ * the record does not support (Security 31 Oct, requests/security/20261031-0208: GitLab, Linear and OpenAI
+ * removed, Google and Deepgram without an amount). Amounts are self-reported; logos and notices follow Security's 28 Oct ruling
  * (only MongoDB shows a logo). The homepage, /investors, /about, /kit and the milestones all read this list,
  * so a change is one line.
  */
@@ -56,8 +56,7 @@ export const startupPrograms: readonly StartupProgram[] = [
     amountUsd: 13_500,
     detail: "30 Starter Suite seats, confirmed 2-year program value",
   },
-  { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-07-23", amountUsd: 2_000, detail: "Google Cloud credits, USD" },
-  { brand: "OpenAI", program: "OpenAI for Startups", accepted: "2026-08-16", amountUsd: 1_200, detail: "ChatGPT Business seat credits" },
+  { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-07-23", detail: "Program member" },
   { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", detail: "Deepgram API credits" },
   {
     brand: "MongoDB",

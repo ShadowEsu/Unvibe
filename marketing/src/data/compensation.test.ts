@@ -36,19 +36,19 @@ const PROGRAMS: Array<[string, string, number | undefined]> = [
   ["Mixpanel for Startups", "2026-08-18", 144_000],
   ["PostHog for Startups", "2026-08-17", 50_000],
   ["Salesforce Launchpad", "2026-08-26", 13_500],
-  ["Google for Startups", "2026-07-23", 2_000],
-  ["OpenAI for Startups", "2026-08-16", 1_200],
+  ["Google for Startups", "2026-07-23", undefined],
   ["Deepgram Startup Program", "2026-08-19", undefined],
   ["MongoDB for Startups", "2026-07-21", 500],
 ];
-const HERO = "$233,500 in startup-program credits and committed cash · 8 programs, including Claude for Startups";
+const HERO = "$230,300 in startup-program credits and committed cash · 7 programs, including Claude for Startups";
 const SUMMARY =
-  "In Claude for Startups, plus Mixpanel, PostHog, Salesforce Launchpad, Google for Startups, OpenAI, Deepgram and MongoDB®";
+  "In Claude for Startups, plus Mixpanel, PostHog, Salesforce Launchpad, Google for Startups, Deepgram and MongoDB®";
 /** Program lines Security removed for lack of a record (0208): never shown again anywhere. */
-const REMOVED = /gitlab|linear startup pack|linear's startup pack|\$23,700|\$4,500|deepgram \$1,000|\$1,000 in deepgram/i;
+const REMOVED =
+  /gitlab|linear startup pack|linear's startup pack|openai for startups|chatgpt business|\$23,700|\$4,500|\$1,200|deepgram \$1,000|\$1,000 in deepgram|\$2,000 in google cloud/i;
 /**
  * MongoDB's logo as served on mongodb.com/company/newsroom/brand-resources, unmodified: the only logo Security
- * cleared. The other seven programs are text (PolyForm Strict, no published permission, or "ask first").
+ * cleared. The other six programs are text (PolyForm Strict, no published permission, or "ask first").
  */
 const LOGO = "/sponsors/mongodb-logo.svg";
 const LOGO_SHA256 = "9f5435c8be18a834b2c2f8c4c03f117a997646c660fd6f28e3b6869a1bc2fcc1";
@@ -72,7 +72,7 @@ function section(markup: string, opening: RegExp): string {
   return markup.slice(start, end + "</section>".length);
 }
 
-/** The 8 names, the one MongoDB logo and nothing else, the notice, no removed line, no "$0", no AWS and no banned wording. */
+/** The 7 names, the one MongoDB logo and nothing else, the notice, no removed line, no "$0", no AWS and no banned wording. */
 function assertProgramSection(markup: string, where: string) {
   const words = text(markup);
   for (const [name] of PROGRAMS) {
@@ -103,24 +103,24 @@ function assertMarksAtFirstUse(markup: string, where: string) {
 describe("startup programs", () => {
   it("lists every program the earlier site listed except AWS, with its date and credit value", () => {
     assert.deepEqual(startupPrograms.map((program) => [program.program, program.accepted, program.amountUsd]), PROGRAMS);
-    assert.equal(compensationProgramCount(), 8);
+    assert.equal(compensationProgramCount(), 7);
     assert.deepEqual(PROGRAM_NOTICES, [SALESFORCE_ATTRIBUTION]);
     assert.equal(startupProgramsLine(), SUMMARY);
     assert.deepEqual(startupPrograms.filter((program) => program.logo).map((program) => [program.brand, program.logo?.src]), [["MongoDB", LOGO]]);
   });
 
-  it("adds up: $232,700 of program credits + $800 of cash = $233,500, from the amounts shown", () => {
+  it("adds up: $229,500 of program credits + $800 of cash = $230,300, from the amounts shown", () => {
     const shown = PROGRAMS.reduce((sum, [, , amount]) => sum + (amount ?? 0), 0);
-    assert.equal(shown, 232_700);
+    assert.equal(shown, 229_500);
     assert.equal(compensationCreditsUsd(), shown);
     assert.equal(compensationCashUsd(), 800);
     assert.equal(compensationTotalUsd(), compensationCreditsUsd() + compensationCashUsd());
-    assert.equal(compensationTotalUsd(), 233_500);
-    assert.equal(compensationTotalLabel(), "$233,500");
-    // Seven programs with a supported amount, plus the two cash lines; Deepgram has no money line.
-    assert.equal(compensationLines.length, 9);
-    assert.equal(compensationLines.some((line) => /deepgram/i.test(line.name)), false);
-    assert.equal(compensationLines.reduce((sum, line) => sum + line.amountUsd, 0), 233_500);
+    assert.equal(compensationTotalUsd(), 230_300);
+    assert.equal(compensationTotalLabel(), "$230,300");
+    // Five programs with a supported amount, plus the two cash lines; Google and Deepgram have no money line.
+    assert.equal(compensationLines.length, 7);
+    assert.equal(compensationLines.some((line) => /deepgram|google/i.test(line.name)), false);
+    assert.equal(compensationLines.reduce((sum, line) => sum + line.amountUsd, 0), 230_300);
   });
 
   it("never publishes AWS, or wording that reads as sponsorship: no line, program, milestone or kit text", () => {
@@ -141,7 +141,7 @@ describe("startup programs", () => {
     assert.equal(createHash("sha256").update(readFileSync(join(dir, "mongodb-logo.svg"))).digest("hex"), LOGO_SHA256);
   });
 
-  it("home: the hero line links to /investors#backing, and the strip shows the 8 names and only the MongoDB logo", () => {
+  it("home: the hero line links to /investors#backing, and the strip shows the 7 names and only the MongoDB logo", () => {
     const home = render(HomePage);
     const hero = home.match(/<p class="vhero__backing">([\s\S]*?)<\/p>/)?.[1] ?? "";
     assert.match(hero, /<a href="\/investors#backing">/);
@@ -155,24 +155,24 @@ describe("startup programs", () => {
     assert.doesNotMatch(text(home), SPONSOR_READING);
   });
 
-  it("/investors shows the total, the count, the 8 names in #backing and every line with its amount", () => {
+  it("/investors shows the total, the count, the 7 names in #backing and every line with its amount", () => {
     const page = render(InvestorsPage);
     assertProgramSection(section(page, /<section class="inv-section" id="backing"/), "/investors#backing");
     const words = text(page);
-    assert.match(words, /\$233,500 in startup-program credits and committed cash/);
-    assert.match(words, /8 startup programs we're in/);
-    assert.match(words, /Program credits \$232,700 · cash \$800/);
+    assert.match(words, /\$230,300 in startup-program credits and committed cash/);
+    assert.match(words, /7 startup programs we're in/);
+    assert.match(words, /Program credits \$229,500 · cash \$800/);
     for (const line of compensationLines) assert.ok(words.includes(`${line.name} ${formatUsd(line.amountUsd)}`), line.name);
     assertMarksAtFirstUse(page, "/investors");
     assert.doesNotMatch(words, NO_AWS);
     assert.doesNotMatch(words, SPONSOR_READING);
   });
 
-  it("/about shows the total with the count, the summary, the 8 names and the investors link", () => {
+  it("/about shows the total with the count, the summary, the 7 names and the investors link", () => {
     const page = render(AboutPage);
     const block = section(page, /<section class="paper-wrap about-backing"/);
     assertProgramSection(block, "/about");
-    assert.match(text(block), /Startup programs we're in \$233,500 in startup-program credits and committed cash \(8 programs\)\./);
+    assert.match(text(block), /Startup programs we're in \$230,300 in startup-program credits and committed cash \(7 programs\)\./);
     assert.ok(text(block).includes(`${SUMMARY}.`));
     assert.match(block, /<a href="\/investors#backing">More on the investors page\.<\/a>/);
     assertMarksAtFirstUse(page, "/about");
@@ -192,14 +192,16 @@ describe("startup programs", () => {
       assert.deepEqual(found.map((m) => iso(m.date)), [date], name);
     }
     const programMilestones = company.filter((m) => PROGRAMS.some(([name]) => m.title.replace(/[™®]/g, "").includes(name)) || m.title === "Startup-program credits and committed cash");
-    assert.equal(programMilestones.length, 9);
+    assert.equal(programMilestones.length, 8);
     for (const m of programMilestones) assert.doesNotMatch(`${m.title} ${m.summary}`, BANNED_WORDING, m.title);
     for (const m of milestones) assert.doesNotMatch(`${m.title} ${m.summary}`, RETIRED_NAMES, m.title);
     assert.ok(milestones.find((m) => m.title === "Salesforce Launchpad")?.summary.includes(SALESFORCE_ATTRIBUTION));
-    const deepgram = milestones.find((m) => m.title === "Deepgram Startup Program");
-    assert.equal(deepgram?.figure, undefined);
-    assert.doesNotMatch(deepgram?.summary ?? "", /\$/);
-    assert.equal(milestones.find((m) => m.title === "Startup-program credits and committed cash")?.figure, "$233,500");
+    for (const title of ["Deepgram Startup Program", "Google for Startups"]) {
+      const found = milestones.find((m) => m.title === title);
+      assert.equal(found?.figure, undefined, title);
+      assert.doesNotMatch(found?.summary ?? "", /\$/, title);
+    }
+    assert.equal(milestones.find((m) => m.title === "Startup-program credits and committed cash")?.figure, "$230,300");
   });
 
   it("the kit names the programs with the notices and the marks", () => {

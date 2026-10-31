@@ -755,13 +755,6 @@ export const milestones: Milestone[] = [
     figure: "75%",
   },
   {
-    date: "16 AUG 2026",
-    category: "COMPANY",
-    title: "OpenAI for Startups",
-    summary: "Accepted into the program. One ChatGPT Business seat, $1,200 in credits. Not cash. Not a round.",
-    figure: "$1,200",
-  },
-  {
     date: "3 AUG 2026",
     category: "INFRA",
     title: "Waitlist attribution scorecard",
@@ -879,8 +872,7 @@ export const milestones: Milestone[] = [
     date: "23 JUL 2026",
     category: "COMPANY",
     title: "Google for Startups",
-    summary: "Accepted into Google for Startups. $2,000 in Google Cloud credits, USD.",
-    figure: "$2,000",
+    summary: "Joined Google for Startups. Not cash. Not a round.",
   },
   {
     date: "22 JUL 2026",
