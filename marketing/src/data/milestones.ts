@@ -660,6 +660,12 @@ export const milestones: Milestone[] = [
     summary: "The homepage demo had stopped playing; it now played from the site itself. A demo of Unvibe in Cursor was added to the homepage.",
   },
   {
+    date: "20 AUG 2026",
+    category: "COMPANY",
+    title: "Google for Startups",
+    summary: "Joined Google for Startups. Not cash. Not a round.",
+  },
+  {
     date: "19 AUG 2026",
     category: "COMPANY",
     title: "Deepgram Startup Program",
@@ -865,12 +871,6 @@ export const milestones: Milestone[] = [
     category: "PRODUCT",
     title: "Island, sound and look preferences",
     summary: "The Island hover delay could be set between 120 and 600 ms. Sound gained a volume control and a Soft or Pixel style. The Island gained quick controls, a mode attached to the top edge and rotating stats. A neutral light palette and one app icon across the app.",
-  },
-  {
-    date: "23 JUL 2026",
-    category: "COMPANY",
-    title: "Google for Startups",
-    summary: "Joined Google for Startups. Not cash. Not a round.",
   },
   {
     date: "22 JUL 2026",

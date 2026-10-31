@@ -37,7 +37,7 @@ const PROGRAMS: Array<[string, string, number | undefined]> = [
   ["Mixpanel for Startups", "2026-08-18", undefined],
   ["PostHog for Startups", "2026-08-17", 50_000],
   ["Salesforce Launchpad", "2026-08-26", undefined],
-  ["Google for Startups", "2026-07-23", undefined],
+  ["Google for Startups", "2026-08-20", undefined],
   ["Deepgram Startup Program", "2026-08-19", undefined],
   ["MongoDB for Startups", "2026-07-21", undefined],
 ];

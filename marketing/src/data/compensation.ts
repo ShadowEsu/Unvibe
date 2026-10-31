@@ -55,7 +55,7 @@ export const startupPrograms: readonly StartupProgram[] = [
     accepted: "2026-08-26",
     detail: "Starter Suite free for 12 months, then 50% off the second year",
   },
-  { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-07-23", detail: "Program member" },
+  { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-08-20", detail: "Program member" },
   { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", detail: "Program member" },
   {
     brand: "MongoDB",
