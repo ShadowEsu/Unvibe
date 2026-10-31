@@ -7,6 +7,7 @@ import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 import { chatAskRequest } from './chatRequest';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import { HOSTED_AI } from './names';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -105,7 +106,7 @@ function AiPicker({
         <div className="chat-ai__menu" role="menu">
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onOpenSettings(); }}>
             Change AI
-            <span>Open settings to pick Unvibe AI or another provider.</span>
+            <span>Open settings to pick {HOSTED_AI} or another provider.</span>
           </button>
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onOpenSettings(); }}>
             {usingOwnAi ? 'Manage API key' : 'Use an API key'}
@@ -177,9 +178,7 @@ export function Chat({
   const limit = Math.max(1, usage?.limit ?? 1);
   const pct = Math.min(100, Math.round((used / limit) * 100));
   const remaining = left ?? usage?.remaining ?? null;
-  const aiLabel = usingOwnAi
-    ? (modelName ? `${providerLabel}, ${modelName}` : providerLabel)
-    : `${providerLabel} (default)`;
+  const aiLabel = usingOwnAi && modelName ? `${providerLabel}, ${modelName}` : providerLabel;
 
   useEffect(() => {
     if (usage?.remaining !== undefined) setLeft(usage.remaining);
@@ -337,7 +336,7 @@ export function Chat({
           <div className="chat-hello">
             <span className="chat-hello__vibe"><Buddy mood={vibeMood} size={88} follow label="Vibe" /></span>
             <h2>{greetName(userName)}</h2>
-            <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
+            <p>Ask Vibe anything about this codebase.</p>
             <div className="chat-context">
               {repoLabel ? <span>Repository {repoLabel}</span> : <span>Repository on this {deviceName}</span>}
               <span>{brief ? `${brief.filesChanged} files in the working tree` : 'No current change'}</span>

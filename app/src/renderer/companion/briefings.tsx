@@ -7,6 +7,7 @@ import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
 import { renderSummary } from '../shared/richText';
+import { CHANGE_BRIEF, PAGE_NAMES, UNDERSTAND_CHANGE } from './names';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -96,8 +97,8 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
     <div className="briefings">
       <div className="briefings__head">
         <div>
-          <div className="kicker">Change Brief</div>
-          <h1>Briefings</h1>
+          <div className="kicker">{CHANGE_BRIEF}</div>
+          <h1>{PAGE_NAMES.Briefings}</h1>
           <p>A clear recap of what changed in your project. Available offline from local git.</p>
         </div>
         {needsRepo && !busy ? null : (
@@ -129,7 +130,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       {needsRepo && !busy && (
         <section className="briefings__empty">
           <h2>Your next change, made clear.</h2>
-          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Understand Change and Explain the change send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
+          <p>Choose a local git project to see its recent changes. The brief is built on this {deviceName} and sends nothing. {UNDERSTAND_CHANGE} sends that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
           <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}
@@ -139,7 +140,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
           review={buildAgentReview(brief, knowledge)}
           repo={brief.repo}
           busy={busy}
-          explainLabel={briefsAiLabel('Explain the change', plan)}
+          explainLabel={briefsAiLabel(UNDERSTAND_CHANGE, plan)}
           onExplain={() => void understand('review')}
           proCard={needsPro === 'review' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           onRefreshKnowledge={(id) => void window.unvibe.refreshKnowledge(id).then(() => loadKnowledge())}
@@ -164,7 +165,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
             {brief.understandBeforeCommit.map((line) => <li key={line}>{line}</li>)}
           </ol>
           <p className="briefings__note">{brief.provenanceNote}</p>
-          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel('Understand Change', plan)}</button>
+          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel(UNDERSTAND_CHANGE, plan)}</button>
           {needsPro === 'brief' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           <h2>Files</h2>
           <ul className="briefings__files">
@@ -175,7 +176,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
                   <span>+{file.insertions} / -{file.deletions}</span>
                 </button>
                 {openFile === file.path ? (
-                  <p>Kind: {file.kind}. Open a Change Brief review to read the actual diff.</p>
+                  <p>Kind: {file.kind}. Press {UNDERSTAND_CHANGE} to read the actual diff.</p>
                 ) : null}
               </li>
             ))}
@@ -312,7 +313,7 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard,
           ) : null}
         </section>
       </div>
-      <p className="agent-review__note">Built from local git on this computer. Unvibe ranks the real diff; it does not guess why the agent made each edit.</p>
+      <p className="agent-review__note">Built from local git on this {deviceName}. Unvibe ranks the real diff; it does not guess why the agent made each edit.</p>
     </article>
   );
 }

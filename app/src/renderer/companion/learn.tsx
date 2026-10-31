@@ -6,6 +6,7 @@ import { playTone } from '../shared/tones';
 import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import { PAGE_NAMES } from './names';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -618,7 +619,7 @@ export function Learn({
     <div className="learn-page">
       <div className="topline learn-topline">
         <div>
-          <h1>{intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'}</h1>
+          <h1>{intent === 'quiz' ? PAGE_NAMES.Quiz : PAGE_NAMES.Learn}</h1>
           <p className="lead lead--tight">
             {intent === 'quiz'
               ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'

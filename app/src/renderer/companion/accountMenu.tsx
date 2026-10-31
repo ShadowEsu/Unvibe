@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { isMac } from '../shared/platform';
+import { deviceName, isMac } from '../shared/platform';
 
 interface AccountMenuProps {
   name: string;
@@ -102,7 +102,7 @@ export function AccountMenu(props: AccountMenuProps) {
             <span className="acct-avatar acct-avatar--lg" aria-hidden="true">{initials(name)}</span>
             <div className="acct-menu__who">
               <strong>{name}</strong>
-              <span>{email || 'Saved on this computer'}</span>
+              <span>{email || `Saved on this ${deviceName}`}</span>
             </div>
             <span className="acct-menu__plan">{planLabel}</span>
           </div>

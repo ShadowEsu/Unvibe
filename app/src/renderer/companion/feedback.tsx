@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { playTone } from '../shared/tones';
+import { NOT_NOW } from './names';
 
 const MAX_WORDS = 100;
 export const FEEDBACK_ASKED_KEY = 'unvibe.feedbackAsked';
@@ -85,7 +86,7 @@ export function FeedbackCard({ onClose }: { onClose: () => void }) {
             <p className={`fbk__count${tooLong ? ' is-over' : ''}`}>{count}/{MAX_WORDS} words</p>
             {state === 'error' ? <p className="field-err" role="alert">{error}</p> : null}
             <div className="fbk__actions">
-              <button type="button" className="soft-btn" onClick={onClose}>Maybe later</button>
+              <button type="button" className="soft-btn" onClick={onClose}>{NOT_NOW}</button>
               <button type="submit" className="primary-btn" disabled={!rating || tooLong || state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send'}</button>
             </div>
           </form>

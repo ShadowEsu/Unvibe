@@ -26,6 +26,7 @@ import { CONSENT_PROVIDERS } from '../../core/consent';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
+import { CHANGE_BRIEF, HOSTED_AI, NOT_NOW, PAGE_NAMES } from './names';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -224,37 +225,37 @@ const SETTINGS_ICONS: Record<string, string> = {
 
 const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
-    { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
+    { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep. No folder-tree dumps.' },
     { icon: IC.layers, t: 'How it fits together', d: 'The moving parts and where they connect, so a new codebase stops feeling like a maze.' },
     { icon: IC.check, t: 'How much you grasp', d: 'A running sense of which corners you understand and which you have not opened yet.' },
     { icon: IC.map, t: 'Where to start reading', d: 'Unvibe points you at the file a newcomer should open first.' },
   ] },
-  Concepts: { id: 'Concepts', icon: IC.concepts, lead: 'Your growing handbook of ideas — each one explained once, well, and tied back to the code where you met it.', features: [
-    { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
+  Concepts: { id: 'Concepts', icon: IC.concepts, lead: 'Your growing handbook of ideas, each one explained once, well, and tied back to the code where you met it.', features: [
+    { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second, never the other way around.' },
     { icon: IC.layers, t: 'Examples from your repos', d: 'Real snippets where the idea shows up in code you have touched.' },
     { icon: IC.spark, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
     { icon: IC.check, t: 'A quick check', d: 'One question adds evidence without pretending Unvibe knows exactly what you understand.' },
   ] },
-  Notebook: { id: 'Notebook', icon: IC.notebook, lead: 'The keeper for anything worth a second look — explanations, diagrams, and the back-and-forth you had with Unvibe.', features: [
+  Notebook: { id: 'Notebook', icon: IC.notebook, lead: 'The keeper for anything worth a second look: explanations, diagrams, and the back-and-forth you had with Unvibe.', features: [
     { icon: IC.notebook, t: 'Saved explanations', d: 'Star an explanation in any widget and it lands here, searchable.' },
     { icon: IC.layers, t: 'Diagrams', d: 'Execution flows and structure sketches, kept next to the code they describe.' },
     { icon: IC.spark, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
-    { icon: IC.clock, t: 'Nothing evaporates', d: 'Close a widget without worry — what you kept is still here tomorrow.' },
+    { icon: IC.clock, t: 'Nothing evaporates', d: 'Close a widget without worry. What you kept is still here tomorrow.' },
   ] },
-  Briefings: { id: 'Briefings', icon: IC.briefings, lead: 'Short recaps of what changed and what you picked up — a two-minute read each morning, a longer one each week.', features: [
+  Briefings: { id: 'Briefings', icon: IC.briefings, lead: 'Short recaps of what changed and what you picked up: a two-minute read each morning, a longer one each week.', features: [
     { icon: IC.clock, t: 'Morning recap', d: 'What the agents changed overnight, told as a story rather than a diff.' },
     { icon: IC.check, t: 'Weekly review', d: 'The concepts you locked in and the ones worth revisiting.' },
-    { icon: IC.eye, t: 'Written for skimming', d: 'Headline first, detail underneath — read as deep as you have time for.' },
-    { icon: IC.spark, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
+    { icon: IC.eye, t: 'Written for skimming', d: 'Headline first, detail underneath. Read as deep as you have time for.' },
+    { icon: IC.spark, t: 'Only what moved', d: 'Quiet days stay quiet. Briefs appear when there is something to say.' },
   ] },
-  Library: { id: 'Library', icon: IC.library, lead: 'Hand-picked reading matched to whatever you are learning right now — guides and roadmaps, minus the rabbit holes.', features: [
+  Library: { id: 'Library', icon: IC.library, lead: 'Hand-picked reading matched to whatever you are learning right now: guides and roadmaps, minus the rabbit holes.', features: [
     { icon: IC.map, t: 'Roadmaps', d: 'The shape of a topic end to end, so you know what is left to learn.' },
-    { icon: IC.eye, t: 'Focused guides', d: 'Chosen to match your open concepts — no endless tab-hoarding.' },
+    { icon: IC.eye, t: 'Focused guides', d: 'Chosen to match your open concepts. No endless tab-hoarding.' },
     { icon: IC.layers, t: 'Reference you keep', d: 'The pages you return to, gathered in one calm place.' },
     { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
   ] },
-  Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
-    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
+  Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning: evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
+    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers: first repo understood, first concept you can teach back.' },
     { icon: IC.check, t: 'Evidence map', d: 'Concepts use cautious labels such as developing, familiar, strong, or needs review.' },
     { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
     { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
@@ -393,8 +394,8 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className="perm-title">Accessibility</span>
       </div>
       <div className="perm-why">{isWindows
-        ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
-        : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
+        ? `Nothing to allow on Windows. ${prettyShortcut('Control+Alt+U')} copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
+        : `macOS asks once. Unvibe uses it only to copy the code you selected when you press ${prettyShortcut('Control+U')}, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
@@ -476,8 +477,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const macShortcut = !isWindows && step === 3;
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
   const keys = prettyAccel(shortcut);
-  // Glyphs on the key caps; words in sentences, since many people don't know ⌃ is Control.
-  const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
+  // The shortcut Accessibility turns on (always registered on a Mac) and the editor bridge's, in prettyShortcut's one form.
+  const macKey = prettyShortcut('Control+U');
+  const bridgeKey = prettyShortcut('CommandOrControl+U');
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
   useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
@@ -517,7 +519,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       ? "That's me, explaining it in the panel. Read it, then press Test me."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
     isWindows
-      ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
+      ? `Now try it on code of your own. Select some in any app and press ${keys}.`
       : paste.started
         ? 'Got it. Your explanation is opening in the panel.'
         : 'Now try your own code. Copy a few lines from any file, then paste them here.',
@@ -577,15 +579,14 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     await turnOnShortcut(window.unvibe);
   };
   // The footer's right button. On a Mac the paste and shortcut steps have no competing primary:
-  // Skip for now, Not now and Do it later are ghosts that finish setup.
+  // "Not now" is a ghost that finishes setup.
   const forward: { label: string; ghost?: boolean; finishes?: boolean } =
     step === 0 ? { label: "Let's go" }
-      : step === 1 ? { label: explained ? 'Next' : 'Skip for now' }
+      : step === 1 ? { label: explained ? 'Next' : NOT_NOW }
         : macPaste && ownCodeDone ? { label: 'Next', ghost: true }
-          : macPaste ? { label: 'Skip for now', ghost: true, finishes: true }
-            : macShortcut && offer === 'offer' ? { label: 'Not now', ghost: true, finishes: true }
-              : macShortcut && offer === 'waiting' ? { label: 'Do it later', ghost: true, finishes: true }
-                : { label: 'Start using Unvibe', finishes: true };
+          : macPaste ? { label: NOT_NOW, ghost: true, finishes: true }
+            : macShortcut && offer !== 'on' ? { label: NOT_NOW, ghost: true, finishes: true }
+              : { label: 'Start using Unvibe', finishes: true };
   const advance = () => {
     if (forward.finishes) void finish();
     else go(step + 1);
@@ -660,7 +661,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 {explained ? 'Explaining in the panel →' : 'Explain this code'}
               </button>
               <p className="ob__sub">{explained
-                ? `That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
+                ? `That's what ${keys} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
                 : 'Uses one of your free explanations. No setup needed.'}</p>
               {sampleDone ? (
                 <div className="ob2__level" role="group" aria-label="How was that explanation pitched?">
@@ -690,8 +691,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 <button type="button" className="act" onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
               </div>
               <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add Ctrl+U there too</summary>
-                <div className="ob__integrations"><IntegrationsPanel /></div>
+                <summary>Use VS Code or Cursor? Add {bridgeKey} there too</summary>
+                <div className="ob__integrations"><IntegrationsPanel shortcut={shortcut} /></div>
               </details>
             </>
           )}
@@ -703,8 +704,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
               {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
               <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add ⌘U there too</summary>
-                <div className="ob__integrations"><IntegrationsPanel /></div>
+                <summary>Use VS Code or Cursor? Add {bridgeKey} there too</summary>
+                <div className="ob__integrations"><IntegrationsPanel shortcut={shortcut} /></div>
               </details>
             </>
           )}
@@ -712,12 +713,12 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
           {macShortcut && offer === 'offer' && (
             <>
               <div className="ob2__offer">
-                <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
+                <div className="ob2__keys" aria-hidden="true">{Array.from(macKey).map((key) => <kbd key={key} className="kbd-lg">{key}</kbd>)}</div>
                 <div>
                   <h3 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h3>
-                  <p>Select code in any app and press Control U. No copying, no pasting.</p>
+                  <p>Select code in any app and press {macKey}. No copying, no pasting.</p>
                 </div>
-                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
+                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press {macKey}, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
                 <div className="ob2__offer-acts">
                   <button type="button" className="field-btn ob2__lime" onClick={() => void turnOn()}>Turn on the shortcut</button>
                 </div>
@@ -728,10 +729,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
           {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="act" illustration />}
           {macShortcut && offer === 'on' && (
             <div className="ob2__offer">
-              <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
+              <div className="ob2__keys" aria-hidden="true">{Array.from(macKey).map((key) => <kbd key={key} className="kbd-lg">{key}</kbd>)}</div>
               <div>
                 <span className="shortcut-pill shortcut-pill--on" role="status"><i aria-hidden="true" />Shortcut is on</span>
-                <h3 ref={shortcutHeading} tabIndex={-1}>Select code in any app, press Control U.</h3>
+                <h3 ref={shortcutHeading} tabIndex={-1}>Select code in any app, press {macKey}.</h3>
                 <p>Pasting into the panel still works, too.</p>
               </div>
             </div>
@@ -821,7 +822,7 @@ function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: bo
           {isWindows ? <p className="ob__sub ob2__shortcut">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
         </div>
         <div className="ob__actions ob2__actions--end">
-          <button type="button" className="act" onClick={onNotNow}>Not now</button>
+          <button type="button" className="act" onClick={onNotNow}>{NOT_NOW}</button>
         </div>
       </div>
     </div>
@@ -882,14 +883,7 @@ function greetFirst(name?: string): string {
 }
 
 function pageLabel(id: string): string {
-  if (id === 'Home') return 'Today';
-  if (id === 'Chat') return 'Ask Vibe';
-  if (id === 'Learn') return 'Library';
-  if (id === 'Quiz') return 'Quiz';
-  if (id === 'Briefings') return 'Briefs';
-  if (id === 'Progress') return 'Momentum';
-  if (id === 'Gift') return 'Share';
-  return id;
+  return id in PAGE_NAMES ? PAGE_NAMES[id as keyof typeof PAGE_NAMES] : id;
 }
 
 /** Today or Yesterday when it is recent, otherwise a short calendar date. */
@@ -957,9 +951,9 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
   const learningSteps: Array<{ id: string; title: string; copy: string; icon: string; done: boolean; run: () => void }> = [
     { id: '01', title: 'Review a change', copy: `Select code and press ${shortcut}.`, icon: IC.spark, done: (profile?.reviews ?? 0) > 0, run: startReview },
     { id: '02', title: 'Save the lesson', copy: 'Mark the explanation understood.', icon: IC.study, done: (profile?.understood ?? 0) > 0, run: () => onNavigate('Learn') },
-    { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
+    { id: '03', title: 'Take a quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
     { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
-    { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
+    { id: '05', title: `Read the ${CHANGE_BRIEF}`, copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
   ];
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
@@ -972,10 +966,10 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
     { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
   ].filter((chip) => chip.n > 0);
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
-  const note = explainDisabled ? 'out of explains this month, catch you soon'
-    : brief ? 'you changed some code, want the story?'
-      : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
-        : 'ready when you are';
+  const note = explainDisabled ? 'Out of explanations this month. Catch you soon.'
+    : brief ? 'You changed some code. Want the story?'
+      : (profile?.reviews ?? 0) === 0 ? `Select any code and press ${shortcut}. I've got you.`
+        : 'Ready when you are.';
   return (
     <div className="today">
       <header className="today-hero">
@@ -1069,7 +1063,7 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
                 );
               })}
             </ul>
-          ) : <p className="rows-empty hand-note">nothing yet. your first explanation lands here!</p>}
+          ) : <p className="rows-empty hand-note">Nothing yet. Your first explanation lands here.</p>}
         </section>
       </div>
     </div>
@@ -1110,7 +1104,7 @@ function Progress({ profile }: { profile: Profile | null }) {
     : null;
   return (
     <>
-      <div className="topline"><h1>Momentum</h1></div>
+      <div className="topline"><h1>{PAGE_NAMES.Progress}</h1></div>
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
         <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
@@ -1131,7 +1125,7 @@ function Progress({ profile }: { profile: Profile | null }) {
               <div className="bar-row" key={u.label}><div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div><div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div></div>
             ))}
           </div>
-          <p className="soft-note">Unvibe notes which app you were in when you asked — never what you typed.</p>
+          <p className="soft-note">Unvibe notes which app you were in when you asked, never what you typed.</p>
         </div>
         <div className="panel-card" style={{ marginBottom: 0 }}>
           <div className="ph"><span className="t">Understanding over time</span></div>
@@ -1549,7 +1543,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <section className="ai-container" aria-label="AI settings">
       <div className="ai-container__intro">
         <span>AI on your terms</span>
-        <p>Use included Unvibe AI, or securely connect a provider key kept on this {deviceName}.</p>
+        <p>Use {HOSTED_AI}, or connect a provider key kept on this {deviceName}.</p>
       </div>
       <div className="setrow setrow--stack">
         <div className="sl">Your own API key</div>
@@ -1575,7 +1569,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <div className="setrow">
         <div>
           <div className="sl">Use my own AI</div>
-          <div className="sd">Always call your provider from this {deviceName} instead of Unvibe cloud AI.</div>
+          <div className="sd">Always call your provider from this {deviceName} instead of {HOSTED_AI}.</div>
         </div>
         <Toggle label="Use my own AI" on={Boolean(settings.useOwnAi)} onClick={() => void onSettings({ useOwnAi: !settings.useOwnAi })} />
       </div>
@@ -1605,7 +1599,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <div className="setrow setrow--stack">
         <div className="sl">Rough cost per explanation · {selected?.label ?? provider}{selected?.model ? ` · ${selected.model}` : ''}</div>
         <div className="sd" style={{ marginBottom: 10 }}>
-          Estimates update when you change the provider. List prices only — your provider bill may differ.
+          Estimates update when you change the provider. List prices only. Your provider bill may differ.
         </div>
         {costs ? (
           <div className="cost-table" role="table" aria-label="Estimated cost by mode and lines">
@@ -1637,7 +1631,7 @@ function OverlayPreview({ position, dimmed }: { position: string; dimmed: number
   </div>;
 }
 
-function IntegrationsPanel() {
+function IntegrationsPanel({ shortcut }: { shortcut: string }) {
   const [items, setItems] = useState<Array<{
     id: string;
     name: string;
@@ -1673,7 +1667,7 @@ function IntegrationsPanel() {
   })).filter((item) => item.rows.length > 0);
   return (
     <div className="integ">
-      <p className="integ__lead">Unvibe sits beside tools you already have. Detected means the app is on this {deviceName}. Bridge ready means {isWindows ? 'Ctrl+U' : 'Command U'} can send the editor selection directly.</p>
+      <p className="integ__lead">Unvibe sits beside tools you already have. Detected means the app is on this {deviceName}. Bridge ready means {prettyShortcut('CommandOrControl+U')} sends the selection straight from that editor. {prettyShortcut(shortcut)} works in every app.</p>
       {message ? <div className="integ__message" role="status">{message}</div> : null}
       {groups.map(({ group, rows }) => (
         <section key={group} className="integ__group">
@@ -1812,7 +1806,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
               <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
-              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ' Control+U is always registered as well.'}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
+              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ` ${prettyShortcut('Control+U')} always works as well.`}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow compact />
             </>
           )}
@@ -1840,7 +1834,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
                   <option value="dim">Dim (keep size)</option><option value="stay">Stay solid</option>
                 </select>
               </div>
-              <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
+              <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes: {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
                 <input className="range" aria-label="Dimmed opacity" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
               </div>
             </>
@@ -1851,7 +1845,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="settings-section-label">LOCAL SOUND</div>
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle label="Interface sounds" on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" aria-label="Sound character" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
-              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}%, stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
               <div className="settings-section-label">NOTIFICATIONS</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle label="Bar notifications" on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle label="Quiet hours" on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
@@ -1861,9 +1855,9 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Learning' && <>
             <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" aria-label="Default explanation depth" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
-            <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this {deviceName}. Open Learn to search, revisit, or remove a lesson.</div></div></div>
-            <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Change Brief" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
-            <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle label="Why does this exist" on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
+            <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this {deviceName}. Open {PAGE_NAMES.Learn} to search, revisit, or remove a lesson.</div></div></div>
+            <div className="setrow"><div><div className="sl">{CHANGE_BRIEF}</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label={CHANGE_BRIEF} on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
+            <div className="setrow"><div><div className="sl">Why does this exist?</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle label="Why does this exist?" on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
             <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle label="Teach it back" on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
             <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. {isWindows
                 ? 'To talk: click any question box, press Win+H, speak, then press Enter. It uses Windows voice typing, so Unvibe never records in the background.'
@@ -1872,13 +1866,13 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</button></div> : null}
           </>}
 
-          {tab === 'Integrations' && <IntegrationsPanel />}
+          {tab === 'Integrations' && <IntegrationsPanel shortcut={settings.shortcut} />}
 
           {tab === 'Privacy & Data' && (
             <>
               <AiSendRow />
-              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and Chat messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
-              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
+              <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and {PAGE_NAMES.Chat} messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
+              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and {PAGE_NAMES.Chat} messages. The AI explanation of a change (Pro) sends the git diff you chose. {CHANGE_BRIEF}s are built on this {deviceName} and send nothing.</div></div></div>
               <div className="setrow"><div><div className="sl">Include nearby files (Pro)</div><div className="sd">Also sends parts of up to 2 files that the selected code imports from the same project, for better explanations. Off unless you turn it on.</div></div><Toggle label="Include nearby files" on={settings.nearbyFiles === true} onClick={() => onSettings({ nearbyFiles: settings.nearbyFiles !== true })} /></div>
               {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. Off unless you turn it on. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send setup progress" on={settings.shareSetupProgress === true} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress !== true })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
@@ -1980,6 +1974,12 @@ function App() {
       // A page asked for by name (Island Settings, Plan) wins over the paste step, as Not now does.
       setOwnCodeStep(false);
       void window.unvibe.ownCodeNotNow();
+      // Settings > AI, asked for by the panel's limit state ("Use my own key").
+      if (next === 'Settings:AI') {
+        setSettingsTab('AI');
+        setSettingsOpen(true);
+        return;
+      }
       if (next === 'Settings') {
         setSettingsTab('Island');
         setSettingsOpen(true);
@@ -2063,7 +2063,7 @@ function App() {
   const fillPage = isLearnPage || page === 'Chat' || page === 'Briefings';
   const chatLabel = settings?.useOwnAi
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
-    : 'Unvibe AI';
+    : HOSTED_AI;
   const sideCompact = sideWidth < 178;
   const sideHidden = settings?.sidebarHidden ?? false;
   toggleSideRef.current = () => void applySettings({ sidebarHidden: !sideHidden });
@@ -2191,7 +2191,7 @@ function App() {
           {usageLine ? (
             <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
               {/* The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct). */}
-              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
+              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? `Free on this ${deviceName}` : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
               <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
             </button>
           ) : null}
@@ -2215,7 +2215,7 @@ function App() {
             onSignOut={async () => {
               await window.unvibe.signOut();
               const { acct } = await refresh();
-              if (!acct) flash('Signed out. Your learning stays on this computer.');
+              if (!acct) flash(`Signed out. Your learning stays on this ${deviceName}.`);
             }}
           />
           <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = 204; setSideWidth(204); void applySettings({ sidebarWidth: 204 }); }} />
