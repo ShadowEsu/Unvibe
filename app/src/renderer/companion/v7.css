@@ -589,8 +589,9 @@
   & .ob2 { display: grid; place-items: center; padding: 28px; overflow: auto; }
   /* The card grows with the window (about half its width, 720 to 960 px) instead of shrinking to its
      content in a maximised 1920 px setup window (Design A10). Sized from the viewport, not 100%: the
-     centred grid's track is only as wide as the content, so a percentage collapsed to it. */
-  & .ob2__card { width: min(clamp(720px, 50vw, 960px), calc(100vw - 56px)); padding: 26px 34px 24px; display: grid; gap: 18px; }
+     centred grid's track is only as wide as the content, so a percentage collapsed to it. One full
+     column, since the older flex rule's justify-content would otherwise pack an auto column at the start. */
+  & .ob2__card { width: min(clamp(720px, 50vw, 960px), calc(100vw - 56px)); grid-template-columns: minmax(0, 1fr); padding: 26px 34px 24px; display: grid; gap: 18px; }
   & .ob2__top { display: flex; align-items: center; gap: 14px; }
   & .ob2__top .ob__dots { display: flex; flex: 1; gap: 6px; }
   & .ob2__top .ob__dot { flex: 1; height: 8px; border-radius: 99px; border: 1.5px solid var(--v-ink); background: var(--v-surface); transition: background 300ms ease; }
