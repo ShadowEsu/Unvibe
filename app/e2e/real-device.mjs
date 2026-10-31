@@ -1,12 +1,16 @@
 // Real-device walkthrough of the installed Unvibe app, run by .github/workflows/real-device-test.yml
-// on GitHub's macOS and Windows machines. It drives the packaged app with Playwright's Electron
-// support, saves a screenshot after every step, and writes a plain report of what passed.
+// on GitHub's macOS and Windows machines. It drives the packaged app through Chromium's debug port
+// (cdp-launch.mjs; release builds turn off the Node inspector that Playwright's Electron launch
+// needs), saves a screenshot after every step, and writes a plain report of what passed.
 //
 // Env: UNVIBE_EXE (path to the installed app executable), SHOTS_DIR (output folder),
 //      UNVIBE_OS ("mac" | "windows"), AXE_PATH (optional axe.min.js for the a11y check),
-//      UNVIBE_E2E_PROFILE (optional profile folder; default a new temp folder).
-// CI flags the run's install as QA in a later step, so this script never holds the admin token.
-import { _electron as electron, chromium } from 'playwright';
+//      UNVIBE_E2E_PROFILE (optional profile folder; default a new temp folder),
+//      E2E_INSTALL_ID (the run's install id, qa-prefixed; CI flags it as QA in a later step, so this
+//      script never holds the admin token),
+//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into other apps, no whole-screen shots).
+import { chromium } from 'playwright';
+import { launchApp, readStore } from './cdp-launch.mjs';
 import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -61,6 +65,8 @@ async function shot(page, label) {
 
 /** Whole-screen capture from the operating system, so floating windows and the island show too. */
 function desktopShot(label) {
+  // On someone's own Mac a whole-screen shot would capture their other windows.
+  if (process.env.E2E_LOCAL === '1') return;
   const file = path.join(out, name(`desktop-${label}`));
   try {
     if (os === 'mac') execFileSync('screencapture', ['-x', file]);
@@ -99,14 +105,19 @@ const FIRST_EXPLANATION_BUDGET_S = 60;
 // CI sets UNVIBE_E2E_PROFILE so its QA-flag step can read this run's install ID afterwards.
 const userData = process.env.UNVIBE_E2E_PROFILE || mkdtempSync(path.join(tmpdir(), 'unvibe-e2e-'));
 mkdirSync(userData, { recursive: true });
+// A known, qa-prefixed install id: every launch registers the install with the server.
+const installId = process.env.E2E_INSTALL_ID || `qa-walkthrough-local-${Date.now()}`;
+if (!existsSync(path.join(userData, 'unvibe-store.json'))) writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId }));
+report.push(`NOTE  install id ${readStore(userData).installId}`);
 // Shell-launched protocol handlers must use the same isolated profile as the driven app.
 process.env.UNVIBE_USER_DATA = userData;
+const local = process.env.E2E_LOCAL === '1';
 const launchedAt = Date.now();
 // UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
 // The app under test never gets the founder stats token, even if this process has it.
 const appEnv = { ...process.env, UNVIBE_USER_DATA: userData };
 delete appEnv.UNVIBE_ADMIN_STATS_TOKEN;
-const app = await electron.launch({ executablePath: exe, args: process.env.UNVIBE_APP_DIR ? [process.env.UNVIBE_APP_DIR] : [], env: appEnv, timeout: 90000 });
+const app = await launchApp({ exe, userData, args: process.env.UNVIBE_APP_DIR ? [process.env.UNVIBE_APP_DIR] : [], env: appEnv, timeout: 90000 });
 // Zero runtime errors is part of the gate: console errors and uncaught errors in Unvibe's own
 // windows fail the run. Google's account page is not ours. Main-process output is kept for review.
 const runtimeErrors = [];
@@ -116,42 +127,68 @@ const watch = (page) => {
   page.on('console', (msg) => { if (msg.type() === 'error' && ours(page.url())) runtimeErrors.push(`console ${where(page)}: ${msg.text()}`); });
   page.on('pageerror', (err) => { if (ours(page.url())) runtimeErrors.push(`pageerror ${where(page)}: ${err.message}`); });
 };
-app.windows().forEach(watch);
-app.on('window', watch);
-const mainLog = [];
-app.process().stdout?.on('data', (d) => mainLog.push(String(d)));
-app.process().stderr?.on('data', (d) => mainLog.push(String(d)));
+app.onWindow(watch);
+const mainLog = app.output;
 const companion = await windowWith(app, 'companion.html', 60000);
 if (!companion) { log(false, 'App opens'); writeFileSync(path.join(out, 'report.txt'), report.join('\n')); process.exit(1); }
 await companion.waitForLoadState('domcontentloaded');
-log(true, 'App opens', `version ${await app.evaluate(({ app }) => app.getVersion())}`);
-// The launch-at-login question is a native dialog this walkthrough can't click. Answer No for it
-// (and any other native message box) and keep each message, so the run can check that the
-// question came exactly once, after the first explanation of the user's own code.
-await app.evaluate(({ dialog }) => {
-  globalThis.__unvibeMessageBoxes = [];
-  dialog.showMessageBox = async (...args) => {
-    const options = args.find((arg) => arg && typeof arg === 'object' && 'message' in arg) ?? {};
-    globalThis.__unvibeMessageBoxes.push(String(options.message ?? ''));
-    return { response: 1, checkboxChecked: false };
-  };
-});
+log(true, 'App opens', `version ${(await companion.evaluate(() => window.unvibe.appInfo())).version}`);
+// The launch-at-login question is a native dialog. The main process can't be stubbed on a release
+// build, so the operating system answers it: on macOS a watcher reads every sheet/dialog the app
+// shows, keeps its message, and presses No (Cancel/OK for any other one) through Accessibility.
+// The store's loginPromptAsked flag (set when the question is due) is checked on both systems.
+const messageBoxes = [];
+const answerDialogs = () => {
+  if (os !== 'mac') return;
+  execFile('osascript', ['-e', `tell application "System Events"
+  set p to first process whose unix id is ${app.process.pid}
+  set found to ""
+  repeat with w in windows of p
+    try
+      set boxes to (sheets of w)
+      if subrole of w is "AXDialog" then set end of boxes to w
+      repeat with s in boxes
+        set t to ""
+        repeat with x in (static texts of s)
+          set t to t & (value of x) & " "
+        end repeat
+        repeat with b in {"No", "Cancel", "OK"}
+          if exists button b of s then
+            click button b of s
+            set found to found & t & "|"
+            exit repeat
+          end if
+        end repeat
+      end repeat
+    end try
+  end repeat
+  return found
+end tell`], (error, stdout) => {
+    if (!error) for (const message of String(stdout).split('|').map((m) => m.trim()).filter(Boolean)) messageBoxes.push(message);
+  });
+};
+const dialogWatch = setInterval(answerDialogs, 1500);
 if (os === 'windows') {
-  const registered = await app.evaluate(({ app }) =>
-    app.setAsDefaultProtocolClient('unvibe', process.execPath, [`--user-data-dir=${app.getPath('userData')}`]));
+  // What setAsDefaultProtocolClient(exe, ['--user-data-dir=…']) writes: unvibe:// links start the
+  // installed app with this run's profile, so they reach the running instance.
+  const key = 'HKCU\\Software\\Classes\\unvibe\\shell\\open\\command';
+  execFileSync('reg', ['add', key, '/ve', '/t', 'REG_SZ', '/d', `"${exe}" --user-data-dir=${userData} "%1"`, '/f']);
+  const registered = execFileSync('reg', ['query', key, '/ve'], { encoding: 'utf8' }).includes(`--user-data-dir=${userData}`);
   assert.equal(registered, true, 'the installed app must register its protocol handler');
 }
 desktopShot('first-launch');
 
-// --- First run, timed: hello → explain the sample for real → shortcut and permission ------------
+// --- First run, timed: hello → explain the sample for real → your own code ------------------------
 // The walkthrough acts at a brisk human pace (no sleeps beyond what the UI needs), so the time is
-// close to what a new user who reads and clicks straight through would see.
+// close to what a new user who reads and clicks straight through would see. A Mac's setup has 4
+// steps (step 3 pastes your own code, step 4 offers the shortcut once that worked); Windows has 3.
+const setupSteps = os === 'windows' ? 3 : 4;
 try {
-  await companion.locator('.ob2__count').filter({ hasText: '1 / 3' }).waitFor({ timeout: 20000 });
+  await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
   await companion.getByPlaceholder('Your name').fill('Preston Test');
   await clickText(companion, "Let's go");
-  await companion.locator('.ob2__count').filter({ hasText: '2 / 3' }).waitFor({ timeout: 8000 });
+  await companion.locator('.ob2__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
   await clickText(companion, 'Explain this code');
   log(true, 'Onboarding: hello and sample');
@@ -162,17 +199,20 @@ const seconds = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
 log(first.ok, 'First-run sample explains code', first.why);
 log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
 writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
+// The built-in sample is not the user's own code, so the launch-at-login question is not due yet.
+const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
   await clickText(companion, 'Next');
-  await companion.locator('.ob2__count').filter({ hasText: '3 / 3' }).waitFor({ timeout: 8000 });
-  await companion.locator('.ob2__task').waitFor({ timeout: 8000 });
+  await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+  await companion.locator(os === 'windows' ? '.ob2__task' : '.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
-  await clickText(companion, 'Start using Unvibe');
+  // Nothing is pasted here, so a Mac's step 3 finishes with Skip for now (no step 4).
+  await clickText(companion, os === 'windows' ? 'Start using Unvibe' : 'Skip for now');
   await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
   await shot(companion, 'after-onboarding');
-  log(true, 'Onboarding: all three steps');
-} catch (e) { log(false, 'Onboarding: all three steps', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
+  log(true, 'Onboarding: every step');
+} catch (e) { log(false, 'Onboarding: every step', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
 // Local mode is the default: no sign-in wall after onboarding.
 try {
@@ -184,8 +224,11 @@ try {
 } catch (e) { log(false, 'Home opens', e.message.split('\n')[0]); }
 
 // Google sign-in from the account menu: start the device flow, then open the approval page.
+// The app opens the approval page in the default browser too; on someone's own Mac that would be
+// their browser and their unvibe.site session, so a local run leaves this step to CI.
 let userCode = '';
-try {
+if (local) report.push('NOTE  Google sign-in start: skipped (E2E_LOCAL: the app would open the person\'s own browser)');
+else try {
   await companion.locator('.acct-trigger').click();
   await companion.getByRole('menuitem', { name: 'Sign in to sync' }).click();
   await clickText(companion, 'Continue with Google');
@@ -238,19 +281,25 @@ for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan',
   } catch (e) { log(false, `Page ${page}`, e.message.split('\n')[0]); }
 }
 
-// Internal navigation is also used by deep links and the command palette.
-for (const page of ['Projects', 'Concepts', 'Notebook', 'Library', 'Profile']) {
-  try {
-    await app.evaluate(({ BrowserWindow }, id) => {
-      const win = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('companion.html'));
-      if (!win) throw new Error('Companion window missing');
-      win.webContents.send('companion:showPage', id);
-    }, page);
-    await companion.locator('.topbar__title').filter({ hasText: page }).waitFor();
-    await shot(companion, `internal-${page.toLowerCase()}`);
-    log(true, `Internal page ${page}`);
-  } catch (e) { log(false, `Internal page ${page}`, e.message.split('\n')[0]); }
-}
+// Main → companion navigation (companion:showPage): the two pages main really sends, through the
+// same IPC the island and the plan buttons use. The earlier check also pushed Projects, Concepts,
+// Notebook, Library and Profile through this channel from the main process; that needs main access,
+// and nothing in the app sends those ids (main only sends Settings and Plan), so it is not repeated.
+try {
+  await companion.evaluate(() => window.unvibe.openPlan());
+  await companion.locator('.topbar__title').filter({ hasText: 'Plan' }).waitFor({ timeout: 10000 });
+  await shot(companion, 'internal-plan');
+  log(true, 'Internal page Plan (main sends companion:showPage)');
+} catch (e) { log(false, 'Internal page Plan (main sends companion:showPage)', e.message.split('\n')[0]); }
+try {
+  await companion.evaluate(() => window.unvibe.openSettings());
+  await companion.locator('.mbody h2').filter({ hasText: 'Island' }).waitFor({ timeout: 10000 });
+  await shot(companion, 'internal-settings');
+  await companion.getByRole('button', { name: 'Close settings', exact: true }).click();
+  await companion.getByRole('dialog', { name: 'Settings', exact: true }).waitFor({ state: 'detached' });
+  log(true, 'Internal page Settings (main sends companion:showPage)');
+} catch (e) { log(false, 'Internal page Settings (main sends companion:showPage)', e.message.split('\n')[0]); }
+report.push('NOTE  internal pages Projects, Concepts, Notebook, Library, Profile via companion:showPage: not checked (needs main-process access; no sender in the app). Library is checked as a sidebar page.');
 
 // Design coverage includes the controls people use after their first explanation.
 try {
@@ -280,16 +329,39 @@ try {
   log(true, 'Search, account menu and feedback open without sending');
 } catch (e) { log(false, 'Dialog design coverage', e.message.split('\n')[0]); await shot(companion, 'dialog-stuck'); }
 
+// globalShortcut.isRegistered needs the main process. A shortcut that is not registered makes the
+// global-shortcut step below fail, so its result is reported as the registration check too.
 const { shortcut } = await companion.evaluate(() => window.unvibe.appInfo());
-const shortcutRegistered = await app.evaluate(({ globalShortcut }, accelerator) =>
-  globalShortcut.isRegistered(accelerator), shortcut);
-log(shortcutRegistered, 'Configured global shortcut is registered', shortcut);
 const sample = 'function total(items) {\n  return items.reduce((sum, item) => sum + item.price * item.qty, 0);\n}';
 
-async function waitForExplanation(label, expectedCode) {
+async function waitForExplanation(label, expectedCode, { confirm = false } = {}) {
   const panel = await windowWith(app, 'widget.html', 20000);
   if (!panel) return { ok: false, why: 'review panel did not open' };
   try {
+    if (confirm) {
+      // The first code of the person's own (0.1.46+): the send agreement comes first. Continue does
+      // nothing until all three boxes are ticked; nothing may stream before it.
+      const consent = panel.locator('.consent-form');
+      await consent.or(panel.locator('#confirm-title')).first().waitFor({ timeout: 30000 });
+      if (await consent.count()) {
+        const boxes = consent.locator('input[type="checkbox"]');
+        assert.equal(await boxes.count(), 3, 'the send agreement has three boxes');
+        for (let i = 0; i < 3; i++) assert.equal(await boxes.nth(i).isChecked(), false, 'every agreement box starts unticked');
+        const agree = consent.getByRole('button', { name: 'Continue', exact: true });
+        assert.equal(await agree.getAttribute('aria-disabled'), 'true', 'Continue is off before the boxes are ticked');
+        await shot(panel, `${label}-consent`);
+        for (let i = 0; i < 3; i++) await boxes.nth(i).check();
+        assert.equal(await panel.locator('.stage').count(), 0, 'nothing streams before the agreement');
+        await agree.click();
+        report.push('NOTE  first own code: send agreement shown, all three boxes ticked, Continue');
+      }
+      // A link-started review waits for Explain (Security LOW #8): nothing may stream before the click.
+      await panel.locator('#confirm-title').waitFor({ timeout: 30000 });
+      await sleep(1500);
+      assert.equal(await panel.locator('.stage').count(), 0, 'a link-started review must not start before Explain');
+      await shot(panel, `${label}-confirm`);
+      await panel.getByRole('button', { name: 'Explain', exact: true }).click();
+    }
     const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });
     await preview.waitFor({ timeout: 30000 });
     assert.equal((await preview.innerText()).trim(), expectedCode.trim());
@@ -312,15 +384,21 @@ async function waitForExplanation(label, expectedCode) {
 
 // --- Editor bridge path (what ⌘U / Ctrl+U does inside VS Code and Cursor) -------------------
 try {
-  await app.evaluate(({ clipboard }, code) => clipboard.writeText(code), sample);
-  if (os === 'mac') execFileSync('open', ['unvibe://review?source=ide']);
+  if (os === 'mac') execFileSync('pbcopy', { input: sample });
+  else execFileSync('powershell', ['-NoProfile', '-Command', '[Console]::In.ReadToEnd() | Set-Clipboard'], { input: sample });
+  // Plain `open` asks macOS for the registered unvibe:// handler, as a real editor does. A build that
+  // is not the installed one (a local run) gets the link directly, so the person's own Unvibe never opens.
+  const bundle = exe.replace(/\/Contents\/MacOS\/[^/]+$/, '');
+  if (os === 'mac') execFileSync('open', bundle === '/Applications/Unvibe.app' ? ['unvibe://review?source=ide'] : ['-a', bundle, 'unvibe://review?source=ide']);
   else execFileSync('cmd', ['/c', 'start', '', 'unvibe://review?source=ide']);
-  const r = await waitForExplanation('editor-bridge-explanation', sample);
-  log(r.ok, 'Editor shortcut path explains code', r.why);
+  const r = await waitForExplanation('editor-bridge-explanation', sample, { confirm: true });
+  log(r.ok, 'Editor shortcut path waits for Explain, then explains code', r.why);
 } catch (e) { log(false, 'Editor shortcut path explains code', e.message.split('\n')[0]); }
 
 // --- Global shortcut in another app ------------------------------------------------------------
-try {
+let globalShortcutWorked = false;
+if (local) report.push('NOTE  global shortcut in another app: skipped (E2E_LOCAL: no keystrokes into the person\'s own apps)');
+else try {
   const file = path.join(tmpdir(), 'unvibe-sample.js');
   const globalSample = sample.replace('function total', 'function selectedTotal');
   writeFileSync(file, globalSample);
@@ -334,7 +412,7 @@ try {
   } else {
     execFile('notepad', [file]);
     await sleep(3000);
-    assert.equal(shortcutRegistered, true, 'the configured shortcut must be registered before sending it');
+    // No main-process check of the registration first: the explanation below only appears if it is.
     const keys = `${/Control|CommandOrControl/i.test(shortcut) ? '^' : ''}${/Alt/i.test(shortcut) ? '%' : ''}${/Shift/i.test(shortcut) ? '+' : ''}u`;
     // Windows refuses focus requests from background processes (the taskbar icon only flashes),
     // so bring Notepad forward and confirm it is the foreground window before sending any keys.
@@ -369,13 +447,22 @@ try {
     desktopShot('notepad-selected');
   }
   const r = await waitForExplanation('global-shortcut-explanation', globalSample);
+  globalShortcutWorked = r.ok;
   log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
 } catch (e) { log(false, 'Global shortcut in another app', e.message.split('\n')[0]); }
+if (!local) log(globalShortcutWorked, 'Configured global shortcut is registered', `${shortcut} (shown by the step above)`);
 
-const messageBoxes = await app.evaluate(() => globalThis.__unvibeMessageBoxes ?? []);
-const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
-log(loginAsks === 1, 'Launch-at-login question asked once, after the first own-code explanation', `${loginAsks} time(s)`);
-for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
+// Launch-at-login question: due after the first explanation of the user's own code (the editor
+// bridge above), never after the built-in sample, and only once (the store flag stops a second ask).
+await sleep(3000); // one more pass of the dialog watcher
+clearInterval(dialogWatch);
+const askedAtEnd = readStore(userData).loginPromptAsked === true;
+log(!askedAfterSample && askedAtEnd, 'Launch-at-login question becomes due after the first own-code explanation, not the sample', `after sample: ${askedAfterSample}, at end: ${askedAtEnd}`);
+if (os === 'mac') {
+  const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
+  log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)`);
+  for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
+} else report.push('NOTE  launch-at-login dialog count: not read on Windows (no main-process access); the store flag above covers when it is due.');
 
 await sleep(1000);
 desktopShot('final');
