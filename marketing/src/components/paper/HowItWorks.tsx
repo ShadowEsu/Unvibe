@@ -32,7 +32,7 @@ const STEPS: readonly FlexAccordionItem[] = [
     id: "test",
     label: "Test me",
     title: "Check that it stuck.",
-    body: "Test me writes one question about this exact code. Miss it and the lesson is saved to revisit later.",
+    body: "Test me writes a question about this exact code, and up to three if you want more. Miss one and the lesson is saved to revisit later.",
     image: panelShot("panel-test-me", "A multiple-choice Test me question about the debounce function"),
   },
 ];
@@ -42,7 +42,7 @@ const PAGES: readonly FlexAccordionItem[] = [
     id: "today",
     label: "Today",
     title: "Today",
-    body: "What you understood, what is due for review, and the next small thing to do.",
+    body: "Today's goal (explain one piece of code, answer one question), what is due for review, and the next small thing to do.",
     image: appShot("today", "The Unvibe Today page with lines understood, reviews and an Up next list"),
   },
   {

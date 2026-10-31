@@ -30,7 +30,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "what-is-it",
     question: "What is Unvibe?",
-    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, take a one-question Test me, and save the lesson to your Library.`,
+    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, check yourself with Test me (up to three questions about that code), and save the lesson to your Library. The Today page sets a small daily goal: explain one piece of code and answer one question.`,
     category: "product",
   },
   {
