@@ -31,6 +31,12 @@ const SAMPLE = `function debounce(fn, ms) {
 
 const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
+/**
+ * The outage switch (BOSS 31 Oct): NEXT_PUBLIC_AI_MAINTENANCE=1 at build time, set together with the
+ * API's AI_MAINTENANCE=1, says so up front and keeps the demo from sending anything.
+ */
+const AI_MAINTENANCE = process.env.NEXT_PUBLIC_AI_MAINTENANCE?.trim() === "1";
+const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
 
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
 function render(text: string): string {
@@ -258,12 +264,12 @@ export function TryIt({
           <button
             type="button"
             className="try__go"
-            disabled={state === "thinking" || !code.trim()}
+            disabled={AI_MAINTENANCE || state === "thinking" || !code.trim()}
             aria-disabled={consented ? undefined : true}
             aria-describedby={consented ? undefined : "try-consent-hint"}
             onClick={() => void explain()}
           >
-            {state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
+            {AI_MAINTENANCE ? "Paused for maintenance" : state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
           </button>
           {consented ? null : <p className="try__fine" id="try-consent-hint">Tick both boxes to explain.</p>}
           <p className="try__fine" id="try-fine">
@@ -297,7 +303,9 @@ export function TryIt({
           {state === "idle" ? (
             <div className="try__state">
               <Vibe size={72} />
-              <p>Press <b>Explain it</b> for the sample, or paste your own code first.</p>
+              <p role={AI_MAINTENANCE ? "status" : undefined}>
+                {AI_MAINTENANCE ? AI_MAINTENANCE_NOTE : <>Press <b>Explain it</b> for the sample, or paste your own code first.</>}
+              </p>
             </div>
           ) : state === "thinking" ? (
             <div className="try__state try__state--thinking" aria-hidden="true">
