@@ -90,7 +90,7 @@ import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, 
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
 import { installHardening } from './hardening';
-import { aiKeyStatus, clearAiKey, writeAiKey } from './aiKey';
+import { aiKeyStatus, clearAiKey, readAiKey, writeAiKey } from './aiKey';
 import {
   costOverview,
   guessProviderFromKey,
@@ -561,9 +561,10 @@ let heldClipboardReview: HeldClipboardReview | null = null;
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
-  // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
+  // A recent snapshot keeps ⌘U instant; the server still enforces the real limit. With your own AI
+  // key a used-up allowance doesn't stop you: runReview sends the code to your provider instead.
   const usage = await cachedAppUsage();
-  if (usage.remaining <= 0) {
+  if (usage.remaining <= 0 && !readAiKey()) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);
     const win = getOrCreateWidget();
@@ -1055,6 +1056,8 @@ app.whenReady().then(() => {
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
   ipcMain.on('companion:openPlan', () => openCompanionPage('Plan'));
+  // The panel's limit state: "Use my own key" opens Settings › AI (the companion's 'Settings:AI' page).
+  ipcMain.on('widget:openAiSettings', () => openCompanionPage('Settings:AI'));
 
   // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
   let resizeTick: ReturnType<typeof setInterval> | null = null;

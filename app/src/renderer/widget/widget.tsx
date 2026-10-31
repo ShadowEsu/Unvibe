@@ -6,7 +6,7 @@ import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
-import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { BETA_SURVEY_URL } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
@@ -17,7 +17,7 @@ import { ConsentForm } from '../shared/consentForm';
 import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
-import { actionRow, type Phase } from './panelModel';
+import { actionRow, limitState, showsLimit, type LimitState, type Phase } from './panelModel';
 import '../shared/tokens.css';
 
 interface Quiz {
@@ -62,6 +62,8 @@ interface TabState {
   level: ExplanationLevel;
   findings: SecretFinding[];
   error: string;
+  /** The error event's code (`plan_limit_reached`, `pro_required`, `offline`, …); '' otherwise. */
+  errorCode: string;
   mock: boolean;
   ask: string;
   quiz: Quiz | null;
@@ -144,6 +146,7 @@ function newTab(id: string, label: string): TabState {
     level: 'intermediate',
     findings: [],
     error: '',
+    errorCode: '',
     mock: false,
     ask: '',
     quiz: null,
@@ -348,6 +351,27 @@ function EmptyPicker({
   );
 }
 
+/** The limit's one fix, then its quieter text links (Design A3). */
+function LimitActions({ limit, plan }: { limit: LimitState; plan: string | undefined }) {
+  return (
+    <div className="limit-actions">
+      <button type="button" className="btn" onClick={() => window.unvibe.openAiSettings()}>
+        Use my own key
+      </button>
+      {limit.links.includes('survey') ? (
+        <button type="button" className="link-btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
+          Tell us how Unvibe is working for you
+        </button>
+      ) : null}
+      {limit.links.includes('plan') ? (
+        <button type="button" className="link-btn" onClick={() => window.unvibe.openPlan()}>
+          {plan === 'pro' || plan === 'teams' ? 'Open Plan' : 'See Pro'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function patchTab(tabs: TabState[], tabId: string, patch: Partial<TabState>): TabState[] {
   return tabs.map((t) => (t.id === tabId ? { ...t, ...patch } : t));
 }
@@ -411,7 +435,7 @@ function Widget() {
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
-  // While checkout is closed the panel says "Pro opens soon" instead of offering a purchase.
+  // While checkout is closed the panel offers no purchase; Plan itself says whether payments are open.
   const [proOpen, setProOpen] = useState(false);
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
@@ -423,8 +447,6 @@ function Widget() {
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
-  const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
-  const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
   const [revealedText, setRevealedText] = useState('');
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
   const [listening, setListening] = useState(false);
@@ -509,6 +531,7 @@ function Widget() {
               text: '',
               quiz: null,
               error: '',
+              errorCode: '',
               mock: false,
               phase: ev.consentProvider ? 'aiConsent' : ev.hasCode ? (ev.confirm ? 'confirm' : 'ready') : 'empty',
               consentProvider: ev.consentProvider ?? null,
@@ -523,7 +546,7 @@ function Widget() {
             return prev;
           case 'status':
             playTone('think');
-            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+            return patchTab(prev, tabId, { text: '', phase: 'streaming', errorCode: '', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
           case 'consentNeeded':
             return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
@@ -542,6 +565,7 @@ function Widget() {
           case 'error':
             return patchTab(prev, tabId, {
               error: ev.message ?? 'Something went wrong.',
+              errorCode: ev.code ?? '',
               phase: 'error',
               quiz: tab.quiz && tab.quiz.phase !== 'graded' ? null : tab.quiz,
             });
@@ -638,18 +662,8 @@ function Widget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsed, activeTabId]);
 
-  const request = (opts: Record<string, unknown>) => {
-    if (outOfExplanations) {
-      setTabs((prev) => patchTab(prev, activeRef.current, {
-        phase: 'error',
-        error: offer
-          ? offer.body
-          : 'You have reached your monthly explanation limit. Open Plan to upgrade.',
-      }));
-      return;
-    }
-    window.unvibe.request({ level: active.level, ...opts });
-  };
+  // Main checks the allowance (and uses your own AI key when one is set), so every request goes there.
+  const request = (opts: Record<string, unknown>) => window.unvibe.request({ level: active.level, ...opts });
 
   const openQuiz = (another = false) => {
     setActiveTool('quiz');
@@ -703,22 +717,21 @@ function Widget() {
   };
 
   const phase = active.phase;
-  const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
+  const limit: LimitState | null = usage ? limitState(usage, proOpen) : null;
+  const limited = Boolean(limit) && showsLimit(phase, active.errorCode, outOfExplanations);
+  const phaseLabel = limited ? 'Paused' : phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
       <b>{active.meta.lines} lines</b>
       {active.meta.language && active.meta.language !== 'plaintext' ? ` · ${active.meta.language}` : ''}
       {active.meta.sourceApp ? ` · from ${active.meta.sourceApp}` : ''}
     </span>
-  ) : (
-    <span className="src">
-      <b>Ready</b>
-    </span>
-  );
+  ) : null;
 
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
-  const row = actionRow(phase, stillTyping, active.mock);
+  // The limit keeps the panel's frame: the same depth row and action row as an error.
+  const row = actionRow(limited ? 'error' : phase, stillTyping, active.mock);
   // The survey card waits until an explanation has fully finished, typing included, and is asked
   // for again after each one until it is sent or closed. Main decides eligibility.
   const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
@@ -802,7 +815,7 @@ function Widget() {
           <span className="head__product">Unvibe</span>
           {src}
         </div>
-        <span className={`head__status head__status--${phase}`} role="status"><i aria-hidden="true" />{phaseLabel}</span>
+        <span className={`head__status head__status--${limited ? 'paused' : phase}`} role="status"><i aria-hidden="true" />{phaseLabel}</span>
         <div className="head__actions">
           {usage && (
             <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
@@ -862,7 +875,7 @@ function Widget() {
           </aside>
           <section className="widget-main">
 
-      {!collapsed && !sessionPaused && (
+      {!collapsed && (
         <div className="tabs" role="group" aria-label="Review tabs">
           {tabs.map((t) => (
             <div key={t.id} className={`tab${t.id === activeTabId ? ' on' : ''}`}>
@@ -891,24 +904,7 @@ function Widget() {
         </div>
       )}
 
-      {!collapsed && sessionPaused && offer ? (
-        <div className="state state--limit state--pause" role="status">
-          <div className="big">{offer.title}</div>
-          <div className="sub">{offer.body}</div>
-          <div className="pause-actions">
-            <button className="btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
-              {offer.primary}
-            </button>
-            {offer.showPlan ? (
-              <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
-                {proOpen ? 'Buy a subscription' : 'Pro opens soon'}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {!collapsed && !sessionPaused && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
+      {!collapsed && (limited || phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot' || phase === 'error') && (
         <div className="levels" role="group" aria-label="Explanation depth">
           <span className="levels__label">Depth</span>
           {LEVELS.map((l) => {
@@ -942,9 +938,9 @@ function Widget() {
         </div>
       )}
 
-      {!collapsed && !sessionPaused && (
+      {!collapsed && (
         <>
-          {phase === 'boot' && (
+          {phase === 'boot' && !limited && (
             <div className="state" role="status">
               <div className="sub">Capturing selection…</div>
             </div>
@@ -1017,7 +1013,7 @@ function Widget() {
             </div>
           )}
 
-          {phase === 'empty' && <EmptyPicker shortcut={shortcut} level={active.level} />}
+          {phase === 'empty' && !limited && <EmptyPicker shortcut={shortcut} level={active.level} />}
 
           {phase === 'consent' && (
             <div className="state" role="alert">
@@ -1053,30 +1049,32 @@ function Widget() {
             </div>
           )}
 
-          {phase === 'error' && (
-            <div className={`state${outOfExplanations ? ' state--limit' : ''}`} role="alert">
+          {limited && limit ? (
+            <div className="state state--limit" role="status">
+              <div className="big">{limit.title}</div>
+              {limit.when ? <div className="sub">{limit.when}</div> : null}
+              <div className="sub">With your own AI key, Unvibe keeps explaining now.</div>
+              <LimitActions limit={limit} plan={usage?.plan} />
+            </div>
+          ) : null}
+
+          {phase === 'error' && !limited && (
+            <div className="state" role="alert">
               <div className="big">
-                {outOfExplanations && offer ? offer.title : proGate ? 'Pro feature' : "Couldn't explain that"}
+                {proGate ? 'Pro feature' : "Couldn't explain that"}
               </div>
               <div className="sub">{active.error}</div>
-              {proGate && !outOfExplanations && !proOpen ? <div className="sub">{freePlanLine(usage)}</div> : null}
-              {outOfExplanations || proGate ? (
+              {proGate && !proOpen ? <div className="sub">{freePlanLine(usage)}</div> : null}
+              {proGate ? (
                 <>
-                  <button className="btn" onClick={() => {
-                    if (offer?.primaryKind === 'survey') void window.unvibe.openUrl(BETA_SURVEY_URL);
-                    else window.unvibe.openPlan();
-                  }}>
-                    {outOfExplanations && offer ? offer.primary : proOpen ? 'Upgrade to Pro' : 'Pro opens soon'}
+                  {proOpen ? (
+                    <button className="btn" onClick={() => window.unvibe.openPlan()}>
+                      Upgrade to Pro
+                    </button>
+                  ) : null}
+                  <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>
+                    Maybe later
                   </button>
-                  {outOfExplanations && offer?.showPlan && offer.primaryKind === 'survey' ? (
-                    <button className="btn ghost" onClick={() => window.unvibe.openPlan()}>
-                      {proOpen ? 'Buy a subscription' : 'Pro opens soon'}
-                    </button>
-                  ) : (
-                    <button className="btn ghost" onClick={() => { setProGate(false); window.unvibe.openStudy(); }}>
-                      {outOfExplanations ? 'Return to saved learning' : 'Maybe later'}
-                    </button>
-                  )}
                 </>
               ) : (
                 <button className="btn" onClick={() => request({})}>
@@ -1250,15 +1248,13 @@ function Widget() {
             </div>
           )}
 
-          {outOfExplanations && offer && offer.primaryKind !== 'survey' && (phase === 'done' || phase === 'streaming') && (
+          {limit && outOfExplanations && !limited && (phase === 'done' || phase === 'streaming') && (
             <div className="limit-strip" role="status">
               <div>
-                <strong>{offer.title}</strong>
-                <p>{offer.body}</p>
+                <strong>{limit.title}</strong>
+                {limit.when ? <p>{limit.when}</p> : null}
               </div>
-              <button type="button" className="btn" onClick={() => window.unvibe.openPlan()}>
-                {offer.primary}
-              </button>
+              <LimitActions limit={limit} plan={usage?.plan} />
             </div>
           )}
 

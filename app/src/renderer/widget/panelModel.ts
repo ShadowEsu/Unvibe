@@ -1,3 +1,5 @@
+import { refillDate } from '../shared/planStatus';
+
 /**
  * The review panel's state model, kept apart from widget.tsx (which renders on import) so the rules
  * for what the panel shows in each state are testable.
@@ -28,4 +30,52 @@ export function actionRow(phase: Phase, stillTyping: boolean, mock: boolean): Ac
     ready: phase === 'done' && !stillTyping,
     right: phase === 'streaming' ? 'stop' : phase === 'done' ? (mock ? 'mock' : 'saved') : 'none',
   };
+}
+
+/** The allowance the last usage event reported. */
+export interface LimitUsage {
+  plan?: string;
+  limit: number;
+  resetsAt: string;
+}
+
+/**
+ * A used-up allowance (Design A3, polish bar B-5): what happened in the title, when it comes back
+ * (or when the public-beta trial's 30 days end, since that allowance never refills), and the one fix,
+ * Use my own key (Settings › AI: with a key the app explains through your provider, see review.ts).
+ * `links` are the quieter text links under that button.
+ */
+export interface LimitState {
+  title: string;
+  when: string;
+  links: Array<'survey' | 'plan'>;
+}
+
+export function limitState(usage: LimitUsage, proOpen: boolean): LimitState {
+  const { plan, limit } = usage;
+  if (plan === 'trial') {
+    const end = new Date(usage.resetsAt);
+    const endDay = Number.isNaN(end.getTime()) ? '' : end.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+    return {
+      title: `You've used your 30-day allowance of ${limit} free explanations.`,
+      when: `${endDay ? `It doesn't refill, and your 30 days end on ${endDay}.` : "It doesn't refill."} Sign in to keep going on the Free plan, which refills every month.`,
+      links: proOpen ? ['survey', 'plan'] : ['survey'],
+    };
+  }
+  const refill = refillDate(plan, usage.resetsAt);
+  const when = refill ? `They refill on ${refill}.` : '';
+  if (plan === 'pro' || plan === 'teams') {
+    return { title: `You've used this month's ${limit} ${plan === 'pro' ? 'Pro' : 'Teams'} explanations.`, when, links: ['plan'] };
+  }
+  return { title: `You've used this month's ${limit} free explanations.`, when, links: proOpen ? ['survey', 'plan'] : ['survey'] };
+}
+
+/**
+ * Whether the panel shows the limit state in place of its content. Main reports a used-up allowance
+ * as a `plan_limit_reached` error; a panel opened with nothing to explain while the count is at zero
+ * shows it too. A finished or streaming explanation stays on screen with the limit under it.
+ */
+export function showsLimit(phase: Phase, errorCode: string, outOfExplanations: boolean): boolean {
+  if (phase === 'error') return errorCode === 'plan_limit_reached' || outOfExplanations;
+  return outOfExplanations && (phase === 'boot' || phase === 'empty');
 }

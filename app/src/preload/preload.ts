@@ -69,6 +69,7 @@ const api = {
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
   openPlan: () => ipcRenderer.send('companion:openPlan'),
+  openAiSettings: () => ipcRenderer.send('widget:openAiSettings'),
   openUrl: (url: string) => ipcRenderer.invoke('app:openUrl', url),
   sendFeedback: (input: { rating: number; message: string; email?: string }) => ipcRenderer.invoke('feedback:send', input),
   pmfState: (): Promise<{ show: boolean; draft: PmfDraft }> => ipcRenderer.invoke('pmf:state'),
