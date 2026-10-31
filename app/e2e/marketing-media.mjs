@@ -109,7 +109,8 @@ async function resize(page, width, height, { center = false } = {}) {
   const m = await page.evaluate(() => ({ outer: [window.outerWidth, window.outerHeight], inner: [window.innerWidth, window.innerHeight], avail: [screen.availWidth, screen.availHeight] }));
   if (Math.abs(m.outer[0] - width) <= 2 && Math.abs(m.outer[1] - height) <= 2) return;
   if (m.avail[0] >= width && m.avail[1] >= height) throw new Error(`window is ${m.outer.join('x')}, wanted ${width}x${height}`);
-  const viewport = { width: width - (m.outer[0] - m.inner[0]), height: height - (m.outer[1] - m.inner[1]) };
+  // The window frame (title bar); 0 for frameless windows, which can report inner > outer mid-resize.
+  const viewport = { width: width - Math.max(0, m.outer[0] - m.inner[0]), height: height - Math.max(0, m.outer[1] - m.inner[1]) };
   await page.setViewportSize(viewport);
   await sleep(300);
   const inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
@@ -169,6 +170,12 @@ async function step(label, fn) {
   catch (e) {
     failures.push(`${label}: ${e.message.split('\n')[0]}`);
     console.log(`FAIL ${label}: ${e.message.split('\n')[0]}`);
+    // Why an action waited: the end of Playwright's call log, and what each app window reports.
+    for (const line of e.message.split('\n').filter((l) => /^\s+-\s/.test(l)).slice(-4)) console.log(`  ${line.trim()}`);
+    for (const w of app.windows().filter((p) => !p.isClosed())) {
+      const s = await w.evaluate(() => `${document.visibilityState}, focus ${document.hasFocus()}, ${window.innerWidth}x${window.innerHeight}`).catch((err) => err.message.split('\n')[0]);
+      console.log(`  window ${w.url().split('/').pop()?.split('?')[0]}: ${s}`);
+    }
     return false;
   }
 }
