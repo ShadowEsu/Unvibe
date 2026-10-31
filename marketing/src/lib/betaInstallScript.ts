@@ -1,6 +1,6 @@
-export const BETA_INSTALL_TAG = "v0.1.44";
-export const BETA_INSTALL_ASSET = "Unvibe-0.1.44-mac-arm64.dmg";
-export const BETA_WINDOWS_ASSET = "Unvibe-0.1.44-win-x64-portable.exe";
+export const BETA_INSTALL_TAG = "v0.1.46";
+export const BETA_INSTALL_ASSET = "Unvibe-0.1.46-mac-arm64.dmg";
+export const BETA_WINDOWS_ASSET = "Unvibe-0.1.46-win-x64-portable.exe";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 export const BETA_INSTALL_HELP_URL = "https://unvibe.site/install-help";
 /** Where both install scripts live, so people can read them before running them. */
@@ -185,7 +185,7 @@ try {
 \$destDir = Join-Path \$env:LOCALAPPDATA "Unvibe"
 \$dest = Join-Path \$destDir "Unvibe.exe"
 \$track = "${BETA_INSTALL_TRACK_URL}"
-\$ua = "UnvibeBetaInstaller/0.1.44"
+\$ua = "UnvibeBetaInstaller/${BETA_INSTALL_TAG.replace(/^v/, "")}"
 
 if (\$env:OS -notlike "*Windows*") {
   Write-Error "This installer is for Windows. On a Mac run: curl -fsSL https://unvibe.site/install.sh | bash"

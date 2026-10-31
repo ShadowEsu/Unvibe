@@ -61,9 +61,9 @@ export default function BetaDownloadsPage() {
               <li>
                 <span className="beta-page__step-badge">2</span>
                 <div>
-                  <strong>On Mac, allow Accessibility when prompted</strong>
+                  <strong>Optional on Mac: turn on the shortcut</strong>
                   <p>
-                    {`This lets Unvibe read the code you select. It does not watch your keystrokes or record your screen.`}
+                    {`You can start by pasting code into Unvibe. To explain code you select in any app with the shortcut in step 3, allow Accessibility when macOS asks. This lets Unvibe read the code you select. It does not watch your keystrokes or record your screen.`}
                   </p>
                 </div>
               </li>
@@ -72,7 +72,7 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Select code and press {mac.anywhere} ({windows.anywhere} on Windows)</strong>
                   <p>
-                    {`A panel opens beside your editor and the explanation streams in. Ask a follow-up, take Test me, or save it to your Library.`}
+                    {`A panel opens beside your editor and the explanation streams in. Ask a follow-up, take Test me, or save it to your Library. No shortcut yet? Paste code into Unvibe instead.`}
                   </p>
                 </div>
               </li>
