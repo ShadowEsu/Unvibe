@@ -138,6 +138,7 @@ log(true, 'App opens', `version ${(await companion.evaluate(() => window.unvibe.
 // shows, keeps its message, and presses No (Cancel/OK for any other one) through Accessibility.
 // The store's loginPromptAsked flag (set when the question is due) is checked on both systems.
 const messageBoxes = [];
+let dialogWatchError = ''; // shown if the watcher never saw the question (Accessibility, a locked screen)
 const answerDialogs = () => {
   if (os !== 'mac') return;
   execFile('osascript', ['-e', `tell application "System Events"
@@ -164,7 +165,8 @@ const answerDialogs = () => {
   end repeat
   return found
 end tell`], (error, stdout) => {
-    if (!error) for (const message of String(stdout).split('|').map((m) => m.trim()).filter(Boolean)) messageBoxes.push(message);
+    if (error) dialogWatchError = String(error.message).split('\n').filter(Boolean).pop() ?? '';
+    else for (const message of String(stdout).split('|').map((m) => m.trim()).filter(Boolean)) messageBoxes.push(message);
   });
 };
 const dialogWatch = setInterval(answerDialogs, 1500);
@@ -360,7 +362,8 @@ async function waitForExplanation(label, expectedCode, { confirm = false } = {})
       await sleep(1500);
       assert.equal(await panel.locator('.stage').count(), 0, 'a link-started review must not start before Explain');
       await shot(panel, `${label}-confirm`);
-      await panel.getByRole('button', { name: 'Explain', exact: true }).click();
+      // The confirm sheet's own Explain; the panel's side rail has an Explain tab as well.
+      await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
     }
     const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });
     await preview.waitFor({ timeout: 30000 });
@@ -460,7 +463,7 @@ const askedAtEnd = readStore(userData).loginPromptAsked === true;
 log(!askedAfterSample && askedAtEnd, 'Launch-at-login question becomes due after the first own-code explanation, not the sample', `after sample: ${askedAfterSample}, at end: ${askedAtEnd}`);
 if (os === 'mac') {
   const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
-  log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)`);
+  log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
   for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
 } else report.push('NOTE  launch-at-login dialog count: not read on Windows (no main-process access); the store flag above covers when it is due.');
 
