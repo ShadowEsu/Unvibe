@@ -6,7 +6,7 @@ import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
-import { compensationProgramCount, compensationTotalLabel, startupPrograms } from "@/data/compensation";
+import { compensationProgramCount, compensationTotalLabel, compensationTotalPhrase, startupPrograms } from "@/data/compensation";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
@@ -187,7 +187,7 @@ export function PhotoHero() {
         )}
         <p className="vhero__backing">
           <a href="/investors#backing">
-            <b>{compensationTotalLabel()} in startup-program credits and committed cash</b>
+            <b>{compensationTotalLabel()} {compensationTotalPhrase()}</b>
             <span className="vhero__backing-separator"> · </span>
             <span className="vhero__backing-programs">{compensationProgramCount()} programs, including {startupPrograms[0].program}</span>
           </a>

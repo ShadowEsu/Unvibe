@@ -1,12 +1,14 @@
 import {
   compensationCashUsd,
   compensationCreditsUsd,
-  compensationLines,
   compensationProgramCount,
   compensationTotalLabel,
+  creditSourcesLabel,
   formatUsd,
   PROGRAM_NOTICES,
+  programsWithoutAmountCount,
   startupProgramsLine,
+  supportRows,
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
@@ -59,7 +61,7 @@ export const KIT_ASSETS: KitAsset[] = [
 export function kitSections(): KitSection[] {
   const total = compensationTotalLabel();
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
-  const support = [...compensationLines].sort((a, b) => b.amountUsd - a.amountUsd);
+  const support = supportRows();
   const company = milestones.filter((m) => m.category === "COMPANY" || m.category === "DISTRIBUTION").slice(0, 10);
   const latestProduct = milestones.filter((m) => m.category === "PRODUCT").slice(0, 5);
 
@@ -111,7 +113,7 @@ export function kitSections(): KitSection[] {
     {
       id: "investors",
       title: "Persuading investors",
-      intro: `Unvibe is live, free, and shipping fast. Support secured: ${total}, of which ${formatUsd(compensationCreditsUsd())} is credits from ${compensationProgramCount()} startup programs and ${formatUsd(compensationCashUsd())} is committed cash. Credits are not cash, and this is not a priced round. Never say it is.`,
+      intro: `Unvibe is live, free, and shipping fast. Support secured with an amount on record: ${total}, of which ${formatUsd(compensationCreditsUsd())} is ${creditSourcesLabel()} credits and ${formatUsd(compensationCashUsd())} is committed cash. Unvibe is in ${compensationProgramCount()} startup programs; ${programsWithoutAmountCount()} of them are listed with their terms and no amount, so never add a figure for them. Credits are not cash, and this is not a priced round. Never say it is.`,
       bullets: [
         "Problem: developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment code changes.",
         "Product: select code, press one key, get an in-place explanation at five depths, a quiz, a saved lesson, and a review of what the agent changed.",
@@ -123,7 +125,7 @@ export function kitSections(): KitSection[] {
       ],
       table: {
         head: ["Source", "Amount", "What it is", "Status"],
-        rows: support.map((line) => [line.name, formatUsd(line.amountUsd), line.detail, line.state]),
+        rows: support.map((line) => [line.name, line.amount, line.detail, line.state]),
       },
     },
     {

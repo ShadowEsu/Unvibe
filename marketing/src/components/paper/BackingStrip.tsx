@@ -4,7 +4,7 @@ import { PROGRAM_NOTICES, startupPrograms, withMark } from "@/data/compensation"
  * The startup programs by full name, plain text in our own type. Only MongoDB shows a logo: its official,
  * unmodified file, on a light chip in both themes, smaller than Unvibe's own mark. Shared by the homepage strip,
  * /investors and /about. `firstUse`: this list is the first mention of the names on the page, so marks carry
- * their notice (MongoDB®, GitLab™).
+ * their notice (MongoDB®).
  */
 export function ProgramList({ firstUse }: { firstUse: boolean }) {
   return (
