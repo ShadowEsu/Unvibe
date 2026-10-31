@@ -41,8 +41,8 @@ describe("unvibe.site sends nothing to PostHog", () => {
 
   it("the privacy page lists Mixpanel as the analytics provider and dates the end of PostHog", () => {
     const page = renderToStaticMarkup(createElement(PrivacyPage)).replace(/\s+/g, " ");
+    assert.match(page, /<strong>Mixpanel<\/strong> measures website usage\./);
     assert.match(page, /Until 2 November 2026 unvibe\.site also sent the same consented analytics to PostHog: events, with your IP address used to estimate a rough location, and session replays with all page text hidden\. That data stays with PostHog until we delete it, which we will do after exporting it\./);
-    assert.match(page, /Until 2 November 2026 unvibe\.site also sent the same consented analytics and session replays to PostHog; that data stays with PostHog until we delete it, which we will do after exporting it\./);
     assert.match(page, /<strong>PostHog<\/strong> still holds the website analytics and replays recorded until 2 November 2026, until we delete them; the site no longer sends it anything\./);
   });
 });
