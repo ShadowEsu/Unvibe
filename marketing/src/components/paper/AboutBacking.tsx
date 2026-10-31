@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ProgramList } from "@/components/paper/BackingStrip";
-import { compensationProgramCount, compensationTotalLabel, startupProgramsLine } from "@/data/compensation";
+import { compensationTotalLabel, compensationTotalPhrase, programsWithoutAmountCount, startupProgramsLine } from "@/data/compensation";
 
 /**
  * /about: the startup programs (about-mission.md). Self-contained, with its own styles, so it can move into the
@@ -11,7 +11,7 @@ export function AboutBacking() {
     <section className="paper-wrap about-backing" aria-labelledby="about-backing-title">
       <h2 id="about-backing-title">Startup programs we&apos;re in</h2>
       <p className="about-backing__lead">
-        <b>{compensationTotalLabel()}</b> in startup-program credits and committed cash ({compensationProgramCount()} programs).
+        <b>{compensationTotalLabel()}</b> {compensationTotalPhrase()}, plus {programsWithoutAmountCount()} more startup programs listed without an amount.
       </p>
       <p className="about-backing__lead">{startupProgramsLine()}.</p>
       <ProgramList firstUse={false} />

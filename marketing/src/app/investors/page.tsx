@@ -6,10 +6,13 @@ import { Vibe } from "@/components/paper/Vibe";
 import {
   compensationCashUsd,
   compensationCreditsUsd,
-  compensationLines,
   compensationProgramCount,
   compensationTotalLabel,
+  compensationTotalPhrase,
+  creditSourcesLabel,
   formatUsd,
+  programsWithoutAmountCount,
+  supportRows,
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -42,8 +45,8 @@ export default function InvestorsPage() {
   const credits = formatUsd(compensationCreditsUsd());
   const cash = formatUsd(compensationCashUsd());
   const programs = compensationProgramCount();
-  const sorted = [...compensationLines].sort((a, b) => b.amountUsd - a.amountUsd);
-  const lead = sorted[0];
+  const rows = supportRows();
+  const lead = rows[0];
   const releases = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   const company = milestones.filter((m) => m.category === "COMPANY" || m.category === "DISTRIBUTION").slice(0, 8);
 
@@ -70,7 +73,7 @@ export default function InvestorsPage() {
       </header>
 
       <section className="inv-stats" aria-label="Unvibe at a glance">
-        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>in startup-program credits and committed cash</span></div>
+        <div className="inv-stat inv-stat--lime"><b>{total}</b><span>{compensationTotalPhrase()}</span></div>
         <div className="inv-stat inv-stat--sky"><b>{programs}</b><span>startup programs we&apos;re in</span></div>
         <div className="inv-stat inv-stat--sun"><b>{releases}+</b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
         <div className="inv-stat inv-stat--lilac"><b>Mac + Windows</b><span>beta, free to download</span></div>
@@ -95,15 +98,15 @@ export default function InvestorsPage() {
       <section className="inv-section" id="support">
         <p className="inv-eyebrow">Resource runway</p>
         <h2>Where the {total} <em>comes from.</em></h2>
-        <p className="inv-lead">Every program credit and self-reported cash line, by source. Program credits {credits} · cash {cash}. Credits are not cash, and this is not a funding round.</p>
+        <p className="inv-lead">Every source by name. {creditSourcesLabel()} credits {credits} · cash {cash}. The other {programsWithoutAmountCount()} programs are listed with their terms and no amount. Credits are not cash, and this is not a funding round.</p>
         <div className="inv-table" role="table" aria-label="Support by source">
           <div className="inv-row inv-row--head" role="row">
             <span role="columnheader">Source</span><span role="columnheader">Amount</span><span role="columnheader">What it is</span><span role="columnheader">Status</span>
           </div>
-          {sorted.map((line) => (
+          {rows.map((line) => (
             <div key={line.name} className={`inv-row${line === lead ? " inv-row--lead" : ""}`} role="row">
               <strong role="cell">{line.name}</strong>
-              <span role="cell" className="inv-amount">{formatUsd(line.amountUsd)}</span>
+              <span role="cell" className="inv-amount">{line.amount}</span>
               <span role="cell">{line.detail}</span>
               <span role="cell"><i className="inv-pill">{line.state}</i></span>
             </div>
