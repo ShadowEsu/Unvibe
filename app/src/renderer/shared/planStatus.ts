@@ -80,7 +80,7 @@ export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): str
   if (refill) return `Pro isn't open yet. Your Free plan keeps working: ${left}, refilling on ${refill}.`;
   const end = new Date(usage.resetsAt).getTime();
   if (usage.plan === 'trial' && end > now) {
-    return `Pro isn't open yet. Your Free plan keeps working: ${left} until ${shortDate(usage.resetsAt)}.`;
+    return `Pro isn't open yet. The free explanations on this computer: ${left} until ${shortDate(usage.resetsAt)}. They don't refill; sign in to keep going on the Free plan, which refills every month.`;
   }
   if (usage.plan === 'trial' && !Number.isNaN(end)) {
     return `Pro isn't open yet. The free explanations on this computer ended on ${shortDate(usage.resetsAt)}. Sign in to keep going on the Free plan, which refills every month.`;

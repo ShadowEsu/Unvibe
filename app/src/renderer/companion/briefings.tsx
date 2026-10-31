@@ -6,6 +6,7 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
+import { renderSummary } from '../shared/richText';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -200,7 +201,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
               <li key={item.id}>
                 <div>
                   <strong>{item.title}</strong>
-                  <p>{item.summary}</p>
+                  <p>{renderSummary(item.summary)}</p>
                   <span>
                     {item.verificationStatus.replaceAll('_', ' ')} · {item.freshnessStatus.replaceAll('_', ' ')} ·{' '}
                     <time dateTime={item.updatedAt}>

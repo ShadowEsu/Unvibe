@@ -98,6 +98,14 @@ export function renderInline(text: string): ReactNode[] {
   return out;
 }
 
+/**
+ * A one-line preview of a saved explanation (Briefs' Saved knowledge): headings and line breaks are
+ * flattened, then citations, bold and code render as inline nodes, so no raw `##` or `[[cite:…]]` shows.
+ */
+export function renderSummary(text: string): ReactNode[] {
+  return renderInline(text.replace(/^\s*#{1,6}\s+/gm, '').replace(/\s*\n+\s*/g, ' ').trim());
+}
+
 const LIST_RE = /^\s*(?:[-*•]|\d+[.)])\s+/;
 const HEADING_RE = /^\s*(#{1,6})\s+(.+?)\s*$/;
 
