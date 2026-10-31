@@ -2194,7 +2194,8 @@ function App() {
               <kbd>{shortcutLabel}</kbd><span>Explain</span>
             </button>
           </header>
-          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} style={askBarShown ? { paddingBottom: scrollEndPadding(askBarHeight) } : undefined} tabIndex={0} role="region" aria-labelledby="companion-page-title">
+          {/* --ask-clearance repeats the padding for pages whose content overflows a shrunk flex child (Briefs). */}
+          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} style={askBarShown ? { paddingBottom: scrollEndPadding(askBarHeight), '--ask-clearance': `${scrollEndPadding(askBarHeight)}px` } as React.CSSProperties : undefined} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
               {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn

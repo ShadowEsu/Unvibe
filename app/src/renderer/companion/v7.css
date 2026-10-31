@@ -857,4 +857,7 @@
   & .ask-row .ask-dock { width: 100%; margin: 0; }
   & .ask-row__slot { display: flex; justify-content: flex-end; }
   & .content > .update-card { position: static; flex: 0 0 auto; align-self: flex-end; margin: 16px 22px 0 0; }
+  /* Briefs fills the page as a flex child that shrinks, so the page's own bottom padding is not part of
+     its scroll end; the brief carries the same clearance itself. */
+  & .page--learn .briefings { padding-bottom: var(--ask-clearance, 0px); }
 }
