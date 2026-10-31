@@ -13,6 +13,27 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "31 OCT 2026",
+    category: "PRODUCT",
+    title: "The app names Claude when it asks to send code, and asks for your feedback",
+    summary: "The agreement the app shows before your code first leaves the computer named Anthropic's Claude, the provider explanations use since 30 Oct, and everyone who agreed before was asked again; nothing was sent until they agreed. On Free and the trial, Briefs' AI buttons were marked Pro, and pressing one showed a card saying Pro opens soon instead of a bare error. A short optional survey in the panel asked four questions about Unvibe; answers went to the team with the app version and your random install ID, which the thanks screen showed so you could ask for deletion. While an answer streamed, raw markdown markers no longer showed.",
+    figure: "v0.1.47",
+  },
+  {
+    date: "30 OCT 2026",
+    category: "PRODUCT",
+    title: "Cleaner bold labels and a paste step that asks again",
+    summary: "Inline code inside a bold label rendered as code instead of raw backticks. During setup, the paste step asked again after Cancel instead of stopping.",
+    figure: "v0.1.46",
+  },
+  {
+    date: "30 OCT 2026",
+    category: "PRODUCT",
+    title: "The app asks before your code first leaves the computer",
+    summary: "Before the first explanation of your own code, the app asked for your agreement to send it, recorded the answer on your computer for that AI provider, and checked it before every send; turning the switch off withdrew it. Setup progress was off unless you turned it on, and updating switched it off once for existing installs. On a Mac, the first run started with pasting your own code, then offered the shortcut. A review started from a link waited for you to press Explain. Today showed a daily goal with one streak, and the panel's Teach box became readable in the light look. The app's Electron build turned off running as plain Node, NODE_OPTIONS and the --inspect debugger.",
+    figure: "v0.1.45",
+  },
+  {
     date: "30 OCT 2026",
     category: "PRODUCT",
     title: "Explanations moved to Anthropic's Claude",
