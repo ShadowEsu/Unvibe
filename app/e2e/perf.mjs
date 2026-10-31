@@ -31,15 +31,52 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const median = (xs) => { const v = xs.filter((x) => typeof x === 'number').sort((a, b) => a - b); return v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null; };
 const appDir = os === 'mac' ? exe.replace(/\/Contents\/MacOS\/[^/]+$/, '') : path.dirname(exe);
 
-/** Total resident memory (MB) of every process started from this app's folder. */
+/** Which Electron process a command line belongs to: main, gpu, utility:<sub-type>, renderer:<client id>. */
+function kind(cmd) {
+  const type = cmd.match(/--type=([\w-]+)/)?.[1];
+  if (!type) return 'main';
+  if (type === 'renderer') return `renderer:${cmd.match(/--renderer-client-id=(\d+)/)?.[1] ?? '?'}`;
+  if (type === 'gpu-process') return 'gpu';
+  if (type === 'utility') return `utility:${cmd.match(/--utility-sub-type=([\w.]+)/)?.[1] ?? '?'}`;
+  return type;
+}
+
+/**
+ * Memory of every process started from this app's folder, in MB, in total and per process.
+ * `mb` sums resident memory (RSS / working set), which counts pages shared between Electron's
+ * processes once per process. `footprintMb` is what Activity Monitor / Task Manager show:
+ * macOS phys_footprint, Windows private bytes.
+ */
 function memory() {
+  let procs;
   if (os === 'mac') {
-    const rows = execFileSync('ps', ['-axo', 'rss=,command=']).toString().split('\n').filter((l) => l.includes(appDir));
-    return { mb: Math.round(rows.reduce((s, l) => s + Number(l.trim().split(/\s+/)[0]), 0) / 1024), processes: rows.length };
+    const rows = execFileSync('ps', ['-axww', '-o', 'pid=,rss=,command=']).toString().split('\n').filter((l) => l.includes(appDir));
+    procs = rows.map((l) => { const m = l.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/); return { pid: m[1], rssMb: Math.round(Number(m[2]) / 1024), kind: kind(m[3]) }; });
+    try {
+      const text = execFileSync('footprint', ['-f', 'bytes', ...procs.flatMap((p) => ['-p', p.pid])], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      for (const m of text.matchAll(/\[(\d+)\]:.*?Footprint: (\d+) B/g)) {
+        const p = procs.find((x) => x.pid === m[1]); if (p) p.footprintMb = Math.round(Number(m[2]) / 1048576);
+      }
+    } catch { /* footprint unavailable: RSS only */ }
+  } else {
+    const ps = `Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith(${JSON.stringify(appDir)}, 'OrdinalIgnoreCase') } | ForEach-Object { "$($_.ProcessId)\`t$($_.WorkingSetSize)\`t$($_.PrivatePageCount)\`t$($_.CommandLine)" }`;
+    procs = execFileSync('powershell', ['-NoProfile', '-Command', ps], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean).map((l) => {
+      const [pid, ws, priv, ...cmd] = l.split('\t');
+      return { pid, rssMb: Math.round(Number(ws) / 1048576), footprintMb: Math.round(Number(priv) / 1048576), kind: kind(cmd.join('\t')) };
+    });
   }
-  const ps = `$p = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith(${JSON.stringify(appDir)}, 'OrdinalIgnoreCase') }; "$(($p | Measure-Object WorkingSetSize -Sum).Sum) $(@($p).Count)"`;
-  const [bytes, count] = execFileSync('powershell', ['-NoProfile', '-Command', ps], { encoding: 'utf8' }).trim().split(/\s+/).map(Number);
-  return { mb: Math.round((bytes || 0) / 1048576), processes: count || 0 };
+  const sum = (k) => (procs.every((p) => typeof p[k] === 'number') ? procs.reduce((s, p) => s + p[k], 0) : null);
+  return { mb: sum('rssMb'), footprintMb: sum('footprintMb'), processes: procs.length, perProcess: procs.map(({ kind: k, rssMb, footprintMb }) => ({ kind: k, rssMb, footprintMb })) };
+}
+
+/** JS heap in use per app window (Chromium's performance.memory), to tell which window grows. */
+async function heaps(app) {
+  const out = {};
+  for (const w of app.windows()) {
+    const name = w.url().split('/').pop()?.split('?')[0];
+    out[name] = await w.evaluate(() => Math.round((performance.memory?.usedJSHeapSize ?? 0) / 1048576)).catch(() => null);
+  }
+  return out;
 }
 
 /** Epoch ms of a window's first contentful paint, or null if it hasn't painted (hidden) within `wait`. */
@@ -104,8 +141,8 @@ for (let r = 1; r <= ROUNDS; r++) {
     round.firstExplanationS = Math.round((Date.now() - a.spawnedAt) / 100) / 10;
     if (r === ROUNDS) {
       idle = [];
-      for (let s = 60; s <= IDLE_S; s += 60) { await sleep(60000); idle.push({ s, ...memory() }); }
-      explanations = [{ n: 0, ...memory() }];
+      for (let s = 60; s <= IDLE_S; s += 60) { await sleep(60000); idle.push({ s, ...memory(), heapMb: await heaps(a.app) }); }
+      explanations = [{ n: 0, ...memory(), heapMb: await heaps(a.app) }];
       const levels = ['new', 'beginner', 'intermediate', 'advanced'];
       for (let n = 1; n <= EXPLANATIONS; n++) {
         const current = await panel.locator('.lvl.on').getAttribute('data-level').catch(() => null);
@@ -113,7 +150,7 @@ for (let r = 1; r <= ROUNDS; r++) {
         await panel.locator(`.lvl[data-level="${next}"]`).click();
         await panel.locator('.body .cursor').waitFor({ timeout: 15000 }).catch(() => {});
         panel = await finished(a.app);
-        explanations.push({ n, level: next, ...memory() });
+        explanations.push({ n, level: next, ...memory(), heapMb: await heaps(a.app) });
       }
     }
     await a.app.close();
@@ -142,11 +179,15 @@ const result = {
   },
   idle, explanations,
   growthPct: explanations && explanations[0].mb ? Math.round(((explanations.at(-1).mb - explanations[0].mb) / explanations[0].mb) * 1000) / 10 : null,
+  footprintGrowthPct: explanations && explanations[0].footprintMb ? Math.round(((explanations.at(-1).footprintMb - explanations[0].footprintMb) / explanations[0].footprintMb) * 1000) / 10 : null,
   failures,
 };
 writeFileSync(path.join(out, 'perf.json'), JSON.stringify(result, null, 1));
 console.log(`median ${JSON.stringify(result.median)}`);
-console.log(`idle ${JSON.stringify(idle)}`);
-console.log(`explanations ${JSON.stringify(explanations?.map((e) => e.mb))} growth ${result.growthPct}%`);
+console.log(`idle rss ${JSON.stringify(idle?.map((e) => e.mb))} footprint ${JSON.stringify(idle?.map((e) => e.footprintMb))}`);
+console.log(`explanations rss ${JSON.stringify(explanations?.map((e) => e.mb))} footprint ${JSON.stringify(explanations?.map((e) => e.footprintMb))} growth rss ${result.growthPct}% footprint ${result.footprintGrowthPct}%`);
+for (const [label, e] of [['idle 1 min', idle?.[0]], ['idle 5 min', idle?.at(-1)], ['after explanations', explanations?.at(-1)]]) {
+  if (e) console.log(`${label}: ${e.perProcess.map((p) => `${p.kind} ${p.rssMb}/${p.footprintMb ?? '?'}`).join(', ')} | heap ${JSON.stringify(e.heapMb)}`);
+}
 console.log(`install ids: ${rounds.map((x) => x.installId).join(', ')}`);
 process.exit(failures.length ? 1 : 0);
