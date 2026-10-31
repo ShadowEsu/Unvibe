@@ -9,6 +9,7 @@ import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
+import { reviewTraceLine, type ReviewOutcome } from '../core/reviewTrace';
 import { fetchQuestion, PlanLimitError, postReview } from './backend';
 import { store } from './store';
 
@@ -28,7 +29,7 @@ import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
 import { noteOwnCodeExplained } from './ownCodeStep';
 import { productEvent } from '../core/productEvents';
-import { CONSENT_PROVIDERS, ConsentRequiredError, type ConsentProvider } from '../core/consent';
+import { CONSENT_PROVIDERS, ConsentRequiredError, isFirstRunSamplePayload, type ConsentProvider } from '../core/consent';
 import { codeConsented } from './consentStore';
 import { providerInUse } from './consent';
 
@@ -338,7 +339,7 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
   return true;
 }
 
-export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts, attempt = 1): Promise<void> {
   // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
   if (session.awaitingConfirm) return;
   // Fails closed: nothing of the person's is sent before they agree; the panel shows the form.
@@ -404,6 +405,14 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   const abort = new AbortController();
   session.abort = abort;
   let timedOut = false;
+  // Trace of the hosted request (one stdout line in `finally`); the own-key path is not traced.
+  const startedAt = Date.now();
+  let hosted = false;
+  let traceId: string | null = null;
+  let traceStatus: number | null = null;
+  let firstTokenMs: number | null = null;
+  let outcome: ReviewOutcome = 'error';
+  let retry = false;
   // Wait up to FIRST_TOKEN_MS for the first words, then only fail if the stream goes quiet.
   // A long answer that keeps streaming is never cut off.
   let watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, FIRST_TOKEN_MS);
@@ -488,7 +497,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       return;
     }
 
+    hosted = true;
     const res = await postReview(payload, token, abort.signal);
+    traceId = res.headers.get('x-vercel-id');
+    traceStatus = res.status;
     if (!res.ok || !res.body) {
       const body = (await res.json().catch(() => ({}))) as {
         error?: string; message?: string; upgradePath?: string;
@@ -529,6 +541,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         // it; any other type is dropped (init, usage, consent and the rest come from the app).
         if (ev.type === 'token') {
           if (typeof ev.text !== 'string') continue;
+          if (firstTokenMs === null) firstTokenMs = Date.now() - startedAt;
           appendExplanation(session, ev.text);
           send(win, session, { type: 'token', text: ev.text });
         } else if (ev.type === 'error') {
@@ -537,6 +550,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         } else if (ev.type === 'done') {
           send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true });
           completed = true;
+          outcome = 'done';
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
             send(win, session, {
@@ -555,10 +569,18 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     if (!completed) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
   } catch (err) {
     if (err instanceof ConsentRequiredError) {
+      outcome = 'consent';
       askConsent(win, session, err.provider);
       return;
     }
     if (abort.signal.aborted) {
+      outcome = timedOut ? 'timeout' : 'aborted';
+      // A new person's first explanation (the setup sample) must not end on a network stall: when no
+      // words arrived at all, send it once more instead of showing the error.
+      if (timedOut && firstTokenMs === null && attempt === 1 && isFirstRunSamplePayload(payload)) {
+        retry = true;
+        return;
+      }
       if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.' });
       return;
     }
@@ -571,7 +593,11 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     void err;
   } finally {
     clearTimeout(watchdog);
+    if (hosted) {
+      console.log(reviewTraceLine({ id: traceId, status: traceStatus, firstTokenMs, totalMs: Date.now() - startedAt, outcome }));
+    }
     if (session.abort === abort) session.abort = null;
+    if (retry && !win.isDestroyed()) void runReview(win, session, opts, attempt + 1);
   }
 }
 
