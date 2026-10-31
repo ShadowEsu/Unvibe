@@ -178,6 +178,8 @@ jobs:
       # qa-prefixed install ids, flagged as QA in the next steps like the walkthrough's.
       - name: Measure startup and memory
         if: always() && inputs.perf == 'true' && env.UNVIBE_EXE != ''
+        # Leaves time inside the job's 60 min for the flag step, so every perf install is flagged.
+        timeout-minutes: 40
         shell: bash
         env:
           UNVIBE_OS: ${{ matrix.family }}
