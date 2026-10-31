@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { ChangeBrief, BriefScope } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
 import { buildAgentReview, type AgentReview } from '../../core/agentReview';
@@ -25,7 +25,8 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [needsRepo, setNeedsRepo] = useState(false);
   const [openFile, setOpenFile] = useState<string | null>(null);
-  const [needsPro, setNeedsPro] = useState(false);
+  /** Which AI button a Free user pressed, so the Pro card shows right under it (QA P2: a line at the top went unseen). */
+  const [needsPro, setNeedsPro] = useState<'review' | 'brief' | null>(null);
   const [proOpen, setProOpen] = useState(false);
 
   const loadKnowledge = async () => {
@@ -76,12 +77,12 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
     void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)).catch(() => setProOpen(false));
   }, []);
 
-  const understand = async () => {
+  const understand = async (from: 'review' | 'brief') => {
     setBusy(true);
-    setNeedsPro(false);
+    setNeedsPro(null);
     try {
       const result = await window.unvibe.explainDiff({ brief: true, scope }) as { ok?: boolean; cancelled?: boolean; error?: string; proRequired?: boolean };
-      if (result?.proRequired) setNeedsPro(true);
+      if (result?.proRequired) setNeedsPro(from);
       else if (!result?.ok && !result?.cancelled) setError(result?.error ?? 'Could not start that review.');
     } catch {
       setError('Unvibe could not complete this request. Try again.');
@@ -123,7 +124,6 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       </div>
 
       {error ? <div className="briefings__empty" role="alert">{error}</div> : null}
-      {needsPro ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
       {busy && <p className="briefings__busy" role="status">Reading your project…</p>}
       {needsRepo && !busy && (
         <section className="briefings__empty">
@@ -139,7 +139,8 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
           repo={brief.repo}
           busy={busy}
           explainLabel={briefsAiLabel('Explain the change', plan)}
-          onExplain={() => void understand()}
+          onExplain={() => void understand('review')}
+          proCard={needsPro === 'review' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           onRefreshKnowledge={(id) => void window.unvibe.refreshKnowledge(id).then(() => loadKnowledge())}
         />
       ) : null}
@@ -162,7 +163,8 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
             {brief.understandBeforeCommit.map((line) => <li key={line}>{line}</li>)}
           </ol>
           <p className="briefings__note">{brief.provenanceNote}</p>
-          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand()}>{briefsAiLabel('Understand Change', plan)}</button>
+          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel('Understand Change', plan)}</button>
+          {needsPro === 'brief' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           <h2>Files</h2>
           <ul className="briefings__files">
             {brief.files.map((file) => (
@@ -226,12 +228,13 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
 const SIZE_LABEL: Record<AgentReview['size'], string> = { small: 'Small change', medium: 'Medium change', large: 'Big change' };
 
 /** After-Agent Review: what an agent (or you) just changed, ranked by what deserves a human look. */
-function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, onRefreshKnowledge }: {
+function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard, onRefreshKnowledge }: {
   review: AgentReview;
   repo: string;
   busy: boolean;
   explainLabel: string;
   onExplain: () => void;
+  proCard: ReactNode;
   onRefreshKnowledge: (id: string) => void;
 }) {
   const storageKey = `unvibe.agentReview.${repo}.${review.headline}`;
@@ -260,6 +263,7 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, onRefres
         </div>
         <button type="button" className="primary-btn" disabled={busy} onClick={onExplain}>{explainLabel}</button>
       </header>
+      {proCard}
       <div className="agent-review__grid">
         <section>
           <h3>Review first <span>{checked.length}/{review.reviewFirst.length}</span></h3>
