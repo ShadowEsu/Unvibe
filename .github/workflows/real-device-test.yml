@@ -15,6 +15,10 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      perf:
+        description: "Also measure startup time and memory (5 rounds, 5 min idle, 10 explanations per machine; type true)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -28,10 +32,16 @@ jobs:
         include:
           - os: macos-latest
             label: mac
+            family: mac
+          # We ship an x64 DMG too; macos-15-intel is GitHub's remaining Intel image (macos-13 is retired).
+          - os: macos-15-intel
+            label: mac-intel
+            family: mac
           - os: windows-latest
             label: windows
+            family: windows
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.perf == 'true' && 60 || 30 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,13 +91,14 @@ jobs:
         if: inputs.build_run != ''
         uses: actions/download-artifact@v4
         with:
-          name: unvibe-${{ matrix.os }}
+          # The Mac build job uploads both DMGs (arm64 and x64) under its own runner's name.
+          name: unvibe-${{ matrix.family == 'mac' && 'macos-latest' || matrix.os }}
           run-id: ${{ inputs.build_run }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/build
 
       - name: Install Unvibe (Mac)
-        if: matrix.label == 'mac'
+        if: matrix.family == 'mac'
         shell: bash
         env:
           V: ${{ steps.ver.outputs.v }}
@@ -153,7 +164,7 @@ jobs:
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
-          UNVIBE_OS: ${{ matrix.label }}
+          UNVIBE_OS: ${{ matrix.family }}
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
           UNVIBE_E2E_PROFILE: ${{ runner.temp }}/walkthrough-profile
           # Seeded into the profile, so this run's install is known and flagged as QA below.
@@ -162,6 +173,25 @@ jobs:
           cp app/e2e/real-device.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
           cat "$SHOTS_DIR/report.txt"
+
+      # Startup and memory for the 1.0 budgets (QA checklist B6): throwaway profiles with seeded
+      # qa-prefixed install ids, flagged as QA in the next steps like the walkthrough's.
+      - name: Measure startup and memory
+        if: always() && inputs.perf == 'true' && env.UNVIBE_EXE != ''
+        shell: bash
+        env:
+          UNVIBE_OS: ${{ matrix.family }}
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          OUT: ${{ runner.temp }}/shots/perf
+          PERF_PROFILES: ${{ runner.temp }}/perf-profiles
+          PERF_ID_PREFIX: qa-perf-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+        run: |
+          # Nothing left over from the walkthrough may count towards the memory totals.
+          if [ "$UNVIBE_OS" = mac ]; then pkill -f "/Applications/Unvibe.app/" || true
+          else powershell -NoProfile -Command "Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force"; fi
+          sleep 3
+          cp app/e2e/perf.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cd "$RUNNER_TEMP/pw" && node perf.mjs
 
       # The website's Windows download is the portable exe, so open that exact file too.
       - name: Open the portable exe the website serves (Windows)
@@ -217,7 +247,10 @@ jobs:
         run: |
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
-          foreach ($name in 'walkthrough-profile', 'portable-profile') {
+          $names = @('walkthrough-profile', 'portable-profile')
+          $perf = [IO.Path]::Combine($env:RUNNER_TEMP, 'perf-profiles')
+          if (Test-Path $perf) { $names += Get-ChildItem $perf -Directory | ForEach-Object { "perf-profiles/$($_.Name)" } }
+          foreach ($name in $names) {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
             try {
