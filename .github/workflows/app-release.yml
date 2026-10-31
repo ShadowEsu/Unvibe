@@ -221,6 +221,9 @@ jobs:
         shell: bash
         env:
           PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          # Starting the app registers a trial install; a seeded qa id keeps it out of the user counts.
+          RELEASE_INSTALL_ID: qa-release-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           for dmg in release/*.dmg; do
@@ -243,7 +246,9 @@ jobs:
               # RunAsNode fuse is off (scripts/afterPackHook.cjs), so ELECTRON_RUN_AS_NODE must be
               # ignored: Unvibe starts as itself and never runs the -e code.
               out="$(mktemp)"
-              ELECTRON_RUN_AS_NODE=1 "$app/Contents/MacOS/Unvibe" -e "console.log('run-as-node-' + 'works')" >"$out" 2>&1 &
+              profile="$(mktemp -d)"
+              printf '{"installId":"%s"}' "$RELEASE_INSTALL_ID" > "$profile/unvibe-store.json"
+              UNVIBE_USER_DATA="$profile" ELECTRON_RUN_AS_NODE=1 "$app/Contents/MacOS/Unvibe" -e "console.log('run-as-node-' + 'works')" >"$out" 2>&1 &
               pid=$!
               sleep 10
               if ! kill -0 "$pid" 2>/dev/null; then
@@ -251,6 +256,15 @@ jobs:
                 echo "Unvibe exited within 10 seconds of starting:"; cat "$out"; exit 1
               fi
               kill "$pid"; wait "$pid" 2>/dev/null || true
+              if [ -n "$UNVIBE_QA_FLAG_TOKEN" ]; then
+                # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
+                code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+                  -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+                  --data "{\"installId\":\"$RELEASE_INSTALL_ID\"}") || code="curl failed"
+                echo "QA install flag ($RELEASE_INSTALL_ID): $code"
+              else
+                echo "QA install flag: no token, so $RELEASE_INSTALL_ID counts as real until it is flagged by hand"
+              fi
               if grep -q 'run-as-node-works' "$out"; then echo "ELECTRON_RUN_AS_NODE still runs code: the RunAsNode fuse is on."; exit 1; fi
               echo "starts, and ignores ELECTRON_RUN_AS_NODE"
             fi
