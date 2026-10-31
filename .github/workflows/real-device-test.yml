@@ -204,7 +204,9 @@ jobs:
 
       # Leave this run's installs out of founder stats: the walkthrough's profile on both systems and,
       # on Windows, the portable exe's. Only this step has the admin token, and Unvibe is stopped
-      # first, so the app under test never runs with it. Runs even after a failed check.
+      # first, so the app under test never runs with it. Runs even after a failed check. Fails when
+      # the API answers anything but 200 with matched true: a 200 alone does not prove the app's own
+      # install row was flagged (Security, 31 Oct).
       - name: Flag this run's installs as QA
         if: always()
         shell: pwsh
@@ -214,6 +216,7 @@ jobs:
         run: |
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
+          $failed = 0
           foreach ($name in 'walkthrough-profile', 'portable-profile') {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
@@ -223,9 +226,12 @@ jobs:
               $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
                 -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
                 -Body (@{ installId = $installId } | ConvertTo-Json -Compress)
-              "QA install flag ($name): $($r.StatusCode)"
-            } catch { "QA install flag ($name) failed: $($_.Exception.Message)" }
+              $matched = ($r.Content | ConvertFrom-Json).matched
+              "QA install flag ($name): $($r.StatusCode) matched=$matched"
+              if ($r.StatusCode -ne 200 -or $matched -ne $true) { "QA install flag ($name): the app's install row was not flagged"; $failed++ }
+            } catch { "QA install flag ($name) failed: $($_.Exception.Message)"; $failed++ }
           }
+          if ($failed -gt 0) { exit 1 }
 
       - name: Upload screenshots
         if: always()
@@ -237,6 +243,7 @@ jobs:
 
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
+        id: media
         if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
         continue-on-error: true
         shell: bash
@@ -256,13 +263,20 @@ jobs:
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
           MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          MEDIA_OUTCOME: ${{ steps.media.outcome }}
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo 'QA install flag (media): no token, so this install counts as real'; exit 1; fi
           # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
-          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+          answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
             -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
-            --data "{\"installId\":\"$MEDIA_INSTALL_ID\"}") || code="curl failed"
-          echo "QA install flag (media): $code"
+            --data "{\"installId\":\"$MEDIA_INSTALL_ID\"}") || answer=$'\ncurl failed'
+          code=$(printf '%s' "$answer" | tail -n 1)
+          matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2)
+          echo "QA install flag (media): $code matched=${matched:-none}"
+          if [ "$code" = 200 ] && [ "$matched" = true ]; then exit 0; fi
+          # A capture that failed before the app reached the API leaves nothing to flag; the media step already shows that.
+          if [ "$MEDIA_OUTCOME" != success ]; then echo "QA install flag (media): no match after a media step that ended '$MEDIA_OUTCOME'"; exit 0; fi
+          echo "QA install flag (media): the app's install row was not flagged"; exit 1
 
       - name: Upload website media
         if: always() && matrix.label == 'mac'
