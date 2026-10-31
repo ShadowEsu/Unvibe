@@ -12,13 +12,12 @@ Short map for Cursor / ChatGPT / MCP agents. No secrets in this file.
 - Re-run or mirror setup: `scripts/setup-datadog-python-logs.sh` (needs sudo / admin).
 - Verify: `sudo datadog-agent status` → Logs Agent → `python` integration Status OK and LogsSent > 0.
 
-## PostHog (marketing site)
+## Mixpanel (marketing site)
 
-- Browser: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` (default `https://us.i.posthog.com`).
-- Server capture: `POSTHOG_PROJECT_API_KEY` / `POSTHOG_HOST` via `marketing/src/lib/posthogServer.ts`.
-- Client abstraction: `marketing/src/lib/analytics.ts` (named events only; Mixpanel is also wired).
+- Browser: `NEXT_PUBLIC_MIXPANEL_TOKEN`; server fallback `MIXPANEL_TOKEN` / `MIXPANEL_HOST`.
+- Client abstraction: `marketing/src/lib/analytics.ts` (named events only, after the visitor presses Allow).
 - Env template: `marketing/.env.example`.
-- MCP: PostHog tools in Cursor (`user-posthog`). Project is Unvibe / Default project on `us.posthog.com`.
+- The site used PostHog as well until 2 November 2026; it no longer loads or sends anything to PostHog.
 
 ## Backboard (docs MCP)
 

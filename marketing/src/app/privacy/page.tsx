@@ -170,7 +170,10 @@ export default function PrivacyPage() {
           content is left out of any replay. Automated browsers send no
           analytics, and neither does a browser where you have opened any page with ?notrack=1
           added to the address; ?notrack=0 lifts that, and analytics then runs only if you pressed
-          Allow. We
+          Allow. Until 2 November 2026 unvibe.site also sent the same consented analytics to PostHog:
+          events, with your IP address used to estimate a rough location, and session replays with all
+          page text hidden. That data stays with PostHog until we delete it, which we will do after
+          exporting it. We
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
@@ -216,6 +219,10 @@ export default function PrivacyPage() {
           <li><strong>Resend</strong> delivers sign-in and product emails.</li>
           <li><strong>GitHub</strong> hosts the installer downloads.</li>
           <li><strong>Mixpanel</strong> measures website usage.</li>
+          <li>
+            <strong>PostHog</strong> still holds the website analytics and replays recorded until 2 November
+            2026, until we delete them; the site no longer sends it anything.
+          </li>
           <li>
             <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
             only after you press Allow on the analytics bar.
