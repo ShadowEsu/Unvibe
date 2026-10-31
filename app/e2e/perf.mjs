@@ -59,8 +59,10 @@ function memory() {
       }
     } catch { /* footprint unavailable: RSS only */ }
   } else {
-    const ps = `Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith(${JSON.stringify(appDir)}, 'OrdinalIgnoreCase') } | ForEach-Object { "$($_.ProcessId)\`t$($_.WorkingSetSize)\`t$($_.PrivatePageCount)\`t$($_.CommandLine)" }`;
-    procs = execFileSync('powershell', ['-NoProfile', '-Command', ps], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean).map((l) => {
+    // Single-quoted PowerShell literal (backslashes stay as they are), passed as -EncodedCommand so no
+    // command-line quoting can change it.
+    const ps = `Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('${appDir.replace(/'/g, "''")}', 'OrdinalIgnoreCase') } | ForEach-Object { "$($_.ProcessId)\`t$($_.WorkingSetSize)\`t$($_.PrivatePageCount)\`t$($_.CommandLine)" }`;
+    procs = execFileSync('powershell', ['-NoProfile', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean).map((l) => {
       const [pid, ws, priv, ...cmd] = l.split('\t');
       return { pid, rssMb: Math.round(Number(ws) / 1048576), footprintMb: Math.round(Number(priv) / 1048576), kind: kind(cmd.join('\t')) };
     });
