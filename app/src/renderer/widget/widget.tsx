@@ -650,13 +650,24 @@ function Widget() {
     };
   }, [active.text, active.phase, activeTabId]);
 
-  // First focus goes to the explanation (Design A9, P5), not a header control: on open, for a new
-  // review and when the words arrive. Focus the person put somewhere else in the panel stays there.
+  // First focus goes to the explanation (Design A9, P5), not a header control. When the window gains
+  // focus with nothing focused, Chromium focuses the first tabbable control (the header's first
+  // button), so the panel moves it to the explanation on window focus, for a new review and when the
+  // words arrive. A field being typed in, or a control inside the content (a Test me option, a consent
+  // box), keeps focus.
   useEffect(() => {
-    const current = document.activeElement;
-    const idle = !current || current === document.body || current === mainRef.current
-      || (current instanceof HTMLButtonElement && current.disabled) || (current instanceof HTMLInputElement && current.disabled);
-    if (idle) (bodyRef.current ?? mainRef.current)?.focus({ preventScroll: true });
+    const toExplanation = () => {
+      const current = document.activeElement;
+      const main = mainRef.current;
+      if (current instanceof HTMLInputElement || current instanceof HTMLTextAreaElement) return;
+      const inContent = current instanceof HTMLElement && current !== main && Boolean(main?.contains(current))
+        && !(current instanceof HTMLButtonElement && current.disabled);
+      if (!inContent) (bodyRef.current ?? main)?.focus({ preventScroll: true });
+    };
+    toExplanation();
+    const onFocus = () => window.setTimeout(toExplanation, 0);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [active.phase, activeTabId]);
 
   // Autoscroll while streaming on the active tab.
