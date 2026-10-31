@@ -418,17 +418,12 @@
   & .chat-context span { border: 1.5px solid var(--v-line); border-radius: 99px; background: var(--v-sunken); color: var(--v-muted); }
   & .chat-meter { color: var(--v-muted); }
 
-  /* ── Vibe in the corner ────────────────────────────────────────────────── */
-  & .vibe-float { right: 22px; bottom: 82px; }
+  /* ── Vibe in the bottom-right slot ─────────────────────────────────────── */
   & .vibe-float__btn {
     width: 60px; height: 60px; border: 1.5px solid var(--v-ink); border-radius: 50%; background: var(--v-surface);
     box-shadow: var(--hard); animation: vibeBob 3.6s ease-in-out infinite;
   }
   & .vibe-float__btn:hover { animation-play-state: paused; transform: rotate(-6deg) scale(1.06); }
-  & .vibe-float__bubble {
-    border: 1.5px solid var(--v-ink); border-radius: 14px 14px 4px 14px; background: var(--v-surface); color: var(--v-ink);
-    font: italic 400 20px/1.1 var(--font-hand); box-shadow: var(--hard-sm);
-  }
 
   /* ── Palette, settings, toast ──────────────────────────────────────────── */
   & .search-overlay { background: rgb(20 20 20 / 0.3); backdrop-filter: blur(2px); }
@@ -849,4 +844,15 @@
   & .chat-dock .chat-starters { margin-top: 14px; }
   & .chat-meter--warn { color: var(--v-warn); }
   & .chat-meter--hot { color: #b42318; }
+
+  /* The page's bottom edge (Design A7, P2, P4): the Ask bar sits in its own row with a 16 px gap
+     above it, centred, with the bottom-right slot beside it for Vibe. The update card takes the
+     slot's place above that row and pushes the page up instead of covering the bar or Vibe. */
+  & .ask-row {
+    flex: 0 0 auto; display: grid; grid-template-columns: 76px minmax(0, 620px) 76px; justify-content: center;
+    align-items: center; padding: 16px 12px 16px;
+  }
+  & .ask-row .ask-dock { width: 100%; margin: 0; }
+  & .ask-row__slot { display: flex; justify-content: flex-end; }
+  & .content > .update-card { position: static; flex: 0 0 auto; align-self: flex-end; margin: 16px 22px 0 0; }
 }

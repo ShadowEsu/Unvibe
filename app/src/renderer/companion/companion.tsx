@@ -27,6 +27,7 @@ import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { CHANGE_BRIEF, HOSTED_AI, NOT_NOW, PAGE_NAMES } from './names';
+import { bottomRightSlot, scrollEndPadding } from './layout';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -1920,6 +1921,10 @@ function App() {
   const [lessonSeedRevision, setLessonSeedRevision] = useState(0);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [ownCodeStep, setOwnCodeStep] = useState(false);
+  const [updateShown, setUpdateShown] = useState(false);
+  // The Ask bar's height, measured, so the page above it can scroll its last line clear (Design P2).
+  const askBarRef = useRef<HTMLFormElement>(null);
+  const [askBarHeight, setAskBarHeight] = useState(0);
 
   const refresh = async () => {
     try {
@@ -2130,6 +2135,15 @@ function App() {
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
 
+  const askBarShown = gate === 'app' && !ownCodeStep && page !== 'Chat';
+  useEffect(() => {
+    const bar = askBarRef.current;
+    if (!askBarShown || !bar) return undefined;
+    const observer = new ResizeObserver(() => setAskBarHeight(bar.getBoundingClientRect().height));
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [askBarShown]);
+
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
@@ -2237,7 +2251,7 @@ function App() {
               <kbd>{shortcutLabel}</kbd><span>Explain</span>
             </button>
           </header>
-          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
+          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} style={askBarShown ? { paddingBottom: scrollEndPadding(askBarHeight) } : undefined} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
               {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
@@ -2272,25 +2286,31 @@ function App() {
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>
-          {page !== 'Chat' && (
-            <form className="ask-dock" onSubmit={(event) => {
-              event.preventDefault();
-              setAskSeed(askDraft.trim());
-              setAskDraft('');
-              setPage('Chat');
-            }}>
-              <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
-              <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
-              <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
-            </form>
+          {/* The bottom-right slot holds one thing: the update card (taking room above the Ask bar,
+              never covering it) or Vibe beside the bar. Nothing here sits on page content. */}
+          <UpdateCard onShownChange={setUpdateShown} />
+          {askBarShown && (
+            <div className="ask-row">
+              <span aria-hidden="true" />
+              <form className="ask-dock" ref={askBarRef} onSubmit={(event) => {
+                event.preventDefault();
+                setAskSeed(askDraft.trim());
+                setAskDraft('');
+                setPage('Chat');
+              }}>
+                <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
+                <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
+                <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
+              </form>
+              <div className="ask-row__slot">
+                {bottomRightSlot({ updateShown, page, settingsOpen }) === 'vibe'
+                  ? <FloatingBuddy onOpenChat={() => { setAskSeed(''); setPage('Chat'); }} />
+                  : null}
+              </div>
+            </div>
           )}
         </main>
       </div>
-      <FloatingBuddy
-        userName={settings?.displayName?.trim() || info.user}
-        hidden={page === 'Chat' || settingsOpen}
-        onOpenChat={() => { setAskSeed(''); setPage('Chat'); }}
-      />
       {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}
@@ -2299,7 +2319,6 @@ function App() {
           onAccountDeleted={(message) => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setDeletionNotice(message ?? ''); setGate('login'); void refresh(); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
-      <UpdateCard />
       {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
       {toast && <div className="toast" role="status">{toast}</div>}
     </>

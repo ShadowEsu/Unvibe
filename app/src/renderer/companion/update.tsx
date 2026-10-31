@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { Buddy } from '../shared/buddy';
 import { playTone } from '../shared/tones';
 
-/** A small card when a newer Unvibe exists. One click downloads it, swaps the app and reopens. */
-export function UpdateCard() {
+/**
+ * A small card when a newer Unvibe exists. One click downloads it, swaps the app and reopens. It takes
+ * the bottom-right slot, so `onShownChange` tells the companion to put Vibe away while it shows.
+ */
+export function UpdateCard({ onShownChange }: { onShownChange: (shown: boolean) => void }) {
   const [latest, setLatest] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'working' | 'error'>('idle');
   const [pct, setPct] = useState(0);
@@ -20,7 +23,10 @@ export function UpdateCard() {
     return () => { offAvailable(); offProgress(); };
   }, []);
 
-  if (!latest || hidden) return null;
+  const shown = Boolean(latest) && !hidden;
+  useEffect(() => onShownChange(shown), [shown]);
+
+  if (!shown) return null;
 
   const update = async () => {
     setState('working'); setError(''); setPct(0);
