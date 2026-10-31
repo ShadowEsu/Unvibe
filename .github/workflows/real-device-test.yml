@@ -68,13 +68,14 @@ jobs:
           echo "Testing Unvibe $v"
           echo "v=$v" >> "$GITHUB_OUTPUT"
 
-      - name: Install Playwright (driver and Chromium only)
+      - name: Install Playwright (driver, Chromium and its ffmpeg)
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
           npm init -y >/dev/null
           npm install playwright@1.48.2 axe-core@4.12.1 >/dev/null
-          npx playwright install chromium
+          # ffmpeg: marketing-media.mjs encodes its window recordings with it.
+          npx playwright install chromium ffmpeg
 
       - name: Get the build-only artifacts
         if: inputs.build_run != ''
@@ -155,8 +156,10 @@ jobs:
           UNVIBE_OS: ${{ matrix.label }}
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
           UNVIBE_E2E_PROFILE: ${{ runner.temp }}/walkthrough-profile
+          # Seeded into the profile, so this run's install is known and flagged as QA below.
+          E2E_INSTALL_ID: qa-walkthrough-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
         run: |
-          cp app/e2e/real-device.mjs "$RUNNER_TEMP/pw/real-device.mjs"
+          cp app/e2e/real-device.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
           cat "$SHOTS_DIR/report.txt"
 
@@ -245,9 +248,9 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
           # A fresh install per run: one reused id spends its 50 free explanations and then every
           # capture shows the limit instead of an answer. The next step flags it as QA.
-          MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          cp app/e2e/marketing-media.mjs "$RUNNER_TEMP/pw/marketing-media.mjs"
+          cp app/e2e/marketing-media.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
@@ -255,7 +258,7 @@ jobs:
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
-          MEDIA_INSTALL_ID: media-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo 'QA install flag (media): no token, so this install counts as real'; exit 1; fi
           # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
