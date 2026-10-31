@@ -1657,3 +1657,30 @@ code.inline {
 .pmf-card--thanks p { margin: 0; font-size: 13px; line-height: 1.45; }
 .pmf-card__id { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; cursor: text; }
 .pmf-card .btn.pmf-card__copy { min-width: 24px; min-height: 24px; margin-left: 2px; padding: 3px 9px; border-radius: 7px; font-size: 11.5px; line-height: 16px; vertical-align: baseline; }
+
+/* Design A1: the older theme tokens (--test, --diff, --ask, --fill-strong, --panel-tint) follow the
+   app theme, not the panel look, so the ink panel under a light app theme drew #111 text on near black
+   (the Test me result line measured 1.98:1). On the card they follow the panel's paper or ink tokens.
+   --p-accent-text is the accent for marks drawn as text: lime on ink, #4d5c00 on paper (7:1). */
+.card.card {
+  --test: var(--p-ink); --test-soft: var(--p-raised);
+  --diff: var(--p-ink); --diff-soft: var(--p-raised);
+  --ask: var(--p-ink); --ask-soft: var(--p-raised);
+  --fill-strong: var(--p-ink); --panel-tint: var(--p-surface);
+  --p-accent-text: var(--p-lime);
+}
+:root[data-panel="light"] .card.card { --p-accent-text: #4d5c00; }
+.card .verdict { color: var(--p-ink); }
+.card .verdict.ok::before { color: var(--p-accent-text); }
+.card .verdict.no::before { color: var(--p-muted); }
+/* Graded: the correct option and the one you chose are marked in words and by their edge, not by colour alone. */
+.card .opt.right { border-color: var(--p-accent-text); color: var(--p-ink); }
+.card .opt.right em { color: var(--p-accent-text); }
+.card .opt.wrong { border-style: dashed; border-color: var(--p-muted); color: var(--p-ink); }
+.card .opt__tag { flex: 0 0 auto; margin-left: auto; padding-left: 8px; color: var(--p-muted); font-size: 0.86em; font-weight: 650; white-space: nowrap; }
+.card .opt.right .opt__tag { color: var(--p-ink); }
+
+/* Design P13: a consent Continue that can't be pressed yet reads as off on paper and on ink. */
+:root .card .consent-form__actions .btn[aria-disabled="true"],
+:root .card .consent-form__actions .btn[aria-disabled="true"]:hover,
+:root .card .consent-form__actions .btn[aria-disabled="true"]:active { opacity: 0.4; box-shadow: none; transform: none; cursor: not-allowed; }

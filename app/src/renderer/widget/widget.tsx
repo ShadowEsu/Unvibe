@@ -1160,15 +1160,18 @@ function Widget() {
                     <div className="quiz__opts">
                       {active.quiz.options?.map((o, i) => {
                         const graded = active.quiz!.phase === 'graded';
+                        const isAnswer = graded && i === active.quiz!.answerIndex;
+                        const isChoice = i === active.quiz!.choice;
                         const cls = graded
-                          ? i === active.quiz!.answerIndex
+                          ? isAnswer
                             ? 'opt right'
-                            : i === active.quiz!.choice
+                            : isChoice
                               ? 'opt wrong'
                               : 'opt'
-                          : i === active.quiz!.choice
+                          : isChoice
                             ? 'opt sel'
                             : 'opt';
+                        const tag = !graded ? '' : isAnswer ? (isChoice ? 'Your answer, correct' : 'Correct answer') : isChoice ? 'Your answer' : '';
                         return (
                           <button
                             key={i}
@@ -1182,8 +1185,9 @@ function Widget() {
                               )
                             }
                           >
-                            <em>{String.fromCharCode(65 + i)}</em>
+                            <em>{isAnswer ? '✓' : graded && isChoice ? '✕' : String.fromCharCode(65 + i)}</em>
                             <span>{o}</span>
+                            {tag ? <b className="opt__tag">{tag}</b> : null}
                           </button>
                         );
                       })}
