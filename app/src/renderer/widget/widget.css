@@ -1684,3 +1684,13 @@ code.inline {
 :root .card .consent-form__actions .btn[aria-disabled="true"],
 :root .card .consent-form__actions .btn[aria-disabled="true"]:hover,
 :root .card .consent-form__actions .btn[aria-disabled="true"]:active { opacity: 0.4; box-shadow: none; transform: none; cursor: not-allowed; }
+
+/* Design A2: one action row in every state. The three buttons never wrap and keep their places;
+   the right slot has a fixed width, so Stop generating and the saved note swap without moving them.
+   Until the explanation has finished, the buttons are dimmed and flat (not pressable keys). */
+.card .foot .actions-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; }
+.card .foot .actions-row > .chip { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .actions-row__right { flex: 0 0 136px; margin-left: auto; min-width: 0; display: flex; justify-content: flex-end; overflow: hidden; }
+.card .actions-row__right .local-save-note, .card .actions-row__right .mock-note { margin-left: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .actions-row__right .chip--stop { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .foot .actions-row .chip:disabled { opacity: 0.45; box-shadow: none; transform: none; cursor: default; }

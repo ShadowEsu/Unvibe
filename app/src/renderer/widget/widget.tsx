@@ -17,13 +17,8 @@ import { ConsentForm } from '../shared/consentForm';
 import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
+import { actionRow, type Phase } from './panelModel';
 import '../shared/tokens.css';
-
-/**
- * `aiConsent`: the first-send agreement (sending code to the provider, Terms, 18+);
- * `confirm`: a link started this review, Explain sends it; `consent`: a secret was found.
- */
-type Phase = 'boot' | 'ready' | 'aiConsent' | 'confirm' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
 interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
@@ -723,6 +718,7 @@ function Widget() {
 
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
+  const row = actionRow(phase, stillTyping, active.mock);
   // The survey card waits until an explanation has fully finished, typing included, and is asked
   // for again after each one until it is sent or closed. Main decides eligibility.
   const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
@@ -1266,17 +1262,12 @@ function Widget() {
             </div>
           )}
 
-          {(phase === 'streaming' || phase === 'done') && (
+          {row && (
             <div className="foot">
-              <div className="chips">
-                {phase === 'streaming' && (
-                  <button className="chip" onClick={() => window.unvibe.cancel()}>
-                    Stop generating
-                  </button>
-                )}
+              <div className="chips actions-row" role="group" aria-label="Actions">
                 <button
                   className="chip chip--ok"
-                  disabled={stillTyping}
+                  disabled={!row.ready}
                   onClick={() => {
                     setBuddyMood('celebrate');
                     window.unvibe.gotIt();
@@ -1287,23 +1278,29 @@ function Widget() {
                 </button>
                 <button
                   className="chip chip--diff"
-                  disabled={stillTyping}
+                  disabled={!row.ready}
                   onClick={() => request({ variant: 'different' })}
                 >
                   Explain differently
                 </button>
                 <button
                   className="chip chip--test"
-                  disabled={stillTyping}
+                  disabled={!row.ready}
                   onClick={() => openQuiz()}
                 >
                   Test me
                 </button>
-
-                {active.mock && (
-                  <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
-                )}
-                {!active.mock && phase === 'done' && <span className="local-save-note">saved on this {deviceName}</span>}
+                <span className="actions-row__right">
+                  {row.right === 'stop' ? (
+                    <button className="chip chip--stop" onClick={() => window.unvibe.cancel()}>
+                      Stop generating
+                    </button>
+                  ) : row.right === 'mock' ? (
+                    <span className="mock-note">Mock AI. Set ANTHROPIC_API_KEY for real explanations.</span>
+                  ) : row.right === 'saved' ? (
+                    <span className="local-save-note">Saved on this {deviceName}</span>
+                  ) : null}
+                </span>
               </div>
               {active.originOpen ? (
                 <div className="origin-panel" role="region" aria-label="Why this exists">
@@ -1364,13 +1361,13 @@ function Widget() {
                     placeholder="Why does this exist? What breaks if I remove it?"
                     value={active.ask}
                     maxLength={4000}
-                    disabled={stillTyping}
+                    disabled={!row.ready}
                     aria-label="Follow-up question"
                     onChange={(e) =>
                       setTabs((prev) => patchTab(prev, activeTabId, { ask: e.target.value }))
                     }
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && active.ask.trim()) {
+                      if (e.key === 'Enter' && row.ready && active.ask.trim()) {
                         request({ question: active.ask.trim() });
                         setTabs((prev) => patchTab(prev, activeTabId, { ask: '' }));
                       }
@@ -1394,7 +1391,7 @@ function Widget() {
                     type="button"
                     className="btn btn-ask"
                     aria-label="Ask"
-                    disabled={stillTyping || !active.ask.trim()}
+                    disabled={!row.ready || !active.ask.trim()}
                     onClick={() => {
                       if (!active.ask.trim()) return;
                       request({ question: active.ask.trim() });
