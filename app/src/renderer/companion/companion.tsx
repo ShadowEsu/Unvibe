@@ -3,6 +3,7 @@ import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
+import { Momentum } from './momentum';
 import { Chat } from './chat';
 import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
@@ -1085,58 +1086,6 @@ function TodayGoalCard({ goal }: { goal: TodayGoal }) {
     </section>
   );
 }
-
-function Progress({ profile }: { profile: Profile | null }) {
-  const [knowledge, setKnowledge] = useState<KnowledgeObject[] | null>(null);
-  useEffect(() => {
-    void window.unvibe.listKnowledge().then((result) => {
-      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
-      if (next?.ok) setKnowledge(next.items ?? []);
-    });
-  }, []);
-  const heat = profile?.heat ?? Array.from({ length: 182 }, () => 0);
-  const coverage = profile && profile.linesReviewed > 0
-    ? `${Math.round((profile.linesUnderstood / profile.linesReviewed) * 100)}%`
-    : null;
-  const currentKnowledge = knowledge ? knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length : 0;
-  // Like coverage: the share as the figure, the count under it (Design P3: the card repeated "5 of 6 current").
-  const freshness = knowledge && knowledge.length
-    ? { share: `${Math.round((currentKnowledge / knowledge.length) * 100)}%`, count: `${currentKnowledge} of ${knowledge.length} current` }
-    : null;
-  return (
-    <>
-      <div className="topline"><h1>{PAGE_NAMES.Progress}</h1></div>
-      <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
-      <div className="metrics">
-        <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness?.share ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness?.count ?? 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.reviews : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
-      </div>
-      <div className="panel-card">
-        <div className="ph"><span className="t">Explained per day</span><span className="m">last 6 months</span></div>
-        <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
-        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
-      </div>
-      <div className="two">
-        <div className="panel-card" style={{ marginBottom: 0 }}>
-          <div className="ph"><span className="t">Where you learn</span></div>
-          <div className="bars">
-            {(profile && profile.usage.length > 0 ? profile.usage : [{ label: 'Editors & IDEs', pct: 0 }, { label: 'Terminal', pct: 0 }, { label: 'Browser & docs', pct: 0 }]).map((u) => (
-              <div className="bar-row" key={u.label}><div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div><div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div></div>
-            ))}
-          </div>
-          <p className="soft-note">Unvibe notes which app you were in when you asked, never what you typed.</p>
-        </div>
-        <div className="panel-card" style={{ marginBottom: 0 }}>
-          <div className="ph"><span className="t">Understanding over time</span></div>
-          <div className="chart-empty">Your weekly curve of lines understood will draw itself here after a few days of reviewing.</div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 
 function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   compact?: boolean;
@@ -2279,7 +2228,7 @@ function App() {
                   onOpenAiSettings={() => { setSettingsTab('AI'); setSettingsOpen(true); }}
                   voiceTip={voiceTip}
                 />
-                : page === 'Progress' ? <Progress profile={profile} />
+                : page === 'Progress' ? <Momentum profile={profile} onExplain={() => window.unvibe.companionReview()} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
                 : page === 'Briefings' ? <Briefings plan={usageLine?.plan ?? null} onPlan={() => setPage('Plan')} />

@@ -195,7 +195,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
           </div>
         </div>
         {knowledge.length === 0 ? (
-          <div className="briefings__empty">No saved knowledge yet. Finish an explanation to create the first object.</div>
+          <div className="briefings__empty">No saved knowledge yet. Finish an explanation to save your first note.</div>
         ) : (
           <ul className="briefings__knowlist">
             {knowledge.slice(0, 20).map((item) => (
