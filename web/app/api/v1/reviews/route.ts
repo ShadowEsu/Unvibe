@@ -40,14 +40,13 @@ export async function POST(req: Request): Promise<Response> {
   const proOnly = payload.scope === 'diff' || payload.scope === 'file' || payload.scope === 'project'
     || Boolean(payload.context.diffHunks?.length);
 
-  // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows).
-  // Follow-ups and "Explain differently" are follow-up questions; anything else is an explanation.
-  // The sealed trial keeps one explanation budget for both.
+  // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows); the
+  // no-account trial spends its 30-day allowance. On both, follow-ups and "Explain differently" are
+  // follow-up questions and anything else is an explanation.
   // Token counts (no text) go onto the reserved usage row, or the trial's daily totals.
   let release: (() => Promise<void>) | null = null;
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   let trialStartedAt: string | undefined;
-  // A follow-up question or "Explain differently" is a follow-up, for accounts and the no-account trial alike.
   const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
   if (!provider.mock && userId) {
     const reserved = await reserveMeteredAction(userId, kind, req, { proOnly });
