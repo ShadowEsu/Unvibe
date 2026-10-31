@@ -259,7 +259,7 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard,
       <header className="agent-review__head">
         <Buddy mood={done ? 'happy' : 'reading'} size={44} label="Vibe" />
         <div>
-          <p className="agent-review__eyebrow">after-agent review</p>
+          <p className="agent-review__eyebrow">After-agent review</p>
           <h2>{review.headline}</h2>
           <p className="agent-review__sub">{SIZE_LABEL[review.size]}{repo ? ` in ${repo.split(/[\\/]/).filter(Boolean).pop()}` : ''}. Here is what deserves your eyes first.</p>
         </div>
