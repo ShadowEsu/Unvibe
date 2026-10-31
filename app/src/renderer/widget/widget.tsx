@@ -17,7 +17,7 @@ import { ConsentForm } from '../shared/consentForm';
 import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
-import { actionRow, limitState, showsLimit, type LimitState, type Phase } from './panelModel';
+import { actionRow, errorView, limitState, showsLimit, statusLabel, statusTone, type LimitState, type Phase } from './panelModel';
 import '../shared/tokens.css';
 
 interface Quiz {
@@ -511,6 +511,9 @@ function Widget() {
       }
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
+      } else if (ev.type === 'init' || ev.type === 'status') {
+        // A new run: a Pro gate shown for the last one no longer applies.
+        setProGate(false);
       }
       setTabs((prev) => {
         const tab = prev.find((t) => t.id === tabId);
@@ -719,7 +722,7 @@ function Widget() {
   const phase = active.phase;
   const limit: LimitState | null = usage ? limitState(usage, proOpen) : null;
   const limited = Boolean(limit) && showsLimit(phase, active.errorCode, outOfExplanations);
-  const phaseLabel = limited ? 'Paused' : phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
+  const failure = errorView(active.errorCode, active.error);
   const src = active.meta.lines ? (
     <span className="src">
       <b>{active.meta.lines} lines</b>
@@ -815,7 +818,7 @@ function Widget() {
           <span className="head__product">Unvibe</span>
           {src}
         </div>
-        <span className={`head__status head__status--${limited ? 'paused' : phase}`} role="status"><i aria-hidden="true" />{phaseLabel}</span>
+        <span className={`head__status head__status--${statusTone(phase, { limited, errorCode: active.errorCode })}`} role="status"><i aria-hidden="true" />{statusLabel(phase, { limited, errorCode: active.errorCode, proGate })}</span>
         <div className="head__actions">
           {usage && (
             <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
@@ -1061,9 +1064,9 @@ function Widget() {
           {phase === 'error' && !limited && (
             <div className="state" role="alert">
               <div className="big">
-                {proGate ? 'Pro feature' : "Couldn't explain that"}
+                {proGate ? 'Pro feature' : failure.title}
               </div>
-              <div className="sub">{active.error}</div>
+              <div className="sub">{proGate ? active.error : failure.body}</div>
               {proGate && !proOpen ? <div className="sub">{freePlanLine(usage)}</div> : null}
               {proGate ? (
                 <>
@@ -1078,7 +1081,7 @@ function Widget() {
                 </>
               ) : (
                 <button className="btn" onClick={() => request({})}>
-                  Retry
+                  {failure.action}
                 </button>
               )}
             </div>

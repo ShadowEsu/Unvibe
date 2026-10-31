@@ -1700,3 +1700,6 @@ code.inline {
 .card .actions-row__right .local-save-note, .card .actions-row__right .mock-note { margin-left: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .actions-row__right .chip--stop { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .foot .actions-row .chip:disabled { opacity: 0.45; box-shadow: none; transform: none; cursor: default; }
+
+/* Design A4, P10: Offline, Paused and Error never show the lime "ready" dot. */
+.card .head__status.head__status--offline i, .card .head__status.head__status--paused i, .card .head__status.head__status--error i { background: var(--p-muted); box-shadow: none; animation: none; }

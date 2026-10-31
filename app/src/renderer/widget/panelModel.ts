@@ -76,6 +76,56 @@ export function limitState(usage: LimitUsage, proOpen: boolean): LimitState {
  * shows it too. A finished or streaming explanation stays on screen with the limit under it.
  */
 export function showsLimit(phase: Phase, errorCode: string, outOfExplanations: boolean): boolean {
-  if (phase === 'error') return errorCode === 'plan_limit_reached' || outOfExplanations;
+  if (phase === 'error') return errorCode === 'plan_limit_reached' || (outOfExplanations && !isNetworkError(errorCode));
   return outOfExplanations && (phase === 'boot' || phase === 'empty');
+}
+
+/** review.ts: the request never reached Unvibe's server, with (`unreachable`) or without (`offline`) a network. */
+function isNetworkError(errorCode: string): boolean {
+  return errorCode === 'offline' || errorCode === 'unreachable';
+}
+
+/**
+ * The error card (Design A4, polish bar B-5): what happened and why in the title, what to do in the
+ * body, one button that does it. A network failure says so and offers Retry; any other error keeps
+ * the service's own message with Try again.
+ */
+export interface ErrorView {
+  title: string;
+  body: string;
+  action: 'Retry' | 'Try again';
+}
+
+export function errorView(errorCode: string, message: string): ErrorView {
+  if (errorCode === 'offline') {
+    return { title: "You're offline. Unvibe can't reach its server.", body: 'Check your Wi-Fi or network, then retry.', action: 'Retry' };
+  }
+  if (errorCode === 'unreachable') {
+    return { title: "Unvibe can't reach its server.", body: 'Your network is connected, so the server may be down for a moment. Retry in a bit.', action: 'Retry' };
+  }
+  return { title: "Couldn't explain that", body: message, action: 'Try again' };
+}
+
+/** The header's one status word (Design P10, sentence case), consistent with what the panel shows. */
+export function statusLabel(phase: Phase, opts: { limited: boolean; errorCode: string; proGate: boolean }): string {
+  if (opts.limited) return 'Paused';
+  switch (phase) {
+    case 'boot': return 'Capturing';
+    case 'ready': return 'Reading';
+    case 'aiConsent':
+    case 'confirm': return 'Waiting for you';
+    case 'empty': return 'Waiting';
+    case 'consent': return 'Check needed';
+    case 'blocked': return 'Blocked';
+    case 'streaming': return 'Explaining';
+    case 'done': return 'Ready';
+    case 'error': return isNetworkError(opts.errorCode) ? 'Offline' : opts.proGate ? 'Pro feature' : 'Error';
+  }
+}
+
+/** The status chip's style: one tone per kind of state, so Offline and Paused never show the "ready" dot. */
+export function statusTone(phase: Phase, opts: { limited: boolean; errorCode: string }): string {
+  if (opts.limited) return 'paused';
+  if (phase === 'error') return isNetworkError(opts.errorCode) ? 'offline' : 'error';
+  return phase;
 }

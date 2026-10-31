@@ -101,7 +101,7 @@ function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
     win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
   }
-  const typed = ev as { type?: string; message?: string };
+  const typed = ev as { type?: string; message?: string; code?: string };
   if (typed.type === 'status') pulseBar({ phase: 'thinking', label: 'Thinking' });
   else if (typed.type === 'token' && !session.islandStreaming) {
     session.islandStreaming = true;
@@ -110,7 +110,7 @@ function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   else if (typed.type === 'done') pulseBar({ phase: 'finalizing', label: 'Finalizing' });
   else if (typed.type === 'understood') pulseBar({ phase: 'understood', label: 'Understood' });
   else if (typed.type === 'error') {
-    const offline = /could not reach|network|offline|connection/i.test(typed.message ?? '');
+    const offline = typed.code === 'offline' || typed.code === 'unreachable' || /could not reach|network|offline|connection/i.test(typed.message ?? '');
     pulseBar({ phase: offline ? 'offline' : 'error', label: offline ? 'Offline' : 'Issue' });
   }
   else if (typed.type === 'blocked') pulseBar({ phase: 'error', label: 'Blocked' });
@@ -584,9 +584,13 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.' });
       return;
     }
+    // The request never reached the service. `offline`: this computer has no network; `unreachable`:
+    // it does, but Unvibe's server didn't answer. The panel says which and offers Retry (Design A4).
+    const online = net.isOnline();
     send(win, session, {
       type: 'error',
-      message: net.isOnline()
+      code: online ? 'unreachable' : 'offline',
+      message: online
         ? 'Unvibe could not reach its explanation service. Try again in a moment.'
         : 'You appear to be offline. Reconnect to the internet and try again.',
     });

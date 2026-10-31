@@ -11,6 +11,8 @@ export const net = {
     netCalls.push(String(input instanceof Request ? input.url : input));
     throw new Error('Network is disabled in tests.');
   },
+  /** Electron's view of the network; a test sets it to exercise the offline path. */
+  isOnline: (): boolean => true,
 };
 
 export const app = {
