@@ -32,7 +32,9 @@ const mark = (label) => { marks.push({ label, s: (Date.now() - t0) / 1000 }); co
 
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-media-'));
 const installId = process.env.MEDIA_INSTALL_ID ?? `qa-media-local-${Date.now()}`;
-writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId }));
+// Launch at login already answered: "why exists" explains a real file, the first own-code explanation,
+// which otherwise opens that question as a native sheet the recording has no reason to show.
+writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId, loginPromptAsked: true, launchAtLogin: false }));
 console.log(`install id ${installId}`);
 
 // Retina-sharp screenshots on runners whose display is 1x.
