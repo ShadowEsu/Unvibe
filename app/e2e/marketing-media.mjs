@@ -164,6 +164,18 @@ async function windowWith(part, timeout = 30000) {
 }
 const shot = (page, label) => page.screenshot({ path: path.join(shots, `${label}.png`), animations: 'disabled' });
 const button = (page, name) => page.getByRole('button', { name, exact: true }).first();
+/**
+ * Puts `text` in a field and waits until the field holds exactly it. No key events: typing over CDP
+ * stalled at random on GitHub's macOS runner (31 Oct runs 41238370806 and 41239289051).
+ */
+async function enterText(field, text) {
+  await field.fill(text);
+  const start = Date.now();
+  while ((await field.inputValue()) !== text) {
+    if (Date.now() - start > 10000) throw new Error(`field holds "${await field.inputValue()}", wanted "${text}"`);
+    await sleep(100);
+  }
+}
 
 async function step(label, fn) {
   try { await fn(); mark(label); return true; }
@@ -230,7 +242,7 @@ const firstRun = await step('onboarding', async () => {
   await sleep(800);
   await shot(companion, 'onboarding-hello');
   // A neutral name: the greeting and sidebar show it in every published frame and screenshot.
-  await companion.getByPlaceholder('Your name').pressSequentially('Sam', { delay: 70 });
+  await enterText(companion.getByPlaceholder('Your name'), 'Sam');
   await button(companion, "Let's go").click();
   await companion.locator('.ob2__count').filter({ hasText: `2 / ${steps}` }).waitFor();
   await sleep(1200);
@@ -260,16 +272,14 @@ if (explained) {
   });
   await step('follow-up', async () => {
     const question = 'What happens if I call it five times quickly?';
-    const ask = (await windowWith('widget.html')).getByLabel('Follow-up question');
-    await ask.click();
-    await ask.pressSequentially(question, { delay: 45 });
-    await ask.press('Enter');
+    const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
+    await enterText((await askRow()).getByLabel('Follow-up question'), question);
+    await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
     // A question is the person's own text, so the agreement is asked here; then ask again.
     if (await agreeIfAsked(await windowWith('widget.html'))) {
-      const again = (await windowWith('widget.html')).getByLabel('Follow-up question');
-      await again.click();
-      if (!(await again.inputValue()).trim()) await again.pressSequentially(question, { delay: 45 });
-      await again.press('Enter');
+      const again = (await askRow()).getByLabel('Follow-up question');
+      if ((await again.inputValue()).trim() !== question) await enterText(again, question);
+      await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
     }
     await sleep(1500);
     await shot(await settledPanel(), 'panel-follow-up');
@@ -379,13 +389,14 @@ for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
 
 // Ask Vibe answers a real question about what was just learned.
 await step('ask vibe answer', async () => {
+  const question = 'Explain debounce again in one sentence, like I am new to this.';
   const chat = companion.locator('#chatDraft');
-  await chat.click();
-  await chat.pressSequentially('Explain debounce again in one sentence, like I am new to this.', { delay: 40 });
-  await chat.press('Enter');
+  const send = companion.locator('.chat-dock').getByRole('button', { name: 'Send', exact: true });
+  await enterText(chat, question);
+  await send.click();
   if (await agreeIfAsked(companion, 3000)) {
-    if (!(await chat.inputValue()).trim()) await chat.pressSequentially('Explain debounce again in one sentence, like I am new to this.', { delay: 40 });
-    await chat.press('Enter');
+    if ((await chat.inputValue()).trim() !== question) await enterText(chat, question);
+    await send.click();
   }
   await companion.locator('.chat-thinking').waitFor({ timeout: 10000 }).catch(() => {});
   await companion.locator('.chat-thinking').waitFor({ state: 'detached', timeout: 90000 });
@@ -401,7 +412,7 @@ await step('settings privacy', async () => {
   await companion.locator('.mside').getByRole('button', { name: 'Privacy & Data', exact: true }).click();
   await sleep(1200);
   await shot(companion, 'settings-privacy');
-  await companion.keyboard.press('Escape');
+  await companion.getByRole('button', { name: 'Close settings', exact: true }).click();
 });
 
 await step('island', async () => {
