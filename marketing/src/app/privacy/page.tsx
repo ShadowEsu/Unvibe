@@ -13,16 +13,17 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="October 2026"
+      updated="31 October 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong>Code you choose to review.</strong> When you activate Unvibe on a
-            selection, that snippet and the limited surrounding context you approve is
-            sent to generate an explanation. Before that code leaves your computer it is
-            scanned on-device for secrets, and detected credentials block or warn first.
+            selection, that snippet is sent to generate an explanation. On Pro, up to two files
+            from your project that the snippet imports are added to it automatically (the first
+            4,000 characters of each). Before that code leaves your computer it is scanned
+            on-device for secrets, and detected credentials block or warn first.
           </li>
           <li>
             <strong>File and project names.</strong> Each explanation includes the file&apos;s path
@@ -52,6 +53,12 @@ export default function PrivacyPage() {
             stop repeated sends, and is not stored with your feedback. Each send is also
             counted as one PostHog event that carries only the star rating and where it
             came from, under a random ID that is new each time.
+          </li>
+          <li>
+            <strong>Survey answers:</strong> if you answer the short in-app survey and press Send,
+            your answers, the app version and your random install ID. Kept 12 months. The team reads
+            them and may use AI tools that don&apos;t train on your data to summarise them. To have
+            them deleted, email support@unvibe.site with the install ID the app shows after Send.
           </li>
         </ul>
       </LegalSection>

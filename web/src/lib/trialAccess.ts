@@ -167,8 +167,11 @@ export function trialInstallKey(installId: string): string {
   return createHash('sha256').update(`unvibe-trial-install:${installId}`).digest('hex');
 }
 
-/** Validate Bearer trial token + install header. Returns install key or null. */
-export function trialInstallFromRequest(req: Request): string | null {
+/**
+ * Validate Bearer trial token + install header. Returns the raw install id or null. Callers must
+ * hash it before storing it (`trialInstallKey`, or a feature-specific prefix like the PMF survey).
+ */
+export function trialInstallIdFromRequest(req: Request): string | null {
   const secret = trialSecret();
   if (!secret) return null;
   const header = req.headers.get('authorization') ?? '';
@@ -176,8 +179,13 @@ export function trialInstallFromRequest(req: Request): string | null {
   const token = match?.[1]?.trim();
   if (!token || !safeEqual(token, secret)) return null;
   const installId = req.headers.get('x-unvibe-install-id')?.trim() ?? '';
-  if (!INSTALL_ID_RE.test(installId)) return null;
-  return trialInstallKey(installId);
+  return INSTALL_ID_RE.test(installId) ? installId : null;
+}
+
+/** Validate Bearer trial token + install header. Returns install key or null. */
+export function trialInstallFromRequest(req: Request): string | null {
+  const installId = trialInstallIdFromRequest(req);
+  return installId ? trialInstallKey(installId) : null;
 }
 
 function memoryBucket(): Map<string, TrialCounter> {

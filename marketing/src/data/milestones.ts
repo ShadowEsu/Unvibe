@@ -13,6 +13,12 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "30 OCT 2026",
+    category: "PRODUCT",
+    title: "Explanations moved to Anthropic's Claude",
+    summary: "Hosted explanations in the app and in Try it moved to Anthropic's Claude API (Claude Haiku). A spend cap was checked before every request, and requests stopped at the cap instead of switching to another provider. The privacy page, data controls and the Try it box named Anthropic.",
+  },
+  {
     date: "27 OCT 2026",
     category: "PRODUCT",
     title: "One light theme across the site",
@@ -40,7 +46,7 @@ export const milestones: Milestone[] = [
     date: "26 OCT 2026",
     category: "PRODUCT",
     title: "Try it protects requests and explains where code goes",
-    summary: "Try it limits were enforced before an AI request started, and an unavailable check stopped the request. The site and resource kit explained that Try it runs online and sends pasted code to Unvibe and Google Gemini. The privacy page explained what Try it sends and keeps.",
+    summary: "Try it limits were enforced before an AI request started, and an unavailable check stopped the request. The site and resource kit explained that Try it runs online and sends pasted code to Unvibe and Google Gemini (the provider at the time; explanations moved to Anthropic's Claude API on 30 Oct). The privacy page explained what Try it sends and keeps.",
   },
   {
     date: "25 OCT 2026",
