@@ -1,4 +1,4 @@
-import { compensationTotalLabel, GITLAB_ATTRIBUTION, SALESFORCE_ATTRIBUTION } from "./compensation";
+import { compensationTotalLabel, SALESFORCE_ATTRIBUTION } from "./compensation";
 
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
@@ -631,7 +631,7 @@ export const milestones: Milestone[] = [
     date: "24 AUG 2026",
     category: "COMPANY",
     title: "Startup-program credits and committed cash",
-    summary: `Program credits plus self-reported cash now total ${compensationTotalLabel()}. Includes Deepgram $1,000 and Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
+    summary: `Program credits plus self-reported cash now total ${compensationTotalLabel()}. Includes Mixpanel Pro $144,000 for 1 year. Credits are not cash. Not a round.`,
     figure: compensationTotalLabel(),
     pinned: true,
   },
@@ -664,8 +664,7 @@ export const milestones: Milestone[] = [
     date: "19 AUG 2026",
     category: "COMPANY",
     title: "Deepgram Startup Program",
-    summary: "Secured $1,000 in Deepgram API credits. Not cash. Not a round.",
-    figure: "$1,000",
+    summary: "Joined the Deepgram Startup Program. Not cash. Not a round.",
   },
   {
     date: "19 AUG 2026",
@@ -758,23 +757,9 @@ export const milestones: Milestone[] = [
   {
     date: "16 AUG 2026",
     category: "COMPANY",
-    title: "GitLab™ for Startups",
-    summary: `Accepted into the program. GitLab Ultimate credits to secure, automate, and scale the developer pipeline. Not cash. Not a round. ${GITLAB_ATTRIBUTION}`,
-    figure: "$23,700",
-  },
-  {
-    date: "16 AUG 2026",
-    category: "COMPANY",
     title: "OpenAI for Startups",
     summary: "Accepted into the program. One ChatGPT Business seat, $1,200 in credits. Not cash. Not a round.",
     figure: "$1,200",
-  },
-  {
-    date: "14 AUG 2026",
-    category: "COMPANY",
-    title: "Linear startup pack",
-    summary: "Accepted into Linear's startup pack. Six months of Linear, $4,500 value. Not cash. Not a round.",
-    figure: "$4,500",
   },
   {
     date: "3 AUG 2026",
