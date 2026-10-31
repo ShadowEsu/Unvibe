@@ -33,8 +33,7 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   this change still hold one until someone clears the column). The rate limit (5
   sends per 10 minutes) keys an in-memory map in each server instance on a SHA-256 of the client
   IP (`hashIp`); that key is never stored or sent, and it lasts until the instance restarts or the
-  map passes 5,000 keys. The `feedback_submitted` PostHog event carries only the rating and source,
-  under a random UUID per send.
+  map passes 5,000 keys. No analytics event is sent for a feedback send.
 
 ## Not implemented or not verified
 
@@ -51,7 +50,7 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing. What it does send
   about setup is listed below (anonymous setup progress, on by default, with a switch to turn it
   off). The
-  website's Mixpanel and PostHog tracking is described on unvibe.site/privacy. Incident-response
+  website's Mixpanel tracking is described on unvibe.site/privacy. Incident-response
   alerting is still not configured.
 - Without an account, each cloud explanation and the launch usage check carry a random install ID
   (`app/src/main/backend.ts` `aiAuthHeaders`), the OS family (`mac`/`win`) and the app version.

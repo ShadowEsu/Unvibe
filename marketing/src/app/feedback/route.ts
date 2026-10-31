@@ -1,23 +1,15 @@
-import { randomUUID } from "node:crypto";
 import { BETA_SURVEY_URL } from "@/lib/betaOffer";
 import { recordBetaInstallEvent } from "@/lib/betaInstallStats";
-import { captureServerEvent } from "@/lib/posthogServer";
 import { cleanText, clientIp, FEEDBACK_BONUS_MIN_WORDS, feedbackDb, feedbackSchema, hashIp, wordCount } from "@/lib/feedback";
 import { verifyEmailSignature } from "@/lib/rewardLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Count every open of the public feedback link, then send people to the PostHog survey. */
+/** Count every open of the public feedback link, then send people to the site's feedback form. */
 export async function GET() {
   try {
     await recordBetaInstallEvent("survey");
-    await captureServerEvent("feedback_opened", "feedback-redirect", {
-      source: "feedback_route",
-    });
-    await captureServerEvent("survey_opened", "feedback-redirect", {
-      source: "feedback_route",
-    });
   } catch (error) {
     console.error("feedback count failed", error);
   }
@@ -68,8 +60,6 @@ export async function POST(request: Request) {
     console.error("feedback insert failed", error.message);
     return Response.json({ error: "Could not save that. Try again in a moment." }, { status: 500, headers: noStore });
   }
-  // A fresh random ID per send, so the analytics event can't be joined to the sender or to other sends.
-  await captureServerEvent("feedback_submitted", randomUUID(), { rating: input.rating, source: input.source }).catch(() => undefined);
 
   // From the welcome email: a signed link plus a real message earns one more month of Pro.
   let bonus: "granted" | "already" | "too_short" | undefined;

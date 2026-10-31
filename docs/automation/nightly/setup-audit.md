@@ -53,7 +53,7 @@
 - No `.env` files committed — only `.env.example` templates
 - Backend requires: `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` for real AI, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` for real data
 - Desktop app: `UNVIBE_BACKEND` defaults to `http://localhost:8787`
-- Marketing: `SUPABASE_*` for waitlist, `POSTHOG_*` for analytics
+- Marketing: `SUPABASE_*` for waitlist, `MIXPANEL_*` for analytics (PostHog removed 2 November 2026)
 
 ### Existing documentation
 - `AGENTS.md` and `CLAUDE.md`: identical product context, architecture, commands

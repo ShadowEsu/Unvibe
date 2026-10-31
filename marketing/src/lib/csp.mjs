@@ -13,9 +13,9 @@ export const ENFORCED_CSP = "object-src 'none'; base-uri 'self'; frame-ancestors
 export const CSP_REPORT_PATH = "/api/csp-report";
 export const CSP_REPORT_GROUP = "csp";
 
-/** Analytics hosts, loaded only after Allow: the SDKs send events and load their replay recorders here. */
-const ANALYTICS_SCRIPT_HOSTS = ["https://us-assets.i.posthog.com", "https://cdn.mxpnl.com"];
-const ANALYTICS_CONNECT_HOSTS = ["https://us.i.posthog.com", "https://us-assets.i.posthog.com", "https://api-js.mixpanel.com"];
+/** Analytics hosts, loaded only after Allow: the SDK sends events and loads its replay recorder here. */
+const ANALYTICS_SCRIPT_HOSTS = ["https://cdn.mxpnl.com"];
+const ANALYTICS_CONNECT_HOSTS = ["https://api-js.mixpanel.com"];
 /**
  * Directory badge images loaded from the directory itself, only after the visitor allowed analytics
  * (`remoteSrc` in src/data/listings.ts). Every badge also has a copy in public/badges, shown before

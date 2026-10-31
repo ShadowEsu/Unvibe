@@ -29,7 +29,7 @@ const limiterHits = new Map<string, number>();
 /** Every bucket the routes asked the store to count, in order. */
 const limiterBuckets: string[] = [];
 let limiterFails = false;
-/** PostHog (/i/v0/e/) and Mixpanel (/track) captures, when a test points their hosts here. */
+/** Mixpanel (/track) captures, when a test points its host here. */
 const analyticsHits: string[] = [];
 /** Writes to the growth funnel's sentinel row. */
 let funnelHits = 0;
@@ -49,7 +49,7 @@ before(async () => {
   server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     const body = await readBody(request);
-    if (url.pathname === "/i/v0/e/" || url.pathname === "/track") {
+    if (url.pathname === "/track") {
       analyticsHits.push(url.pathname);
       return json(response, 200, 1);
     }
@@ -484,7 +484,7 @@ describe("a waitlist signup is counted in analytics only when the browser allowe
   async function signUp(extra: Record<string, unknown>): Promise<number> {
     const local = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     return withEnv(
-      { POSTHOG_PROJECT_API_KEY: "phc_test", POSTHOG_HOST: local, MIXPANEL_TOKEN: "mp_test", MIXPANEL_HOST: local },
+      { MIXPANEL_TOKEN: "mp_test", MIXPANEL_HOST: local },
       async () => (await waitlistRoute.POST(post("/api/waitlist", { email: `consent-${randomUUID().slice(0, 8)}@unvibe-mail.test`, ...extra }))).status,
     );
   }
@@ -495,7 +495,7 @@ describe("a waitlist signup is counted in analytics only when the browser allowe
     ["the string \"true\"", { analytics: "true" }],
     ["the number 1", { analytics: 1 }],
   ] as const) {
-    it(`${name}: the signup is saved and nothing goes to PostHog, Mixpanel or the funnel`, async () => {
+    it(`${name}: the signup is saved and nothing goes to Mixpanel or the funnel`, async () => {
       analyticsHits.length = 0;
       funnelHits = 0;
       assert.equal(await signUp(extra), 200);
@@ -504,11 +504,11 @@ describe("a waitlist signup is counted in analytics only when the browser allowe
     });
   }
 
-  it("analytics true: one PostHog and one Mixpanel event, and the funnel counts it", async () => {
+  it("analytics true: one Mixpanel event, and the funnel counts it", async () => {
     analyticsHits.length = 0;
     funnelHits = 0;
     assert.equal(await signUp({ analytics: true }), 200);
-    assert.deepEqual([...analyticsHits].sort(), ["/i/v0/e/", "/track"]);
+    assert.deepEqual(analyticsHits, ["/track"]);
     assert.ok(funnelHits > 0);
   });
 });

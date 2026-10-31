@@ -4,7 +4,7 @@
  * its keys once, when it is loaded, so a `before` hook would be too late: import this first, above
  * anything that loads analytics.ts, and call restoreAnalyticsKeys() in `after`.
  */
-export const ANALYTICS_KEYS = ["POSTHOG_PROJECT_API_KEY", "NEXT_PUBLIC_POSTHOG_KEY", "MIXPANEL_TOKEN", "NEXT_PUBLIC_MIXPANEL_TOKEN"] as const;
+export const ANALYTICS_KEYS = ["MIXPANEL_TOKEN", "NEXT_PUBLIC_MIXPANEL_TOKEN"] as const;
 
 const saved = ANALYTICS_KEYS.map((name) => [name, process.env[name]] as const);
 for (const name of ANALYTICS_KEYS) delete process.env[name];

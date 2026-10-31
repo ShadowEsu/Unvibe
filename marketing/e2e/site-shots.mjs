@@ -37,7 +37,7 @@ const VIEWPORTS = [
   { width: 320, height: 640 },
 ];
 
-const ANALYTICS_HOST = /(^|\.)(mixpanel\.com|posthog\.com|google-analytics\.com|googletagmanager\.com|doubleclick\.net|vercel-insights\.com)$/;
+const ANALYTICS_HOST = /(^|\.)(mixpanel\.com|google-analytics\.com|googletagmanager\.com|doubleclick\.net|vercel-insights\.com)$/;
 const isAnalytics = (url) => {
   try {
     const u = new URL(url);

@@ -7,7 +7,7 @@ import { ANALYTICS_CONSENT_KEY } from "@/lib/analyticsConsent";
 import { NOTRACK_STORAGE_KEY } from "@/lib/trackingOptOut";
 
 /**
- * Starts Mixpanel + PostHog (events, exception autocapture, surveys) on public pages, once the
+ * Starts Mixpanel (events, autocapture, session replay) on public pages, once the
  * visitor has pressed Allow on the analytics bar; before that `initAnalytics` loads nothing. On
  * every client navigation, including one that only changes the query (`?notrack=1`), and when
  * another tab changes the opt-out or the analytics answer, it turns capture and replay off or
