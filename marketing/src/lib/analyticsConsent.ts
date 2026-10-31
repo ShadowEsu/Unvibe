@@ -2,6 +2,8 @@
  * The visitor's answer to the analytics bar (AnalyticsConsentBar). Until this browser has
  * answered Allow for the current policy version, no analytics SDK loads and nothing is sent:
  * `browserTrackingDisabled` (trackingOptOut.ts) reads this, and every analytics path checks it.
+ * The one exception is the press itself: Allow or No thanks adds one to that day's count of that
+ * answer, with no ID (consentAnswerClient.ts).
  *
  * Stored in localStorage as `{"v":"2026-10-28","choice":"allow"|"deny","at":"<ISO time>"}`.
  * A record for another policy version counts as no answer, so the bar asks again. A browser that
