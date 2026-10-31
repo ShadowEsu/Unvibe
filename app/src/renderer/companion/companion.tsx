@@ -29,6 +29,7 @@ import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { CHANGE_BRIEF, HOSTED_AI, NOT_NOW, PAGE_NAMES } from './names';
 import { bottomRightSlot, scrollEndPadding } from './layout';
+import { SETUP_STEP_LABELS, setupForward, setupSteps, type SetupStep } from './onboardingFlow';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -451,12 +452,12 @@ const SAMPLE_LINES = [
 ];
 
 /**
- * First run, built so the first real explanation lands within a minute: 1 hello (name optional),
- * 2 explain a sample for real (no permission needed), then one skippable level question, 3 try it on
- * your own code. On a Mac, step 3 is one paste target (no permission), and step 4 offers the shortcut
- * only once that own code has been explained (onboarding:ownCodeDone): value first, permission second.
- * Windows needs no permission, so it keeps its three steps. Google sign-in and editor bridges are
- * optional and stay reachable later.
+ * First run, built so the first real explanation lands within a minute and setup gives before it
+ * asks (onboardingFlow.ts): 1 explain a sample for real (no permission needed), then one skippable
+ * level question, 2 your name and optional Google sync, 3 try it on your own code. On a Mac, step 3
+ * is one paste target (no permission), and step 4 offers the shortcut only once that own code has
+ * been explained (onboarding:ownCodeDone): value first, permission second. Windows needs no
+ * permission, so it keeps three steps. Editor bridges stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -474,10 +475,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
   const shortcutHeading = useRef<HTMLHeadingElement>(null);
   const paste = useOwnCodePaste();
-  const steps = isWindows ? ['Hello', 'Try it', 'Anywhere'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
-  const macPaste = !isWindows && step === 2;
-  const macShortcut = !isWindows && step === 3;
-  const firstName = displayName.trim().split(/\s+/)[0] ?? '';
+  const steps = setupSteps(isWindows);
+  const stepId = steps[step] ?? 'try';
+  const macPaste = stepId === 'code';
+  const macShortcut = stepId === 'shortcut';
   const keys = prettyAccel(shortcut);
   // The shortcut Accessibility turns on (always registered on a Mac) and the editor bridge's, in prettyShortcut's one form.
   const macKey = prettyShortcut('Control+U');
@@ -488,9 +489,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer.
   useEffect(() => {
     if (isWindows) return undefined;
+    const codeStep = steps.indexOf('code');
     return window.unvibe.onOwnCodeDone(() => {
       setOwnCodeDone(true);
-      setStep((current) => (current === 2 ? 3 : current));
+      setStep((current) => (current === codeStep ? codeStep + 1 : current));
     });
   }, []);
   // Announce the card, without making Enter trigger the permission prompt.
@@ -515,23 +517,23 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     });
   }, [macShortcut, offer, soundEffects]);
 
-  const lines = [
-    "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
-    explained
+  const lines: Record<SetupStep, string> = {
+    try: explained
       ? "That's me, explaining it in the panel. Read it, then press Test me."
-      : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    isWindows
-      ? `Now try it on code of your own. Select some in any app and press ${keys}.`
-      : paste.started
-        ? 'Got it. Your explanation is opening in the panel.'
-        : 'Now try your own code. Copy a few lines from any file, then paste them here.',
-    offer === 'on'
+      : "Hey! I'm Vibe. I explain the code AI writes for you. Let's do one for real: press the button and watch.",
+    you: 'Nice work. What should I call you?',
+    anywhere: `Now try it on code of your own. Select some in any app and press ${keys}.`,
+    code: paste.started
+      ? 'Got it. Your explanation is opening in the panel.'
+      : 'Now try your own code. Copy a few lines from any file, then paste them here.',
+    shortcut: offer === 'on'
       ? 'The shortcut is on. Try it anywhere.'
       : offer === 'waiting'
         ? "Switch Unvibe on in the list that opened. I'll notice by myself."
         : 'That was your own code. Want it one keystroke away next time?',
-  ];
-  const said = useVibeSays(lines[step] ?? '', soundEffects);
+  };
+  const line = lines[stepId];
+  const said = useVibeSays(line, soundEffects);
 
   // Google sign-in hands back the account email and profile name; fill what is still empty.
   const fillFromGoogle = (email: string, name?: string) => {
@@ -580,15 +582,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     setOffer('waiting');
     await turnOnShortcut(window.unvibe);
   };
-  // The footer's right button. On a Mac the paste and shortcut steps have no competing primary:
-  // "Not now" is a ghost that finishes setup.
-  const forward: { label: string; ghost?: boolean; finishes?: boolean } =
-    step === 0 ? { label: "Let's go" }
-      : step === 1 ? { label: explained ? 'Next' : NOT_NOW }
-        : macPaste && ownCodeDone ? { label: 'Next', ghost: true }
-          : macPaste ? { label: NOT_NOW, ghost: true, finishes: true }
-            : macShortcut && offer !== 'on' ? { label: NOT_NOW, ghost: true, finishes: true }
-              : { label: 'Start using Unvibe', finishes: true };
+  const forward = setupForward(stepId, { explained, ownCodeDone, shortcutOn: offer === 'on' });
   const advance = () => {
     if (forward.finishes) void finish();
     else go(step + 1);
@@ -604,19 +598,19 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, select, textarea, button, summary, [role="textbox"]')) return;
       // On a Mac's paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
-      if ((event.key === 'ArrowRight' || event.key === 'Enter') && (isWindows || step < 2)) { event.preventDefault(); advance(); }
+      if ((event.key === 'ArrowRight' || event.key === 'Enter') && (isWindows || stepId === 'try' || stepId === 'you')) { event.preventDefault(); advance(); }
       if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy')
+  const mood = celebrating ? 'celebrate' : stepId === 'try' ? (explained ? 'reading' : 'wave') : stepId === 'you' ? 'happy'
     : macPaste && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
   const continueLabel = forward.finishes && celebrating ? 'Welcome!' : forward.finishes && saving ? 'Saving…' : forward.label;
 
   return (
-    <div className={`ob ob2 ob--scene-${step}`}>
+    <div className={`ob ob2 ob--scene-${stepId}`}>
       {celebrating ? (
         <div className="ob__confetti" aria-hidden="true">
           {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
@@ -624,18 +618,17 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       ) : null}
       <div className="ob__card ob2__card">
         <div className="ob2__top">
-          <div className="ob__dots">{steps.map((label, i) => <span key={label} title={label} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
+          <div className="ob__dots">{steps.map((id, i) => <span key={id} title={SETUP_STEP_LABELS[id]} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
           <span className="ob2__count">{step + 1} / {steps.length}</span>
         </div>
         <div className="ob2__vibe">
-          <span className="ob2__blob"><Buddy mood={mood} size={step === 0 ? 112 : 72} follow label="Vibe" key={`${step}-${mood}`} /></span>
-          <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < (lines[step] ?? '').length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
+          <span className="ob2__blob"><Buddy mood={mood} size={72} follow label="Vibe" key={`${step}-${mood}`} /></span>
+          <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < line.length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
         </div>
 
         <FadeIn animKey={step} className={`ob__step ob2__body${macPaste || macShortcut ? ' ob2__paste' : ''}`}>
-          {step === 0 && (
+          {stepId === 'you' && (
             <>
-              <h2 className="ob__title">Understand the code <em>AI writes.</em></h2>
               <form className="ob__form ob2__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
                 <label>
                   <span>What should I call you? <em className="ob2__opt">optional</em></span>
@@ -653,8 +646,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
             </>
           )}
 
-          {step === 1 && (
+          {stepId === 'try' && (
             <div className="ob2__try">
+              <h2 className="ob__title">Understand the code <em>AI writes.</em></h2>
               <div className="obd__editor">
                 <div className="obd__bar"><i /><i /><i /><span>debounce.js</span></div>
                 <pre>{SAMPLE_LINES.join('\n')}</pre>
@@ -682,7 +676,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
             </div>
           )}
 
-          {step === 2 && isWindows && (
+          {stepId === 'anywhere' && (
             <>
               <div className="ob2__keys" aria-label={`Shortcut ${keys}`}>
                 {keys.split('+').map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
@@ -728,7 +722,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <p className="ob__sub ob2__note">Pasting keeps working without it.</p>
             </>
           )}
-          {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="act" illustration />}
+          {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="act" illustration helpOpen={false} />}
           {macShortcut && offer === 'on' && (
             <div className="ob2__offer">
               <div className="ob2__keys" aria-hidden="true">{Array.from(macKey).map((key) => <kbd key={key} className="kbd-lg">{key}</kbd>)}</div>

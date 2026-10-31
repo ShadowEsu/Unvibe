@@ -36,10 +36,11 @@ export function watchGrant(api: Pick<GrantApi, 'accessibility'>, onGranted: () =
 
 /**
  * The 3-step guide shown while System Settings is open, in setup's step 4 and in the review panel.
- * The stale-entry help is open from the start. `illustration` adds a drawing of the Accessibility
- * list (drawn here, never a macOS screenshot).
+ * The stale-entry help starts open unless `helpOpen` is false: setup's waiting screen keeps it
+ * folded to its one-line question (Design A10, B-2). `illustration` adds a drawing of the
+ * Accessibility list (drawn here, never a macOS screenshot).
  */
-export function ShortcutGuide({ buttonClass, illustration = false }: { buttonClass: string; illustration?: boolean }) {
+export function ShortcutGuide({ buttonClass, illustration = false, helpOpen = true }: { buttonClass: string; illustration?: boolean; helpOpen?: boolean }) {
   return (
     <div className={`shortcut-guide${illustration ? ' shortcut-guide--wide' : ''}`}>
       <div className="shortcut-guide__main">
@@ -49,7 +50,7 @@ export function ShortcutGuide({ buttonClass, illustration = false }: { buttonCla
           <li><span>Come back here. This screen updates by itself.</span></li>
         </ol>
         <p className="shortcut-guide__wait"><span className="shortcut-pill shortcut-pill--busy" role="status"><i aria-hidden="true" />Waiting for the switch</span></p>
-        <details className="shortcut-guide__fix" open>
+        <details className="shortcut-guide__fix" open={helpOpen}>
           <summary>Switched it on and nothing changed?</summary>
           <p>macOS may still hold an old Unvibe entry. Press Fix it, switch Unvibe on again, then restart Unvibe.</p>
           <div className="shortcut-guide__acts">
