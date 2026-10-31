@@ -39,7 +39,7 @@ interface GrowthFunnel {
   installViewedPeople: number;
   installCopiedPeople: number;
   surveyOpenedPeople: number;
-  source: "posthog" | "live" | "floor";
+  source: "live" | "floor";
 }
 
 interface AnalyticsPayload {
@@ -220,7 +220,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
         <div>
           <span className="founder-analytics__eyebrow">Analytics</span>
           <Title className="founder-analytics__title">Unvibe, by the numbers.</Title>
-          <p>Joined people stay on the roster. Form starts, copies, and drop-off come from PostHog so unfinished traffic is not invented as accounts.</p>
+          <p>Joined people stay on the roster. Form starts, copies, and drop-off come from the site&apos;s own funnel counter so unfinished traffic is not invented as accounts.</p>
         </div>
         <div className="founder-analytics__actions">
           <button type="button" onClick={() => void load()} disabled={loading}>
@@ -471,7 +471,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
           </article>
 
           <footer className="founder-analytics__footer">
-            <span>Funnel counts itself from form starts and PostHog. Joined people stay real emails only.</span>
+            <span>Funnel counts itself from form starts. Joined people stay real emails only.</span>
             <span>{updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span>
           </footer>
         </>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getBetaInstallCounts } from "@/lib/betaInstallStats";
 import { getSiteStats } from "@/lib/siteStatsStore";
 import { getPublicAnalytics } from "@/lib/publicAnalyticsStore";
-import { getGrowthFunnel } from "@/lib/posthogFunnel";
+import { getGrowthFunnel } from "@/lib/growthFunnel";
 import { getDownloadStats } from "@/lib/downloadStats";
 
 export const runtime = "nodejs";

@@ -4,7 +4,7 @@ Dated: 2026-08-23. Owner: CMO drafts · COO ships · CEO clears public claims.
 
 ## Math (honest)
 
-Recent PostHog (UTC, filter test accounts): `waitlist_started` ~4–13/day. Traffic is the bottleneck, then conversion, then viral loop.
+Recent site analytics (UTC, filter test accounts): `waitlist_started` ~4–13/day. Traffic is the bottleneck, then conversion, then viral loop.
 
 Path to 100 completed / day without paid ads yet:
 
@@ -16,7 +16,7 @@ Path to 100 completed / day without paid ads yet:
 | Niche communities (Cursor/AI builders) | 10–25 / week sustained | Founder posts |
 | Paid later | only after completed gauge works 7d | CFO gate |
 
-## Funnel events to watch (PostHog + Mixpanel)
+## Funnel events to watch (Mixpanel)
 
 Site:
 
@@ -133,7 +133,7 @@ Prospect list: research via CMO outreach skill in-window; do not send outside Sa
 
 ## Verify after deploy
 
-1. Join once on unvibe.site → PostHog shows `waitlist_completed` within minutes.
+1. Join once on unvibe.site → Mixpanel shows `waitlist_completed` within minutes.
 2. Focus form → `waitlist_started`; load alone → `waitlist_viewed` only.
 3. Copy Mac and Windows install → `beta_install_copied` with `os`.
 4. Hit curl/PowerShell install URL → `beta_install_fetched`.

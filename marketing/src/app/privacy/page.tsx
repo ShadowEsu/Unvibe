@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="31 October 2026"
+      updated="1 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -50,9 +50,7 @@ export default function PrivacyPage() {
             <strong>Feedback you send:</strong> your star rating and message, where it
             came from (the site or the app, with the page or app version), and your email
             only if you add it. Your IP address is used only in the server&apos;s memory, to
-            stop repeated sends, and is not stored with your feedback. Each send is also
-            counted as one PostHog event that carries only the star rating and where it
-            came from, under a random ID that is new each time.
+            stop repeated sends, and is not stored with your feedback.
           </li>
           <li>
             <strong>Survey answers:</strong> if you answer the short in-app survey and press Send,
@@ -158,13 +156,13 @@ export default function PrivacyPage() {
 
       <LegalSection heading="This website">
         <p>
-          If you press Allow on the analytics bar, unvibe.site uses Mixpanel and PostHog to
+          If you press Allow on the analytics bar, unvibe.site uses Mixpanel to
           understand how visitors use the site, including page views, clicks, and session replays.
           Until you press Allow, and if you press No thanks, ignore the bar, or your browser sends
-          Global Privacy Control, neither loads and nothing is recorded. The Analytics settings link
-          at the bottom of every page changes your answer, and No thanks stops recording at once. Both
-          receive your IP address with
-          each event and use it to estimate a rough location. Replays hide all page text and
+          Global Privacy Control, Mixpanel does not load and nothing is recorded. The Analytics settings link
+          at the bottom of every page changes your answer, and No thanks stops recording at once. Mixpanel
+          receives your IP address with
+          each event and uses it to estimate a rough location. Replays hide all page text and
           everything typed into forms. Emails, tokens, and codes (such as invite and sign-in
           codes) are removed from page addresses before they are sent. Admin pages and private
           stats links start no analytics; if you open one from another page on the site, replay
@@ -217,7 +215,7 @@ export default function PrivacyPage() {
           </li>
           <li><strong>Resend</strong> delivers sign-in and product emails.</li>
           <li><strong>GitHub</strong> hosts the installer downloads.</li>
-          <li><strong>Mixpanel and PostHog</strong> measure website usage.</li>
+          <li><strong>Mixpanel</strong> measures website usage.</li>
           <li>
             <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
             only after you press Allow on the analytics bar.

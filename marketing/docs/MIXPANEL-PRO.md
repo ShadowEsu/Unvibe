@@ -16,4 +16,4 @@ Unvibe is on **Mixpanel for Startups** with **$144,000** of Mixpanel Pro plan cr
 
 ## Read path
 
-Composio Mixpanel alias `unvibe`, `project_id=4054892`. Prefer `MIXPANEL_QUERY_SEGMENTATION` and JQL. Cross-check PostHog; never invent conversion when `waitlist_completed` is missing.
+Composio Mixpanel alias `unvibe`, `project_id=4054892`. Prefer `MIXPANEL_QUERY_SEGMENTATION` and JQL. Never invent conversion when `waitlist_completed` is missing.

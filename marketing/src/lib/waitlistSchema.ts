@@ -22,7 +22,7 @@ export const waitlistSchema = z.object({
   utmMedium: z.string().trim().max(64).optional().or(z.literal("")),
   utmCampaign: z.string().trim().max(64).optional().or(z.literal("")),
   // The browser's answer on the analytics bar. Only exactly `true` (Allow, no GPC, no ?notrack)
-  // lets the server count the signup in PostHog, Mixpanel or the funnel (Security U-L1).
+  // lets the server count the signup in Mixpanel or the funnel (Security U-L1).
   analytics: z.unknown().optional().transform((value) => value === true),
   // The footer, /about and homepage newsletter forms. Only exactly `true` counts as the ticked box.
   source: z.enum(["newsletter"]).optional(),
