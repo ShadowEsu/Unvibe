@@ -440,6 +440,8 @@ export function ResourcesHub() {
           </Link>
         </div>
       </section>
+      {/* Exchanged link (Top10AI lists Unvibe): rel="sponsored", as Google's link-spam policy asks for link exchanges. */}
+      <p className="resources-more">More AI coding tools are compared on <a href="https://top10ai.com/" rel="sponsored" className="paper-text-link">Top10AI</a>.</p>
     </div>
   );
 }

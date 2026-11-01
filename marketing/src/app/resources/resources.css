@@ -652,6 +652,12 @@
   gap: 1rem;
 }
 
+.resources-more {
+  margin: 1.5rem 0 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 /* ── Card look: ink outlines on white, as on the homepage ──────────────── */
 
 .resources-filters {
