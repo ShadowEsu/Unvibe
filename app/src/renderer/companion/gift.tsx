@@ -143,7 +143,7 @@ export function Gift() {
               ? `${browserOpened ? 'Finish in your browser.' : 'Your browser did not open.'} Sign in with Google, then approve the code above.`
               : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
           </p>
-          {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startSignIn()}>Retry</button></div> : null}
+          {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startSignIn()}>Try again</button></div> : null}
         </section>
       ) : (
         <>
