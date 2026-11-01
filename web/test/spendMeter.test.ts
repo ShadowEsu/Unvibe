@@ -235,12 +235,12 @@ function appRequest(route: string): Request {
   });
 }
 
-test('reviews past the daily stop: the stream says AI is paused for today; no provider is called', async () => {
+test('reviews past the daily stop: the stream says AI is paused for today, coded ai_paused; no provider is called', async () => {
   fullMeter();
   const response = await review(appRequest('reviews'));
   assert.equal(response.status, 200);
   const events = (await response.text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
-  assert.deepEqual(events, [{ type: 'error', message: AI_PAUSED_TODAY }]);
+  assert.deepEqual(events, [{ type: 'error', message: AI_PAUSED_TODAY, code: 'ai_paused' }]);
   assert.deepEqual(hosts, []);
 });
 
@@ -274,12 +274,24 @@ test('production without the meter store refuses every call before any provider 
   assert.deepEqual(hosts, []);
 });
 
+test('reviews when the spend store is unavailable: the stream says AI is paused, coded ai_paused; no provider is called', async () => {
+  const broken: SpendStore = { reserve: async () => { throw new Error('connection refused'); }, settle: async () => {} };
+  // spendStore() reads its non-production store from this global; a store that throws stands in for an outage.
+  const spendSeam = globalThis as unknown as { __unvibeSpendMemory?: SpendStore };
+  spendSeam.__unvibeSpendMemory = broken;
+  const response = await review(appRequest('reviews'));
+  assert.equal(response.status, 200);
+  const events = (await response.text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
+  assert.deepEqual(events, [{ type: 'error', message: AI_PAUSED, code: 'ai_paused' }]);
+  assert.deepEqual(hosts, []);
+});
+
 test('AI_MAINTENANCE=1 pauses the app, the quiz and Try with the maintenance text; nothing is reserved or sent', async () => {
   const store = new MemorySpendStore();
   (globalThis as unknown as { __unvibeSpendMemory?: MemorySpendStore }).__unvibeSpendMemory = store;
   process.env.AI_MAINTENANCE = '1';
   const events = (await (await review(appRequest('reviews'))).text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
-  assert.deepEqual(events, [{ type: 'error', message: AI_MAINTENANCE }]);
+  assert.deepEqual(events, [{ type: 'error', message: AI_MAINTENANCE, code: 'ai_paused' }]);
   const quiz = await comprehension(appRequest('comprehension'));
   assert.equal(quiz.status, 503);
   assert.deepEqual(await quiz.json(), { error: 'ai_paused', message: AI_MAINTENANCE });

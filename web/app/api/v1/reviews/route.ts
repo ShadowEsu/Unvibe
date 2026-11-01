@@ -91,8 +91,10 @@ export async function POST(req: Request): Promise<Response> {
         }
       } catch (err) {
         if (err instanceof AiPausedError) {
-          // The spend meter refused before anything was sent; no other provider is tried.
-          send({ type: 'error', message: err.message });
+          // The spend meter refused before anything was sent; no other provider is tried. Maintenance,
+          // the day's spend stop and an unavailable spend store all mean hosted AI is paused: the code
+          // lets the app say Paused instead of Error (older apps ignore it and show the message).
+          send({ type: 'error', message: err.message, code: 'ai_paused' });
         } else {
           if (!req.signal.aborted) console.error('review provider failed', providerErrorSummary(err));
           send({ type: 'error', message: PROVIDER_FAILURE });
