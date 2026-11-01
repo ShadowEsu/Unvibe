@@ -1,10 +1,11 @@
-import { DownloadRow } from "@/components/paper/DownloadLink";
 import { InviteReveal } from "@/components/paper/InviteReveal";
 import { Vibe } from "@/components/paper/Vibe";
-import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
-/** Closing call to action on the homepage. Replaces the old waitlist form. */
+/**
+ * Closing call to action on the homepage. It links to the download card at #install instead of
+ * repeating it, so the page has one download card (Design gate, 31 Oct).
+ */
 export function DownloadCta() {
   return (
     <InviteReveal>
@@ -16,10 +17,11 @@ export function DownloadCta() {
           Mac (Apple silicon or Intel) and Windows. No API key and no credit card.
           Select code, press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows), and keep what you ship.
         </p>
-        <DownloadRow surface="home_cta" />
-        <p className="paper-caption mt-4">
-          {BETA_INSTALL_VERSION} · <a href="/beta" className="paper-text-link">Install steps and requirements</a>
-        </p>
+        <div className="paper-join-row">
+          <a className="paper-join paper-join--mac" href="#install">
+            <span className="paper-join__label">Go to the download</span>
+          </a>
+        </div>
       </div>
     </InviteReveal>
   );
