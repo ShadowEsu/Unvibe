@@ -7,7 +7,7 @@ import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
 import { renderSummary } from '../shared/richText';
-import { CHANGE_BRIEF, PAGE_NAMES, UNDERSTAND_CHANGE } from './names';
+import { PAGE_NAMES, UNDERSTAND_CHANGE } from './names';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -97,7 +97,6 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
     <div className="briefings">
       <div className="briefings__head">
         <div>
-          <div className="kicker">{CHANGE_BRIEF}</div>
           <h1>{PAGE_NAMES.Briefings}</h1>
           <p>A clear recap of what changed in your project. Available offline from local git.</p>
         </div>

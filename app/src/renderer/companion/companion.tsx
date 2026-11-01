@@ -368,7 +368,7 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
       ) : (
         <div className="field-note">Opens your browser for Google sign-in. Unvibe never sees your Google password.</div>
       )}
-      {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startDevice()}>Retry</button></div> : null}
+      {verificationUrl ? <div className="inline-actions"><button className="field-btn" type="button" onClick={() => void openBrowser()}>Open browser</button><button className="field-btn" type="button" onClick={() => void copyLink()}>Copy link</button><button className="field-btn" type="button" onClick={() => void startDevice()}>Try again</button></div> : null}
     </div>
   );
 }
@@ -2142,7 +2142,7 @@ function App() {
             disabled={sync.phase === 'syncing' || sync.phase === 'local'}
           >
             <span className="sync-state__dot" />
-            <span className="sync-state__copy">{sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
+            <span className="sync-state__copy">{sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Try syncing again'}</span>
             {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
           </button>
           {usageLine ? (
