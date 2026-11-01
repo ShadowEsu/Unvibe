@@ -5,6 +5,7 @@ import { Vibe } from "@/components/paper/Vibe";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { changelogEntries } from "@/data/milestones";
 import { AboutBacking } from "@/components/paper/AboutBacking";
+import { FREE_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = pageMetadata({
@@ -61,7 +62,7 @@ export default function AboutPage() {
           <ul>
             <li>We ship small releases often and list every one on the <Link href="/releases">change log</Link>. {releases}+ releases so far.</li>
             <li>Every explanation is generated live by cloud AI after a secret scan on your computer. The <Link href="/privacy">privacy page</Link> says exactly what is sent.</li>
-            <li>Free explanations have a monthly limit. No card, no API key.</li>
+            <li>Free: {SIGNED_OUT_ALLOWANCE}, then {FREE_MONTHLY_ALLOWANCE} when you sign in. No card, no API key.</li>
           </ul>
         </article>
         <article className="founder-about__card">

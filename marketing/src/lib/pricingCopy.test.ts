@@ -80,10 +80,11 @@ describe("pricing copy in both states", () => {
       assert.deepEqual(copy.plans.filter((plan) => plan.primary).map((plan) => [plan.id, plan.cta, plan.href]), [["free", "Download free", "/beta"]]);
     });
 
-    it(`states no allowance numbers (payments ${paymentsOpen ? "open" : "closed"})`, () => {
-      const text = allText(copy);
-      assert.doesNotMatch(text, /\d+\s*(ai\s+)?(explanations|questions|projects|items|reviews)/i);
-      assert.ok(copy.plans.find((plan) => plan.id === "pro")?.features.includes("More explanations each month than Free"));
+    it(`states the allowances from lib/allowance (payments ${paymentsOpen ? "open" : "closed"})`, () => {
+      const plans = Object.fromEntries(copy.plans.map((plan) => [plan.id, plan]));
+      assert.equal(plans.free.detail, "50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in. No card and no separate API key.");
+      assert.ok(plans.pro.features.includes("100 explanations a month"));
+      assert.doesNotMatch(allText(copy), /usage limit|More explanations each month/i);
     });
   }
 
@@ -117,7 +118,7 @@ describe("pricing copy once payments open", () => {
     assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
-      ["free", "No card needed", "Included AI explanations with a usage limit. No card and no separate API key.", "Download free", "/beta"],
+      ["free", "No card needed", open.plans[0].detail, "Download free", "/beta"],
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);

@@ -1,10 +1,11 @@
+import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
  * stay visible but nothing promises an upgrade, checkout or renewal. Once payments open, the
- * shipped copy returns. In both states Download free is the only filled button, and no plan
- * states an allowance number (Pro gets more explanations than Free; see web/src/billing/plans.ts).
+ * shipped copy returns. In both states Download free is the only filled button. Allowance numbers
+ * come only from lib/allowance.
  */
 
 export type PlanCopy = {
@@ -45,7 +46,7 @@ const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
 
 const FEATURES = {
   free: ["Explain code you select in any app", "New, Beginner, Intermediate and Advanced depths", "Follow-ups and Test me", "Lessons saved to your Library", "Briefs of your Git changes, made on your computer", "“Why does this exist?” from your Git history", "Keys and tokens in your code filtered on your device"],
-  pro: ["Everything in Free", "Expert depth", "AI explanations of Git diffs and change Briefs", "Answers that use nearby files", "More explanations each month than Free"],
+  pro: ["Everything in Free", "Expert depth", "AI explanations of Git diffs and change Briefs", "Answers that use nearby files", PRO_MONTHLY_ALLOWANCE],
   teams: ["One shared workspace", "Invites for your team", "Who reviewed what (metadata only)", SEATS],
 } as const;
 
@@ -55,7 +56,7 @@ const free: PlanCopy = {
   badge: "No card needed",
   eyebrow: "Understand the code in front of you.",
   price: "$0",
-  detail: "Included AI explanations with a usage limit. No card and no separate API key.",
+  detail: `${SIGNED_OUT_ALLOWANCE}, then ${FREE_MONTHLY_ALLOWANCE} when you sign in. No card and no separate API key.`,
   features: FEATURES.free,
   cta: "Download free",
   href: "/beta",
