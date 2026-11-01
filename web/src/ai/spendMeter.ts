@@ -30,11 +30,21 @@ export const TOTAL_CAP_NANO_USD = 20_000_000_000; // $20, never resets
 
 export const AI_PAUSED_TODAY = 'AI is paused for today. Explanations come back after midnight UTC.';
 export const AI_PAUSED = 'AI is paused for now. Explanations will be back soon.';
+export const AI_MAINTENANCE = 'AI features are paused for maintenance. Back soon.';
 
-/** Thrown before any request leaves: the meter refused, or could not count (fail closed). */
+/**
+ * The outage switch (BOSS 31 Oct): AI_MAINTENANCE=1 on the API pauses every hosted AI call before
+ * anything is reserved or sent, e.g. while a provider key is being replaced. Read per call, so an
+ * env change plus a redeploy turns it on and off.
+ */
+export function aiMaintenance(): boolean {
+  return process.env.AI_MAINTENANCE?.trim() === '1';
+}
+
+/** Thrown before any request leaves: the meter refused, could not count (fail closed), or maintenance. */
 export class AiPausedError extends Error {
-  constructor(readonly reason: 'day_cap' | 'total_cap' | 'unavailable') {
-    super(reason === 'day_cap' ? AI_PAUSED_TODAY : AI_PAUSED);
+  constructor(readonly reason: 'day_cap' | 'total_cap' | 'unavailable' | 'maintenance') {
+    super(reason === 'day_cap' ? AI_PAUSED_TODAY : reason === 'maintenance' ? AI_MAINTENANCE : AI_PAUSED);
     this.name = 'AiPausedError';
   }
 }
@@ -167,6 +177,7 @@ export class MeteredProvider implements Provider {
   }
 
   private async metered<T>(system: string, user: string, call: () => Promise<{ result: T; usage: TokenUsage | undefined }>): Promise<T> {
+    if (aiMaintenance()) throw new AiPausedError('maintenance');
     if (!this.store) throw new AiPausedError('unavailable');
     const worst = worstCaseNanoUsd(system, user, this.inner.maxOutputTokens);
     let reservation: Reservation | 'day_cap' | 'total_cap';
