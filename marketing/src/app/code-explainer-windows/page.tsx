@@ -111,7 +111,7 @@ export default function CodeExplainerWindowsPage() {
           and your project folder&apos;s name when Unvibe knows them (on Pro, some code around it for context), or, on
           Pro, the git changes you ask the AI to explain, and any question you type. A request with
           a key or token in it is stopped on your PC, and a possible one asks you first; since version 0.1.44 that check
-          covers your questions and Chat messages too. Your repository is never uploaded.
+          covers your questions and Ask Vibe chat messages too. Your repository is never uploaded.
         </p>
       </section>
 

@@ -11,7 +11,7 @@ const guarantees = [
   {
     Icon: EyeOff,
     title: "Secrets filtered on your computer",
-    body: "The code you send is checked for keys, tokens, and passwords first. A known credential blocks the request. A string that only looks random waits for your OK. From version 0.1.44, your typed questions and Chat messages are checked too.",
+    body: "The code you send is checked for keys, tokens, and passwords first. A known credential blocks the request. A string that only looks random waits for your OK. From version 0.1.44, your typed questions and Ask Vibe chat messages are checked too.",
   },
   {
     Icon: ShieldCheck,

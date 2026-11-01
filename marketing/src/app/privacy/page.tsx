@@ -79,7 +79,7 @@ export default function PrivacyPage() {
           known credential blocks the request and shows you the rule and line so you can
           remove it. A string that only looks random is shown to you first, and nothing is
           sent unless you choose Send anyway. From version 0.1.44, follow-up questions, lesson
-          questions and Chat messages are scanned too, and a Chat message or lesson question with
+          questions and Ask Vibe chat messages are scanned too, and an Ask Vibe message or lesson question with
           any finding is not sent. Version 0.1.43 and older do not scan what you type, so keep keys
           out of it there.
           There is no file exclusion list: a file you select or open is sent once it passes
