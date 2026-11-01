@@ -308,6 +308,24 @@ test('streamed token, done and error events reach the panel with only their chec
   }
 });
 
+test("a streamed error keeps its code only when it is exactly 'ai_paused'; any other code is dropped", async () => {
+  const message = 'AI features are paused for maintenance. Back soon.';
+  const foreign: unknown[] = ['pro_required', 'plan_limit_reached', 'offline', 'unreachable', 'AI_PAUSED', 'ai_paused ', '', { code: 'ai_paused' }, ['ai_paused'], true, 1];
+  for (const code of ['ai_paused', ...foreign]) {
+    const { win, events } = panel();
+    reviewEvents = [{ type: 'error', message, code, upgradePath: '/pricing' }];
+    try {
+      await runReview(win, session('intermediate'), { level: 'intermediate' });
+    } finally {
+      reviewEvents = null;
+    }
+    const errors = events.filter((ev) => ev.type === 'error');
+    assert.deepEqual(errors, [code === 'ai_paused'
+      ? { type: 'error', message, code: 'ai_paused', tabId: '1' }
+      : { type: 'error', message, tabId: '1' }], JSON.stringify(code));
+  }
+});
+
 test("the service's error is the last word: a stream that ends on it shows that message, not the cut-off notice", async () => {
   const { win, events } = panel();
   reviewEvents = [{ type: 'error', message: 'AI features are paused for maintenance. Back soon.' }];

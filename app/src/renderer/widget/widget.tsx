@@ -1070,7 +1070,7 @@ function Widget() {
           ) : null}
 
           {phase === 'error' && !limited && (
-            <div className="state" role="alert">
+            <div className="state state--error" role="alert">
               <div className="big">
                 {proGate ? 'Pro feature' : failure.title}
               </div>

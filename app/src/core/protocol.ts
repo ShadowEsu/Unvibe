@@ -48,7 +48,8 @@ export interface ReviewRequestPayload {
 export type StreamEvent =
   | { type: 'token'; text: string }
   | { type: 'done'; model: string; mock: boolean }
-  | { type: 'error'; message: string };
+  /** `code: 'ai_paused'`: hosted AI is paused (maintenance or its spend cap); older services send no code. */
+  | { type: 'error'; message: string; code?: string };
 
 /** A single multiple-choice comprehension question (non-streaming). answerIndex/rationale
  * are held in the main process and never sent to the widget renderer until after grading. */

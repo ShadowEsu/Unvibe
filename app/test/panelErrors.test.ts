@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 import type { BrowserWindow } from 'electron';
 import { FIRST_RUN_SAMPLE } from '../src/core/consent';
 import { runReview } from '../src/main/review';
-import { actionRow, errorView, statusLabel, type Phase } from '../src/renderer/widget/panelModel';
+import { actionRow, errorView, statusLabel, statusTone, type Phase } from '../src/renderer/widget/panelModel';
 
 /** No request reaches a server; `online` is what the operating system says about the network. */
 let online = false;
@@ -65,10 +65,24 @@ test('the header status reads Offline for a network failure and Paused at the li
   assert.ok(actionRow('error', false, false), 'the action row stays in error and offline states');
 });
 
+test('a planned AI pause (ai_paused) reads Paused in the neutral tone; without that code an error still reads Error', () => {
+  assert.equal(statusLabel('error', { limited: false, errorCode: 'ai_paused', proGate: false }), 'Paused');
+  assert.equal(statusTone('error', { limited: false, errorCode: 'ai_paused' }), 'paused');
+  assert.equal(statusTone('error', { limited: false, errorCode: 'ai_paused' }), statusTone('boot', { limited: true, errorCode: '' }), 'the same tone as the limit state');
+  // An older service sends the same words with no code: the message text is never matched.
+  for (const errorCode of ['', 'AI_PAUSED', 'ai_paused ', 'paused']) {
+    assert.equal(statusLabel('error', { limited: false, errorCode, proGate: false }), 'Error', JSON.stringify(errorCode));
+    assert.equal(statusTone('error', { limited: false, errorCode }), 'error', JSON.stringify(errorCode));
+  }
+  assert.equal(errorView('ai_paused', 'AI features are paused for maintenance. Back soon.').body, 'AI features are paused for maintenance. Back soon.', 'the service message stays the body');
+  const row = actionRow('error', false, false);
+  assert.ok(row && !row.ready, 'Understand, Explain differently and Test me stay disabled while paused');
+});
+
 test('every header status is in sentence case', () => {
   const phases: Phase[] = ['boot', 'ready', 'aiConsent', 'confirm', 'empty', 'consent', 'blocked', 'streaming', 'done', 'error'];
   for (const phase of phases) {
-    for (const errorCode of ['', 'offline']) {
+    for (const errorCode of ['', 'offline', 'ai_paused']) {
       for (const proGate of [false, true]) {
         const label = statusLabel(phase, { limited: false, errorCode, proGate });
         assert.match(label, /^[A-Z][a-z]*( [a-z]+)*$/, `${phase}: "${label}"`);

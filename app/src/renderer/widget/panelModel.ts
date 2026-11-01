@@ -118,14 +118,15 @@ export function statusLabel(phase: Phase, opts: { limited: boolean; errorCode: s
     case 'blocked': return 'Blocked';
     case 'streaming': return 'Explaining';
     case 'done': return 'Ready';
-    case 'error': return isNetworkError(opts.errorCode) ? 'Offline' : opts.proGate ? 'Pro feature' : 'Error';
+    // 'ai_paused' (review.ts): hosted AI is paused (maintenance or its spend cap), a planned pause, not a fault.
+    case 'error': return isNetworkError(opts.errorCode) ? 'Offline' : opts.errorCode === 'ai_paused' ? 'Paused' : opts.proGate ? 'Pro feature' : 'Error';
   }
 }
 
 /** The status chip's style: one tone per kind of state, so Offline and Paused never show the "ready" dot. */
 export function statusTone(phase: Phase, opts: { limited: boolean; errorCode: string }): string {
   if (opts.limited) return 'paused';
-  if (phase === 'error') return isNetworkError(opts.errorCode) ? 'offline' : 'error';
+  if (phase === 'error') return isNetworkError(opts.errorCode) ? 'offline' : opts.errorCode === 'ai_paused' ? 'paused' : 'error';
   return phase;
 }
 

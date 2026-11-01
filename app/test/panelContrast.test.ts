@@ -49,6 +49,7 @@ interface Look { theme: 'light' | 'dark'; panel: 'light' | 'dark' }
 function rootPrefixes({ theme, panel }: Look): string[] {
   const out = [':root', `:root[data-theme="${theme}"]`];
   if (panel === 'light') out.push(':root[data-panel="light"]');
+  else out.push(':root:not([data-panel="light"])');
   if (theme === 'dark' && panel === 'dark') out.push(':root[data-theme="dark"]:not([data-panel="light"])');
   return out;
 }
@@ -187,6 +188,20 @@ test('action buttons waiting for the explanation are dimmed by opacity only: sam
       }
       const opacity = Number(cascade(look, [...enabled, ...disabled], 'opacity'));
       assert.ok(opacity < 1, `${kind} is dimmed for ${JSON.stringify(look)}`);
+    }
+  }
+});
+
+test('on ink, waiting action buttons drop the lime and sky fills for the neutral key; paper keeps its faded fills', () => {
+  const disabled = ['.chip:disabled', '.card .foot .actions-row .chip:disabled'];
+  for (const look of LOOKS) {
+    const neutral = painted(look, ['.chip', '.card .chip', '.chip--diff', '.card .chip--diff', '.card .foot .actions-row > .chip'], 'background');
+    for (const kind of ['chip--ok', 'chip--test']) {
+      const enabled = ['.chip', '.card .chip', `.${kind}`, `.card .${kind}`, '.card .foot .actions-row > .chip'];
+      const lit = painted(look, enabled, 'background');
+      const waiting = painted(look, [...enabled, ...disabled], 'background');
+      assert.notEqual(lit, neutral, `${kind} has its own fill when on for ${JSON.stringify(look)}`);
+      assert.equal(waiting, look.panel === 'dark' ? neutral : lit, `${kind} waiting fill for ${JSON.stringify(look)}`);
     }
   }
 });

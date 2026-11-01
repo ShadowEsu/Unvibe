@@ -548,8 +548,14 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           appendExplanation(session, ev.text);
           send(win, session, { type: 'token', text: ev.text });
         } else if (ev.type === 'error') {
-          // The service's error text reaches the panel only as a capped string.
-          send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
+          // The service's error text reaches the panel only as a capped string. Its code is kept only
+          // when it is exactly 'ai_paused' (hosted AI paused), so the header says Paused; any other
+          // code is dropped, since a streamed code must not unlock the panel's plan or upgrade states.
+          send(win, session, {
+            type: 'error',
+            message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.',
+            ...(ev.code === 'ai_paused' ? { code: 'ai_paused' } : {}),
+          });
           serviceErrored = true;
         } else if (ev.type === 'done') {
           send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true });

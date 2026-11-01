@@ -1702,6 +1702,13 @@ code.inline {
 .card .actions-row__right .local-save-note, .card .actions-row__right .mock-note { margin-left: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .actions-row__right .chip--stop { max-width: 100%; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .foot .actions-row .chip:disabled { opacity: 0.45; transform: none; cursor: default; }
+/* On the ink panel that fade turned the lime and sky keys into olive and slate fills with dark text,
+   which read as live buttons in another color. Disabled there, they take the neutral key's fill and
+   ink (border and key shadow unchanged, so nothing shifts), the way the paper panel's fade reads. */
+:root:not([data-panel="light"]) .card .foot .actions-row .chip:disabled { background: var(--p-surface); color: var(--p-ink); }
+
+/* Design: the error card's body never leaves one word alone on its last line. */
+.card .state--error .sub { text-wrap: balance; }
 
 /* Design A4, P10: Offline, Paused and Error never show the lime "ready" dot. */
 .card .head__status.head__status--offline i, .card .head__status.head__status--paused i, .card .head__status.head__status--error i { background: var(--p-muted); box-shadow: none; animation: none; }
