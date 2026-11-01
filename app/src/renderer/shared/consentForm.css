@@ -27,6 +27,14 @@
   font-size: 0.86rem;
   line-height: 1.5;
 }
+/* The 1.0 names-only re-ask: one plain line in the form's own text colour, above the lead. */
+.consent-form__changed {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
 .consent-form__row {
   display: grid;
   grid-template-columns: auto 1fr;

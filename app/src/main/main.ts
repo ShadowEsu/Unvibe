@@ -108,7 +108,7 @@ import {
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
 import { consentStatus, providerInUse } from './consent';
 import { codeConsented, consentStore, sendingSwitchedOff } from './consentStore';
-import { agreedItems, FIRST_RUN_SAMPLE, reviewCapture } from '../core/consent';
+import { agreedItems, FIRST_RUN_SAMPLE, isConsentProvider, namesOnlyReask, reviewCapture } from '../core/consent';
 import { shortcutKeys } from '../core/shortcutKeys';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
@@ -851,6 +851,8 @@ app.whenReady().then(() => {
 
   // --- consent before the user's own code is sent (BOSS ledger 299) ---
   ipcMain.handle('consent:status', () => consentStatus());
+  // The form's "What changed" line: only for an agreement under the names-only bump's old policy.
+  ipcMain.handle('consent:namesOnly', (_e, provider: unknown) => isConsentProvider(provider) && namesOnlyReask(consentStore().all(), provider));
   // Only a form with all three boxes exactly true, naming a provider Unvibe knows, is an agreement;
   // the time is set here, not by the renderer.
   ipcMain.handle('consent:agree', (_e, form: unknown) => {

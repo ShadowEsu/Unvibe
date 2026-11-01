@@ -37,6 +37,12 @@ export function ConsentForm({
   const id = useId();
   const ready = aiSend && terms && age18;
   const text = (value: string) => consentText(value, provider, platformAttr);
+  const [namesOnly, setNamesOnly] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void window.unvibe.consentNamesOnly(provider).then((value) => { if (live) setNamesOnly(value); });
+    return () => { live = false; };
+  }, [provider]);
 
   const submit = async () => {
     if (saving) return;
@@ -60,6 +66,7 @@ export function ConsentForm({
   return (
     <section className="consent-form" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="consent-form__title">{CONSENT_COPY.title}</h2>
+      {namesOnly && <p className="consent-form__changed">{CONSENT_COPY.changed}</p>}
       <p className="consent-form__lead">
         {text(provider === 'unvibe' ? CONSENT_COPY.leadUnvibe : CONSENT_COPY.leadOwnKey)} {text(CONSENT_COPY.secrets)}
       </p>

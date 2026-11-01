@@ -50,6 +50,8 @@ export const CONSENT_COPY = {
     'You chose your own {provider} key, so the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Ask Vibe chat messages go from {device} straight to {provider}, under your account with them.',
   secrets: 'Unvibe looks for keys and tokens on {device} first and stops, or asks you, before sending one. Nothing has been sent yet.',
   device: { mac: 'this Mac', win: 'this PC', other: 'this computer' },
+  /** Shown only when namesOnlyReask() is true: the person agreed to the same sends under 2026-10-30. */
+  changed: 'What changed: new names only. Unvibe sends the same things as before.',
   aiSend: 'Send my code and questions to {provider} to explain them',
   termsBefore: 'I agree to the ',
   terms: 'Terms',
@@ -87,6 +89,25 @@ export function aiSendAllowed(records: readonly ConsentRecord[], provider: Conse
     latest
     && !latest.revokedAt
     && latest.policyVersion === version
+    && CONSENT_ITEMS.every((item) => latest.items.includes(item)),
+  );
+}
+
+/**
+ * The 1.0.0 bump changed names only ("Ask Vibe chat messages", "this Mac"), so someone whose newest
+ * agreement for `provider` is the 2026-10-30 one, still on, sees CONSENT_COPY.changed (Security R1).
+ * Older agreements were to Google Gemini, so "the same things as before" would be false for them;
+ * switched-off people and first-timers see the plain form. Any later bump turns the line off.
+ */
+export const NAMES_ONLY_BUMP = { from: '2026-10-30', to: '1.0.0' } as const;
+
+export function namesOnlyReask(records: readonly ConsentRecord[], provider: ConsentProvider, version: string = POLICY_VERSION): boolean {
+  if (version !== NAMES_ONLY_BUMP.to) return false;
+  const latest = [...records].reverse().find((record) => record.provider === provider);
+  return Boolean(
+    latest
+    && !latest.revokedAt
+    && latest.policyVersion === NAMES_ONLY_BUMP.from
     && CONSENT_ITEMS.every((item) => latest.items.includes(item)),
   );
 }

@@ -122,6 +122,8 @@ const api = {
 
   // consent before the user's own code is sent: status, the three-box form, the off switch
   consentStatus: (): Promise<ConsentStatus> => ipcRenderer.invoke('consent:status'),
+  /** True when this ask is the 1.0 names-only re-ask for `provider` (the form adds "What changed"). */
+  consentNamesOnly: (provider: ConsentProvider): Promise<boolean> => ipcRenderer.invoke('consent:namesOnly', provider),
   consentAgree: (form: { aiSend: boolean; terms: boolean; age18: boolean; provider: ConsentProvider }): Promise<ConsentAnswer> =>
     ipcRenderer.invoke('consent:agree', form),
   consentRevoke: (): Promise<ConsentAnswer> => ipcRenderer.invoke('consent:revoke'),

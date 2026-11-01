@@ -27,6 +27,7 @@ import {
   consentText,
   FIRST_RUN_SAMPLE,
   isFirstRunSamplePayload,
+  namesOnlyReask,
   reviewCapture,
   POLICY_VERSION,
   switchedOff,
@@ -104,7 +105,7 @@ test('CC-3 and U-G3: the consent words and the server\'s AI provider are pinned 
   // (Security R1). If the server's provider changes (web/src/ai, set by the API's environment), change
   // CONSENT_PROVIDERS.unvibe, bump the version and pin both here.
   const pinned: Record<string, { copy: string; server: string }> = {
-    '1.0.0': { copy: '5d24eb652c116fc4', server: 'Anthropic (Claude)' },
+    '1.0.0': { copy: '542a02b7b167e8fc', server: 'Anthropic (Claude)' },
   };
   const hash = createHash('sha256').update(JSON.stringify(CONSENT_COPY)).digest('hex').slice(0, 16);
   assert.deepEqual({ copy: hash, server: CONSENT_PROVIDERS.unvibe }, pinned[POLICY_VERSION], 'consent changed: bump POLICY_VERSION and pin it');
@@ -167,6 +168,19 @@ test('someone who switched sending off before a policy bump stays off and is not
   assert.equal(switchedOff([before]), true, 'still switched off under the new version');
   assert.equal(aiSendAllowed([before], 'unvibe'), false);
   assert.deepEqual(shortcutKeys('Control+Alt+U', true, switchedOff([before])), [], 'no shortcuts until they agree again');
+});
+
+test('"What changed" shows only to someone still agreed under 2026-10-30, for that provider', () => {
+  const at = '2026-10-31T08:00:00.000Z';
+  const claude: ConsentRecord = { items: [...CONSENT_ITEMS], provider: 'unvibe', policyVersion: '2026-10-30', agreedAt: at };
+  assert.equal(namesOnlyReask([claude], 'unvibe'), true, 'agreed to the same sends under 2026-10-30');
+  assert.equal(namesOnlyReask([], 'unvibe'), false, 'a first-timer sees the plain form');
+  assert.equal(namesOnlyReask([{ ...claude, policyVersion: '2026-10-28' }], 'unvibe'), false, 'the Google Gemini agreement: "same as before" would be false');
+  assert.equal(namesOnlyReask([{ ...claude, revokedAt: at }], 'unvibe'), false, 'switched off');
+  assert.equal(namesOnlyReask([{ ...claude, items: ['ai_send', 'terms'] }], 'unvibe'), false, 'an incomplete agreement');
+  assert.equal(namesOnlyReask([claude], 'anthropic'), false, 'another provider was never agreed to');
+  assert.equal(namesOnlyReask([claude, { ...claude, policyVersion: '2026-10-28' }], 'unvibe'), false, 'the newest record counts');
+  assert.equal(namesOnlyReask([claude], 'unvibe', '2099-01-01'), false, 'a later policy bump turns the line off');
 });
 
 test('CC-6: only the verbatim built-in sample, with nothing added, is exempt', () => {
