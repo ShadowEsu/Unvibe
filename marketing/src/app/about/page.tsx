@@ -16,7 +16,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default function AboutPage() {
-  // Version releases on the change log (/releases renders the same entries).
+  // Version releases on the changelog (/releases renders the same entries).
   const releases = changelogEntries().filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   return (
     <article className="founder-about">
@@ -60,7 +60,7 @@ export default function AboutPage() {
         <article className="founder-about__card">
           <h2>How we build it</h2>
           <ul>
-            <li>We ship small releases often and list every one on the <Link href="/releases">change log</Link>. {releases}+ releases so far.</li>
+            <li>We ship small releases often and list every one on the <Link href="/releases">changelog</Link>. {releases}+ releases so far.</li>
             <li>Every explanation is generated live by cloud AI after a secret scan on your computer. The <Link href="/privacy">privacy page</Link> says exactly what is sent.</li>
             <li>Free: {SIGNED_OUT_ALLOWANCE}, then {FREE_MONTHLY_ALLOWANCE} when you sign in. No card, no API key.</li>
           </ul>

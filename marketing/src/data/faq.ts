@@ -21,9 +21,9 @@ export interface FaqItem {
 
 export const faqCategories: Record<FaqItem["category"], string> = {
   product: "Product",
-  privacy: "Privacy & data",
+  privacy: "Privacy and data",
   platform: "Platforms",
-  pricing: "Access & pricing",
+  pricing: "Access and pricing",
 };
 
 const { mac, windows } = SHORTCUTS;

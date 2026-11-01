@@ -50,7 +50,7 @@
 
 @media (max-width: 480px) {
   .vhero__backing-programs, .vhero__trust-item { display: block; }
-  .vhero__backing-separator, .vhero__trust-separator { display: none; }
+  .vhero__backing-separator { display: none; }
 }
 
 @media (max-width: 360px) {

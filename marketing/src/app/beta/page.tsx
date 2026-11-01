@@ -101,7 +101,7 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>macOS won’t open Unvibe the first time</summary>
               <p>
-                Unvibe is not notarized by Apple yet, so macOS blocks the first open. Do this once:
+                Unvibe is not verified by Apple yet, so macOS blocks the first open. Do this once:
               </p>
               <ol>
                 <li>Press <strong>Done</strong> on the warning.</li>

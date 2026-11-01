@@ -18,7 +18,7 @@ const product = [
   ["Code explainer for Windows", "/code-explainer-windows"],
   ["Download", "/beta"],
   ["Pricing", "/pricing"],
-  ["Change log", "/releases"],
+  ["Changelog", "/releases"],
   ["Install help", "/install-help"],
   ["Resources", "/resources"],
 ];
@@ -66,7 +66,7 @@ export function Footer() {
         <p>© {new Date().getFullYear()} Unvibe.</p>
         {/* This site's own shortcuts (SitePalette, SelectionExplain), not the desktop app's. */}
         <p className="paper-footer__status" ref={statusRef}>
-          <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows · Press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> / <kbd>Ctrl+U</kbd>
+          <span className="paper-footer__dot" aria-hidden="true" /> Live for Mac and Windows. Press <kbd>⌘K</kbd> or <kbd>Ctrl+K</kbd> to search this site, or select text here and press <kbd>⌘U</kbd> or <kbd>Ctrl+U</kbd>
         </p>
       </div>
     </footer>
