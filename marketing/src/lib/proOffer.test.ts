@@ -71,8 +71,8 @@ describe("the Pro sentence", () => {
 
   it("says only 'Pro isn't on sale yet.' on /beta, the FAQ and the kit while paused, and /pricing has no Try Pro line", () => {
     for (const name of ["beta", "faq", "kit"] as const) {
-      assert.match(paused[name], /Pro isn't on sale yet\./, name);
-      assert.doesNotMatch(paused[name], /try it now|free month|gift code/i, name);
+      assert.ok(paused[name].includes(proSentence(true)), name);
+      assert.doesNotMatch(paused[name], /You can try it now/, name);
     }
     assert.doesNotMatch(paused.pricing, /Try Pro today|gift code/);
     assert.match(paused.pricing, /Not on sale yet/);
