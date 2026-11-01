@@ -308,6 +308,28 @@ test('streamed token, done and error events reach the panel with only their chec
   }
 });
 
+test("the service's error is the last word: a stream that ends on it shows that message, not the cut-off notice", async () => {
+  const { win, events } = panel();
+  reviewEvents = [{ type: 'error', message: 'AI features are paused for maintenance. Back soon.' }];
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.deepEqual(events.filter((ev) => ev.type === 'error').map((ev) => ev.message), ['AI features are paused for maintenance. Back soon.']);
+});
+
+test('a stream that stops with neither done nor an error still says it was cut off', async () => {
+  const { win, events } = panel();
+  reviewEvents = [{ type: 'token', text: 'Half an' }];
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.deepEqual(events.filter((ev) => ev.type === 'error').map((ev) => ev.message), ['The explanation ended before it was complete. Please try again.']);
+});
+
 test('Test me asks quick-check, scenario, recall, then makes no fourth request', async () => {
   received.length = 0;
   const { win, events } = panel();
