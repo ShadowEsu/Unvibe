@@ -66,7 +66,7 @@ describe("pricing copy while payments are closed", () => {
     const pro = planCard(false, "pro");
     assert.doesNotMatch(pro, /<a |<button/);
     assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
-    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, and each friend you invite adds one\.<\/p>/);
+    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, plus a month for each friend who enters your gift code in the app \(up to five\)\.<\/p>/);
     assert.doesNotMatch(pro, /Pro isn&#x27;t on sale yet/);
     // Free keeps its download, Teams its email.
     assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);

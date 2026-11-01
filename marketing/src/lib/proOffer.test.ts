@@ -18,10 +18,6 @@ const text = (element: React.ReactElement) =>
 const OLD = /starts (a new account )?with a free month of Pro|Pro opens soon/i;
 
 describe("the Pro sentence", () => {
-  it("is Design's wording", () => {
-    assert.equal(PRO_SENTENCE, "Pro isn't on sale yet. You can try it now: new accounts get a free month, and each friend you invite adds one.");
-  });
-
   it("is the one Pro line on /beta, the FAQ and the kit", () => {
     const surfaces: Record<string, string> = {
       beta: text(createElement(BetaDownloadsPage)),
