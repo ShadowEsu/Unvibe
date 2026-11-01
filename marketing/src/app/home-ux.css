@@ -47,6 +47,6 @@
 .plans-strip__price { font: 800 clamp(2rem, 3.4vw, 2.6rem)/1 var(--font-display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .plans-strip__price small { font: 500 1rem var(--font-sans); letter-spacing: 0; color: var(--u-text-2); }
 .plans-strip__note { color: var(--u-text-2); line-height: 1.45; }
-.plans-strip__list { display: grid; gap: 0.45rem; padding-left: 1.2rem !important; line-height: 1.45; }
+.plans-strip__list { display: grid; gap: 0.45rem; padding: 0 !important; list-style: none; line-height: 1.45; }
 .plans-strip__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); text-align: center; }
 .plans-strip__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
