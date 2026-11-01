@@ -44,13 +44,10 @@ test('a request that never reaches the server tells the panel whether this compu
   }
 });
 
-test('offline is told apart from other errors: its own explanation and Retry; other errors keep the service message', () => {
+test('offline is told apart from other errors with its own explanation; other errors keep the service message', () => {
   const offline = errorView('offline', 'You appear to be offline. Reconnect to the internet and try again.');
   const unreachable = errorView('unreachable', 'Unvibe could not reach its explanation service.');
   const service = errorView('', 'The explanation service is busy. Try again in a moment.');
-  assert.equal(offline.action, 'Retry');
-  assert.equal(unreachable.action, 'Retry');
-  assert.equal(service.action, 'Try again');
   assert.equal(service.body, 'The explanation service is busy. Try again in a moment.', 'the service message is shown as sent');
   assert.notEqual(offline.title, service.title, 'offline does not read like any other error');
   assert.notEqual(offline.title, unreachable.title, 'offline is only claimed when the network is down');

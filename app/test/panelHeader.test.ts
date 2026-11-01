@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import { PanelHeader } from '../src/renderer/widget/panelHeader';
+import { focusQuietly } from '../src/renderer/widget/panelModel';
 
 const noop = () => {};
 
@@ -29,4 +30,13 @@ test('the panel header has the status, the count, collapse and close, and no oth
     assert.match(html, /class="head__usage"[^>]*>29\b/, 'the count stays');
     assert.equal((html.match(/<(input|select|textarea|a)\b/g) ?? []).length, 0);
   }
+});
+
+test('first focus moves to the explanation without its ring or a scroll jump; the ring is for keyboard focus', () => {
+  const calls: FocusOptions[] = [];
+  focusQuietly({ focus: (options) => { calls.push(options ?? {}); } });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0], { preventScroll: true, focusVisible: false });
+  focusQuietly(null);
+  assert.equal(calls.length, 1, 'no explanation yet: nothing is focused');
 });

@@ -1694,13 +1694,14 @@ code.inline {
    (left-aligned at their own width); the right slot takes the rest of the row, at least 112px, so
    Stop generating and the saved note swap there without moving them. They only shrink, with an
    ellipsis, on a panel too narrow for all four. Until the explanation has finished, the buttons are
-   dimmed and flat (not pressable keys). The old 12px chip margin is dropped: the row's gap spaces them. */
+   dimmed by opacity only: they keep their border and key shadow, so nothing shifts when they turn on
+   (Design R3). The old 12px chip margin is dropped: the row's gap spaces them. */
 .card .foot .actions-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; }
 .card .foot .actions-row > .chip { flex: 0 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .actions-row__right { flex: 1 0 112px; min-width: 0; display: flex; justify-content: flex-end; overflow: hidden; }
 .card .actions-row__right .local-save-note, .card .actions-row__right .mock-note { margin-left: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .actions-row__right .chip--stop { max-width: 100%; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card .foot .actions-row .chip:disabled { opacity: 0.45; box-shadow: none; transform: none; cursor: default; }
+.card .foot .actions-row .chip:disabled { opacity: 0.45; transform: none; cursor: default; }
 
 /* Design A4, P10: Offline, Paused and Error never show the lime "ready" dot. */
 .card .head__status.head__status--offline i, .card .head__status.head__status--paused i, .card .head__status.head__status--error i { background: var(--p-muted); box-shadow: none; animation: none; }

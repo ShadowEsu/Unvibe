@@ -176,3 +176,17 @@ test('a consent Continue that cannot be pressed yet is dimmed to 40% with no key
     assert.equal(painted(look, targets, 'box-shadow'), 'none');
   }
 });
+
+test('action buttons waiting for the explanation are dimmed by opacity only: same border, shadow and size as when they turn on', () => {
+  const disabled = ['.chip:disabled', '.card .foot .actions-row .chip:disabled'];
+  for (const look of LOOKS) {
+    for (const kind of ['chip--ok', 'chip--diff', 'chip--test']) {
+      const enabled = ['.chip', '.card .chip', `.${kind}`, `.card .${kind}`, '.card .foot .actions-row > .chip'];
+      for (const prop of ['border', 'border-width', 'border-style', 'border-color', 'border-radius', 'box-shadow', 'padding', 'min-height', 'font-size']) {
+        assert.equal(cascade(look, [...enabled, ...disabled], prop), cascade(look, enabled, prop), `${kind} ${prop} for ${JSON.stringify(look)}`);
+      }
+      const opacity = Number(cascade(look, [...enabled, ...disabled], 'opacity'));
+      assert.ok(opacity < 1, `${kind} is dimmed for ${JSON.stringify(look)}`);
+    }
+  }
+});
