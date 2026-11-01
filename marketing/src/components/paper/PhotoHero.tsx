@@ -5,6 +5,7 @@ import { DownloadLink } from "@/components/paper/DownloadLink";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
 import { track } from "@/lib/analytics";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 import { compensationProgramCount, compensationTotalLabel, compensationTotalPhrase, startupPrograms } from "@/data/compensation";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
@@ -90,8 +91,9 @@ function EmailMeLink() {
   );
 }
 
-/** A way to see a real explanation before installing anything. */
+/** A way to see a real explanation before installing anything. Gone while Try it is paused. */
 function TryInBrowser({ device }: { device: VisitorDevice }) {
+  if (AI_MAINTENANCE) return null;
   return (
     <a className="vhero__try" href="#try-it" onClick={() => track("hero_try_clicked", { device })}>
       Or try it online first

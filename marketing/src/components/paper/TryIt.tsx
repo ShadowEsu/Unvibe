@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Vibe } from "@/components/paper/Vibe";
-import { DownloadRow } from "@/components/paper/DownloadLink";
+import { DownloadLink, DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
-import { detectVisitorDevice } from "@/lib/shortcuts";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
+import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
 import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, type TryConsentTicks } from "@/lib/tryConsent";
 import type { DownloadSurface } from "@/lib/downloadTracking";
@@ -31,12 +33,8 @@ const SAMPLE = `function debounce(fn, ms) {
 
 const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
-/**
- * The outage switch (BOSS 31 Oct): NEXT_PUBLIC_AI_MAINTENANCE=1 at build time, set together with the
- * API's AI_MAINTENANCE=1, says so up front and keeps the demo from sending anything.
- */
-const AI_MAINTENANCE = process.env.NEXT_PUBLIC_AI_MAINTENANCE?.trim() === "1";
-const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
+/** While the outage switch is on (see aiMaintenance.ts) the box sends nothing and points at the app. */
+const AI_MAINTENANCE_NOTE = "Online Try it is paused today. The app works as normal.";
 
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
 function render(text: string): string {
@@ -102,7 +100,8 @@ export function TryIt({
   const [shown, setShown] = useState("");
   const [error, setError] = useState("");
   const [note, setNote] = useState(0);
-  const [phone, setPhone] = useState(false);
+  const [device, setDevice] = useState<VisitorDevice>("mac");
+  const phone = device === "phone";
   // Request start to the whole answer received, for the last explanation that succeeded.
   const [tookMs, setTookMs] = useState(0);
   // Both boxes start unticked; a tick of the current consent version is remembered in localStorage.
@@ -116,7 +115,7 @@ export function TryIt({
   const [roomNotOpen, setRoomNotOpen] = useState(false);
 
   useEffect(() => {
-    setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone");
+    setDevice(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints));
     setRoomField(new URLSearchParams(window.location.search).has("room"));
     try {
       setTicks(storedTryConsent(localStorage.getItem(TRY_CONSENT_KEY)));
@@ -164,8 +163,8 @@ export function TryIt({
   }, [answer]);
 
   const explain = async (depth: Level = level) => {
-    // Nothing is sent to Anthropic until both boxes are ticked.
-    if (!consented) return;
+    // Nothing is sent to Anthropic until both boxes are ticked, and nothing at all while paused.
+    if (AI_MAINTENANCE || !consented) return;
     setState("thinking");
     setError("");
     setRoomNotOpen(false);
@@ -306,6 +305,13 @@ export function TryIt({
               <p role={AI_MAINTENANCE ? "status" : undefined}>
                 {AI_MAINTENANCE ? AI_MAINTENANCE_NOTE : <>Press <b>Explain it</b> for the sample, or paste your own code first.</>}
               </p>
+              {AI_MAINTENANCE ? (
+                <DownloadLink
+                  href={device === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD}
+                  platform={device === "windows" ? "windows" : "mac"}
+                  surface={errorSurface}
+                />
+              ) : null}
             </div>
           ) : state === "thinking" ? (
             <div className="try__state try__state--thinking" aria-hidden="true">
