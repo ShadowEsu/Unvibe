@@ -24,7 +24,16 @@ export default function BetaDownloadsPage() {
   return (
     <article className="beta-page">
       <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
+        {/* The band is about 208 px tall at 1440, so it gets a 1440x420 crop (78 KB) and a 780 wide copy for phones
+            (57 KB) instead of the 367 KB 1600 px photo. It is the first thing on the page, so it loads first. React 18
+            only passes the lowercase attribute through. */}
+        <img
+          src="/hero/golden-gate-band-1440x420.webp"
+          srcSet="/hero/golden-gate-band-780x545.webp 780w, /hero/golden-gate-band-1440x420.webp 1440w"
+          sizes="100vw"
+          alt=""
+          {...{ fetchpriority: "high" }}
+        />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Free for Mac and Windows</p>
