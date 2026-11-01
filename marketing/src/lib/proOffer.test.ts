@@ -22,10 +22,9 @@ describe("the Pro sentence", () => {
     assert.equal(PRO_SENTENCE, "Pro isn't on sale yet. You can try it now: new accounts get a free month, and each friend you invite adds one.");
   });
 
-  it("is the one Pro line on /beta, the home invite section, the FAQ and the kit", () => {
+  it("is the one Pro line on /beta, the FAQ and the kit", () => {
     const surfaces: Record<string, string> = {
       beta: text(createElement(BetaDownloadsPage)),
-      invite: text(createElement(InviteFriend)),
       faq: faqItems.find((item) => item.id === "pro-annual")?.answer ?? "",
       kit: kitMarkdown(),
     };
@@ -34,5 +33,13 @@ describe("the Pro sentence", () => {
       assert.doesNotMatch(copy, OLD, name);
       assert.doesNotMatch(copy, /Try Pro today/, name);
     }
+  });
+
+  it("the home invite says Pro isn't on sale, the free month, and that a link alone adds nothing", () => {
+    const invite = text(createElement(InviteFriend));
+    assert.match(invite, /Pro isn't on sale yet\. New accounts get a free month of Pro, and each friend you invite adds one\./);
+    assert.match(invite, /A link alone adds no Pro months\./);
+    assert.doesNotMatch(invite, OLD);
+    assert.equal(invite.match(/on sale/g)?.length, 1, "said once");
   });
 });
