@@ -6,6 +6,7 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
 import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, type TryConsentTicks } from "@/lib/tryConsent";
@@ -31,11 +32,7 @@ const SAMPLE = `function debounce(fn, ms) {
 
 const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
-/**
- * The outage switch (BOSS 31 Oct): NEXT_PUBLIC_AI_MAINTENANCE=1 at build time, set together with the
- * API's AI_MAINTENANCE=1, says so up front and keeps the demo from sending anything.
- */
-const AI_MAINTENANCE = process.env.NEXT_PUBLIC_AI_MAINTENANCE?.trim() === "1";
+/** While the outage switch is on (see aiMaintenance.ts) the box says so and sends nothing. */
 const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
 
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
@@ -164,8 +161,8 @@ export function TryIt({
   }, [answer]);
 
   const explain = async (depth: Level = level) => {
-    // Nothing is sent to Anthropic until both boxes are ticked.
-    if (!consented) return;
+    // Nothing is sent to Anthropic until both boxes are ticked, and nothing at all while paused.
+    if (AI_MAINTENANCE || !consented) return;
     setState("thinking");
     setError("");
     setRoomNotOpen(false);
