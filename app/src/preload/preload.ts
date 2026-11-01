@@ -60,6 +60,8 @@ const api = {
   pickProjectRoot: () => ipcRenderer.invoke('project:pickRoot'),
   reviewQueue: (limit: number) => ipcRenderer.invoke('learning:queue', limit),
   learningToday: () => ipcRenderer.invoke('learning:today'),
+  /** Today's week sentence: counts from the last 7 days (rolling). */
+  learningWeek: () => ipcRenderer.invoke('learning:week'),
   reopenLearningItem: (item: unknown) => ipcRenderer.invoke('review:reopenItem', item),
   testMe: () => ipcRenderer.send('widget:testMe'),
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),

@@ -29,7 +29,7 @@ import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { CHANGE_BRIEF, HOSTED_AI, NOT_NOW, PAGE_NAMES } from './names';
 import { bottomRightSlot, scrollEndPadding } from './layout';
-import { todayFirstRun, weekSentence } from './today';
+import { todayFirstRun, weekSentence, type TodayCounts } from './today';
 import { SETUP_STEP_LABELS, setupForward, setupSteps, type SetupStep } from './onboardingFlow';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
@@ -908,8 +908,10 @@ function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: str
   return { text: 'Stale', tone: 'stale' };
 }
 
-function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
+function Home({ shortcut, userName, profile, week: weekCounts, today, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
   onTryVoice: () => void;
+  /** Counts from the last 7 days, rolling (`learning:week`). */
+  week: TodayCounts | null;
   today: TodayGoal | null;
   shortcut: string;
   userName?: string;
@@ -954,12 +956,10 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
   ];
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
-  const concepts = (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0);
-  // Design C1: the week's numbers as one sentence (no streak); first-run cards only while Today is empty.
+  // Design C1: the week's numbers as one sentence (no streak); first-run cards only while nothing was
+  // ever explained (all-time profile), so a quiet week never brings the first-run banner back.
   const firstRun = todayFirstRun(profile);
-  const week = profile && !firstRun.explainBanner
-    ? weekSentence({ explanations: profile.reviews, linesExplained: profile.linesReviewed, linesUnderstood: profile.linesUnderstood, concepts })
-    : '';
+  const week = profile && weekCounts && !firstRun.explainBanner ? weekSentence(weekCounts) : '';
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
   const note = explainDisabled ? 'Out of explanations this month. Catch you soon.'
     : brief ? 'You changed some code. Want the story?'
@@ -1844,6 +1844,7 @@ function App() {
   const [history, setHistory] = useState<LearningItem[]>([]);
   const [queue, setQueue] = useState<LearningItem[]>([]);
   const [today, setToday] = useState<TodayGoal | null>(null);
+  const [week, setWeek] = useState<TodayCounts | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
@@ -1868,7 +1869,7 @@ function App() {
 
   const refresh = async () => {
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
+      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo, ownCode, weekCounts] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.feed(8) as Promise<FeedItem[]>,
@@ -1880,8 +1881,9 @@ function App() {
         window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
         window.unvibe.ownCodeStep(),
+        window.unvibe.learningWeek() as Promise<TodayCounts>,
       ]);
-      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
+      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setWeek(weekCounts); setSettings(st); setSync(syncState);
       setOwnCodeStep(ownCode);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
@@ -2194,7 +2196,7 @@ function App() {
           {/* --ask-clearance repeats the padding for pages whose content overflows a shrunk flex child (Briefs). */}
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} style={askBarShown ? { paddingBottom: scrollEndPadding(askBarHeight), '--ask-clearance': `${scrollEndPadding(askBarHeight)}px` } as React.CSSProperties : undefined} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} week={week} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}

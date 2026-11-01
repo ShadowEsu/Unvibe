@@ -165,6 +165,26 @@ export function computeToday(events: LocalEvent[], now: Date): TodayGoal {
   return { explained: explainedDays.has(today), answered: answeredDays.has(today) };
 }
 
+/** Today's week sentence counts (Design C1). */
+export interface WeekCounts {
+  explanations: number;
+  linesExplained: number;
+  linesUnderstood: number;
+}
+
+export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The last 7 days, rolling (now minus 7 × 24 h), counted by computeProfile on only those events.
+ * No concept count: a concept's state (Familiar, Strong) is derived from its whole history, so a
+ * weekly count would either mix in older evidence or report states the concept isn't in.
+ */
+export function computeWeek(events: LocalEvent[], now: Date): WeekCounts {
+  const since = now.getTime() - WEEK_MS;
+  const profile = computeProfile(events.filter((e) => Date.parse(e.ts) >= since), localDayKey(now));
+  return { explanations: profile.reviews, linesExplained: profile.linesReviewed, linesUnderstood: profile.linesUnderstood };
+}
+
 const APP_BUCKETS: Array<{ label: string; re: RegExp }> = [
   { label: 'Editors & IDEs', re: /code|cursor|vscode|xcode|jetbrains|intellij|webstorm|pycharm|goland|rubymine|clion|sublime|\bvim\b|neovim|nova|\bzed\b|atom|fleet|android studio/i },
   { label: 'Terminal', re: /terminal|iterm|warp|kitty|alacritty|tmux|hyper|wezterm/i },

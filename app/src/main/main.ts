@@ -86,7 +86,7 @@ import {
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, computeWeek, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
 import { installHardening } from './hardening';
@@ -1122,6 +1122,7 @@ app.whenReady().then(() => {
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
   ipcMain.handle('learning:today', () => computeToday(store().events(), new Date()));
+  ipcMain.handle('learning:week', () => computeWeek(store().events(), new Date()));
   ipcMain.handle('learning:item', (_e, id: string) => {
     const event = store().eventById(id);
     if (!event) return null;
