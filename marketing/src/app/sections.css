@@ -12,6 +12,18 @@
 .home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-wrap: pretty; }
 .home-langs .paper-text-link { font-size: inherit; text-decoration: underline; text-underline-offset: 0.18em; }
 
+/* Standalone text links get a 32 px tall target (Design W21): the language links, which wrap as whole
+   items instead of breaking mid-name, /beta's "Show me how", the download card's "Show me how" and
+   the closing card's "Install steps and requirements". */
+.home-langs .paper-text-link,
+.beta-page__steps-list p > a.paper-text-link,
+.paper-beta__update > a,
+.paper-invite__card .paper-caption > a {
+  display: inline-block;
+  padding-block: 6px;
+  line-height: 20px;
+}
+
 /* ── Try it: editor on the left, Vibe panel on the right ── */
 .try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .try__editor { background: #151514; }
