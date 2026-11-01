@@ -31,13 +31,23 @@ describe("pricing copy while payments are closed", () => {
     assert.doesNotMatch(text, /upgrade|renew|plan page|checkout|\bbuy\b|subscribe|cancel|lifetime/i);
   });
 
-  it("says Pro and Teams open soon and Free works today", () => {
+  it("says 'soon' once, in the heading, and each paid card says Not on sale yet", () => {
     assert.match(closed.heading.lead + closed.heading.emphasis + closed.heading.tail, /^Start free today\. Pro and Teams open soon\.$/);
-    const pro = closed.plans.find((plan) => plan.id === "pro");
-    assert.equal(pro?.detail, "One developer account. Pro opens soon. Your Free plan keeps working until then.");
-    assert.match(closed.plans.find((plan) => plan.id === "teams")?.detail ?? "", /Teams opens soon/);
+    const page = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: false })).replace(/<[^>]+>/g, " ");
+    assert.equal(page.match(/soon/gi)?.length, 1, page);
+    for (const id of ["pro", "teams"]) assert.match(planCard(false, id), /<p class="plan-note">Not on sale yet<\/p>/, id);
+    assert.equal(closed.plans.find((plan) => plan.id === "pro")?.detail, "One developer account. Your Free plan keeps working until then.");
     assert.match(closed.disclosure, /not on sale yet, so nothing is billed today/);
     assert.match(closed.termsNote ?? "", /^Pro and Teams are not on sale yet\. Until they open, nothing is billed and your Free plan keeps working\.$/);
+  });
+
+  it("has no Monthly/Annual toggle; each paid card states both prices in one line", () => {
+    const markup = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: false }));
+    assert.doesNotMatch(markup, /radiogroup|pricing-toggle/);
+    const line = (id: string) => planCard(false, id).replace(/<[^>]+>/g, "").match(/\$\d+ a (seat a )?month, or \$\d+ a year/)?.[0];
+    assert.equal(line("pro"), `$${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year`);
+    assert.equal(line("teams"), `$${PRICING.teamsSeatMonthly} a seat a month, or $${PRICING.teamsSeatAnnual} a year`);
+    assert.match(renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: true })), /role="radiogroup" aria-label="Billing interval"/);
   });
 
   it("keeps the real prices visible", () => {

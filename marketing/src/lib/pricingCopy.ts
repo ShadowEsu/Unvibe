@@ -81,8 +81,8 @@ const CLOSED: PricingCopy = {
   description: `Unvibe is free to download and use, with no card. Pro adds the Expert depth for $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year; payments open soon.`,
   plans: [
     free,
-    { id: "pro", name: "Pro", badge: "Opens soon", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Pro opens soon. Your Free plan keeps working until then.", features: FEATURES.pro, after: "Try Pro today: a new account gets a free month, and each friend you invite adds one.", cta: null, href: null, featured: true, primary: false },
-    { id: "teams", name: "Teams", badge: "Opens soon", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Teams opens soon. Until then, founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: "Try Pro today: a new account gets a free month, and each friend you invite adds one.", cta: null, href: null, featured: true, primary: false },
+    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", note: "Not on sale yet", detail: `Founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
   disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
   termsNote: "Pro and Teams are not on sale yet. Until they open, nothing is billed and your Free plan keeps working.",

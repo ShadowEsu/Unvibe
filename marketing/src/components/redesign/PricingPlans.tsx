@@ -8,11 +8,18 @@ import { PRICING } from '@/lib/pricing';
 import { pricingCopy } from '@/lib/pricingCopy';
 import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
-type Interval = 'monthly' | 'annual';
+/** 'both': payments closed, so there is nothing to choose; each card states both prices in one line. */
+type Interval = 'monthly' | 'annual' | 'both';
 
 function priceFor(id: string, interval: Interval, fallback: string): { price: string; per: string } {
-  if (id === 'pro') return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
-  if (id === 'teams') return interval === 'annual' ? { price: `$${PRICING.teamsSeatAnnual}`, per: '/seat/year' } : { price: `$${PRICING.teamsSeatMonthly}`, per: '/seat/month' };
+  if (id === 'pro') {
+    if (interval === 'both') return { price: `$${PRICING.proMonthly}`, per: ` a month, or $${PRICING.proAnnual} a year` };
+    return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
+  }
+  if (id === 'teams') {
+    if (interval === 'both') return { price: `$${PRICING.teamsSeatMonthly}`, per: ` a seat a month, or $${PRICING.teamsSeatAnnual} a year` };
+    return interval === 'annual' ? { price: `$${PRICING.teamsSeatAnnual}`, per: '/seat/year' } : { price: `$${PRICING.teamsSeatMonthly}`, per: '/seat/month' };
+  }
   return { price: fallback, per: '' };
 }
 
@@ -25,7 +32,9 @@ export function trackPlanCta(plan: { id: string; href: string | null }): void {
 /** `paymentsOpen` comes from the server (lib/paymentsStatus); closed copy never promises checkout. */
 export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
   const trackedView = useRef(false);
-  const [interval, setBilling] = useState<Interval>('monthly');
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
+  // The Monthly/Annual toggle comes back when checkout opens.
+  const interval: Interval = paymentsOpen ? billing : 'both';
   const copy = pricingCopy(paymentsOpen);
   useEffect(() => {
     if (!trackedView.current) {
@@ -41,22 +50,24 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
         <h1 id="pricing-title">{copy.heading.lead}<em>{copy.heading.emphasis}</em>{copy.heading.tail}</h1>
         <p>Free needs no card and no API key.</p>
       </header>
-      <div className="pricing-toggle" role="radiogroup" aria-label="Billing interval">
-        {(['monthly', 'annual'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={interval === value}
-            className={interval === value ? 'is-on' : undefined}
-            onClick={() => { setBilling(value); track('billing_interval_selected', { interval: value }); }}
-          >
-            {value === 'monthly' ? 'Monthly' : 'Annual'}
-            {value === 'annual' ? <span>Save {PRICING.annualDiscountPercent}%</span> : null}
-          </button>
-        ))}
-        <span className="pricing-toggle__thumb" data-on={interval} aria-hidden="true" />
-      </div>
+      {paymentsOpen ? (
+        <div className="pricing-toggle" role="radiogroup" aria-label="Billing interval">
+          {(['monthly', 'annual'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={interval === value}
+              className={interval === value ? 'is-on' : undefined}
+              onClick={() => { setBilling(value); track('billing_interval_selected', { interval: value }); }}
+            >
+              {value === 'monthly' ? 'Monthly' : 'Annual'}
+              {value === 'annual' ? <span>Save {PRICING.annualDiscountPercent}%</span> : null}
+            </button>
+          ))}
+          <span className="pricing-toggle__thumb" data-on={interval} aria-hidden="true" />
+        </div>
+      ) : null}
       {/* The h1 above is the page heading; this keeps the outline h1 > h2 > h3 for the plan cards. */}
       <h2 className="sr-only">Plans</h2>
       <div className="marketing-plan-grid marketing-plan-grid--core">
