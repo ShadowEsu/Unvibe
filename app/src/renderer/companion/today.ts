@@ -34,3 +34,19 @@ export function weekSentence(counts: TodayCounts): string {
   ].filter(Boolean);
   return `This week: ${parts.join(', ')}.`;
 }
+
+export interface RecentLesson { id: string; title: string; meta: string; ts: string }
+
+/**
+ * Recently understood shows each lesson once (Design P17): the same concept in the same file,
+ * explained again at another depth or with Explain differently, keeps only its latest time.
+ */
+export function distinctLessons(items: readonly RecentLesson[], limit = 5): RecentLesson[] {
+  const latest = new Map<string, RecentLesson>();
+  for (const item of items) {
+    const key = `${item.title.trim().toLowerCase()}\u0000${item.meta}`;
+    const kept = latest.get(key);
+    if (!kept || item.ts > kept.ts) latest.set(key, item);
+  }
+  return [...latest.values()].sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, limit);
+}

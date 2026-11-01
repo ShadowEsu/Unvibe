@@ -29,7 +29,7 @@ import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { CHANGE_BRIEF, HOSTED_AI, NOT_NOW, PAGE_NAMES } from './names';
 import { bottomRightSlot, scrollEndPadding } from './layout';
-import { todayFirstRun, weekSentence, type TodayCounts } from './today';
+import { distinctLessons, todayFirstRun, weekSentence, type TodayCounts } from './today';
 import { SETUP_STEP_LABELS, setupForward, setupSteps, type SetupStep } from './onboardingFlow';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
@@ -940,11 +940,11 @@ function Home({ shortcut, userName, profile, week: weekCounts, today, feed, hist
   const explainDisabled = !!usage && usage.remaining <= 0;
   const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const startReview = () => window.unvibe.companionReview();
-  const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 5);
-  // Until the knowledge index has entries, show the latest saved lessons instead.
-  const saved = savedKnowledge.length
+  const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT');
+  // Until the knowledge index has entries, show the latest saved lessons instead; each lesson once (P17).
+  const saved = distinctLessons(savedKnowledge.length
     ? savedKnowledge.map((item) => ({ id: item.id, title: item.title, meta: item.file || item.repositoryId || item.sourceType, ts: item.updatedAt }))
-    : history.filter((item) => item.outcome !== 'needs_review').slice(0, 5).map((item) => ({ id: item.id, title: item.title, meta: item.file || item.project || item.meta, ts: item.ts }));
+    : history.filter((item) => item.outcome !== 'needs_review').map((item) => ({ id: item.id, title: item.title, meta: item.file || item.project || item.meta, ts: item.ts })));
   const stale = knowledge.filter((item) => item.freshnessStatus !== 'CURRENT').slice(0, 4);
   const briefings = feed.slice(0, 4);
   const learningSteps: Array<{ id: string; title: string; copy: string; icon: string; done: boolean; run: () => void }> = [

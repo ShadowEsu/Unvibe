@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { computeProfile, computeWeek, localDayKey, type LocalEvent } from '../src/core/learning';
-import { todayFirstRun, weekSentence } from '../src/renderer/companion/today';
+import { distinctLessons, todayFirstRun, weekSentence } from '../src/renderer/companion/today';
 
 const NOW = new Date('2026-10-31T19:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
@@ -49,4 +49,18 @@ test('a user whose only explanations are older than 7 days sees "no explanations
   const events = [ev(9), ev(12, { outcome: 'understood' }), ev(20)];
   assert.equal(weekSentence(computeWeek(events, NOW)), 'This week: no explanations yet.');
   assert.deepEqual(todayFirstRun(computeProfile(events, localDayKey(NOW))), { explainBanner: false, voiceCard: false });
+});
+
+test('Recently understood shows each lesson once, at its latest time (Design P17)', () => {
+  const row = (id: string, title: string, meta: string, ts: string) => ({ id, title, meta, ts });
+  const rows = [
+    row('a', 'Debounce', 'utils/debounce.js', '2026-10-31T10:00:00Z'),
+    row('b', 'Debounce', 'utils/debounce.js', '2026-10-31T12:00:00Z'),
+    row('c', 'Retry with backoff', 'lib/upload.js', '2026-10-30T09:00:00Z'),
+    row('d', 'retry with backoff ', 'lib/upload.js', '2026-10-30T08:00:00Z'),
+    row('e', 'Debounce', 'src/search.ts', '2026-10-29T08:00:00Z'),
+  ];
+  assert.deepEqual(distinctLessons(rows).map((r) => r.id), ['b', 'c', 'e'], 'same concept and file once; same concept in another file stays');
+  const many = Array.from({ length: 8 }, (_, i) => row(`m${i}`, `Lesson ${i}`, 'f.js', `2026-10-2${i}T00:00:00Z`));
+  assert.equal(distinctLessons([...many, ...many]).length, 5, 'five distinct lessons, duplicates never use up the five slots');
 });
