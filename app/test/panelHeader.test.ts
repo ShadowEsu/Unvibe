@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import { PanelHeader } from '../src/renderer/widget/panelHeader';
-import { focusQuietly } from '../src/renderer/widget/panelModel';
+import { focusQuietly, QUIET_FOCUS } from '../src/renderer/widget/panelModel';
 
 const noop = () => {};
 
@@ -32,11 +32,39 @@ test('the panel header has the status, the count, collapse and close, and no oth
   }
 });
 
-test('first focus moves to the explanation without its ring or a scroll jump; the ring is for keyboard focus', () => {
-  const calls: FocusOptions[] = [];
-  focusQuietly({ focus: (options) => { calls.push(options ?? {}); } });
-  assert.equal(calls.length, 1);
-  assert.deepEqual(calls[0], { preventScroll: true, focusVisible: false });
+/** Enough of an element for focusQuietly: attributes, listeners, focus. */
+function fakeElement() {
+  const attrs = new Set<string>();
+  const listeners = new Map<string, Set<() => void>>();
+  const focusCalls: FocusOptions[] = [];
+  return {
+    attrs, focusCalls,
+    focus: (options?: FocusOptions) => { focusCalls.push(options ?? {}); },
+    setAttribute: (name: string) => { attrs.add(name); },
+    removeAttribute: (name: string) => { attrs.delete(name); },
+    addEventListener: (type: string, fn: () => void) => { (listeners.get(type) ?? listeners.set(type, new Set()).get(type)!).add(fn); },
+    removeEventListener: (type: string, fn: () => void) => { listeners.get(type)?.delete(fn); },
+    fire: (type: string) => { for (const fn of [...(listeners.get(type) ?? [])]) fn(); },
+    listenerCount: () => [...listeners.values()].reduce((n, set) => n + set.size, 0),
+  };
+}
+
+test('first focus on the explanation has no ring until a key is pressed on it or focus leaves (R4)', () => {
+  const el = fakeElement();
+  focusQuietly(el as unknown as HTMLElement);
+  assert.equal(el.focusCalls.length, 1);
+  assert.equal(el.focusCalls[0]!.preventScroll, true, 'no scroll jump');
+  assert.ok(el.attrs.has(QUIET_FOCUS), 'quiet: the ring is hidden');
+  el.fire('keydown');
+  assert.ok(!el.attrs.has(QUIET_FOCUS), 'a key on it: keyboard use, the ring shows');
+  assert.equal(el.listenerCount(), 0, 'nothing left listening');
+
+  focusQuietly(el as unknown as HTMLElement);
+  assert.ok(el.attrs.has(QUIET_FOCUS));
+  el.fire('blur');
+  assert.ok(!el.attrs.has(QUIET_FOCUS), 'focus left: Tab back to it shows the ring');
+  assert.equal(el.listenerCount(), 0);
+
   focusQuietly(null);
-  assert.equal(calls.length, 1, 'no explanation yet: nothing is focused');
+  assert.equal(el.focusCalls.length, 2, 'no explanation yet: nothing is focused');
 });

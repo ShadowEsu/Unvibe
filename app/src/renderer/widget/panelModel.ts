@@ -129,12 +129,25 @@ export function statusTone(phase: Phase, opts: { limited: boolean; errorCode: st
   return phase;
 }
 
+/** Set on the explanation while it holds focus the panel gave it; widget.css hides the ring for it. */
+export const QUIET_FOCUS = 'data-quiet-focus';
+
+type QuietTarget = Pick<HTMLElement, 'focus' | 'setAttribute' | 'removeAttribute' | 'addEventListener' | 'removeEventListener'>;
+
 /**
- * Moves focus to the explanation without drawing its ring (Design R4): the ring shows only when the
- * person reaches it with the keyboard. `focusVisible` is Chromium's FocusOptions flag, not yet in
- * TypeScript's DOM types.
+ * Moves focus to the explanation without drawing its ring (Design R4). Electron 36's Chromium ignores
+ * FocusOptions.focusVisible and draws the ring on this script focus, so the element is marked until
+ * the person presses a key on it or focus leaves; Tab back to it, or any key on it, shows the ring.
  */
-export function focusQuietly(target: { focus: (options?: FocusOptions) => void } | null): void {
-  const options: FocusOptions & { focusVisible: boolean } = { preventScroll: true, focusVisible: false };
-  target?.focus(options);
+export function focusQuietly(target: QuietTarget | null): void {
+  if (!target) return;
+  target.setAttribute(QUIET_FOCUS, '');
+  const clear = () => {
+    target.removeAttribute(QUIET_FOCUS);
+    target.removeEventListener('keydown', clear);
+    target.removeEventListener('blur', clear);
+  };
+  target.addEventListener('keydown', clear);
+  target.addEventListener('blur', clear);
+  target.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
 }

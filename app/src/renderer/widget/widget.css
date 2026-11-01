@@ -1709,6 +1709,9 @@ code.inline {
 /* Design A9, P5: first focus lands on the explanation, ringed inside its edge; the content area
    that holds focus before any words arrive is a landmark, not a control, so it draws no ring. */
 .card .stage > .body:focus-visible { outline: 2px solid var(--p-focus); outline-offset: -2px; border-radius: 10px; }
+/* Design R4: no ring on the focus the panel itself gives the explanation (panelModel focusQuietly);
+   a key on it, or Tab back to it, clears the mark and the ring above shows. */
+.card .stage > .body[data-quiet-focus]:focus-visible { outline: none; }
 .card .widget-main:focus, .card .widget-main:focus-visible { outline: none; }
 /* The panel look moved out of the header to the foot of the rail, as a smaller tool. */
 .card .widget-tools .tool--look { min-height: 40px; }
