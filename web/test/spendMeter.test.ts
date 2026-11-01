@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { BilledProviderError, ProviderRejectedError, type Completion, type TokenUsage } from '../src/ai/provider';
 import {
+  AI_MAINTENANCE,
   AI_PAUSED,
   AI_PAUSED_TODAY,
   AiPausedError,
@@ -271,6 +272,35 @@ test('production without the meter store refuses every call before any provider 
   assert.ok(error instanceof AiPausedError);
   assert.equal(error.message, AI_PAUSED);
   assert.deepEqual(hosts, []);
+});
+
+test('AI_MAINTENANCE=1 pauses the app, the quiz and Try with the maintenance text; nothing is reserved or sent', async () => {
+  const store = new MemorySpendStore();
+  (globalThis as unknown as { __unvibeSpendMemory?: MemorySpendStore }).__unvibeSpendMemory = store;
+  process.env.AI_MAINTENANCE = '1';
+  const events = (await (await review(appRequest('reviews'))).text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
+  assert.deepEqual(events, [{ type: 'error', message: AI_MAINTENANCE }]);
+  const quiz = await comprehension(appRequest('comprehension'));
+  assert.equal(quiz.status, 503);
+  assert.deepEqual(await quiz.json(), { error: 'ai_paused', message: AI_MAINTENANCE });
+  const demo = await tryRoute(new Request('http://localhost/api/v1/try', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.10' },
+    body: JSON.stringify({ code: 'const a = 1;', consent: { v: TRY_CONSENT_VERSION, aiSend: true, age18: true } }),
+  }));
+  assert.equal(demo.status, 503);
+  assert.deepEqual(await demo.json(), { error: AI_MAINTENANCE });
+  assert.deepEqual(hosts, []);
+  assert.equal(sum(store), 0, 'nothing was reserved');
+});
+
+test('the maintenance switch is off for any value but 1', async () => {
+  for (const value of ['0', 'true', '', ' 2 ']) {
+    process.env.AI_MAINTENANCE = value;
+    const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
+    const { text } = await new MeteredProvider(inner, new MemorySpendStore()).complete('s', 'u');
+    assert.equal(text, 'answer', JSON.stringify(value));
+  }
 });
 
 test('a provider failure quoting a key reaches neither the response nor the log', async () => {
