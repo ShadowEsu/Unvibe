@@ -7,6 +7,7 @@ import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { InviteFriend } from "@/components/paper/InviteFriend";
 import { proSentence, proTryToday } from "./proOffer";
+import { AI_MAINTENANCE_NOTE } from "./aiMaintenance";
 
 Object.assign(globalThis, { React });
 
@@ -76,6 +77,15 @@ describe("the Pro sentence", () => {
     }
     assert.doesNotMatch(paused.pricing, /Try Pro today|gift code/);
     assert.match(paused.pricing, /Not on sale yet/);
+  });
+
+  it("while paused, /pricing (under the plans) and /beta (by the allowance) say AI features are paused; not with AI on", () => {
+    for (const name of ["pricing", "beta"] as const) {
+      assert.equal(paused[name].split(AI_MAINTENANCE_NOTE).length - 1, 1, `${name} paused`);
+      assert.ok(!live[name].includes(AI_MAINTENANCE_NOTE), `${name} live`);
+    }
+    assert.ok(paused.pricing.indexOf(AI_MAINTENANCE_NOTE) > paused.pricing.indexOf("Email about Teams"), "under the plans");
+    assert.ok(paused.beta.indexOf(AI_MAINTENANCE_NOTE) > paused.beta.indexOf("on Free and syncs your history"), "after the allowance");
   });
 
   it("the home invite says Pro isn't on sale, the free month, and that a link alone adds nothing", () => {
