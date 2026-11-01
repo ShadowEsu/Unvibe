@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { Reveal } from "@/components/redesign/Reveal";
 import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
+import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { PRO_SENTENCE } from "@/lib/proOffer";
@@ -54,9 +55,14 @@ export default function BetaDownloadsPage() {
                     your Mac password.
                   </p>
                   <p>
-                    On Windows, keep the download if your browser warns, then run the portable .exe. If you see
-                    “Windows protected your PC”, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
+                    On Windows: {WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected
+                    your PC, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
                     <a className="paper-text-link" href="/install-help">Show me how</a>
+                  </p>
+                  <p>
+                    Check your download against its SHA-256:{" "}
+                    <a className="paper-text-link" href={MAC_SHA256_URL}>Mac</a>,{" "}
+                    <a className="paper-text-link" href={WINDOWS_SHA256_URL}>Windows</a>.
                   </p>
                 </div>
               </li>
