@@ -4,13 +4,16 @@ import { AppTour } from "@/components/paper/AppTour";
 import { DemoDisclosure } from "@/components/paper/DemoDisclosure";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
-/** The real app screens the home page shows, and the version they were captured on. */
+/**
+ * The real app screens the home page shows, each labelled with the version it was captured on (W19).
+ * The 0.1.47 files are QA's real captures (capture/0147: panel Beginner, Test me 2 of 3, Today), as WebP;
+ * Quiz has no 0.1.47 capture yet, so it keeps the earlier screenshot and says so.
+ */
 export const HOME_SCREENS = {
-  label: `Screens from Unvibe ${demo.version} on a ${demo.platform}.`,
-  panel: { src: "/unvibe/real/panel-beginner.webp", width: 880, height: 1131, alt: "The Unvibe panel explaining a debounce function at the Beginner depth" },
-  testMe: { src: "/unvibe/real/panel-test-me.webp", width: 880, height: 1131, alt: "A multiple-choice Test me question about the debounce function" },
-  today: { src: "/unvibe/real/today.webp", width: 1600, height: 849, alt: "The Unvibe Today page with what is due for review and an Up next list" },
-  quiz: { src: "/unvibe/real/quiz.webp", width: 1600, height: 849, alt: "The Unvibe Quick Quiz page listing a saved Debouncing lesson" },
+  panel: { src: "/unvibe/real/0147-panel-beginner.webp", width: 880, height: 1006, version: "0.1.47", alt: "The Unvibe panel explaining a debounce function at the Beginner depth" },
+  testMe: { src: "/unvibe/real/0147-test-me.webp", width: 880, height: 1006, version: "0.1.47", alt: "Test me, question 2 of 3: what happens if you delete clearTimeout from the debounce function" },
+  today: { src: "/unvibe/real/0147-today.webp", width: 1600, height: 994, version: "0.1.47", alt: "The Unvibe Today page with the day's goal ticked and an Up next list" },
+  quiz: { src: "/unvibe/real/quiz.webp", width: 1600, height: 849, version: demo.version, alt: "The Unvibe Quick Quiz page listing a saved Debouncing lesson" },
 } as const;
 
 const CODE = ["function debounce(fn, wait) {", "  let timer;", "  return (...args) => {", "    clearTimeout(timer);", "    timer = setTimeout(() => fn(...args), wait);", "  };", "}"];
@@ -50,8 +53,11 @@ export function HomeSteps() {
             <span className="steps-row__num" aria-hidden="true">3</span>
             <h3>Read it at your level</h3>
             <p>New, Beginner, Intermediate or Advanced. Ask a follow-up in the same panel.</p>
-            {/* eslint-disable-next-line @next/next/no-img-element -- the site serves its own sized WebP files */}
-            <img className="steps-row__shot" src={HOME_SCREENS.panel.src} alt={HOME_SCREENS.panel.alt} width={HOME_SCREENS.panel.width} height={HOME_SCREENS.panel.height} loading="lazy" decoding="async" />
+            <figure className="shot">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the site serves its own sized WebP files */}
+              <img src={HOME_SCREENS.panel.src} alt={HOME_SCREENS.panel.alt} width={HOME_SCREENS.panel.width} height={HOME_SCREENS.panel.height} loading="lazy" decoding="async" />
+              <figcaption>Unvibe {HOME_SCREENS.panel.version}</figcaption>
+            </figure>
           </li>
         </ol>
         <DemoDisclosure>
@@ -80,14 +86,16 @@ export function HomeLoop() {
         <ul className="loop-cards">
           {cards.map((card) => (
             <li className="loop-cards__card" key={card.title}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- the site serves its own sized WebP files */}
-              <img src={card.src} alt={card.alt} width={card.width} height={card.height} loading="lazy" decoding="async" />
+              <figure className="shot">
+                {/* eslint-disable-next-line @next/next/no-img-element -- the site serves its own sized WebP files */}
+                <img src={card.src} alt={card.alt} width={card.width} height={card.height} loading="lazy" decoding="async" />
+                <figcaption>Unvibe {card.version}</figcaption>
+              </figure>
               <h3>{card.title}</h3>
               <p>{card.body}</p>
             </li>
           ))}
         </ul>
-        <p className="loop-cards__label">{HOME_SCREENS.label}</p>
       </div>
     </section>
   );

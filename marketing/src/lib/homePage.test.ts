@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { KEPT, SENT } from "@/components/paper/WhatLeaves";
 
 // tsx compiles JSX to React.createElement, so rendering pages here needs React in scope.
@@ -46,6 +48,19 @@ describe("home page structure (W2, W3)", () => {
     assert.equal(html.slice(faqStart, html.indexOf("</section>", faqStart)).match(/<summary>/g)?.length, 4);
     for (const gone of ['id="newsletter"', 'id="invite"', 'id="backing"', "Who it", "Four steps", "Where it"]) assert.ok(!html.includes(gone), gone);
     assert.match(text, /Unvibe is in Claude for Startups and \w+ other startup programs\./);
+  });
+});
+
+describe("home screens (W19)", () => {
+  it("the panel, Test me and Today are the real 0.1.47 captures, labelled with their version; every file ships", () => {
+    const shots = Array.from(html.matchAll(/<figure class="shot"><img src="([^"]+)"[^>]*\/?><figcaption>([^<]+)<\/figcaption><\/figure>/g), (m) => [m[1], m[2]]);
+    assert.equal(shots.length, 4);
+    for (const [src, label] of shots) {
+      assert.ok(existsSync(join("public", src)), `${src} is missing`);
+      if (/\/0147-/.test(src)) assert.equal(label, "Unvibe 0.1.47", src);
+      else assert.match(label, /^Unvibe \d+\.\d+\.\d+$/, src);
+    }
+    assert.deepEqual(shots.filter(([src]) => /\/0147-/.test(src)).length, 3);
   });
 });
 
