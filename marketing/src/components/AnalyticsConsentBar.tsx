@@ -13,6 +13,7 @@ import {
   type AnalyticsConsent,
 } from "@/lib/analyticsConsent";
 import { analyticsAllowedOnPath } from "@/lib/analyticsPrivacy";
+import { sendConsentAnswer } from "@/lib/consentAnswerClient";
 
 export const ANALYTICS_BAR_TEXT =
   "Unvibe would like to measure visits and record session replays, with page text hidden, using Mixpanel and PostHog to improve the site.";
@@ -74,8 +75,11 @@ export function AnalyticsConsentBar() {
     returnFocus.current = null;
   };
 
+  // Only the two answer buttons count, one per press (Security C-1). Escape and the GPC bar's OK
+  // call close() and send nothing.
   const choose = (choice: AnalyticsChoice) => {
     setAnalyticsConsent(choice);
+    sendConsentAnswer(choice);
     setCurrent(choice);
     close();
   };
