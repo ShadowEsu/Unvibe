@@ -165,17 +165,17 @@ describe("startup programs", () => {
     assert.equal(createHash("sha256").update(readFileSync(join(dir, "mongodb-logo.svg"))).digest("hex"), LOGO_SHA256);
   });
 
-  it("home: the hero line links to /investors#backing, and the strip shows the 7 names and only the MongoDB logo", () => {
+  it("home: the hero line links to /investors#backing, and the programs are one line at the foot (Design W2), with no names to mark", () => {
     const home = render(HomePage);
     const hero = home.match(/<p class="vhero__backing">([\s\S]*?)<\/p>/)?.[1] ?? "";
     assert.match(hero, /<a href="\/investors#backing">/);
     assert.equal(Array.from(hero.matchAll(/<a\b/g)).length, 1, "the programs line stays one tab stop");
     assert.equal(text(hero).trim(), HERO);
-    const strip = section(home, /<section id="backing"/);
-    assertProgramSection(strip, "home strip");
-    assert.match(text(strip), /Unvibe is in Claude for Startups\./);
-    assertMarksAtFirstUse(home, "home");
-    assert.match(text(strip), /Startup programs we're in\./);
+    assert.doesNotMatch(home, /<section id="backing"/);
+    const line = home.match(/<p class="home-backing">([\s\S]*?)<\/p>/)?.[1] ?? "";
+    assert.equal(text(line).replace(/\s+/g, " ").trim(), "Unvibe is in Claude for Startups and six other startup programs. Details on the investors page");
+    assert.match(line, /<a class="paper-text-link" href="\/investors#backing">/);
+    assert.doesNotMatch(text(home), /MongoDB/);
     assert.doesNotMatch(text(home), SPONSOR_READING);
     assert.doesNotMatch(text(home), ALL_PROGRAMS_TOTAL);
   });

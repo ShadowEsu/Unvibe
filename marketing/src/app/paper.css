@@ -888,59 +888,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   50% { opacity: 0; }
 }
 
-.paper-invite {
-  position: relative;
-  width: min(36rem, 100%);
-  margin-inline: auto;
-  padding: 0.2rem 0 0;
-}
-
-.paper-invite__card {
-  position: relative;
-  z-index: 1;
-  padding: 2.1rem 1.6rem 1.5rem;
-  text-align: center;
-}
-
-/* Visible by default: server HTML, no JS and reduced motion all show the card. InviteReveal arms
-   the entrance only for a card that starts below the fold, then lights it once it is in view. */
-.paper-invite.is-armed .paper-invite__card {
-  opacity: 0;
-  transform: translate3d(0, 18px, 0);
-}
-
-.paper-invite.is-armed.is-lit .paper-invite__card {
-  animation: paperInviteRise 450ms var(--ease-emphatic) both;
-}
-
-.paper-invite__card h2 {
-  margin: 0.7rem 0 0;
-}
-
-.paper-invite__card .paper-lead {
-  margin: 0.85rem auto 0;
-}
-
-@keyframes paperInviteRise {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 18px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-/* Reduced motion, and print (a card armed but never scrolled to would otherwise print blank). */
-@media (prefers-reduced-motion: reduce), print {
-  .paper-invite.is-armed .paper-invite__card {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* The footer's small type needs a solid surface: the field's blue under it is 3.2:1 for ink. */
 .paper-footer {
   border-top: 1px solid var(--u-line);

@@ -50,3 +50,45 @@
 .plans-strip__list { display: grid; gap: 0.45rem; padding-left: 1.2rem !important; line-height: 1.45; }
 .plans-strip__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); text-align: center; }
 .plans-strip__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
+
+/* ── Home sections 2 and 3 (HomeSections; Design W2, W3): a 3-step row and a 3-card row, no tabs and no
+   JavaScript layout, so nothing changes width while the page scrolls. ── */
+.steps-row, .loop-cards { display: grid; gap: clamp(1rem, 2.5vw, 1.6rem); margin: 0; padding: 0; list-style: none; }
+@media (min-width: 900px) { .steps-row, .loop-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.steps-row__step, .loop-cards__card {
+  display: grid; grid-template-rows: auto auto auto 1fr; align-content: start; gap: 0.55rem; min-width: 0; overflow: hidden;
+  padding: clamp(1rem, 2.2vw, 1.4rem); border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card);
+  box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text);
+}
+.steps-row__step > *, .loop-cards__card > * { margin: 0; }
+.steps-row__step h3, .loop-cards__card h3 { font: 800 clamp(1.15rem, 1.8vw, 1.35rem)/1.2 var(--font-display); letter-spacing: -0.02em; }
+.steps-row__step p, .loop-cards__card p { color: var(--u-text-2); line-height: 1.45; }
+.steps-row__num {
+  display: inline-grid; place-items: center; justify-self: start; width: 2rem; height: 2rem; border: 1.5px solid var(--v-ink);
+  border-radius: 999px; background: var(--v-lime); color: #141414; font: 800 0.95rem var(--font-display);
+}
+.steps-row__code {
+  align-self: end; margin-top: 0.4rem !important; padding: 0.9rem 1rem; overflow-x: auto; border-radius: 12px; background: #16131f;
+  color: #e9e6f2; font: 500 0.78rem/1.6 var(--font-mono); white-space: pre;
+}
+.steps-row__code .is-selected { background: rgb(155 123 255 / 0.38); }
+.steps-row__keys { display: grid; align-self: end; justify-items: center; gap: 0.6rem; margin-top: 0.4rem !important; padding: 1.2rem 1rem; border: 1px solid var(--u-line); border-radius: 12px; background: var(--u-raise); }
+.steps-row__keys kbd {
+  display: inline-grid; place-items: center; min-width: 3.2rem; height: 3.2rem; padding: 0 0.8rem; border: 1.5px solid var(--v-ink);
+  border-radius: 12px; background: var(--u-card); box-shadow: 0 4px 0 var(--v-ink); color: var(--u-text); font: 700 1.05rem var(--font-sans);
+}
+.steps-row__keys small { color: var(--u-text-2); font-size: 0.9rem; text-align: center; }
+.steps-row__shot, .loop-cards__card img {
+  display: block; width: 100%; height: 13rem; margin-top: 0.4rem !important; border: 1px solid var(--u-line); border-radius: 12px;
+  background: var(--u-raise); object-fit: cover; object-position: top center;
+}
+.loop-cards__card { grid-template-rows: auto auto 1fr; }
+.loop-cards__card img { order: -1; margin-top: 0 !important; }
+.loop-cards__label { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.9rem; text-align: center; }
+.demo { margin-top: clamp(1.2rem, 3vw, 1.8rem); text-align: center; }
+.demo__button { list-style: none; }
+.demo__button::-webkit-details-marker { display: none; }
+.demo[open] .demo__button { margin-bottom: 1rem; }
+.demo .vtour { padding-bottom: 0; text-align: left; }
+.home-backing { width: min(46rem, calc(100% - 2.5rem)); margin: 0 auto clamp(2rem, 4vw, 3rem); color: var(--u-text-2); text-align: center; }
+.home-backing > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
