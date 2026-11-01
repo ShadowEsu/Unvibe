@@ -12,6 +12,7 @@ import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
+import { WhatLeaves } from "@/components/paper/WhatLeaves";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -89,6 +90,8 @@ export default function HomePage() {
           </p>
         </div>
       </section>
+
+      <WhatLeaves />
 
       <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
         <div className="paper-wrap u-sheet">

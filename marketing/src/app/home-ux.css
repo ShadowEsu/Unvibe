@@ -23,3 +23,15 @@
 @media (prefers-reduced-motion: reduce) {
   .dl-card__other { transition: none; }
 }
+
+/* ── What leaves your computer (WhatLeaves; Design W4): two lists side by side, one line under them. ── */
+.leaves { display: grid; gap: clamp(1.25rem, 3vw, 2rem); }
+@media (min-width: 760px) { .leaves { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.leaves__col { display: grid; align-content: start; gap: 0.9rem; padding: clamp(1.1rem, 2.5vw, 1.6rem); border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); }
+.leaves__col h3 { margin: 0; font: 800 clamp(1.15rem, 1.8vw, 1.35rem)/1.2 var(--font-display); letter-spacing: -0.02em; }
+.leaves__list { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.leaves__list li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 0.65rem; align-items: start; line-height: 1.45; }
+.leaves__list svg { margin-top: 0.15rem; }
+.leaves__who { margin: 0; padding-top: 0.8rem; border-top: 1px solid var(--u-line); color: var(--u-text-2); line-height: 1.45; }
+.leaves__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); line-height: 1.5; text-align: center; }
+.leaves__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
