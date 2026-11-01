@@ -1,12 +1,25 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import React, { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { PRICING } from "./pricing";
 import { pricingCopy, type PricingCopy } from "./pricingCopy";
+
+Object.assign(globalThis, { React });
+
+/** The rendered /pricing card for one plan, from its article tag to the next. */
+function planCard(paymentsOpen: boolean, id: string): string {
+  const markup = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen }));
+  const start = markup.indexOf(`<article id="${id}"`);
+  assert.ok(start >= 0, `no card ${id}`);
+  return markup.slice(start, markup.indexOf("</article>", start));
+}
 
 function allText(copy: PricingCopy): string {
   return [
     copy.heading.lead, copy.heading.emphasis, copy.heading.tail, copy.description, copy.disclosure, copy.termsNote ?? "",
-    ...copy.plans.flatMap((plan) => [plan.badge, plan.eyebrow, plan.detail, plan.cta, ...plan.features]),
+    ...copy.plans.flatMap((plan) => [plan.badge, plan.eyebrow, plan.note ?? "", plan.detail, plan.cta ?? "", plan.after ?? "", ...plan.features]),
   ].join("\n");
 }
 
@@ -33,8 +46,24 @@ describe("pricing copy while payments are closed", () => {
   });
 
   it("has no button that leads to a dead end", () => {
-    for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:hello@unvibe.site"), plan.id);
-    assert.equal(closed.plans.find((plan) => plan.id === "pro")?.cta, "Download free");
+    for (const plan of closed.plans) {
+      if (plan.href === null) continue;
+      assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:hello@unvibe.site"), plan.id);
+    }
+  });
+
+  it("gives the Pro card no button, says it isn't on sale and how to try it today", () => {
+    const pro = planCard(false, "pro");
+    assert.doesNotMatch(pro, /<a |<button/);
+    assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
+    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, and each friend you invite adds one\.<\/p>/);
+    // Free keeps its download, Teams its email.
+    assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);
+    assert.match(planCard(false, "teams"), /href="mailto:hello@unvibe\.site/);
+  });
+
+  it("keeps the Pro button once payments open", () => {
+    assert.match(planCard(true, "pro"), /href="\/beta"[^>]*>.*Download, then upgrade/);
   });
 
   it("follows the copy rules", () => {
@@ -92,7 +121,7 @@ describe("pricing copy once payments open", () => {
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
-    assert.match(open.plans[2].href, /^mailto:hello@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
+    assert.match(open.plans[2].href ?? "", /^mailto:hello@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
   });
 
   it("shares features and the featured card with the closed copy", () => {

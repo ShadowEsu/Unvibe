@@ -195,6 +195,21 @@
   color: var(--v-ink);
 }
 
+/* A card with nothing to buy yet: one line under the price, one under the list, no button. */
+.paper-pricing .marketing-plan-card .plan-note {
+  margin: 0.5rem 0 0;
+  color: var(--v-ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.paper-pricing .marketing-plan-card .plan-after {
+  margin: 0;
+  color: var(--v-ink);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 @media (min-width: 1120px) {
   .paper-pricing .marketing-plan-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
