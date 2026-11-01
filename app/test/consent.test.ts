@@ -24,10 +24,13 @@ import {
   CONSENT_ITEMS,
   CONSENT_PROVIDERS,
   ConsentRequiredError,
+  consentText,
   FIRST_RUN_SAMPLE,
   isFirstRunSamplePayload,
   reviewCapture,
   POLICY_VERSION,
+  switchedOff,
+  type ConsentPlatform,
   type ConsentRecord,
 } from '../src/core/consent';
 import type { ReviewRequestPayload } from '../src/core/protocol';
@@ -95,15 +98,28 @@ test('a review reads nothing of the person\'s before they agree, and reads once 
 const form = { aiSend: true, terms: true, age18: true };
 
 test('CC-3 and U-G3: the consent words and the server\'s AI provider are pinned to the policy version', () => {
-  // Changing any word of CONSENT_COPY, or who Unvibe's server sends code to, must come with a new
-  // POLICY_VERSION, so everyone is asked again. 2026-10-30: the server moved from Google Gemini to
-  // Anthropic (Claude); the words stayed the same. If the server's provider changes (web/src/ai,
-  // set by the API's environment), change CONSENT_PROVIDERS.unvibe, bump the version and pin both here.
+  // Changing any word of CONSENT_COPY (the device words included), or who Unvibe's server sends code
+  // to, must come with a new POLICY_VERSION, so everyone is asked again. 2026-10-30: the server moved
+  // from Google Gemini to Anthropic (Claude). 1.0.0: "Ask Vibe chat messages" and "this Mac" / "this PC"
+  // (Security R1). If the server's provider changes (web/src/ai, set by the API's environment), change
+  // CONSENT_PROVIDERS.unvibe, bump the version and pin both here.
   const pinned: Record<string, { copy: string; server: string }> = {
-    '2026-10-30': { copy: '5cd75bbf623bc0b0', server: 'Anthropic (Claude)' },
+    '1.0.0': { copy: '5d24eb652c116fc4', server: 'Anthropic (Claude)' },
   };
   const hash = createHash('sha256').update(JSON.stringify(CONSENT_COPY)).digest('hex').slice(0, 16);
   assert.deepEqual({ copy: hash, server: CONSENT_PROVIDERS.unvibe }, pinned[POLICY_VERSION], 'consent changed: bump POLICY_VERSION and pin it');
+});
+
+test('the consent words name this Mac on macOS, this PC on Windows, and this computer elsewhere', () => {
+  const words = (platform: ConsentPlatform) =>
+    [CONSENT_COPY.leadOwnKey, CONSENT_COPY.secrets].map((text) => consentText(text, 'anthropic', platform)).join(' ');
+  for (const [platform, device] of [['mac', 'this Mac'], ['win', 'this PC'], ['other', 'this computer']] as const) {
+    const text = words(platform);
+    assert.equal(text.split(device).length - 1, 2, `${platform}: the own-key lead and the secrets line both say ${device}`);
+    assert.doesNotMatch(text, /\{device\}|\{provider\}/);
+  }
+  assert.doesNotMatch(words('mac'), /this (PC|computer)/);
+  assert.doesNotMatch(words('win'), /this (Mac|computer)/);
 });
 
 test('U-G2: an agreement from the Google Gemini wording asks again, names Anthropic, and sends nothing', async () => {
@@ -142,6 +158,15 @@ test('an agreement covers one provider, this policy, until it is withdrawn', () 
   assert.equal(aiSendAllowed([{ ...gemini, revokedAt: at }], 'unvibe'), false);
   assert.equal(aiSendAllowed([{ ...gemini, items: ['ai_send', 'terms'] }], 'unvibe'), false, 'no 18+ box, no agreement');
   assert.equal(aiSendAllowed([{ ...gemini, revokedAt: at }, gemini], 'unvibe'), true, 'the newest record for the provider counts');
+});
+
+test('someone who switched sending off before a policy bump stays off and is not re-enabled by it', () => {
+  const at = '2026-10-31T08:00:00.000Z';
+  const before: ConsentRecord = { items: [...CONSENT_ITEMS], provider: 'unvibe', policyVersion: '2026-10-30', agreedAt: at, revokedAt: at };
+  assert.notEqual(before.policyVersion, POLICY_VERSION);
+  assert.equal(switchedOff([before]), true, 'still switched off under the new version');
+  assert.equal(aiSendAllowed([before], 'unvibe'), false);
+  assert.deepEqual(shortcutKeys('Control+Alt+U', true, switchedOff([before])), [], 'no shortcuts until they agree again');
 });
 
 test('CC-6: only the verbatim built-in sample, with nothing added, is exempt', () => {

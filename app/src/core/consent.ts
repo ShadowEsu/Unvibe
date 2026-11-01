@@ -11,8 +11,9 @@
  */
 
 /** Bump when what Unvibe sends, where, the screen's words, or the Terms/Privacy change.
- * 2026-10-30: Unvibe's server moved from Google Gemini to Anthropic (Claude), so everyone agrees again. */
-export const POLICY_VERSION = '2026-10-30';
+ * 2026-10-30: Unvibe's server moved from Google Gemini to Anthropic (Claude), so everyone agrees again.
+ * 1.0.0: same meaning, new names ("Ask Vibe chat messages"; "this Mac" / "this PC"), Security R1 GO. */
+export const POLICY_VERSION = '1.0.0';
 
 export const CONSENT_ITEMS = ['ai_send', 'terms', 'age_18'] as const;
 export type ConsentItem = (typeof CONSENT_ITEMS)[number];
@@ -37,16 +38,18 @@ export function isConsentProvider(value: unknown): value is ConsentProvider {
 }
 
 /**
- * Every word of the consent screen. `{provider}` is CONSENT_PROVIDERS[provider]. A test pins a hash
- * of this object to POLICY_VERSION, so changing the words without a new version fails (CC-3).
+ * Every word of the consent screen. `{provider}` is CONSENT_PROVIDERS[provider] and `{device}` is
+ * CONSENT_COPY.device[platform]. A test pins a hash of this object, device words included, to
+ * POLICY_VERSION, so changing the words without a new version fails (CC-3).
  */
 export const CONSENT_COPY = {
   title: 'Before Vibe explains your code',
   leadUnvibe:
-    'To write an explanation, Unvibe sends the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Chat messages to {provider}, through Unvibe\'s server.',
+    'To write an explanation, Unvibe sends the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Ask Vibe chat messages to {provider}, through Unvibe\'s server.',
   leadOwnKey:
-    'You chose your own {provider} key, so the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Chat messages go from this computer straight to {provider}, under your account with them.',
-  secrets: 'Unvibe looks for keys and tokens on this computer first and stops, or asks you, before sending one. Nothing has been sent yet.',
+    'You chose your own {provider} key, so the code you select, paste or pick (with its file and project name), the git changes you explain in Briefs, and your questions and Ask Vibe chat messages go from {device} straight to {provider}, under your account with them.',
+  secrets: 'Unvibe looks for keys and tokens on {device} first and stops, or asks you, before sending one. Nothing has been sent yet.',
+  device: { mac: 'this Mac', win: 'this PC', other: 'this computer' },
   aiSend: 'Send my code and questions to {provider} to explain them',
   termsBefore: 'I agree to the ',
   terms: 'Terms',
@@ -59,8 +62,10 @@ export const CONSENT_COPY = {
   notNow: 'Not now',
 } as const;
 
-export function consentText(text: string, provider: ConsentProvider): string {
-  return text.split('{provider}').join(CONSENT_PROVIDERS[provider]);
+export type ConsentPlatform = keyof typeof CONSENT_COPY.device;
+
+export function consentText(text: string, provider: ConsentProvider, platform: ConsentPlatform): string {
+  return text.split('{provider}').join(CONSENT_PROVIDERS[provider]).split('{device}').join(CONSENT_COPY.device[platform]);
 }
 
 /** One agreement as stored on this computer: what, to whom, which policy, when; and when it was withdrawn. */

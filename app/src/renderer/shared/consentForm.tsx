@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { CONSENT_COPY, consentText, type ConsentProvider } from '../../core/consent';
+import { platformAttr } from './platform';
 import './consentForm.css';
 
 const TERMS_URL = 'https://unvibe.site/terms';
@@ -35,7 +36,7 @@ export function ConsentForm({
   const [saving, setSaving] = useState(false);
   const id = useId();
   const ready = aiSend && terms && age18;
-  const text = (value: string) => consentText(value, provider);
+  const text = (value: string) => consentText(value, provider, platformAttr);
 
   const submit = async () => {
     if (saving) return;
@@ -60,7 +61,7 @@ export function ConsentForm({
     <section className="consent-form" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="consent-form__title">{CONSENT_COPY.title}</h2>
       <p className="consent-form__lead">
-        {text(provider === 'unvibe' ? CONSENT_COPY.leadUnvibe : CONSENT_COPY.leadOwnKey)} {CONSENT_COPY.secrets}
+        {text(provider === 'unvibe' ? CONSENT_COPY.leadUnvibe : CONSENT_COPY.leadOwnKey)} {text(CONSENT_COPY.secrets)}
       </p>
       <label className="consent-form__row" htmlFor={`${id}-send`}>
         <input id={`${id}-send`} type="checkbox" autoFocus={autoFocus} checked={aiSend} onChange={(e) => setAiSend(e.target.checked)} />
