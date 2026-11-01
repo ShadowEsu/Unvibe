@@ -66,7 +66,7 @@ describe("pricing copy while payments are closed", () => {
     const pro = planCard(false, "pro");
     assert.doesNotMatch(pro, /<a |<button/);
     assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
-    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, and each friend you invite adds one\.<\/p>/);
+    assert.match(pro, /<p class="plan-after">Pro isn&#x27;t on sale yet\. You can try it now: new accounts get a free month, and each friend you invite adds one\.<\/p>/);
     // Free keeps its download, Teams its email.
     assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);
     assert.match(planCard(false, "teams"), /href="mailto:hello@unvibe\.site/);

@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics";
 import { storedRef } from "@/lib/referral";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
+import { PRO_SENTENCE } from "@/lib/proOffer";
 
 /** Get a personal link to share Unvibe. Gift months come from the app's gift code (app 0.1.44 and later), never from the link. */
 export function InviteFriend() {
@@ -64,7 +65,7 @@ export function InviteFriend() {
       <div className="invite__copy">
         <p className="paper-meta">Bring a friend</p>
         <h2 id="invite-title">Send a friend <em>your invite link.</em></h2>
-        <p className="paper-lead">{GIFT_OFFER} Months stack up to 12 ahead and never apply to an active paid subscription.</p>
+        <p className="paper-lead">{PRO_SENTENCE} {GIFT_OFFER} Months stack up to 12 ahead and never apply to an active paid subscription.</p>
         <p className="invite__fine">{GIFT_LINK_NOTE} The link below brings your friend to Unvibe.</p>
       </div>
       {link ? (
