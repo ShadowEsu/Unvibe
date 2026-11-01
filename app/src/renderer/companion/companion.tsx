@@ -29,6 +29,7 @@ import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { CHANGE_BRIEF, HOSTED_AI, NOT_NOW, PAGE_NAMES } from './names';
 import { bottomRightSlot, scrollEndPadding } from './layout';
+import { todayFirstRun, weekSentence } from './today';
 import { SETUP_STEP_LABELS, setupForward, setupSteps, type SetupStep } from './onboardingFlow';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
@@ -954,13 +955,11 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
   const concepts = (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0);
-  // Design audit 2026-10-22 item 5: count what was done, hide zero counters, no streak chip.
-  const chips = [
-    { tone: 'sky', n: profile?.reviews ?? 0, one: 'explanation', many: 'explanations' },
-    { tone: 'lime', n: profile?.linesReviewed ?? 0, one: 'line explained', many: 'lines explained' },
-    { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
-    { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
-  ].filter((chip) => chip.n > 0);
+  // Design C1: the week's numbers as one sentence (no streak); first-run cards only while Today is empty.
+  const firstRun = todayFirstRun(profile);
+  const week = profile && !firstRun.explainBanner
+    ? weekSentence({ explanations: profile.reviews, linesExplained: profile.linesReviewed, linesUnderstood: profile.linesUnderstood, concepts })
+    : '';
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
   const note = explainDisabled ? 'Out of explanations this month. Catch you soon.'
     : brief ? 'You changed some code. Want the story?'
@@ -975,10 +974,8 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
           <p className="hand-note">{note}</p>
         </div>
       </header>
-      {chips.length ? (
-        <div className="stickers" aria-label="Learning overview">
-          {chips.map((chip) => <span key={chip.many} className={`sticker sticker--${chip.tone}`}><b>{chip.n}</b> {chip.n === 1 ? chip.one : chip.many}</span>)}
-        </div>
+      {week ? (
+        <p className="today-week">{week.split(/(\d+)/).map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part))}</p>
       ) : null}
       {limitOffer && (
         <div className="limit-banner" role="status">
@@ -1000,7 +997,7 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
           </div>
         </div>
       )}
-      <button type="button" className="today-cta" onClick={brief ? () => onNavigate('Briefings') : startReview} disabled={!brief && explainDisabled}>
+      {brief || firstRun.explainBanner ? <button type="button" className="today-cta" onClick={brief ? () => onNavigate('Briefings') : startReview} disabled={!brief && explainDisabled}>
         <span className="today-cta__text">
           <b>{brief ? `Review what changed: ${brief.filesChanged} file${brief.filesChanged === 1 ? '' : 's'}` : 'Explain any code, right where it is'}</b>
           <small>{brief
@@ -1008,15 +1005,15 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
             : 'Select code in any app. Vibe pops up beside it.'}</small>
         </span>
         <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
-      </button>
-      <button type="button" className="voice-cta" onClick={onTryVoice}>
+      </button> : null}
+      {firstRun.voiceCard ? <button type="button" className="voice-cta" onClick={onTryVoice}>
         <span className="voice-cta__mic" aria-hidden="true"><Icon d={MIC_ICON} /></span>
         <span className="voice-cta__text">
           <b>Try voice: ask Vibe out loud</b>
           <small>{voiceHowTo} No typing.</small>
         </span>
         <span className="voice-cta__go" aria-hidden="true">→</span>
-      </button>
+      </button> : null}
       {today ? <TodayGoalCard goal={today} /> : null}
       <div className="today-cols">
         {upNext.length ? (
