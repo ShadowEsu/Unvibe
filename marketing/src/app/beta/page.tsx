@@ -7,6 +7,7 @@ import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/download
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { proSentence } from "@/lib/proOffer";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 
 export const metadata: Metadata = {
   ...pageMetadata({
@@ -165,6 +166,7 @@ export default function BetaDownloadsPage() {
               <p>
                 Skip sign-in on the first screen and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices. {proSentence()}
               </p>
+              {AI_MAINTENANCE ? <p role="status">{AI_MAINTENANCE_NOTE}</p> : null}
             </details>
           </div>
         </Reveal>

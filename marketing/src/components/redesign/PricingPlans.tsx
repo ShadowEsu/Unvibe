@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { track } from '@/lib/analytics';
 import { PRICING } from '@/lib/pricing';
 import { pricingCopy } from '@/lib/pricingCopy';
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from '@/lib/aiMaintenance';
 import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
 /** 'both': payments closed, so there is nothing to choose; each card states both prices in one line. */
@@ -102,6 +103,7 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
           </article>
         ))}
       </div>
+      {AI_MAINTENANCE ? <p className="pricing-disclosure" role="status">{AI_MAINTENANCE_NOTE}</p> : null}
       <p className="pricing-disclosure">{copy.disclosure}</p>
     </div>
   );

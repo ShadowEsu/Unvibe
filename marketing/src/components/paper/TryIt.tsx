@@ -6,7 +6,7 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
-import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
 import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, tryConsentReasons, type TryConsentTicks } from "@/lib/tryConsent";
@@ -32,9 +32,6 @@ const SAMPLE = `function debounce(fn, ms) {
 
 const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
-/** While the outage switch is on (see aiMaintenance.ts) the box says so and sends nothing. */
-const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
-
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
 function render(text: string): string {
   const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
