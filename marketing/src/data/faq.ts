@@ -1,7 +1,7 @@
 import { FREE_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
-import { PRO_SENTENCE } from "@/lib/proOffer";
+import { proSentence } from "@/lib/proOffer";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 /**
@@ -119,7 +119,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${PRO_SENTENCE}`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
     category: "pricing",
   },
   {

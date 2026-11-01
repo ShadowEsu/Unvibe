@@ -1,6 +1,6 @@
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
-import { PRO_TRY_TODAY } from "@/lib/proOffer";
+import { proTryToday } from "@/lib/proOffer";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
@@ -82,8 +82,9 @@ const CLOSED: PricingCopy = {
   description: `Unvibe is free to download and use, with no card. Pro adds the Expert depth for $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year; payments open soon.`,
   plans: [
     free,
-    // Lead, 31 Oct: this card already says "Not on sale yet" under the price, so its line under the list is the "try it" half only.
-    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: PRO_TRY_TODAY, cta: null, href: null, featured: true, primary: false },
+    // Lead, 31 Oct: this card already says "Not on sale yet" under the price, so its line under the list is the
+    // "try it" half only, and nothing while AI features are paused (Security MUST-Q2).
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: proTryToday() ?? undefined, cta: null, href: null, featured: true, primary: false },
     { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", note: "Not on sale yet", detail: `Founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
   disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
