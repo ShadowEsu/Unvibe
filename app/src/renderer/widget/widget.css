@@ -1712,6 +1712,9 @@ code.inline {
 
 /* Design A4, P10: Offline, Paused and Error never show the lime "ready" dot. */
 .card .head__status.head__status--offline i, .card .head__status.head__status--paused i, .card .head__status.head__status--error i { background: var(--p-muted); box-shadow: none; animation: none; }
+/* On paper the dark muted token and the paper dot's black ring made Paused near-black; it takes the
+   ink panel's grey dot instead, with no ring. */
+:root[data-panel="light"] .card .head__status.head__status--paused i { background: #aeaba2; box-shadow: none; }
 
 /* Design A9, P5: first focus lands on the explanation, ringed inside its edge; the content area
    that holds focus before any words arrive is a landmark, not a control, so it draws no ring. */
