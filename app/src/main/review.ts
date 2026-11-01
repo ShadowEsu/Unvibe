@@ -531,6 +531,9 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     const decoder = new TextDecoder();
     const parser = new SseParser();
     let completed = false;
+    // The service's own error (for example "AI features are paused for maintenance") ends the stream
+    // without a done; it is the message the person sees, not the generic cut-off notice below.
+    let serviceErrored = false;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -547,6 +550,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         } else if (ev.type === 'error') {
           // The service's error text reaches the panel only as a capped string.
           send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
+          serviceErrored = true;
         } else if (ev.type === 'done') {
           send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true });
           completed = true;
@@ -566,7 +570,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         }
       }
     }
-    if (!completed) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
+    if (!completed && !serviceErrored) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
   } catch (err) {
     if (err instanceof ConsentRequiredError) {
       outcome = 'consent';
