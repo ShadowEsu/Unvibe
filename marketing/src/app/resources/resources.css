@@ -652,10 +652,11 @@
   gap: 1rem;
 }
 
+/* One full-width small line at the bottom of the white CTA card (the page gradient behind it is too dark for small text). */
 .resources-more {
-  margin: 1.5rem 0 0;
+  flex-basis: 100%;
+  margin: 0;
   font-size: 0.85rem;
-  text-align: center;
 }
 
 /* ── Card look: ink outlines on white, as on the homepage ──────────────── */
