@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BetaFeedbackAsk } from "@/components/paper/BetaFeedbackAsk";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { Reveal } from "@/components/redesign/Reveal";
 import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
@@ -45,7 +46,7 @@ export default function BetaDownloadsPage() {
       <section className="paper-section" id="install">
         <Reveal className="paper-wrap paper-center">
           {/* The band above already says "Free for Mac and Windows"; dropping the repeat keeps the download button on the first screen. */}
-          <BetaInstall tone="page" surface="beta" title={null} showFeedback />
+          <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
         </Reveal>
       </section>
 
@@ -181,6 +182,7 @@ export default function BetaDownloadsPage() {
               <p>Need help? <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
+          <BetaFeedbackAsk />
         </Reveal>
       </section>
     </article>
