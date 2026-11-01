@@ -652,10 +652,13 @@
   gap: 1rem;
 }
 
-/* One full-width small line at the bottom of the white CTA card (the page gradient behind it is too dark for small text). */
+/* One full-width footnote at the bottom of the white CTA card (the page gradient behind it is too dark for
+   small text); the hairline keeps it from reading as a third action next to Download (Design). */
 .resources-more {
   flex-basis: 100%;
   margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgb(var(--line));
   font-size: 0.85rem;
 }
 
