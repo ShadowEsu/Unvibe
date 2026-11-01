@@ -41,7 +41,7 @@ function renderWithFlag(flag: "1" | ""): { tryIt: string; hero: string; kit: str
 
 const paused = renderWithFlag("1");
 const live = renderWithFlag("");
-const PAUSED_LINE = "Online Try it is paused today. The app works as normal.";
+const PAUSED_LINE = "AI features are paused for maintenance. Back soon.";
 
 // Try it sends the pasted code to Unvibe's server and Anthropic. Nothing about it runs in the browser.
 describe("Try it disclosure", () => {
@@ -55,13 +55,10 @@ describe("Try it disclosure", () => {
     assert.doesNotMatch(paused.kit, /try it online/i);
   });
 
-  it("while Try it is paused, the box says so and offers one download for this computer", () => {
+  it("while Try it is paused, the box shows only the maintenance note", () => {
     const body = paused.tryIt.slice(paused.tryIt.indexOf('class="try__body"'));
     assert.ok(body.includes(`<p role="status">${PAUSED_LINE}</p>`), body.slice(0, 400));
-    const links = body.match(/<a [^>]*class="paper-join[^"]*"[^>]*>/g) ?? [];
-    assert.equal(links.length, 1, links.join("\n"));
-    assert.match(links[0], /href="https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/download\/[^"]+\.dmg"/);
-    assert.match(body, /Download free for Mac/);
+    assert.doesNotMatch(body, /paper-join/);
     assert.doesNotMatch(body, /Explain it<\/b> for the sample/);
   });
 
