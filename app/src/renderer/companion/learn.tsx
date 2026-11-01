@@ -6,6 +6,7 @@ import { playTone } from '../shared/tones';
 import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import { PAGE_NAMES } from './names';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -71,7 +72,8 @@ function TrashBtn({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
+/** The empty-page pattern (Library, Quiz, Momentum): one line on why it is empty, one verb button. */
+export function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
   return (
     <div className="learning-empty">
       <h2>{title}</h2>
@@ -618,7 +620,7 @@ export function Learn({
     <div className="learn-page">
       <div className="topline learn-topline">
         <div>
-          <h1>{intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'}</h1>
+          <h1>{intent === 'quiz' ? PAGE_NAMES.Quiz : PAGE_NAMES.Learn}</h1>
           <p className="lead lead--tight">
             {intent === 'quiz'
               ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'
@@ -668,7 +670,7 @@ export function Learn({
       {catalog.length === 0 ? (
         <LearningEmpty
           title={intent === 'quiz' ? 'Nothing to check yet.' : 'Nothing saved yet.'}
-          detail={`Select code and press ${shortcut}. After an explanation finishes, it lands here.`}
+          detail={intent === 'quiz' ? 'Save an explanation first. Quizzes are built from saved lessons.' : `Select code and press ${shortcut}. After an explanation finishes, it lands here.`}
           onReview={onReview}
         />
       ) : filtered.length === 0 ? (

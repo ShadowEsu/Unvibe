@@ -1,11 +1,13 @@
 /** Plan-card status copy. Pure so the wording for each billing state is testable. */
+import { deviceName } from './platform';
 
 export function daysUntil(iso: string, now = Date.now()): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 86_400_000));
 }
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+/** The one date format on Plan and in the panel's limit copy ("October 31"), so a card never mixes two (Design P14). */
+function calendarDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 }
 
 function daysLeft(iso: string, now: number): string {
@@ -16,8 +18,8 @@ function daysLeft(iso: string, now: number): string {
 export function resetLabel(iso: string, plan: string, now = Date.now()): string {
   // The public beta is a 30-day window that ends; it does not reset.
   return plan === 'trial'
-    ? `Free explanations on this computer end on ${shortDate(iso)} (${daysLeft(iso, now)})`
-    : `Usage limits reset on ${shortDate(iso)} (${daysLeft(iso, now)})`;
+    ? `Free explanations on this ${deviceName} end on ${calendarDate(iso)} (${daysLeft(iso, now)})`
+    : `Usage limits reset on ${calendarDate(iso)} (${daysLeft(iso, now)})`;
 }
 
 export interface PaidSubscriptionState {
@@ -35,7 +37,7 @@ export function paidStatusLine(sub: PaidSubscriptionState, planName: string, now
     return `Your last payment didn't go through. Update your card in Manage billing to keep ${planName}.`;
   }
   if (sub.cancelAtPeriodEnd && sub.currentPeriodEnd) {
-    return `${planName} ends on ${shortDate(sub.currentPeriodEnd)} (${daysLeft(sub.currentPeriodEnd, now)}). Use Manage billing to keep it.`;
+    return `${planName} ends on ${calendarDate(sub.currentPeriodEnd)} (${daysLeft(sub.currentPeriodEnd, now)}). Use Manage billing to keep it.`;
   }
   return null;
 }
@@ -50,7 +52,7 @@ export function giftStatusLine(currentPeriodEnd: string | undefined, now = Date.
   if (!currentPeriodEnd || Number.isNaN(end) || end <= now) {
     return 'Pro from a gift. When it ends you move to Free, and nothing is charged.';
   }
-  return `Pro from a gift until ${shortDate(currentPeriodEnd)}. Then you move to Free, and nothing is charged.`;
+  return `Pro from a gift until ${calendarDate(currentPeriodEnd)}. Then you move to Free, and nothing is charged.`;
 }
 
 /** One usage line, as the app's usage check returns it. */
@@ -69,7 +71,7 @@ export interface AllowanceLine {
 export function refillDate(plan: string | undefined, resetsAt: string): string | null {
   const at = new Date(resetsAt);
   if (plan === 'trial' || Number.isNaN(at.getTime())) return null;
-  return at.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  return calendarDate(resetsAt);
 }
 
 /** While Pro is closed: Pro isn't open yet, and the Free plan keeps working with its real allowance. */
@@ -80,10 +82,10 @@ export function freePlanLine(usage: AllowanceLine | null, now = Date.now()): str
   if (refill) return `Pro isn't open yet. Your Free plan keeps working: ${left}, refilling on ${refill}.`;
   const end = new Date(usage.resetsAt).getTime();
   if (usage.plan === 'trial' && end > now) {
-    return `Pro isn't open yet. The free explanations on this computer: ${left} until ${shortDate(usage.resetsAt)}. They don't refill; sign in to keep going on the Free plan, which refills every month.`;
+    return `Pro isn't open yet. The free explanations on this ${deviceName}: ${left} until ${calendarDate(usage.resetsAt)}. They don't refill; sign in to keep going on the Free plan, which refills every month.`;
   }
   if (usage.plan === 'trial' && !Number.isNaN(end)) {
-    return `Pro isn't open yet. The free explanations on this computer ended on ${shortDate(usage.resetsAt)}. Sign in to keep going on the Free plan, which refills every month.`;
+    return `Pro isn't open yet. The free explanations on this ${deviceName} ended on ${calendarDate(usage.resetsAt)}. Sign in to keep going on the Free plan, which refills every month.`;
   }
   return `Pro isn't open yet. Your Free plan keeps working: ${left}.`;
 }

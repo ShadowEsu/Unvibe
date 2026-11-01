@@ -1,4 +1,5 @@
 import { refillDate } from './planStatus';
+import { deviceName } from './platform';
 
 export const BETA_SURVEY_URL = 'https://unvibe.site/feedback';
 
@@ -17,7 +18,7 @@ export interface LimitOfferCopy {
 function refillSentence(plan: string | undefined, usage: { limit: number; resetsAt: string }): string {
   const refill = refillDate(plan, usage.resetsAt);
   if (refill) return `Your ${usage.limit} Free explanations refill on ${refill}.`;
-  if (plan === 'trial') return 'The free explanations on this computer don\'t refill. Sign in to keep going on the Free plan, which refills every month.';
+  if (plan === 'trial') return `The free explanations on this ${deviceName} don't refill. Sign in to keep going on the Free plan, which refills every month.`;
   return '';
 }
 

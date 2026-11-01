@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../src/renderer/shared/planStatus';
+import { giftStatusLine, paidStatusLine, proCard, refillDate, resetLabel } from '../src/renderer/shared/planStatus';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');
 const END = '2026-11-21T12:00:00.000Z';
@@ -34,9 +34,21 @@ test('the public-beta trial ends while paid and free plans reset', () => {
   assert.match(resetLabel('2026-10-23T12:00:00.000Z', 'pro', NOW), /\(1 day left\)$/);
 });
 
+test('one Plan card never shows the same day in two formats (Design P14: "Oct 31" beside "October 31")', () => {
+  const free = { plan: 'free', limit: 50, remaining: 12, resetsAt: END };
+  const refill = refillDate('free', END);
+  assert.ok(refill);
+  const current = resetLabel(END, 'free', NOW);
+  const pro = proCard(false, 'monthly', free, NOW);
+  assert.ok(current.includes(refill), `the current-plan line "${current}" spells the date as the Pro card does ("${refill}")`);
+  assert.ok(!pro.open && pro.line.includes(refill));
+  assert.ok(giftStatusLine(END, NOW).includes(refill));
+  assert.ok(paidStatusLine({ status: 'active', cancelAtPeriodEnd: true, currentPeriodEnd: END }, 'Pro', NOW)?.includes(refill));
+});
+
 test('a gifted Pro says when it ends and that nothing is charged after', () => {
   const line = giftStatusLine(END, NOW);
-  const date = new Date(END).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const date = new Date(END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
   assert.equal(line, `Pro from a gift until ${date}. Then you move to Free, and nothing is charged.`);
 });
 

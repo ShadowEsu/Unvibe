@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { isMac } from '../shared/platform';
+import { createPortal } from 'react-dom';
+import { deviceName, isMac } from '../shared/platform';
 
 interface AccountMenuProps {
   name: string;
@@ -49,9 +50,11 @@ export function AccountMenu(props: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ left: number; bottom: number }>({ left: 12, bottom: 64 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // The sidebar scrolls, so the menu is fixed to the window and anchored above the trigger.
+  // The menu is portalled to <body> and fixed to the window, anchored above the trigger, so the
+  // sidebar's scroll box and animation never clip it (Design A7, P3).
   const place = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -62,7 +65,8 @@ export function AccountMenu(props: AccountMenuProps) {
   useEffect(() => {
     if (!open) return;
     const onDown = (event: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -88,7 +92,7 @@ export function AccountMenu(props: AccountMenuProps) {
   const onMenuKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
-    const items = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
     const next = event.key === 'ArrowDown' ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
     items[next]?.focus();
@@ -96,13 +100,13 @@ export function AccountMenu(props: AccountMenuProps) {
 
   return (
     <div className="acct" ref={rootRef}>
-      {open ? (
-        <div className="acct-menu" role="menu" aria-label="Account" onKeyDown={onMenuKey} style={{ left: pos.left, bottom: pos.bottom }}>
+      {open ? createPortal(
+        <div className="acct-menu" ref={menuRef} role="menu" aria-label="Account" onKeyDown={onMenuKey} style={{ left: pos.left, bottom: pos.bottom }}>
           <div className="acct-menu__head">
             <span className="acct-avatar acct-avatar--lg" aria-hidden="true">{initials(name)}</span>
             <div className="acct-menu__who">
               <strong>{name}</strong>
-              <span>{email || 'Saved on this computer'}</span>
+              <span>{email || `Saved on this ${deviceName}`}</span>
             </div>
             <span className="acct-menu__plan">{planLabel}</span>
           </div>
@@ -148,7 +152,8 @@ export function AccountMenu(props: AccountMenuProps) {
             )}
           </div>
           <div className="acct-menu__foot">Unvibe {version}</div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
 
       <button
