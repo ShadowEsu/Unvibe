@@ -67,7 +67,7 @@ html {
 }
 h1, h2, h3, .flexacc__title { text-wrap: balance; }
 p, li, figcaption, summary { text-wrap: pretty; }
-:is(time, .paper-beta__specs, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
+:is(time, .dl-card__meta, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
 
 /* Links in running text: the underline thickens on hover. */
 main a:not([class]) {

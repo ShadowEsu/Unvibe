@@ -8,6 +8,7 @@ import "./hero.css";
 import "./sections.css";
 import "./pages.css";
 import "./system.css";
+import "./home-ux.css";
 import { Providers } from "@/components/providers/Providers";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { OG_CARD_SIZE, OG_CARDS } from "@/lib/pageMeta";

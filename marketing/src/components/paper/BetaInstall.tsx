@@ -2,19 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useCopyToast } from "@/components/paper/CopyToast";
-import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { delight } from "@/lib/delight";
+import { DOWNLOADS, downloadChoice, type DownloadBuild } from "@/lib/downloadCard";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
-import { SHORTCUTS, detectVisitorDevice } from "@/lib/shortcuts";
+import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
   BETA_INSTALL_COMMAND,
   BETA_INSTALL_LABEL,
-  BETA_INSTALL_VERSION,
   BETA_MAC_DIRECT_DOWNLOAD,
   BETA_MAC_INTEL_DIRECT_DOWNLOAD,
-  BETA_WINDOWS_DIRECT_DOWNLOAD,
   BETA_WINDOWS_INSTALL_COMMAND,
 } from "@/lib/betaOffer";
 
@@ -27,53 +25,48 @@ interface BetaInstallProps {
   title?: string | null;
 }
 
-type InstallOs = "mac" | "windows";
-
+/**
+ * The one download card (home `#install`, `/beta`, `/investors`; Design W10, W11, W13). The site detects
+ * the visitor's computer, so there is one filled button for it, a row of the other downloads, and the
+ * honest first-open line. After a click, the steps for that file show in place. The server renders the
+ * Apple silicon Mac card; the effect switches it to Windows, Intel Mac or the phone's emailed link.
+ */
 export function BetaInstall({
   tone = "hero",
   surface,
   showFeedback = true,
   title = BETA_INSTALL_LABEL,
 }: BetaInstallProps) {
+  const [device, setDevice] = useState<VisitorDevice>("mac");
+  // Chromium browsers can tell an Intel Mac apart; Safari cannot, so the Intel build is always one click away.
+  const [intelMac, setIntelMac] = useState(false);
+  const [opened, setOpened] = useState<DownloadBuild | null>(null);
+  const [termOpen, setTermOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const [os, setOs] = useState<InstallOs>("mac");
-  const [termOpen, setTermOpen] = useState(false);
-  // Chromium browsers can tell an Intel Mac apart; Safari cannot, so Intel users also get a link.
-  const [intelMac, setIntelMac] = useState(false);
-  const [clicked, setClicked] = useState(false);
-  // Phones can't run the desktop app, so the primary action there is the emailed link.
-  const [phone, setPhone] = useState(false);
   const { showCopyToast } = useCopyToast();
-  const command = os === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
-  const prompt = os === "windows" ? "PS>" : "$";
-  const shellHint =
-    os === "windows"
-      ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
-      : "Paste in Terminal on any Mac. It picks the right build for Apple silicon or Intel.";
-  const directHref = os === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : intelMac ? BETA_MAC_INTEL_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD;
+
+  const { primary, others } = downloadChoice(device, intelMac);
+  const termOs = device === "windows" ? "windows" : "mac";
+  const command = termOs === "windows" ? BETA_WINDOWS_INSTALL_COMMAND : BETA_INSTALL_COMMAND;
+  const shortcut = device === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere;
 
   useEffect(() => {
-    const device = detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints);
-    const detected: InstallOs = device === "windows" ? "windows" : "mac";
-    setOs(detected);
-    setPhone(device === "phone");
+    const detected = detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints);
+    setDevice(detected);
     const uaData = (navigator as Navigator & { userAgentData?: { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string; platform?: string }> } }).userAgentData;
     void uaData?.getHighEntropyValues?.(["architecture", "platform"]).then((v) => {
       if (v.platform === "macOS" && v.architecture === "x86") setIntelMac(true);
     }).catch(() => undefined);
-    track("beta_install_viewed", { surface: tone, os: detected });
-    const selectFromCta = (event: Event) => {
-      const platform = (event as CustomEvent<InstallOs>).detail;
-      if (platform === "mac" || platform === "windows") setOs(platform);
-    };
-    window.addEventListener("unvibe:install-platform", selectFromCta);
-    return () => window.removeEventListener("unvibe:install-platform", selectFromCta);
+    track("beta_install_viewed", { surface: tone, os: detected === "windows" ? "windows" : "mac" });
   }, [tone]);
 
-  const selectOs = (next: InstallOs) => {
-    setOs(next);
-    track("beta_install_os_selected", { os: next, surface: tone });
+  const download = (build: DownloadBuild) => {
+    const { platform } = DOWNLOADS[build];
+    track("release_download_clicked", { os: platform, surface: tone });
+    trackDownloadClick(surface, platform);
+    delight();
+    setOpened(build);
   };
 
   const copyCommand = async () => {
@@ -81,8 +74,8 @@ export function BetaInstall({
     try {
       await navigator.clipboard.writeText(command);
       setCopied(true);
-      showCopyToast(os === "windows" ? "Copied the Windows install command" : "Copied the Mac install command");
-      track("beta_install_copied", { os, surface: tone });
+      showCopyToast(termOs === "windows" ? "Copied the Windows install command" : "Copied the Mac install command");
+      track("beta_install_copied", { os: termOs, surface: tone });
       recordBetaSiteEvent("copied");
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -91,33 +84,10 @@ export function BetaInstall({
   };
 
   return (
-    <div className={tone === "hero" ? "paper-beta paper-beta--hero" : "paper-beta paper-beta--page"}>
+    <div className={tone === "hero" ? "paper-beta paper-beta--hero dl-card" : "paper-beta paper-beta--page dl-card"}>
       {title ? <p className="paper-beta__title">{title}</p> : null}
 
-      <div className="paper-beta__os" role="group" aria-label="Install platform">
-        <button
-          type="button"
-          aria-pressed={os === "mac"}
-          className={os === "mac" ? "is-on" : undefined}
-          onClick={() => selectOs("mac")}
-        >
-          <span className="paper-beta__os-icon"><AppleIcon /></span>
-          <span className="paper-beta__os-name">Mac</span>
-          <span className="paper-beta__os-meta">{intelMac ? "Intel" : "M1 or newer"}</span>
-        </button>
-        <button
-          type="button"
-          aria-pressed={os === "windows"}
-          className={os === "windows" ? "is-on" : undefined}
-          onClick={() => selectOs("windows")}
-        >
-          <span className="paper-beta__os-icon"><WindowsIcon /></span>
-          <span className="paper-beta__os-name">Windows</span>
-          <span className="paper-beta__os-meta">10 or 11, x64</span>
-        </button>
-      </div>
-
-      {phone ? (
+      {primary === null ? (
         <>
           <a
             className="paper-beta__download-btn"
@@ -129,117 +99,113 @@ export function BetaInstall({
           <p className="paper-beta__update">Unvibe runs on a Mac or PC. Open the email there to install it.</p>
         </>
       ) : (
-        <a
-          className="paper-beta__download-btn"
-          href={directHref}
-          rel="noreferrer"
-          onClick={() => {
-            track("release_download_clicked", { os, surface: tone });
-            trackDownloadClick(surface, os);
-            delight();
-            setClicked(true);
-          }}
-        >
-          <DownloadIcon />
-          <span>{os === "windows" ? "Download free for Windows" : "Download free for Mac"}</span>
-        </a>
-      )}
+        <>
+          <a className="paper-beta__download-btn" href={DOWNLOADS[primary].href} rel="noreferrer" onClick={() => download(primary)}>
+            <DownloadIcon />
+            <span>{DOWNLOADS[primary].primaryLabel}</span>
+          </a>
+          <p className="dl-card__meta">
+            {DOWNLOADS[primary].meta} No card, no API key.{" "}
+            <a className="paper-text-link" href={DOWNLOADS[primary].sha256Url}>SHA-256</a>
+          </p>
 
-      <div className="paper-beta__specs" aria-label="Download details">
-        <span>{BETA_INSTALL_VERSION}</span>
-        <span aria-hidden="true">·</span>
-        <span>{os === "windows" ? "~88 MB .exe" : intelMac ? "~117 MB .dmg" : "~109 MB .dmg"}</span>
-        <span aria-hidden="true">·</span>
-        <span>No card</span>
-        <span aria-hidden="true">·</span>
-        <span>No API key</span>
-      </div>
+          <div className="dl-card__others" role="group" aria-label="Other downloads">
+            {others.map((build) => (
+              <a key={build} className="dl-card__other" href={DOWNLOADS[build].href} rel="noreferrer" onClick={() => download(build)}>
+                {DOWNLOADS[build].platform === "windows" ? <WindowsIcon /> : <AppleIcon />}
+                <span>{DOWNLOADS[build].otherLabel}</span>
+              </a>
+            ))}
+            <button
+              type="button"
+              className="dl-card__other"
+              onClick={() => setTermOpen(!termOpen)}
+              aria-expanded={termOpen}
+              aria-controls={`dl-term-${surface}`}
+            >
+              <TerminalIcon />
+              <span>Install from the terminal</span>
+              <ChevronIcon open={termOpen} />
+            </button>
+          </div>
 
-      {os === "mac" && !phone ? <MacBuildLinks intelMac={intelMac} surface={surface} /> : null}
-      {clicked ? (
-        <div className="paper-beta__next" role="status">
-          <p className="paper-beta__next-title">Downloading! Now open it the first time:</p>
-          <FirstOpenSteps initialOs={os} compact />
-        </div>
-      ) : (
-        <p className="paper-beta__update">
-          {os === "windows"
-            ? "Unvibe is not signed for Windows yet, so the first run shows a blue warning with Run anyway. "
-            : "Unvibe is not verified by Apple yet, so the first open takes a few extra steps in System Settings. "}
-          <a href="/install-help">Show me how</a>
-        </p>
+          {termOpen ? (
+            <div className="paper-beta__term-drawer" id={`dl-term-${surface}`}>
+              <p className="paper-beta__shell" role="note">
+                {termOs === "windows"
+                  ? "Paste in Windows PowerShell or Terminal (PowerShell). Not Command Prompt. Not Git Bash."
+                  : "Paste in Terminal on any Mac. It picks the right build for Apple silicon or Intel."}
+              </p>
+              <div className="paper-beta__term">
+                <pre
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Copy ${termOs === "windows" ? "Windows" : "Mac"} install command`}
+                  onClick={() => void copyCommand()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      void copyCommand();
+                    }
+                  }}
+                >
+                  <code>
+                    <span className="paper-beta__cmd">
+                      <span className="paper-beta__prompt">{termOs === "windows" ? "PS>" : "$"}</span>
+                      {command}
+                    </span>
+                  </code>
+                </pre>
+                <button
+                  type="button"
+                  className={copied ? "is-copied" : undefined}
+                  onClick={() => void copyCommand()}
+                  aria-label={copied ? "Copied" : "Copy command"}
+                >
+                  {copied ? <CheckIcon /> : <CopyIcon />}
+                </button>
+              </div>
+              {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
+            </div>
+          ) : null}
+
+          {opened ? (
+            <div className="paper-beta__next" role="status">
+              <p className="paper-beta__next-title">Downloading. Now open it the first time:</p>
+              <FirstOpen build={opened} />
+            </div>
+          ) : (
+            <p className="dl-card__honest">
+              {DOWNLOADS[primary].platform === "windows"
+                ? "Unvibe isn't signed for Windows yet, so the first run shows a blue warning with Run anyway. "
+                : "Apple hasn't verified Unvibe yet, so the first open takes one extra step in System Settings. "}
+              <a className="paper-text-link" href="/install-help">Show me how</a>
+            </p>
+          )}
+        </>
       )}
 
       <ol className="paper-beta__quickstart" aria-label="Get started">
         <li className="paper-beta__step">
           <span className="paper-beta__step-num" aria-hidden="true">1</span>
-          <span className="paper-beta__step-text">Download &amp; open</span>
+          <span className="paper-beta__step-text">Download and open</span>
         </li>
-        <li className="paper-beta__step-arrow" aria-hidden="true">→</li>
         <li className="paper-beta__step">
           <span className="paper-beta__step-num" aria-hidden="true">2</span>
           <span className="paper-beta__step-text">Select code in any app</span>
         </li>
-        <li className="paper-beta__step-arrow" aria-hidden="true">→</li>
         <li className="paper-beta__step">
           <span className="paper-beta__step-num" aria-hidden="true">3</span>
-          <span className="paper-beta__step-text">Press <kbd>{os === "windows" ? SHORTCUTS.windows.anywhere : SHORTCUTS.mac.anywhere}</kbd></span>
+          <span className="paper-beta__step-text">Press <kbd>{shortcut}</kbd></span>
         </li>
       </ol>
 
       <p className="paper-beta__update">
         <b>Updating?</b> From v0.1.30 on, Unvibe updates from inside the app with one click.{" "}
-        {os === "windows"
+        {device === "windows"
           ? "On an older version, quit it from the tray icon, then run the new .exe."
           : "On an older version, quit it from the menu bar, drag the new one into Applications and choose Replace."}
       </p>
-
-      <button
-        type="button"
-        className="paper-beta__term-toggle"
-        onClick={() => setTermOpen(!termOpen)}
-        aria-expanded={termOpen}
-      >
-        <TerminalIcon />
-        <span>Or install from the terminal</span>
-        <ChevronIcon open={termOpen} />
-      </button>
-
-      {termOpen && (
-        <div className="paper-beta__term-drawer">
-          <p className="paper-beta__shell" role="note">{shellHint}</p>
-          <div className="paper-beta__term">
-            <pre
-              role="button"
-              tabIndex={0}
-              aria-label={`Copy ${os === "windows" ? "Windows" : "Mac"} install command`}
-              onClick={() => void copyCommand()}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  void copyCommand();
-                }
-              }}
-            >
-              <code>
-                <span className="paper-beta__cmd">
-                  <span className="paper-beta__prompt">{prompt}</span>
-                  {command}
-                </span>
-              </code>
-            </pre>
-            <button
-              type="button"
-              className={copied ? "is-copied" : undefined}
-              onClick={() => void copyCommand()}
-              aria-label={copied ? "Copied" : "Copy command"}
-            >
-              {copied ? <CheckIcon /> : <CopyIcon />}
-            </button>
-          </div>
-          {error ? <p className="paper-beta__error" role="alert">{error}</p> : null}
-        </div>
-      )}
 
       {showFeedback ? (
         <>
@@ -252,8 +218,8 @@ export function BetaInstall({
             target="_blank"
             rel="noreferrer"
             onClick={() => {
-              track("survey_opened", { source: tone === "hero" ? "hero_install" : "page_install", os });
-              track("feedback_opened", { source: tone === "hero" ? "hero_install" : "page_install", os });
+              track("survey_opened", { source: tone === "hero" ? "hero_install" : "page_install", os: termOs });
+              track("feedback_opened", { source: tone === "hero" ? "hero_install" : "page_install", os: termOs });
               recordBetaSiteEvent("survey");
             }}
           >
@@ -262,6 +228,27 @@ export function BetaInstall({
         </>
       ) : null}
     </div>
+  );
+}
+
+/** The first open for the file just downloaded (Design W10 for Mac, W11 for Windows). */
+export function FirstOpen({ build }: { build: DownloadBuild }) {
+  return (
+    <>
+      {DOWNLOADS[build].platform === "windows" ? (
+        <ol className="dl-card__steps">
+          <li>If your browser warns, choose <b>Keep</b>.</li>
+          <li>If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.</li>
+        </ol>
+      ) : (
+        <ol className="dl-card__steps">
+          <li>Open the .dmg and drag Unvibe to Applications.</li>
+          <li>macOS says Apple could not check it: press <b>Done</b>.</li>
+          <li>System Settings, Privacy &amp; Security, <b>Open Anyway</b>.</li>
+        </ol>
+      )}
+      <p className="paper-beta__update"><a className="paper-text-link" href="/install-help">Show me how</a></p>
+    </>
   );
 }
 
