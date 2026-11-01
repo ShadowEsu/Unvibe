@@ -4,7 +4,7 @@
  * "Storage") or the FAQ's "What gets sent to the AI?"; whatLeaves.test.ts checks each against those pages.
  */
 export const SENT: readonly string[] = [
-  "The code you selected and its language",
+  "The code you selected, or the file you choose, and its language",
   "Its file path inside your project, when Unvibe knows it, never the full path on your computer",
   "The name of the project folder",
   "Any question you type",
@@ -17,7 +17,7 @@ export const KEPT: readonly string[] = [
   "Your repo. It is never uploaded.",
   "Keys and tokens. Unvibe scans for them on your computer and stops a known key before anything is sent.",
   "Your Library: the code, the explanations and your notes. Signed in, only a record of each lesson syncs, not its code.",
-  "Your keystrokes and screen. Unvibe reads only the selection.",
+  "Your keystrokes and screen. Unvibe never records them.",
 ];
 
 export function WhatLeaves() {
@@ -27,7 +27,7 @@ export function WhatLeaves() {
         <div className="sec-head">
           <p className="paper-meta">Privacy</p>
           <h2 id="what-leaves-title">What leaves <em>your computer.</em></h2>
-          <p className="paper-lead">Only what you ask about. The privacy policy has the full detail.</p>
+          <p className="paper-lead">Only what&apos;s needed to explain what you ask about. The privacy policy has the full detail.</p>
         </div>
         <div className="leaves">
           <div className="leaves__col">
@@ -37,7 +37,7 @@ export function WhatLeaves() {
                 <li key={item}><UpIcon />{item}</li>
               ))}
             </ul>
-            <p className="leaves__who">During the beta, Anthropic&apos;s Claude API writes the explanation.</p>
+            <p className="leaves__who">During the beta, Anthropic&apos;s Claude API writes the explanation, unless you add your own provider key in the app.</p>
           </div>
           <div className="leaves__col">
             <h3>Stays on your computer</h3>
