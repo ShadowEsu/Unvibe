@@ -40,6 +40,10 @@
 .try__foot .try__consent { display: flex; align-items: center; gap: 10px; min-height: 32px; }
 .try__consent input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--v-lime); }
 .try__consent label { cursor: pointer; }
+/* Why Explain it didn't send, under the unticked box (W18). Empty until a press; stays in the page so
+   role="alert" announces it, and takes back the grid gap while empty. */
+.try__foot .try__why { padding-left: 30px; color: #ffe08a; font-weight: 600; }
+.try__foot .try__why:empty { margin-top: -0.55rem; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 .try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }
