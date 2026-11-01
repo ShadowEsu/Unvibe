@@ -46,7 +46,7 @@ describe("download card: one button for the visitor's computer", () => {
     assert.doesNotMatch(html, /aria-pressed|aria-label="Install platform"|role="tab"/);
     const others = /<div class="dl-card__others" role="group" aria-label="Other downloads">([\s\S]*?)<\/div>/.exec(html)?.[1] ?? "";
     for (const label of ["Intel Mac", "Windows 10 or 11", "Install from the terminal"]) assert.match(others, new RegExp(`>${label}<`));
-    assert.match(html, /Apple hasn&#x27;t verified Unvibe yet, so the first open takes one extra step in System Settings\./);
+    assert.match(html, /Apple hasn&#x27;t verified Unvibe yet, so the first open takes a few extra steps in System Settings\./);
   });
 
   it("Windows meta line and the SmartScreen steps say what the visitor will meet", () => {
@@ -76,4 +76,12 @@ describe("download card: the same card on home #install and /beta", () => {
       assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
     });
   }
+});
+
+describe("home has one download card", () => {
+  it("W2 drops the closing card, so the #install card is the only download card", () => {
+    const html = renderToStaticMarkup(createElement(HomePage));
+    assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
+    assert.doesNotMatch(html, /paper-invite__card|Download free for Windows/);
+  });
 });

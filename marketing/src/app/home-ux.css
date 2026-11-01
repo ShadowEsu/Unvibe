@@ -93,3 +93,4 @@
 .demo .vtour { padding-bottom: 0; text-align: left; }
 .home-backing { width: min(46rem, calc(100% - 2.5rem)); margin: 0 auto clamp(2rem, 4vw, 3rem); color: var(--u-text-2); text-align: center; }
 .home-backing > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
+.plans-strip__paused { margin: 0.6rem 0 0; color: var(--u-text); font-weight: 600; text-align: center; }

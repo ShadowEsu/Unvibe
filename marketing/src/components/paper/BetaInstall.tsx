@@ -178,7 +178,7 @@ export function BetaInstall({
             <p className="dl-card__honest">
               {DOWNLOADS[primary].platform === "windows"
                 ? "Unvibe isn't signed for Windows yet, so the first run shows a blue warning with Run anyway. "
-                : "Apple hasn't verified Unvibe yet, so the first open takes one extra step in System Settings. "}
+                : "Apple hasn't verified Unvibe yet, so the first open takes a few extra steps in System Settings. "}
               <a className="paper-text-link" href="/install-help">Show me how</a>
             </p>
           )}

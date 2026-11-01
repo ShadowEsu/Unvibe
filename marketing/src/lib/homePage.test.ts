@@ -72,7 +72,7 @@ describe("home page keeps Security's required disclosures (W2)", () => {
   });
 
   it("names Anthropic's Claude API", () => {
-    assert.match(text, /Anthropic's Claude API writes the explanation\./);
+    assert.match(text, /Anthropic's Claude API writes the explanation, unless you add your own provider key in the app\./);
   });
 
   it("says AI can be wrong", () => {
