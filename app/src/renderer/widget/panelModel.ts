@@ -87,23 +87,22 @@ function isNetworkError(errorCode: string): boolean {
 
 /**
  * The error card (Design A4, polish bar B-5): what happened and why in the title, what to do in the
- * body, one button that does it. A network failure says so and offers Retry; any other error keeps
- * the service's own message with Try again.
+ * body, and one Try again button (the same verb for every error, Design R2). A network failure says
+ * so; any other error keeps the service's own message.
  */
 export interface ErrorView {
   title: string;
   body: string;
-  action: 'Retry' | 'Try again';
 }
 
 export function errorView(errorCode: string, message: string): ErrorView {
   if (errorCode === 'offline') {
-    return { title: "You're offline. Unvibe can't reach its server.", body: 'Check your Wi-Fi or network, then retry.', action: 'Retry' };
+    return { title: "You're offline. Unvibe can't reach its server.", body: 'Check your Wi-Fi or network, then try again.' };
   }
   if (errorCode === 'unreachable') {
-    return { title: "Unvibe can't reach its server.", body: 'Your network is connected, so the server may be down for a moment. Retry in a bit.', action: 'Retry' };
+    return { title: "Unvibe can't reach its server.", body: 'Your network is connected, so the server may be briefly down. Try again in a moment.' };
   }
-  return { title: "Couldn't explain that", body: message, action: 'Try again' };
+  return { title: "Couldn't explain that", body: message };
 }
 
 /** The header's one status word (Design P10, sentence case), consistent with what the panel shows. */
@@ -128,4 +127,14 @@ export function statusTone(phase: Phase, opts: { limited: boolean; errorCode: st
   if (opts.limited) return 'paused';
   if (phase === 'error') return isNetworkError(opts.errorCode) ? 'offline' : 'error';
   return phase;
+}
+
+/**
+ * Moves focus to the explanation without drawing its ring (Design R4): the ring shows only when the
+ * person reaches it with the keyboard. `focusVisible` is Chromium's FocusOptions flag, not yet in
+ * TypeScript's DOM types.
+ */
+export function focusQuietly(target: { focus: (options?: FocusOptions) => void } | null): void {
+  const options: FocusOptions & { focusVisible: boolean } = { preventScroll: true, focusVisible: false };
+  target?.focus(options);
 }

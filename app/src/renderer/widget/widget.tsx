@@ -18,7 +18,7 @@ import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
 import { PanelHeader } from './panelHeader';
-import { actionRow, errorView, limitState, showsLimit, statusLabel, statusTone, type LimitState, type Phase } from './panelModel';
+import { actionRow, errorView, focusQuietly, limitState, showsLimit, statusLabel, statusTone, type LimitState, type Phase } from './panelModel';
 import '../shared/tokens.css';
 
 interface Quiz {
@@ -662,7 +662,7 @@ function Widget() {
       if (current instanceof HTMLInputElement || current instanceof HTMLTextAreaElement) return;
       const inContent = current instanceof HTMLElement && current !== main && Boolean(main?.contains(current))
         && !(current instanceof HTMLButtonElement && current.disabled);
-      if (!inContent) (bodyRef.current ?? main)?.focus({ preventScroll: true });
+      if (!inContent) focusQuietly(bodyRef.current ?? main);
     };
     toExplanation();
     const onFocus = () => window.setTimeout(toExplanation, 0);
@@ -1089,7 +1089,7 @@ function Widget() {
                 </>
               ) : (
                 <button className="btn" onClick={() => request({})}>
-                  {failure.action}
+                  Try again
                 </button>
               )}
             </div>
