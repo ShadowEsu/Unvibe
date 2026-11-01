@@ -1,12 +1,18 @@
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
+
+/** The Try box's own outage note (TryIt.tsx), repeated word for word under the allowances it qualifies. */
+export const PRICING_PAUSED_NOTE = "AI features are paused for maintenance. Back soon.";
 
 /**
  * The home page's two-card price strip (Design W5): Free today, Pro's real price and that it is not on
  * sale yet. Pro has no button on purpose: nothing can be bought, and the download card follows.
- * Allowances come from lib/allowance (W7), prices from lib/pricing.
+ * Allowances come from lib/allowance (W7), prices from lib/pricing. While the AI outage switch is on,
+ * the Try box's pause note sits under the strip, since its allowances are AI explanations (Security SHOULD-H3).
+ * `paused` is the test seam for the build-time switch.
  */
-export function HomePricing() {
+export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
   return (
     <section className="paper-section" id="pricing" aria-labelledby="pricing-title">
       <div className="paper-wrap u-sheet">
@@ -45,6 +51,7 @@ export function HomePricing() {
           Teams for {PRICING.teamsMinSeats} to {PRICING.teamsMaxSeats} seats also opens soon.{" "}
           <a className="paper-text-link" href="/pricing">See all plans</a>
         </p>
+        {paused ? <p className="plans-strip__paused" role="status">{PRICING_PAUSED_NOTE}</p> : null}
       </div>
     </section>
   );

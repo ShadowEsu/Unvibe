@@ -50,3 +50,4 @@
 .plans-strip__list { display: grid; gap: 0.45rem; padding: 0 !important; list-style: none; line-height: 1.45; }
 .plans-strip__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); text-align: center; }
 .plans-strip__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
+.plans-strip__paused { margin: 0.6rem 0 0; color: var(--u-text); font-weight: 600; text-align: center; }
