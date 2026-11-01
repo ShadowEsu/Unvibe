@@ -7,6 +7,16 @@ import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 
 /**
+ * Pages with no bar: the download pages, whose own content is the download it would cover
+ * (/pricing, /beta, /install-help; Design W16), and the private and form pages.
+ */
+const NO_BAR = ["/pricing", "/beta", "/install-help", "/founder", "/stats", "/s/", "/waitlist"];
+
+export function mobileBarHidden(pathname: string | null): boolean {
+  return NO_BAR.some((prefix) => pathname?.startsWith(prefix));
+}
+
+/**
  * Small-screen bar that appears after the hero. On a phone the useful action is getting the
  * link by email (the hero form); a narrow desktop window still gets the download.
  */
@@ -32,7 +42,7 @@ export function MobileDownloadBar() {
     };
   }, [pathname]);
 
-  if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist")) return null;
+  if (mobileBarHidden(pathname)) return null;
 
   // An <aside>, so the bar sits in a landmark once it shows (axe `region`, seen at 390 with the try-it answer open).
   return (

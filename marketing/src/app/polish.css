@@ -699,6 +699,11 @@ html[data-performance="lite"] .paper-hero > img {
   html:has(.mobile-dl) {
     scroll-padding-bottom: calc(3.8rem + 1.5rem + env(safe-area-inset-bottom));
   }
+
+  /* Room for the bar at the end of the page too, so it never covers the footer's last line. */
+  html:has(.mobile-dl) .paper-footer {
+    padding-bottom: calc(3.8rem + 0.75rem + env(safe-area-inset-bottom));
+  }
 }
 @media (max-width: 360px) {
   .mobile-dl > span { display: none; }
