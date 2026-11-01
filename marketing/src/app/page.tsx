@@ -13,6 +13,7 @@ import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { WhatLeaves } from "@/components/paper/WhatLeaves";
+import { HomePricing } from "@/components/paper/HomePricing";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -92,6 +93,8 @@ export default function HomePage() {
       </section>
 
       <WhatLeaves />
+
+      <HomePricing />
 
       <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
         <div className="paper-wrap u-sheet">

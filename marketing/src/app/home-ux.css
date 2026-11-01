@@ -35,3 +35,18 @@
 .leaves__who { margin: 0; padding-top: 0.8rem; border-top: 1px solid var(--u-line); color: var(--u-text-2); line-height: 1.45; }
 .leaves__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); line-height: 1.5; text-align: center; }
 .leaves__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
+
+/* ── Home price strip (HomePricing; Design W5): Free and Pro side by side, no button on Pro. ── */
+.plans-strip { display: grid; gap: clamp(1.25rem, 3vw, 2rem); }
+@media (min-width: 760px) { .plans-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.plans-strip__card { display: grid; align-content: start; gap: 0.6rem; padding: clamp(1.1rem, 2.5vw, 1.6rem); border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); text-align: left; }
+.plans-strip__card > * { margin: 0; }
+.plans-strip__card h3 { font: 800 clamp(1.3rem, 2vw, 1.6rem)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.plans-strip__tag { justify-self: start; padding: 0.15rem 0.7rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: var(--v-lime); color: #141414; font: 700 0.85rem var(--font-sans); }
+.plans-strip__card--pro .plans-strip__tag { background: var(--u-card); color: var(--u-text); }
+.plans-strip__price { font: 800 clamp(2rem, 3.4vw, 2.6rem)/1 var(--font-display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.plans-strip__price small { font: 500 1rem var(--font-sans); letter-spacing: 0; color: var(--u-text-2); }
+.plans-strip__note { color: var(--u-text-2); line-height: 1.45; }
+.plans-strip__list { display: grid; gap: 0.45rem; padding-left: 1.2rem !important; line-height: 1.45; }
+.plans-strip__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); text-align: center; }
+.plans-strip__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
