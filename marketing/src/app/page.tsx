@@ -101,7 +101,7 @@ export default function HomePage() {
           <div className="sec-head">
             <p className="paper-meta">Download</p>
             <h2 id="install-title">Free for <em>Mac and Windows.</em></h2>
-            <p className="paper-lead">Pick your computer, open the app, then press the shortcut in any app.</p>
+            <p className="paper-lead">Download, open the app, then press the shortcut in any app.</p>
           </div>
           <BetaInstall tone="page" surface="home_install" showFeedback={false} title={null} />
         </div>
