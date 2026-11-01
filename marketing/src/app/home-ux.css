@@ -12,7 +12,7 @@
 .dl-card__other:active { transform: translateY(3px); box-shadow: 0 0 0 var(--v-ink); }
 .dl-card__other:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .dl-card__other svg { flex-shrink: 0; }
-.dl-card__honest { margin: 0.4rem auto 0; max-width: 34rem; color: var(--u-text); font-size: 0.98rem; line-height: 1.5; }
+.dl-card__honest { margin: 0.4rem auto 0; max-width: 46rem; color: var(--u-text); font-size: 0.98rem; line-height: 1.5; }
 /* Standalone links in the card get a 32 px target (W21). */
 .dl-card__meta > a, .dl-card__honest > a, .dl-card .paper-beta__update > a { display: inline-block; padding-block: 6px; line-height: 20px; }
 .dl-card__steps { display: grid; gap: 0.45rem; margin: 0; padding-left: 1.4rem; text-align: left; color: var(--u-text); line-height: 1.5; }
