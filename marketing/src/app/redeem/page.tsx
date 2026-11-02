@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
+import { agreementPayload, REDEEM_AGREEMENT_KEY, saveAgreement, storedAgreement } from "@/lib/accountAgreement";
 import {
   clearPromoCode,
   formatCodeInput,
@@ -36,8 +37,9 @@ function publicSupabase(): { url: string; key: string } | null {
 
 /**
  * Promo codes for Pro months. Sign-in is /activate's: Google or an email link, PKCE, with the
- * site's public Supabase keys. The access token goes to /api/redeem with the code; the API checks
- * it and decides everything.
+ * site's public Supabase keys, after /activate's two unticked boxes (Terms and Privacy; 18 or
+ * older). The access token goes to /api/redeem with the code and the agreement; the API checks
+ * them and decides everything.
  */
 export default function RedeemPage() {
   const [code, setCode] = useState("");
@@ -51,6 +53,11 @@ export default function RedeemPage() {
   const [bootstrapping, setBootstrapping] = useState(true);
   const [working, setWorking] = useState(false);
   const [outcome, setOutcome] = useState<RedeemOutcome | null>(null);
+  const [terms, setTerms] = useState(false);
+  const [age18, setAge18] = useState(false);
+  const [agreeNote, setAgreeNote] = useState(false);
+  const agreement = agreementPayload({ terms, age18 });
+  const agreed = agreement !== null;
   const config = publicSupabase();
   const configured = Boolean(config);
   const supabaseUrl = config?.url;
@@ -108,17 +115,43 @@ export default function RedeemPage() {
     };
   }, [client]);
 
+  // Only this person's own ticks from earlier in this browser session (the Google or email round trip).
+  useEffect(() => {
+    const saved = storedAgreement(REDEEM_AGREEMENT_KEY, sessionStore());
+    setTerms(saved.terms);
+    setAge18(saved.age18);
+  }, []);
+
+  function tick(which: "terms" | "age18", value: boolean) {
+    const next = { terms, age18, [which]: value };
+    setTerms(next.terms);
+    setAge18(next.age18);
+    if (next.terms && next.age18) setAgreeNote(false);
+    saveAgreement(REDEEM_AGREEMENT_KEY, next, sessionStore());
+  }
+
+  /** Every way to sign in or redeem starts here: nothing is sent until both boxes are ticked. */
+  function needsAgreement(): boolean {
+    if (agreed) return false;
+    setAgreeNote(true);
+    return true;
+  }
+
   async function redeem() {
+    if (needsAgreement() || !agreement) return;
     setWorking(true);
     setOutcome(null);
     try {
       const res = await fetch("/api/redeem", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ accessToken, code }),
+        body: JSON.stringify({ accessToken, code, agreement }),
       });
       const result = redeemOutcome(res.status, await res.json().catch(() => ({})));
-      if (result.final) clearPromoCode(sessionStore());
+      if (result.final) {
+        clearPromoCode(sessionStore());
+        saveAgreement(REDEEM_AGREEMENT_KEY, { terms: false, age18: false }, sessionStore());
+      }
       setOutcome(result);
     } catch {
       setOutcome({ kind: "unavailable", ok: false, line: "Could not reach Unvibe. Check your connection and try again.", showDownload: false, final: false });
@@ -128,7 +161,7 @@ export default function RedeemPage() {
   }
 
   async function signInWithGoogle() {
-    if (!client) return;
+    if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage("");
     try {
@@ -155,7 +188,7 @@ export default function RedeemPage() {
   }
 
   async function sendMagicLink() {
-    if (!client) return;
+    if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage("");
     try {
@@ -187,10 +220,14 @@ export default function RedeemPage() {
     void sendMagicLink();
   }
 
+  /** Someone else may sign in next, so the boxes are asked again. */
   async function signOut() {
     if (!client) return;
     await client.auth.signOut().catch(() => undefined);
     setOutcome(null);
+    setTerms(false);
+    setAge18(false);
+    saveAgreement(REDEEM_AGREEMENT_KEY, { terms: false, age18: false }, sessionStore());
   }
 
   const codeReady = normalisePromoCode(code) !== null;
@@ -203,6 +240,22 @@ export default function RedeemPage() {
           Sign in, enter your code, and the Pro months go on your account. Use the account you sign in to the Unvibe app with.
         </p>
 
+        <fieldset className="redeem-agree">
+          <legend className="redeem-label">Before you sign in</legend>
+          <label htmlFor="redeem-agree-terms">
+            <input id="redeem-agree-terms" type="checkbox" checked={terms} onChange={(event) => tick("terms", event.target.checked)} />
+            <span>
+              I agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms</a> and the{" "}
+              <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>
+            </span>
+          </label>
+          <label htmlFor="redeem-agree-age">
+            <input id="redeem-agree-age" type="checkbox" checked={age18} onChange={(event) => tick("age18", event.target.checked)} />
+            <span>I&apos;m 18 or older</span>
+          </label>
+          {agreeNote && !agreed && <p className="redeem-note redeem-note--error" role="status">Tick both boxes first.</p>}
+        </fieldset>
+
         {!accessToken && (
           <div>
             <button
@@ -210,6 +263,7 @@ export default function RedeemPage() {
               type="button"
               onClick={() => void signInWithGoogle()}
               disabled={!configured || authBusy || bootstrapping}
+              aria-disabled={!agreed}
             >
               {authBusy ? "Opening Google…" : "Continue with Google"}
             </button>
@@ -238,7 +292,7 @@ export default function RedeemPage() {
                   {emailError}
                 </p>
               )}
-              <button className="redeem-btn redeem-btn--quiet" type="submit" disabled={!configured || authBusy}>
+              <button className="redeem-btn redeem-btn--quiet" type="submit" disabled={!configured || authBusy} aria-disabled={!agreed}>
                 {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
               </button>
             </form>
@@ -273,7 +327,7 @@ export default function RedeemPage() {
             aria-describedby="redeem-code-hint"
           />
           <p className="redeem-hint" id="redeem-code-hint">16 letters and numbers. Dashes and spaces are optional.</p>
-          <button className="redeem-btn" type="submit" disabled={working || !codeReady || !accessToken || bootstrapping}>
+          <button className="redeem-btn" type="submit" disabled={working || !codeReady || !accessToken || bootstrapping} aria-disabled={!agreed}>
             {working ? "Redeeming…" : "Redeem code"}
           </button>
         </form>
