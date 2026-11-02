@@ -2025,6 +2025,20 @@ function App() {
     // Windows draws its caption buttons over the top-right corner; CSS reserves room for them.
     document.documentElement.dataset.platform = platformAttr;
   }, []);
+  // Motion spec §4: decorative loops run only while this window is focused. The window's own blur/focus
+  // events, not :focus-within, which flips when focus moves to a non-focusable area inside the window.
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => root.classList.toggle('is-blurred', !document.hasFocus());
+    sync();
+    window.addEventListener('blur', sync);
+    window.addEventListener('focus', sync);
+    return () => {
+      window.removeEventListener('blur', sync);
+      window.removeEventListener('focus', sync);
+      root.classList.remove('is-blurred');
+    };
+  }, []);
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);

@@ -422,7 +422,7 @@
   & .vibe-float { right: 22px; bottom: 82px; }
   & .vibe-float__btn {
     width: 60px; height: 60px; border: 1.5px solid var(--v-ink); border-radius: 50%; background: var(--v-surface);
-    box-shadow: var(--hard); animation: vibeBob 3.6s ease-in-out infinite;
+    box-shadow: var(--hard); animation: vibeBob 3.6s ease-in-out 3; /* spec §4: 3 cycles, then still */
   }
   & .vibe-float__btn:hover { animation-play-state: paused; transform: rotate(-6deg) scale(1.06); }
   & .vibe-float__bubble {

@@ -3159,3 +3159,10 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 @media (prefers-reduced-motion: reduce) {
   .ob__hello-bubble, .ob__confetti i { animation: none; }
 }
+
+/* Motion spec §4: no idle loop while the window is unfocused (the root gets .is-blurred from the window's
+   blur/focus events), and the dusk drift also rests while an answer is being written (.is-writing).
+   !important because the `animation` shorthand on the rules that start these loops resets play-state. */
+:root.is-blurred body::before, :root.is-blurred .sanFranWash::before,
+:root.is-writing body::before, :root.is-writing .sanFranWash::before,
+:root.is-blurred .vibe-float__btn { animation-play-state: paused !important; }

@@ -257,7 +257,7 @@
   width: 62px; height: 62px; border-radius: 50%; border: 0;
   background: radial-gradient(circle at 30% 25%, #ffffff, #f1ecff 70%);
   box-shadow: 0 0 0 2px rgb(124 92 255 / 0.25), 0 14px 32px -10px rgb(91 60 220 / 0.55);
-  animation: vibeBob 3.6s ease-in-out infinite;
+  animation: vibeBob 3.6s ease-in-out 3; /* spec §4: 3 cycles each time the button appears, then still */
 }
 :root[data-ui="v3"][data-theme="dark"] .vibe-float__btn { background: radial-gradient(circle at 30% 25%, #2a2850, #17162a 70%); }
 :root[data-ui="v3"] .vibe-float__btn:hover { animation-play-state: paused; transform: scale(1.06); }
