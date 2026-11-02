@@ -51,12 +51,10 @@ describe("pricing copy in both states", () => {
       assert.deepEqual(copy.plans.filter((plan) => plan.primary).map((plan) => [plan.id, plan.cta, plan.href]), [["free", "Download free", "/beta"]]);
     });
 
-    // Pro is 200 explanations a month (ledger 417), the number production enforces
-    // (plan_entitlements, web/src/billing/plans.ts). It is the only allowance number on the page.
-    it(`states Pro's 200 explanations and no other allowance number (payments ${paymentsOpen ? "open" : "closed"})`, () => {
-      const numbers = allText(copy).match(/\d+\s*(ai\s+)?(explanations|questions|projects|items|reviews)/gi) ?? [];
-      assert.deepEqual(numbers, ["200 AI explanations"]);
-      assert.ok(copy.plans.find((plan) => plan.id === "pro")?.features.includes("200 AI explanations a month"));
+    it(`states no allowance numbers (payments ${paymentsOpen ? "open" : "closed"})`, () => {
+      const text = allText(copy);
+      assert.doesNotMatch(text, /\d+\s*(ai\s+)?(explanations|questions|projects|items|reviews)/i);
+      assert.ok(copy.plans.find((plan) => plan.id === "pro")?.features.includes("More explanations each month than Free"));
     });
   }
 
