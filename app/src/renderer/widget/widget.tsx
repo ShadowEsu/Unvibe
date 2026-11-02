@@ -134,6 +134,21 @@ function shortAnswerTop(body: HTMLElement): number | null {
   return answer ? answer.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop : null;
 }
 
+/** The bottom of each rendered text line in `el`, top to bottom, in `body`'s scroll coordinates. */
+function lineBottoms(el: HTMLElement, body: HTMLElement): number[] {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const origin = body.getBoundingClientRect().top - body.scrollTop;
+  const rects = [...range.getClientRects()].filter((r) => r.height > 0).sort((a, b) => a.top - b.top);
+  const bottoms: number[] = [];
+  for (const r of rects) {
+    const last = bottoms[bottoms.length - 1];
+    if (last === undefined || r.top >= last + origin - 2) bottoms.push(r.bottom - origin);
+    else bottoms[bottoms.length - 1] = Math.max(last, r.bottom - origin);
+  }
+  return bottoms;
+}
+
 function newTab(id: string, label: string): TabState {
   return {
     id,
@@ -816,21 +831,19 @@ function Widget() {
     const reveal = revealDetail.current;
     const body = bodyRef.current;
     if (!reveal || !body || !active.detail.open) return;
-    const first = body.querySelector<HTMLElement>('.more-detail__body > *');
-    if (!first) return;
-    if (reveal.target === null) {
-      const style = getComputedStyle(first);
-      const line = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
-      const bodyBox = body.getBoundingClientRect();
-      const top = first.getBoundingClientRect().top - bodyBox.top + body.scrollTop;
-      if (top + line <= body.scrollTop + body.clientHeight) {
-        revealDetail.current = null; // its first line is already in view: no scroll
-        return;
-      }
-      reveal.target = top + 3 * line + 12 - body.clientHeight;
+    const detail = body.querySelector<HTMLElement>('.more-detail__body');
+    const lines = detail ? lineBottoms(detail, body) : [];
+    if (!lines.length) return;
+    const visibleBottom = body.scrollTop + body.clientHeight;
+    if (reveal.target === null && lines[0]! <= visibleBottom) {
+      revealDetail.current = null; // its first line is already in view: no scroll
+      return;
     }
+    // The bottom of its third rendered line (or the last so far while it streams), 12 px above the action bar.
+    const complete = lines.length >= 3 || active.detail.phase !== 'streaming';
+    reveal.target = lines[Math.min(3, lines.length) - 1]! + 12 - body.clientHeight;
     const goal = Math.min(reveal.target, body.scrollHeight - body.clientHeight);
-    if (goal >= reveal.target || active.detail.phase !== 'streaming') revealDetail.current = null;
+    if (complete) revealDetail.current = null;
     if (goal <= body.scrollTop) return;
     cancelAnimationFrame(revealFrame.current);
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
