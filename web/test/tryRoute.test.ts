@@ -128,7 +128,7 @@ test('Try uses Anthropic even when an OpenRouter key is set too, metered through
   assert.equal(res.status, 200);
   assert.match(await res.text(), /"text":"Claude says it adds one\."/);
   assert.deepEqual(calls, { anthropic: 1, openrouter: 0 });
-  assert.deepEqual(spendCalls, ['reserve_ai_spend', 'settle_ai_spend']);
+  assert.deepEqual(spendCalls, ['reserve_ai_spend_month', 'settle_ai_spend']);
 });
 
 test('Try in production with only an OpenRouter key answers 503 and calls no model', async () => {

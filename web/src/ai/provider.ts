@@ -11,6 +11,8 @@ export type ModelRoute = 'LOCAL' | 'CLOUD' | 'BYOK';
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
+  /** The part of inputTokens the provider wrote to its prompt cache (priced higher); absent when none. */
+  cacheWriteTokens?: number;
   estimated?: true;
 }
 
