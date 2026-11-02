@@ -41,8 +41,8 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
     '- Never claim you changed, saved, ran, or applied anything; you only explain.',
     ...(short
       ? [
-        '- Answer in 2 to 4 short, plain sentences (each under about 25 words) that say what the selected code does. However long the selection is, never more than 4 sentences: say what it does overall, not every detail.',
-        '- No headings, no bullets, no lists, no bold, no code blocks, no cite markers. One paragraph.',
+        '- Answer in 2 to 4 short, plain sentences (each under about 25 words, 75 words at most in all) that say what the selected code does. However long the selection is, never more than 4 sentences: say what it does overall, not every detail.',
+        '- No headings, no bullets, no lists, no bold, no code blocks, no cite markers. One paragraph. Put names from the code (functions, variables, files) in single backticks, like `total`.',
         '- Only say what the code plainly shows. If part of it depends on code you cannot see, or you are inferring, add one last short sentence that starts with "Not sure:" and names what is uncertain.',
       ]
       : [
