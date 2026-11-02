@@ -25,6 +25,8 @@ test('device auth opens only the activate page on the API the app signs in with'
     'https://user@evil.example/activate', // userinfo trick
     'https://api.unvibe.site/oauth/callback', // right host, wrong page
     'https://api.unvibe.site/activate/../account', // normalises to /account
+    'https://api.unvibe.site/activate-evil', // a longer path that only starts with /activate
+    'https://api.unvibe.site/activate/x', // a page under /activate
   ]) {
     assert.throws(() => deviceVerificationUrl(elsewhere, 'ABC123', API), /not on Unvibe's service/, elsewhere);
   }
