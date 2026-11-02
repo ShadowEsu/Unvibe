@@ -111,3 +111,20 @@ test('a sync that loses the compare-and-set every time fails the event, so Strip
   };
   await assert.rejects(processStripeEvent(racing(store, touch, 10), updated(id), deps), /concurrent changes/);
 });
+
+test('a lost compare-and-set retrieves the subscription again, so an older snapshot never overwrites a newer sync', async () => {
+  const store = new MemoryBillingStore();
+  const userId = randomUUID();
+  const { workspaceId, id } = await storedPaid(store, userId, 'active');
+  let stripeStatus: Stripe.Subscription.Status = 'active';
+  let retrieved = 0;
+  const deps: StripeWebhookDependencies = { retrieveSubscription: async (subscriptionId) => { retrieved += 1; return subscription(subscriptionId, workspaceId, stripeStatus); } };
+  // A renewal fails and that event is synced while this one sits between its read and its write.
+  const failedRenewal = async () => {
+    stripeStatus = 'past_due';
+    await processStripeEvent(store, updated(id), deps);
+  };
+  await processStripeEvent(racing(store, failedRenewal), updated(id), deps);
+  assert.equal((await store.subscriptionByWorkspaceId(workspaceId))?.status, 'grace_period');
+  assert.equal(retrieved, 3, 'this event, the racing event, and this event again after losing the compare-and-set');
+});
