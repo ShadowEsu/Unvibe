@@ -61,6 +61,29 @@ function render(os: ThanksOs, state: ThanksState): string {
   return renderToStaticMarkup(createElement(ThanksContent, { os, state, decided: true }));
 }
 
+/** What a person sees or hears: without the hidden copies that hold the lead's height, and without the pill's drawn faces. */
+function shown(html: string): string {
+  return html
+    .replace(/<div class="thanks__ghost" aria-hidden="true">[\s\S]*?<\/div>/, "")
+    .replace(/<span class="thanks__pill-face" aria-hidden="true">[\s\S]*?<\/span><\/p>/, "</p>");
+}
+
+/** The text inside one element (by class), every tag removed, in document order. */
+function slotText(html: string, className: string): string {
+  const start = html.indexOf(`class="${className}"`);
+  assert.ok(start >= 0, className);
+  const open = html.lastIndexOf("<", start);
+  const tag = html.slice(open + 1).match(/^\w+/)![0];
+  let depth = 0;
+  const re = new RegExp(`<(/?)${tag}\\b[^>]*>`, "g");
+  re.lastIndex = open;
+  for (let match = re.exec(html); match; match = re.exec(html)) {
+    depth += match[1] ? -1 : 1;
+    if (depth === 0) return html.slice(open, re.lastIndex).replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+  }
+  throw new Error(`unclosed ${className}`);
+}
+
 function lastSegment(href: string): string {
   return new URL(href).pathname.split("/").pop() ?? "";
 }
@@ -136,15 +159,41 @@ describe("thanks page copy", () => {
   });
 
   it("the line follows the pill", () => {
-    const preparing = render("mac", "preparing");
-    assert.match(preparing, /Preparing download/);
+    const preparing = shown(render("mac", "preparing"));
+    assert.match(preparing, /<span class="sr-only">Preparing download<\/span>/);
     assert.match(preparing, /Your download will begin automatically\. If it didn&#x27;t start, <a [^>]*>download Unvibe manually<\/a>\./);
-    const started = render("mac", "started");
+    assert.doesNotMatch(preparing, /has started|Download started|Ready to download|>Download Unvibe for Mac</);
+    const started = shown(render("mac", "started"));
+    assert.match(started, /<span class="sr-only">Download started<\/span>/);
     assert.match(started, /Your download has started\. If it didn&#x27;t, <a [^>]*>download Unvibe manually<\/a>\./);
-    const ready = render("windows", "ready");
-    assert.match(ready, /Ready to download/);
+    assert.doesNotMatch(started, /will begin automatically|Preparing download|Ready to download/);
+    const ready = shown(render("windows", "ready"));
+    assert.match(ready, /<span class="sr-only">Ready to download<\/span>/);
     assert.match(ready, />Download Unvibe for Windows</);
-    assert.doesNotMatch(ready, /will begin automatically|has started/);
+    assert.doesNotMatch(ready, /will begin automatically|has started|Preparing download|Download started/);
+  });
+
+  it("every state lays out the same pill faces and lead lines, so a state change never moves the page (CLS 0)", () => {
+    for (const os of ALL_OS) {
+      const [ready, preparing, started] = (["ready", "preparing", "started"] as const).map((state) => render(os, state));
+      const face = (html: string) => slotText(html, "thanks__pill-face");
+      assert.equal(face(preparing), face(ready), `${os} pill`);
+      assert.equal(face(started), face(ready), `${os} pill`);
+      // The same three texts are in the lead's cell in every state; only which one shows changes.
+      const lines = (html: string) => slotText(html, "thanks__slot").split("|").filter(Boolean).join("").replace(/\s+/g, " ");
+      const present = (html: string) => ["Download Unvibe for", "will begin automatically", "has started"].map((text) => lines(html).includes(text));
+      for (const html of [ready, preparing, started]) assert.deepEqual(present(html), [true, true, true], os);
+    }
+  });
+
+  it("the hidden copies hold no link or button and are hidden from assistive tech", () => {
+    for (const os of ALL_OS) {
+      for (const state of ["ready", "preparing", "started"] as const) {
+        const ghost = render(os, state).match(/<div class="thanks__ghost" aria-hidden="true">([\s\S]*?)<\/div>/);
+        assert.ok(ghost, `${os} ${state}`);
+        assert.doesNotMatch(ghost[1]!, /<a |<button|href=|tabindex/);
+      }
+    }
   });
 
   it("only the pill is a live region", () => {

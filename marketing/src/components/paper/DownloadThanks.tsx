@@ -111,19 +111,19 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
   const manual = (
     <a className="thanks__link thanks__nowrap" href={href} onClick={file(os)}>download Unvibe manually</a>
   );
+  const preparingLine = (link: JSX.Element) => <>Your download will begin automatically. If it didn&apos;t start, {link}.</>;
+  const startedLine = (link: JSX.Element) => <>Your download has started. If it didn&apos;t, {link}.</>;
+  const ghostLink = <span className="thanks__nowrap">download Unvibe manually</span>;
+  const buttonLabel = mac ? "Download Unvibe for Mac" : "Download Unvibe for Windows";
   return (
     <section className="thanks" aria-labelledby="thanks-title" data-view={decided ? state : undefined} data-switched={switched || undefined}>
       <p className="thanks__pill thanks__in" role="status" aria-live="polite" data-state={state}>
         <span className="sr-only">{PILL[state]}</span>
+        {/* All three faces share one grid cell, so the pill keeps one width in every state (CLS 0). */}
         <span className="thanks__pill-face" aria-hidden="true">
-          {state === "ready" ? (
-            <span className="thanks__pill-layer" data-on="">{PILL.ready}</span>
-          ) : (
-            <>
-              <span className="thanks__pill-layer" data-on={state === "preparing" ? "" : undefined}><Spinner />{PILL.preparing}</span>
-              <span className="thanks__pill-layer" data-on={state === "started" ? "" : undefined}><Check />{PILL.started}</span>
-            </>
-          )}
+          <span className="thanks__pill-layer" data-on={state === "ready" ? "" : undefined}>{PILL.ready}</span>
+          <span className="thanks__pill-layer" data-on={state === "preparing" ? "" : undefined}><Spinner />{PILL.preparing}</span>
+          <span className="thanks__pill-layer" data-on={state === "started" ? "" : undefined}><Check />{PILL.started}</span>
         </span>
       </p>
 
@@ -132,17 +132,22 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
       </h1>
 
       <div className="thanks__lead thanks__in">
-        {state === "ready" ? (
-          <a className="paper-join paper-join--win thanks__primary" href={href} onClick={file(os)}>
-            <span className="paper-join__label">{mac ? "Download Unvibe for Mac" : "Download Unvibe for Windows"}</span>
-          </a>
-        ) : (
-          <p className="thanks__line">
-            {state === "preparing"
-              ? <>Your download will begin automatically. If it didn&apos;t start, {manual}.</>
-              : <>Your download has started. If it didn&apos;t, {manual}.</>}
-          </p>
-        )}
+        {/* The shown line and hidden copies of the other two share one grid cell, so swapping the state
+            never moves the steps below it (CLS 0). The copies hold no links and are hidden from everyone. */}
+        <div className="thanks__slot">
+          {state === "ready" ? (
+            <a className="paper-join paper-join--win thanks__primary" href={href} onClick={file(os)}>
+              <span className="paper-join__label">{buttonLabel}</span>
+            </a>
+          ) : (
+            <p className="thanks__line">{state === "preparing" ? preparingLine(manual) : startedLine(manual)}</p>
+          )}
+          <div className="thanks__ghost" aria-hidden="true">
+            {state !== "ready" ? <span className="paper-join thanks__primary"><span className="paper-join__label">{buttonLabel}</span></span> : null}
+            {state !== "preparing" ? <p className="thanks__line">{preparingLine(ghostLink)}</p> : null}
+            {state !== "started" ? <p className="thanks__line">{startedLine(ghostLink)}</p> : null}
+          </div>
+        </div>
         {os === "mac" ? (
           <p className="thanks__sub">
             Intel Mac? <a className="thanks__link" href={THANKS_DOWNLOADS["mac-intel"].href} onClick={file("mac-intel")}>Get the Intel build</a>.
@@ -183,9 +188,12 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
  * /download/thanks. On load it maps `?os=` and `?from=` through the downloadTracking allowlists,
  * takes the one-time click token, and only for a fresh token for that same file asks for the file,
  * 400 ms after the first paint. Without a token it offers the download as a button instead.
+ *
+ * `initialOs` is the server's answer to the same question (the allowlisted `?os=`, else the user
+ * agent), so the first render already shows the right system and nothing moves on hydration.
  */
-export function DownloadThanks() {
-  const [os, setOs] = useState<ThanksOs>("mac");
+export function DownloadThanks({ initialOs }: { initialOs: ThanksOs }) {
+  const [os, setOs] = useState<ThanksOs>(initialOs);
   const [state, setState] = useState<ThanksState>("ready");
   const [decided, setDecided] = useState(false);
   const [leaving, setLeaving] = useState(false);

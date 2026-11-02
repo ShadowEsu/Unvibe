@@ -91,7 +91,7 @@ html:has(.thanks-page) body::after {
 .thanks__spin-arc { stroke: var(--u-ink); }
 .thanks__spin-dot { fill: var(--u-ink); opacity: 0; }
 /* The spinner turns only while preparing, then stops for good. */
-.thanks__pill[data-state="started"] .thanks__spin { animation: none; }
+.thanks__pill:not([data-state="preparing"]) .thanks__spin { animation: none; }
 
 .thanks__title {
   margin: 20px 0 0;
@@ -106,6 +106,14 @@ html:has(.thanks-page) body::after {
 .thanks__title span { color: var(--thanks-ink-2); }
 
 .thanks__lead { max-width: 620px; margin: 16px auto 0; }
+/* The shown line and hidden copies of the other states in one cell: the tallest sets the height. */
+.thanks__slot,
+.thanks__ghost { display: grid; }
+.thanks__slot > *,
+.thanks__ghost > * { grid-area: 1 / 1; align-self: center; }
+.thanks__ghost { visibility: hidden; }
+.thanks__slot > .thanks__primary,
+.thanks__ghost > .thanks__primary { justify-self: center; }
 .thanks__line {
   margin: 0;
   color: var(--thanks-ink-2);
@@ -233,6 +241,7 @@ html:has(.thanks-page) body::after {
 .thanks__switch:hover { text-decoration-color: currentColor; }
 /* The switch needs JavaScript; without it the line above offers the Windows file instead. */
 html:not(.js) .thanks__switch { display: none; }
+html:not(.js) .thanks__trouble { margin-top: 56px; }
 
 .thanks__trouble {
   margin: 16px 0 0;

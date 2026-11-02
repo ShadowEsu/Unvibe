@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
+import { THANKS_PATH } from "@/lib/downloadThanks";
 
 const MAX_WORDS = 100;
 /** Same floor the server uses before the email link earns a Pro month. */
 const BONUS_MIN_WORDS = 8;
-const HIDDEN = ["/founder", "/stats", "/s/", "/waitlist-admin", "/activate"];
+// /download/thanks: nothing beside the steps (Design spec: no clutter, no nav).
+const HIDDEN = ["/founder", "/stats", "/s/", "/waitlist-admin", "/activate", THANKS_PATH];
 
 function words(text: string): number {
   const trimmed = text.trim();
