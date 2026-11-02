@@ -579,7 +579,7 @@ h2 {
   align-items: end;
   justify-content: center;
   gap: 1rem;
-  animation: paperKeysBreathe 6.4s var(--ease-calm) infinite;
+  animation: paperKeysBreathe 6.4s var(--ease-calm) 3;
 }
 
 .paper-key {
@@ -676,7 +676,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   align-items: center;
   justify-content: center;
   gap: 0.9rem 1.05rem;
-  animation: paperKeysBreathe 6.4s var(--ease-calm) infinite;
+  animation: paperKeysBreathe 6.4s var(--ease-calm) 3;
 }
 
 .paper-follow__mark {
@@ -910,7 +910,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-invite.is-armed.is-lit .paper-invite__card {
-  animation: paperInviteRise 450ms var(--ease-emphatic) both;
+  animation: paperInviteRise var(--dur-standard) var(--ease-emphatic) both;
 }
 
 .paper-invite__card h2 {
@@ -1716,7 +1716,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   height: 100%;
   background: var(--hero-type);
   transform-origin: left center;
-  animation: paperMeterFill 1.6s var(--ease-emphatic) both;
+  animation: paperMeterFill 400ms var(--ease-emphatic) both;
 }
 
 .paper-meter strong {
@@ -1774,7 +1774,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-map.is-drawn .paper-map__lane {
-  animation: paperMapDraw 2.4s var(--ease-emphatic) both;
+  animation: paperMapDraw 400ms var(--ease-emphatic) both;
 }
 
 .paper-map__dash {
@@ -1787,7 +1787,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-map.is-drawn .paper-map__dash {
-  animation: paperMapDash 0.5s 2.1s var(--ease-calm) both;
+  animation: paperMapDash var(--dur-standard) 400ms var(--ease-calm) both;
 }
 
 @keyframes paperMapDraw {
@@ -1860,21 +1860,15 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-map.is-drawn .paper-map__node {
-  animation: paperMapNode 0.85s var(--ease-emphatic) both;
+  animation: paperMapNode var(--dur-standard) var(--ease-emphatic) both;
 }
 
-.paper-map.is-drawn .paper-map__node:nth-child(1) { animation-delay: 0.12s; }
-.paper-map.is-drawn .paper-map__node:nth-child(2) { animation-delay: 0.28s; }
-.paper-map.is-drawn .paper-map__node:nth-child(3) { animation-delay: 0.44s; }
-.paper-map.is-drawn .paper-map__node:nth-child(4) { animation-delay: 0.6s; }
-.paper-map.is-drawn .paper-map__node:nth-child(5) { animation-delay: 0.76s; }
-.paper-map.is-drawn .paper-map__node:nth-child(6) { animation-delay: 0.92s; }
-.paper-map.is-drawn .paper-map__node:nth-child(7) { animation-delay: 1.08s; }
-.paper-map.is-drawn .paper-map__node:nth-child(8) { animation-delay: 1.24s; }
-.paper-map.is-drawn .paper-map__node:nth-child(9) { animation-delay: 1.4s; }
-.paper-map.is-drawn .paper-map__node:nth-child(10) { animation-delay: 1.56s; }
-.paper-map.is-drawn .paper-map__node:nth-child(11) { animation-delay: 1.72s; }
-.paper-map.is-drawn .paper-map__node:nth-child(12) { animation-delay: 1.88s; }
+/* 60 ms apart, capped at the 6th, so the whole map is in by 0.6 s. */
+.paper-map.is-drawn .paper-map__node:nth-child(2) { animation-delay: 60ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(3) { animation-delay: 120ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(4) { animation-delay: 180ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(5) { animation-delay: 240ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(n + 6) { animation-delay: 300ms; }
 
 @keyframes paperMapNode {
   to {
@@ -1886,10 +1880,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 .paper-map__node.is-now strong,
 .paper-map__node.is-live strong {
   color: var(--brand);
-}
-
-.paper-map.is-drawn .paper-map__node.is-live strong {
-  animation: paperLivePulse 2.2s var(--ease-calm) infinite;
 }
 
 .paper-live {
