@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel, QuizMode } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
-import { Buddy, setBuddyMood } from '../shared/buddy';
+import { Buddy, setBuddyMood, type BuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
-import { AnswerWait, ShortAnswer, answerArriving, offersMoreDetail, waitingStatus } from '../shared/shortAnswer';
+import { AnswerWait, EXIT_MS, ShortAnswer, answerArriving, offersMoreDetail, splitUnsure, waitingStatus } from '../shared/shortAnswer';
 import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
@@ -127,6 +127,12 @@ function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'libr
 }
 
 const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
+
+/** Where the short answer starts in the body's scroll coordinates, or null when there is none. */
+function shortAnswerTop(body: HTMLElement): number | null {
+  const answer = body.querySelector<HTMLElement>('.short-answer');
+  return answer ? answer.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop : null;
+}
 
 function newTab(id: string, label: string): TabState {
   return {
@@ -415,19 +421,22 @@ function Widget() {
   /**
    * When a short answer arrives (its More detail block mounts once the whole answer is shown), scroll the body just
    * enough to show the button plus 12 px, never past the top of the short answer (Design, 2 Nov). Instant,
-   * once per answer; showing or hiding the detail later never scrolls.
+   * once per answer; showing the detail later never scrolls (Less detail may snap back, see toggleDetail).
    */
   const revealMoreDetail = useCallback((block: HTMLDivElement | null) => {
     const body = bodyRef.current;
     if (!block || !body) return;
-    const bodyBox = body.getBoundingClientRect();
     const toggle = block.querySelector<HTMLElement>('.more-detail__toggle') ?? block;
-    const hidden = toggle.getBoundingClientRect().bottom + 12 - bodyBox.bottom;
+    const hidden = toggle.getBoundingClientRect().bottom + 12 - body.getBoundingClientRect().bottom;
     if (hidden <= 0) return;
-    const answer = body.querySelector<HTMLElement>('.short-answer');
-    const answerTop = answer ? answer.getBoundingClientRect().top - bodyBox.top + body.scrollTop : Number.POSITIVE_INFINITY;
+    const answerTop = shortAnswerTop(body) ?? Number.POSITIVE_INFINITY;
     body.scrollTop = Math.min(body.scrollTop + hidden, Math.max(body.scrollTop, answerTop));
   }, []);
+  /** The tab whose More detail content is fading out after Less detail, for EXIT_MS. */
+  const [detailLeaving, setDetailLeaving] = useState<string | null>(null);
+  const detailLeaveTimer = useRef(0);
+  /** Less detail was pressed while the reader was below the top of the short answer. */
+  const snapToAnswer = useRef(false);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -689,7 +698,20 @@ function Widget() {
    */
   const toggleDetail = () => {
     const detail = active.detail;
+    window.clearTimeout(detailLeaveTimer.current);
+    setDetailLeaving(null);
     if (detail.phase === 'done' || detail.phase === 'streaming') {
+      if (detail.open) {
+        // Less detail: the content fades out, then the body snaps back to the short answer if the
+        // reader was below its top (Design motion spec §4).
+        const body = bodyRef.current;
+        const answerTop = body ? shortAnswerTop(body) : null;
+        snapToAnswer.current = Boolean(body && answerTop !== null && body.scrollTop > answerTop);
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          setDetailLeaving(activeRef.current);
+          detailLeaveTimer.current = window.setTimeout(() => setDetailLeaving(null), EXIT_MS);
+        }
+      }
       setTabs((prev) => patchTab(prev, activeRef.current, { detail: { ...detail, open: !detail.open } }));
       return;
     }
@@ -769,6 +791,18 @@ function Widget() {
   // The survey card waits until an explanation has fully finished, typing included, and is asked
   // for again after each one until it is sent or closed. Main decides eligibility.
   const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
+  // Vibe changes on events only: thinking while the answer comes, done (one squish) or unsure when it ends.
+  const vibeMood: BuddyMood = phase === 'streaming' ? 'thinking'
+    : phase === 'done' ? (active.short && splitUnsure(active.text).unsure ? 'unsure' : 'done')
+    : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle';
+  const detailShown = active.detail.open || detailLeaving === active.id;
+  useLayoutEffect(() => {
+    if (detailShown || !snapToAnswer.current) return;
+    snapToAnswer.current = false;
+    const body = bodyRef.current;
+    const answerTop = body ? shortAnswerTop(body) : null;
+    if (body && answerTop !== null) body.scrollTop = Math.min(body.scrollTop, answerTop);
+  }, [detailShown]);
   useEffect(() => {
     if (!pmfReady || pmf || pmfClosed.current) return;
     let live = true;
@@ -843,7 +877,7 @@ function Widget() {
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
-          <Buddy mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={26} label="Vibe" />
+          <Buddy mood={vibeMood} size={26} label="Vibe" />
         </span>
         <div className="head__context">
           <span className="head__product">Unvibe</span>
@@ -1162,8 +1196,8 @@ function Widget() {
                     {active.detail.open ? 'Less detail' : 'More detail'}
                     <svg className="more-detail__chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
                   </button>
-                  {active.detail.open ? (
-                    <div className="more-detail__body" id={`more-detail-${active.id}`}>
+                  {detailShown ? (
+                    <div className={`more-detail__body${active.detail.open ? '' : ' more-detail__body--leaving'}`} id={`more-detail-${active.id}`}>
                       {active.detail.text
                         ? renderRich(active.detail.text, active.detail.phase === 'streaming')
                         : active.detail.phase === 'streaming' ? <p className="more-detail__wait" role="status">Writing more detail…</p> : null}

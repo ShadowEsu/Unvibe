@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { renderInline, renderRich } from './richText';
 import { linesLabel } from '../../core/linesLabel';
 
-/** The skeleton's crossfade out, matching --dur-exit in tokens.css. */
-const EXIT_MS = 150;
+/** The panel's exits in ms (the skeleton's crossfade out, Less detail), matching --dur-exit in tokens.css. */
+export const EXIT_MS = 150;
 
 /**
  * Splits a short answer's honest "Not sure:" sentence off the 2 to 4 sentences before it, so it can

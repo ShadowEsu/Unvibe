@@ -1623,6 +1623,8 @@ code.inline {
 .more-detail__chevron { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .more-detail__toggle[aria-expanded="true"] .more-detail__chevron { transform: rotate(180deg); }
 .more-detail__body { margin-top: 6px; animation: more-detail-in var(--dur-detail) ease-out both; }
+/* Less detail: the content fades out (no height animation), then unmounts. */
+.more-detail__body--leaving { pointer-events: none; animation: answer-out var(--dur-exit) var(--ease-calm) both; }
 .more-detail__wait, .more-detail__error { margin: 0; font-size: .9em; }
 @keyframes more-detail-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .more-detail__body { animation: none; } }
@@ -1648,10 +1650,14 @@ code.inline {
 .short-answer__sentence { animation: answer-in var(--dur-sentence) var(--ease-calm) both; }
 .short-answer--arriving > p:first-of-type > .short-answer__sentence:first-child { animation-duration: var(--dur-micro); }
 .card .state[role="alert"] { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
+/* Done: the "Not sure:" line fades in, then More detail 60 ms later. */
+.short-answer--arriving > .short-answer__unsure { animation: answer-in var(--dur-standard) var(--ease-calm) both; }
+.card .body > .more-detail { animation: answer-in var(--dur-standard) var(--ease-calm) 60ms both; }
 @keyframes answer-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes answer-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes answer-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .answer-skeleton i, .card .body .answer-wait, .short-answer__sentence, .card .state[role="alert"] { animation: none; }
+  .answer-skeleton i, .card .body .answer-wait, .short-answer__sentence, .card .state[role="alert"],
+  .short-answer--arriving > .short-answer__unsure, .card .body > .more-detail { animation: none; }
   .card .body .answer-wait--leaving { display: none; }
 }
