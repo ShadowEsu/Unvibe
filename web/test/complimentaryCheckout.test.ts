@@ -9,6 +9,7 @@ import { seedMemoryPromoBatch } from '../src/billing/promo';
 import { getBillingStore } from '../src/billing/store';
 import { getStripe } from '../src/billing/stripe';
 import { getStore } from '../src/data/store';
+import { ACCOUNT_POLICY_VERSION } from '../src/lib/accountConsent';
 import { PROMO_ALPHABET, promoCodeHash } from '../src/lib/promoCode';
 
 // Real checkout, promo and webhook routes on the memory stores. Test-mode key; every Stripe method
@@ -86,7 +87,7 @@ async function redeem(token: string, code: string): Promise<string> {
   const response = await redeemRoute(new Request('https://api.example.test/api/v1/promo/redeem', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-forwarded-for': `10.77.0.${ipCounter}` },
-    body: JSON.stringify({ accessToken: token, code }),
+    body: JSON.stringify({ accessToken: token, code, agreement: { terms: true, age18: true, policyVersion: ACCOUNT_POLICY_VERSION } }),
   }));
   const body = await response.json() as { ok: boolean; proUntil?: string };
   assert.equal(response.status, 200);

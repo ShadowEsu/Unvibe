@@ -1,4 +1,6 @@
 import { PROMO_RESPONSES, promoBackend, PromoUnavailableError } from '@/billing/promo';
+import { getStore } from '@/data/store';
+import { accountAgreement, consentsTableOn } from '@/lib/accountConsent';
 import { normalisePromoCode, promoCodeHash } from '@/lib/promoCode';
 
 export const runtime = 'nodejs';
@@ -31,15 +33,22 @@ function failure(error: string, status: number, message: string): Response {
 }
 
 /**
- * A signed-in person redeems a promo code: { accessToken, code }. The access token is a Supabase
- * session from the site's sign-in, checked with Supabase Auth exactly as device approval checks
- * it. The account is always the token's owner. Unknown and revoked codes answer the same 404.
+ * A signed-in person redeems a promo code: { accessToken, code, agreement }. The access token is a
+ * Supabase session from the site's sign-in, checked with Supabase Auth exactly as device approval
+ * checks it. The account is always the token's owner. Unknown and revoked codes answer the same 404.
+ * `agreement` is /activate's: both boxes (Terms and Privacy; 18 or older) and the current policy version.
  */
 export async function POST(req: Request): Promise<Response> {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'local';
   if (rateLimited('ip', ip)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
 
-  const body = (await req.json().catch(() => ({}))) as { accessToken?: unknown; code?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { accessToken?: unknown; code?: unknown; agreement?: unknown };
+  // /redeem can create an account, so it asks for the agreement /activate asks for (two unticked
+  // boxes). Checked here, before any Supabase call, so a request that skips the page is refused.
+  const agreement = accountAgreement(body);
+  if (!agreement) {
+    return failure('agreement_required', 400, 'Agree to the Terms and Privacy Policy and confirm you are 18 or older.');
+  }
   const accessToken = typeof body.accessToken === 'string' ? body.accessToken.trim() : '';
   if (!accessToken) return failure('unauthorized', 401, 'Sign in to redeem a code.');
   const code = normalisePromoCode(body.code);
@@ -51,6 +60,19 @@ export async function POST(req: Request): Promise<Response> {
     if (!account) return failure('unauthorized', 401, 'Your sign-in has expired. Sign in again.');
     if (rateLimited('user', account.id)) return failure('rate_limited', 429, 'Too many tries. Wait a minute and try again.');
     await backend.upsertUser(account);
+    if (consentsTableOn()) {
+      // Recorded before the redemption, not after it as approve does: the users row it needs exists
+      // once upsertUser returns, and a granted promo can't easily be undone the way approve
+      // withdraws a session. So no Pro months ever land without a stored agreement; if the record
+      // fails, nothing is redeemed and the person can try again. A refused code still leaves a
+      // true record: the person did tick both boxes.
+      try {
+        await getStore().recordConsents(account.id, agreement.kinds, agreement.policyVersion, new Date());
+      } catch (error) {
+        console.error('promo redeem: could not record the agreement', error instanceof Error ? error.message : error);
+        return failure('unavailable', 503, 'Could not save your agreement. Try again shortly.');
+      }
+    }
     const result = await backend.redeem(account.id, promoCodeHash(code));
     const { http, message } = PROMO_RESPONSES[result.status];
     if (http !== 200) return failure(result.status, http, message);
