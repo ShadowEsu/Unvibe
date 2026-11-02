@@ -13,6 +13,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "4 NOV 2026",
+    category: "PRODUCT",
+    title: "Explanations start with a short answer",
+    summary: "An explanation now opens as a short answer of a few sentences, with names from your code in code style and a quiet line for anything Unvibe is not sure about. More detail opens the full explanation under it. If an explanation is refused or breaks before it arrives, for example while AI features are paused, the free trial gives that credit back. A one-line selection now reads 1 line, not 1 lines.",
+    figure: "v0.1.49",
+  },
+  {
     date: "2 NOV 2026",
     category: "PRODUCT",
     title: "The panel says why an explanation could not start",
