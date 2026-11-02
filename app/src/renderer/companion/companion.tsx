@@ -3,6 +3,7 @@ import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
+import { linesLabel } from '../../core/linesLabel';
 import { Chat } from './chat';
 import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
@@ -1113,7 +1114,7 @@ function Progress({ profile }: { profile: Profile | null }) {
       <div className="topline"><h1>Momentum</h1></div>
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
-        <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${linesLabel(profile?.linesReviewed ?? 0)}` : 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{freshness?.share ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness?.count ?? 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{profile ? profile.reviews : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>

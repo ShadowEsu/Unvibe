@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel, QuizMode } from '../../core/protocol';
@@ -7,6 +7,7 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
 import { ShortAnswer } from '../shared/shortAnswer';
+import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -437,6 +438,22 @@ function Widget() {
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
+  /**
+   * When a short answer arrives (its More detail block mounts once typing ends), scroll the body just
+   * enough to show the button plus 12 px, never past the top of the short answer (Design, 2 Nov). Instant,
+   * once per answer; showing or hiding the detail later never scrolls.
+   */
+  const revealMoreDetail = useCallback((block: HTMLDivElement | null) => {
+    const body = bodyRef.current;
+    if (!block || !body) return;
+    const bodyBox = body.getBoundingClientRect();
+    const toggle = block.querySelector<HTMLElement>('.more-detail__toggle') ?? block;
+    const hidden = toggle.getBoundingClientRect().bottom + 12 - bodyBox.bottom;
+    if (hidden <= 0) return;
+    const answer = body.querySelector<HTMLElement>('.short-answer');
+    const answerTop = answer ? answer.getBoundingClientRect().top - bodyBox.top + body.scrollTop : Number.POSITIVE_INFINITY;
+    body.scrollTop = Math.min(body.scrollTop + hidden, Math.max(body.scrollTop, answerTop));
+  }, []);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -762,7 +779,7 @@ function Widget() {
   const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
-      <b>{active.meta.lines} lines</b>
+      <b>{linesLabel(active.meta.lines ?? 0)}</b>
       {active.meta.language && active.meta.language !== 'plaintext' ? ` · ${active.meta.language}` : ''}
       {active.meta.sourceApp ? ` · from ${active.meta.sourceApp}` : ''}
     </span>
@@ -1037,7 +1054,7 @@ function Widget() {
               <div className="big">Reading your code in context…</div>
               <div className="detected">
                 <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
-                <span>{active.meta.lines ?? 0} lines</span>
+                <span>{linesLabel(active.meta.lines ?? 0)}</span>
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               <div className="sub">Parsing your selection and generating the explanation.</div>
@@ -1049,7 +1066,7 @@ function Widget() {
               <div className="big" id="confirm-title">Explain this code?</div>
               <div className="detected">
                 <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
-                <span>{active.meta.lines ?? 0} lines</span>
+                <span>{linesLabel(active.meta.lines ?? 0)}</span>
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               {active.meta.preview ? (
@@ -1159,7 +1176,7 @@ function Widget() {
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
               {active.short && phase === 'done' && !stillTyping ? (
-                <div className="more-detail">
+                <div className="more-detail" ref={revealMoreDetail}>
                   <button
                     type="button"
                     className="more-detail__toggle"
