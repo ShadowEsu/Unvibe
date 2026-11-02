@@ -3,15 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
-import {
-  ACCOUNT_POLICY_VERSION,
-  clearDeviceCode,
-  opensForSignIn,
-  pendingDeviceCode,
-  saveAgreement,
-  saveDeviceCode,
-  storedAgreement,
-} from "@/lib/deviceApproval";
+import { ACCOUNT_POLICY_VERSION, ACTIVATE_AGREEMENT_KEY, saveAgreement, storedAgreement } from "@/lib/accountAgreement";
+import { clearDeviceCode, opensForSignIn, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
 
 function sessionStore(): Storage | null {
   try {
@@ -83,7 +76,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
   }, []);
 
   useEffect(() => {
-    const saved = storedAgreement(sessionStore());
+    const saved = storedAgreement(ACTIVATE_AGREEMENT_KEY, sessionStore());
     setTerms(saved.terms);
     setAge18(saved.age18);
   }, []);
@@ -93,7 +86,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
     setTerms(next.terms);
     setAge18(next.age18);
     if (next.terms && next.age18) setAgreeNote(false);
-    saveAgreement(next, sessionStore());
+    saveAgreement(ACTIVATE_AGREEMENT_KEY, next, sessionStore());
   }
 
   /** Every way to sign an app in starts here: nothing is sent until both boxes are ticked. */
@@ -168,7 +161,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
         return;
       }
       clearDeviceCode(sessionStore());
-      saveAgreement({ terms: false, age18: false }, sessionStore());
+      saveAgreement(ACTIVATE_AGREEMENT_KEY, { terms: false, age18: false }, sessionStore());
       setStatus("done");
     } catch {
       setStatus("error");

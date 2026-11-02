@@ -14,7 +14,11 @@ export const dynamic = "force-dynamic";
 const REDEEM_IP_LIMIT: RateLimitRule = { name: "promo-redeem-ip", windowSeconds: 60, max: 60 };
 const NO_STORE = { "Cache-Control": "no-store" };
 
-/** /redeem's proxy to POST /api/v1/promo/redeem. Forwards only the access token and the code. */
+/**
+ * /redeem's proxy to POST /api/v1/promo/redeem. Forwards only the access token, the code and the
+ * agreement's three fields (terms, age18, policyVersion), each of its own type; an agreement of any
+ * other shape is left out, so the API refuses it. The API decides whether it's agreed.
+ */
 export async function POST(request: Request) {
   const crossSite = rejectCrossSitePost(request);
   if (crossSite) return crossSite;
@@ -27,11 +31,15 @@ export async function POST(request: Request) {
   const fields = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const accessToken = typeof fields.accessToken === "string" ? fields.accessToken : "";
   const code = typeof fields.code === "string" ? fields.code.slice(0, 64) : "";
+  const given = fields.agreement && typeof fields.agreement === "object" ? (fields.agreement as Record<string, unknown>) : {};
+  const agreement = typeof given.terms === "boolean" && typeof given.age18 === "boolean" && typeof given.policyVersion === "string"
+    ? { terms: given.terms, age18: given.age18, policyVersion: given.policyVersion.slice(0, 32) }
+    : undefined;
   try {
     const response = await fetch(`${webAppBackendUrl()}/api/v1/promo/redeem`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ accessToken, code }),
+      body: JSON.stringify({ accessToken, code, agreement }),
       cache: "no-store",
     });
     const data: unknown = await response.json().catch(() => ({}));

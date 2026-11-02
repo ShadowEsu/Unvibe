@@ -116,6 +116,7 @@ describe("one line per answer", () => {
       [410, "expired", "That code has expired.", true],
       [410, "cap_reached", "Every code from this offer has been claimed.", true],
       [429, "rate_limited", "Too many tries. Wait a minute and try again.", false],
+      [400, "agreement_required", "Tick both boxes above, then redeem.", false],
       [503, "unavailable", "Codes cannot be redeemed right now. Try again shortly.", false],
     ];
     const lines = new Set<string>();
@@ -137,11 +138,11 @@ describe("one line per answer", () => {
 
   it("writes no em dashes and uses sentence case", () => {
     const all = [
-      "bad_code", "invalid", "used", "one_per_account", "has_paid_plan", "expired", "cap_reached", "rate_limited", "unavailable",
+      "bad_code", "invalid", "used", "one_per_account", "has_paid_plan", "expired", "cap_reached", "rate_limited", "unavailable", "agreement_required",
     ].map((error) => redeemOutcome(400, { error }).line);
     all.push(redeemOutcome(200, { status: "redeemed", months: 3, proUntil: until }, TZ).line);
     for (const line of all) {
-      assert.ok(!line.includes("\u2014"), line);
+      assert.ok(!/[\u2013\u2014]/.test(line), line);
       assert.match(line, /^[A-Z0-9]/);
     }
   });
