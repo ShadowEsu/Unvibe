@@ -8,6 +8,10 @@ describe("the small-screen download bar", () => {
     for (const path of ["/pricing", "/beta", "/install-help"]) assert.equal(mobileBarHidden(path), true, path);
   });
 
+  it("stays off the form pages, where it covered the promo-code field at 390", () => {
+    for (const path of ["/redeem", "/activate"]) assert.equal(mobileBarHidden(path), true, path);
+  });
+
   it("still shows on the other public pages", () => {
     for (const path of ["/", "/about", "/resources", "/releases", "/explain"]) assert.equal(mobileBarHidden(path), false, path);
   });
