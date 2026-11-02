@@ -306,7 +306,7 @@ export function TryIt({
             </div>
           ) : state === "thinking" ? (
             <div className="try__state try__state--thinking" aria-hidden="true">
-              <span className="try__bob"><Vibe size={60} follow={false} /></span>
+              <Vibe size={60} follow={false} />
               <p key={note}>{NOTES[note]}</p>
               <i /><i /><i />
             </div>
