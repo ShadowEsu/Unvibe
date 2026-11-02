@@ -49,5 +49,5 @@ export interface ReviewRequestPayload {
 export type StreamEvent =
   | { type: 'token'; text: string }
   | { type: 'done'; model: string; mock: boolean }
-  /** `code: 'ai_paused'`: hosted AI is paused (maintenance, the spend stop, or no spend store). */
+  /** `code: 'ai_paused'`: hosted AI is paused for everyone (maintenance, the service's day or month stop, or no spend store); never for one account's daily share. */
   | { type: 'error'; message: string; code?: 'ai_paused' };
