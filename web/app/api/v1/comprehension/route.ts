@@ -4,7 +4,7 @@ import type { ReviewRequestPayload } from '@/ai/protocol';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { billedUsage, type TokenUsage } from '@/ai/provider';
-import { AiPausedError } from '@/ai/spendMeter';
+import { AiPausedError, spendAccount } from '@/ai/spendMeter';
 import { recordMeteredTokens, releaseMeteredAction, reserveMeteredAction } from '@/billing/enforce';
 import { recordTrialTokens, reserveTrialAction, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { payloadSizeError } from '@/lib/reviewLimits';
@@ -16,7 +16,7 @@ export async function POST(req: Request): Promise<Response> {
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
   const payload = (await req.json().catch(() => null)) as ReviewRequestPayload | null;
-  const provider = selectProvider();
+  const provider = selectProvider(userId ? spendAccount('user', userId) : trialInstall ? spendAccount('install', trialInstall) : undefined);
   if (!provider) return Response.json({ error: 'The AI service is unavailable. Try again later.' }, { status: 503 });
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();
