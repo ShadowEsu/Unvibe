@@ -6,6 +6,7 @@ import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
+import { ShortAnswer } from '../shared/shortAnswer';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -90,6 +91,17 @@ interface TabState {
   confirmAfterAgree: boolean;
   /** Who Explain sends the code to, for the confirm sheet (Security U10). */
   providerName: string;
+  /** The answer is the short default (2 to 4 sentences), so "More detail" is offered under it. */
+  short: boolean;
+  /** "More detail": the full-depth text streamed under the short answer, and whether it is shown. */
+  detail: DetailState;
+}
+
+interface DetailState {
+  phase: 'idle' | 'streaming' | 'done' | 'error';
+  text: string;
+  error: string;
+  open: boolean;
 }
 
 const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
@@ -139,6 +151,8 @@ function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'libr
   return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
 }
 
+const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
+
 function newTab(id: string, label: string): TabState {
   return {
     id,
@@ -166,6 +180,8 @@ function newTab(id: string, label: string): TabState {
     agreedJustNow: false,
     confirmAfterAgree: false,
     providerName: CONSENT_PROVIDERS.unvibe,
+    short: false,
+    detail: NO_DETAIL,
   };
 }
 
@@ -499,6 +515,22 @@ function Widget() {
         const tab = prev.find((t) => t.id === tabId);
         if (!tab) return prev;
 
+        // "More detail" streams under the short answer; the answer and its actions stay as they are.
+        if ('part' in ev && ev.part === 'detail') {
+          const detail = tab.detail;
+          switch (ev.type) {
+            case 'status':
+              return patchTab(prev, tabId, { detail: { phase: 'streaming', text: '', error: '', open: true } });
+            case 'token':
+              return patchTab(prev, tabId, { detail: { ...detail, phase: 'streaming', text: detail.text + (ev.text ?? '') } });
+            case 'done':
+              return patchTab(prev, tabId, { detail: { ...detail, phase: 'done' } });
+            case 'error':
+              return patchTab(prev, tabId, { detail: { ...detail, phase: 'error', error: ev.message ?? 'Something went wrong.' } });
+          }
+          return prev;
+        }
+
         switch (ev.type) {
           case 'init': {
             const history = archiveCurrent(tab);
@@ -512,6 +544,8 @@ function Widget() {
                 preview: ev.preview,
               },
               text: '',
+              short: false,
+              detail: NO_DETAIL,
               quiz: null,
               error: '',
               mock: false,
@@ -528,7 +562,7 @@ function Widget() {
             return prev;
           case 'status':
             playTone('think');
-            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+            return patchTab(prev, tabId, { text: '', short: ev.short === true, detail: NO_DETAIL, phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
           case 'consentNeeded':
             return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
@@ -543,7 +577,7 @@ function Widget() {
             );
           case 'done':
             playTone('done');
-            return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done' });
+            return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done', short: ev.short === true });
           case 'error':
             return patchTab(prev, tabId, {
               error: ev.message ?? 'Something went wrong.',
@@ -554,7 +588,7 @@ function Widget() {
             return patchTab(prev, tabId, { quiz: { phase: 'failed', error: ev.message } });
           // understood: no UI reset — Got it collapses separately
           case 'cancelled':
-            return patchTab(prev, tabId, { text: '', quiz: null, phase: 'ready' });
+            return patchTab(prev, tabId, { text: '', short: false, detail: NO_DETAIL, quiz: null, phase: 'ready' });
           case 'question':
             return patchTab(prev, tabId, {
               quiz: {
@@ -654,6 +688,23 @@ function Widget() {
       return;
     }
     window.unvibe.request({ level: active.level, ...opts });
+  };
+
+  /**
+   * "More detail" under a short answer: the first press streams the full depth below the short
+   * answer (nothing above it moves); after that the button only shows or hides it. A failed run
+   * can be asked for again. Focus stays on the button.
+   */
+  const toggleDetail = () => {
+    const detail = active.detail;
+    if (detail.phase === 'done' || detail.phase === 'streaming') {
+      setTabs((prev) => patchTab(prev, activeRef.current, { detail: { ...detail, open: !detail.open } }));
+      return;
+    }
+    setTabs((prev) => patchTab(prev, activeRef.current, { detail: { phase: 'streaming', text: '', error: '', open: true } }));
+    // Not request(): More detail is a follow-up, not a new explanation, so an exhausted explanation
+    // allowance must not replace the answer on screen; a refusal shows under the short answer.
+    window.unvibe.request({ level: active.level, moreDetail: true });
   };
 
   const openQuiz = (another = false) => {
@@ -1103,10 +1154,32 @@ function Widget() {
                 </section>
               ) : null}
               {showText
-                ? renderRich(showText, stillTyping)
+                ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} /> : renderRich(showText, stillTyping))
                 : (
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
+              {active.short && phase === 'done' && !stillTyping ? (
+                <div className="more-detail">
+                  <button
+                    type="button"
+                    className="more-detail__toggle"
+                    aria-expanded={active.detail.open}
+                    aria-controls={`more-detail-${active.id}`}
+                    onClick={toggleDetail}
+                  >
+                    {active.detail.open ? 'Less detail' : 'More detail'}
+                    <svg className="more-detail__chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
+                  </button>
+                  {active.detail.open ? (
+                    <div className="more-detail__body" id={`more-detail-${active.id}`}>
+                      {active.detail.text
+                        ? renderRich(active.detail.text, active.detail.phase === 'streaming')
+                        : active.detail.phase === 'streaming' ? <p className="more-detail__wait" role="status">Writing more detail…</p> : null}
+                      {active.detail.phase === 'error' ? <p className="more-detail__error" role="alert">{active.detail.error}</p> : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {pmf && pmfReady ? (
                 <PmfCard
                   model={pmf}

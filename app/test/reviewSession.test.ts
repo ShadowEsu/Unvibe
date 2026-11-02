@@ -43,7 +43,9 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
     if (reviewRefusal) return Response.json(reviewRefusal.body, { status: reviewRefusal.status });
     const text = body.question
       ? `ANSWER to "${body.question}"`
-      : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
+      : body.detail === 'short'
+        ? `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''}, short: it delays a call until input goes quiet.`
+        : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
     const events = reviewEvents ?? [{ type: 'token', text }, { type: 'done', model: 'test', mock: false }];
     return new Response(events.map((ev) => `data: ${JSON.stringify(ev)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } });
   }
@@ -117,6 +119,51 @@ test('"Explain differently" applies to that request only', async () => {
   assert.match(lesson(s.reviewId)?.explanation ?? '', /\(different\)/);
   await runReview(win, s, { level: 'advanced' });
   assert.equal(reviewBodies().at(-1)?.variant, 'default');
+});
+
+test('a selection explanation asks for the short answer; More detail sends it back and streams under it', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('beginner');
+  await runReview(win, s, { level: 'beginner' });
+  const first = reviewBodies().at(-1);
+  assert.equal(first?.detail, 'short');
+  assert.equal(first?.shortAnswer, undefined);
+  const shortText = 'EXPLANATION at beginner, short: it delays a call until input goes quiet.';
+  assert.equal(events.find((ev) => ev.type === 'status')?.short, true, 'the panel knows the answer is short before it streams');
+  assert.equal(events.find((ev) => ev.type === 'done')?.short, true);
+  assert.equal(lesson(s.reviewId)?.explanation, shortText);
+
+  events.length = 0;
+  await runReview(win, s, { level: 'beginner', moreDetail: true });
+  const detail = reviewBodies().at(-1);
+  assert.equal(detail?.detail, 'full');
+  assert.equal(detail?.shortAnswer, shortText);
+  assert.equal(detail?.question, undefined);
+  // Every event of the detail run is tagged, so the panel keeps the short answer above it.
+  assert.ok(events.filter((ev) => ev.type !== 'usage').every((ev) => ev.part === 'detail'), JSON.stringify(events));
+  assert.equal(events.find((ev) => ev.type === 'status')?.resetQuiz, false);
+  // The lesson keeps both, short answer first.
+  assert.equal(lesson(s.reviewId)?.explanation, `${shortText}\n\nEXPLANATION at beginner of a debounce helper that waits for quiet input.`);
+
+  // A new explanation (another depth) is short again and forgets the old short answer.
+  await runReview(win, s, { level: 'advanced' });
+  assert.equal(reviewBodies().at(-1)?.detail, 'short');
+  assert.equal(reviewBodies().at(-1)?.shortAnswer, undefined);
+  assert.equal(lesson(s.reviewId)?.explanation, 'EXPLANATION at advanced, short: it delays a call until input goes quiet.');
+});
+
+test('More detail without a finished short answer is an ordinary explanation; follow-up questions stay full', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('beginner');
+  await runReview(win, s, { level: 'beginner', moreDetail: true });
+  assert.equal(reviewBodies().at(-1)?.detail, 'short', 'nothing to go on from, so it is a new short answer');
+  assert.ok(events.every((ev) => ev.part === undefined));
+
+  await runReview(win, s, { level: 'beginner', question: 'Why wait?' });
+  assert.equal(reviewBodies().at(-1)?.detail, 'full');
+  assert.equal(reviewBodies().at(-1)?.shortAnswer, undefined);
 });
 
 test('a link-captured review sends nothing until Explain, then exactly one request', async () => {
@@ -294,15 +341,16 @@ test('streamed token, done and error events reach the panel with only their chec
     reviewEvents = null;
   }
   const streamed = events.filter((ev) => ev.type === 'token' || ev.type === 'done' || ev.type === 'error');
+  // `short` is the app's own flag (this run asked for the short answer), never a field the service sent.
   assert.deepEqual(streamed, [
     { type: 'token', text: 'Kept words.', tabId: '1' },
     { type: 'error', message: 'The explanation service could not complete that request. Please try again.', tabId: '1' },
-    { type: 'done', model: 'service-model', mock: false, tabId: '1' },
-    { type: 'done', model: undefined, mock: true, tabId: '1' },
-    { type: 'done', model: 'm'.repeat(80), mock: false, tabId: '1' },
+    { type: 'done', model: 'service-model', mock: false, short: true, tabId: '1' },
+    { type: 'done', model: undefined, mock: true, short: true, tabId: '1' },
+    { type: 'done', model: 'm'.repeat(80), mock: false, short: true, tabId: '1' },
   ]);
   for (const ev of streamed) {
-    const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'tabId', 'type'];
+    const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'short', 'tabId', 'type'];
     assert.deepEqual(Object.keys(ev).sort(), expected);
     assert.ok(Object.values(ev).every((value) => value === undefined || typeof value === 'string' || typeof value === 'boolean'), JSON.stringify(ev));
   }

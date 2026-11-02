@@ -40,12 +40,17 @@ export type WidgetEvent =
   | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; providerName: string; mode?: string; level: ExplanationLevel }
   /** The person hasn't agreed to sending their code to this provider: the panel asks first. */
   | { type: 'consentNeeded'; tabId: string; provider: ConsentProvider }
-  | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
+  /**
+   * `part: 'detail'`: about a "More detail" run, shown under the short answer; the answer itself stays.
+   * `short`: the answer on its way is the short default (its "Not sure:" line shows in the quiet style).
+   */
+  | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
-  | { type: 'token'; tabId: string; text: string }
-  | { type: 'done'; tabId: string; model: string; mock: boolean }
-  | { type: 'error'; tabId: string; message: string; code?: string; upgradePath?: string }
+  | { type: 'token'; tabId: string; text: string; part?: 'detail' }
+  /** `short`: the answer was the short default, so the panel offers "More detail". */
+  | { type: 'done'; tabId: string; model: string; mock: boolean; part?: 'detail'; short?: boolean }
+  | { type: 'error'; tabId: string; message: string; code?: string; upgradePath?: string; part?: 'detail' }
   | { type: 'cancelled'; tabId: string }
   | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string; index: number; total: number; mode: QuizMode }
   | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string; hasMissed: boolean }
@@ -64,6 +69,10 @@ export interface ReviewSession {
   level: ExplanationLevel;
   /** Accumulated streamed explanation for local history (on-device only). */
   explanationText?: string;
+  /** The finished short answer, kept for "More detail" (which sends it back so the detail goes on from it). */
+  shortText?: string;
+  /** The "More detail" text streamed under the short answer. */
+  detailText?: string;
   /** Prevents a pulse event for every streamed token. */
   islandStreaming?: boolean;
   payload?: ReviewRequestPayload;
@@ -93,6 +102,8 @@ export interface RequestOpts {
   level: ExplanationLevel;
   question?: string;
   variant?: 'default' | 'different';
+  /** "More detail" on the short answer: the full depth, streamed under it. */
+  moreDetail?: boolean;
   consented?: boolean;
 }
 
@@ -338,9 +349,24 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
   return true;
 }
 
+/**
+ * The request for this run: a selection explanation is short by default (2 to 4 sentences); "More
+ * detail" asks for the full depth and sends the short answer back so the detail goes on from it;
+ * follow-up questions and the other scopes are full, as before.
+ */
+export function withDetail(payload: ReviewRequestPayload, detailRun: boolean, shortText: string | undefined): ReviewRequestPayload {
+  if (detailRun && shortText) return { ...payload, question: undefined, variant: 'default', detail: 'full', shortAnswer: shortText };
+  if (!payload.question && payload.scope === 'selection') return { ...payload, detail: 'short', shortAnswer: undefined };
+  return { ...payload, detail: 'full', shortAnswer: undefined };
+}
+
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
   // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
   if (session.awaitingConfirm) return;
+  // "More detail" goes on from the short answer this panel already has; anything else is a new answer.
+  const detailRun = Boolean(opts.moreDetail) && !opts.question && Boolean(session.shortText?.trim());
+  // Events about a "More detail" run carry part 'detail', so the panel keeps the short answer above it.
+  const tag = detailRun ? { part: 'detail' as const } : {};
   // Fails closed: nothing of the person's is sent before they agree; the panel shows the form.
   const before = consentNeededFor(session, undefined, opts.question);
   if (before) {
@@ -348,15 +374,21 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     return;
   }
   if (!session.code && !session.payload) {
-    send(win, session, { type: 'error', message: 'No code captured.' });
+    send(win, session, { type: 'error', message: 'No code captured.', ...tag });
     return;
   }
   session.level = opts.level;
-  if (!opts.question) {
+  if (!opts.question && !detailRun) {
     session.comprehension = undefined;
     session.pendingAnswer = undefined;
   }
-  session.explanationText = '';
+  if (detailRun) {
+    session.detailText = '';
+  } else {
+    session.explanationText = '';
+    session.shortText = undefined;
+    session.detailText = undefined;
+  }
   session.islandStreaming = false;
   // A lesson this panel saved before a wipe went with it: this run saves a new one.
   if (wipedSinceRun(session)) session.recorded = false;
@@ -376,17 +408,29 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       code: 'pro_required',
       upgradePath: '/plan',
       message: 'Expert explanations are included with Unvibe Pro.',
+      ...tag,
     });
     return;
   }
 
   let payload: ReviewRequestPayload;
   try {
-    payload = await ensurePayload(session, opts);
+    payload = withDetail(await ensurePayload(session, opts), detailRun, session.shortText);
   } catch (err) {
-    send(win, session, { type: 'error', message: err instanceof Error ? err.message : 'Could not build review context.' });
+    send(win, session, { type: 'error', message: err instanceof Error ? err.message : 'Could not build review context.', ...tag });
     return;
   }
+  const shortRun = payload.detail === 'short';
+  const take = (text: string): void => {
+    if (detailRun) session.detailText = (session.detailText ?? '') + text;
+    else appendExplanation(session, text);
+  };
+  // A finished "More detail" run saves the short answer and the detail together as the lesson.
+  const save = (): boolean => {
+    if (!detailRun) return recordReview(win, session, Boolean(opts.question));
+    session.explanationText = `${session.shortText ?? ''}\n\n${session.detailText ?? ''}`.trim();
+    return recordReview(win, session, false);
+  };
 
   pulseBar({ phase: 'analyzing', label: 'Analyzing' });
   const findings = scanReviewPayload(payload);
@@ -412,7 +456,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, STREAM_IDLE_MS);
   };
 
-  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question });
+  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question && !detailRun, short: shortRun, ...tag });
   try {
     const token = store().token();
     const usage = await cachedAppUsage();
@@ -436,6 +480,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         code: 'plan_limit_reached',
         upgradePath: '/plan',
         message: `You have reached your ${usage.plan === 'trial' ? '30-day' : 'monthly'} ${planName} explanation limit (${usage.limit}). ${usage.plan === 'trial' ? 'Free explanations on this computer end' : 'Resets'} on ${resets}. Add your own API key in Settings → AI, or upgrade.`,
+        ...tag,
       });
       raiseLimitPause(win);
       return;
@@ -444,7 +489,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     if (wantLocal && localKey) {
       const lines = (payload.context.code ?? '').split('\n').length;
       const cost = estimateCost(prefs.aiProvider, opts.level, lines);
-      send(win, session, { type: 'status', message: `your AI · ${cost.label} · ${session.mode ?? 'selection'}` });
+      send(win, session, { type: 'status', message: `your AI · ${cost.label} · ${session.mode ?? 'selection'}`, ...tag });
       try {
         const model = await streamLocalAi({
           provider: prefs.aiProvider,
@@ -453,13 +498,14 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           user: buildLocalUserPrompt(payload),
           onToken: (text) => {
             stillStreaming();
-            appendExplanation(session, text);
-            send(win, session, { type: 'token', text });
+            take(text);
+            send(win, session, { type: 'token', text, ...tag });
           },
           signal: abort.signal,
         });
-        send(win, session, { type: 'done', model, mock: false });
-        if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
+        if (shortRun) session.shortText = session.explanationText;
+        send(win, session, { type: 'done', model, mock: false, short: shortRun, ...tag });
+        if (save()) pulseBar({ phase: 'ready', label: 'Ready' });
         void refreshAppUsage().then((next) => {
           send(win, session, {
             type: 'usage',
@@ -477,12 +523,13 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           return;
         }
         if (abort.signal.aborted) {
-          if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });
+          if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.', ...tag });
           return;
         }
         send(win, session, {
           type: 'error',
           message: err instanceof Error ? err.message : 'Your local AI provider could not complete that request.',
+          ...tag,
         });
       }
       return;
@@ -512,6 +559,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         // 402 pro_required opens the Pro upgrade panel; only a used-up allowance is plan_limit_reached.
         code: failure.proRequired ? 'pro_required' : failure.planLimit ? 'plan_limit_reached' : undefined,
         upgradePath: body.upgradePath ?? (failure.planLimit || failure.proRequired ? '/plan' : undefined),
+        ...tag,
       });
       return;
     }
@@ -532,16 +580,17 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         // it; any other type is dropped (init, usage, consent and the rest come from the app).
         if (ev.type === 'token') {
           if (typeof ev.text !== 'string') continue;
-          appendExplanation(session, ev.text);
-          send(win, session, { type: 'token', text: ev.text });
+          take(ev.text);
+          send(win, session, { type: 'token', text: ev.text, ...tag });
         } else if (ev.type === 'error') {
           // The service's error text reaches the panel only as a capped string.
-          send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
+          send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.', ...tag });
           serviceErrored = true;
         } else if (ev.type === 'done') {
-          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true });
+          if (shortRun) session.shortText = session.explanationText;
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true, short: shortRun, ...tag });
           completed = true;
-          if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
+          if (save()) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
             send(win, session, {
               type: 'usage',
@@ -556,14 +605,14 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         }
       }
     }
-    if (!completed && !serviceErrored) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
+    if (!completed && !serviceErrored) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.', ...tag });
   } catch (err) {
     if (err instanceof ConsentRequiredError) {
       askConsent(win, session, err.provider);
       return;
     }
     if (abort.signal.aborted) {
-      if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.' });
+      if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.', ...tag });
       return;
     }
     send(win, session, {
@@ -571,6 +620,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       message: net.isOnline()
         ? 'Unvibe could not reach its explanation service. Try again in a moment.'
         : 'You appear to be offline. Reconnect to the internet and try again.',
+      ...tag,
     });
     void err;
   } finally {
