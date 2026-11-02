@@ -136,10 +136,16 @@ function shortAnswerTop(body: HTMLElement): number | null {
 
 /** The bottom of each rendered text line in `el`, top to bottom, in `body`'s scroll coordinates. */
 function lineBottoms(el: HTMLElement, body: HTMLElement): number[] {
+  // Text nodes only: a range over the element would also return the boxes of the blocks inside it.
   const range = document.createRange();
-  range.selectNodeContents(el);
   const origin = body.getBoundingClientRect().top - body.scrollTop;
-  const rects = [...range.getClientRects()].filter((r) => r.height > 0).sort((a, b) => a.top - b.top);
+  const rects: DOMRect[] = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) if (r.height > 0) rects.push(r);
+  }
+  rects.sort((a, b) => a.top - b.top);
   const bottoms: number[] = [];
   for (const r of rects) {
     const last = bottoms[bottoms.length - 1];
