@@ -6,7 +6,7 @@ import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
-import { ShortAnswer } from '../shared/shortAnswer';
+import { AnswerWait, ShortAnswer, waitingStatus } from '../shared/shortAnswer';
 import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
@@ -112,32 +112,6 @@ const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'advanced', label: 'Advanced' },
   { id: 'expert', label: 'Expert' },
 ];
-
-/** Shown while the first words are on their way: Vibe thinks out loud with three real steps. */
-function ThinkingCard({ hasCode }: { hasCode: boolean }) {
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    const a = window.setTimeout(() => setStep(1), 700);
-    const b = window.setTimeout(() => setStep(2), 1700);
-    return () => { window.clearTimeout(a); window.clearTimeout(b); };
-  }, []);
-  const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
-  const notes = [hasCode ? 'hmm, let me read this…' : 'one sec, reading…', 'checking the rest of your project', 'okay, writing it up for you'];
-  return (
-    <div className="thinking" role="status" aria-live="polite" aria-label="Generating explanation">
-      <div className="thinking__vibe"><Buddy mood={step === 2 ? 'reading' : 'thinking'} size={46} label="Vibe is thinking" /></div>
-      <div className="thinking__main">
-        <p className="thinking__note" key={step}>{notes[step]}</p>
-        <ol className="thinking__steps">
-          {steps.map((label, i) => (
-            <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}><i aria-hidden="true" />{label}</li>
-          ))}
-        </ol>
-        <div className="thinking__lines" aria-hidden="true"><i /><i /><i /></div>
-      </div>
-    </div>
-  );
-}
 
 function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' | 'why' | 'teach' }) {
   const paths = {
@@ -1170,11 +1144,11 @@ function Widget() {
                   <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
-              {showText
-                ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} /> : renderRich(showText, stillTyping))
-                : (
-                  <ThinkingCard hasCode={Boolean(active.meta.preview)} />
-                )}
+              {active.short
+                ? <ShortAnswer key={active.id} text={showText} streaming={stillTyping} status={waitingStatus(active.meta.lines, active.meta.language)} />
+                : showText
+                  ? renderRich(showText, stillTyping)
+                  : <AnswerWait status={waitingStatus(active.meta.lines, active.meta.language)} />}
               {active.short && phase === 'done' && !stillTyping ? (
                 <div className="more-detail" ref={revealMoreDetail}>
                   <button

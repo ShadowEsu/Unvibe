@@ -2,7 +2,10 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   --font-display: "Newsreader", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
-  --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Panel motion: the shared --dur-* tokens (shared/tokens.css) plus the answer's own beats. */
+  --dur-sentence: 120ms;
+  --dur-detail: 200ms;
+  --dur-shimmer: 1.2s;
   --bg: #ffffff;
   --fg: #111111;
   --muted: #4a4a4a;
@@ -113,8 +116,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   isolation: isolate;
   container-type: inline-size;
   container-name: widget;
-  animation: widgetIn .42s var(--ease-emphatic) both;
-  transition: opacity 0.3s ease, border-color 0.25s ease, background 0.3s ease, transform 220ms var(--ease-emphatic);
+  animation: widgetIn var(--dur-standard) var(--ease-emphatic) both;
+  transition: opacity var(--dur-standard) var(--ease-calm), border-color var(--dur-micro) ease, background var(--dur-standard) var(--ease-calm), transform var(--dur-standard) var(--ease-emphatic);
 }
 .card::before { content:""; position:absolute; left:32%; right:32%; top:0; height:2px; border-radius:0 0 2px 2px; background:var(--fg); opacity:.7; pointer-events:none; z-index:2; }
 .card::after { content: none; }
@@ -145,7 +148,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   background: url("./dusk-field.webp") 62% 40% / cover no-repeat;
   filter: blur(28px) saturate(1.85) contrast(1.1) brightness(0.92);
   transform: scale(1.18);
-  animation: duskDrift 28s ease-in-out alternate infinite;
 }
 .sanFranWash::after {
   content: "";
@@ -158,10 +160,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
 }
 :root[data-theme="light"] .sanFranWash::after {
   background: linear-gradient(180deg, rgb(255 220 190 / 0.38) 0%, rgb(210 225 255 / 0.18) 46%, rgb(255 255 255 / 0.62) 100%);
-}
-@keyframes duskDrift {
-  from { transform: scale(1.18) translate3d(0, 0, 0); }
-  to { transform: scale(1.3) translate3d(-1.6%, 1.2%, 0); }
 }
 @keyframes widgetIn {
   from { opacity: 0; transform: translateY(16px) scale(.96); }
@@ -286,7 +284,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   padding: 4px 7px;
   border-radius: 7px;
   cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease, transform .12s ease;
+  transition: background var(--dur-micro) ease, color var(--dur-micro) ease, border-color var(--dur-micro) ease, transform var(--dur-micro) ease;
 }
 .head button:hover { background: var(--chip-bg); color: var(--fg); border-color: var(--line); transform: translateY(-1px); }
 .head button.on { color: var(--fill-strong); background: var(--chip-bg); }
@@ -318,7 +316,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   padding: 5px 8px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background .15s ease, color .15s ease;
+  transition: background var(--dur-micro) ease, color var(--dur-micro) ease;
 }
 .tab:hover { background: var(--chip-bg); color: var(--fg); }
 .tab.on {
@@ -342,7 +340,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   font-size: 16px;
   line-height: 1;
   margin-bottom: 2px;
-  transition: border-color .15s ease, color .15s ease, background .15s ease, transform .12s ease;
+  transition: border-color var(--dur-micro) ease, color var(--dur-micro) ease, background var(--dur-micro) ease, transform var(--dur-micro) ease;
 }
 .tab-add:hover { border-color: var(--fill); color: var(--fill-strong); background: var(--chip-bg); transform: scale(1.04); }
 
@@ -376,7 +374,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: transform .14s ease, border-color .15s ease, background .15s ease, color .15s ease;
+  transition: transform var(--dur-micro) ease, border-color var(--dur-micro) ease, background var(--dur-micro) ease, color var(--dur-micro) ease;
 }
 .lvl:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--fill); color: var(--fill-strong); background: var(--chip-bg); }
 .lvl.on {
@@ -548,12 +546,6 @@ code.inline {
 .empty-hint { color: var(--fill-strong) !important; }
 .detected { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
 .detected span { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
-.skeleton { display: grid; gap: 10px; padding: 6px 0; }
-.skeleton span { color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .03em; }
-.skeleton i { display: block; height: 11px; border-radius: 999px; background: var(--chip-bg); animation: shimmer 1.25s ease-in-out infinite alternate; }
-.skeleton i:nth-child(2) { width: 84%; animation-delay: .12s; }
-.skeleton i:nth-child(3) { width: 62%; animation-delay: .24s; }
-@keyframes shimmer { to { opacity: .45; } }
 
 .btn {
   background: var(--fill);
@@ -566,7 +558,7 @@ code.inline {
   padding: 8px 14px;
   cursor: pointer;
   margin-top: 4px;
-  transition: background .15s ease, border-color .15s ease, transform .12s ease;
+  transition: background var(--dur-micro) ease, border-color var(--dur-micro) ease, transform var(--dur-micro) ease;
 }
 .btn:not(:disabled):hover { background: var(--fill-strong); border-color: var(--fill-strong); transform: translateY(-1px); }
 .btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
@@ -593,7 +585,7 @@ code.inline {
   padding: 5px 2px;
   margin-right: 12px;
   cursor: pointer;
-  transition: transform .12s ease, background .15s ease, border-color .15s ease, color .15s ease;
+  transition: transform var(--dur-micro) ease, background var(--dur-micro) ease, border-color var(--dur-micro) ease, color var(--dur-micro) ease;
 }
 .chip:hover:not(:disabled) { transform: translateY(-1px); background: transparent; border-color: var(--fill); color: var(--fill-strong); }
 .chip:disabled { color: var(--muted); cursor: default; }
@@ -611,7 +603,7 @@ code.inline {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: border-color .15s ease, background .15s ease;
+  transition: border-color var(--dur-micro) ease, background var(--dur-micro) ease;
 }
 .ask-sandbox:focus-within {
   border-color: var(--ask);
@@ -702,7 +694,7 @@ code.inline {
   font-size: 13px;
   color: var(--fg);
   cursor: pointer;
-  transition: border-color .15s ease, background .15s ease, transform .12s ease;
+  transition: border-color var(--dur-micro) ease, background var(--dur-micro) ease, transform var(--dur-micro) ease;
 }
 .opt em {
   flex: 0 0 18px;
@@ -755,7 +747,7 @@ code.inline {
 .opt { padding: calc(10px * var(--widget-scale)) calc(12px * var(--widget-scale)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .cursor, .skeleton i, .card, .card::after, .lvl, .chip, .btn, .tab-add, .opt, .sanFranWash::before { animation: none; transition: none; transform: none; }
+  .cursor, .answer-skeleton i, .card, .card::after, .lvl, .chip, .btn, .tab-add, .opt, .sanFranWash::before { animation: none; transition: none; transform: none; }
 }
 
 /* Quiet explanation surface; use monospace only for actual code. */
@@ -784,7 +776,7 @@ code.inline {
 .body { font-size: 15px; line-height: 1.7; }
 .empty-picker { gap: 18px; }
 .btn:not(:disabled):hover { transform: translateY(-2px); }
-.head__mark { animation: uv-logo-in .5s ease-out; }
+.head__mark { animation: uv-logo-in var(--dur-standard) var(--ease-emphatic); }
 .quota { overflow: visible; }
 .quota .usage-ring__detail { bottom: auto; top: calc(100% + 8px); }
 .head { z-index: 5; }
@@ -957,7 +949,7 @@ code.inline {
   background: var(--bg); color: var(--fg);
   border: 1px solid var(--line); border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.14);
-  backdrop-filter: none; animation-duration: .18s;
+  backdrop-filter: none;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-panel="light"]) .card {
@@ -1034,7 +1026,6 @@ code.inline {
 .quiz__kicker, .quiz__concept { color: var(--muted); font: 500 12px var(--font-sans); text-transform: none; letter-spacing: 0; }
 .opt { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); box-shadow: none; }
 .opt:hover:not(:disabled) { background: var(--chip-bg); }
-.skeleton > * { background: var(--chip-bg); }
 .head__mark.head__mark--vibe { width: 28px; height: 28px; border: 0; background: transparent; box-shadow: none; outline: 0; }
 .chip.chip--on { border-color: var(--fg); }
 .foot .chips { flex-wrap: wrap; gap: 6px; }
@@ -1152,27 +1143,6 @@ code.inline {
 .card .code-context pre, .card .cb pre { padding: 10px 12px; color: #e6e6ee; font-size: calc(var(--p-fs) * 0.78); line-height: 1.55; }
 .card .tk-k { color: #c3a6ff; } .card .tk-s { color: #8fe0b2; } .card .tk-c { color: #6e6e79; } .card .tk-n { color: #ffc58a; }
 
-/* Thinking */
-.card .thinking { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--p-line); border-radius: 14px; background: linear-gradient(180deg, rgb(164 139 255 / 0.07), transparent 70%), var(--p-surface); }
-.card .thinking__head { display: flex; align-items: center; gap: 10px; }
-.card .think-status { display: flex; align-items: center; gap: 8px; }
-.card .think-status__spark { color: var(--p-violet); font-size: 15px; width: 14px; text-align: center; }
-.card .think-status__copy { display: grid; line-height: 1.2; }
-.card .think-status__verb {
-  font-size: 14px; font-weight: 650; background: linear-gradient(90deg, #8f7af0, #e9e3ff 45%, #8f7af0 90%); background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent; animation: pShimmer 1.6s linear infinite;
-}
-.card .think-status__sub { color: var(--p-faint); font-size: 11.5px; }
-.card .thinking__steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
-.card .thinking__steps li { display: flex; align-items: center; gap: 9px; color: var(--p-faint); font-size: 12.5px; }
-.card .thinking__steps li i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--p-line); flex: 0 0 auto; }
-.card .thinking__steps li.is-now { color: var(--p-ink); }
-.card .thinking__steps li.is-now i { border-color: var(--p-violet); border-top-color: transparent; animation: pSpin 0.8s linear infinite; }
-.card .thinking__steps li.is-done { color: var(--p-muted); }
-.card .thinking__steps li.is-done i { border-color: var(--p-green); background: var(--p-green); box-shadow: inset 0 0 0 3px var(--p-surface); }
-.card .thinking__lines { display: grid; gap: 7px; }
-.card .thinking__lines i { height: 9px; border-radius: 6px; background: linear-gradient(90deg, var(--p-raised), #2f2f39, var(--p-raised)); background-size: 200% 100%; animation: pShimmer 1.4s linear infinite; }
-.card .thinking__lines i:nth-child(2) { width: 86%; } .card .thinking__lines i:nth-child(3) { width: 62%; }
 
 /* Quiz rail */
 .card .quiz-rail { background: var(--p-bg); border-left: 1px solid var(--p-line); }
@@ -1232,11 +1202,9 @@ code.inline {
   .card .head__usage { display: none; }
 }
 
-@keyframes pShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-@keyframes pSpin { to { transform: rotate(360deg); } }
 @keyframes pPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) {
-  .card .think-status__verb, .card .thinking__lines i, .card .thinking__steps li.is-now i, .card.card--streaming .head__status i { animation: none; }
+  .card.card--streaming .head__status i { animation: none; }
 }
 
 .card.card .tabs, .card.card .levels { background: var(--p-bg); }
@@ -1265,15 +1233,14 @@ code.inline {
 .card .head__product { background: linear-gradient(135deg, #c4b5fd, #93c5fd); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 750; }
 .card .widget-tools button.on { background: linear-gradient(180deg, rgb(164 139 255 / 0.18), rgb(124 180 255 / 0.08)); box-shadow: inset 2px 0 0 var(--p-violet); }
 .card .widget-tools button:hover:not(:disabled) .widget-tool-icon { transform: scale(1.08) rotate(-4deg); }
-.card .widget-tools .widget-tool-icon { transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
+.card .widget-tools .widget-tool-icon { transition: transform var(--dur-micro) cubic-bezier(.2,.8,.2,1); }
 .card .lvl.on, .card .lvl[data-level].on { box-shadow: 0 6px 16px -8px currentColor; }
-.card .chip { transition: transform 140ms ease, background 160ms ease; }
+.card .chip { transition: transform var(--dur-micro) ease, background var(--dur-micro) ease; }
 .card .chip:hover:not(:disabled) { transform: translateY(-1px); }
 .card .chip:active:not(:disabled) { transform: scale(0.97); }
-.card .body > * { animation: pRise 380ms cubic-bezier(.2,.8,.2,1) both; }
-.card .thinking { animation: pRise 420ms cubic-bezier(.2,.8,.2,1) both; border-color: rgb(164 139 255 / 0.25); box-shadow: 0 0 0 1px rgb(164 139 255 / 0.08), 0 16px 40px -24px rgb(124 92 255 / 0.6); }
+.card .body > * { animation: pRise var(--dur-standard) var(--ease-emphatic) both; }
 @keyframes pRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .card .body > *, .card .thinking { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .card .body > * { animation: none; } }
 
 /* ═════════════════════════════════════════════════════════════════════════════
    Panel v6 "Dark pro": same palette as the companion. Near black, hairlines,
@@ -1330,7 +1297,6 @@ code.inline {
 .card .body p { color: #d4d4dc; }
 .card .body :not(pre) > code { background: var(--p-raised); color: #d9ccff; }
 .card .code-context, .card .cb { border-radius: 10px; }
-.card .thinking { border-radius: 12px; border-color: rgb(139 92 246 / 0.3); background: linear-gradient(180deg, rgb(139 92 246 / 0.08), transparent 70%), var(--p-surface); }
 
 /* Actions: neutral chips, the next step in violet, understood in green. */
 .card .chip, .card .chip--diff, .card .chip--test,
@@ -1392,7 +1358,7 @@ code.inline {
 .card .head__actions button { border-radius: 8px; border-color: var(--p-line); }
 
 .card .tab.on { background: var(--p-surface); border-color: var(--p-line); }
-.card .lvl, .card .lvl[data-level] { border-radius: 99px; transition: transform 180ms var(--p-press), background 120ms ease; }
+.card .lvl, .card .lvl[data-level] { border-radius: 99px; transition: transform var(--dur-micro) var(--p-press), background var(--dur-micro) ease; }
 .card .lvl:hover:not(:disabled) { transform: translateY(-1px); }
 .card .lvl.on, .card .lvl[data-level].on,
 .card .lvl[data-level="new"].on, .card .lvl[data-level="beginner"].on, .card .lvl[data-level="intermediate"].on,
@@ -1400,14 +1366,14 @@ code.inline {
   background: var(--p-lime); border-color: var(--p-lime); color: #141413; font-weight: 700; box-shadow: 0 2px 0 #6f8a12;
 }
 
-.card .widget-tools button { border-radius: 10px; transition: transform 200ms var(--p-press), background 120ms ease; }
+.card .widget-tools button { border-radius: 10px; transition: transform var(--dur-micro) var(--p-press), background var(--dur-micro) ease; }
 .card .widget-tools button:hover:not(:disabled) { transform: translateY(-1px); }
 .card .widget-tools button:hover:not(:disabled) .widget-tool-icon { transform: rotate(-8deg); }
 .card .widget-tools .widget-tool-icon,
 .card .widget-tools .tool--explain .widget-tool-icon, .card .widget-tools .tool--depth .widget-tool-icon,
 .card .widget-tools .tool--quiz .widget-tool-icon, .card .widget-tools .tool--ask .widget-tool-icon,
 .card .widget-tools .tool--why .widget-tool-icon, .card .widget-tools .tool--teach .widget-tool-icon,
-.card .widget-tools .tool--saved .widget-tool-icon { background: var(--p-surface); color: var(--p-muted); box-shadow: none; transition: transform 240ms var(--p-press); }
+.card .widget-tools .tool--saved .widget-tool-icon { background: var(--p-surface); color: var(--p-muted); box-shadow: none; transition: transform var(--dur-micro) var(--p-press); }
 .card .widget-tools button.on { background: transparent; box-shadow: none; color: var(--p-ink); }
 .card .widget-tools button.on .widget-tool-icon { background: var(--p-lime); color: #141413; box-shadow: 0 2px 0 #6f8a12; }
 
@@ -1423,28 +1389,12 @@ code.inline {
 .card .code-context, .card .cb { border-radius: 12px; border-color: var(--p-line); }
 .card .tk-k { color: var(--p-lilac); } .card .tk-s { color: var(--p-lime); } .card .tk-c { color: #6f6c64; } .card .tk-n { color: var(--p-sun); }
 
-/* Thinking: Vibe bobs while a handwritten note writes itself. */
-.card .thinking {
-  display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px dashed #3a3a36; border-radius: 14px;
-  background: var(--p-surface); box-shadow: none;
-}
-.card .thinking__vibe { flex: 0 0 auto; animation: pBob 1.1s ease-in-out infinite; }
-.card .thinking__vibe .buddy { --vibe-ink: #0d0d0c; }
-.card .thinking__main { display: grid; gap: 10px; flex: 1; min-width: 0; }
-.card .thinking__note {
-  margin: 0; color: var(--p-lime); font-family: "Instrument Serif", Georgia, serif !important; font-style: italic; font-size: 23px; font-weight: 400; line-height: 1.05;
-  animation: pWrite 650ms ease-out both;
-}
-.card .thinking__steps li { font-size: 12.5px; }
-.card .thinking__steps li.is-now i { border-color: var(--p-lime); border-top-color: transparent; }
-.card .thinking__steps li.is-done i { border-color: var(--p-lime); background: var(--p-lime); box-shadow: inset 0 0 0 3px var(--p-surface); }
-.card .thinking__lines i { background: linear-gradient(90deg, var(--p-raised), #34342f, var(--p-raised)); background-size: 200% 100%; }
 
 /* Actions: chunky keys that press down. */
 .card .chip, .card .chip--ok, .card .chip--diff, .card .chip--test,
 .card .chip:not(.chip--ok):not(.chip--diff):not(.chip--test) {
   min-height: 30px; padding: 0 13px; border: 1.5px solid var(--p-line); border-radius: 10px; background: var(--p-surface);
-  color: var(--p-ink); font-weight: 650; box-shadow: 0 2px 0 #000; transition: transform 160ms var(--p-press), box-shadow 160ms var(--p-press);
+  color: var(--p-ink); font-weight: 650; box-shadow: 0 2px 0 #000; transition: transform var(--dur-micro) var(--p-press), box-shadow var(--dur-micro) var(--p-press);
 }
 .card .chip:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 0 #000; background: var(--p-raised); }
 .card .chip:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 #000; }
@@ -1455,7 +1405,7 @@ code.inline {
 .card .ask-sandbox:focus-within { border-color: var(--p-lime); box-shadow: none; background: var(--p-code); }
 .card .askrow .btn-ask { width: 32px; height: 32px; border-radius: 9px; background: var(--p-lime); color: #141413; box-shadow: 0 2px 0 #6f8a12; }
 .card .askrow .btn-ask:disabled { background: var(--p-raised); color: var(--p-faint); box-shadow: none; }
-.card .btn { border-radius: 10px; background: var(--p-lime); color: #141413; border: 0; font-weight: 750; box-shadow: 0 3px 0 #6f8a12; transition: transform 160ms var(--p-press), box-shadow 160ms var(--p-press); }
+.card .btn { border-radius: 10px; background: var(--p-lime); color: #141413; border: 0; font-weight: 750; box-shadow: 0 3px 0 #6f8a12; transition: transform var(--dur-micro) var(--p-press), box-shadow var(--dur-micro) var(--p-press); }
 .card .btn:hover:not(:disabled) { opacity: 1; transform: translateY(-1px); box-shadow: 0 4px 0 #6f8a12; }
 .card .btn:active:not(:disabled) { transform: translateY(3px); box-shadow: none; }
 .card .btn.ghost { background: var(--p-surface); color: var(--p-ink); border: 1.5px solid var(--p-line); box-shadow: 0 2px 0 #000; }
@@ -1463,18 +1413,15 @@ code.inline {
 .card .paste-box { border-radius: 12px; }
 .card .quiz__kicker { color: var(--p-sky); font-family: "Instrument Serif", Georgia, serif !important; font-style: italic; font-size: 19px; font-weight: 400; letter-spacing: 0; }
 .card .quiz__q { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; letter-spacing: -0.02em; }
-.card .opt { border: 1.5px solid var(--p-line); border-radius: 12px; box-shadow: 0 2px 0 #000; transition: transform 160ms var(--p-press), border-color 120ms ease; }
+.card .opt { border: 1.5px solid var(--p-line); border-radius: 12px; box-shadow: 0 2px 0 #000; transition: transform var(--dur-micro) var(--p-press), border-color var(--dur-micro) ease; }
 .card .opt:hover:not(:disabled) { border-color: var(--p-sky); background: var(--p-raised); transform: translateY(-1px); }
-.card .body > * { animation: pRise 360ms var(--p-press) both; }
+.card .body > * { animation: pRise var(--dur-standard) var(--ease-emphatic) both; }
 
-@keyframes pBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
-@keyframes pWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@media (prefers-reduced-motion: reduce) { .card .thinking__vibe, .card .thinking__note { animation: none; } }
-.card .state__vibe { display: flex; justify-content: center; margin: 4px 0 6px; animation: pBob 2.4s ease-in-out infinite; }
+.card .state__vibe { display: flex; justify-content: center; margin: 4px 0 6px; }
 .card .state__vibe .buddy { --vibe-ink: #0d0d0c; }
 
 /* Clicked away: the panel stays put but turns see-through so your code shows behind it. */
-.card.card { transition: background-color 260ms ease, border-color 260ms ease; }
+.card.card { transition: background-color var(--dur-standard) var(--ease-calm), border-color var(--dur-standard) var(--ease-calm); }
 .card.card.card--away { background: rgb(20 20 19 / 0.62); border-color: rgb(255 255 255 / 0.08); }
 .card.card.card--away .head, .card.card.card--away .foot { background: transparent; }
 .card.card.card--away:hover { background: var(--p-bg); }
@@ -1497,7 +1444,6 @@ code.inline {
 :root[data-panel="light"] .card.card.card--away { background: rgb(251 250 246 / 0.62); border-color: rgb(20 20 20 / 0.25); box-shadow: none; }
 :root[data-panel="light"] .card.card.card--away:hover { background: var(--p-bg); }
 :root[data-panel="light"] .card .head .buddy,
-:root[data-panel="light"] .card .thinking__vibe .buddy,
 :root[data-panel="light"] .card .state__vibe .buddy { --vibe-ink: #141414; }
 :root[data-panel="light"] .card .body p { color: #2e2e2e; }
 :root[data-panel="light"] .card .body strong { color: #141414; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%); }
@@ -1509,11 +1455,6 @@ code.inline {
 :root[data-panel="light"] .card .code-context pre, :root[data-panel="light"] .card .cb pre { color: #f4f2ea; }
 :root[data-panel="light"] .card .code-context__head, :root[data-panel="light"] .card .cb-head { color: #aeaba2; border-color: #2f2f2c; }
 :root[data-panel="light"] .card .code-context, :root[data-panel="light"] .card .cb { border-color: #141414; }
-:root[data-panel="light"] .card .thinking { background: #ffffff; border-color: #d6d0c3; }
-:root[data-panel="light"] .card .thinking__note { color: #5b4bd6; }
-:root[data-panel="light"] .card .thinking__steps li.is-now i { border-color: #141414; border-top-color: transparent; }
-:root[data-panel="light"] .card .thinking__steps li.is-done i { border-color: #141414; background: #d6f45a; box-shadow: none; }
-:root[data-panel="light"] .card .thinking__lines i { background: linear-gradient(90deg, #f1eee6, #e4dfd3, #f1eee6); background-size: 200% 100%; }
 :root[data-panel="light"] .card .chip, :root[data-panel="light"] .card .chip--diff,
 :root[data-panel="light"] .card .chip:not(.chip--ok):not(.chip--diff):not(.chip--test) { border-color: #141414; background: #ffffff; color: #141414; box-shadow: 0 2px 0 #141414; }
 :root[data-panel="light"] .card .chip:hover:not(:disabled) { background: #f1eee6; box-shadow: 0 3px 0 #141414; }
@@ -1665,9 +1606,10 @@ code.inline {
 /* The panel themes color `.card .body p` directly (up to :root[data-panel] specificity), so the quiet lines
    name their own p, with :root to win over the light theme's rule. */
 :root .card .body .short-answer__unsure p,
+:root .card .body p.answer-wait__status,
 :root .card .body .more-detail__wait,
 :root .card .body .more-detail__error,
-.short-answer__unsure p, .more-detail__wait, .more-detail__error { color: var(--p-muted, var(--muted)); }
+.short-answer__unsure p, .answer-wait__status, .more-detail__wait, .more-detail__error { color: var(--p-muted, var(--muted)); }
 .more-detail { margin-top: 10px; }
 .more-detail__toggle {
   display: inline-flex; align-items: center; gap: 5px;
@@ -1680,7 +1622,34 @@ code.inline {
 .more-detail__toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
 .more-detail__chevron { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .more-detail__toggle[aria-expanded="true"] .more-detail__chevron { transform: rotate(180deg); }
-.more-detail__body { margin-top: 6px; animation: more-detail-in 200ms ease-out both; }
+.more-detail__body { margin-top: 6px; animation: more-detail-in var(--dur-detail) ease-out both; }
 .more-detail__wait, .more-detail__error { margin: 0; font-size: .9em; }
 @keyframes more-detail-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .more-detail__body { animation: none; } }
+
+/* Waiting (Design motion spec §4): three skeleton lines at the answer's own line height and a quiet line
+   saying what is being read; no spinner. The shimmer (1.2 s a pass) runs only while waiting, then the
+   skeleton crossfades to the text. An error replaces the whole stage with a plain fade, never a shake. */
+.short-answer { position: relative; }
+.card .body > .short-answer { animation: none; }
+.card .body .answer-wait { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
+.answer-skeleton { display: grid; }
+.answer-skeleton i {
+  display: block; height: .7em; margin-block: calc((1lh - .7em) / 2); border-radius: 6px;
+  background: linear-gradient(90deg, var(--p-raised, var(--chip-bg)) 25%, var(--p-line, var(--line)) 50%, var(--p-raised, var(--chip-bg)) 75%) 0 0 / 200% 100%;
+  animation: answer-shimmer var(--dur-shimmer) linear infinite;
+}
+.answer-skeleton i:nth-child(2) { width: 92%; }
+.answer-skeleton i:nth-child(3) { width: 58%; }
+.card .body p.answer-wait__status { margin: 4px 0 0; font-size: .9em; }
+.card .body .answer-wait--leaving { position: absolute; inset: 0 0 auto; pointer-events: none; animation: answer-out var(--dur-exit) var(--ease-calm) both; }
+.answer-wait--leaving .answer-skeleton i { animation: none; }
+.short-answer > p { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
+.card .state[role="alert"] { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
+@keyframes answer-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes answer-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes answer-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .answer-skeleton i, .card .body .answer-wait, .short-answer > p, .card .state[role="alert"] { animation: none; }
+  .card .body .answer-wait--leaving { display: none; }
+}

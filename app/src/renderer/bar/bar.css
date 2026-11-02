@@ -48,7 +48,7 @@ button { font: inherit; }
 .island__tool {
   width: 21px; height: 21px; padding: 0; border-radius: 50%;
   border: 1px solid rgba(255,255,255,.13); background: #111114; color: #8d8d96;
-  display: grid; place-items: center; cursor: pointer; transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+  display: grid; place-items: center; cursor: pointer; transition: color var(--dur-micro) ease, border-color var(--dur-micro) ease, background var(--dur-micro) ease;
 }
 .island__tool:hover { color: #fff; border-color: rgba(167,139,250,.5); background: #17151e; }
 .island__left { display: flex; align-items: baseline; gap: 4px; font-size: 13px; font-weight: 650; white-space: nowrap; }
@@ -73,10 +73,10 @@ button { font: inherit; }
   flex-direction: column;
   opacity: 0;
   transform: translateY(-5px);
-  animation: island-reveal 220ms cubic-bezier(.22,.8,.24,1) forwards;
+  animation: island-reveal var(--dur-standard) var(--ease-emphatic) forwards;
 }
 @keyframes island-reveal { to { opacity: 1; transform: translateY(0); } }
-.island--closing .island__overview { opacity: 0; transform: translateY(-6px); transition: opacity 120ms ease, transform 160ms ease; }
+.island--closing .island__overview { opacity: 0; transform: translateY(-6px); transition: opacity var(--dur-exit) var(--ease-calm), transform var(--dur-exit) var(--ease-calm); }
 .island__header { min-height: 34px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .island__header > div:first-child { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
 .island__header strong { font-size: 17px; line-height: 25px; font-weight: 650; letter-spacing: 0; }
@@ -104,7 +104,7 @@ button { font: inherit; }
 .island__actions button {
   height: 29px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18);
   background: #0e0e10; color: #f3f3f4; font-size: 12px; font-weight: 600; letter-spacing: 0;
-  cursor: pointer; transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
+  cursor: pointer; transition: background var(--dur-micro) ease, border-color var(--dur-micro) ease, transform var(--dur-micro) ease;
 }
 .island__actions button:hover { background: #17151d; border-color: rgba(167,139,250,.5); }
 .island__actions button:active { transform: translateY(1px); }

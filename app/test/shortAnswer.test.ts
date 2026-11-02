@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
-import { ShortAnswer, splitUnsure } from '../src/renderer/shared/shortAnswer';
+import { ShortAnswer, splitUnsure, waitingStatus } from '../src/renderer/shared/shortAnswer';
 
 test('the "Not sure:" sentence is split off only where a sentence starts', () => {
   assert.deepEqual(splitUnsure('It adds prices. Not sure: where items comes from.'), { main: 'It adds prices.', unsure: 'Not sure: where items comes from.' });
@@ -15,4 +15,12 @@ test('the short answer renders the sentences, then the uncertainty line in its o
   const html = renderToStaticMarkup(createElement(ShortAnswer, { text: 'It adds prices. Not sure: where items comes from.' }));
   assert.match(html, /^<div class="short-answer"><p>It adds prices\.<\/p><div class="short-answer__unsure"><p>Not sure: where items comes from\.<\/p><\/div><\/div>$/);
   assert.doesNotMatch(renderToStaticMarkup(createElement(ShortAnswer, { text: 'It adds prices.' })), /short-answer__unsure/);
+});
+
+test('the waiting line says how much of which language is being read', () => {
+  assert.equal(waitingStatus(24, 'typescript'), 'Reading 24 lines of TypeScript…');
+  assert.equal(waitingStatus(1, 'python'), 'Reading 1 line of Python…');
+  assert.equal(waitingStatus(3, 'unknown'), 'Reading 3 lines of code…');
+  assert.equal(waitingStatus(3), 'Reading 3 lines of code…');
+  assert.equal(waitingStatus(undefined, 'typescript'), 'Reading your request…');
 });
