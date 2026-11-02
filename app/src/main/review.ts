@@ -48,8 +48,8 @@ export type WidgetEvent =
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
   | { type: 'token'; tabId: string; text: string; part?: 'detail' }
-  /** `short`: the answer was the short default, so the panel offers "More detail". */
-  | { type: 'done'; tabId: string; model: string; mock: boolean; part?: 'detail'; short?: boolean }
+  /** `short`: the answer was the short default, so the panel offers "More detail". `aiBack`: the first answer since hosted AI was paused for everyone; the panel says it's back, once. */
+  | { type: 'done'; tabId: string; model: string; mock: boolean; part?: 'detail'; short?: boolean; aiBack?: true }
   | { type: 'error'; tabId: string; message: string; code?: string; upgradePath?: string; part?: 'detail' }
   | { type: 'cancelled'; tabId: string }
   | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string; index: number; total: number; mode: QuizMode }
@@ -621,10 +621,14 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
         } else if (ev.type === 'error') {
           // The service's error text reaches the panel only as a capped string.
           send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.', ...tag });
+          // Hosted AI paused for everyone (not this account's own cap): the next answer says it's back.
+          if (ev.code === 'ai_paused') store().markAiPaused();
           serviceErrored = true;
         } else if (ev.type === 'done') {
           if (shortRun) session.shortText = session.explanationText;
-          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true, short: shortRun, ...tag });
+          // The "back" line belongs to a whole answer, not a "More detail" run under one.
+          const aiBack = !detailRun && ev.mock !== true && store().takeAiBack();
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true, short: shortRun, ...(aiBack ? { aiBack: true } : {}), ...tag });
           completed = true;
           if (save()) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {

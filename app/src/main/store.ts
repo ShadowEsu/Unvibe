@@ -64,6 +64,8 @@ interface Data {
   progressSent?: Partial<Record<ProgressStep, true>>;
   /** The launch-at-login question was shown (either answer), so it is never asked again. */
   loginPromptAsked?: true;
+  /** When an explanation last failed because hosted AI was paused for everyone (ISO); cleared by the next answer. */
+  aiPausedAt?: string;
   /** This install's first run (ISO). Set once, never later than the store's own records show. */
   firstRunAt?: string;
   /** The PMF survey card (FE-09): sent or closed for good, and the unsent answers. Local only. */
@@ -374,6 +376,21 @@ class Store {
   markLoginPromptAsked(): void {
     this.data.loginPromptAsked = true;
     this.save();
+  }
+
+  /** Hosted AI was paused for everyone (the service's `ai_paused` error): the next answer says it's back. */
+  markAiPaused(): void {
+    if (this.data.aiPausedAt) return;
+    this.data.aiPausedAt = new Date().toISOString();
+    this.save();
+  }
+
+  /** True once after a pause: the first answer since then shows the "back" line, and the mark is cleared. */
+  takeAiBack(): boolean {
+    if (!this.data.aiPausedAt) return false;
+    delete this.data.aiPausedAt;
+    this.save();
+    return true;
   }
 
   /**

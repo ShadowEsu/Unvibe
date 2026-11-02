@@ -94,6 +94,8 @@ interface TabState {
   providerName: string;
   /** The answer is the short default (2 to 4 sentences), so "More detail" is offered under it. */
   short: boolean;
+  /** The first answer since hosted AI was paused for everyone: one quiet "back" line with it. */
+  aiBack?: boolean;
   /** "More detail": the full-depth text streamed under the short answer, and whether it is shown. */
   detail: DetailState;
 }
@@ -604,7 +606,7 @@ function Widget() {
             );
           case 'done':
             playTone('done');
-            return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done', short: ev.short === true });
+            return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done', short: ev.short === true, aiBack: 'aiBack' in ev && ev.aiBack === true });
           case 'error':
             return patchTab(prev, tabId, {
               error: ev.message ?? 'Something went wrong.',
@@ -1461,6 +1463,7 @@ function Widget() {
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
+                {!active.mock && phase === 'done' && active.aiBack && <span className="ai-back-note" role="status">Explanations are back. Thanks for waiting.</span>}
                 {!active.mock && phase === 'done' && <span className="local-save-note">saved on this {deviceName}</span>}
               </div>
               {active.originOpen ? (

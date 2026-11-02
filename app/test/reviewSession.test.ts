@@ -378,6 +378,29 @@ test('a stream that stops with neither done nor an error still says it was cut o
   assert.deepEqual(events.filter((ev) => ev.type === 'error').map((ev) => ev.message), ['The explanation ended before it was complete. Please try again.']);
 });
 
+test('after hosted AI was paused for everyone, the next answer says it is back, once; an account cap says nothing', async () => {
+  const dones = (events: Array<Record<string, unknown>>) => events.filter((ev) => ev.type === 'done');
+  // This account's own day cap carries no ai_paused code: no "back" line afterwards.
+  reviewEvents = [{ type: 'error', message: 'You have used today\'s explanations.' }];
+  try { await runReview(panel().win, session('intermediate'), { level: 'intermediate' }); } finally { reviewEvents = null; }
+  const afterCap = panel();
+  await runReview(afterCap.win, session('intermediate'), { level: 'intermediate' });
+  assert.equal(dones(afterCap.events)[0]?.aiBack, undefined, 'an account cap is not a pause');
+
+  // Paused for everyone, twice in a row: one mark.
+  for (let i = 0; i < 2; i += 1) {
+    reviewEvents = [{ type: 'error', code: 'ai_paused', message: 'AI features are paused for maintenance. Back soon.' }];
+    try { await runReview(panel().win, session('intermediate'), { level: 'intermediate' }); } finally { reviewEvents = null; }
+  }
+  const back = panel();
+  await runReview(back.win, session('intermediate'), { level: 'intermediate' });
+  assert.equal(dones(back.events)[0]?.aiBack, true, 'the first answer after the pause');
+  const next = panel();
+  await runReview(next.win, session('intermediate'), { level: 'intermediate' });
+  assert.equal(dones(next.events)[0]?.aiBack, undefined, 'only once');
+  assert.equal(store().takeAiBack(), false, 'the mark is cleared');
+});
+
 test('Test me asks quick-check, scenario, recall, then makes no fourth request', async () => {
   received.length = 0;
   const { win, events } = panel();
