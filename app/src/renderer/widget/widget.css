@@ -642,7 +642,7 @@ code.inline {
 .askrow .btn-ask:disabled { opacity: 0.72; }
 .mock-note { font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); }
 .local-save-note { margin-left:auto; align-self:center; color:var(--muted); font:9px var(--font-mono); white-space:nowrap; }
-.ai-back-note { align-self:center; color:var(--muted); font-size:11px; }
+.ai-back-note { align-self:center; color:var(--muted); font-size:12px; }
 .local-save-note::before { content:"■"; margin-right:5px; color:var(--fill); font-size:6px; }
 
 .quiz-rail {
@@ -1164,7 +1164,8 @@ code.inline {
 .card .chip--ok { background: rgb(95 212 160 / 0.14); border-color: rgb(95 212 160 / 0.4); color: var(--p-green); }
 .card .chip--diff { background: rgb(124 180 255 / 0.12); border-color: rgb(124 180 255 / 0.35); color: var(--p-blue); }
 .card .chip--test { background: rgb(255 143 184 / 0.12); border-color: rgb(255 143 184 / 0.35); color: var(--p-pink); }
-.card .mock-note, .card .local-save-note, .card .ai-back-note { color: var(--p-faint); font-size: 11px; }
+.card .mock-note, .card .local-save-note { color: var(--p-faint); font-size: 11px; }
+.card .ai-back-note { color: var(--p-faint); font-size: 12px; }
 .card .ask-sandbox {
   display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 14px; border: 1px solid var(--p-line); border-radius: 22px;
   background: var(--p-surface); box-shadow: none;
