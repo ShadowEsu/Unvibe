@@ -26,6 +26,21 @@ function highlight(code: string): ReactNode[] {
   return out;
 }
 
+/** How long a Copy control reads "Copied" (Design motion spec §4). */
+export const COPIED_MS = 1600;
+
+/** A Copy control's label: "Copy", then a check and "Copied". Each swap remounts, so the panel can fade it in. */
+export function CopyLabel({ copied }: { copied: boolean }) {
+  return copied ? (
+    <span key="copied" className="copy-label copy-label--done">
+      <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 6.5 5 9l4.5-6" /></svg>
+      Copied
+    </span>
+  ) : (
+    <span key="copy" className="copy-label">Copy</span>
+  );
+}
+
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -37,10 +52,10 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
           onClick={() => {
             void navigator.clipboard.writeText(code);
             setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
+            setTimeout(() => setCopied(false), COPIED_MS);
           }}
         >
-          {copied ? 'copied' : 'copy'}
+          <CopyLabel copied={copied} />
         </button>
       </div>
       <pre>{highlight(code)}</pre>

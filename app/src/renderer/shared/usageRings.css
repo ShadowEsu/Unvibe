@@ -32,7 +32,7 @@ button.usage-rings { cursor: pointer; }
 }
 .usage-ring__value {
   stroke: currentColor;
-  transition: stroke-dasharray 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: stroke-dasharray var(--dur-standard) var(--ease-emphatic);
 }
 .usage-ring[data-tone="low"] .usage-ring__value { stroke: #f5a524; }
 .usage-ring[data-tone="out"] .usage-ring__value { stroke: #ef6f6c; }
@@ -61,14 +61,14 @@ button.usage-rings { cursor: pointer; }
 /* Branded remaining-allowance meters; details are available with hover or keyboard focus. */
 .usage-cluster { display: grid; justify-items: center; gap: 10px; }
 .usage-ring { position: relative; color: #c4b5fd; outline-offset: 5px; border-radius: 8px; }
-.usage-ring__brand { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .2s, transform .25s; }
+.usage-ring__brand { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity var(--dur-micro), transform var(--dur-micro); }
 .usage-ring__brand svg { width: 48%; height: 48%; }
-.usage-ring__dial b { opacity: 0; transition: opacity .2s; font-size: 11px; }
+.usage-ring__dial b { opacity: 0; transition: opacity var(--dur-micro); font-size: 11px; }
 .usage-ring:hover .usage-ring__brand, .usage-ring:focus .usage-ring__brand { opacity: 0; transform: scale(.7) rotate(-12deg); }
 .usage-ring:hover .usage-ring__dial b, .usage-ring:focus .usage-ring__dial b { opacity: 1; }
-.usage-ring__value { stroke: #a78bfa; animation: uv-ring-in .7s ease-out both; }
+.usage-ring__value { stroke: #a78bfa; animation: uv-ring-in var(--dur-standard) var(--ease-emphatic) both; }
 .usage-ring:nth-child(2) .usage-ring__value { stroke: #7dd3fc; }
-.usage-ring__detail { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translate(-50%, 6px); width: 200px; display: grid; gap: 9px; padding: 16px; background: #211c30; border: 1px solid #ffffff24; border-radius: 14px; color: #f4efff; font: 11px/1.4 -apple-system, sans-serif; opacity: 0; visibility: hidden; transition: opacity .18s, transform .18s, visibility .18s; pointer-events: none; z-index: 100; text-align: left; }
+.usage-ring__detail { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translate(-50%, 6px); width: 200px; display: grid; gap: 9px; padding: 16px; background: #211c30; border: 1px solid #ffffff24; border-radius: 14px; color: #f4efff; font: 11px/1.4 -apple-system, sans-serif; opacity: 0; visibility: hidden; transition: opacity var(--dur-micro), transform var(--dur-micro), visibility var(--dur-micro); pointer-events: none; z-index: 100; text-align: left; }
 .usage-ring:first-child .usage-ring__detail { left: 0; transform: translateY(6px); }
 .usage-ring:last-child .usage-ring__detail { left: auto; right: 0; transform: translateY(6px); }
 .usage-ring:hover .usage-ring__detail, .usage-ring:focus .usage-ring__detail { opacity: 1; visibility: visible; transform: translateY(0); }

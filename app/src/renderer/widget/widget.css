@@ -1653,11 +1653,13 @@ code.inline {
 /* Done: the "Not sure:" line fades in, then More detail 60 ms later. */
 .short-answer--arriving > .short-answer__unsure { animation: answer-in var(--dur-standard) var(--ease-calm) both; }
 .card .body > .more-detail { animation: answer-in var(--dur-standard) var(--ease-calm) 60ms both; }
+/* Copy → a check and "Copied", held 1.6 s (COPIED_MS); each label swap fades in. */
+.copy-label { display: inline-flex; align-items: center; gap: 4px; animation: answer-in var(--dur-micro) var(--ease-calm) both; }
 @keyframes answer-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes answer-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes answer-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .answer-skeleton i, .card .body .answer-wait, .short-answer__sentence, .card .state[role="alert"],
-  .short-answer--arriving > .short-answer__unsure, .card .body > .more-detail { animation: none; }
+  .short-answer--arriving > .short-answer__unsure, .card .body > .more-detail, .copy-label { animation: none; }
   .card .body .answer-wait--leaving { display: none; }
 }
