@@ -11,6 +11,7 @@ import type {
   SubscriptionRecord,
   SubscriptionStatus,
   SubscriptionSyncInput,
+  VersionedSubscription,
   UsageKind,
   UsageReservation,
   WebhookClaim,
@@ -65,6 +66,21 @@ function defaultSubscription(workspaceId: string): SubscriptionRecord {
     seats: 1,
     cancelAtPeriodEnd: false,
   };
+}
+
+// Every write stores a new row object and none edits one in place, so a row object's identity is its
+// version: the dev mirror of comparing `updated_at`, which every SQL and store write sets.
+const rowVersions = new WeakMap<SubscriptionRecord, string>();
+let lastRowVersion = 0;
+
+function rowVersion(row: SubscriptionRecord): string {
+  let version = rowVersions.get(row);
+  if (version === undefined) {
+    lastRowVersion += 1;
+    version = String(lastRowVersion);
+    rowVersions.set(row, version);
+  }
+  return version;
 }
 
 export class MemoryBillingStore implements BillingStore {
@@ -312,6 +328,18 @@ export class MemoryBillingStore implements BillingStore {
 
   async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
     this.data.subscriptions.set(input.workspaceId, { ...input });
+  }
+
+  async versionedSubscriptionByWorkspaceId(workspaceId: string): Promise<VersionedSubscription | null> {
+    const subscription = this.data.subscriptions.get(workspaceId);
+    return subscription ? { subscription, version: rowVersion(subscription) } : null;
+  }
+
+  async syncSubscriptionIf(input: SubscriptionSyncInput, expectedVersion: string | null): Promise<boolean> {
+    const current = this.data.subscriptions.get(input.workspaceId);
+    if ((current ? rowVersion(current) : null) !== expectedVersion) return false;
+    this.data.subscriptions.set(input.workspaceId, { ...input });
+    return true;
   }
 
   async setSubscriptionStatusIf(stripeSubscriptionId: string, expected: SubscriptionStatus, status: SubscriptionStatus, gracePeriodEndsAt?: string): Promise<boolean> {

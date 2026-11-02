@@ -211,14 +211,35 @@ async function stopCheckoutWhileLocked(store: BillingStore, session: Stripe.Chec
   console.error(`[billing] checkout completed while payments are locked, stopped: workspace=${workspaceId} stopped=${stopped} refunds=${refunded.join(',') || 'none'}`);
 }
 
+/**
+ * Stores a subscription as Stripe has it. The write is a compare-and-set on the row as this run read
+ * it (the unlocked-upsert race, Security 0344 N2 and the before-live list): when another write lands
+ * in between (a lost dispute or a refund that canceled it, a free-months grant, the sync of another
+ * subscription), nothing is written; the subscription is retrieved again, the row read again and the
+ * decision made again. Losing three times fails the event, so Stripe retries it.
+ */
 export async function syncStripeSubscription(store: BillingStore, subscription: Stripe.Subscription, deps: StripeWebhookDependencies): Promise<void> {
+  let live = subscription;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt > 0) live = await deps.retrieveSubscription(subscription.id);
+    if (await syncStripeSubscriptionOnce(store, live, deps)) return;
+  }
+  throw new Error('Subscription sync lost to concurrent changes three times.');
+}
+
+/** One read-decide-write round of `syncStripeSubscription`. False when the row changed after the read and nothing was written. */
+async function syncStripeSubscriptionOnce(store: BillingStore, subscription: Stripe.Subscription, deps: StripeWebhookDependencies): Promise<boolean> {
   const metadata = requiredMetadata(subscription);
   const item = subscription.items.data[0];
   if (!item) throw new Error('Stripe subscription has no billable item.');
   if (item.price.id !== stripePriceId(metadata.plan, metadata.interval)) throw new Error('Stripe subscription price does not match the trusted plan configuration.');
   if (metadata.plan === 'pro' && (item.quantity ?? 1) !== 1) throw new Error('Pro subscriptions must have exactly one account seat.');
   if (metadata.plan === 'teams' && (item.quantity ?? 0) < 2) throw new Error('Teams subscriptions require at least two seats.');
-  const stored = await store.subscriptionByWorkspaceId(metadata.workspaceId);
+  const read = await store.versionedSubscriptionByWorkspaceId(metadata.workspaceId);
+  const stored = read?.subscription ?? null;
+  // Stripe never reopens a canceled subscription, and this row is marked canceled only once Stripe
+  // has canceled it. A snapshot that still shows it live was read before that mark: it is stale.
+  if (stored?.stripeSubscriptionId === subscription.id && stored.status === 'canceled' && subscription.status !== 'canceled') return true;
   // Lifetime is paid once and never ends here: a subscription event for the same workspace (say one
   // started from the portal or a stale checkout) is recorded for a person to sort out, never applied.
   if (stored?.interval === 'lifetime' && stored.status === 'active') {
@@ -226,7 +247,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
       stripeSubscriptionId: subscription.id,
       status: subscription.status,
     });
-    return;
+    return true;
   }
   // Checkout refuses a paid subscription while complimentary access runs, but a session opened
   // before a promo code was redeemed can still complete after it. The complimentary row stays; the
@@ -237,17 +258,17 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   // now could leave a payment the customer completes later unrefunded. It is left alone until its
   // invoice.paid, its update to active or the checkout completion stops it, refund first.
   if (stored && complimentaryPaidEnd(stored)) {
-    if (subscription.status === 'incomplete') return;
+    if (subscription.status === 'incomplete') return true;
     const ended = subscription.status === 'canceled' || subscription.status === 'incomplete_expired';
     if (!ended) await stopDuplicate(store, deps, metadata.workspaceId, 'complimentary', subscription.id);
-    return;
+    return true;
   }
   const storedId = stored?.stripeSubscriptionId;
   const replacesOther = stored !== null && storedId !== undefined && storedId !== subscription.id;
   const incomingLive = subscription.status === 'active' || subscription.status === 'trialing' || subscription.status === 'past_due';
   // A late or retried event for a subscription the workspace has since replaced (say ended sub A
   // after re-subscribing with B) must not overwrite B while B can still charge or entitles.
-  if (replacesOther && stored.status !== 'canceled' && stored.status !== 'inactive' && !incomingLive) return;
+  if (replacesOther && stored.status !== 'canceled' && stored.status !== 'inactive' && !incomingLive) return true;
   if (replacesOther && incomingLive && stored.interval !== 'lifetime') {
     // Checkout refuses a second subscription, so two live ones on a workspace are a real duplicate
     // (say two checkouts that raced). Overwriting the stored one would lose a subscription that keeps
@@ -255,12 +276,12 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     const other = await retrieveIfExists(deps, storedId);
     if (other && liveSubscriptionStillCharges(other)) {
       // The incoming one ends on its own: the stored one goes on charging and stays on record.
-      if (!liveSubscriptionStillCharges(subscription)) return;
+      if (!liveSubscriptionStillCharges(subscription)) return true;
       // Both charge: the first one created stays and the newer one is stopped. The id breaks a
       // same-second tie, so the events of both subscriptions agree on which one that is.
       const incomingIsDuplicate = subscription.created > other.created || (subscription.created === other.created && subscription.id > other.id);
       await stopDuplicate(store, deps, metadata.workspaceId, incomingIsDuplicate ? other.id : subscription.id, incomingIsDuplicate ? subscription.id : other.id);
-      if (incomingIsDuplicate) return;
+      if (incomingIsDuplicate) return true;
     }
   }
   // Only Stripe's live status starts a grace period: a failed-payment event that lands after the
@@ -271,7 +292,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
   const graceEnds = prior?.status === 'grace_period' && prior.gracePeriodEndsAt
     ? prior.gracePeriodEndsAt
     : graceEndsFromNow();
-  await store.syncSubscription({
+  return store.syncSubscriptionIf({
     workspaceId: metadata.workspaceId,
     plan: metadata.plan,
     interval: metadata.interval,
@@ -284,7 +305,7 @@ export async function syncStripeSubscription(store: BillingStore, subscription: 
     currentPeriodEnd: new Date(item.current_period_end * 1_000).toISOString(),
     gracePeriodEndsAt: shouldGrace ? graceEnds : undefined,
     cancelAtPeriodEnd: endsWithoutRenewing(subscription, item.current_period_end),
-  });
+  }, read?.version ?? null);
 }
 
 /** When a grace period that starts now ends: BILLING_GRACE_PERIOD_DAYS (1 to 30, default 7) from now. */

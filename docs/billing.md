@@ -13,7 +13,7 @@ usage reservations; the migration seeds it to the same initial values:
 - Pro: $9/month or $81/year (about $6.75/month, 25% annual savings); 200 AI explanations/month (migration `20261102191000_pro_200_explanations.sql`); up to 10 active projects.
 - Pro Lifetime: $80 one-time (`PRO_LIFETIME_CENTS`), offered only while checkout is open, `STRIPE_PRICE_PRO_LIFETIME` is set and `BILLING_LIFETIME_ENABLED=true`.
 - Teams ($8/seat/month or $72/seat/year) is sold as a pilot by email: the site collects company email + seat request (mailto). Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
-- Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key (restricted `rk_live_` only; `sk_live_` is refused) opens checkout only on the production deployment with `UNVIBE_CHECKOUT_LIVE` set to exactly `1`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`. `/api/v1/health` reports `billing: off|test|live` and `webhookConfigured`. Stripe Tax is on only with `STRIPE_AUTOMATIC_TAX=1`.
+- Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key (restricted `rk_live_` only; `sk_live_` is refused) opens checkout only on the production deployment with `UNVIBE_CHECKOUT_LIVE` set to exactly `1`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`. `/api/v1/health` reports `billing: off|test|live` and `webhookConfigured`. Stripe Tax is on only with `STRIPE_AUTOMATIC_TAX=1`. With a live key, Checkout requires Terms of Service consent (`consent_collection.terms_of_service: 'required'`), which needs the Terms URL in the live account's public details; sandbox checkout sends no consent setting.
 - Founding Teams collab (no Stripe required): create team workspace, invite seats, shared activity feed with authorship (`GET /api/v1/workspaces/:id/history`). Explanation/code bodies stay on-device. GitHub intelligence remains out of scope.
 - Owner env paste list: `docs/release/owner-paste-list.md`.
 
@@ -60,6 +60,14 @@ privileges are also restricted to `service_role`.
 Checkout redirects do not grant access. The webhook is authoritative; the success-page refresh
 waits for the completed checkout intent and paid entitlement written by the signed webhook.
 Webhook claims are idempotent, completed events cannot replay, and failed processing can retry.
+The Stripe client pins API version `2026-06-24.dahlia`; set the same version on each endpoint.
+An event whose `livemode` differs from the key's mode is answered 200 `livemode_mismatch`, logged
+and audited (`webhook.livemode_mismatch`), and never claimed or processed.
+The subscription sync writes the row only while its `updated_at` is still the value it read, so a
+cancel, refund, dispute or free-months grant that lands in between is never overwritten; it then
+retrieves the subscription again and decides again (three tries, then the event fails and Stripe
+retries). A late snapshot that still shows a subscription live never reopens a row stored as canceled
+under that subscription.
 
 ## Lifecycle behavior
 

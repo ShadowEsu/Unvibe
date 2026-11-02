@@ -34,6 +34,54 @@ test('the revoke-only status write is a compare-and-set on the stored status', a
   assert.equal(patches[1].body.grace_period_ends_at, '2026-11-02T00:00:00.000Z');
 });
 
+// The unlocked-upsert race: the subscription sync writes the whole row only while updated_at is still
+// the value it read (exactly as PostgREST returned it), or inserts only while the workspace has no row.
+test('the subscription sync write is a compare-and-set on updated_at, and an insert only when no row exists', async () => {
+  const previousFetch = globalThis.fetch;
+  const requests: Array<{ method: string; query: URLSearchParams; prefer: string | null; body: Record<string, unknown> | null }> = [];
+  let rows: unknown[] = [];
+  const storedAt = '2026-11-02T18:00:00.123456+00:00';
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    assert.equal(url.pathname, '/rest/v1/subscriptions');
+    const method = init?.method ?? 'GET';
+    requests.push({ method, query: url.searchParams, prefer: new Headers(init?.headers).get('prefer'), body: init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null });
+    if (method === 'GET') return Response.json([{ workspace_id: 'ws-1', plan: 'pro', interval: 'monthly', status: 'active', seats: 1, cancel_at_period_end: false, updated_at: storedAt }]);
+    return Response.json(rows);
+  }) as typeof fetch;
+  const store = new SupabaseBillingStore('https://billing.supabase.test', 'service-key');
+  const input = {
+    workspaceId: 'ws-1', plan: 'pro' as const, interval: 'monthly' as const, status: 'canceled' as const, seats: 1,
+    stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1', stripePriceId: 'price_1', cancelAtPeriodEnd: false,
+  };
+  try {
+    const read = await store.versionedSubscriptionByWorkspaceId('ws-1');
+    assert.equal(read?.version, storedAt, 'the version is updated_at exactly as stored');
+    assert.equal(read?.subscription.status, 'active');
+    rows = [{ workspace_id: 'ws-1' }];
+    assert.equal(await store.syncSubscriptionIf(input, storedAt), true);
+    // Another write changed updated_at first: no row matches, nothing is written.
+    rows = [];
+    assert.equal(await store.syncSubscriptionIf(input, storedAt), false);
+    // No row was read: an insert that does nothing when a row appeared meanwhile.
+    assert.equal(await store.syncSubscriptionIf(input, null), false);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+  const [, update, , insert] = requests;
+  assert.equal(update?.method, 'PATCH');
+  assert.equal(update?.query.get('workspace_id'), 'eq.ws-1');
+  assert.equal(update?.query.get('updated_at'), `eq.${storedAt}`);
+  assert.equal(update?.body?.status, 'canceled');
+  assert.equal(update?.body?.stripe_subscription_id, 'sub_1');
+  assert.equal('workspace_id' in (update?.body ?? {}), false, 'the key is the filter, not a written column');
+  assert.notEqual(update?.body?.updated_at, storedAt, 'the write sets a new updated_at');
+  assert.equal(insert?.method, 'POST');
+  assert.equal(insert?.query.get('on_conflict'), 'workspace_id');
+  assert.match(insert?.prefer ?? '', /resolution=ignore-duplicates/);
+  assert.equal(insert?.body?.workspace_id, 'ws-1');
+});
+
 test('checkout stop audits are read in one query filtered by both actions and the session', async () => {
   const previousFetch = globalThis.fetch;
   const actions = ['checkout.stop_started', 'checkout.stopped_while_locked'];
