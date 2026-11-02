@@ -7,6 +7,7 @@ import { createRef, isValidElement, type ReactElement, type ReactNode } from "re
 import { FooterLinks } from "@/components/Footer";
 import { MacBuildLinks } from "@/components/paper/BetaInstall";
 import { DownloadForThisComputer } from "@/components/paper/PhotoHero";
+import { ThanksContent } from "@/components/paper/DownloadThanks";
 import { siteCommands } from "@/components/paper/SitePalette";
 import { trackPlanCta } from "@/components/redesign/PricingPlans";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "./betaOffer";
@@ -364,6 +365,8 @@ describe("download_thanks_viewed (Security MUST-TD2)", () => {
     assert.equal(thanksOs("windows"), "windows");
     assert.equal(downloadSurface("hero"), "hero");
     assert.equal(downloadSurface("seo_windows"), "seo_windows");
+    assert.equal(downloadSurface("thanks"), "thanks");
+    for (const near of ["Thanks", "thank", "thanks ", "thanks_page"]) assert.equal(downloadSurface(near), "other", `from ${JSON.stringify(near)}`);
     for (const value of [null, "", "Mac", "linux", " windows", "https://evil.example/x.dmg", "../../x", "<b>", "constructor", "__proto__", "toString"]) {
       assert.equal(thanksOs(value), "other", `os ${JSON.stringify(value)}`);
       assert.equal(downloadSurface(value), "other", `from ${JSON.stringify(value)}`);
@@ -379,6 +382,17 @@ describe("download_thanks_viewed (Security MUST-TD2)", () => {
       { event: "download_thanks_viewed", properties: { os: "windows", from: "other", auto: false, path: "/download/thanks" } },
     ]);
   });
+
+  for (const [os, state] of [["mac", "started"], ["mac-intel", "preparing"], ["windows", "ready"]] as const) {
+    it(`the thanks page's file links (${os}, ${state}) send download_cta_clicked with surface thanks`, () => {
+      const fileLinks = elements(ThanksContent({ os, state, decided: true }))
+        .filter((element) => String(element.props.href ?? "").startsWith("https://github.com/") && typeof element.props.onClick === "function");
+      assert.equal(fileLinks.length, os === "windows" ? 2 : 3, "the manual or button link, the direct link, and on a Mac the other build");
+      for (const fileLink of fileLinks) click(fileLink);
+      assert.deepEqual(sent, fileLinks.map((fileLink) => downloadClick("thanks", fileLink.props.href === BETA_WINDOWS_DIRECT_DOWNLOAD ? "windows" : "mac")));
+      assert.equal(thanksToken(), null, "they download in place: no token, no second thanks page");
+    });
+  }
 });
 
 describe("opt-out", () => {

@@ -8,7 +8,7 @@ import { MacOpenAnyway } from "@/components/paper/thanks-art/MacOpenAnyway";
 import { WinKeep } from "@/components/paper/thanks-art/WinKeep";
 import { WinRun } from "@/components/paper/thanks-art/WinRun";
 import { WinRunAnyway } from "@/components/paper/thanks-art/WinRunAnyway";
-import { downloadSurface, thanksOs, trackDownloadThanksViewed, type ThanksOs } from "@/lib/downloadTracking";
+import { downloadSurface, thanksOs, trackDownloadClick, trackDownloadThanksViewed, type ThanksOs } from "@/lib/downloadTracking";
 import {
   THANKS_DOWNLOADS,
   takeThanksToken,
@@ -103,8 +103,13 @@ export interface ThanksContentProps {
 export function ThanksContent({ os, state, decided = false, leaving = false, switched = false, firstCaptionRef, onFile, onSwitch }: ThanksContentProps) {
   const { href } = THANKS_DOWNLOADS[os];
   const mac = os !== "windows";
+  // Every link to a file on this page is a download click, surface "thanks"; the browser downloads it in place.
+  const file = (target: ThanksOs) => () => {
+    trackDownloadClick("thanks", target === "windows" ? "windows" : "mac");
+    onFile?.(target);
+  };
   const manual = (
-    <a className="thanks__link thanks__nowrap" href={href} onClick={() => onFile?.(os)}>download Unvibe manually</a>
+    <a className="thanks__link thanks__nowrap" href={href} onClick={file(os)}>download Unvibe manually</a>
   );
   return (
     <section className="thanks" aria-labelledby="thanks-title" data-view={decided ? state : undefined} data-switched={switched || undefined}>
@@ -128,7 +133,7 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
 
       <div className="thanks__lead thanks__in">
         {state === "ready" ? (
-          <a className="paper-join paper-join--win thanks__primary" href={href} onClick={() => onFile?.(os)}>
+          <a className="paper-join paper-join--win thanks__primary" href={href} onClick={file(os)}>
             <span className="paper-join__label">{mac ? "Download Unvibe for Mac" : "Download Unvibe for Windows"}</span>
           </a>
         ) : (
@@ -140,11 +145,11 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
         )}
         {os === "mac" ? (
           <p className="thanks__sub">
-            Intel Mac? <a className="thanks__link" href={THANKS_DOWNLOADS["mac-intel"].href} onClick={() => onFile?.("mac-intel")}>Get the Intel build</a>.
+            Intel Mac? <a className="thanks__link" href={THANKS_DOWNLOADS["mac-intel"].href} onClick={file("mac-intel")}>Get the Intel build</a>.
           </p>
         ) : os === "mac-intel" ? (
           <p className="thanks__sub">
-            M1 or newer? <a className="thanks__link" href={THANKS_DOWNLOADS.mac.href} onClick={() => onFile?.("mac")}>Get that build instead</a>.
+            M1 or newer? <a className="thanks__link" href={THANKS_DOWNLOADS.mac.href} onClick={file("mac")}>Get that build instead</a>.
           </p>
         ) : null}
         {mac ? (
@@ -168,7 +173,7 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
       </button>
       <p className="thanks__trouble thanks__in">
         Having trouble with the installer? <Link className="thanks__link" href="/install-help?from=thanks">Read install help</Link> or{" "}
-        <a className="thanks__link" href={href} onClick={() => onFile?.(os)}>download the file directly</a>.
+        <a className="thanks__link" href={href} onClick={file(os)}>download the file directly</a>.
       </p>
     </section>
   );

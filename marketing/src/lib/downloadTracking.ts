@@ -11,6 +11,7 @@
  *   /code-explainer-mac and /code-explainer-windows).
  *   A plain click on one of these opens /download/thanks, which starts the file (see
  *   downloadThanks.ts); beta, the /beta install box, downloads in place. Modified clicks download.
+ *   thanks: the manual, direct and other-build links on /download/thanks, which download in place.
  * - Opens the download page (/beta) instead: nav, mobile_bar, pricing, footer, releases, build,
  *   resources. Of these, only the DownloadLink buttons (nav, releases, build, resources) also
  *   fire DOWNLOADED_EVENT, as they always have.
@@ -56,6 +57,7 @@ const DOWNLOAD_SURFACES = [
   "build",
   "resources",
   "redeem",
+  "thanks",
 ] as const;
 
 export type DownloadSurface = (typeof DOWNLOAD_SURFACES)[number];
