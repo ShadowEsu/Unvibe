@@ -6,7 +6,7 @@ export const USAGE_TOKEN_WINDOW_MS = 15 * 60_000;
 /** Billing helpers mirror the limits and access rules in the Supabase migration. */
 const BILLING_LIMITS: Record<PlanId, Record<UsageKind, number>> = {
   free: { ai_explanation: 50, project_question: 10, indexed_project: 1, dictionary_item: 25, saved_item: 20 },
-  pro: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
+  pro: { ai_explanation: 200, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
   teams: { ai_explanation: 100, project_question: 500, indexed_project: 10, dictionary_item: 1000, saved_item: 1000 },
 };
 
