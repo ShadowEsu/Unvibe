@@ -165,6 +165,12 @@ export class SupabaseStore implements Store {
       const { error } = await this.db.from(table).delete().eq(column, userId);
       if (error) throw new Error(`Could not delete ${table}: ${error.message}`);
     }
+    // Last, the Supabase Auth user (the email and any Google name), so "Delete account" removes the
+    // sign-in identity too, as the deletion page promises (Security MUST-RT0). public.users.id is the
+    // Auth user id. Last on purpose: if this fails, signing in again recreates the user row under the
+    // same id and the person can retry. Already gone (404) counts as done; any other error throws.
+    const { error } = await this.db.auth.admin.deleteUser(userId);
+    if (error && error.status !== 404) throw new Error(`Could not delete the sign-in account: ${error.message}`);
   }
 
   async upsertEvents(userId: string, events: IncomingEvent[], workspaceId?: string): Promise<void> {
