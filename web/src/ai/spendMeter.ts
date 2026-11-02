@@ -13,16 +13,18 @@ import { ProviderRejectedError, type Completion, type Provider, type TokenUsage 
  */
 export const SPEND_METER = 'anthropic';
 /**
- * Claude Haiku 5.5 list prices (platform.claude.com pricing, Money 2026-10-29): $0.10 / $0.50 per
- * 1M input / output tokens, and $0.50 / $2.50 for the whole request once its input passes 100,000
- * tokens. Cache reads and writes are counted as input at the same tier price, which is never less
- * than their real price; the app sends no cache_control.
+ * List prices per model in nano-dollars per token, from platform.claude.com/docs/en/about-claude/pricing
+ * (read 2026-11-02): "Claude Opus 5.5 | $4 / MTok | $5 / MTok | $8 / MTok | $0.20 / MTok | $20 / MTok"
+ * (base input, 5m cache writes, 1h cache writes, cache hits, output). Opus 5.5 has one price for its
+ * whole context window, so there is no long-context tier. Cache writes are counted at the 1h price,
+ * the dearest kind; cache hits are counted as plain input, which is above their real price. The app
+ * sends no cache_control, so neither is expected. A model without a row here is never called: the
+ * meter refuses it before anything is reserved or sent.
  */
-export const NANO_USD_PER_INPUT_TOKEN = 100;
-export const NANO_USD_PER_OUTPUT_TOKEN = 500;
-export const LONG_CONTEXT_INPUT_TOKENS = 100_000;
-export const LONG_NANO_USD_PER_INPUT_TOKEN = 500;
-export const LONG_NANO_USD_PER_OUTPUT_TOKEN = 2_500;
+export type ModelPrices = { input: number; output: number; cacheWrite: number };
+export const MODEL_PRICES: Readonly<Record<string, ModelPrices>> = {
+  'claude-opus-5-5': { input: 4_000, output: 20_000, cacheWrite: 8_000 },
+};
 /** Room for the Messages API's own framing tokens around the system prompt and the user turn. */
 const FRAMING_TOKENS = 64;
 export const DAY_CAP_NANO_USD = 1_000_000_000; // $1 per UTC day
@@ -49,11 +51,9 @@ export class AiPausedError extends Error {
   }
 }
 
-/** The price of `inputTokens` in and `outputTokens` out, at the tier the input puts the whole request in. */
-function priceNanoUsd(inputTokens: number, outputTokens: number): number {
-  const long = inputTokens > LONG_CONTEXT_INPUT_TOKENS;
-  return inputTokens * (long ? LONG_NANO_USD_PER_INPUT_TOKEN : NANO_USD_PER_INPUT_TOKEN)
-    + outputTokens * (long ? LONG_NANO_USD_PER_OUTPUT_TOKEN : NANO_USD_PER_OUTPUT_TOKEN);
+/** The model's price row, or undefined for a model the meter has no prices for. */
+export function pricesFor(model: string): ModelPrices | undefined {
+  return Object.hasOwn(MODEL_PRICES, model) ? MODEL_PRICES[model] : undefined;
 }
 
 /** The most input tokens a prompt can be: Claude's tokenizer never makes more tokens than UTF-8 bytes. */
@@ -61,13 +61,15 @@ export function maxInputTokens(system: string, user: string): number {
   return Buffer.byteLength(system, 'utf8') + Buffer.byteLength(user, 'utf8') + FRAMING_TOKENS;
 }
 
-/** Worst-case cost of one call: the byte bound as input plus the full output budget, at its tier. */
-export function worstCaseNanoUsd(system: string, user: string, maxOutputTokens: number): number {
-  return priceNanoUsd(maxInputTokens(system, user), maxOutputTokens);
+/** Worst-case cost of one call: the byte bound as input plus the full output budget. */
+export function worstCaseNanoUsd(prices: ModelPrices, system: string, user: string, maxOutputTokens: number): number {
+  return maxInputTokens(system, user) * prices.input + maxOutputTokens * prices.output;
 }
 
-export function costNanoUsd(usage: TokenUsage): number {
-  return priceNanoUsd(usage.inputTokens, usage.outputTokens);
+/** Measured cost: the cache-write share of the input at the cache-write price, the rest at the input price. */
+export function costNanoUsd(prices: ModelPrices, usage: TokenUsage): number {
+  const writes = Math.min(usage.cacheWriteTokens ?? 0, usage.inputTokens);
+  return (usage.inputTokens - writes) * prices.input + writes * prices.cacheWrite + usage.outputTokens * prices.output;
 }
 
 export type Reservation = { day: string; nanoUsd: number };
@@ -145,14 +147,17 @@ export function spendStore(): SpendStore | null {
   return g.__unvibeSpendMemory;
 }
 
-/** A provider whose calls carry a measured or an explicitly estimated cost. */
+/** A provider whose calls carry a measured or an explicitly estimated cost, for one priced model. */
 export interface MeterableProvider extends Provider {
+  /** Keys MODEL_PRICES; the same value the provider sends as the request's model. */
+  readonly model: string;
   readonly maxOutputTokens: number;
 }
 
 /**
- * Wraps the real provider so no call starts without a reservation. Past a stop, or when the store
- * can't answer, it throws `AiPausedError` and the provider is never called (no fallback provider).
+ * Wraps the real provider so no call starts without a reservation. Past a stop, when the store
+ * can't answer, or for a model without prices, it throws `AiPausedError` and the provider is never
+ * called (no fallback provider).
  */
 export class MeteredProvider implements Provider {
   readonly name: string;
@@ -178,8 +183,13 @@ export class MeteredProvider implements Provider {
 
   private async metered<T>(system: string, user: string, call: () => Promise<{ result: T; usage: TokenUsage | undefined }>): Promise<T> {
     if (aiMaintenance()) throw new AiPausedError('maintenance');
+    const prices = pricesFor(this.inner.model);
+    if (!prices) {
+      console.error('ai spend: no prices for the model, refusing');
+      throw new AiPausedError('unavailable');
+    }
     if (!this.store) throw new AiPausedError('unavailable');
-    const worst = worstCaseNanoUsd(system, user, this.inner.maxOutputTokens);
+    const worst = worstCaseNanoUsd(prices, system, user, this.inner.maxOutputTokens);
     let reservation: Reservation | 'day_cap' | 'total_cap';
     try {
       reservation = await this.store.reserve(worst);
@@ -200,7 +210,7 @@ export class MeteredProvider implements Provider {
       throw error;
     }
     const { result, usage } = outcome;
-    if (usage && !usage.estimated) await this.adjust(reservation, costNanoUsd(usage) - reservation.nanoUsd);
+    if (usage && !usage.estimated) await this.adjust(reservation, costNanoUsd(prices, usage) - reservation.nanoUsd);
     return result;
   }
 
