@@ -126,12 +126,13 @@ export function AnalyticsConsentBar() {
 
   return (
     <div className="consent-bar" data-live={live ? "" : undefined} role="region" aria-label="Analytics choice" aria-describedby="consent-bar-text" tabIndex={-1} ref={barRef} onKeyDown={onKeyDown}>
-      <p id="consent-bar-text">{gpc ? ANALYTICS_GPC_TEXT : ANALYTICS_BAR_TEXT}</p>
+      {/* Under 360px the Privacy link ends the text so the two buttons fit on one row (Design, 320px pass). Only one of the two links is ever displayed. */}
+      <p id="consent-bar-text">{gpc ? ANALYTICS_GPC_TEXT : ANALYTICS_BAR_TEXT} <Link className="consent-bar__privacy consent-bar__privacy--inline" href="/privacy">Privacy</Link></p>
       {reopened && !gpc && current !== "ask" ? (
         <p className="consent-bar__now">Your choice now: {current === "allow" ? "Allow" : "No thanks"}.</p>
       ) : null}
       <div className="consent-bar__actions">
-        <Link href="/privacy">Privacy</Link>
+        <Link className="consent-bar__privacy" href="/privacy">Privacy</Link>
         {gpc ? (
           <button type="button" className="consent-bar__btn" onClick={close}>OK</button>
         ) : (
