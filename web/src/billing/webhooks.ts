@@ -154,22 +154,30 @@ async function stopCheckoutWhileLocked(store: BillingStore, session: Stripe.Chec
     const storedWithAccess = stored !== null && !WITHOUT_ACCESS.includes(stored.status);
     if (storedWithAccess && !started) return;
     const live = await retrieveIfExists(deps, id);
-    if (live && live.status !== 'canceled' && live.status !== 'incomplete_expired') {
+    const liveGone = !live || live.status === 'canceled' || live.status === 'incomplete_expired';
+    // Every write below is conditional on the status this run read (Security R8-1): a complimentary
+    // grant or another event that changed the row since is left alone instead of being canceled.
+    const cancelStored = async () => { if (storedWithAccess) await store.setSubscriptionStatusIf(id, stored.status, 'canceled'); };
+    // A started stop whose subscription Stripe already ended (say the cancel went through and the
+    // write after it failed, on an unpaid or no_payment_required session) loses access now, not when
+    // customer.subscription.deleted arrives (Security R8-2).
+    if (started && liveGone) await cancelStored();
+    if (!liveGone) {
       if (!started) {
         await store.recordAudit(null, workspaceId, 'checkout.stop_started', { checkoutSessionId: session.id, subscriptionId: id });
       }
       refunded = await refundAndCancel(deps, id);
       // Stripe has canceled it: a row a subscription event stored as active loses access now, not
       // when customer.subscription.deleted arrives (the same write that handler makes).
-      if (storedWithAccess) await store.markSubscriptionCanceled(id);
+      await cancelStored();
       stopped = id;
     } else if (live?.status === 'canceled' && session.payment_status === 'paid' && started) {
       // A refund and cancel may have succeeded before the audit failed. Shared refund keys recover
       // the result without another refund; the completion row, once written, ends the stop above.
+      // The row was marked canceled above.
       if (!session.invoice || !deps.paidInvoicePayments || !deps.refundPayment) {
         throw new Error('Refunding a settled locked checkout needs its invoice, paidInvoicePayments and refundPayment.');
       }
-      if (storedWithAccess) await store.markSubscriptionCanceled(id);
       for (const { payment } of await deps.paidInvoicePayments(providerId(session.invoice))) {
         const target = refundTarget(payment);
         if (!target) continue;

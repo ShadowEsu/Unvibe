@@ -768,6 +768,56 @@ test('a started stop whose subscription Stripe already canceled recovers the ref
   assert.equal((await store.overview((await store.findCheckoutIntent(sessionId))!.userId)).subscription.plan, 'free');
 });
 
+// Security R8-2: a started stop on a session that needed no payment, whose cancel went through at Stripe
+// but whose write after it failed. On the retry Stripe shows it canceled and the session isn't paid, so
+// neither branch runs; the stored active row must still lose access now.
+test('a started stop on an unpaid session that Stripe already canceled cancels the stored active row on the retry', async () => {
+  const subscriptionId = `sub_${randomUUID()}`;
+  const event = lockedPaidSession('', subscriptionId);
+  (event.data.object as Stripe.Checkout.Session).payment_status = 'no_payment_required';
+  const { store, workspaceId, sessionId } = await storeWithIntent(event);
+  const { state, deps } = stripeFor(workspaceId, subscriptionId);
+  await store.recordAudit(null, workspaceId, 'checkout.stop_started', { checkoutSessionId: sessionId, subscriptionId });
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', subscriptionId), deps);
+  assert.equal((await store.subscriptionByWorkspaceId(workspaceId))?.status, 'active', 'stored as active before the retry');
+  state.status = 'canceled';
+
+  await processStripeEvent(store, event, deps, { revokeOnly: true });
+  assert.equal(state.refundCalls, 0, 'nothing was paid, nothing is refunded');
+  assert.equal(state.cancels, 0, 'already canceled in Stripe');
+  assert.equal((await store.subscriptionByWorkspaceId(workspaceId))?.status, 'canceled', 'access ends without waiting for the deletion event');
+  assert.equal((await store.overview((await store.findCheckoutIntent(sessionId))!.userId)).subscription.plan, 'free');
+});
+
+// Security R8-1: free months granted onto the canceled row (gift, welcome, referral, promo) must survive a
+// stop for the old subscription that is still retrying, say on "no payment found to refund yet".
+test('free Pro months granted after a locked stop canceled the row survive a retry of that stop', async () => {
+  const subscriptionId = `sub_${randomUUID()}`;
+  const event = lockedPaidSession('', subscriptionId);
+  const { store, workspaceId, sessionId } = await storeWithIntent(event);
+  const { state, deps } = stripeFor(workspaceId, subscriptionId);
+  const userId = (await store.findCheckoutIntent(sessionId))!.userId;
+  await store.recordAudit(null, workspaceId, 'checkout.stop_started', { checkoutSessionId: sessionId, subscriptionId });
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.updated', subscriptionId), deps);
+  state.status = 'canceled';
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.deleted', subscriptionId), deps);
+  assert.equal((await store.subscriptionByWorkspaceId(workspaceId))?.status, 'canceled');
+
+  assert.equal((await store.addProMonths(userId, 1)).applied, true, 'a gift month lands on the canceled row');
+  const granted = await store.subscriptionByWorkspaceId(workspaceId);
+  assert.equal(granted?.status, 'trialing');
+  assert.equal(granted?.stripeSubscriptionId, undefined, 'the old Stripe subscription id is dropped with the grant');
+  assert.equal(granted?.stripeCustomerId, 'cus_stop', 'the Stripe customer is kept for a later checkout');
+
+  // The stop retries (paid, Stripe canceled, refund recovered on the shared key) and must not touch the gift.
+  await processStripeEvent(store, event, deps, { revokeOnly: true });
+  assert.equal((await store.subscriptionByWorkspaceId(workspaceId))?.status, 'trialing', 'the free month survives the retry');
+  assert.equal((await store.overview(userId)).subscription.plan, 'pro');
+  // A late deletion for the old subscription can't find the row either.
+  await processStripeEvent(store, subscriptionEvent('customer.subscription.deleted', subscriptionId), deps);
+  assert.equal((await store.subscriptionByWorkspaceId(workspaceId))?.status, 'trialing');
+});
+
 function lockedLifetimeSession(paymentIntent: string): Stripe.Event {
   return {
     id: `evt_${randomUUID()}`, type: 'checkout.session.completed',

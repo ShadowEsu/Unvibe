@@ -389,6 +389,9 @@ export class MemoryBillingStore implements BillingStore {
   /**
    * Dev mirror of the SQL `add_pro_months`: complimentary Pro months that stack on a running
    * gift month, end at most 12 months from now, and never touch a live Stripe subscription.
+   * A grant onto a canceled or inactive Stripe row drops that row's old Stripe subscription and
+   * price ids (Security R8-1), so a late event or a stop retry for the old subscription can't find
+   * the row and cancel the free months.
    */
   async addProMonths(userId: string, months: number): Promise<{ applied: boolean }> {
     if (!Number.isInteger(months) || months <= 0) return { applied: false };
@@ -409,6 +412,8 @@ export class MemoryBillingStore implements BillingStore {
       interval: 'monthly',
       status: 'trialing',
       seats: 1,
+      stripeSubscriptionId: undefined,
+      stripePriceId: undefined,
       currentPeriodStart: from > now ? current.currentPeriodStart ?? now.toISOString() : now.toISOString(),
       currentPeriodEnd: (stacked < cap ? stacked : cap).toISOString(),
     });
