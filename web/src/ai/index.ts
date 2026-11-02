@@ -3,7 +3,7 @@ import { MockProvider } from './mock';
 import { AnthropicProvider } from './anthropic';
 import { MeteredProvider, spendStore } from './spendMeter';
 
-export { buildSystemPrompt, buildUserPrompt, buildComprehensionPrompt, isShortExplanation } from './prompt';
+export { buildSystemPrompt, buildUserPrompt, buildComprehensionPrompt, isMoreDetail, isShortExplanation } from './prompt';
 export type { Provider, ModelProvider, ModelRoute } from './provider';
 export type { SpeechToTextProvider, TextToSpeechProvider, EmbeddingProvider } from './speech';
 

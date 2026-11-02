@@ -1,4 +1,4 @@
-import { selectProvider, buildSystemPrompt, buildUserPrompt, isShortExplanation } from '@/ai';
+import { selectProvider, buildSystemPrompt, buildUserPrompt, isMoreDetail, isShortExplanation } from '@/ai';
 import { SHORT_MAX_TOKENS } from '@/ai/anthropic';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
@@ -43,14 +43,14 @@ export async function POST(req: Request): Promise<Response> {
     || Boolean(payload.context.diffHunks?.length);
 
   // Signed-in accounts spend their plan's monthly allowance (the same one the Plan page shows).
-  // Follow-ups and "Explain differently" are follow-up questions; anything else is an explanation.
+  // Follow-ups, "Explain differently" and "More detail" are follow-up questions; anything else is an explanation.
   // The sealed trial keeps one explanation budget for both.
   // Token counts (no text) go onto the reserved usage row, or the trial's daily totals.
   let release: (() => Promise<void>) | null = null;
   let recordTokens: ((usage: TokenUsage) => Promise<void>) | null = null;
   let trialStartedAt: string | undefined;
   if (!provider.mock && userId) {
-    const kind = payload.question || payload.variant === 'different' ? 'project_question' : 'ai_explanation';
+    const kind = payload.question || payload.variant === 'different' || isMoreDetail(payload) ? 'project_question' : 'ai_explanation';
     const reserved = await reserveMeteredAction(userId, kind, req, { proOnly });
     if (reserved instanceof Response) return reserved;
     release = () => releaseMeteredAction(userId, kind, reserved);
@@ -86,7 +86,7 @@ export async function POST(req: Request): Promise<Response> {
         }, req.signal);
         send({ type: 'done', model: provider.name, mock: provider.mock });
         if (usage) await recordTokens?.(usage);
-        if (produced && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different') {
+        if (produced && !provider.mock && trialInstall && payload.scope === 'selection' && !payload.question && payload.variant !== 'different' && !isMoreDetail(payload)) {
           await recordActivation(trialInstall, payload.context.code, { startedAt: trialStartedAt }).catch((error) => {
             console.error('activation marker write failed', error);
           });

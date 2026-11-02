@@ -20,6 +20,11 @@ export function isShortExplanation(payload: ReviewRequestPayload): boolean {
 /** The most of a short answer sent back with "More detail"; a real one is far shorter. */
 export const SHORT_ANSWER_MAX_CHARS = 1_500;
 
+/** "More detail" on a short answer: the full depth, going on from the short answer it sends back. A follow-up, not a new explanation. */
+export function isMoreDetail(payload: ReviewRequestPayload): boolean {
+  return payload.detail === 'full' && !payload.question && typeof payload.shortAnswer === 'string' && payload.shortAnswer.trim() !== '';
+}
+
 /**
  * System prompt. Enforces the anti-hallucination contract: use only provided context,
  * distinguish what is visible vs inferred vs uncertain, and cite file + line.
@@ -104,7 +109,7 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   } else if (isShortExplanation(payload)) {
     parts.push('\n## Task\nSay what this code does in 2 to 4 plain sentences.');
   } else {
-    const shown = payload.detail === 'full' && typeof payload.shortAnswer === 'string' ? payload.shortAnswer.trim().slice(0, SHORT_ANSWER_MAX_CHARS) : '';
+    const shown = isMoreDetail(payload) ? String(payload.shortAnswer).trim().slice(0, SHORT_ANSWER_MAX_CHARS) : '';
     if (shown) {
       parts.push(`\n## Short answer the reader has already read\n${fenceBlock(shown)}`);
       parts.push('Go into more detail from there. Do not repeat the short answer.');
