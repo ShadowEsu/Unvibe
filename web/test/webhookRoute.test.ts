@@ -108,7 +108,7 @@ test('while payments are locked, a cancellation is still applied', async () => {
 
 test('while payments are locked, a refund is still processed', async () => {
   const stripe = getStripe();
-  stripe.invoicePayments.list = (async () => ({ data: [] })) as unknown as typeof stripe.invoicePayments.list;
+  stripe.invoicePayments.list = (async function* () { /* no invoice payments */ }) as unknown as typeof stripe.invoicePayments.list;
   const event = {
     id: `evt_${randomUUID()}`, type: 'charge.refunded',
     data: { object: { id: `ch_${randomUUID()}`, object: 'charge', amount: 1000, amount_refunded: 1000, refunded: true, currency: 'usd', payment_intent: `pi_${randomUUID()}`, customer: `cus_${randomUUID()}` } },
@@ -148,6 +148,36 @@ test('a delivery that arrives while the first is still processing gets 409 so St
   assert.deepEqual(await replay.json(), { received: true, duplicate: true });
 });
 
+test('Stripe\'s in-flight idempotency conflict (409 idempotency_key_in_use) answers 409 webhook_in_progress and releases the claim', async () => {
+  const store = getBillingStore();
+  const stripe = getStripe();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  await store.syncSubscription({
+    workspaceId: workspace.id, plan: 'pro', interval: 'monthly', status: 'active', seats: 1,
+    stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: `sub_${randomUUID()}`, stripePriceId: 'price_pro_monthly', cancelAtPeriodEnd: false,
+  });
+  stripe.subscriptions.retrieve = (async () => {
+    // The body Stripe sent in the sandbox, through the SDK's own error mapping (RequestSender -> generateV1Error).
+    throw Stripe.errors.generateV1Error({
+      type: 'invalid_request_error', code: 'idempotency_key_in_use', statusCode: 409,
+      message: 'There is currently another in-progress request using this Idempotent Key (that probably means you submitted twice, and the other request is still going through): uncode-dup-refund-x. Please try again later.',
+    });
+  }) as unknown as typeof stripe.subscriptions.retrieve;
+  const event = { id: `evt_${randomUUID()}`, type: 'customer.subscription.created', data: { object: { id: `sub_${randomUUID()}`, object: 'subscription' } } };
+  const logged: string[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args.join(' ')); };
+  try {
+    const response = await post(event);
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: 'webhook_in_progress' });
+  } finally {
+    console.error = original;
+  }
+  assert.deepEqual(logged, [`[billing] webhook customer.subscription.created ${event.id} failed: StripeAPIError invalid_request_error idempotency_key_in_use`]);
+  assert.equal(await store.claimWebhook(event.id, event.type), 'claimed', 'the claim was released, so Stripe\'s retry runs it');
+});
+
 test('the signed webhook refunds the duplicate\'s latest paid invoice and cancels it now, each with a key from its id', async () => {
   const store = getBillingStore();
   const workspace = await store.ensurePersonalWorkspace(randomUUID());
@@ -172,9 +202,9 @@ test('the signed webhook refunds the duplicate\'s latest paid invoice and cancel
     calls.push(['invoices.list', params]);
     return { data: [{ id: invoiceId, status: 'paid' }] };
   }) as unknown as typeof stripe.invoices.list;
-  stripe.invoicePayments.list = (async (params: Stripe.InvoicePaymentListParams) => {
+  stripe.invoicePayments.list = (async function* (params: Stripe.InvoicePaymentListParams) {
     calls.push(['invoicePayments.list', params]);
-    return { data: [{ status: 'paid', payment: { type: 'payment_intent', payment_intent: paymentIntent } }] };
+    yield { status: 'paid', payment: { type: 'payment_intent', payment_intent: paymentIntent } };
   }) as unknown as typeof stripe.invoicePayments.list;
   stripe.refunds.create = (async (params: Stripe.RefundCreateParams, options: Stripe.RequestOptions) => {
     calls.push(['refunds.create', params, options]);

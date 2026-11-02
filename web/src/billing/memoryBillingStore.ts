@@ -7,7 +7,9 @@ import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  CheckoutStopAudits,
   SubscriptionRecord,
+  SubscriptionStatus,
   SubscriptionSyncInput,
   UsageKind,
   UsageReservation,
@@ -295,7 +297,8 @@ export class MemoryBillingStore implements BillingStore {
     intent.stripeCheckoutSessionId = stripeCheckoutSessionId;
   }
 
-  async expireCheckoutIntent(intentId: string): Promise<void> { const intent = this.data.checkoutIntents.get(intentId); if (intent) intent.status = 'expired'; }
+  // Mirrors the SQL update, which only expires a pending intent; a completed one stays completed.
+  async expireCheckoutIntent(intentId: string): Promise<void> { const intent = this.data.checkoutIntents.get(intentId); if (intent?.status === 'pending') intent.status = 'expired'; }
 
   async completeCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null> {
     const intent = await this.findCheckoutIntent(stripeCheckoutSessionId);
@@ -309,6 +312,13 @@ export class MemoryBillingStore implements BillingStore {
 
   async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
     this.data.subscriptions.set(input.workspaceId, { ...input });
+  }
+
+  async setSubscriptionStatusIf(stripeSubscriptionId: string, expected: SubscriptionStatus, status: SubscriptionStatus, gracePeriodEndsAt?: string): Promise<boolean> {
+    const subscription = await this.subscriptionByProviderId(stripeSubscriptionId);
+    if (!subscription || subscription.status !== expected) return false;
+    this.data.subscriptions.set(subscription.workspaceId, { ...subscription, status, gracePeriodEndsAt });
+    return true;
   }
 
   async markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void> {
@@ -355,6 +365,11 @@ export class MemoryBillingStore implements BillingStore {
 
   async recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
     this.data.audits.push({ userId, workspaceId, action, metadata, at: this.now().toISOString() });
+  }
+
+  async checkoutStopAudits(stripeCheckoutSessionId: string): Promise<CheckoutStopAudits> {
+    const actions = new Set(this.data.audits.filter((audit) => audit.metadata.checkoutSessionId === stripeCheckoutSessionId).map((audit) => audit.action));
+    return { started: actions.has('checkout.stop_started'), finished: actions.has('checkout.stopped_while_locked') };
   }
 
   async deleteUserBilling(userId: string): Promise<void> {

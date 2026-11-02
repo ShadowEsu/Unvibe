@@ -21,6 +21,15 @@ The server always chooses a trusted Stripe price ID. Browser-supplied amounts, p
 customer IDs, subscription IDs, and entitlements are ignored. The database also rejects Pro on
 a team workspace, Teams on a personal workspace, one-seat Teams, and multi-seat Pro.
 
+Checkout takes cards only, including card wallets such as Apple Pay, so delayed
+payments cannot settle after the locked checkout refund runs. Link is not offered.
+For a session with an intent in this deployment, paid after purchases were locked,
+the webhook starts a refund and cancels its subscription without granting access.
+After-cancellation recovery applies only to a checkout whose stop we recorded
+while locked, and uses that session's own invoice. An ordinary cancellation is
+not a reason to refund. Refunds can remain pending, fail or be disputed; check older
+bank-debit sessions by hand instead of assuming they were refunded successfully.
+
 ## Data model and migration
 
 Apply `web/supabase/migrations/20260716092442_plans_workspaces_billing.sql` after migrations

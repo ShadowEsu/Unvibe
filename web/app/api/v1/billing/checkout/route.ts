@@ -140,6 +140,7 @@ export async function POST(req: Request): Promise<Response> {
       session = body.interval === 'lifetime'
         ? await stripe.checkout.sessions.create({
           mode: 'payment',
+          payment_method_types: ['card'],
           line_items: [{ price, quantity: 1 }],
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
@@ -153,6 +154,7 @@ export async function POST(req: Request): Promise<Response> {
         }, { idempotencyKey: `uncode-checkout-${intent.id}` })
         : await stripe.checkout.sessions.create({
           mode: 'subscription',
+          payment_method_types: ['card'],
           line_items: [{ price, quantity: seats }],
           custom_text: {
             submit: {

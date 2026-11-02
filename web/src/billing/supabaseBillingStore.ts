@@ -3,7 +3,9 @@ import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  CheckoutStopAudits,
   SubscriptionRecord,
+  SubscriptionStatus,
   SubscriptionSyncInput,
   UsageKind,
   UsageReservation,
@@ -322,6 +324,15 @@ export class SupabaseBillingStore implements BillingStore {
     this.require(error, 'sync subscription');
   }
 
+  async setSubscriptionStatusIf(stripeSubscriptionId: string, expected: SubscriptionStatus, status: SubscriptionStatus, gracePeriodEndsAt?: string): Promise<boolean> {
+    const { data, error } = await this.db.from('subscriptions')
+      .update({ status, grace_period_ends_at: gracePeriodEndsAt ?? null, updated_at: new Date().toISOString() })
+      .eq('stripe_subscription_id', stripeSubscriptionId).eq('status', expected)
+      .select('workspace_id');
+    this.require(error, 'set subscription status');
+    return Array.isArray(data) && data.length > 0;
+  }
+
   async markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void> {
     const { error } = await this.db.from('subscriptions').update({ status: 'canceled', updated_at: new Date().toISOString() }).eq('stripe_subscription_id', stripeSubscriptionId);
     this.require(error, 'cancel subscription');
@@ -375,6 +386,15 @@ export class SupabaseBillingStore implements BillingStore {
   async recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
     const { error } = await this.db.from('billing_audit_log').insert({ user_id: userId, workspace_id: workspaceId, action, metadata });
     this.require(error, 'record audit');
+  }
+
+  async checkoutStopAudits(stripeCheckoutSessionId: string): Promise<CheckoutStopAudits> {
+    const { data, error } = await this.db.from('billing_audit_log').select('action')
+      .in('action', ['checkout.stop_started', 'checkout.stopped_while_locked'])
+      .contains('metadata', { checkoutSessionId: stripeCheckoutSessionId });
+    this.require(error, 'read checkout stop audits');
+    const actions = new Set((data ?? []).map((row) => row.action));
+    return { started: actions.has('checkout.stop_started'), finished: actions.has('checkout.stopped_while_locked') };
   }
 
   async deleteUserBilling(userId: string): Promise<void> {
