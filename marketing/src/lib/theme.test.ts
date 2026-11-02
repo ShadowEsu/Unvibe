@@ -67,6 +67,7 @@ describe("BOOT_SCRIPT", () => {
       ["JSON null", "null", false],
       ["first visit with GPC", null, true],
       ["older policy with GPC", record("2026-10-01", "allow"), true],
+      ["not JSON with GPC", "allow", true],
     ];
     for (const [label, stored, gpc] of cases) {
       const { classes } = bootDarkVisitor(stored === null ? {} : { [ANALYTICS_CONSENT_KEY]: stored }, gpc ? { globalPrivacyControl: true } : {});
@@ -74,12 +75,17 @@ describe("BOOT_SCRIPT", () => {
     }
   });
 
-  it("still adds js when storage throws", () => {
-    const classes = new Set<string>();
-    const html = { classList: { add: (n: string) => void classes.add(n) }, style: { colorScheme: "" } };
-    const localStorage = { getItem: () => { throw new Error("blocked"); } };
-    runInNewContext(BOOT_SCRIPT, { document: { documentElement: html }, window: { localStorage, navigator: {} } });
-    assert.equal(classes.has("js"), true);
-    assert.equal(classes.has("consent-known"), false, "a first-visit bar still shows when storage is blocked");
+  it("when storage throws: still adds js, asks without GPC, never asks with GPC", () => {
+    const boot = (navigator: Record<string, unknown>) => {
+      const classes = new Set<string>();
+      const html = { classList: { add: (n: string) => void classes.add(n) }, style: { colorScheme: "" } };
+      const localStorage = { getItem: () => { throw new Error("blocked"); } };
+      runInNewContext(BOOT_SCRIPT, { document: { documentElement: html }, window: { localStorage, navigator } });
+      return classes;
+    };
+    const plain = boot({});
+    assert.equal(plain.has("js"), true);
+    assert.equal(plain.has("consent-known"), false, "a first-visit bar still shows when storage is blocked");
+    assert.equal(boot({ globalPrivacyControl: true }).has("consent-known"), true, "a GPC browser with blocked storage is never asked");
   });
 });

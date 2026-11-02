@@ -178,7 +178,7 @@ export default function RootLayout({
               home page's LCP when it came after the page), and keyboard and screen-reader users meet it first. */}
           <AnalyticsConsentBar />
           <Nav />
-          <main id="main">{children}</main>
+          <main id="main" tabIndex={-1}>{children}</main>
           <Footer />
           <SelectionExplain />
           <SitePalette />
