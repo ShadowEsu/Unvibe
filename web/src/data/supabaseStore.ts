@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import type {
   Account,
   DeviceCode,
@@ -26,10 +27,10 @@ export class SupabaseStore implements Store {
   readonly kind = 'supabase';
   private readonly db: SupabaseClient;
 
-  constructor(url: string, serviceRoleKey: string, fetcher?: typeof fetch) {
+  constructor(url: string, serviceRoleKey: string, fetcher: typeof fetch = noStoreFetch) {
     this.db = createClient(url, serviceRoleKey, {
       auth: { persistSession: false },
-      ...(fetcher ? { global: { fetch: fetcher } } : {}),
+      global: { fetch: fetcher },
     });
   }
 
