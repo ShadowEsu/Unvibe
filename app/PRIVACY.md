@@ -33,7 +33,7 @@ When you create an account, your learning history (reviews and concepts) is sync
 - Concepts encountered and understood
 - Progress metrics counted from them
 
-You can see your saved explanations and progress in the app at any time. The app has no export button yet; for a copy of your data, email **hello@unvibe.site**. To delete it, see Data deletion below.
+You can see your saved explanations and progress in the app at any time. The app has no export button yet; for a copy of your data, email **support@unvibe.site**. To delete it, see Data deletion below.
 
 ## Without an account
 
@@ -76,4 +76,4 @@ Without an account, **Erase learning** in Settings › Account & Plan removes ev
 
 ## Contact
 
-Questions about this policy: **hello@unvibe.site**
+Questions about this policy: **support@unvibe.site**

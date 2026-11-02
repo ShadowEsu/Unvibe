@@ -1518,7 +1518,7 @@ app.whenReady().then(() => {
       '',
       'Optional: attach a screenshot if it makes the issue easier to see.',
     ].join('\n'));
-    void shell.openExternal(`mailto:hello@unvibe.site?subject=${subject}&body=${body}`);
+    void shell.openExternal(`mailto:support@unvibe.site?subject=${subject}&body=${body}`);
     return { ok: true };
   });
 
