@@ -1,6 +1,6 @@
-# Mixpanel Pro (startup credits)
+# Mixpanel (Startup Plan)
 
-Unvibe is on **Mixpanel for Startups** with **$144,000** of Mixpanel Pro plan credits (1 year). Use Pro features that the credit plan includes. Do not buy add-ons or upgrade to a paid SKU that would charge the card.
+Unvibe is on **Mixpanel for Startups**: the first year free on the Startup Plan (up to 1B annual events, per the 18 Aug 2026 welcome email; no dollar figure). Use features that plan includes. Do not buy add-ons or upgrade to a paid SKU that would charge the card.
 
 ## Included Pro usage we turn on
 
@@ -16,4 +16,4 @@ Unvibe is on **Mixpanel for Startups** with **$144,000** of Mixpanel Pro plan cr
 
 ## Read path
 
-Composio Mixpanel alias `unvibe`, `project_id=4054892`. Prefer `MIXPANEL_QUERY_SEGMENTATION` and JQL. Cross-check PostHog; never invent conversion when `waitlist_completed` is missing.
+Composio Mixpanel alias `unvibe`, `project_id=4054892`. Prefer `MIXPANEL_QUERY_SEGMENTATION` and JQL. Never invent conversion when `waitlist_completed` is missing.

@@ -7,7 +7,7 @@ import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
 import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
+import { fetchQuestion, postReview } from './backend';
 import { store, type ChatThread } from './store';
 import { flush } from './sync';
 import { readAiKey } from './aiKey';
@@ -15,14 +15,28 @@ import { settings } from './settings';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, streamLocalAi } from './localAi';
 import { cachedAppUsage, refreshAppUsage } from './usage';
 import { scanTypedText } from '../core/secretFilter';
+import { ConsentRequiredError, isConsentProvider, type ConsentProvider } from '../core/consent';
+import { codeConsented } from './consentStore';
+import { providerInUse } from './consent';
 
 /** Typed text has no consent step, so any secret finding stops it before anything leaves the Mac. */
 const SECRET_IN_MESSAGE = 'That looks like it contains a key, token, or password, so nothing was sent. Remove it and try again.';
 
-type AskFailure = { ok: false; error: string; remaining?: number; code?: 'secret' };
+/** `code: 'consent'`: nothing was sent; the companion asks, naming `provider`, then tries again. */
+type AskFailure = { ok: false; error: string; remaining?: number; code?: 'secret' | 'consent'; provider?: ConsentProvider };
 type AskResult = { ok: true; answer: string; remaining: number } | AskFailure;
 /** `wipeGeneration`: store().wipeGeneration() when this reply's request started. Saving its thread needs it. */
 type ChatResult = { ok: true; answer: string; remaining: number; wipeGeneration: number } | AskFailure;
+
+function consentFailure(provider: ConsentProvider): AskFailure & { code: 'consent'; provider: ConsentProvider } {
+  return { ok: false, error: new ConsentRequiredError(provider).message, code: 'consent', provider };
+}
+
+/** Chat answers with the person's own key whenever one is saved; otherwise through Unvibe. */
+function chatProvider(hasKey: boolean): ConsentProvider {
+  const configured = settings().all().aiProvider;
+  return hasKey && isConsentProvider(configured) ? configured : 'unvibe';
+}
 
 interface PendingQuiz {
   eventId: string;
@@ -111,15 +125,7 @@ async function collectReviewText(payload: ReviewRequestPayload, signal: AbortSig
   const abort = new AbortController();
   const timeout = setTimeout(() => abort.abort(), 45_000);
   try {
-    const res = await networkFetch(`${BACKEND}/api/v1/reviews`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...aiAuthHeaders(token),
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.any([abort.signal, signal]),
-    });
+    const res = await postReview(payload, token, AbortSignal.any([abort.signal, signal]));
     if (!res.ok || !res.body) {
       const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       throw new Error(explanationFailure(res.status, body).message);
@@ -161,10 +167,13 @@ export async function askStudyAssistant(input: {
   question: string;
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }): Promise<AskResult> {
+  // After the local checks (a secret is refused without touching the network), before anything is built to send.
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Ask a short question about this lesson.' };
   if (question.length > 800) return { ok: false, error: 'Keep questions under 800 characters.' };
   if (scanTypedText(question, input.messages).length > 0) return { ok: false, error: SECRET_IN_MESSAGE, code: 'secret' };
+  const provider = providerInUse();
+  if (!codeConsented(provider)) return consentFailure(provider);
 
   const built = lessonPayload(input.eventId);
   if ('error' in built) return { ok: false, error: built.error };
@@ -201,6 +210,7 @@ export async function askStudyAssistant(input: {
     if (!quota.ok) return { ok: false, error: quota.error, remaining: quota.remaining };
     return { ok: true, answer: result.text, remaining: quota.remaining };
   } catch (err) {
+    if (err instanceof ConsentRequiredError) return consentFailure(err.provider);
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'The study assistant could not answer.',
@@ -249,8 +259,10 @@ function localLessonQuiz(event: LocalEvent, mode: QuizMode): {
 
 export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-check'): Promise<
   | { ok: true; question: string; options: string[]; conceptLabel: string; remaining: number }
-  | { ok: false; error: string; remaining?: number }
+  | { ok: false; error: string; remaining?: number; code?: 'consent'; provider?: ConsentProvider }
 > {
+  // Quiz questions always come from Unvibe's server.
+  if (!codeConsented('unvibe')) return consentFailure('unvibe');
   const built = lessonPayload(eventId);
   if ('error' in built) return { ok: false, error: built.error };
 
@@ -266,7 +278,8 @@ export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-che
     };
     try {
       q = await fetchQuestion({ ...built.payload, level: adaptiveQuizLevel(built.event), quizMode: mode }, store().token(), request.signal);
-    } catch {
+    } catch (error) {
+      if (error instanceof ConsentRequiredError) throw error;
       // Keep demos usable when the cloud quiz endpoint is unavailable or requires sign-in.
       q = localLessonQuiz(built.event, mode);
     }
@@ -288,6 +301,7 @@ export async function startQuizCard(eventId: string, mode: QuizMode = 'quick-che
       remaining: quota.remaining,
     };
   } catch (err) {
+    if (err instanceof ConsentRequiredError) return consentFailure(err.provider);
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Could not build a quiz for this lesson.',
@@ -310,7 +324,7 @@ export function answerQuizCard(eventId: string, choice: number):
   // Soft mode: wrong answers stay open so the learner can try again.
   if (!correct) {
     try {
-      store().setOutcome(eventId, 'needs_review', pending.concept, pending.conceptLabel);
+      store().setOutcome(eventId, 'needs_review', pending.concept, pending.conceptLabel, new Date());
       void flush();
     } catch {
       // Keep grading even if the outcome write fails.
@@ -322,7 +336,7 @@ export function answerQuizCard(eventId: string, choice: number):
     };
   }
   try {
-    store().setOutcome(eventId, 'understood', pending.concept, pending.conceptLabel);
+    store().setOutcome(eventId, 'understood', pending.concept, pending.conceptLabel, new Date());
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Could not save the quiz result.' };
   }
@@ -336,14 +350,23 @@ export function answerQuizCard(eventId: string, choice: number):
   };
 }
 
+/**
+ * `wipeGeneration`: the open conversation's stamp (store().wipeGeneration() when it started). A
+ * conversation from before a wipe is refused before anything is sent, so its erased turns are not
+ * used as AI context and its reply is not recorded. Without a stamp, asking works as before.
+ */
 export async function askChat(input: {
   messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   question: string;
+  wipeGeneration?: number;
 }): Promise<ChatResult> {
   const question = input.question?.trim();
   if (!question) return { ok: false, error: 'Type a message first.' };
   if (question.length > 4000) return { ok: false, error: 'Keep messages under 4000 characters.' };
   if (scanTypedText(question, input.messages).length > 0) return { ok: false, error: SECRET_IN_MESSAGE, code: 'secret' };
+  if (input.wipeGeneration !== undefined && input.wipeGeneration !== store().wipeGeneration()) return { ok: false, error: WIPED_MEANWHILE };
+  const provider = chatProvider(Boolean(readAiKey()));
+  if (!codeConsented(provider)) return consentFailure(provider);
 
   // Tracked before the first await: a wipe during the usage check must stop this reply too.
   const request = trackRequest();
@@ -375,7 +398,9 @@ export async function askChat(input: {
           onToken: (chunk) => { text += chunk; },
           signal: request.signal,
         });
-      } catch {
+      } catch (error) {
+        // A refusal is never a reason to try the other provider instead.
+        if (error instanceof ConsentRequiredError) throw error;
         text = '';
       }
     }
@@ -419,6 +444,7 @@ export async function askChat(input: {
     if (request.wiped()) return { ok: false, error: WIPED_MEANWHILE };
     return { ok: true, answer, remaining: next.remaining, wipeGeneration: request.generation };
   } catch (err) {
+    if (err instanceof ConsentRequiredError) return consentFailure(err.provider);
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Chat could not reply.',

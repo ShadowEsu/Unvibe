@@ -33,8 +33,9 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   this change still hold one until someone clears the column). The rate limit (5
   sends per 10 minutes) keys an in-memory map in each server instance on a SHA-256 of the client
   IP (`hashIp`); that key is never stored or sent, and it lasts until the instance restarts or the
-  map passes 5,000 keys. The `feedback_submitted` PostHog event carries only the rating and source,
-  under a random UUID per send.
+  map passes 5,000 keys. The server and the desktop app send no analytics event for a feedback send;
+  on the website, if the visitor pressed Allow on the analytics bar, `FeedbackWidget` records one
+  Mixpanel `feedback_submitted` event with the star rating.
 
 ## Not implemented or not verified
 
@@ -49,9 +50,9 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   deployment settings; they must be verified before public legal copy makes those claims.
 - The desktop app has no analytics SDK. Its build has no PostHog, Mixpanel or other analytics
   client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing. What it does send
-  about setup is listed below (anonymous setup progress, on by default, with a switch to turn it
-  off). The
-  website's Mixpanel and PostHog tracking is described on unvibe.site/privacy. Incident-response
+  about setup is listed below (setup progress, off by default from 0.1.45, with a switch to turn it
+  on). The
+  website's Mixpanel tracking is described on unvibe.site/privacy. Incident-response
   alerting is still not configured.
 - Without an account, each cloud explanation and the launch usage check carry a random install ID
   (`app/src/main/backend.ts` `aiAuthHeaders`), the OS family (`mac`/`win`) and the app version.
@@ -63,7 +64,9 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   (`app/src/main/progress.ts`): setup finished, Accessibility asked and allowed (Mac), signed in
   (UTC day only), level question answered, and the launch-at-login question shown and accepted
   (`app/src/main/main.ts`, `askLaunchAtLogin`). One timestamp per step, no code, file names, email
-  or IP. Settings, Privacy & Data, "Send anonymous setup progress" turns these off; it does not
+  or IP. Settings, Privacy & Data, "Send setup progress" turns these on (off by default from 0.1.45;
+  updating switches existing installs off once; 0.1.44's switch reads "Send anonymous setup
+  progress" and starts on); it does not
   cover the rows above, which come from requests the app makes anyway. Both are described on
   unvibe.site/privacy and in `app/PRIVACY.md`.
 

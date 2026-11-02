@@ -4,6 +4,9 @@ import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
 import type { ChangeBrief } from '../../core/changeBrief';
 import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
+import { chatAskRequest } from './chatRequest';
+import { askForConsent } from '../shared/consentForm';
+import type { ConsentProvider } from '../../core/consent';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -155,6 +158,7 @@ export function Chat({
   const [copied, setCopied] = useState<number | null>(null);
   const [modelName, setModelName] = useState('');
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
+  const [repoLabel, setRepoLabel] = useState('');
   const [saved, setSaved] = useState<SavedThread[]>([]);
   const [showVoice, setShowVoice] = useState(voiceTip);
   const threadRef = useRef(newThreadId());
@@ -206,8 +210,11 @@ export function Chat({
     areaRef.current?.focus();
     loadSaved();
     void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
-      const next = result as { ok?: boolean; brief?: ChangeBrief; branch?: string };
-      if (next?.ok && next.brief && !next.brief.empty) setBrief(next.brief);
+      const next = result as { ok?: boolean; brief?: ChangeBrief; repoLabel?: string; branch?: string };
+      if (next?.ok && next.brief && !next.brief.empty) {
+        setBrief(next.brief);
+        setRepoLabel(next.repoLabel ?? '');
+      }
     });
   }, []);
 
@@ -268,19 +275,23 @@ export function Chat({
     const thinkTimer = window.setTimeout(() => setBuddyMood('thinking'), 900);
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: question, ts: new Date().toISOString() }];
     setMessages(nextMessages);
-    const result = await window.unvibe.chatAsk({
-      messages: nextMessages.slice(0, -1).map((item) => ({ role: item.role, content: item.content })),
-      question,
-    }) as { ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; wipeGeneration?: number };
+    const result = await window.unvibe.chatAsk(chatAskRequest(nextMessages.slice(0, -1), question, threadGenRef.current)) as {
+      ok: boolean; answer?: string; error?: string; remaining?: number; code?: string; provider?: ConsentProvider; wipeGeneration?: number;
+    };
     window.clearTimeout(thinkTimer);
     setBusy(false);
     if (result.remaining !== undefined) setLeft(result.remaining);
-    if (!result.ok && result.code === 'secret') {
+    if (!result.ok && (result.code === 'secret' || result.code === 'consent')) {
       // Nothing was sent: take the message back out of the log so it is not resent next turn.
       setMessages(messages);
       setDraft(question);
-      setError(result.error ?? '');
       setBuddyMood('idle');
+      if (result.code === 'secret') {
+        setError(result.error ?? '');
+        return;
+      }
+      // First send to this provider: ask, then send this message once they agree.
+      if (result.provider && await askForConsent(result.provider)) void send(question);
       return;
     }
     if (!result.ok || !result.answer || result.wipeGeneration === undefined) {
@@ -328,7 +339,7 @@ export function Chat({
             <h2>{greetName(userName)}</h2>
             <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
             <div className="chat-context">
-              {brief?.repo ? <span>Repository {brief.repo}</span> : <span>Repository on this {deviceName}</span>}
+              {repoLabel ? <span>Repository {repoLabel}</span> : <span>Repository on this {deviceName}</span>}
               <span>{brief ? `${brief.filesChanged} files in the working tree` : 'No current change'}</span>
               {brief?.files[0] ? <span>Current file {brief.files[0].path}</span> : null}
             </div>

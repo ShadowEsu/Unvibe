@@ -108,7 +108,7 @@ body::after {
 }
 :root[data-theme="light"] body { background: #ffffff; }
 
-/* San Fran gradient: Golden Gate photo wash plus fog veil. */
+/* Dusk wash: the licensed dusk-field.webp image plus a fog veil. */
 .sanFranWash {
   position: absolute;
   inset: 0;

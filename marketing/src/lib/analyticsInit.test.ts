@@ -2,8 +2,8 @@
 import { restoreAnalyticsKeys } from "./testWithoutAnalyticsKeys";
 import { after, afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { initMixpanel, initPosthog } from "./analytics";
-import { POSTHOG_PRIVACY_CONFIG, mixpanelPrivacyConfig } from "./analyticsPrivacy";
+import { initMixpanel } from "./analytics";
+import { mixpanelPrivacyConfig } from "./analyticsPrivacy";
 
 after(restoreAnalyticsKeys);
 
@@ -72,22 +72,5 @@ describe("Mixpanel init", () => {
     const fake = { init: () => undefined, register: () => undefined, track: () => undefined };
     initMixpanel(fake as unknown as Parameters<typeof initMixpanel>[0], "test-token");
     assert.deepEqual(Array.from(stored.keys()), ["unvibe_anon_id", "mp_oldtoken_mixpanel"]);
-  });
-});
-
-describe("PostHog init", () => {
-  it("passes every privacy option to posthog.init unchanged, with no feature-flag requests", () => {
-    const inits: Array<{ token: string; config: Record<string, unknown> }> = [];
-    const fake = {
-      init: (token: string, config: Record<string, unknown>) => void inits.push({ token, config }),
-      identify: () => undefined,
-    };
-    initPosthog(fake as unknown as Parameters<typeof initPosthog>[0], "phc_test");
-    assert.equal(inits.length, 1);
-    const { config } = inits[0];
-    assert.equal(config.advanced_disable_feature_flags, true, "/flags sends the stored first landing URL with no hook");
-    for (const [name, value] of Object.entries(POSTHOG_PRIVACY_CONFIG)) {
-      assert.deepEqual(config[name], value, `posthog.init gets ${name} as configured`);
-    }
   });
 });

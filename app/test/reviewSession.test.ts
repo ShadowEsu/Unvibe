@@ -11,8 +11,15 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { applyBuiltReview, gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
+import { computeToday } from '../src/core/learning';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// These tests are about explaining the person's own code, so the person has agreed to sending it
+// (consent.test.ts covers what happens before that).
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
 
 /** Every request body the backend received, by path. */
 const received: Array<{ path: string; body: ReviewRequestPayload }> = [];
@@ -110,6 +117,34 @@ test('"Explain differently" applies to that request only', async () => {
   assert.match(lesson(s.reviewId)?.explanation ?? '', /\(different\)/);
   await runReview(win, s, { level: 'advanced' });
   assert.equal(reviewBodies().at(-1)?.variant, 'default');
+});
+
+test('a link-captured review sends nothing until Explain, then exactly one request', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = { ...session('intermediate'), awaitingConfirm: true };
+  initWidget(win, s, { autoStart: true });
+  const init = events.find((ev) => ev.type === 'init');
+  assert.deepEqual([init?.confirm, init?.autoStart], [true, false], 'the panel asks first, even when a caller asks to auto-start');
+  await runReview(win, s, { level: 'intermediate' });
+  assert.equal(reviewBodies().length, 0, 'nothing is sent while the panel waits for Explain');
+  s.awaitingConfirm = false; // what Explain (widget:request) does
+  await runReview(win, s, { level: 'intermediate' });
+  assert.equal(reviewBodies().length, 1);
+});
+
+test('a file or brief built over a waiting link capture runs as the person\'s own pick', () => {
+  const { win, events } = panel();
+  const s = { ...session('intermediate'), awaitingConfirm: true };
+  applyBuiltReview(s, {
+    payload: { scope: 'selection', level: 'advanced', context: { language: 'typescript', primaryFile: 'picked.ts', projectStructure: [], imports: [], code: 'const picked = true;' } },
+    displayCode: 'const picked = true;',
+    file: 'picked.ts',
+    mode: 'selection',
+  });
+  initWidget(win, s, { autoStart: true });
+  const init = events.find((ev) => ev.type === 'init');
+  assert.deepEqual([s.awaitingConfirm, init?.confirm, init?.autoStart], [false, false, true]);
 });
 
 test('a Test me failure stays in the quiz and leaves the finished explanation on screen', async () => {
@@ -227,7 +262,7 @@ test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; a
 });
 
 test('review streams forward only the token, done and error events the service sends', async () => {
-  const appOnly = ['init', 'understood', 'status', 'consent', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
+  const appOnly = ['init', 'understood', 'status', 'consent', 'consentNeeded', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
   const { win, events } = panel();
   // Forwarded events are rebuilt without extra fields, so the stream's own values mark them.
   reviewEvents = [...appOnly, 'token', 'error', 'unhandled', 'constructor', '', 'done'].map((type) => ({
@@ -251,6 +286,7 @@ test('streamed token, done and error events reach the panel with only their chec
     { type: 'error', message: { html: '<b>x</b>' }, code: 'pro_required', upgradePath: 'https://elsewhere.test', ...extras },
     { type: 'done', model: 'service-model', mock: 'yes', ...extras },
     { type: 'done', model: { name: 'x' }, mock: true, ...extras },
+    { type: 'done', model: 'm'.repeat(500), mock: false, ...extras },
   ];
   try {
     await runReview(win, session('intermediate'), { level: 'intermediate' });
@@ -263,10 +299,108 @@ test('streamed token, done and error events reach the panel with only their chec
     { type: 'error', message: 'The explanation service could not complete that request. Please try again.', tabId: '1' },
     { type: 'done', model: 'service-model', mock: false, tabId: '1' },
     { type: 'done', model: undefined, mock: true, tabId: '1' },
+    { type: 'done', model: 'm'.repeat(80), mock: false, tabId: '1' },
   ]);
   for (const ev of streamed) {
     const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'tabId', 'type'];
     assert.deepEqual(Object.keys(ev).sort(), expected);
     assert.ok(Object.values(ev).every((value) => value === undefined || typeof value === 'string' || typeof value === 'boolean'), JSON.stringify(ev));
   }
+});
+
+test('Test me asks quick-check, scenario, recall, then makes no fourth request', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  for (let i = 0; i < 4; i++) {
+    await startComprehension(win, s);
+    gradeComprehension(win, s, 0);
+  }
+  assert.deepEqual(received.filter((r) => r.path === '/api/v1/comprehension').map((r) => r.body.quizMode),
+    ['quick-check', 'scenario', 'recall'], 'exactly three requests in angle order');
+  assert.deepEqual(events.filter((ev) => ev.type === 'question').map(({ index, total, mode }) => ({ index, total, mode })), [
+    { index: 1, total: 3, mode: 'quick-check' },
+    { index: 2, total: 3, mode: 'scenario' },
+    { index: 3, total: 3, mode: 'recall' },
+  ]);
+});
+
+test('a new explanation resets Test me, but a follow-up and another tab do not', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  await startComprehension(win, s);
+  await runReview(win, s, { level: s.level, question: 'Why wait?' });
+  await startComprehension(win, s);
+  const other = { ...session('beginner'), tabId: '2' };
+  await startComprehension(win, other);
+  await runReview(win, s, { level: 'advanced', variant: 'different' });
+  await startComprehension(win, s);
+  assert.deepEqual(received.filter((r) => r.path === '/api/v1/comprehension').map((r) => r.body.quizMode),
+    ['quick-check', 'scenario', 'quick-check', 'quick-check'], 'new explanation starts again at quick-check');
+  assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1);
+});
+
+test('a wrong answer then a right answer stays needs_review for this explanation', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 1);
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 0);
+  assert.equal(lesson(s.reviewId)?.outcome, 'needs_review', 'a later right answer must not clear a miss');
+  assert.equal(events.filter((ev) => ev.type === 'graded').at(-1)?.hasMissed, true);
+  await runReview(win, s, { level: 'advanced' });
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 0);
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood', 'a new explanation starts a fresh outcome');
+});
+
+test('a Test me answer counts toward today\'s goal; "Got it" alone does not', async () => {
+  const { win } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  markUnderstood(win, s);
+  assert.deepEqual(computeToday([lesson(s.reviewId)!], new Date()), { explained: true, answered: false }, 'Got it is not an answer');
+  await startComprehension(win, s);
+  gradeComprehension(win, s, 1);
+  assert.deepEqual(computeToday([lesson(s.reviewId)!], new Date()), { explained: true, answered: true }, 'a graded Test me answer, even a wrong one');
+});
+
+test('all right answers stay understood and save the snapshot and callback only once', async () => {
+  const { win } = panel();
+  const file = `quiz-once-${Math.random().toString(36).slice(2)}.js`;
+  let understood = 0;
+  const s: ReviewSession = { ...session('intermediate'), file, snapshotText: 'original', onUnderstood: () => { understood++; } };
+  await runReview(win, s, { level: s.level });
+  for (let i = 0; i < 3; i++) {
+    await startComprehension(win, s);
+    gradeComprehension(win, s, 0);
+    s.snapshotText = 'must not overwrite first snapshot';
+  }
+  assert.equal(lesson(s.reviewId)?.outcome, 'understood');
+  assert.equal(understood, 1, 'only the first right answer calls onUnderstood');
+  assert.equal(store().fileSnapshot(file)?.text, 'original', 'only the first right answer saves the snapshot');
+});
+
+test('question allowance refusals keep the explanation and use the existing plan wording', async () => {
+  const { win, events } = panel();
+  const s = session('intermediate');
+  await runReview(win, s, { level: s.level });
+  try {
+    for (const status of [402, 429]) {
+      quizStatus = status;
+      await startComprehension(win, s);
+      assert.equal(events.filter((ev) => ev.type === 'quizError').at(-1)?.message,
+        'Your plan limit has been reached. Open Plan & usage to review options.', `allowance status ${status}`);
+    }
+  } finally {
+    quizStatus = null;
+  }
+  await startComprehension(win, s);
+  assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1, 'refusals do not consume a question position');
+  assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION/);
 });

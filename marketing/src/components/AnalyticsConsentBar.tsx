@@ -16,7 +16,7 @@ import { analyticsAllowedOnPath } from "@/lib/analyticsPrivacy";
 import { sendConsentAnswer } from "@/lib/consentAnswerClient";
 
 export const ANALYTICS_BAR_TEXT =
-  "Unvibe would like to measure visits and record session replays, with page text hidden, using Mixpanel and PostHog to improve the site.";
+  "Unvibe would like to measure visits and record session replays, with page text hidden, using Mixpanel to improve the site.";
 export const ANALYTICS_GPC_TEXT = "Your browser sends Global Privacy Control, so Unvibe records no analytics.";
 
 /**

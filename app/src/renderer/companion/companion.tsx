@@ -21,6 +21,11 @@ import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
+import { askForConsent, ConsentDialog } from '../shared/consentForm';
+import { CONSENT_PROVIDERS } from '../../core/consent';
+import type { ConsentStatus } from '../../main/consent';
+import { PasteTarget } from '../shared/pasteTarget';
+import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -32,10 +37,11 @@ interface Profile {
   linesUnderstood: number; linesReviewed: number;
   conceptsSeen: number; conceptsDeveloping: number; conceptsFamiliar: number;
   conceptsStrong: number; conceptsNeedReview: number;
-  streak: number; bestStreak: number;
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
+/** The daily goal from `learning:today`, derived from saved lessons on this computer. */
+interface TodayGoal { explained: boolean; answered: boolean }
 interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
@@ -73,6 +79,7 @@ interface Settings {
   sidebarWidth: number;
   sidebarHidden: boolean;
   shareSetupProgress: boolean;
+  nearbyFiles: boolean;
   features: {
     changeBrief: boolean;
     whyExists: boolean;
@@ -247,7 +254,7 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
     { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
   ] },
   Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
-    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first week-long streak.' },
+    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
     { icon: IC.check, t: 'Evidence map', d: 'Concepts use cautious labels such as developing, familiar, strong, or needs review.' },
     { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
     { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
@@ -386,8 +393,8 @@ function PermRow({ compact }: { compact?: boolean }) {
         <span className="perm-title">Accessibility</span>
       </div>
       <div className="perm-why">{isWindows
-        ? 'Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app.'
-        : 'macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U. It never reads your keystrokes or your screen.'}</div>
+        ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
+        : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
       {!granted && !na && (
         <div className="perm-actions">
           <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
@@ -441,11 +448,12 @@ const SAMPLE_LINES = [
 ];
 
 /**
- * First run in three steps, built so the first real explanation lands within a minute:
- * 1 hello (name optional), 2 explain a sample for real (no permission needed), then one skippable
- * level question, 3 try it on your own code (or the clipboard). The Mac Accessibility ask waits for
- * the first shortcut press, where the review panel shows it with its reason (first-run spec, change 2).
- * Google sign-in and editor bridges are optional and stay reachable later.
+ * First run, built so the first real explanation lands within a minute: 1 hello (name optional),
+ * 2 explain a sample for real (no permission needed), then one skippable level question, 3 try it on
+ * your own code. On a Mac, step 3 is one paste target (no permission), and step 4 offers the shortcut
+ * only once that own code has been explained (onboarding:ownCodeDone): value first, permission second.
+ * Windows needs no permission, so it keeps its three steps. Google sign-in and editor bridges are
+ * optional and stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -458,7 +466,14 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [sampleDone, setSampleDone] = useState(false);
   const [levelSaved, setLevelSaved] = useState('');
   const [signedIn, setSignedIn] = useState('');
-  const steps = ['Hello', 'Try it', 'Anywhere'];
+  const [ownCodeDone, setOwnCodeDone] = useState(false);
+  // Mac step 4: the offer, the guide while System Settings is open, then the shortcut is on.
+  const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
+  const shortcutHeading = useRef<HTMLHeadingElement>(null);
+  const paste = useOwnCodePaste();
+  const steps = isWindows ? ['Hello', 'Try it', 'Anywhere'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
+  const macPaste = !isWindows && step === 2;
+  const macShortcut = !isWindows && step === 3;
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
   const keys = prettyAccel(shortcut);
   // Glyphs on the key caps; words in sentences, since many people don't know ⌃ is Control.
@@ -466,13 +481,51 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
   useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
+  // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer.
+  useEffect(() => {
+    if (isWindows) return undefined;
+    return window.unvibe.onOwnCodeDone(() => {
+      setOwnCodeDone(true);
+      setStep((current) => (current === 2 ? 3 : current));
+    });
+  }, []);
+  // Announce the card, without making Enter trigger the permission prompt.
+  useEffect(() => {
+    if (macShortcut) shortcutHeading.current?.focus();
+  }, [macShortcut, offer]);
+  // Already allowed (an earlier install, say): nothing to offer, the shortcut is on.
+  useEffect(() => {
+    if (!macShortcut) return undefined;
+    let alive = true;
+    void window.unvibe.accessibility().then((result: { granted?: boolean }) => {
+      if (alive && result.granted) setOffer('on');
+    });
+    return () => { alive = false; };
+  }, [macShortcut]);
+  // Only the open guide checks for the grant.
+  useEffect(() => {
+    if (!macShortcut || offer !== 'waiting') return undefined;
+    return watchGrant(window.unvibe, () => {
+      setOffer('on');
+      if (soundEffects) playTone('correct');
+    });
+  }, [macShortcut, offer, soundEffects]);
 
   const lines = [
     "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
     explained
-      ? "That's me, explaining it in the panel. Real answer, not a demo."
+      ? "That's me, explaining it in the panel. Read it, then press Test me."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    `Now try it on code of your own. Select some in any app and press ${spoken}.`,
+    isWindows
+      ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
+      : paste.started
+        ? 'Got it. Your explanation is opening in the panel.'
+        : 'Now try your own code. Copy a few lines from any file, then paste them here.',
+    offer === 'on'
+      ? 'The shortcut is on. Try it anywhere.'
+      : offer === 'waiting'
+        ? "Switch Unvibe on in the list that opened. I'll notice by myself."
+        : 'That was your own code. Want it one keystroke away next time?',
   ];
   const said = useVibeSays(lines[step] ?? '', soundEffects);
 
@@ -486,6 +539,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   };
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
+    // Navigation remounts the paste target without a preview; its speech must reset with it.
+    if (!isWindows) paste.setStarted(false);
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
   const explainSample = () => {
@@ -517,24 +572,45 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       setSaveError('Your setup could not be saved. Please try again.');
     } finally { setSaving(false); }
   };
+  const turnOn = async () => {
+    setOffer('waiting');
+    await turnOnShortcut(window.unvibe);
+  };
+  // The footer's right button. On a Mac the paste and shortcut steps have no competing primary:
+  // Skip for now, Not now and Do it later are ghosts that finish setup.
+  const forward: { label: string; ghost?: boolean; finishes?: boolean } =
+    step === 0 ? { label: "Let's go" }
+      : step === 1 ? { label: explained ? 'Next' : 'Skip for now' }
+        : macPaste && ownCodeDone ? { label: 'Next', ghost: true }
+          : macPaste ? { label: 'Skip for now', ghost: true, finishes: true }
+            : macShortcut && offer === 'offer' ? { label: 'Not now', ghost: true, finishes: true }
+              : macShortcut && offer === 'waiting' ? { label: 'Do it later', ghost: true, finishes: true }
+                : { label: 'Start using Unvibe', finishes: true };
   const advance = () => {
-    if (step === steps.length - 1) void finish();
+    if (forward.finishes) void finish();
     else go(step + 1);
+  };
+  const back = () => {
+    if (saving) return;
+    if (macShortcut && offer === 'waiting') setOffer('offer');
+    else go(step - 1);
   };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.matches('input, select, textarea, button')) return;
-      if (event.key === 'ArrowRight' || event.key === 'Enter') { event.preventDefault(); advance(); }
-      if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); if (!saving) go(step - 1); }
+      if (target?.matches('input, select, textarea, button, summary, [role="textbox"]')) return;
+      // On a Mac's paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
+      if ((event.key === 'ArrowRight' || event.key === 'Enter') && (isWindows || step < 2)) { event.preventDefault(); advance(); }
+      if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy') : 'thinking';
-  const continueLabel = step === 0 ? "Let's go" : step === 1 ? (explained ? 'Next' : 'Skip for now') : celebrating ? 'Welcome!' : saving ? 'Saving…' : 'Start using Unvibe';
+  const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy')
+    : macPaste && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
+  const continueLabel = forward.finishes && celebrating ? 'Welcome!' : forward.finishes && saving ? 'Saving…' : forward.label;
 
   return (
     <div className={`ob ob2 ob--scene-${step}`}>
@@ -553,7 +629,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
           <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < (lines[step] ?? '').length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
         </div>
 
-        <FadeIn animKey={step} className="ob__step ob2__body">
+        <FadeIn animKey={step} className={`ob__step ob2__body${macPaste || macShortcut ? ' ob2__paste' : ''}`}>
           {step === 0 && (
             <>
               <h2 className="ob__title">Understand the code <em>AI writes.</em></h2>
@@ -584,7 +660,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 {explained ? 'Explaining in the panel →' : 'Explain this code'}
               </button>
               <p className="ob__sub">{explained
-                ? `That's what ${spoken} does with any code you select. Read it, then press Next.`
+                ? `That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
                 : 'Uses one of your free explanations. No setup needed.'}</p>
               {sampleDone ? (
                 <div className="ob2__level" role="group" aria-label="How was that explanation pitched?">
@@ -603,10 +679,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
             </div>
           )}
 
-          {step === 2 && (
+          {step === 2 && isWindows && (
             <>
               <div className="ob2__keys" aria-label={`Shortcut ${keys}`}>
-                {(isWindows ? keys.split('+') : Array.from(keys)).map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
+                {keys.split('+').map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
               </div>
               <p className="ob2__task">Open a file you didn't write, select a few lines, press {keys}.</p>
               <div className="ob2__alt">
@@ -614,17 +690,138 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 <button type="button" className="act" onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
               </div>
               <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
+                <summary>Use VS Code or Cursor? Add Ctrl+U there too</summary>
                 <div className="ob__integrations"><IntegrationsPanel /></div>
               </details>
             </>
+          )}
+
+          {/* A Mac's own-code step needs no permission: one paste target. The shortcut, which needs
+              Accessibility, is offered in step 4 once this has worked. */}
+          {macPaste && (
+            <>
+              <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
+              {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
+              <details className="ob2__more">
+                <summary>Use VS Code or Cursor? Add ⌘U there too</summary>
+                <div className="ob__integrations"><IntegrationsPanel /></div>
+              </details>
+            </>
+          )}
+
+          {macShortcut && offer === 'offer' && (
+            <>
+              <div className="ob2__offer">
+                <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
+                <div>
+                  <h3 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h3>
+                  <p>Select code in any app and press Control U. No copying, no pasting.</p>
+                </div>
+                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
+                <div className="ob2__offer-acts">
+                  <button type="button" className="field-btn ob2__lime" onClick={() => void turnOn()}>Turn on the shortcut</button>
+                </div>
+              </div>
+              <p className="ob__sub ob2__note">Pasting keeps working without it.</p>
+            </>
+          )}
+          {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="act" illustration />}
+          {macShortcut && offer === 'on' && (
+            <div className="ob2__offer">
+              <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
+              <div>
+                <span className="shortcut-pill shortcut-pill--on" role="status"><i aria-hidden="true" />Shortcut is on</span>
+                <h3 ref={shortcutHeading} tabIndex={-1}>Select code in any app, press Control U.</h3>
+                <p>Pasting into the panel still works, too.</p>
+              </div>
+            </div>
           )}
         </FadeIn>
 
         {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
         <div className="ob__actions">
-          <button className="ob__skip" disabled={step === 0 || saving} onClick={() => go(step - 1)}>Back</button>
-          <button className="field-btn inline" disabled={saving} onClick={advance}>{continueLabel}</button>
+          <button className="ob__skip" disabled={step === 0 || saving} onClick={back}>Back</button>
+          <button className={forward.ghost ? 'act' : 'field-btn inline'} disabled={saving} onClick={advance}>{continueLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const OWN_CODE_HINT = "Copy a few lines from a file you didn't write. Pasting explains it in the panel and uses one free explanation.";
+
+/**
+ * The own-code paste step's two ways in, used by setup's step 3 on a Mac and by the next open's
+ * paste step: a paste explains the clipboard, which holds what was just pasted (main reads it there,
+ * as Explain my clipboard does), and Choose a file explains a file. Neither needs a permission.
+ */
+function useOwnCodePaste() {
+  const [started, setStarted] = useState(false);
+  const [fileError, setFileError] = useState('');
+  // Bumped to remount the paste target without its preview and "Explaining in the panel" pill.
+  const [attempt, setAttempt] = useState(0);
+  // A paste or file went to the panel and hasn't been explained yet.
+  const waiting = useRef(false);
+  const explainPaste = () => {
+    setFileError('');
+    setStarted(true);
+    waiting.current = true;
+    window.unvibe.explainClipboard();
+  };
+  const chooseFile = async () => {
+    setFileError('');
+    const result = await window.unvibe.companionPickFile();
+    if (result.ok) {
+      setStarted(true);
+      waiting.current = true;
+    } else if (result.error) setFileError(result.error);
+  };
+  useEffect(() => window.unvibe.onOwnCodeDone(() => { waiting.current = false; }), []);
+  // The panel closed before explaining it (Cancel on the confirm sheet, say): ask again instead of
+  // saying it's opening.
+  useEffect(() => window.unvibe.onPanelClosed(() => {
+    if (!waiting.current) return;
+    waiting.current = false;
+    setStarted(false);
+    setAttempt((n) => n + 1);
+  }), []);
+  return { started, setStarted, fileError, explainPaste, chooseFile, attempt };
+}
+
+function LockGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </svg>
+  );
+}
+
+/**
+ * The next open after a first session that explained only the sample: the same paste step as setup,
+ * before Today. Pasting or choosing a file explains in the panel, with no permission needed. Windows
+ * also names its shortcut. "Not now" goes to Today until the next open (ownCodeStep.ts).
+ */
+function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: boolean; shortcut: string; onNotNow: () => void }) {
+  const { started, fileError, explainPaste, chooseFile, attempt } = useOwnCodePaste();
+  const said = useVibeSays(started
+    ? 'Got it. Your explanation is opening in the panel.'
+    : 'Welcome back. Try it on your own code: copy a few lines, then paste them here.', soundEffects);
+  return (
+    <div className="ob ob2">
+      <div className="ob__card ob2__card">
+        <div className="ob2__vibe">
+          <span className="ob2__blob"><Buddy mood={started ? 'reading' : 'wave'} size={72} follow label="Vibe" /></span>
+          <p className="ob2__speech" aria-live="polite">{said}</p>
+        </div>
+        <div className="ob__step ob2__body ob2__paste">
+          <PasteTarget key={attempt} hint={OWN_CODE_HINT}
+            onPaste={explainPaste} onChooseFile={() => void chooseFile()} />
+          {fileError ? <p className="field-err" role="alert">{fileError}</p> : null}
+          {isWindows ? <p className="ob__sub ob2__shortcut">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
+        </div>
+        <div className="ob__actions ob2__actions--end">
+          <button type="button" className="act" onClick={onNotNow}>Not now</button>
         </div>
       </div>
     </div>
@@ -720,8 +917,9 @@ function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: str
   return { text: 'Stale', tone: 'stale' };
 }
 
-function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
+function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
   onTryVoice: () => void;
+  today: TodayGoal | null;
   shortcut: string;
   userName?: string;
   profile: Profile | null;
@@ -762,7 +960,6 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
     { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
     { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
     { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
-    { id: '06', title: 'Build your rhythm', copy: 'Return tomorrow and keep the streak.', icon: IC.progress, done: (profile?.streak ?? 0) > 1, run: () => onNavigate('Progress') },
   ];
   const completedSteps = learningSteps.filter((step) => step.done).length;
   const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
@@ -774,12 +971,11 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
     { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
     { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
   ].filter((chip) => chip.n > 0);
-  const streak = profile?.streak ?? 0;
   const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
   const note = explainDisabled ? 'out of explains this month, catch you soon'
     : brief ? 'you changed some code, want the story?'
       : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
-        : streak > 1 ? `${streak} days in a row, nice!` : 'ready when you are';
+        : 'ready when you are';
   return (
     <div className="today">
       <header className="today-hero">
@@ -831,6 +1027,7 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
         </span>
         <span className="voice-cta__go" aria-hidden="true">→</span>
       </button>
+      {today ? <TodayGoalCard goal={today} /> : null}
       <div className="today-cols">
         {upNext.length ? (
           <section className="today-sec">
@@ -879,6 +1076,21 @@ function Home({ shortcut, userName, profile, feed, history, usage, onPlan, onNav
   );
 }
 
+function GoalCheck({ done }: { done: boolean }) {
+  return <span className={`today-goal__check${done ? ' is-done' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>{done ? '✓' : ''}</span>;
+}
+
+/** One quiet card: today's two steps. No count of days and no celebration. */
+function TodayGoalCard({ goal }: { goal: TodayGoal }) {
+  return (
+    <section className="today-goal" aria-label="Today's goal">
+      <p className="today-goal__line">
+        Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 question
+      </p>
+    </section>
+  );
+}
+
 function Progress({ profile }: { profile: Profile | null }) {
   const [knowledge, setKnowledge] = useState<KnowledgeObject[] | null>(null);
   useEffect(() => {
@@ -891,8 +1103,10 @@ function Progress({ profile }: { profile: Profile | null }) {
   const coverage = profile && profile.linesReviewed > 0
     ? `${Math.round((profile.linesUnderstood / profile.linesReviewed) * 100)}%`
     : null;
+  const currentKnowledge = knowledge ? knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length : 0;
+  // Like coverage: the share as the figure, the count under it (Design P3: the card repeated "5 of 6 current").
   const freshness = knowledge && knowledge.length
-    ? `${knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length} of ${knowledge.length} current`
+    ? { share: `${Math.round((currentKnowledge / knowledge.length) * 100)}%`, count: `${currentKnowledge} of ${knowledge.length} current` }
     : null;
   return (
     <>
@@ -900,12 +1114,12 @@ function Progress({ profile }: { profile: Profile | null }) {
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
         <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${profile?.linesReviewed ?? 0} lines` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness ?? 'Not enough data yet.'}</span></article>
+        <article className="metric-card"><span className="v">{freshness?.share ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness?.count ?? 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{profile ? profile.reviews : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
         <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
       </div>
       <div className="panel-card">
-        <div className="ph"><span className="t">Your streak</span><span className="m">last 6 months</span></div>
+        <div className="ph"><span className="t">Explained per day</span><span className="m">last 6 months</span></div>
         <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
         <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
       </div>
@@ -1186,6 +1400,44 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
   return <button type="button" className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} onClick={onClick}><span className="knob" /></button>;
 }
 
+/**
+ * The off switch for sending code (Security U36, CC-5). Off takes effect on the next request:
+ * every send checks the stored record, and the global shortcuts are unregistered. On asks with
+ * the same three boxes, naming the provider in use.
+ */
+function AiSendRow() {
+  const [status, setStatus] = useState<ConsentStatus | null>(null);
+  const [error, setError] = useState('');
+  const refresh = () => void window.unvibe.consentStatus().then(setStatus);
+  useEffect(refresh, []);
+  const toggle = async () => {
+    if (!status) return;
+    setError('');
+    if (status.allowed) {
+      const result = await window.unvibe.consentRevoke();
+      if (result.ok) setStatus(result.status);
+      else setError(result.error);
+      return;
+    }
+    if (await askForConsent(status.provider)) refresh();
+  };
+  const name = status?.providerName ?? CONSENT_PROVIDERS.unvibe;
+  return (
+    <div className="setrow">
+      <div>
+        <div className="sl">Send code to {name}</div>
+        <div className="sd">
+          {status?.allowed === false
+            ? `Off. Nothing you select, paste or ask is sent${status.switchedOff ? ', and the shortcut is off' : ''}. Explaining code asks you first.`
+            : `On. The code you ask about and your questions go to ${name}${status?.ownKey ? ' with your own key' : ''} to write explanations. Turn this off to stop sending at once.`}
+          {error ? <> {error}</> : null}
+        </div>
+      </div>
+      {status ? <Toggle label={`Send code to ${name}`} on={status.allowed} onClick={() => void toggle()} /> : null}
+    </div>
+  );
+}
+
 function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Account; onChange: () => void; onDeleted: (message?: string) => void; onNotice: (message: string) => void }) {
   const [confirming, setConfirming] = useState(false);
   const [phrase, setPhrase] = useState('');
@@ -1235,7 +1487,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
         }}>Sign out</button></div>
       <div className="setrow setrow--stack">
         <div className="sl sl--danger">Delete account</div>
-        <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review, concept and streak) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
+        <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review and concept) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
         {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
           <div className="danger-row">
             <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
@@ -1624,9 +1876,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Privacy & Data' && (
             <>
+              <AiSendRow />
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and Chat messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
-              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. On Pro, explanations also include parts of nearby files from the same project. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
-              {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send anonymous setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send anonymous setup progress" on={settings.shareSetupProgress !== false} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress === false })} /></div>}
+              <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
+              <div className="setrow"><div><div className="sl">Include nearby files (Pro)</div><div className="sd">Also sends parts of up to 2 files that the selected code imports from the same project, for better explanations. Off unless you turn it on.</div></div><Toggle label="Include nearby files" on={settings.nearbyFiles === true} onClick={() => onSettings({ nearbyFiles: settings.nearbyFiles !== true })} /></div>
+              {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. Off unless you turn it on. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send setup progress" on={settings.shareSetupProgress === true} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress !== true })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
               <div className="setrow"><div><div className="sl">Support</div><div className="sd">hello@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:hello@unvibe.site')}>Email →</button></div>
@@ -1654,6 +1908,7 @@ function App() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [history, setHistory] = useState<LearningItem[]>([]);
   const [queue, setQueue] = useState<LearningItem[]>([]);
+  const [today, setToday] = useState<TodayGoal | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
@@ -1670,10 +1925,11 @@ function App() {
   const [lessonSeedId, setLessonSeedId] = useState<string | null>(null);
   const [lessonSeedRevision, setLessonSeedRevision] = useState(0);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [ownCodeStep, setOwnCodeStep] = useState(false);
 
   const refresh = async () => {
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q, appInfo] = await Promise.all([
+      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.feed(8) as Promise<FeedItem[]>,
@@ -1682,9 +1938,12 @@ function App() {
         window.unvibe.syncStatus() as Promise<SyncStatus>,
         window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
+        window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
+        window.unvibe.ownCodeStep(),
       ]);
-      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
+      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
+      setOwnCodeStep(ownCode);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
         setSideWidth(st.sidebarWidth);
@@ -1715,8 +1974,12 @@ function App() {
     })();
     const onFocus = () => void refresh();
     const offLearning = window.unvibe.onLearningChanged(() => void refresh());
+    const offOwnCode = window.unvibe.onOwnCodeChanged(() => void refresh());
     window.unvibe.onSyncStatus((next) => setSync(next as SyncStatus));
     window.unvibe.onShowPage((next) => {
+      // A page asked for by name (Island Settings, Plan) wins over the paste step, as Not now does.
+      setOwnCodeStep(false);
+      void window.unvibe.ownCodeNotNow();
       if (next === 'Settings') {
         setSettingsTab('Island');
         setSettingsOpen(true);
@@ -1749,6 +2012,7 @@ function App() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('focus', onFocus);
       offLearning();
+      offOwnCode();
     };
   }, []);
 
@@ -1873,9 +2137,15 @@ function App() {
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} notice={deletionNotice} onSignedIn={async () => { setDeletionNotice(''); await refresh(); setGate('app'); }} onSkip={() => { setDeletionNotice(''); setGate('app'); }} /></>);
   }
+  if (ownCodeStep) {
+    // Hidden at once, and again once main has it, so a refresh already under way can't bring it back.
+    const notNow = () => { setOwnCodeStep(false); void window.unvibe.ownCodeNotNow().then(() => setOwnCodeStep(false)); };
+    return (<><div className="titlebar" /><OwnCodeWelcome soundEffects={settings?.soundEffects ?? true} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onNotNow={notNow} /></>);
+  }
 
   return (
     <>
+      <ConsentDialog buttonClass="field-btn" />
       {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
           clicks on anything layered over them, whatever the z-index. */}
       <div className="titlebar" />
@@ -1968,7 +2238,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -1997,7 +2267,7 @@ function App() {
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
-                : page === 'Briefings' ? <Briefings />
+                : page === 'Briefings' ? <Briefings plan={usageLine?.plan ?? null} onPlan={() => setPage('Plan')} />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>

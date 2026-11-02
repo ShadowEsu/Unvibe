@@ -4,6 +4,7 @@
  */
 import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
 import { fenceBlock } from './promptFence';
+import { requireCodeConsent } from './consentStore';
 
 export type LocalAiProviderId =
   | 'gemini'
@@ -270,6 +271,8 @@ async function streamGemini(
   onToken: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
+  // The person's own key: the code goes straight to this provider, so the agreement must name it (Security CC-1, CC-2).
+  requireCodeConsent(info.id);
   const url = new URL(`https://generativelanguage.googleapis.com/v1beta/models/${info.model}:streamGenerateContent`);
   url.searchParams.set('alt', 'sse');
   const res = await fetch(url, {
@@ -317,6 +320,7 @@ async function streamAnthropic(
   onToken: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
+  requireCodeConsent(info.id);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -373,6 +377,7 @@ async function streamOpenAiCompatible(
   onToken: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
+  requireCodeConsent(info.id);
   const base = (info.baseUrl ?? 'https://api.openai.com/v1').replace(/\/$/, '');
   const res = await fetch(`${base}/chat/completions`, {
     method: 'POST',

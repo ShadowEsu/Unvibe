@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, shell, type WebContents } from 'electron';
+import { app, BrowserWindow, screen, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize } from './settings';
 import { isSafeExternalUrl } from '../core/permissions';
@@ -384,6 +384,22 @@ export function getOrCreateWidget(): BrowserWindow {
     panelWin = null;
   });
   return panelWin;
+}
+
+/**
+ * The panel shows without taking focus, so the editor keeps its selection. A Mac without
+ * Accessibility gets the panel's paste box instead, and ⌘V must land there, not in the editor: make
+ * Unvibe the active app and the panel its key window. A fresh panel shows on ready-to-show, so wait
+ * for that (its own showInactive runs first).
+ */
+export function focusPanelForPaste(win: BrowserWindow, fresh: boolean): void {
+  const take = () => {
+    if (win.isDestroyed()) return;
+    app.focus({ steal: true });
+    win.focus();
+  };
+  if (fresh) win.once('ready-to-show', take);
+  else take();
 }
 
 /** @deprecated use getOrCreateWidget — kept for any stray callers */

@@ -11,6 +11,7 @@ import {
   supportRows,
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
 import { OG_CARDS } from "@/lib/pageMeta";
@@ -107,7 +108,9 @@ export function kitSections(): KitSection[] {
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
         "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. From app 0.1.44, typed questions and Chat are filtered too; older versions don't filter them, so say so if asked.",
         "Objection: \"Is it really free?\" Answer: yes. Pro adds Expert depth, git diffs and nearby-file context, and your first month of Pro is free anyway.",
-        `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,
+        AI_MAINTENANCE
+          ? `Call to action: ${SITE} (download).`
+          : `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,
       ],
     },
     {

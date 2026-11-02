@@ -20,6 +20,8 @@ Stack:
 
 Command U / Control+U selection capture, streaming explanations, depth levels, follow-up questions, multiple-choice Test me, local history, secret filter, onboarding, usage meters, Island, Pro git-diff and agent-change-brief questions, BYOK, device sign-in, plan pages.
 
+The panel's Test me offers up to three multiple-choice questions per explanation: quick-check, scenario ("Prove it"), then recall. Each question requires a click and uses the existing question allowance. Main owns the sequence; a new explanation resets it, while a follow-up does not. Any missed answer keeps that explanation in `needs_review` even after later correct answers, so it returns in the spaced review queue. Correct answers save the understood snapshot and notify understanding only once per explanation. Question allowance refusals keep the explanation visible and reuse the service's allowance message or the existing Plan & usage fallback.
+
 ## 3. Incomplete features
 
 Companion Briefings/Projects/Concepts pages were placeholder copy. There was no structured Change Brief object, no git blame origin report, no knowledge-object table on device or in Postgres, no change-driven freshness, no voice capture, no free-text teach-it-back, no GitHub App, no Understanding Gap metrics in product.

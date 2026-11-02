@@ -5,13 +5,11 @@ import {
 } from "@/lib/betaInstallScript";
 
 export const BETA_INSTALL_HOST = "https://unvibe.site";
-/** PostHog hosted survey (startup credits). Typeform kept as fallback only. */
-export const BETA_SURVEY_URL =
-  "https://us.posthog.com/external_surveys/01a03aa5-ab81-0000-b791-03561d8f4f7d";
+/** The site's own feedback form (FeedbackWidget opens on ?feedback=1). Typeform kept as fallback only. */
+export const BETA_SURVEY_URL = `${BETA_INSTALL_HOST}/?feedback=1`;
 export const TYPEFORM_SURVEY_URL =
   "https://5fmnqm5vw5o.typeform.com/to/gtkkixB7";
 export const BETA_FEEDBACK_URL = `${BETA_INSTALL_HOST}/feedback`;
-export const POSTHOG_SURVEY_ID = "01a03aa5-ab81-0000-b791-03561d8f4f7d";
 
 export const BETA_INSTALL_COMMAND = `curl -fsSL ${BETA_INSTALL_HOST}/install.sh | bash`;
 export const BETA_WINDOWS_INSTALL_COMMAND = `irm ${BETA_INSTALL_HOST}/install.ps1 | iex`;

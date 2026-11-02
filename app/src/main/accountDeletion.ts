@@ -45,14 +45,17 @@ async function clearLocalLearning(): Promise<void> {
 
 /**
  * Removes what belongs to the deleted account on this computer: the saved API key, the name, email,
- * gift code and project folder in settings, then the local learning (above), last the learning store
- * with the session token. The token goes last so a failure earlier leaves a session that can retry.
+ * gift code, project folder and own-code flag in settings, then the local learning (above), last the
+ * learning store with the session token. The token goes last so a failure earlier leaves a session
+ * that can retry.
  */
 async function clearAccountData(): Promise<void> {
   clearAiKey();
   if (hasAiKey()) throw new Error('The API key saved in Unvibe could not be removed.');
   settings().forgetPerson();
   await clearLocalLearning();
+  // Again after the awaits, so a folder picked or own code explained while they ran can't be saved back.
+  settings().forgetLocalWork();
 }
 
 export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${process.platform === 'win32' ? 'PC' : 'Mac'}. Sign in again, then delete.`;
@@ -64,13 +67,14 @@ export const UNREADABLE_SIGN_IN = `Unvibe can't read your sign-in on this ${proc
  */
 export async function deleteAccountAndLocalData(stopReviews: () => void): Promise<AccountDeletionResult> {
   if (!store().account()) {
-    // Signed out: no account to delete. Erase the learning on this computer, the project folder and
-    // the renderer storage and cache the signed-in erase clears too.
+    // Signed out: no account to delete. Erase the learning on this computer, the project folder, the
+    // own-code flag and the renderer storage and cache the signed-in erase clears too.
     try {
       stopReviews();
       abortChatAndStudy();
-      settings().forgetProjectRoot();
       await clearLocalLearning();
+      // After the awaits, so a folder picked or own code explained while they ran can't be saved back.
+      settings().forgetLocalWork();
     } catch (err) {
       return { ok: false, error: reason(err, 'Learning on this computer could not be erased.') };
     }

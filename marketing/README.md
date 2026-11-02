@@ -6,7 +6,7 @@ agent writes, at the depth you choose, and checks that you understood it.
 > AI can write the code. Unvibe helps you understand it.
 
 Built with Next.js 14 (App Router), TypeScript, Tailwind CSS, Framer Motion, and a
-privacy-respecting analytics abstraction (named Mixpanel and optional PostHog events,
+privacy-respecting analytics abstraction (Mixpanel, loaded only after the visitor allows it,
 no vendor script). It is independent of the product backend in `../web`.
 
 ## Run locally
@@ -45,8 +45,6 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 | `NEXT_PUBLIC_MIXPANEL_TOKEN` | Optional Mixpanel project token for the browser SDK. Autocapture and session replay are on. |
 | `MIXPANEL_TOKEN` | Optional Mixpanel project token (server only). Fallback named events via `/api/analytics`. |
 | `MIXPANEL_HOST` | Optional Mixpanel API host (defaults to `https://api.mixpanel.com`). |
-| `NEXT_PUBLIC_POSTHOG_KEY` | Optional PostHog project key. Named events only. |
-| `NEXT_PUBLIC_POSTHOG_HOST` | Optional PostHog host (defaults to US cloud). |
 | `UNVIBE_API_URL` | Product backend origin, used by `/stats` for desktop app user counts. |
 | `UNVIBE_ADMIN_STATS_TOKEN` | Server-only secret, 24+ characters, matching the backend's `UNVIBE_ADMIN_STATS_TOKEN`. |
 
@@ -71,7 +69,7 @@ email delivery fails.
 
 ## Analytics events
 
-Fired when Mixpanel and/or PostHog is configured. Mixpanel loads `mixpanel-browser`
+Fired when Mixpanel is configured. Mixpanel loads `mixpanel-browser`
 with autocapture and session replay on, then tracks named events. `/api/analytics`
 remains as a fallback when the browser token is unset. No code contents, no emails:
 

@@ -25,12 +25,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { userInfo } from 'node:os';
+import { homedir, userInfo } from 'node:os';
 import {
   applyWidgetResize,
   createBar,
   createCompanion,
   currentWidget,
+  focusPanelForPaste,
   getOrCreateWidget,
   hideBar,
   positionBar,
@@ -57,7 +58,8 @@ import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
-import { grantReturnApp, type PendingGrant } from '../core/grantReturn';
+import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
+import { grantReturnApp, heldReviewToRun, type HeldClipboardReview, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
 import { reportProgress, syncProgress } from './progress';
@@ -78,9 +80,13 @@ import {
   type Account as BackendAccount,
   warmBackend,
   networkFetch,
+  aiAuthHeaders,
+  postPmfAnswer,
 } from './backend';
+import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
+import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, localDayKey } from '../core/learning';
+import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
 import { installHardening } from './hardening';
@@ -96,20 +102,25 @@ import {
   buildComparePayload,
   buildDiffPayload,
   buildSelectionPayload,
-  isProPlan,
+  sendNearbyFiles,
   resolveRepoRoot,
 } from './contextBuilder';
 import { answerQuizCard, askChat, askStudyAssistant, quizCardStatus, saveChatThread, startQuizCard, studyAskStatus } from './studyQuiz';
+import { consentStatus, providerInUse } from './consent';
+import { codeConsented, consentStore, sendingSwitchedOff } from './consentStore';
+import { agreedItems, FIRST_RUN_SAMPLE, reviewCapture } from '../core/consent';
+import { shortcutKeys } from '../core/shortcutKeys';
 import { installDesktopBridge, integrationStatus } from './integrations';
 import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
 import { deleteAccountAndLocalData } from './accountDeletion';
-import { buildChangeBrief, type BriefScope } from '../core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, type BriefScope } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
+import { isProPlan } from '../core/plan';
 
 function osUserName(): string {
   try {
@@ -178,7 +189,7 @@ function parseExternalReviewUrl(rawUrl: string): { preferClipboard: boolean } | 
 function handleExternalReviewUrl(rawUrl: string): void {
   const request = parseExternalReviewUrl(rawUrl);
   if (!request) return;
-  if (app.isReady()) void startReview(request);
+  if (app.isReady()) void startReview({ ...request, confirm: true });
   else pendingExternalReview = request;
 }
 
@@ -199,8 +210,10 @@ function makeSession(
     isSample: () => session.code === FIRST_RUN_SAMPLE,
     onRecorded: () => {
       notify('Added to your learning history');
-      // First run step 2 asks its one level question once the sample answer has finished.
-      if (session.isSample?.() && companion && !companion.isDestroyed()) companion.webContents.send('onboarding:sampleDone');
+      // First run: step 2 asks its one level question once the sample answer has finished, and
+      // the Mac setup offers the shortcut once the user's own code has been explained.
+      const event = firstRunEvent(session.isSample?.() === true);
+      if (event && companion && !companion.isDestroyed()) companion.webContents.send(event);
       void askLaunchAtLogin(!session.isSample?.());
     },
     onUnderstood: () => notify('Nice — concept understood'),
@@ -262,6 +275,8 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
     clearPanelSessions();
     normalBounds.delete(windowId);
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
+    // The companion's paste step stops saying the explanation is opening if none came.
+    if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
   });
   return { win, fresh: true };
 }
@@ -270,16 +285,27 @@ function beginCaptureOnActiveTab(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
+  confirm = false,
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
   // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
   const session = makeSession(activeTabId, code, sourceApp, prev?.level);
+  if (confirm && code) session.awaitingConfirm = true;
   tabSessions.set(activeTabId, session);
   if (!panelReady) return;
-  // No selection → calm picker UI (never auto-error / auto-run).
-  initWidget(win, session, { autoStart: Boolean(code) });
-  if (code) void runReview(win, session, { level: session.level });
+  // No selection → calm picker UI (never auto-error / auto-run). A link-started capture waits for Explain.
+  const start = Boolean(code) && !session.awaitingConfirm;
+  initWidget(win, session, { autoStart: start });
+  if (start) void runReview(win, session, { level: session.level });
+}
+
+/** Trial builds count selected-code prompts on this computer. False, with a notice, once they're used up. */
+function allowSelectedCodePrompt(): boolean {
+  if (!trialBuildEnabled() || fullProductBuildEnabled()) return true;
+  if (store().consumeBetaSelectedCodePrompt().ok) return true;
+  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
+  return false;
 }
 
 const MAX_PICK_BYTES = 200_000;
@@ -297,6 +323,7 @@ function loadCodeIntoSession(
   session.sourceApp = sourceLabel;
   session.recorded = false;
   session.reviewId = randomUUID();
+  session.awaitingConfirm = false;
   session.payload = undefined;
   session.mode = 'selection';
   session.file = meta?.file;
@@ -384,8 +411,9 @@ function accessibilityGranted(prompt = false): boolean {
  * stays the same across updates (identical in v0.1.42 and v0.1.43, unsigned-install research
  * 2026-10-22) and macOS should keep the Accessibility grant. Local ad-hoc builds still change
  * identity, and macOS can then keep an entry that looks on but no longer applies. So, as a
- * fallback: after an update, if access was lost, clear the stale entry and ask again once, with a
- * clear note instead of a silent failure.
+ * fallback: after an update, if access was lost, clear the stale entry and say how to turn it on
+ * again. It never raises the macOS prompt by itself: Settings explains first what the shortcut
+ * does with a selection, and its button asks (Security U3, CC-4).
  */
 function repairAccessibilityAfterUpdate(): void {
   if (!isMac) return;
@@ -396,8 +424,7 @@ function repairAccessibilityAfterUpdate(): void {
   try { writeFileSync(file, current); } catch { /* still repair this launch */ }
   if (!last || last === current || accessibilityGranted(false)) return;
   execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => {
-    accessibilityGranted(true);
-    notify('Unvibe updated. Switch Unvibe on in Accessibility once more so the shortcut can read your selection.');
+    notify('Unvibe updated. To use the shortcut again, open Settings, General, and press Allow Accessibility.');
   });
 }
 
@@ -416,7 +443,13 @@ function openCompanion(): void {
     return;
   }
   companion = createCompanion();
+  noteCompanionOpen();
   const win = companion;
+  // Brought back from minimized (the Windows close button minimizes) is an open the user started too.
+  win.on('restore', () => {
+    noteCompanionOpen();
+    win.webContents.send('ownCode:changed');
+  });
   // On Windows and Linux the taskbar button belongs to the window, so closing it would make
   // Unvibe vanish into the tray. Minimize instead so it always stays clickable in the taskbar.
   if (!isMac) {
@@ -440,6 +473,40 @@ function openCompanionPage(page: string): void {
   else send();
 }
 
+/** The open dialog for one source file, read and checked; shared by the panel and the companion. */
+async function chooseCodeFile(parent: BrowserWindow): Promise<{ ok: true; filePath: string; text: string } | { ok: false; cancelled?: true; error?: string }> {
+  const picked = await dialog.showOpenDialog(parent, {
+    title: 'Choose a file to explain',
+    message: 'Pick a source file from your project',
+    properties: ['openFile'],
+    filters: [
+      {
+        name: 'Code',
+        extensions: [
+          'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'kt', 'swift',
+          'c', 'cc', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'md', 'json', 'css', 'scss',
+          'html', 'sql', 'sh', 'zsh', 'yml', 'yaml', 'toml',
+        ],
+      },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  });
+  if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
+  const filePath = picked.filePaths[0];
+  let text: string;
+  try {
+    const buf = await readFile(filePath);
+    if (buf.byteLength > MAX_PICK_BYTES) {
+      return { ok: false, error: 'That file is a bit large — pick a smaller source file (under ~200KB).' };
+    }
+    text = buf.toString('utf8').trim();
+  } catch {
+    return { ok: false, error: 'Could not read that file.' };
+  }
+  if (!text) return { ok: false, error: 'That file looks empty.' };
+  return { ok: true, filePath, text };
+}
+
 function allowedExternalUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -460,25 +527,25 @@ function asset(...parts: string[]): string {
   return path.join(__dirname, '..', 'assets', ...parts);
 }
 
-/** First-run sample. Kept in the main process so the renderer can't send arbitrary code this way. */
-const FIRST_RUN_SAMPLE = [
-  'function debounce(fn, wait) {',
-  '  let timer;',
-  '  return (...args) => {',
-  '    clearTimeout(timer);',
-  '    timer = setTimeout(() => fn(...args), wait);',
-  '  };',
-  '}',
-].join('\n');
-
 /**
  * The app a shortcut press came from while macOS had not allowed Accessibility yet, and when. Once
  * the grant shows up, the panel asks main to go back there and explain the selection already made;
  * `grantReturnApp` drops presses older than five minutes (Security L2).
  */
 let pendingGrant: PendingGrant | null = null;
+/**
+ * A clipboard explain asked for before the person agreed to sending code (QA F1): nothing was read
+ * then. After Agree, the panel asks main to read it and show the confirm sheet; `heldReviewToRun`
+ * drops requests older than five minutes. Any other review started meanwhile replaces or clears it.
+ */
+let heldClipboardReview: HeldClipboardReview | null = null;
 
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
+/**
+ * `confirm`: an `unvibe://review` link asked for this; capture it, but send nothing until Explain is pressed.
+ * Before the person agrees to sending code, nothing is captured at all (Windows' synthetic copy would
+ * overwrite the clipboard): the panel opens on the agreement instead (Security CC-4, CC-5).
+ */
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -513,46 +580,53 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // already allowed.
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
-  const capture = options.sample
-    ? { code: FIRST_RUN_SAMPLE, sourceApp: 'Unvibe' }
-    : options.captured ?? await captureSelection(options);
+  const agreed = codeConsented(providerInUse(usage.remaining));
+  if (!options.sample && !options.captured) {
+    heldClipboardReview = !agreed && options.preferClipboard ? { at: Date.now() } : null;
+  }
+  const capture = await reviewCapture(options, agreed, () => captureSelection(options));
   const code = capture.code;
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
-  if (!code) pulseBar({ phase: 'error', label: 'Select code first' });
-  if (!code && process.platform === 'win32' && !options.preferClipboard) {
+  const captureFailed = !code && agreed;
+  if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
+  // instead of leaving the panel to guess why.
+  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
+  if (captureFailed && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
   }
-  if (!code && isMac && !options.preferClipboard && !accessibilityGranted(false)) {
-    // The panel shows the one-button pre-permission screen (first-run spec, change 2).
+  const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
+  if (needsGrant) {
+    // The panel leads with its paste box; Turn on the shortcut asks for the grant.
     reportProgress('accessibility_asked');
     pendingGrant = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? { app: sourceApp, at: Date.now() } : null;
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
-  if (code && trialBuildEnabled() && !fullProductBuildEnabled()) {
-    const quota = store().consumeBetaSelectedCodePrompt();
-    if (!quota.ok) {
-      notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
-      return;
-    }
-  }
+  // A link-started capture is counted when Explain is pressed (widget:request), not when the link arrives.
+  if (code && !options.confirm && !allowSelectedCodePrompt()) return;
+  if (code && options.confirm) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
+  // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
+  if (needsGrant) focusPanelForPaste(win, fresh);
   if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
-    tabSessions.set(activeTabId, makeSession(activeTabId, code, sourceApp));
+    const session = makeSession(activeTabId, code, sourceApp);
+    if (options.confirm && code) session.awaitingConfirm = true;
+    tabSessions.set(activeTabId, session);
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp);
+  beginCaptureOnActiveTab(win, code, sourceApp, options.confirm);
 }
 
 function registerShortcut(accel: string): boolean {
   globalShortcut.unregisterAll();
-  // ⌃U is a spare chord on macOS (the IDE bridge owns ⌘U). On Windows Ctrl+U is the
-  // bridge's own key and a common app shortcut, so only the user's choice is grabbed there.
-  const keys = new Set<string>(isMac ? [accel, 'Control+U'] : [accel]);
+  const keys = shortcutKeys(accel, isMac, sendingSwitchedOff());
+  // None while sending is switched off in Settings, Privacy & Data; that isn't a "shortcut taken" failure.
+  if (keys.length === 0) return true;
   let any = false;
   for (const key of keys) {
     try {
@@ -639,6 +713,12 @@ app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
+  try {
+    // Records this install's first run once (the PMF survey's 3-day rule); a full disk only delays it.
+    store().firstRunAt();
+  } catch {
+    // Asked again when the survey card checks eligibility.
+  }
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
@@ -702,7 +782,7 @@ app.whenReady().then(() => {
   if (pendingExternalReview) {
     const request = pendingExternalReview;
     pendingExternalReview = null;
-    void startReview(request);
+    void startReview({ ...request, confirm: true });
   }
 
   // --- bar / companion ---
@@ -740,7 +820,6 @@ app.whenReady().then(() => {
     return {
       shortcut: settings().all().shortcut,
       recent: recent ? { id: recent.id, title: recent.title, detail: recent.meta, level: recent.level } : null,
-      streak: profile.streak,
       explanations: profile.reviews,
       understood: profile.understood,
       needsReview: profile.needsReview,
@@ -755,6 +834,44 @@ app.whenReady().then(() => {
   });
   ipcMain.on('companion:review', () => void startReview());
 
+  // --- consent before the user's own code is sent (BOSS ledger 299) ---
+  ipcMain.handle('consent:status', () => consentStatus());
+  // Only a form with all three boxes exactly true, naming a provider Unvibe knows, is an agreement;
+  // the time is set here, not by the renderer.
+  ipcMain.handle('consent:agree', (_e, form: unknown) => {
+    const agreed = agreedItems(form);
+    if (!agreed) return { ok: false as const, error: 'Tick all three boxes to continue.' };
+    try {
+      consentStore().agree(agreed.items, agreed.provider);
+    } catch {
+      return { ok: false as const, error: 'Unvibe could not save your answer. Nothing was sent; try again.' };
+    }
+    // Back from the off switch: the shortcuts come back too.
+    registerShortcut(settings().all().shortcut);
+    return { ok: true as const, status: consentStatus() };
+  });
+  // After Agree in the panel: read the clipboard explain that waited on the agreement (QA F1) and show
+  // it on the confirm sheet; nothing is sent before Explain (Security: the clipboard may have changed
+  // since it was asked for). startReview checks the agreement again itself.
+  ipcMain.handle('consent:explainHeld', async () => {
+    const held = heldReviewToRun(heldClipboardReview, Date.now());
+    heldClipboardReview = null;
+    if (!held || !codeConsented(providerInUse())) return { explained: false };
+    await startReview({ preferClipboard: true, confirm: true });
+    return { explained: true };
+  });
+  // The off switch: every send checks the record, so it applies to the next request at once, and
+  // every global shortcut (the Mac's Control+U too) is unregistered.
+  ipcMain.handle('consent:revoke', () => {
+    try {
+      consentStore().revoke();
+    } catch {
+      return { ok: false as const, error: 'Unvibe could not save that. Try again.' };
+    }
+    registerShortcut(settings().all().shortcut);
+    return { ok: true as const, status: consentStatus() };
+  });
+
   // --- widget lifecycle (single panel + tabs) ---
   ipcMain.on('widget:ready', (e) => {
     const win = widgetOf(e);
@@ -762,8 +879,9 @@ app.whenReady().then(() => {
     panelReady = true;
     const session = sessionFor(activeTabId);
     if (!session) return;
-    initWidget(win, session, { autoStart: Boolean(session.code) });
-    if (session.code) void runReview(win, session, { level: session.level });
+    const start = Boolean(session.code) && !session.awaitingConfirm;
+    initWidget(win, session, { autoStart: start });
+    if (start) void runReview(win, session, { level: session.level });
   });
   ipcMain.on('widget:setActiveTab', (_e, tabId: string) => {
     if (typeof tabId !== 'string' || !tabId) return;
@@ -797,7 +915,13 @@ app.whenReady().then(() => {
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
     const session = sessionFor(activeTabId);
-    if (win && session) void runReview(win, session, opts);
+    if (!win || !session) return;
+    if (session.awaitingConfirm) {
+      // Explain on a link-started capture: the person chose to send it.
+      if (!allowSelectedCodePrompt()) return;
+      session.awaitingConfirm = false;
+    }
+    void runReview(win, session, opts);
   });
   ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
@@ -815,35 +939,9 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     const session = sessionFor(activeTabId);
     if (!win || !session) return { ok: false as const };
-    const picked = await dialog.showOpenDialog(win, {
-      title: 'Choose a file to explain',
-      message: 'Pick a source file from your project',
-      properties: ['openFile'],
-      filters: [
-        {
-          name: 'Code',
-          extensions: [
-            'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'kt', 'swift',
-            'c', 'cc', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'md', 'json', 'css', 'scss',
-            'html', 'sql', 'sh', 'zsh', 'yml', 'yaml', 'toml',
-          ],
-        },
-        { name: 'All files', extensions: ['*'] },
-      ],
-    });
-    if (picked.canceled || !picked.filePaths[0]) return { ok: false as const, cancelled: true as const };
-    const filePath = picked.filePaths[0];
-    let text: string;
-    try {
-      const buf = await readFile(filePath);
-      if (buf.byteLength > MAX_PICK_BYTES) {
-        return { ok: false as const, error: 'That file is a bit large — pick a smaller source file (under ~200KB).' };
-      }
-      text = buf.toString('utf8').trim();
-    } catch {
-      return { ok: false as const, error: 'Could not read that file.' };
-    }
-    if (!text) return { ok: false as const, error: 'That file looks empty.' };
+    const picked = await chooseCodeFile(win);
+    if (!picked.ok) return picked;
+    const { filePath, text } = picked;
     const root = await resolveRepoRoot(path.dirname(filePath));
     const rel = root ? path.relative(root, filePath) : path.basename(filePath);
     const usage = await cachedAppUsage();
@@ -853,7 +951,7 @@ app.whenReady().then(() => {
         level: opts?.level ?? session.level,
         filePath,
         repoRoot: root,
-        withNearby: isProPlan(usage.plan),
+        withNearby: sendNearbyFiles(usage.plan),
       });
       session.abort?.abort();
       session.sourceApp = path.basename(filePath);
@@ -870,6 +968,14 @@ app.whenReady().then(() => {
         sourceFilePath: filePath,
       });
     }
+    return { ok: true as const };
+  });
+  // The companion's paste step offers a file too; it explains in the panel like a shortcut press.
+  ipcMain.handle('companion:pickFile', async () => {
+    if (!companion || companion.isDestroyed()) return { ok: false as const };
+    const picked = await chooseCodeFile(companion);
+    if (!picked.ok) return picked;
+    void startReview({ captured: { code: picked.text, sourceApp: path.basename(picked.filePath) } });
     return { ok: true as const };
   });
   ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {
@@ -988,6 +1094,7 @@ app.whenReady().then(() => {
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
+  ipcMain.handle('learning:today', () => computeToday(store().events(), new Date()));
   ipcMain.handle('learning:item', (_e, id: string) => {
     const event = store().eventById(id);
     if (!event) return null;
@@ -1015,7 +1122,8 @@ app.whenReady().then(() => {
     startQuizCard(input.eventId, input.mode),
   );
   ipcMain.handle('quiz:answer', (_e, input: { eventId: string; choice: number }) => answerQuizCard(input.eventId, input.choice));
-  ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string }) =>
+  // wipeGeneration: the conversation's stamp; askChat refuses a conversation from before a wipe.
+  ipcMain.handle('chat:ask', (_e, input: { messages?: Array<{ role: 'user' | 'assistant'; content: string }>; question: string; wipeGeneration?: number }) =>
     askChat(input));
   // wipeGeneration lets the panel stamp a conversation, so a save from before a wipe is dropped.
   ipcMain.handle('chat:threads', () => ({ ok: true, threads: store().chatThreads(), wipeGeneration: store().wipeGeneration() }));
@@ -1037,11 +1145,11 @@ app.whenReady().then(() => {
     const brief = Boolean(opts?.brief);
     const feature = brief ? 'Change briefs' : 'Git diff explanations';
     // Plan check first, so a Free user is never asked to pick a folder for a feature they cannot use.
-    // Only the panel renders the upgrade prompt; Briefs shows the returned error and gets no panel.
+    // Only the panel renders the upgrade prompt; Briefs gets `proRequired` and shows its own Pro card.
     const panel = currentWidget();
     const askedFromPanel = panel !== null && widgetOf(e) === panel;
     if (!(await requireProOrError(askedFromPanel ? panel : null, activeTabId, feature))) {
-      return { ok: false, error: 'Pro required' };
+      return { ok: false, error: 'Pro required', proRequired: true };
     }
     let root = await resolveRepoRoot();
     if (!root) {
@@ -1083,7 +1191,7 @@ app.whenReady().then(() => {
       const brief = buildChangeBrief({ repo: root, scope, hunks });
       productEvent('change_brief_opened', { files: brief.filesChanged });
       pulseBar({ phase: 'ready', label: 'Ready' });
-      return { ok: true, brief, branch: head.branch, detached: head.detached };
+      return { ok: true, brief, repoLabel: briefRepoLabel(root, homedir()), branch: head.branch, detached: head.detached };
     } catch (error) {
       pulseBar({ phase: 'error', label: 'Issue' });
       return { ok: false, error: error instanceof Error ? error.message : 'Could not read git changes.' };
@@ -1209,7 +1317,7 @@ app.whenReady().then(() => {
         level: session.level,
         filePath,
         repoRoot: repoRoot ?? undefined,
-        withNearby: isProPlan(usage.plan),
+        withNearby: sendNearbyFiles(usage.plan),
       });
       applyBuiltReview(session, built);
       session.sourceApp = 'Study';
@@ -1317,6 +1425,53 @@ app.whenReady().then(() => {
     return { ok: true };
   });
   ipcMain.handle('feedback:send', (_event, input: FeedbackInput | undefined) => sendFeedback(input, { fetcher: networkFetch, appVersion: app.getVersion() }));
+  // The PMF survey card in the panel (FE-09). Nothing is sent until pmf:send, which the Send button calls.
+  // Shown in one run of the app only: this flag lives in memory, so a restart never brings it back.
+  let pmfShownThisRun = false;
+  const pmfDeps = (): PmfDeps => ({
+    now: () => new Date(),
+    explanations: () => completedExplanations(store().events()),
+    firstRunAt: (now) => store().firstRunAt(now),
+    status: () => store().pmfStatus(),
+    draft: () => store().pmfDraft(),
+    saveDraft: (draft) => store().savePmfDraft(draft),
+    setStatus: (status) => store().setPmfStatus(status),
+    shownThisRun: () => pmfShownThisRun,
+    markShownThisRun: () => { pmfShownThisRun = true; },
+    installId: () => store().installId(),
+    post: trialBuildEnabled() ? (body) => postPmfAnswer(body, aiAuthHeaders(null)) : null,
+    appVersion: app.getVersion(),
+  });
+  ipcMain.handle('pmf:state', () => {
+    try {
+      return pmfCardState(pmfDeps());
+    } catch {
+      return { show: false, draft: { ...EMPTY_PMF_DRAFT } };
+    }
+  });
+  ipcMain.on('pmf:draft', (_event, input: unknown) => {
+    try {
+      savePmfDraft(input, pmfDeps());
+    } catch {
+      // The panel keeps the answers on screen; the next change or Send saves again.
+    }
+  });
+  ipcMain.handle('pmf:dismiss', () => {
+    try {
+      dismissPmf(pmfDeps());
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Could not save that.' };
+    }
+  });
+  ipcMain.handle('pmf:send', async (_event, input: unknown) => {
+    try {
+      return await sendPmfAnswer(input, pmfDeps());
+    } catch {
+      // A full disk while saving the draft: the answers are still on screen.
+      return { ok: false, error: PMF_SEND_FAILED };
+    }
+  });
   ipcMain.handle('app:reportFeedback', (_event, context: { screen?: unknown; version?: unknown }) => {
     const screen = typeof context.screen === 'string' ? context.screen.slice(0, 120) : 'Unknown screen';
     const version = typeof context.version === 'string' ? context.version.slice(0, 48) : app.getVersion();
@@ -1367,6 +1522,8 @@ app.whenReady().then(() => {
     }
     if (!accessibilityGranted(false)) return { explained: false };
     pendingGrant = null;
+    // Turned off since the press: capture nothing.
+    if (!codeConsented(providerInUse())) return { explained: false };
     const capture = await captureSelection({ fromApp });
     if (!capture.code) return { explained: false };
     await startReview({ captured: { code: capture.code, sourceApp: fromApp } });
@@ -1396,6 +1553,8 @@ app.whenReady().then(() => {
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });
+  ipcMain.handle('ownCode:step', () => ownCodeStepShown());
+  ipcMain.handle('ownCode:notNow', () => ownCodeStepNotNow());
 
   // --- account ---
   ipcMain.handle('account:get', () => store().account());
