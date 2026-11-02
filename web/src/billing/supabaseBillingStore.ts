@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import type {
   BillingOverview,
   BillingStore,
@@ -30,8 +31,8 @@ export class SupabaseBillingStore implements BillingStore {
   readonly kind = 'supabase billing';
   private readonly db: SupabaseClient;
 
-  constructor(url: string, serviceRoleKey: string) {
-    this.db = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+  constructor(url: string, serviceRoleKey: string, fetcher: typeof fetch = noStoreFetch) {
+    this.db = createClient(url, serviceRoleKey, { auth: { persistSession: false }, global: { fetch: fetcher } });
   }
 
   private require(error: { message: string } | null, operation: string): void {

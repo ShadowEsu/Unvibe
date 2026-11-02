@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import { selectProvider } from '@/ai';
 import { AiPausedError } from '@/ai/spendMeter';
 import {
@@ -52,7 +53,7 @@ async function reserveTry(bucket: string, hourCap: number, hourRefusal: Refusal)
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (url && key) {
-    const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: noStoreFetch } });
     const { data, error } = await db.rpc('reserve_try_request', {
       p_ip_hash: bucket,
       p_ip_cap: hourCap,
