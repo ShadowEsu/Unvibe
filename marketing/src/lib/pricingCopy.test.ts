@@ -85,7 +85,8 @@ describe("pricing copy once payments open", () => {
     assert.equal(open.heading.emphasis, "earns a place");
     assert.match(open.description, new RegExp(`\\$${PRICING.proMonthly} a month or \\$${PRICING.proAnnual} a year\\.$`));
     assert.doesNotMatch(open.description, /open soon/);
-    assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
+    // Teams has no checkout (founding seats start by email), so only Pro renews (Security SHOULD-LR3).
+    assert.equal(open.disclosure, "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
       ["free", "No card needed", "Included AI explanations with a usage limit. No card and no separate API key.", "Download free", "/beta"],

@@ -66,7 +66,7 @@ const OPEN: PricingCopy = {
     { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
     { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Request Teams seats", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
-  disclosure: "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
+  disclosure: "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
   termsNote: null,
 };
 
