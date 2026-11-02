@@ -1629,9 +1629,10 @@ code.inline {
 
 /* Waiting (Design motion spec §4): three skeleton lines at the answer's own line height and a quiet line
    saying what is being read; no spinner. The shimmer (1.2 s a pass) runs only while waiting, then the
-   skeleton crossfades to the text. An error replaces the whole stage with a plain fade, never a shake. */
+   skeleton crossfades to the first sentence. Each later sentence fades in as it completes, with no caret.
+   An error replaces the whole stage with a plain fade, never a shake. */
 .short-answer { position: relative; }
-.card .body > .short-answer { animation: none; }
+.card .body > .short-answer--arriving { animation: none; }
 .card .body .answer-wait { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
 .answer-skeleton { display: grid; }
 .answer-skeleton i {
@@ -1644,12 +1645,13 @@ code.inline {
 .card .body p.answer-wait__status { margin: 4px 0 0; font-size: .9em; }
 .card .body .answer-wait--leaving { position: absolute; inset: 0 0 auto; pointer-events: none; animation: answer-out var(--dur-exit) var(--ease-calm) both; }
 .answer-wait--leaving .answer-skeleton i { animation: none; }
-.short-answer > p { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
+.short-answer__sentence { animation: answer-in var(--dur-sentence) var(--ease-calm) both; }
+.short-answer--arriving > p:first-of-type > .short-answer__sentence:first-child { animation-duration: var(--dur-micro); }
 .card .state[role="alert"] { animation: answer-in var(--dur-micro) var(--ease-calm) both; }
 @keyframes answer-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes answer-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes answer-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .answer-skeleton i, .card .body .answer-wait, .short-answer > p, .card .state[role="alert"] { animation: none; }
+  .answer-skeleton i, .card .body .answer-wait, .short-answer__sentence, .card .state[role="alert"] { animation: none; }
   .card .body .answer-wait--leaving { display: none; }
 }

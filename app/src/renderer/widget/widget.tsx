@@ -6,7 +6,7 @@ import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
-import { AnswerWait, ShortAnswer, waitingStatus } from '../shared/shortAnswer';
+import { AnswerWait, ShortAnswer, answerArriving, offersMoreDetail, waitingStatus } from '../shared/shortAnswer';
 import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
@@ -413,7 +413,7 @@ function Widget() {
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
   /**
-   * When a short answer arrives (its More detail block mounts once typing ends), scroll the body just
+   * When a short answer arrives (its More detail block mounts once the whole answer is shown), scroll the body just
    * enough to show the button plus 12 px, never past the top of the short answer (Design, 2 Nov). Instant,
    * once per answer; showing or hiding the detail later never scrolls.
    */
@@ -619,9 +619,10 @@ function Widget() {
     window.unvibe.appInfo().then((i) => setShortcut(prettyAccel(i.shortcut)));
   }, []);
 
-  // ChatGPT-style progressive reveal: catch displayed text up to the streamed buffer.
+  // Full answers type in, catching the displayed text up to the streamed buffer. Short answers show
+  // whole sentences instead (ShortAnswer), so they skip this.
   useEffect(() => {
-    if (active.phase !== 'streaming' && active.phase !== 'done') {
+    if (active.short || (active.phase !== 'streaming' && active.phase !== 'done')) {
       setRevealedText('');
       return;
     }
@@ -647,14 +648,14 @@ function Widget() {
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [active.text, active.phase, activeTabId]);
+  }, [active.text, active.phase, active.short, activeTabId]);
 
   // Autoscroll while streaming on the active tab.
   useEffect(() => {
     if (active.phase === 'streaming' && bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [revealedText, active.phase]);
+  }, [revealedText, active.text, active.phase]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -763,8 +764,8 @@ function Widget() {
     </span>
   );
 
-  const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
-  const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
+  const showText = active.short ? active.text : phase === 'streaming' || phase === 'done' ? revealedText : active.text;
+  const stillTyping = answerArriving(phase, active.short, revealedText.length, active.text.length);
   // The survey card waits until an explanation has fully finished, typing included, and is asked
   // for again after each one until it is sent or closed. Main decides eligibility.
   const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
@@ -1149,7 +1150,7 @@ function Widget() {
                 : showText
                   ? renderRich(showText, stillTyping)
                   : <AnswerWait status={waitingStatus(active.meta.lines, active.meta.language)} />}
-              {active.short && phase === 'done' && !stillTyping ? (
+              {offersMoreDetail(phase, active.short, revealedText.length, active.text.length) ? (
                 <div className="more-detail" ref={revealMoreDetail}>
                   <button
                     type="button"
