@@ -69,30 +69,6 @@ const config: Config = {
         soft: "0 1px 2px rgb(15 12 40 / 0.04), 0 8px 30px rgb(15 12 40 / 0.06)",
         lift: "0 2px 6px rgb(15 12 40 / 0.06), 0 20px 60px rgb(15 12 40 / 0.10)",
       },
-      keyframes: {
-        "fade-up": {
-          from: { opacity: "0", transform: "translateY(12px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "caret-blink": {
-          "0%, 45%": { opacity: "1" },
-          "50%, 95%": { opacity: "0" },
-        },
-        marquee: {
-          from: { transform: "translateX(0)" },
-          to: { transform: "translateX(-50%)" },
-        },
-        shimmer: {
-          from: { backgroundPosition: "200% 0" },
-          to: { backgroundPosition: "-200% 0" },
-        },
-      },
-      animation: {
-        "fade-up": "fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
-        "caret-blink": "caret-blink 1s steps(1) infinite",
-        marquee: "marquee 40s linear infinite",
-        shimmer: "shimmer 1.6s linear infinite",
-      },
     },
   },
   plugins: [],

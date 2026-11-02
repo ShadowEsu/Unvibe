@@ -530,17 +530,6 @@ h2 {
   }
 }
 
-@keyframes paperFadeRise {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
 .paper-section {
   padding: clamp(3.5rem, 8vw, 6.5rem) 0;
 }
@@ -617,88 +606,12 @@ h2 {
   gap: 0.85rem;
 }
 
-.paper-keys-tray {
-  width: 100%;
-  margin-top: 0.55rem;
-  padding: 0.55rem 0 0.2rem;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.paper-keys {
-  display: flex;
-  align-items: end;
-  justify-content: center;
-  gap: 1rem;
-  animation: paperKeysBreathe 6.4s var(--ease-calm) 3;
-}
-
-.paper-key {
-  position: relative;
-  width: 6.4rem;
-  height: 6.4rem;
-  padding: 0;
-  appearance: none;
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-key);
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-glass);
-  color: var(--brand);
-  font-family: var(--font-mono);
-  cursor: pointer;
-  transition: transform 100ms ease, filter 200ms ease;
-}
-
-.paper-key:hover,
-.paper-key:focus-visible {
-  transform: translateY(4px);
-  filter: brightness(0.97);
-}
-
-.paper-key__mod {
-  position: absolute;
-  top: 0.6rem;
-  right: 0.7rem;
-  font-size: 1rem;
-}
-
-.paper-key__word {
-  position: absolute;
-  right: 0;
-  bottom: 0.95rem;
-  left: 0;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-align: center;
-  text-transform: lowercase;
-}
-
-.paper-key__letter {
-  position: absolute;
-  inset: 0 0 0.45rem;
-  display: grid;
-  place-items: center;
-  font-size: 2rem;
-}
-
-.paper-keys__plus {
-  padding-bottom: 2rem;
-  color: var(--brand);
-  font-family: var(--font-mono);
-  font-size: 1.4rem;
-}
-
 @keyframes paperKeysBreathe {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-14px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .paper-key,
-  .paper-keys,
   .paper-follow,
   .paper-faq__caret {
     animation: none;
@@ -714,7 +627,6 @@ h2 {
 
 html[data-performance="lite"] .paper-marquee__track,
 html[data-performance="lite"] .paper-follow,
-html[data-performance="lite"] .paper-keys,
 html[data-performance="lite"] .paper-faq__caret { animation: none; will-change: auto; }
 html[data-performance="lite"] .paper-glass,
 html[data-performance="lite"] .paper-frame,
@@ -762,11 +674,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   .paper-marquee__track {
     animation: none;
   }
-}
-
-@keyframes paperMarquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
 }
 
 .paper-log {
@@ -1382,10 +1289,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   font-family: var(--font-display);
   font-size: clamp(1.7rem, 2.8vw, 2.5rem);
   font-weight: 400;
-}
-
-.paper-key {
-  appearance: none;
 }
 
 .founder-page .founder-analytics {
@@ -2300,69 +2203,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 /* ── Release status badge (replaces expired countdown) ── */
-
-.release-status {
-  display: grid;
-  justify-items: center;
-  gap: 0.45rem;
-}
-
-.release-status--hero {
-  padding: 0.4rem 0;
-}
-
-.release-status__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.85rem;
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-pill);
-  background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-glass);
-}
-
-.release-status__dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 8px rgb(34 197 94 / 0.6);
-  animation: statusPulse 2.4s ease-in-out infinite;
-}
-
-@keyframes statusPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgb(34 197 94 / 0.6); }
-  50%      { opacity: 0.6; box-shadow: 0 0 14px rgb(34 197 94 / 0.9); }
-}
-
-.release-status__label {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--hero-type);
-  text-shadow: var(--glow-hero);
-}
-
-.release-status__platforms {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(0.82rem, 1.4vw, 0.95rem);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--hero-type);
-  opacity: 0.78;
-  text-shadow: var(--glow-hero);
-}
-
-.release-status__platforms strong {
-  font-weight: 700;
-  opacity: 1;
-}
 
 /* ── /beta download page ── */
 
