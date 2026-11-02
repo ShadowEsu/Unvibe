@@ -53,6 +53,7 @@ test('the review route sends a short answer with the short output budget, and a 
   delete process.env.ENABLE_MOCK_AI;
   const budgets: unknown[] = [];
   const holds: unknown[] = [];
+  const activations: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     if (url.hostname === ANTHROPIC_HOST) {
@@ -67,7 +68,7 @@ test('the review route sends a short answer with the short output budget, and a 
     }
     if (url.pathname === '/rest/v1/rpc/trial_reserve') return Response.json(1);
     if (url.pathname === '/rest/v1/trial_counters') return Response.json([{ used: 1 }]);
-    if (url.pathname === '/rest/v1/trial_activation') return new Response(null, { status: 201 });
+    if (url.pathname === '/rest/v1/trial_activation') { activations.push(String(init?.body)); return new Response(null, { status: 201 }); }
     throw new Error(`Unexpected request: ${url.pathname}`);
   }) as typeof fetch;
   try {
@@ -79,7 +80,19 @@ test('the review route sends a short answer with the short output budget, and a 
       }));
       assert.match(await response.text(), /"type":"done"/, detail);
     }
-    assert.deepEqual(budgets, [SHORT_MAX_TOKENS, ANTHROPIC_MAX_TOKENS]);
+    // "More detail" is a follow-up: the full budget, and no activation marker (it is not a first explanation).
+    const before = activations.length;
+    assert.ok(before > 0, 'the explanations above wrote activation markers');
+    const more = await POST(new Request('http://localhost/api/v1/reviews', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${process.env.UNVIBE_TRIAL_TOKEN}`, 'x-unvibe-install-id': 'short-more' },
+      body: JSON.stringify({ ...base, detail: 'full', shortAnswer: 'It sets x to 1.' }),
+    }));
+    assert.match(await more.text(), /"type":"done"/, 'more detail');
+    assert.equal(activations.length, before, 'More detail writes no activation marker');
+    // Literal numbers on purpose: the short answer's 400-token budget is the cost claim (Security SHOULD-U116b).
+    assert.equal(SHORT_MAX_TOKENS, 400);
+    assert.deepEqual(budgets, [400, ANTHROPIC_MAX_TOKENS, ANTHROPIC_MAX_TOKENS]);
     assert.ok(Number(holds[0]) < Number(holds[1]), 'the short call holds less of the budget');
   } finally {
     process.env = previousEnv;
