@@ -10,11 +10,12 @@
 --
 -- public.trial_used keeps exactly two columns: an HMAC-SHA256 of the normalized address and the day of
 -- the first trial. No user id, no address, no time finer than the day. Account deletion never touches
--- it. Rows older than 12 months are deleted every time an account is created (the same pattern as
--- submit_pmf_response's 12-month retention; there is no scheduler in this project).
+-- it. Rows older than 12 months are deleted by a daily pg_cron job (04:17 UTC), and also every time an
+-- account is created.
 --
--- The HMAC key is generated inside the database into Supabase Vault by this migration: no person,
--- agent, repo or env file ever holds it. An unkeyed hash of an email can be reversed by guessing
+-- The HMAC key is generated inside the database into Supabase Vault by this migration. It is stored
+-- only in the database (Supabase Vault) and never written to a repo, env file or log; only the database
+-- owner and the service role can read it. An unkeyed hash of an email can be reversed by guessing
 -- addresses; a keyed one can't without the key.
 --
 -- Normalization: trim, lowercase, and drop a +tag from the local part. Gmail dots are not folded
@@ -77,7 +78,8 @@ grant execute on function public.trial_email_normalize(text) to service_role;
 grant execute on function public.trial_email_fp(text) to service_role;
 
 -- The live body (pg_get_functiondef, 2026-11-02) with only the welcome-month branch changed.
--- A missing key raises inside the guarded block: that sign-up gets no trial (fails closed) and a warning.
+-- A missing key raises inside the welcome branch's own guard: that sign-up gets no trial (fails closed)
+-- and a warning, and still gets its waitlist row and any bonus months.
 create or replace function public.on_app_account()
 returns trigger
 language plpgsql
@@ -94,14 +96,20 @@ begin
     values (v_email, unvibe_referral_code(v_email), 'app', now())
     on conflict (email) do nothing;
     if not exists (select 1 from welcome_pro_grants where user_id = new.id) then
-      delete from trial_used where first_trial_on < current_date - interval '12 months';
-      insert into trial_used (email_fp, first_trial_on)
-      values (trial_email_fp(v_email), current_date)
-      on conflict (email_fp) do nothing;
-      if found then
-        insert into welcome_pro_grants (user_id, email) values (new.id, v_email);
-        v_months := 1;
-      end if;
+      -- Its own guard: a fault here (say the key is missing) costs only the trial, never the waitlist
+      -- row or the bonus months below.
+      begin
+        delete from trial_used where first_trial_on < current_date - interval '12 months';
+        insert into trial_used (email_fp, first_trial_on)
+        values (trial_email_fp(v_email), current_date)
+        on conflict (email_fp) do nothing;
+        if found then
+          insert into welcome_pro_grants (user_id, email) values (new.id, v_email);
+          v_months := 1;
+        end if;
+      exception when others then
+        raise warning 'unvibe trial check failed: %', sqlerrm;
+      end;
     end if;
     v_months := v_months
       + (select count(*) from bonus_pro_grants where email = v_email and applied_at is null)::integer;
@@ -123,5 +131,11 @@ from public.welcome_pro_grants g
 where coalesce(g.email, '') <> ''
 group by public.trial_email_fp(g.email)
 on conflict (email_fp) do nothing;
+
+-- The daily purge, so "kept for 12 months" holds even when nobody signs up (Security MUST-TU1).
+-- cron.schedule replaces a job of the same name, so a re-run keeps exactly one.
+create extension if not exists pg_cron with schema pg_catalog;
+select cron.schedule('unvibe-trial-used-purge', '17 4 * * *',
+  $$delete from public.trial_used where first_trial_on < current_date - interval '12 months'$$);
 
 notify pgrst, 'reload schema';

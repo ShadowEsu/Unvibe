@@ -2,8 +2,9 @@
 -- (migration 20261103090000_trial_used.sql): one free Pro trial per email address.
 --
 -- Run it on a scratch or local database that has Supabase's roles (anon, authenticated, service_role),
--- pgcrypto in schema extensions, Supabase Vault, and every migration in ../migrations applied. Never on
--- production: the behaviour checks create and delete accounts.
+-- pgcrypto in schema extensions, Supabase Vault, pg_cron, and every migration in ../migrations applied.
+-- Never on production: the behaviour checks create and delete accounts, and block 6 deletes the Vault
+-- key inside its rolled-back transaction.
 --
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f web/supabase/tests/trial_used.sql
 --
@@ -122,6 +123,60 @@ begin
   end if;
   if not exists (select 1 from public.trial_used where email_fp = young_fp) then
     raise exception 'a fingerprint younger than 12 months must stay';
+  end if;
+end $$;
+rollback;
+
+-- 5. The daily purge (Security MUST-TU1): one active job at 04:17 UTC, and its own command deletes only
+--    fingerprints older than 12 months.
+begin;
+do $$
+declare
+  cmd text;
+  old_fp constant bytea := public.trial_email_fp('trial-cron-old-' || gen_random_uuid() || '@example.test');
+  young_fp constant bytea := public.trial_email_fp('trial-cron-young-' || gen_random_uuid() || '@example.test');
+begin
+  if (select count(*) from cron.job where jobname = 'unvibe-trial-used-purge' and schedule = '17 4 * * *' and active) <> 1 then
+    raise exception 'expected exactly one active unvibe-trial-used-purge job at 17 4 * * *';
+  end if;
+  select command into cmd from cron.job where jobname = 'unvibe-trial-used-purge';
+  insert into public.trial_used (email_fp, first_trial_on) values
+    (old_fp, current_date - interval '12 months' - interval '1 day'),
+    (young_fp, current_date - interval '11 months');
+  execute cmd;
+  if exists (select 1 from public.trial_used where email_fp = old_fp) then
+    raise exception 'the daily job must purge a fingerprint older than 12 months';
+  end if;
+  if not exists (select 1 from public.trial_used where email_fp = young_fp) then
+    raise exception 'the daily job must keep a fingerprint younger than 12 months';
+  end if;
+end $$;
+rollback;
+
+-- 6. A fault in the trial check (the key is missing) costs only the trial: the waitlist row and the
+--    bonus month still land (Security SHOULD-TU4).
+begin;
+do $$
+declare
+  u uuid := gen_random_uuid();
+  addr constant text := 'trial-nokey-' || replace(gen_random_uuid()::text, '-', '') || '@example.test';
+  rows_before bigint;
+begin
+  select count(*) into rows_before from public.trial_used;
+  delete from vault.secrets where name = 'trial_fp_key';
+  insert into public.bonus_pro_grants (email, reason) values (addr, 'feedback');
+  insert into public.users (id, email) values (u, addr);
+  if exists (select 1 from public.welcome_pro_grants where user_id = u) then
+    raise exception 'no key: no welcome month';
+  end if;
+  if (select count(*) from public.trial_used) <> rows_before then
+    raise exception 'no key: no fingerprint written';
+  end if;
+  if not exists (select 1 from public.bonus_pro_grants where email = addr and applied_at is not null) then
+    raise exception 'no key: the bonus month must still be applied';
+  end if;
+  if not exists (select 1 from public.waitlist_entries where email = addr) then
+    raise exception 'no key: the waitlist row must still be written';
   end if;
 end $$;
 rollback;
