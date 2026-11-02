@@ -2,16 +2,17 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { BilledProviderError, ProviderRejectedError, type Completion, type TokenUsage } from '../src/ai/provider';
 import {
+  AI_LIMIT_MONTH,
+  AI_LIMIT_TODAY,
   AI_MAINTENANCE,
   AI_PAUSED,
-  AI_PAUSED_TODAY,
   AiPausedError,
   DAY_CAP_NANO_USD,
   MemorySpendStore,
   MeteredProvider,
   SupabaseSpendStore,
   MODEL_PRICES,
-  TOTAL_CAP_NANO_USD,
+  MONTH_CAP_NANO_USD,
   costNanoUsd,
   maxInputTokens,
   pricesFor,
@@ -77,22 +78,13 @@ test('the hold bounds input by UTF-8 bytes, so CJK and emoji can never be held b
   assert.equal(maxInputTokens('ab', 'c'), 3 + 64);
   assert.equal(maxInputTokens('', '漢'), 3 + 64);
   assert.equal(maxInputTokens('', '😀'), 4 + 64);
+  // A 120k-character CJK paste (the API's size cap counts UTF-16 length) is 360k bytes, held in full.
+  const cjk = '漢'.repeat(120_000);
+  assert.equal(worst('', cjk), (360_000 + 64) * 4_000 + 2048 * 20_000);
+  assert.ok(worst('', cjk) >= costNanoUsd(PRICES, { inputTokens: 180_000, outputTokens: 2048 }));
   const emoji = '😀'.repeat(60_000); // 120k UTF-16 units, 240k bytes
   assert.ok(worst('', emoji) >= costNanoUsd(PRICES, { inputTokens: 120_000, outputTokens: 2048 }));
   assert.equal(worst('', 'x'.repeat(99_000)), (99_000 + 64) * 4_000 + 2048 * 20_000);
-});
-
-test('a review too large to fit under the daily stop is refused up front, even on a fresh day', async () => {
-  // A 120k-character CJK paste (the API's size cap counts UTF-16 length) is 360k bytes: its worst case
-  // ($1.48) is above the $1 daily stop, so it can never be sent.
-  const cjk = '漢'.repeat(120_000);
-  assert.ok(worst('', cjk) > DAY_CAP_NANO_USD);
-  const store = new MemorySpendStore();
-  const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
-  const error = await new MeteredProvider(inner, store).complete('', cjk).catch((e: unknown) => e);
-  assert.ok(error instanceof AiPausedError && error.reason === 'day_cap');
-  assert.equal(inner.calls, 0);
-  assert.equal(sum(store), 0);
 });
 
 test('a call reserves its worst case first, then settles to the measured cost', async () => {
@@ -138,7 +130,7 @@ test('past the daily stop the call is refused before the provider is reached, an
   const error = await metered.complete('s', 'u').catch((e: unknown) => e);
   assert.ok(error instanceof AiPausedError);
   assert.equal(error.reason, 'day_cap');
-  assert.equal(error.message, AI_PAUSED_TODAY);
+  assert.equal(error.message, AI_LIMIT_TODAY);
   assert.equal(inner.calls, 0);
   assert.equal(store.days.get('2026-10-29'), DAY_CAP_NANO_USD - 1000);
 
@@ -147,15 +139,23 @@ test('past the daily stop the call is refused before the provider is reached, an
   assert.equal(inner.calls, 1);
 });
 
-test('the total stop holds on a new day and refuses the call that would cross it', async () => {
-  const store = new MemorySpendStore(() => new Date('2026-11-02T08:00:00Z'));
-  store.days.set('2026-11-01', TOTAL_CAP_NANO_USD - worst('s', 'u') + 1);
+test('the monthly stop counts every day of this UTC month, refuses honestly, and the 1st opens again', async () => {
+  let now = new Date('2026-11-30T12:00:00Z');
+  const store = new MemorySpendStore(() => now);
+  store.days.set('2026-10-31', MONTH_CAP_NANO_USD); // last month: never counted against this one
+  store.days.set('2026-11-01', MONTH_CAP_NANO_USD - DAY_CAP_NANO_USD);
+  store.days.set('2026-11-29', DAY_CAP_NANO_USD - worst('s', 'u') + 1); // today is empty, the month is not
   const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
-  const error = await new MeteredProvider(inner, store).complete('s', 'u').catch((e: unknown) => e);
+  const metered = new MeteredProvider(inner, store);
+  const error = await metered.complete('s', 'u').catch((e: unknown) => e);
   assert.ok(error instanceof AiPausedError);
-  assert.equal(error.reason, 'total_cap');
-  assert.equal(error.message, AI_PAUSED);
+  assert.equal(error.reason, 'month_cap');
+  assert.equal(error.message, AI_LIMIT_MONTH);
   assert.equal(inner.calls, 0);
+
+  now = new Date('2026-12-01T00:00:00Z');
+  await metered.complete('s', 'u');
+  assert.equal(inner.calls, 1);
 });
 
 test('fail closed: no store, or a store that throws, refuses without calling the provider', async () => {
@@ -182,10 +182,11 @@ test('a failed settle keeps the worst case counted and still returns the answer'
 
 test('the Supabase store accepts only a well-formed answer; anything else pauses AI', async () => {
   const originalFetch = globalThis.fetch;
-  const answers: Array<{ status: number; body: unknown; expect: 'ok' | 'day_cap' | 'total_cap' | 'paused' }> = [
+  const answers: Array<{ status: number; body: unknown; expect: 'ok' | 'day_cap' | 'month_cap' | 'paused' }> = [
     { status: 200, body: [{ status: 'ok', day: '2026-10-29' }], expect: 'ok' },
     { status: 200, body: [{ status: 'day_cap', day: '2026-10-29' }], expect: 'day_cap' },
-    { status: 200, body: [{ status: 'total_cap', day: '2026-10-29' }], expect: 'total_cap' },
+    { status: 200, body: [{ status: 'month_cap', day: '2026-10-29' }], expect: 'month_cap' },
+    { status: 200, body: [{ status: 'total_cap', day: '2026-10-29' }], expect: 'paused' },
     { status: 200, body: [{ status: 'OK', day: '2026-10-29' }], expect: 'paused' },
     { status: 200, body: [{ status: 'ok', day: 'tomorrow' }], expect: 'paused' },
     { status: 200, body: [], expect: 'paused' },
@@ -207,7 +208,7 @@ test('the Supabase store accepts only a well-formed answer; anything else pauses
       const label = JSON.stringify(answer);
       if (answer.expect === 'ok') {
         assert.equal(inner.calls, 1, label);
-        assert.deepEqual(rpc, ['/rest/v1/rpc/reserve_ai_spend', '/rest/v1/rpc/settle_ai_spend'], label);
+        assert.deepEqual(rpc, ['/rest/v1/rpc/reserve_ai_spend_month', '/rest/v1/rpc/settle_ai_spend'], label);
       } else {
         assert.equal(inner.calls, 0, label);
         assert.ok(result instanceof AiPausedError, label);
@@ -255,12 +256,12 @@ function appRequest(route: string): Request {
   });
 }
 
-test('reviews past the daily stop: the stream says AI is paused for today; no provider is called', async () => {
+test('reviews past the daily stop: the stream says the AI limit is reached for today; no provider is called', async () => {
   fullMeter();
   const response = await review(appRequest('reviews'));
   assert.equal(response.status, 200);
   const events = (await response.text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
-  assert.deepEqual(events, [{ type: 'error', message: AI_PAUSED_TODAY }]);
+  assert.deepEqual(events, [{ type: 'error', message: AI_LIMIT_TODAY }]);
   assert.deepEqual(hosts, []);
 });
 
@@ -268,7 +269,7 @@ test('comprehension past the daily stop: 503 ai_paused; no provider is called', 
   fullMeter();
   const response = await comprehension(appRequest('comprehension'));
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: 'ai_paused', message: AI_PAUSED_TODAY });
+  assert.deepEqual(await response.json(), { error: 'ai_paused', message: AI_LIMIT_TODAY });
   assert.deepEqual(hosts, []);
 });
 
@@ -280,7 +281,7 @@ test('Try it past the daily stop: 503 with the paused text; no provider is calle
     body: JSON.stringify({ code: 'const a = 1;', consent: { v: TRY_CONSENT_VERSION, aiSend: true, age18: true } }),
   }));
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: AI_PAUSED_TODAY });
+  assert.deepEqual(await response.json(), { error: AI_LIMIT_TODAY });
   assert.deepEqual(hosts, []);
 });
 

@@ -2,8 +2,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
- * Hard spend stops for the hosted AI (BOSS ledger 339, caps confirmed by Money 2026-10-29):
- * $1 per UTC day and $20 in total, on the database so every serverless instance shares one count.
+ * Hard spend stops for the hosted AI (Preston 2026-11-02, via BOSS): the Anthropic key may spend $50
+ * per calendar month; Unvibe's share is $25 per UTC calendar month, with a $5 per UTC day guard (a
+ * fifth of the month) so one bad day can't burn the month. Counted on the database so every
+ * serverless instance shares one count.
  *
  * Each call reserves its worst case before the request leaves and settles afterwards from the usage
  * Anthropic measured. A call that failed or was cut off without measured usage keeps its whole
@@ -27,10 +29,11 @@ export const MODEL_PRICES: Readonly<Record<string, ModelPrices>> = {
 };
 /** Room for the Messages API's own framing tokens around the system prompt and the user turn. */
 const FRAMING_TOKENS = 64;
-export const DAY_CAP_NANO_USD = 1_000_000_000; // $1 per UTC day
-export const TOTAL_CAP_NANO_USD = 20_000_000_000; // $20, never resets
+export const DAY_CAP_NANO_USD = 5_000_000_000; // $5 per UTC day
+export const MONTH_CAP_NANO_USD = 25_000_000_000; // $25 per UTC calendar month
 
-export const AI_PAUSED_TODAY = 'AI is paused for today. Explanations come back after midnight UTC.';
+export const AI_LIMIT_TODAY = "AI limit reached for today. Explanations come back after midnight UTC.";
+export const AI_LIMIT_MONTH = "AI limit reached for this month. Explanations come back on the 1st (UTC).";
 export const AI_PAUSED = 'AI is paused for now. Explanations will be back soon.';
 export const AI_MAINTENANCE = 'AI features are paused for maintenance. Back soon.';
 
@@ -43,10 +46,15 @@ export function aiMaintenance(): boolean {
   return process.env.AI_MAINTENANCE?.trim() === '1';
 }
 
-/** Thrown before any request leaves: the meter refused, could not count (fail closed), or maintenance. */
+/** Thrown before any request leaves: a spend stop was reached, the meter could not count (fail closed), or maintenance. */
 export class AiPausedError extends Error {
-  constructor(readonly reason: 'day_cap' | 'total_cap' | 'unavailable' | 'maintenance') {
-    super(reason === 'day_cap' ? AI_PAUSED_TODAY : reason === 'maintenance' ? AI_MAINTENANCE : AI_PAUSED);
+  constructor(readonly reason: 'day_cap' | 'month_cap' | 'unavailable' | 'maintenance') {
+    super(
+      reason === 'day_cap' ? AI_LIMIT_TODAY
+        : reason === 'month_cap' ? AI_LIMIT_MONTH
+          : reason === 'maintenance' ? AI_MAINTENANCE
+            : AI_PAUSED,
+    );
     this.name = 'AiPausedError';
   }
 }
@@ -74,16 +82,18 @@ export function costNanoUsd(prices: ModelPrices, usage: TokenUsage): number {
 
 export type Reservation = { day: string; nanoUsd: number };
 
+export type SpendStop = 'day_cap' | 'month_cap';
+
 export interface SpendStore {
-  /** Counts `nanoUsd` against today and the total, or refuses when either stop would be passed. */
-  reserve(nanoUsd: number): Promise<Reservation | 'day_cap' | 'total_cap'>;
+  /** Counts `nanoUsd` against today and this UTC month, or refuses when either stop would be passed. */
+  reserve(nanoUsd: number): Promise<Reservation | SpendStop>;
   /** Adds `deltaNanoUsd` (negative when the measured cost came in under the reservation) to `day`. */
   settle(day: string, deltaNanoUsd: number): Promise<void>;
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** One call to `reserve_ai_spend`, which checks both stops and counts under one advisory lock (migration 20261029100000). */
+/** One call to `reserve_ai_spend_month`, which checks both stops and counts under one advisory lock (migration 20261102090000). */
 export class SupabaseSpendStore implements SpendStore {
   private client: SupabaseClient | undefined;
 
@@ -95,18 +105,18 @@ export class SupabaseSpendStore implements SpendStore {
     return this.client;
   }
 
-  async reserve(nanoUsd: number): Promise<Reservation | 'day_cap' | 'total_cap'> {
-    const { data, error } = await this.db.rpc('reserve_ai_spend', {
+  async reserve(nanoUsd: number): Promise<Reservation | SpendStop> {
+    const { data, error } = await this.db.rpc('reserve_ai_spend_month', {
       p_meter: SPEND_METER,
       p_nano_usd: nanoUsd,
       p_day_cap: DAY_CAP_NANO_USD,
-      p_total_cap: TOTAL_CAP_NANO_USD,
+      p_month_cap: MONTH_CAP_NANO_USD,
     });
-    if (error) throw new Error(`reserve_ai_spend failed: ${error.code ?? 'unknown'}`);
+    if (error) throw new Error(`reserve_ai_spend_month failed: ${error.code ?? 'unknown'}`);
     const row = (Array.isArray(data) ? data[0] : data) as { status?: unknown; day?: unknown } | null;
-    if (row?.status === 'day_cap' || row?.status === 'total_cap') return row.status;
+    if (row?.status === 'day_cap' || row?.status === 'month_cap') return row.status;
     if (row?.status === 'ok' && typeof row.day === 'string' && DAY.test(row.day)) return { day: row.day, nanoUsd };
-    throw new Error('reserve_ai_spend returned an unexpected answer');
+    throw new Error('reserve_ai_spend_month returned an unexpected answer');
   }
 
   async settle(day: string, deltaNanoUsd: number): Promise<void> {
@@ -121,11 +131,12 @@ export class MemorySpendStore implements SpendStore {
 
   constructor(private readonly now: () => Date = () => new Date()) {}
 
-  async reserve(nanoUsd: number): Promise<Reservation | 'day_cap' | 'total_cap'> {
+  async reserve(nanoUsd: number): Promise<Reservation | SpendStop> {
     const day = this.now().toISOString().slice(0, 10);
+    const month = day.slice(0, 7);
     const today = this.days.get(day) ?? 0;
-    const total = [...this.days.values()].reduce((sum, v) => sum + v, 0);
-    if (total + nanoUsd > TOTAL_CAP_NANO_USD) return 'total_cap';
+    const thisMonth = [...this.days].reduce((sum, [d, v]) => (d.startsWith(month) ? sum + v : sum), 0);
+    if (thisMonth + nanoUsd > MONTH_CAP_NANO_USD) return 'month_cap';
     if (today + nanoUsd > DAY_CAP_NANO_USD) return 'day_cap';
     this.days.set(day, today + nanoUsd);
     return { day, nanoUsd };
@@ -190,14 +201,14 @@ export class MeteredProvider implements Provider {
     }
     if (!this.store) throw new AiPausedError('unavailable');
     const worst = worstCaseNanoUsd(prices, system, user, this.inner.maxOutputTokens);
-    let reservation: Reservation | 'day_cap' | 'total_cap';
+    let reservation: Reservation | SpendStop;
     try {
       reservation = await this.store.reserve(worst);
     } catch (error) {
       console.error('ai spend reserve failed', error instanceof Error ? error.message : 'unknown');
       throw new AiPausedError('unavailable');
     }
-    if (reservation === 'day_cap' || reservation === 'total_cap') throw new AiPausedError(reservation);
+    if (reservation === 'day_cap' || reservation === 'month_cap') throw new AiPausedError(reservation);
 
     // From here the request may be billed. Only usage Anthropic measured replaces the worst case,
     // and only an error status it answered with (not billed) releases it. A dropped connection or a
