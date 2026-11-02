@@ -73,6 +73,12 @@ export interface ReviewSession {
   shortText?: string;
   /** The "More detail" text streamed under the short answer. */
   detailText?: string;
+  /**
+   * Trial builds' local selected-code credit for this capture (REG-83): 'held' once taken, 'returned' after a
+   * refused or failed explanation gave it back (the next attempt takes it again). Unset once an explanation
+   * arrives, and in builds that don't count credits.
+   */
+  selectionCredit?: 'held' | 'returned';
   /** Prevents a pulse event for every streamed token. */
   islandStreaming?: boolean;
   payload?: ReviewRequestPayload;
@@ -360,22 +366,51 @@ export function withDetail(payload: ReviewRequestPayload, detailRun: boolean, sh
   return { ...payload, detail: 'full', shortAnswer: undefined };
 }
 
+/**
+ * How a run ended, for the selection credit: 'explained' (it was used), 'failed' (refused or broken, with
+ * no explanation: it goes back), 'waiting' (paused for the person or replaced by a newer run: kept).
+ */
+type RunOutcome = 'explained' | 'failed' | 'waiting';
+
+const SELECTION_CREDITS_USED_UP = (limit: number) =>
+  `Your 30-day beta includes ${limit} selected-code prompts. Your saved learning is still available.`;
+
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
-  // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
-  if (session.awaitingConfirm) return;
   // "More detail" goes on from the short answer this panel already has; anything else is a new answer.
   const detailRun = Boolean(opts.moreDetail) && !opts.question && Boolean(session.shortText?.trim());
+  // Only a new explanation of the selection uses its credit; follow-ups and More detail never do.
+  const creditRun = !opts.question && !detailRun && session.selectionCredit !== undefined && !session.awaitingConfirm;
+  if (creditRun && session.selectionCredit === 'returned') {
+    if (!store().consumeBetaSelectedCodePrompt().ok) {
+      send(win, session, { type: 'error', message: SELECTION_CREDITS_USED_UP(store().betaSelectedCodeUsage().limit) });
+      return;
+    }
+    session.selectionCredit = 'held';
+  }
+  const outcome = await explain(win, session, opts, detailRun);
+  if (!creditRun) return;
+  if (outcome === 'explained') session.selectionCredit = undefined;
+  else if (outcome === 'failed' && session.selectionCredit === 'held') {
+    // REG-83: the explanation this credit paid for never came (AI paused, a 5xx, offline...), so it goes back.
+    store().refundBetaSelectedCodePrompt();
+    session.selectionCredit = 'returned';
+  }
+}
+
+async function explain(win: BrowserWindow, session: ReviewSession, opts: RequestOpts, detailRun: boolean): Promise<RunOutcome> {
+  // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
+  if (session.awaitingConfirm) return 'waiting';
   // Events about a "More detail" run carry part 'detail', so the panel keeps the short answer above it.
   const tag = detailRun ? { part: 'detail' as const } : {};
   // Fails closed: nothing of the person's is sent before they agree; the panel shows the form.
   const before = consentNeededFor(session, undefined, opts.question);
   if (before) {
     askConsent(win, session, before);
-    return;
+    return 'waiting';
   }
   if (!session.code && !session.payload) {
     send(win, session, { type: 'error', message: 'No code captured.', ...tag });
-    return;
+    return 'failed';
   }
   session.level = opts.level;
   if (!opts.question && !detailRun) {
@@ -400,7 +435,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   const switched = consentNeededFor(session, usageEarly.remaining, opts.question);
   if (switched) {
     askConsent(win, session, switched);
-    return;
+    return 'waiting';
   }
   if (opts.level === 'expert' && !isProPlan(usageEarly.plan)) {
     send(win, session, {
@@ -410,7 +445,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       message: 'Expert explanations are included with Unvibe Pro.',
       ...tag,
     });
-    return;
+    return 'failed';
   }
 
   let payload: ReviewRequestPayload;
@@ -418,7 +453,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     payload = withDetail(await ensurePayload(session, opts), detailRun, session.shortText);
   } catch (err) {
     send(win, session, { type: 'error', message: err instanceof Error ? err.message : 'Could not build review context.', ...tag });
-    return;
+    return 'failed';
   }
   const shortRun = payload.detail === 'short';
   const take = (text: string): void => {
@@ -436,12 +471,12 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   const findings = scanReviewPayload(payload);
   if (hasBlocking(findings)) {
     send(win, session, { type: 'blocked', findings });
-    return;
+    return 'failed';
   }
   if (findings.length > 0 && !opts.consented) {
     send(win, session, { type: 'consent', findings });
     pulseBar({ phase: 'idle', label: 'Ready' });
-    return;
+    return 'waiting';
   }
 
   session.abort?.abort();
@@ -483,7 +518,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         ...tag,
       });
       raiseLimitPause(win);
-      return;
+      return 'failed';
     }
 
     if (wantLocal && localKey) {
@@ -517,22 +552,23 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           });
           if (next.remaining <= 0) raiseLimitPause(win);
         }).catch(() => undefined);
+        return 'explained';
       } catch (err) {
         if (err instanceof ConsentRequiredError) {
           askConsent(win, session, err.provider);
-          return;
+          return 'waiting';
         }
         if (abort.signal.aborted) {
           if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.', ...tag });
-          return;
+          return timedOut ? 'failed' : 'waiting';
         }
         send(win, session, {
           type: 'error',
           message: err instanceof Error ? err.message : 'Your local AI provider could not complete that request.',
           ...tag,
         });
+        return 'failed';
       }
-      return;
     }
 
     const res = await postReview(payload, token, abort.signal);
@@ -561,7 +597,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
         upgradePath: body.upgradePath ?? (failure.planLimit || failure.proRequired ? '/plan' : undefined),
         ...tag,
       });
-      return;
+      return 'failed';
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -606,14 +642,15 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       }
     }
     if (!completed && !serviceErrored) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.', ...tag });
+    return completed ? 'explained' : 'failed';
   } catch (err) {
     if (err instanceof ConsentRequiredError) {
       askConsent(win, session, err.provider);
-      return;
+      return 'waiting';
     }
     if (abort.signal.aborted) {
       if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.', ...tag });
-      return;
+      return timedOut ? 'failed' : 'waiting';
     }
     send(win, session, {
       type: 'error',
@@ -623,6 +660,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       ...tag,
     });
     void err;
+    return 'failed';
   } finally {
     clearTimeout(watchdog);
     if (session.abort === abort) session.abort = null;

@@ -298,12 +298,14 @@ function beginCaptureOnActiveTab(
   sourceApp: string | null,
   confirm = false,
   meta?: FileMeta,
+  credit: SelectionCredit = 'free',
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
   // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
   const session = makeSession(activeTabId, code, sourceApp, prev?.level);
   applyFileMeta(session, meta);
+  if (credit === 'held') session.selectionCredit = 'held';
   if (confirm && code) session.awaitingConfirm = true;
   tabSessions.set(activeTabId, session);
   if (!panelReady) return;
@@ -313,12 +315,15 @@ function beginCaptureOnActiveTab(
   if (start) void runReview(win, session, { level: session.level });
 }
 
-/** Trial builds count selected-code prompts on this computer. False, with a notice, once they're used up. */
-function allowSelectedCodePrompt(): boolean {
-  if (!trialBuildEnabled() || fullProductBuildEnabled()) return true;
-  if (store().consumeBetaSelectedCodePrompt().ok) return true;
+/** 'held': a trial build took one local selected-code credit; 'free': this build doesn't count them. */
+type SelectionCredit = 'held' | 'free';
+
+/** Trial builds count selected-code prompts on this computer. Null, with a notice, once they're used up. */
+function takeSelectionCredit(): SelectionCredit | null {
+  if (!trialBuildEnabled() || fullProductBuildEnabled()) return 'free';
+  if (store().consumeBetaSelectedCodePrompt().ok) return 'held';
   notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
-  return false;
+  return null;
 }
 
 const MAX_PICK_BYTES = 200_000;
@@ -620,7 +625,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
   // A link-started capture is counted when Explain is pressed (widget:request), not when the link arrives.
-  if (code && !options.confirm && !allowSelectedCodePrompt()) return;
+  const credit = code && !options.confirm ? takeSelectionCredit() : 'free';
+  if (credit === null) return;
   if (code && options.confirm) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
@@ -629,11 +635,12 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
     const session = makeSession(activeTabId, code, sourceApp);
     applyFileMeta(session, options.captured?.meta);
+    if (credit === 'held') session.selectionCredit = 'held';
     if (options.confirm && code) session.awaitingConfirm = true;
     tabSessions.set(activeTabId, session);
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp, options.confirm, options.captured?.meta);
+  beginCaptureOnActiveTab(win, code, sourceApp, options.confirm, options.captured?.meta, credit);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -932,7 +939,9 @@ app.whenReady().then(() => {
     if (!win || !session) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
-      if (!allowSelectedCodePrompt()) return;
+      const credit = takeSelectionCredit();
+      if (credit === null) return;
+      if (credit === 'held') session.selectionCredit = 'held';
       session.awaitingConfirm = false;
     }
     void runReview(win, session, opts);

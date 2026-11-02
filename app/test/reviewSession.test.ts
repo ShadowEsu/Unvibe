@@ -474,3 +474,80 @@ test('question allowance refusals keep the explanation and use the existing plan
   assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1, 'refusals do not consume a question position');
   assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION/);
 });
+
+/** A capture in a trial build: the app took one selection credit before the request (main.ts takeSelectionCredit). */
+function capturedWithCredit(level: ReviewSession['level']): ReviewSession {
+  assert.equal(store().consumeBetaSelectedCodePrompt().ok, true);
+  return { ...session(level), selectionCredit: 'held' };
+}
+const creditsUsed = () => store().betaSelectedCodeUsage().used;
+
+test('REG-83: a refused or broken explanation gives its selection credit back; a finished one keeps it', async () => {
+  const { win } = panel();
+  const refusals: Array<[string, () => void]> = [
+    ['AI paused (streamed error)', () => { reviewEvents = [{ type: 'error', message: 'AI features are paused for maintenance. Back soon.' }]; }],
+    ['503 from the service', () => { reviewRefusal = { status: 503, body: { error: 'ai_paused', message: 'AI features are paused for maintenance. Back soon.' } }; }],
+    ['a stream cut off before done', () => { reviewEvents = [{ type: 'token', text: 'Half an' }]; }],
+  ];
+  for (const [label, refuse] of refusals) {
+    const before = creditsUsed();
+    const s = capturedWithCredit('beginner');
+    assert.equal(creditsUsed(), before + 1);
+    refuse();
+    try {
+      await runReview(win, s, { level: 'beginner' });
+    } finally {
+      reviewEvents = null;
+      reviewRefusal = null;
+    }
+    assert.equal(creditsUsed(), before, `${label}: the credit is back`);
+    assert.equal(s.selectionCredit, 'returned', label);
+  }
+
+  const before = creditsUsed();
+  const s = capturedWithCredit('beginner');
+  await runReview(win, s, { level: 'beginner' });
+  assert.equal(creditsUsed(), before + 1, 'an explanation that arrives uses its credit');
+  assert.equal(s.selectionCredit, undefined);
+  // Later runs on the same capture (another depth, a follow-up) neither take nor give back a credit.
+  reviewRefusal = { status: 503, body: { error: 'ai_paused', message: 'Paused.' } };
+  try {
+    await runReview(win, s, { level: 'advanced' });
+    await runReview(win, s, { level: 'advanced', question: 'Why?' });
+  } finally {
+    reviewRefusal = null;
+  }
+  assert.equal(creditsUsed(), before + 1);
+});
+
+test('REG-83: trying again after a refund takes the credit again, and is refused once credits are used up', async () => {
+  const { win, events } = panel();
+  const before = creditsUsed();
+  const s = capturedWithCredit('beginner');
+  reviewEvents = [{ type: 'error', message: 'Paused.' }];
+  try {
+    await runReview(win, s, { level: 'beginner' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.equal(creditsUsed(), before);
+  await runReview(win, s, { level: 'beginner' });
+  assert.equal(creditsUsed(), before + 1, 'the retry that explained paid for it');
+  assert.equal(s.selectionCredit, undefined);
+
+  // Credits used up while a refunded capture waits: its retry sends nothing and says why.
+  const t = capturedWithCredit('beginner');
+  reviewEvents = [{ type: 'error', message: 'Paused.' }];
+  try {
+    await runReview(win, t, { level: 'beginner' });
+  } finally {
+    reviewEvents = null;
+  }
+  while (store().consumeBetaSelectedCodePrompt().ok) { /* use up the rest */ }
+  received.length = 0;
+  events.length = 0;
+  await runReview(win, t, { level: 'beginner' });
+  assert.equal(reviewBodies().length, 0, 'no request without a credit');
+  assert.match(String(events.find((ev) => ev.type === 'error')?.message), /selected-code prompts/);
+  assert.equal(t.selectionCredit, 'returned');
+});
