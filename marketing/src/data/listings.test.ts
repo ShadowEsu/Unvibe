@@ -20,7 +20,12 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://foundermag.co",
   "https://krispitech.com",
   "https://vibecoding.app",
+  "https://strategic-flow-audit.replit.app",
+  "https://www.f6s.com",
 ];
+
+/** Directories whose required homepage link shows as "Listing in progress" until the listing exists. */
+const ALLOWED_PENDING_ORIGINS = ["https://startupfa.me", "https://fazier.com"];
 
 const BADGE_LIMIT_BYTES = 50 * 1024;
 
@@ -36,6 +41,14 @@ describe("footer listings", () => {
   it("shows no directory where Unvibe isn't listed yet (Security R-4)", () => {
     const shown = listingLinks.map((link) => new URL(link.href).origin);
     for (const pending of pendingBacklinks) assert.equal(shown.includes(new URL(pending.href).origin), false, pending.name);
+  });
+
+  it("links to pending directories only from their allowlisted homepages, over https", () => {
+    for (const { name, href } of pendingBacklinks) {
+      const url = new URL(href);
+      assert.equal(url.protocol, "https:", name);
+      assert.ok(ALLOWED_PENDING_ORIGINS.includes(url.origin), `${name}: ${url.origin} is not in the pending allowlist`);
+    }
   });
 
   it(`keeps every badge file under ${BADGE_LIMIT_BYTES / 1024} KB (Security R-7)`, () => {
