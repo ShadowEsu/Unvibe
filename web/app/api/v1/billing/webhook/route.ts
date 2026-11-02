@@ -46,9 +46,18 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return Response.json({ error: 'invalid_signature' }, { status: 400 });
   }
-  // A 200 so Stripe stops retrying: an event from the other mode than this key is never ours to apply.
-  if (event.livemode !== (keyMode === 'live')) return Response.json({ ignored: 'livemode_mismatch' });
   const store = getBillingStore();
+  // Security L5: an event from the other mode than the admitted key is never ours to apply. It is
+  // acknowledged with a 200 so Stripe stops retrying, logged and audited, and never claimed or processed.
+  if (event.livemode !== (keyMode === 'live')) {
+    console.error(`[billing] webhook ${event.type} ${event.id} ignored: livemode ${event.livemode} does not match the ${keyMode} key`);
+    try {
+      await store.recordAudit(null, null, 'webhook.livemode_mismatch', { eventId: event.id, eventType: event.type, eventLivemode: event.livemode, keyMode });
+    } catch (error) {
+      console.error(`[billing] webhook ${event.id} livemode audit failed: ${errorSummary(error)}`);
+    }
+    return Response.json({ ignored: 'livemode_mismatch' });
+  }
   let revokeOnly = false;
   if (paymentsLocked() && !revokesAccess(event.type)) {
     const downgrades = event.type === 'customer.subscription.updated' || event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';

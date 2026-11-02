@@ -4,7 +4,7 @@ import test from 'node:test';
 import Stripe from 'stripe';
 import { POST as webhook } from '../app/api/v1/billing/webhook/route';
 import { getBillingStore } from '../src/billing/store';
-import { getStripe } from '../src/billing/stripe';
+import { getStripe, paymentsLocked } from '../src/billing/stripe';
 
 // Real route + memory store. Test-mode key; the Stripe client's methods a test needs are replaced
 // on the cached client, so no request leaves the machine.
@@ -122,15 +122,59 @@ test('while payments are locked, a refund is still processed', async () => {
   });
 });
 
-test('a live-mode event reaching a test-key deployment is acknowledged and never applied', async () => {
+// Security L5: an event whose livemode differs from the admitted key's mode is acknowledged (a 200, so
+// Stripe stops retrying), logged and audited, and never claimed or processed. Both directions.
+async function deliverOtherMode(livemode: boolean) {
   const store = getBillingStore();
   const workspace = await store.ensurePersonalWorkspace(randomUUID());
-  getStripe().subscriptions.retrieve = activeProSubscription(workspace.id);
-  const object = { id: `sub_${randomUUID()}`, object: 'subscription' };
-  const response = await post({ id: `evt_${randomUUID()}`, type: 'customer.subscription.created', livemode: true, data: { object } });
+  const stripe = getStripe();
+  let retrieved = 0;
+  const active = activeProSubscription(workspace.id);
+  stripe.subscriptions.retrieve = (async (id: string) => { retrieved += 1; return active(id); }) as unknown as typeof stripe.subscriptions.retrieve;
+  const event = { id: `evt_${randomUUID()}`, type: 'customer.subscription.created', livemode, data: { object: { id: `sub_${randomUUID()}`, object: 'subscription' } } };
+  const audits: { action: string; metadata?: Record<string, unknown> }[] = [];
+  const recordAudit = store.recordAudit.bind(store);
+  store.recordAudit = async (userId, workspaceId, action, metadata) => { audits.push({ action, metadata }); return recordAudit(userId, workspaceId, action, metadata); };
+  const logged: string[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args.join(' ')); };
+  let response: Response;
+  try {
+    response = await post(event);
+  } finally {
+    console.error = original;
+    store.recordAudit = recordAudit;
+  }
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ignored: 'livemode_mismatch' });
-  assert.equal((await store.subscriptionByWorkspaceId(workspace.id))?.plan ?? 'free', 'free');
+  assert.equal(retrieved, 0, 'no Stripe call for an event of the other mode');
+  assert.equal((await store.subscriptionByWorkspaceId(workspace.id))?.plan ?? 'free', 'free', 'nothing granted');
+  assert.equal(await store.claimWebhook(event.id, event.type), 'claimed', 'never claimed, so never processed');
+  const keyMode = livemode ? 'test' : 'live';
+  assert.deepEqual(audits, [{ action: 'webhook.livemode_mismatch', metadata: { eventId: event.id, eventType: event.type, eventLivemode: livemode, keyMode } }]);
+  assert.deepEqual(logged, [`[billing] webhook ${event.type} ${event.id} ignored: livemode ${livemode} does not match the ${keyMode} key`]);
+}
+
+test('a live-mode event reaching a test-key deployment is acknowledged, logged and audited, and never applied', async () => {
+  await deliverOtherMode(true);
+});
+
+// An unlocked live deployment (Production, UNVIBE_CHECKOUT_LIVE=1), so only the livemode check stops it.
+test('a test-mode event reaching an open live-key deployment is acknowledged, logged and audited, and never applied', async () => {
+  const env = { key: process.env.STRIPE_SECRET_KEY, vercel: process.env.VERCEL_ENV, live: process.env.UNVIBE_CHECKOUT_LIVE };
+  process.env.STRIPE_SECRET_KEY = 'rk_live_fake';
+  process.env.VERCEL_ENV = 'production';
+  process.env.UNVIBE_CHECKOUT_LIVE = '1';
+  try {
+    assert.equal(paymentsLocked(), false, 'purchases are open');
+    await deliverOtherMode(false);
+  } finally {
+    process.env.STRIPE_SECRET_KEY = env.key;
+    if (env.vercel === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = env.vercel;
+    if (env.live === undefined) delete process.env.UNVIBE_CHECKOUT_LIVE;
+    else process.env.UNVIBE_CHECKOUT_LIVE = env.live;
+  }
 });
 
 test('a delivery that arrives while the first is still processing gets 409 so Stripe retries; a completed one is a 200 duplicate', async () => {
