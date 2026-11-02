@@ -16,6 +16,11 @@ interface Props {
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const SUPPORT_MAIL = 'support@unvibe.site';
+// Dates render the same on the server and in the browser, so React hydration never sees two
+// different texts (React #418/#425 on /plan, sweep 2 Nov). Periods end and allowances reset on
+// UTC boundaries, so the day is the UTC day.
+const UTC_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const formatDay = (iso: string): string => UTC_DAY.format(new Date(iso));
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
@@ -219,14 +224,15 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
         <div><span>Current plan</span><strong>{overview.subscription.plan === 'teams' ? 'Teams' : overview.subscription.plan === 'pro' ? 'Pro' : 'Free'}</strong></div>
         <div><span>Billing interval</span><strong>{isLifetime ? 'Lifetime' : (overview.subscription.interval ?? 'No billing')}</strong></div>
         <div><span>Status</span><strong>{overview.subscription.plan === 'free' ? 'Ready' : overview.subscription.status.replaceAll('_', ' ')}</strong></div>
-        <div><span>{isLifetime ? 'Access' : overview.subscription.cancelAtPeriodEnd ? 'Access through' : 'Renews'}</span><strong>{isLifetime ? 'Never renews · paid once' : (overview.subscription.currentPeriodEnd ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString() : 'Not applicable')}</strong></div>
+        {/* Complimentary Pro (welcome, gift, referral, promo) is `trialing` and never charges: it ends, it doesn't renew. */}
+        <div><span>{isLifetime ? 'Access' : overview.subscription.cancelAtPeriodEnd || overview.subscription.status === 'trialing' ? 'Access through' : 'Renews'}</span><strong>{isLifetime ? 'Never renews · paid once' : (overview.subscription.currentPeriodEnd ? formatDay(overview.subscription.currentPeriodEnd) : 'Not applicable')}</strong></div>
         <div><span>Workspace role</span><strong>{overview.workspace.role}</strong></div>
         {overview.canManageBilling && overview.hasBillingAccount && !isLifetime && <button className="btn btn--secondary" onClick={() => void manageBilling()} disabled={busy}>Manage billing</button>}
       </section>
 
       <section className="usage-panel" aria-labelledby="usage-title">
         <h2 id="usage-title">This month</h2>
-        <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong></div><progress value={line.used} max={line.limit} /><small>Resets {new Date(line.resetsAt).toLocaleDateString()}</small></div>)}</div>
+        <div className="usage-grid">{overview.usage.map((line) => <div className="usage-item" key={line.kind}><div><span>{line.kind.replaceAll('_', ' ')}</span><strong>{line.used} / {line.limit}</strong></div><progress value={line.used} max={line.limit} /><small>Resets {formatDay(line.resetsAt)}</small></div>)}</div>
       </section>
 
       {!isLifetime && <>
