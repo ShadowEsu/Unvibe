@@ -243,14 +243,16 @@ test('every payload the size check lets through is held under one account\'s dai
   };
   for (const unit of ['x', '漢', '😀']) {
     const code = fill(unit);
-    for (const question of [undefined, '漢'.repeat(MAX_QUESTION_CHARS)]) {
-      const payload: ReviewRequestPayload = { scope: 'selection', level: 'expert', variant: 'different', context: context(code), question };
+    // The longest question, and "More detail" sending back the longest short answer (the prompt keeps 1,500 characters).
+    const extras: Array<Partial<ReviewRequestPayload>> = [{}, { question: '漢'.repeat(MAX_QUESTION_CHARS) }, { detail: 'full', shortAnswer: '😀'.repeat(2_000) }, { detail: 'full', shortAnswer: '漢'.repeat(2_000) }];
+    for (const extra of extras) {
+      const payload: ReviewRequestPayload = { scope: 'selection', level: 'expert', variant: 'different', context: context(code), ...extra };
       assert.equal(payloadSizeError(payload), null, `${unit} is accepted at its largest`);
       const held = Math.max(
         worstCaseNanoUsd(PRICES, buildSystemPrompt(payload), buildUserPrompt(payload), 2048),
         worstCaseNanoUsd(PRICES, buildComprehensionPrompt(payload).system, buildComprehensionPrompt(payload).user, 2048),
       );
-      assert.ok(held <= ACCOUNT_DAY_CAP_NANO_USD, `${unit} with question=${Boolean(question)} holds $${held / 1e9}`);
+      assert.ok(held <= ACCOUNT_DAY_CAP_NANO_USD, `${unit} with ${JSON.stringify(Object.keys(extra))} holds $${held / 1e9}`);
     }
     // One more unit is refused as too much code (413), before anything is reserved.
     const over = payloadSizeError({ scope: 'selection', level: 'expert', context: context(code + unit) });
