@@ -14,7 +14,7 @@ export default function AccountDeletionPage() {
   return (
     <LegalLayout
       title="Deleting your account"
-      updated="July 2026"
+      updated="November 2026"
       intro="You can delete your account at any time and remove your data from your device and our servers. Here is exactly what happens when you do."
     >
       <LegalSection heading="How to delete">
@@ -27,6 +27,7 @@ export default function AccountDeletionPage() {
       <LegalSection heading="What deletion does">
         <ul className="list-disc space-y-2 pl-5">
           <li>Removes your user record and all your learning events from the backend.</li>
+          <li>Keeps only a one-way fingerprint of your email for 12 months, so the same address can&apos;t start another free trial.</li>
           <li>Revokes your authentication tokens, so previous tokens stop working.</li>
           <li>Wipes your local learning store and credentials on the device.</li>
           <li>Returns the app to a clean, signed-out state.</li>
