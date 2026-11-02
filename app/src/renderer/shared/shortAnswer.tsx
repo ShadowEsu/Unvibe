@@ -166,14 +166,14 @@ export function ShortAnswer({ text, streaming = false, status = 'Reading your se
   );
 }
 
-/** True for the skeleton's crossfade out, from the moment waiting ends. */
+/** True for the skeleton's crossfade out, from the moment waiting ends. Reduced motion: none, the text replaces it at once. */
 function useSkeletonExit(waiting: boolean): boolean {
   const [leaving, setLeaving] = useState(false);
   const wasWaiting = useRef(waiting);
   useEffect(() => {
     const ended = wasWaiting.current && !waiting;
     wasWaiting.current = waiting;
-    if (!ended) return;
+    if (!ended || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     setLeaving(true);
     const timer = window.setTimeout(() => setLeaving(false), EXIT_MS);
     return () => {
