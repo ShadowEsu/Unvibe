@@ -30,6 +30,9 @@ import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
 import { selectProvider } from '../src/ai';
 import { trialInstallFromRequest } from '../src/lib/trialAccess';
 import { ANTHROPIC_MODEL } from '../src/ai/anthropic';
+import { buildComprehensionPrompt, buildSystemPrompt, buildUserPrompt } from '../src/ai/prompt';
+import { MAX_CONTEXT_BYTES, MAX_CONTEXT_CHARS, MAX_QUESTION_CHARS, payloadSizeError } from '../src/lib/reviewLimits';
+import type { ReviewRequestPayload } from '../src/ai/protocol';
 
 /** A provider double that records calls and answers with fixed usage (or none, or a failure). */
 class SpyProvider implements MeterableProvider {
@@ -216,6 +219,43 @@ test('the account key is a hash that keeps users and installs apart', () => {
   assert.match(spendAccount('user', 'abc'), /^[0-9a-f]{64}$/);
   assert.notEqual(spendAccount('user', 'abc'), spendAccount('install', 'abc'));
   assert.ok(!spendAccount('user', 'abc').includes('abc'));
+});
+
+test('the budget is $25 a month, $5 a day and $1 per account a day: a fifth of each level above it', () => {
+  assert.equal(MONTH_CAP_NANO_USD, 25_000_000_000);
+  assert.equal(DAY_CAP_NANO_USD, 5_000_000_000);
+  assert.equal(ACCOUNT_DAY_CAP_NANO_USD, 1_000_000_000);
+  assert.equal(ACCOUNT_DAY_CAP_NANO_USD * 5, DAY_CAP_NANO_USD);
+  assert.equal(DAY_CAP_NANO_USD * 5, MONTH_CAP_NANO_USD);
+});
+
+test('every payload the size check lets through is held under one account\'s daily share, so it is never refused as a spent limit', () => {
+  const context = (code: string) => ({ language: 'typescript', projectStructure: [], imports: [], code });
+  // The largest of each kind the size check accepts: ASCII at the character cap, 3-byte CJK and
+  // 4-byte emoji at the byte cap, each with the longest question in the longest script.
+  const fill = (unit: string) => {
+    const overhead = Buffer.byteLength(JSON.stringify(context('')));
+    const bytes = Buffer.byteLength(unit);
+    const chars = unit.length;
+    let n = Math.min(Math.floor((MAX_CONTEXT_BYTES - overhead) / bytes), Math.floor((MAX_CONTEXT_CHARS - overhead) / chars));
+    while (payloadSizeError({ scope: 'selection', level: 'expert', context: context(unit.repeat(n + 1)) }) === null) n += 1;
+    return unit.repeat(n);
+  };
+  for (const unit of ['x', '漢', '😀']) {
+    const code = fill(unit);
+    for (const question of [undefined, '漢'.repeat(MAX_QUESTION_CHARS)]) {
+      const payload: ReviewRequestPayload = { scope: 'selection', level: 'expert', variant: 'different', context: context(code), question };
+      assert.equal(payloadSizeError(payload), null, `${unit} is accepted at its largest`);
+      const held = Math.max(
+        worstCaseNanoUsd(PRICES, buildSystemPrompt(payload), buildUserPrompt(payload), 2048),
+        worstCaseNanoUsd(PRICES, buildComprehensionPrompt(payload).system, buildComprehensionPrompt(payload).user, 2048),
+      );
+      assert.ok(held <= ACCOUNT_DAY_CAP_NANO_USD, `${unit} with question=${Boolean(question)} holds $${held / 1e9}`);
+    }
+    // One more unit is refused as too much code (413), before anything is reserved.
+    const over = payloadSizeError({ scope: 'selection', level: 'expert', context: context(code + unit) });
+    assert.equal(over?.status, 413, unit);
+  }
 });
 
 test('the Supabase store sends the account hash to the account RPCs, and Try (no account) to the month RPC', async () => {
