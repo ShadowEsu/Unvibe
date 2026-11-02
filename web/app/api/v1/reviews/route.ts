@@ -1,4 +1,5 @@
-import { selectProvider, buildSystemPrompt, buildUserPrompt } from '@/ai';
+import { selectProvider, buildSystemPrompt, buildUserPrompt, isShortExplanation } from '@/ai';
+import { SHORT_MAX_TOKENS } from '@/ai/anthropic';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
@@ -25,7 +26,8 @@ export async function POST(req: Request): Promise<Response> {
 
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
-  const provider = selectProvider(userId ? spendAccount('user', userId) : trialInstall ? spendAccount('install', trialInstall) : undefined);
+  const account = userId ? spendAccount('user', userId) : trialInstall ? spendAccount('install', trialInstall) : undefined;
+  const provider = selectProvider(account, isShortExplanation(payload) ? SHORT_MAX_TOKENS : undefined);
   if (!provider) return Response.json({ error: 'The AI service is unavailable. Try again later.' }, { status: 503 });
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();

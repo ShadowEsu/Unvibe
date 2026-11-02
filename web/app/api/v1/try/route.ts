@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { selectProvider } from '@/ai';
+import { SHORT_MAX_TOKENS } from '@/ai/anthropic';
 import { AiPausedError } from '@/ai/spendMeter';
 import {
   TRY_ALLOWED_ORIGINS,
@@ -98,7 +99,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!checked.ok) return Response.json({ error: checked.error }, { status: 400, headers });
 
   const refuse = ({ status, error }: Refusal) => Response.json({ error }, { status, headers });
-  const provider = selectProvider();
+  const provider = selectProvider(undefined, SHORT_MAX_TOKENS);
   // Never pass off mock output as a real explanation.
   if (!provider || provider.mock) return refuse(UNAVAILABLE);
 
