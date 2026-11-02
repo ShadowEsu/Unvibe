@@ -19,7 +19,7 @@ export default async function TermsPage() {
   return (
     <LegalLayout
       title="Terms of use"
-      updated="October 2026"
+      updated="November 2026"
       intro="Plain-language terms for using Unvibe during its beta. Using the product means you agree to these. This is a summary and may be superseded by a full agreement as the product matures."
     >
       <LegalSection heading="The service">
@@ -72,11 +72,12 @@ export default async function TermsPage() {
 
       <LegalSection heading="Payments and cancellation">
         <p>
-          {termsNote ? `${termsNote} ` : null}Free use needs no card. Pro is billed through Stripe, monthly or yearly, and
-          renews until you cancel. You can cancel a
-          subscription at any time from the Plan page in the app. Paid access continues
-          until the end of the period you already paid for, then your account returns to
-          the Free plan. Prices are shown in USD before checkout.
+          {termsNote ? `${termsNote} ` : null}Free use needs no card. Pro is sold by Unvibe and
+          billed through Stripe, monthly or yearly. It renews automatically until you cancel.
+          You can cancel a subscription at any time from the Plan page in the app. Paid access
+          continues until the end of the period you already paid for, then your account returns
+          to the Free plan. Prices are shown in USD before checkout. Tax may be added at checkout
+          where it applies. Refunds follow the <a href="/refund">refund policy</a>.
         </p>
       </LegalSection>
 
