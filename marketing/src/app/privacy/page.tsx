@@ -115,7 +115,10 @@ export default function PrivacyPage() {
           encrypted in transit. Backend at-rest and backup settings must be verified for
           the selected staging/production infrastructure. You can access and delete your
           data. See <a href="/data-controls">data controls</a> and{" "}
-          <a href="/account-deletion">account deletion</a>. We use no advertising
+          <a href="/account-deletion">account deletion</a>. When you delete your account, we also
+          delete your sign-in record. We keep one thing: a one-way fingerprint of your email address
+          (a keyed hash, not the address itself) for 12 months, so the same address can&apos;t start
+          another free Pro trial. It can&apos;t be turned back into your email. We use no advertising
           trackers.
         </p>
         <p>

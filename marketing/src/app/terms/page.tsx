@@ -72,7 +72,8 @@ export default async function TermsPage() {
 
       <LegalSection heading="Payments and cancellation">
         <p>
-          {termsNote ? `${termsNote} ` : null}Free use needs no card. Pro is sold by Unvibe and
+          {termsNote ? `${termsNote} ` : null}Free use needs no card. One free Pro trial per email
+          address. Pro is sold by Unvibe and
           billed through Stripe, monthly or yearly, and includes 200 AI explanations a month. It
           renews automatically until you cancel.
           You can cancel a subscription at any time from the Plan page in the app. Paid access
