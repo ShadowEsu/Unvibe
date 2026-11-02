@@ -12,6 +12,7 @@ import {
   savePromoCode,
   type RedeemOutcome,
 } from "@/lib/promoRedeem";
+import { SIGN_IN_DID_NOT_FINISH, signInReturnFailed, withoutSignInError } from "@/lib/oauthReturn";
 
 function sessionStore(): Storage | null {
   try {
@@ -47,6 +48,7 @@ export default function RedeemPage() {
   const [emailError, setEmailError] = useState("");
   const emailField = useRef<HTMLInputElement>(null);
   const [authMessage, setAuthMessage] = useState("");
+  const [signInFailed, setSignInFailed] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [working, setWorking] = useState(false);
@@ -71,10 +73,14 @@ export default function RedeemPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const failed = signInReturnFailed(window.location.search, window.location.hash);
     const pending = pendingPromoCode(window.location.search, sessionStore());
     setCode(pending.code);
-    if (pending.cleanSearch !== null) {
-      window.history.replaceState({}, "", `${window.location.pathname}${pending.cleanSearch}${window.location.hash}`);
+    // Cancel at Google, an expired email link or any sign-in error: say so, show none of the provider's text.
+    if (failed) setSignInFailed(true);
+    if (pending.cleanSearch !== null || failed) {
+      const search = withoutSignInError(pending.cleanSearch ?? window.location.search);
+      window.history.replaceState({}, "", `${window.location.pathname}${search}${failed ? "" : window.location.hash}`);
     }
     if (!client) {
       setBootstrapping(false);
@@ -131,6 +137,7 @@ export default function RedeemPage() {
     if (!client) return;
     setAuthBusy(true);
     setAuthMessage("");
+    setSignInFailed(false);
     try {
       savePromoCode(code, sessionStore());
       const { error } = await client.auth.signInWithOAuth({
@@ -214,6 +221,14 @@ export default function RedeemPage() {
               {authBusy ? "Opening Google…" : "Continue with Google"}
             </button>
             {authMessage && <p className="redeem-note redeem-note--error" role="alert">{authMessage}</p>}
+            {signInFailed && (
+              <p className="redeem-note redeem-note--error" role="alert">
+                {SIGN_IN_DID_NOT_FINISH}{" "}
+                <button className="redeem-link redeem-link--inline" type="button" onClick={() => void signInWithGoogle()} disabled={!configured || authBusy}>
+                  Try again with Google
+                </button>
+              </p>
+            )}
             <div className="redeem-divider">or email a link</div>
             <form noValidate onSubmit={submitMagicLink}>
               <label className="redeem-label" htmlFor="redeem-email">Email</label>

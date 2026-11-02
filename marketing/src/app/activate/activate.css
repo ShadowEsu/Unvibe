@@ -282,6 +282,24 @@
   font-weight: 600;
 }
 
+/* The retry inside the "Sign-in did not finish." note. */
+.activate-retry {
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.activate-retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 /* Between the email field and its button. */
 .activate-note--field {
   margin: -0.25rem 0 0.75rem;

@@ -156,6 +156,11 @@
   cursor: pointer;
 }
 
+/* The retry inside the "Sign-in did not finish." note takes the note's colour. */
+.redeem-link--inline {
+  color: inherit;
+}
+
 .redeem-note {
   margin: 0.8rem 0 0;
   color: var(--ink-muted);
