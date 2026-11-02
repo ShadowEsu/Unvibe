@@ -72,7 +72,6 @@ export const listingLinks = [
   { name: "KrispiTech product showcase", href: "https://krispitech.com/the-hidden-cost-of-vibe-coding-and-how-unvibe-helps-you-actually-own-your-codebase/" },
   { name: "vibecoding.app", href: "https://vibecoding.app/tools/unvibe" },
   { name: "ToolIndex on Replit", href: "https://strategic-flow-audit.replit.app/directory/unvibe-185" },
-  { name: "F6S", href: "https://www.f6s.com/company/unvibe" },
 ] as const;
 
 /**

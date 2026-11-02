@@ -21,7 +21,6 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://krispitech.com",
   "https://vibecoding.app",
   "https://strategic-flow-audit.replit.app",
-  "https://www.f6s.com",
 ];
 
 /** Directories whose required homepage link shows as "Listing in progress" until the listing exists. */
