@@ -73,7 +73,8 @@ export default async function TermsPage() {
       <LegalSection heading="Payments and cancellation">
         <p>
           {termsNote ? `${termsNote} ` : null}Free use needs no card. Pro is sold by Unvibe and
-          billed through Stripe, monthly or yearly. It renews automatically until you cancel.
+          billed through Stripe, monthly or yearly, and includes 200 AI explanations a month. It
+          renews automatically until you cancel.
           You can cancel a subscription at any time from the Plan page in the app. Paid access
           continues until the end of the period you already paid for, then your account returns
           to the Free plan. Prices are shown in USD before checkout. Tax may be added at checkout
