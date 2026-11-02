@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadLink } from "@/components/paper/DownloadLink";
+import { THANKS_PATH } from "@/lib/downloadThanks";
 
 const links = [
   { label: "Product", href: "/#product" },
@@ -37,7 +38,8 @@ export function Nav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (pathname?.startsWith("/activate")) return null;
+  // /download/thanks has only the product mark at the top (Design spec), so no bar there either.
+  if (pathname?.startsWith("/activate") || pathname?.startsWith(THANKS_PATH)) return null;
 
   return (
     <header

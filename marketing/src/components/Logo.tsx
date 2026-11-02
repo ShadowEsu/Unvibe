@@ -6,12 +6,15 @@ interface LogoProps {
   className?: string;
   showWordmark?: boolean;
   label?: string;
+  /** The mascot's height in CSS px. */
+  size?: number;
 }
 
 export function Logo({
   className,
   showWordmark = true,
   label = "Unvibe home",
+  size = 30,
 }: LogoProps) {
   return (
     <span
@@ -19,7 +22,7 @@ export function Logo({
       role="img"
       aria-label={label}
     >
-      <Vibe size={30} follow={false} className="paper-logo__vibe" />
+      <Vibe size={size} follow={false} className="paper-logo__vibe" />
       {showWordmark && (
         <span className="paper-logo__word">Unvibe</span>
       )}

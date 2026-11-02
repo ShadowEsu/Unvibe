@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { DOWNLOADED_EVENT } from "@/lib/downloadTracking";
+import { THANKS_PATH } from "@/lib/downloadThanks";
 import { GIFT_CODE, markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
 
-const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
+// /download/thanks already shows the first-open steps, so the toast never opens over them.
+const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate", THANKS_PATH];
 
 /**
  * One small email ask. Opens when a friend's invite link brings you here (with an app gift code,
@@ -40,14 +42,18 @@ export function ReminderToast() {
     const onDownload = () => {
       if (asked) return;
       asked = true;
-      try { window.localStorage.setItem("unvibe.reminderAsked", "1"); } catch { /* storage blocked */ }
-      window.setTimeout(() => setMode((current) => (current === "closed" ? "download" : current)), 900);
+      window.setTimeout(() => {
+        // A download click now usually opens /download/thanks first; the ask is kept for a later page.
+        if (window.location.pathname.startsWith(THANKS_PATH)) return;
+        try { window.localStorage.setItem("unvibe.reminderAsked", "1"); } catch { /* storage blocked */ }
+        setMode((current) => (current === "closed" ? "download" : current));
+      }, 900);
     };
     window.addEventListener(DOWNLOADED_EVENT, onDownload);
     return () => window.removeEventListener(DOWNLOADED_EVENT, onDownload);
   }, []);
 
-  if (mode === "closed") return null;
+  if (mode === "closed" || pathname.startsWith(THANKS_PATH)) return null;
   const invited = Boolean(ref) && !refUsed();
   const giftCode = GIFT_CODE.test(ref) && (invited || mode === "invited") ? ref : "";
 

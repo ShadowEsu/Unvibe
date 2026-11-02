@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { track } from "@/lib/analytics";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
+import { THANKS_PATH } from "@/lib/downloadThanks";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 
 /**
@@ -32,7 +33,7 @@ export function MobileDownloadBar() {
     };
   }, [pathname]);
 
-  if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist")) return null;
+  if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist") || pathname?.startsWith(THANKS_PATH)) return null;
 
   // An <aside>, so the bar sits in a landmark once it shows (axe `region`, seen at 390 with the try-it answer open).
   return (

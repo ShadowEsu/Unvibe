@@ -162,7 +162,9 @@ export const BETA_WINDOWS_DOWNLOAD_URL =
 export const BETA_MAC_DOWNLOAD_URL =
   `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/${BETA_INSTALL_ASSET}`;
 /** Older Intel Macs need the x64 build; the Apple silicon one cannot run there. */
-export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-arm64.dmg", "mac-x64.dmg");
+export const BETA_MAC_INTEL_ASSET = BETA_INSTALL_ASSET.replace("mac-arm64.dmg", "mac-x64.dmg");
+export const BETA_MAC_INTEL_DOWNLOAD_URL =
+  `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/${BETA_MAC_INTEL_ASSET}`;
 
 /** Private beta installer. Downloads the portable Windows exe, which uses the free plan. */
 export function betaWindowsInstallScript(): string {

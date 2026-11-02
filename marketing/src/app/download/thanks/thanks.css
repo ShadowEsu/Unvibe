@@ -1,0 +1,304 @@
+/* /download/thanks (Design spec thanks-for-downloading-2026-11-02): one quiet paper page, the mark,
+   a status pill, a serif headline, three illustrated steps. Motion is transform and opacity only, and
+   without JavaScript (no `js` class) or with reduced motion everything is at its final state. */
+
+html:has(.thanks-page),
+html:has(.thanks-page) body {
+  background: var(--u-sheet);
+}
+/* No dusk photo behind the paper: nothing to fetch, and the h1 stays the largest paint. */
+html:has(.thanks-page) body::before,
+html:has(.thanks-page) body::after {
+  content: none;
+}
+
+.thanks-page {
+  --thanks-ink-2: #4a4842;
+  --thanks-ink-3: #66635b;
+  --thanks-hair: #e9e5d8;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--u-sheet);
+  color: var(--u-text);
+}
+
+.thanks-page__top {
+  display: flex;
+  justify-content: center;
+  padding: 32px 20px 0;
+}
+
+.thanks-page__mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 8px;
+  color: var(--u-text);
+  text-decoration: none;
+}
+.thanks-page__mark .paper-logo { gap: 8px; }
+.thanks-page__mark .paper-logo__word { font-size: 17px; line-height: 24px; color: var(--u-text); }
+
+.thanks-page__foot {
+  margin: 0;
+  padding: 40px 20px 32px;
+  color: var(--thanks-ink-3);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+}
+.thanks-page__foot .thanks__link { color: inherit; text-decoration-color: currentColor; }
+
+/* ── The content column ── */
+.thanks {
+  flex: 1;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1008px; /* a 960 px column plus the side padding */
+  margin: 0 auto;
+  padding: 96px 24px 48px;
+  text-align: center;
+}
+
+.thanks__pill {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--thanks-hair);
+  border-radius: 999px;
+  background: var(--u-card);
+  color: var(--thanks-ink-2);
+  /* 13 px: the site's floor for visible labels (system.css). */
+  font: 500 13px/16px var(--font-sans);
+}
+/* Both labels share one grid cell, so the pill is as wide as the longer one and never changes width. */
+.thanks__pill-face { display: grid; }
+.thanks__pill-layer {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 160ms var(--u-ease);
+}
+.thanks__pill-layer:not([data-on]) { opacity: 0; }
+.thanks__pill svg { flex: none; width: 12px; height: 12px; }
+.thanks__spin { animation: thanks-spin 900ms linear infinite; }
+.thanks__spin-track { stroke: #c9c4b4; }
+.thanks__spin-arc { stroke: var(--u-ink); }
+.thanks__spin-dot { fill: var(--u-ink); opacity: 0; }
+/* The spinner turns only while preparing, then stops for good. */
+.thanks__pill[data-state="started"] .thanks__spin { animation: none; }
+
+.thanks__title {
+  margin: 20px 0 0;
+  color: var(--u-text);
+  font-family: var(--font-serif);
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 60px;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.thanks__title span { color: var(--thanks-ink-2); }
+
+.thanks__lead { max-width: 620px; margin: 16px auto 0; }
+.thanks__line {
+  margin: 0;
+  color: var(--thanks-ink-2);
+  font-size: 17px;
+  line-height: 26px;
+  text-wrap: balance;
+}
+.thanks__sub {
+  margin: 4px 0 0;
+  color: var(--thanks-ink-3);
+  font-size: 14px;
+  line-height: 20px;
+}
+.thanks__primary { margin: 4px 0 8px; }
+
+/* Links: ink text with an accent underline; 4 px vertical padding makes every inline target 24 px tall. */
+.thanks__link {
+  padding: 4px 0;
+  border-radius: 4px;
+  color: var(--u-text);
+  text-decoration: underline;
+  text-decoration-color: var(--u-accent-ink);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 150ms var(--u-ease);
+}
+.thanks__link:hover { text-decoration-color: currentColor; }
+.thanks__nowrap { white-space: nowrap; }
+
+:is(.thanks__link, .thanks__switch, .thanks-page__mark):focus-visible {
+  outline: 2px solid var(--u-focus);
+  outline-offset: 2px;
+}
+
+/* ── Steps: one column below 1024 px (number beside the card), three equal cards above ── */
+.thanks__steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  margin: 64px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  transition: opacity 120ms var(--u-ease);
+}
+.thanks__steps[data-leaving] { opacity: 0; }
+
+.thanks__step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+}
+
+.thanks__num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--u-ink);
+  color: var(--u-sheet);
+  font: 600 14px/32px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.thanks__card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--thanks-hair);
+  border-radius: 20px;
+  background: var(--u-card);
+}
+
+.thanks__art {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+}
+.thanks__art--1 { background: #f3f9dc; }
+.thanks__art--2 { background: #eaf5fe; }
+.thanks__art--3 { background: #fff6d6; }
+
+.thanks-art { display: block; width: 56%; height: auto; }
+.thanks-art__label { fill: #141414; font: 600 11px var(--font-sans); }
+.thanks-art__label--small { font-size: 10px; }
+.thanks-art__label--quiet { fill: #4a4842; font-weight: 500; }
+.thanks-art__label--link { text-decoration: underline; }
+
+.thanks__cap {
+  margin: 0;
+  padding: 16px 18px 18px;
+  color: var(--u-text);
+  font-size: 16px;
+  line-height: 24px;
+}
+.thanks__cap b { font-weight: 600; overflow-wrap: anywhere; }
+/* The OS switch moves focus here, so the ring shows for pointer and keyboard alike. */
+.thanks__cap:focus { outline: 2px solid var(--u-focus); outline-offset: -4px; border-radius: 0 0 18px 18px; }
+
+@media (min-width: 1024px) {
+  .thanks__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .thanks__step { display: flex; flex-direction: column; align-items: center; }
+  .thanks__num { margin-bottom: 14px; }
+  .thanks__card { flex: 1; width: 100%; }
+  .thanks__art { aspect-ratio: 4 / 3; }
+  .thanks-art { width: 78%; }
+}
+
+.thanks__switch {
+  margin-top: 56px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--u-text);
+  cursor: pointer;
+  font: 500 15px/24px var(--font-sans);
+  text-decoration: underline;
+  text-decoration-color: var(--u-accent-ink);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms var(--u-ease);
+}
+.thanks__switch:hover { text-decoration-color: currentColor; }
+/* The switch needs JavaScript; without it the line above offers the Windows file instead. */
+html:not(.js) .thanks__switch { display: none; }
+
+.thanks__trouble {
+  margin: 16px 0 0;
+  color: var(--thanks-ink-3);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+@media (max-width: 639px) {
+  .thanks { padding: 56px 20px 32px; }
+  .thanks__title { font-size: 40px; line-height: 44px; }
+  /* Two forced lines only where they fit; narrower screens wrap naturally. */
+  .thanks__title br { display: none; }
+  .thanks__line { font-size: 16px; line-height: 24px; }
+  .thanks__steps { margin-top: 44px; }
+  .thanks__switch { margin-top: 40px; }
+}
+@media (max-width: 359px) {
+  .thanks__title { font-size: 34px; line-height: 38px; }
+}
+
+/* ── Motion ── */
+@keyframes thanks-spin { to { transform: rotate(360deg); } }
+@keyframes thanks-enter { from { opacity: 0; transform: translateY(8px); } }
+@keyframes thanks-fade { from { opacity: 0; } }
+@keyframes thanks-reveal { to { opacity: 1; } }
+
+/* With JS the page waits for the click token before showing which view it is (no visible swap), and
+   shows itself anyway after 3 s should the script never run. */
+.js .thanks:not([data-view]) .thanks__in { opacity: 0; animation: thanks-reveal 0s 3s forwards; }
+
+/* Enter once: pill 0, h1 50, line 100, cards 160 / 210 / 260 ms; all in by 540 ms. */
+.thanks[data-view]:not([data-switched]) .thanks__in {
+  animation: thanks-enter 280ms var(--u-ease) var(--thanks-delay, 0ms) both;
+}
+.thanks__title { --thanks-delay: 50ms; }
+.thanks__lead { --thanks-delay: 100ms; }
+.thanks__step:nth-child(1) { --thanks-delay: 160ms; }
+.thanks__step:nth-child(2) { --thanks-delay: 210ms; }
+.thanks__step:nth-child(3), .thanks__switch, .thanks__trouble { --thanks-delay: 260ms; }
+
+/* OS switch: the old grid fades out (120 ms, above), the new one in. */
+.thanks[data-switched] .thanks__steps { animation: thanks-fade 160ms var(--u-ease); }
+
+/* Art cues, once per card when it first comes on screen (data-cue), after the card has entered. */
+.thanks-art__pointer,
+.thanks-art__nudge,
+.thanks-art__ring { transform-box: fill-box; transform-origin: center; }
+@keyframes thanks-settle { from { opacity: 0; transform: translate(10px, 10px); } }
+@keyframes thanks-nudge { 50% { transform: translateX(12px); } }
+@keyframes thanks-ring { from { opacity: 0; transform: scale(1.15); } }
+.thanks__art[data-cue] .thanks-art__pointer--settle { animation: thanks-settle 360ms var(--u-ease-out) 300ms both; }
+.thanks__art[data-cue] .thanks-art__nudge { animation: thanks-nudge 400ms var(--u-ease) 300ms; }
+.thanks__art[data-cue] .thanks-art__ring { animation: thanks-ring 320ms var(--u-ease-out) 300ms both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .thanks[data-view]:not([data-switched]) .thanks__in,
+  .thanks[data-switched] .thanks__steps,
+  .thanks__art[data-cue] :is(.thanks-art__pointer--settle, .thanks-art__nudge, .thanks-art__ring) { animation: none; }
+  .thanks__steps,
+  .thanks__pill-layer,
+  .thanks__link,
+  .thanks__switch { transition: none; }
+  /* A still dot instead of the spinner. */
+  .thanks__spin { animation: none; }
+  .thanks__spin-track,
+  .thanks__spin-arc { opacity: 0; }
+  .thanks__spin-dot { opacity: 1; }
+}

@@ -8,6 +8,7 @@ export const ANALYTICS_EVENTS = [
   "download_cta_clicked",
   "download_cta_viewed",
   "install_help_viewed",
+  "download_thanks_viewed",
   "demo_started",
   "demo_completed",
   "depth_changed",

@@ -9,13 +9,18 @@
  *   the /explain pages: explain (the page's download section), explain_answer and explain_try
  *   (their Try it box, as try_it_answer and try_it), and seo_mac / seo_windows (the download on
  *   /code-explainer-mac and /code-explainer-windows).
+ *   A plain click on one of these opens /download/thanks, which starts the file (see
+ *   downloadThanks.ts); beta, the /beta install box, downloads in place. Modified clicks download.
  * - Opens the download page (/beta) instead: nav, mobile_bar, pricing, footer, releases, build,
  *   resources. Of these, only the DownloadLink buttons (nav, releases, build, resources) also
  *   fire DOWNLOADED_EVENT, as they always have.
  *
  * `download_cta_viewed {surface: "hero", platform}`: once per page view, hero CTA half visible.
  * `install_help_viewed {from, os_default}`: once per /install-help view, from home | beta | pricing |
- * installer | other; os_default (mac | windows) is the tab the first-open steps opened on.
+ * installer | thanks | other; os_default (mac | windows) is the tab the first-open steps opened on.
+ * `download_thanks_viewed {os, from, auto}`: once per /download/thanks view. os is mac | mac-intel |
+ * windows and from a DownloadSurface or other, both through the allowlists below (Security MUST-TD2);
+ * auto says whether the page started the download itself.
  */
 
 import { track } from "@/lib/analytics";
@@ -26,30 +31,61 @@ export const DOWNLOADED_EVENT = "unvibe:downloaded";
 
 export type DownloadPlatform = "mac" | "windows" | "other";
 
-export type DownloadSurface =
-  | "hero"
-  | "hero_other_os"
-  | "nav"
-  | "mobile_bar"
-  | "palette"
-  | "beta"
-  | "home_install"
-  | "investors"
-  | "home_cta"
-  | "try_it"
-  | "try_it_answer"
-  | "activate"
-  | "explain"
-  | "explain_answer"
-  | "explain_try"
-  | "seo_mac"
-  | "seo_windows"
-  | "pricing"
-  | "footer"
-  | "releases"
-  | "build"
-  | "resources"
-  | "redeem";
+// One list for the type and the allowlist that `?from=` on /download/thanks passes through.
+const DOWNLOAD_SURFACES = [
+  "hero",
+  "hero_other_os",
+  "nav",
+  "mobile_bar",
+  "palette",
+  "beta",
+  "home_install",
+  "investors",
+  "home_cta",
+  "try_it",
+  "try_it_answer",
+  "activate",
+  "explain",
+  "explain_answer",
+  "explain_try",
+  "seo_mac",
+  "seo_windows",
+  "pricing",
+  "footer",
+  "releases",
+  "build",
+  "resources",
+  "redeem",
+] as const;
+
+export type DownloadSurface = (typeof DOWNLOAD_SURFACES)[number];
+
+/** The three files a download button can start: Apple silicon Mac, Intel Mac, Windows. */
+export type ThanksOs = "mac" | "mac-intel" | "windows";
+
+// Maps, not object literals: the keys come from the URL, and `constructor` or `__proto__`
+// would otherwise resolve to Object.prototype members.
+const SURFACE_BY_NAME = new Map<string, DownloadSurface>(DOWNLOAD_SURFACES.map((surface) => [surface, surface]));
+const THANKS_OS_BY_NAME = new Map<string, ThanksOs>([
+  ["mac", "mac"],
+  ["mac-intel", "mac-intel"],
+  ["windows", "windows"],
+]);
+
+/** A `?from=` value as a known surface, or "other". Nothing else may reach an event, the page or a link. */
+export function downloadSurface(value: string | null): DownloadSurface | "other" {
+  return value === null ? "other" : SURFACE_BY_NAME.get(value) ?? "other";
+}
+
+/** A `?os=` value as one of the three files, or "other". */
+export function thanksOs(value: string | null): ThanksOs | "other" {
+  return value === null ? "other" : THANKS_OS_BY_NAME.get(value) ?? "other";
+}
+
+/** `download_thanks_viewed {os, from, auto}`; call once per /download/thanks view with allowlisted values. */
+export function trackDownloadThanksViewed(os: ThanksOs, from: DownloadSurface | "other", auto: boolean): void {
+  track("download_thanks_viewed", { os, from, auto });
+}
 
 /** A click on a download button or link. */
 export function trackDownloadClick(surface: DownloadSurface, platform: DownloadPlatform): void {
@@ -88,7 +124,7 @@ export function watchDownloadCtaView(element: Element, surface: DownloadSurface,
   return () => observer.disconnect();
 }
 
-export type InstallHelpSource = "home" | "beta" | "pricing" | "installer" | "other";
+export type InstallHelpSource = "home" | "beta" | "pricing" | "installer" | "thanks" | "other";
 
 // Maps, not object literals: the keys come from the URL, and `constructor` or `__proto__`
 // would otherwise resolve to Object.prototype members.
@@ -97,6 +133,7 @@ const INSTALL_HELP_SOURCES = new Map<string, InstallHelpSource>([
   ["beta", "beta"],
   ["pricing", "pricing"],
   ["installer", "installer"],
+  ["thanks", "thanks"],
 ]);
 
 /** Same-site pages that link to /install-help, by path. */

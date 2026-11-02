@@ -5,6 +5,7 @@ import { DownloadLink } from "@/components/paper/DownloadLink";
 import { track } from "@/lib/analytics";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
+import { thanksClick } from "@/lib/downloadThanks";
 import { detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
 const DIRECT_DOWNLOAD = { mac: BETA_MAC_DIRECT_DOWNLOAD, windows: BETA_WINDOWS_DIRECT_DOWNLOAD } as const;
@@ -34,7 +35,14 @@ export function GetUnvibe({ surface }: { surface: DownloadSurface }) {
   return (
     <div className="get-unvibe">
       <DownloadLink href={DIRECT_DOWNLOAD[device]} platform={device} surface={surface} />
-      <a className="paper-alt-link" href={DIRECT_DOWNLOAD[other]} onClick={() => trackDownloadClick(surface, other)}>
+      <a
+        className="paper-alt-link"
+        href={DIRECT_DOWNLOAD[other]}
+        onClick={(event) => {
+          trackDownloadClick(surface, other);
+          thanksClick(event, other, surface);
+        }}
+      >
         {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
       </a>
     </div>

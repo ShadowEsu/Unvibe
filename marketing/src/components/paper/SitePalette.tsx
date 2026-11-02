@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@/lib/analytics";
-import { BETA_INSTALL_COMMAND, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { BETA_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { trackDownloadClick } from "@/lib/downloadTracking";
+import { openThanks } from "@/lib/downloadThanks";
 
 interface Command {
   id: string;
@@ -32,8 +33,8 @@ function matches(haystack: string, query: string): boolean {
 export function siteCommands(push: (href: string) => void): Command[] {
   const go = (href: string) => () => push(href);
   return [
-    { id: "mac", label: "Download for Mac", hint: ".dmg · M1 or newer", keywords: "install get macos apple", run: () => { trackDownloadClick("palette", "mac"); window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
-    { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { trackDownloadClick("palette", "windows"); window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
+    { id: "mac", label: "Download for Mac", hint: ".dmg · M1 or newer", keywords: "install get macos apple", run: () => { trackDownloadClick("palette", "mac"); openThanks("mac", "palette", push); } },
+    { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { trackDownloadClick("palette", "windows"); openThanks("windows", "palette", push); } },
     { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
     { id: "home", label: "Home", hint: "/", run: go("/") },
     { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },

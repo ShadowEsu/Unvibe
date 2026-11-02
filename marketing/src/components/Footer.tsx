@@ -9,6 +9,7 @@ import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
+import { THANKS_PATH } from "@/lib/downloadThanks";
 import { observeMotion } from "@/lib/motionInView";
 
 const product = [
@@ -38,7 +39,8 @@ export function Footer() {
   useEffect(() => (statusRef.current ? observeMotion(statusRef.current) : undefined), []);
 
   // /activate is a full-screen card over the page; a footer under it would only add hidden Tab stops.
-  if (pathname?.startsWith("/activate")) return null;
+  // /download/thanks has its own one-line footer (Design spec: no footer columns).
+  if (pathname?.startsWith("/activate") || pathname?.startsWith(THANKS_PATH)) return null;
 
   return (
     <footer className="paper-footer">

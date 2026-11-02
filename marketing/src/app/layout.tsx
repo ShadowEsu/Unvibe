@@ -17,6 +17,7 @@ import { MobileDownloadBar } from "@/components/paper/MobileDownloadBar";
 import { ScrollVibe } from "@/components/paper/ScrollVibe";
 import { FeedbackWidget } from "@/components/paper/FeedbackWidget";
 import { ReminderToast } from "@/components/paper/ReminderToast";
+import { DownloadThanksRouter } from "@/components/paper/DownloadThanksRouter";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -182,6 +183,7 @@ export default function RootLayout({
           <ScrollVibe />
           <FeedbackWidget />
           <ReminderToast />
+          <DownloadThanksRouter />
         </Providers>
         <script dangerouslySetInnerHTML={{ __html: monoWhenWanted }} />
       </body>

@@ -7,6 +7,7 @@ import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking
 import { clsx } from "clsx";
 import { delight } from "@/lib/delight";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
+import { thanksClick, thanksOsForHref } from "@/lib/downloadThanks";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 
 interface DownloadLinkProps {
@@ -68,11 +69,14 @@ export function DownloadLink({
   return (
     <Link
       href={phone ? "/#email-link" : href}
-      onClick={() => {
+      onClick={(event) => {
         if (phone) { onClick?.(); return; }
         trackDownloadClick(surface, platform ?? "other");
         delight();
         onClick?.();
+        // A file link opens the thanks page, which starts the download; a page link (/beta) just navigates.
+        const os = thanksOsForHref(href);
+        if (os) thanksClick(event, os, surface);
       }}
       className={clsx(
         "paper-join",

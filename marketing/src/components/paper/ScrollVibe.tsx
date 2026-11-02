@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
+import { THANKS_PATH } from "@/lib/downloadThanks";
 
 /** What Vibe says as you scroll further down the page. */
 const LINES: Array<[number, string]> = [
@@ -15,7 +16,7 @@ const LINES: Array<[number, string]> = [
   [0.85, "go on, download me"],
 ];
 
-const HIDDEN = ["/founder", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate"];
+const HIDDEN = ["/founder", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate", THANKS_PATH];
 
 /**
  * Site-wide scroll companion: a lime progress bar and Vibe riding down the right edge,

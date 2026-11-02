@@ -10,6 +10,7 @@ import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 import { compensationProgramCount, compensationTotalLabel, compensationTotalPhrase, startupPrograms } from "@/data/compensation";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
+import { thanksClick } from "@/lib/downloadThanks";
 import { markRefUsed, storedRef } from "@/lib/referral";
 import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
@@ -119,7 +120,13 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
         <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>Keys and tokens filtered on your computer</span>{" "}
         <span className="vhero__trust-item">
           <span className="vhero__trust-separator">· </span>
-          <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
+          <a
+            href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD}
+            onClick={(event) => {
+              trackDownloadClick("hero_other_os", other);
+              thanksClick(event, other, "hero_other_os");
+            }}
+          >
             {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
           </a>
         </span>

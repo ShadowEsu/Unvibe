@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useCopyToast } from "@/components/paper/CopyToast";
 import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { delight } from "@/lib/delight";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
+import { thanksClick } from "@/lib/downloadThanks";
 import { SHORTCUTS, detectVisitorDevice } from "@/lib/shortcuts";
 import {
   BETA_FEEDBACK_URL,
@@ -28,6 +29,12 @@ interface BetaInstallProps {
 }
 
 type InstallOs = "mac" | "windows";
+
+/**
+ * The /beta install box keeps its inline "Downloading! Now open it the first time" steps, so its
+ * clicks download in place; everywhere else a plain click opens /download/thanks.
+ */
+const DOWNLOADS_IN_PLACE: DownloadSurface = "beta";
 
 export function BetaInstall({
   tone = "hero",
@@ -133,11 +140,12 @@ export function BetaInstall({
           className="paper-beta__download-btn"
           href={directHref}
           rel="noreferrer"
-          onClick={() => {
+          onClick={(event) => {
             track("release_download_clicked", { os, surface: tone });
             trackDownloadClick(surface, os);
             delight();
-            setClicked(true);
+            if (surface !== DOWNLOADS_IN_PLACE) thanksClick(event, os === "windows" ? "windows" : intelMac ? "mac-intel" : "mac", surface);
+            if (!event.defaultPrevented) setClicked(true);
           }}
         >
           <DownloadIcon />
@@ -267,7 +275,10 @@ export function BetaInstall({
 
 /** The other Mac build: Apple silicon by default, so Intel Macs get their own link (and the reverse). */
 export function MacBuildLinks({ intelMac, surface }: { intelMac: boolean; surface: DownloadSurface }) {
-  const onClick = () => trackDownloadClick(surface, "mac");
+  const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    trackDownloadClick(surface, "mac");
+    if (surface !== DOWNLOADS_IN_PLACE) thanksClick(event, intelMac ? "mac" : "mac-intel", surface);
+  };
   return (
     <p className="paper-beta__update paper-beta__builds">
       {intelMac

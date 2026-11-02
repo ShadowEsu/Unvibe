@@ -12,11 +12,15 @@ import { trackPlanCta } from "@/components/redesign/PricingPlans";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "./betaOffer";
 import {
   DOWNLOADED_EVENT,
+  downloadSurface,
   installHelpSource,
+  thanksOs,
   trackDownloadClick,
+  trackDownloadThanksViewed,
   trackInstallHelpViewed,
   watchDownloadCtaView,
 } from "./downloadTracking";
+import { THANKS_TOKEN_KEY, thanksHref } from "./downloadThanks";
 import { pricingCopy } from "./pricingCopy";
 import type { OptOutStorage } from "./trackingOptOut";
 import { analyticsEnabled } from "./analytics";
@@ -75,6 +79,8 @@ class FakeObserver {
 let requests: string[] = [];
 let sent: Sent[] = [];
 let dispatched: string[] = [];
+/** The page's sessionStorage, where a download click leaves its one-time token. */
+let session = new Map<string, string>();
 const realWindow: unknown = Reflect.get(globalThis, "window");
 const realFetch = globalThis.fetch;
 
@@ -92,6 +98,11 @@ function installWindow({
     navigator: { webdriver, userAgent, maxTouchPoints: 0 },
     location,
     localStorage: storage,
+    sessionStorage: {
+      getItem: (key: string) => session.get(key) ?? null,
+      setItem: (key: string, value: string) => void session.set(key, value),
+      removeItem: (key: string) => void session.delete(key),
+    },
     document: { referrer },
     IntersectionObserver: observer ? FakeObserver : undefined,
     dispatchEvent: (event: Event) => {
@@ -115,10 +126,40 @@ function link(tree: ReactNode, href: string): ReactElement<Props> {
   return found[0]!;
 }
 
-function click(element: ReactElement<Props>): void {
+interface FakeClick {
+  button: number;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  defaultPrevented: boolean;
+  preventDefault(): void;
+}
+
+/** Clicks the element (a plain primary click unless `init` says otherwise) and returns the event. */
+function click(element: ReactElement<Props>, init: Partial<FakeClick> = {}): FakeClick {
   const onClick = element.props.onClick;
   assert.equal(typeof onClick, "function", "link has no click handler");
-  (onClick as () => void)();
+  const event: FakeClick = {
+    button: 0,
+    metaKey: false,
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    defaultPrevented: false,
+    preventDefault() {
+      event.defaultPrevented = true;
+    },
+    ...init,
+  };
+  (onClick as (event: FakeClick) => void)(event);
+  return event;
+}
+
+/** The token a download click left for the thanks page, if any. */
+function thanksToken(): { asset: string; at: number } | null {
+  const raw = session.get(THANKS_TOKEN_KEY);
+  return raw ? (JSON.parse(raw) as { asset: string; at: number }) : null;
 }
 
 function downloadClick(surface: string, platform: string): Sent {
@@ -129,6 +170,7 @@ beforeEach(() => {
   requests = [];
   sent = [];
   dispatched = [];
+  session = new Map();
   FakeObserver.last = null;
   const recordingFetch: typeof fetch = async (input, init) => {
     requests.push(String(input));
@@ -154,18 +196,21 @@ describe("download clicks", () => {
     assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
   });
 
-  for (const [id, platform, href] of [
-    ["mac", "mac", BETA_MAC_DIRECT_DOWNLOAD],
-    ["win", "windows", BETA_WINDOWS_DIRECT_DOWNLOAD],
+  for (const [id, platform] of [
+    ["mac", "mac"],
+    ["win", "windows"],
   ] as const) {
-    it(`palette "${id}" item sends surface palette, platform ${platform}, then downloads`, () => {
+    it(`palette "${id}" item sends surface palette, platform ${platform}, then opens the thanks page`, () => {
       const location = installWindow();
-      const command = siteCommands(() => undefined).find((item) => item.id === id);
+      const pushed: string[] = [];
+      const command = siteCommands((href) => void pushed.push(href)).find((item) => item.id === id);
       assert.ok(command);
       command.run();
       assert.deepEqual(sent, [downloadClick("palette", platform)]);
       assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
-      assert.equal(location.href, href);
+      assert.deepEqual(pushed, [thanksHref(platform, "palette")], "a client navigation to the thanks page");
+      assert.equal(location.href, "https://unvibe.site/", "the thanks page asks for the file, not the palette");
+      assert.equal(thanksToken()?.asset, platform);
     });
   }
 
@@ -173,10 +218,25 @@ describe("download clicks", () => {
     ["mac", "windows", BETA_WINDOWS_DIRECT_DOWNLOAD],
     ["windows", "mac", BETA_MAC_DIRECT_DOWNLOAD],
   ] as const) {
-    it(`hero other-OS link on a ${device} sends surface hero_other_os, platform ${other}`, () => {
-      click(link(DownloadForThisComputer({ device, actionsRef: createRef<HTMLDivElement>() }), href));
+    it(`hero other-OS link on a ${device} sends surface hero_other_os, platform ${other}, then opens the thanks page`, () => {
+      const location = installWindow();
+      const event = click(link(DownloadForThisComputer({ device, actionsRef: createRef<HTMLDivElement>() }), href));
       assert.deepEqual(sent, [downloadClick("hero_other_os", other)]);
       assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
+      assert.equal(event.defaultPrevented, true);
+      assert.equal(location.href, thanksHref(other, "hero_other_os"));
+      assert.equal(thanksToken()?.asset, other);
+    });
+  }
+
+  for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+    it(`a modified click (${JSON.stringify(init)}) still tracks but keeps the browser's own download`, () => {
+      const location = installWindow();
+      const event = click(link(DownloadForThisComputer({ device: "mac", actionsRef: createRef<HTMLDivElement>() }), BETA_WINDOWS_DIRECT_DOWNLOAD), init);
+      assert.deepEqual(sent, [downloadClick("hero_other_os", "windows")]);
+      assert.equal(event.defaultPrevented, false);
+      assert.equal(location.href, "https://unvibe.site/");
+      assert.equal(thanksToken(), null);
     });
   }
 
@@ -184,12 +244,25 @@ describe("download clicks", () => {
     [false, BETA_MAC_INTEL_DIRECT_DOWNLOAD],
     [true, BETA_MAC_DIRECT_DOWNLOAD],
   ] as const) {
-    it(`download page's other Mac build link (intel=${intelMac}) sends surface beta, platform mac`, () => {
-      click(link(MacBuildLinks({ intelMac, surface: "beta" }), href));
+    it(`download page's other Mac build link (intel=${intelMac}) sends surface beta, platform mac, and downloads in place`, () => {
+      const location = installWindow();
+      const event = click(link(MacBuildLinks({ intelMac, surface: "beta" }), href));
       assert.deepEqual(sent, [downloadClick("beta", "mac")]);
       assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
+      assert.equal(event.defaultPrevented, false, "/beta keeps its inline install box");
+      assert.equal(location.href, "https://unvibe.site/");
+      assert.equal(thanksToken(), null);
     });
   }
+
+  it("the other Mac build link anywhere else opens the thanks page for that build", () => {
+    const location = installWindow();
+    const event = click(link(MacBuildLinks({ intelMac: false, surface: "seo_mac" }), BETA_MAC_INTEL_DIRECT_DOWNLOAD));
+    assert.deepEqual(sent, [downloadClick("seo_mac", "mac")]);
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(location.href, thanksHref("mac-intel", "seo_mac"));
+    assert.equal(thanksToken()?.asset, "mac-intel");
+  });
 
   for (const paymentsOpen of [false, true]) {
     it(`pricing download CTAs send surface pricing (payments ${paymentsOpen ? "open" : "closed"}); Teams email does not`, () => {
@@ -248,6 +321,7 @@ describe("install_help_viewed", () => {
     assert.equal(installHelpSource("?from=installer", "", "unvibe.site"), "installer");
     assert.equal(installHelpSource("?from=Beta", "", "unvibe.site"), "beta");
     assert.equal(installHelpSource("?from=pricing", "https://unvibe.site/beta", "unvibe.site"), "pricing");
+    assert.equal(installHelpSource("?from=thanks", "", "unvibe.site"), "thanks", "the thanks page's Read install help link");
   });
 
   it("turns any other ?from= value into other", () => {
@@ -283,6 +357,30 @@ describe("install_help_viewed", () => {
   });
 });
 
+describe("download_thanks_viewed (Security MUST-TD2)", () => {
+  it("maps ?os= to one of the three files and ?from= to a known surface; anything else is other", () => {
+    assert.equal(thanksOs("mac"), "mac");
+    assert.equal(thanksOs("mac-intel"), "mac-intel");
+    assert.equal(thanksOs("windows"), "windows");
+    assert.equal(downloadSurface("hero"), "hero");
+    assert.equal(downloadSurface("seo_windows"), "seo_windows");
+    for (const value of [null, "", "Mac", "linux", " windows", "https://evil.example/x.dmg", "../../x", "<b>", "constructor", "__proto__", "toString"]) {
+      assert.equal(thanksOs(value), "other", `os ${JSON.stringify(value)}`);
+      assert.equal(downloadSurface(value), "other", `from ${JSON.stringify(value)}`);
+    }
+  });
+
+  it("sends exactly the mapped values", () => {
+    installWindow({ pathname: "/download/thanks" });
+    trackDownloadThanksViewed("mac-intel", "hero", true);
+    trackDownloadThanksViewed("windows", "other", false);
+    assert.deepEqual(sent, [
+      { event: "download_thanks_viewed", properties: { os: "mac-intel", from: "hero", auto: true, path: "/download/thanks" } },
+      { event: "download_thanks_viewed", properties: { os: "windows", from: "other", auto: false, path: "/download/thanks" } },
+    ]);
+  });
+});
+
 describe("opt-out", () => {
   for (const [label, options] of [
     ["?notrack=1", { search: "?notrack=1" }],
@@ -298,6 +396,7 @@ describe("opt-out", () => {
       watchDownloadCtaView({} as Element, "hero", "mac");
       FakeObserver.last?.show(1);
       trackInstallHelpViewed();
+      trackDownloadThanksViewed("mac", "hero", true);
       assert.deepEqual(requests, []);
     });
   }
@@ -306,6 +405,7 @@ describe("opt-out", () => {
     installWindow({ storage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } });
     trackDownloadClick("beta", "mac");
     trackInstallHelpViewed();
+    trackDownloadThanksViewed("mac", "hero", true);
     assert.deepEqual(requests, []);
     assert.deepEqual(dispatched, [DOWNLOADED_EVENT], "the download toast still opens");
   });
