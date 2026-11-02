@@ -86,6 +86,41 @@ for (const interval of ['monthly', 'lifetime'] as const) {
   });
 }
 
+// Security L6: ToS consent at checkout. Stripe requires the Terms URL in the account's public details
+// before it accepts consent_collection, so it is sent with a live key only and sandbox checkout keeps working.
+for (const interval of ['monthly', 'lifetime'] as const) {
+  test(`Checkout ${interval} requires Terms of Service consent with a live key, and not with a test key`, async () => {
+    process.env.STRIPE_PRICE_PRO_LIFETIME = 'price_pro_lifetime';
+    process.env.BILLING_LIFETIME_ENABLED = 'true';
+    const open = async () => {
+      const account = await getStore().signIn(`consent-${randomUUID()}@checkout.test`);
+      const response = await checkout(new Request('http://localhost/api/v1/billing/checkout', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${account.token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ plan: 'pro', interval }),
+      }));
+      assert.equal(response.status, 201);
+      return checkoutParams.at(-1);
+    };
+    try {
+      assert.equal((await open())?.consent_collection, undefined, 'test key: no consent collection');
+      process.env.STRIPE_SECRET_KEY = 'rk_live_fake';
+      process.env.VERCEL_ENV = 'production';
+      process.env.UNVIBE_CHECKOUT_LIVE = '1';
+      process.env.APP_URL = 'https://app.unvibe.site';
+      assert.equal(paymentsLocked(), false, 'live purchases are open');
+      assert.deepEqual((await open())?.consent_collection, { terms_of_service: 'required' }, 'live key');
+    } finally {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_localOnly';
+      delete process.env.VERCEL_ENV;
+      delete process.env.UNVIBE_CHECKOUT_LIVE;
+      delete process.env.APP_URL;
+      delete process.env.BILLING_LIFETIME_ENABLED;
+      delete process.env.STRIPE_PRICE_PRO_LIFETIME;
+    }
+  });
+}
+
 test('a Checkout opened while purchases were open and paid after the lock went back on is refunded and canceled, and nothing is stored', async () => {
   const account = await getStore().signIn(`relock-${randomUUID()}@checkout.test`);
   const opened = await checkout(new Request('http://localhost/api/v1/billing/checkout', {

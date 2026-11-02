@@ -81,6 +81,15 @@ export function automaticTax(reusesCustomer: boolean): Pick<Stripe.Checkout.Sess
   return { automatic_tax: { enabled: true }, ...(reusesCustomer ? { customer_update: { address: 'auto' } } : {}) };
 }
 
+/**
+ * Terms of Service consent on Checkout (Security L6), with a live key only: Stripe refuses
+ * `consent_collection.terms_of_service` until the account's public details carry a Terms URL, which
+ * Preston sets on the live account; the sandbox has none, so sandbox checkout sends nothing here.
+ */
+export function termsConsent(): Pick<Stripe.Checkout.SessionCreateParams, 'consent_collection'> {
+  return stripeKeyMode(process.env.STRIPE_SECRET_KEY) === 'live' ? { consent_collection: { terms_of_service: 'required' } } : {};
+}
+
 export const PAYMENTS_NOT_OPEN = {
   error: 'payments_not_open',
   message: 'Payments open soon. Your Free plan keeps working until then.',
