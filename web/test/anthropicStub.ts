@@ -54,7 +54,9 @@ export function anthropicError(status = 529, type = 'overloaded_error', message 
 
 /** PostgREST answers for the spend meter's RPCs, or null for any other path. */
 export function spendMeterRpc(url: URL): Response | null {
-  if (url.pathname === '/rest/v1/rpc/reserve_ai_spend') return Response.json([{ status: 'ok', day: '2026-10-29' }]);
-  if (url.pathname === '/rest/v1/rpc/settle_ai_spend') return new Response(null, { status: 204 });
+  if (url.pathname === '/rest/v1/rpc/reserve_ai_spend_month' || url.pathname === '/rest/v1/rpc/reserve_ai_spend_account') {
+    return Response.json([{ status: 'ok', day: '2026-10-29' }]);
+  }
+  if (url.pathname === '/rest/v1/rpc/settle_ai_spend' || url.pathname === '/rest/v1/rpc/settle_ai_spend_account') return new Response(null, { status: 204 });
   return null;
 }

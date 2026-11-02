@@ -98,7 +98,7 @@ export default function CodeExplainerMacPage() {
         <h2 id="mac-what">What it can explain</h2>
         <ul className="explain-notes">
           <li>Any code you select, at four free depths: New, Beginner, Intermediate and Advanced. Expert is part of Pro.</li>
-          <li>Test me writes one question about the exact code you selected, to check the explanation stuck.</li>
+          <li>Test me writes a question about the exact code you selected, and up to three if you want more, to check the explanation stuck.</li>
           <li>Lessons you keep are saved to your Library on this Mac.</li>
           <li>Change Briefs list what changed in your git repo, made on your Mac, for free. The AI explanation of a change is Pro.</li>
           <li>

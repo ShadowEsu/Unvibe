@@ -51,6 +51,11 @@ const IDE_BRIDGE_SHORTCUT_REVISION = 2;
 const SIDEBAR_DENSITY_REVISION = 2;
 /** Moves Windows installs off Ctrl+U, which belongs to the editor bridge and other apps. */
 const WINDOWS_SHORTCUT_REVISION = 1;
+/**
+ * Turns setup progress off once for every existing install (Security): it used to start on, and
+ * settings are saved whole, so a stored `true` does not mean the person chose it.
+ */
+const SETUP_PROGRESS_REVISION = 1;
 
 const IS_WIN = process.platform === 'win32';
 /**
@@ -72,6 +77,8 @@ export interface Settings {
   sidebarDensityRevision?: number;
   /** Internal — tracks the Windows Ctrl+U → Ctrl+Alt+U shortcut migration. */
   windowsShortcutRevision?: number;
+  /** Internal — tracks the one-time switch of setup progress to off (SETUP_PROGRESS_REVISION). */
+  setupProgressRevision?: number;
   onboarded: boolean;
   /** Electron accelerator for the cross-app fallback. ⌘U belongs to the IDE bridge. */
   shortcut: string;
@@ -125,10 +132,15 @@ export interface Settings {
   /** ISO timestamp while Live mode is snoozed. */
   liveSnoozeUntil?: string;
   /**
-   * Send anonymous setup progress (instrumentation spec 5 and 10): one date each for setup
+   * Send setup progress (instrumentation spec 5 and 10): one date each for setup
    * finished, Accessibility allowed, signed in and similar steps, tied to the random install ID.
+   * Off until the person turns it on.
    */
   shareSetupProgress: boolean;
+  /** The first explanation of the user's own code is saved, so the companion's paste step is gone for good. */
+  ownCodeExplained?: true;
+  /** Pro: also send up to 2 files the selected code imports. Off until the person turns it on (Security U13). */
+  nearbyFiles: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -138,6 +150,7 @@ const DEFAULTS: Settings = {
   ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
   sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
   windowsShortcutRevision: WINDOWS_SHORTCUT_REVISION,
+  setupProgressRevision: SETUP_PROGRESS_REVISION,
   onboarded: false,
   shortcut: DEFAULT_SHORTCUT,
   // Windows has no notch to attach to; a floating pill above the taskbar reads better.
@@ -167,7 +180,8 @@ const DEFAULTS: Settings = {
   sidebarHidden: false,
   giftCode: '',
   features: DEFAULT_FEATURES,
-  shareSetupProgress: true,
+  shareSetupProgress: false,
+  nearbyFiles: false,
 };
 
 class SettingsStore {
@@ -204,6 +218,7 @@ class SettingsStore {
     // Only the former defaults move; a deliberately chosen shortcut stays as it is.
     const needsWindowsShortcut = IS_WIN && (loaded.windowsShortcutRevision ?? 0) < WINDOWS_SHORTCUT_REVISION &&
       (loaded.shortcut === 'Control+U' || loaded.shortcut === 'CommandOrControl+U');
+    const needsSetupProgressOff = (loaded.setupProgressRevision ?? 0) < SETUP_PROGRESS_REVISION;
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -220,6 +235,8 @@ class SettingsStore {
       ideBridgeShortcutRevision: IDE_BRIDGE_SHORTCUT_REVISION,
       sidebarDensityRevision: SIDEBAR_DENSITY_REVISION,
       windowsShortcutRevision: WINDOWS_SHORTCUT_REVISION,
+      setupProgressRevision: SETUP_PROGRESS_REVISION,
+      ...(needsSetupProgressOff ? { shareSetupProgress: false } : {}),
       ...(needsLightDefault ? { theme: 'light' as const } : {}),
       ...(needsFullscreenIsland
         ? { barVisibility: 'always' as const, barHoverPreview: true }
@@ -245,7 +262,7 @@ class SettingsStore {
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsWindowsShortcut || needsSidebarDensity || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsWindowsShortcut || needsSidebarDensity || needsSetupProgressOff || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
@@ -285,10 +302,14 @@ class SettingsStore {
     this.data = next;
   }
 
-  /** Erase everything while signed out: forget the project folder. Throws when the file can't be saved. */
-  forgetProjectRoot(): void {
+  /**
+   * Erase everything (and account deletion): forget the project folder and that the user's own code
+   * was explained. Throws when the file can't be saved.
+   */
+  forgetLocalWork(): void {
     const next: Settings = { ...this.data };
     delete next.lastProjectRoot;
+    delete next.ownCodeExplained;
     this.write(next);
     this.data = next;
   }

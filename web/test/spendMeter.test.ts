@@ -2,17 +2,23 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { BilledProviderError, ProviderRejectedError, type Completion, type TokenUsage } from '../src/ai/provider';
 import {
+  ACCOUNT_DAY_CAP_NANO_USD,
+  AI_LIMIT_ACCOUNT,
+  AI_LIMIT_MONTH,
+  AI_LIMIT_TODAY,
   AI_MAINTENANCE,
   AI_PAUSED,
-  AI_PAUSED_TODAY,
   AiPausedError,
   DAY_CAP_NANO_USD,
   MemorySpendStore,
   MeteredProvider,
   SupabaseSpendStore,
-  TOTAL_CAP_NANO_USD,
+  MODEL_PRICES,
+  MONTH_CAP_NANO_USD,
   costNanoUsd,
   maxInputTokens,
+  pricesFor,
+  spendAccount,
   worstCaseNanoUsd,
   type MeterableProvider,
   type SpendStore,
@@ -22,6 +28,11 @@ import { POST as comprehension } from '../app/api/v1/comprehension/route';
 import { POST as tryRoute } from '../app/api/v1/try/route';
 import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
 import { selectProvider } from '../src/ai';
+import { trialInstallFromRequest } from '../src/lib/trialAccess';
+import { ANTHROPIC_MODEL } from '../src/ai/anthropic';
+import { buildComprehensionPrompt, buildSystemPrompt, buildUserPrompt } from '../src/ai/prompt';
+import { MAX_CONTEXT_BYTES, MAX_CONTEXT_CHARS, MAX_QUESTION_CHARS, payloadSizeError } from '../src/lib/reviewLimits';
+import type { ReviewRequestPayload } from '../src/ai/protocol';
 
 /** A provider double that records calls and answers with fixed usage (or none, or a failure). */
 class SpyProvider implements MeterableProvider {
@@ -29,7 +40,7 @@ class SpyProvider implements MeterableProvider {
   readonly mock = false;
   readonly maxOutputTokens = 2048;
   calls = 0;
-  constructor(private readonly outcome: { usage?: TokenUsage; fail?: Error }) {}
+  constructor(private readonly outcome: { usage?: TokenUsage; fail?: Error }, readonly model: string = ANTHROPIC_MODEL) {}
   async stream(_s: string, _u: string, onToken: (t: string) => void): Promise<TokenUsage | undefined> {
     this.calls += 1;
     if (this.outcome.fail) throw this.outcome.fail;
@@ -44,35 +55,43 @@ class SpyProvider implements MeterableProvider {
 }
 
 const sum = (store: MemorySpendStore) => [...store.days.values()].reduce((a, b) => a + b, 0);
+/** The prices the meter uses for the model production sends. */
+const PRICES = MODEL_PRICES[ANTHROPIC_MODEL];
+const worst = (s: string, u: string) => worstCaseNanoUsd(PRICES, s, u, 2048);
 
-test('prices are $0.10 / $0.50 per million tokens, and the whole request moves to $0.50 / $2.50 past 100,000 input tokens', () => {
-  assert.equal(costNanoUsd({ inputTokens: 1_000_000 / 10, outputTokens: 0 }), 10_000_000); // 100k in = $0.01
-  assert.equal(costNanoUsd({ inputTokens: 0, outputTokens: 1_000_000 }), 500_000_000); // $0.50
-  assert.equal(costNanoUsd({ inputTokens: 100_000, outputTokens: 1000 }), 100_000 * 100 + 1000 * 500);
-  assert.equal(costNanoUsd({ inputTokens: 100_001, outputTokens: 1000 }), 100_001 * 500 + 1000 * 2500);
+test('the hosted model is metered at Opus 5.5 list prices: $4 / $20 per million in / out at any length, cache writes $8', () => {
+  const prices = pricesFor(ANTHROPIC_MODEL);
+  assert.ok(prices, 'the hosted model has a price row');
+  assert.equal(costNanoUsd(prices, { inputTokens: 1_000_000, outputTokens: 0 }), 4_000_000_000); // $4
+  assert.equal(costNanoUsd(prices, { inputTokens: 0, outputTokens: 1_000_000 }), 20_000_000_000); // $20
+  // One tier: a long prompt costs the same per token as a short one.
+  assert.equal(costNanoUsd(prices, { inputTokens: 150_000, outputTokens: 1000 }), 150_000 * 4_000 + 1000 * 20_000);
+  // Cache writes inside the input are priced at the 1h write price; the rest at the input price.
+  assert.equal(costNanoUsd(prices, { inputTokens: 1000, outputTokens: 0, cacheWriteTokens: 600 }), 400 * 4_000 + 600 * 8_000);
+});
+
+test('a model without a price row is refused before anything is reserved or sent', async () => {
+  for (const model of ['claude-haiku-5-5', 'claude-fable-5-1', '', '__proto__', 'toString']) {
+    const store = new MemorySpendStore();
+    const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } }, model);
+    const error = await new MeteredProvider(inner, store).complete('s', 'u').catch((e: unknown) => e);
+    assert.ok(error instanceof AiPausedError && error.reason === 'unavailable', model);
+    assert.equal(inner.calls, 0, model);
+    assert.equal(sum(store), 0, model);
+  }
 });
 
 test('the hold bounds input by UTF-8 bytes, so CJK and emoji can never be held below their cost', () => {
   assert.equal(maxInputTokens('ab', 'c'), 3 + 64);
   assert.equal(maxInputTokens('', '漢'), 3 + 64);
   assert.equal(maxInputTokens('', '😀'), 4 + 64);
-  // A 120k-character CJK paste (the API's size cap counts UTF-16 length) is 360k bytes: held at the
-  // long tier. Even if every character were a token and a half, the hold covers the real cost.
+  // A 120k-character CJK paste (the API's size cap counts UTF-16 length) is 360k bytes, held in full.
   const cjk = '漢'.repeat(120_000);
-  const held = worstCaseNanoUsd('system prompt', cjk, 2048);
-  assert.equal(held, (Buffer.byteLength('system prompt') + 360_000 + 64) * 500 + 2048 * 2500);
-  assert.ok(held >= costNanoUsd({ inputTokens: 180_000, outputTokens: 2048 }));
+  assert.equal(worst('', cjk), (360_000 + 64) * 4_000 + 2048 * 20_000);
+  assert.ok(worst('', cjk) >= costNanoUsd(PRICES, { inputTokens: 180_000, outputTokens: 2048 }));
   const emoji = '😀'.repeat(60_000); // 120k UTF-16 units, 240k bytes
-  assert.ok(worstCaseNanoUsd('', emoji, 2048) >= costNanoUsd({ inputTokens: 120_000, outputTokens: 2048 }));
-  // Ordinary code under 100k bytes stays at the short tier: about a fifth of a cent at most.
-  assert.equal(worstCaseNanoUsd('', 'x'.repeat(99_000), 2048), (99_000 + 64) * 100 + 2048 * 500);
-});
-
-test('a long-tier call settles at the long-tier price', async () => {
-  const store = new MemorySpendStore();
-  const inner = new SpyProvider({ usage: { inputTokens: 150_000, outputTokens: 900 } });
-  await new MeteredProvider(inner, store).complete('', '漢'.repeat(60_000));
-  assert.equal(sum(store), 150_000 * 500 + 900 * 2500);
+  assert.ok(worst('', emoji) >= costNanoUsd(PRICES, { inputTokens: 120_000, outputTokens: 2048 }));
+  assert.equal(worst('', 'x'.repeat(99_000)), (99_000 + 64) * 4_000 + 2048 * 20_000);
 });
 
 test('a call reserves its worst case first, then settles to the measured cost', async () => {
@@ -85,8 +104,8 @@ test('a call reserves its worst case first, then settles to the measured cost', 
     return original();
   };
   await new MeteredProvider(inner, store).complete('s'.repeat(30), 'u'.repeat(30));
-  assert.equal(reservedDuringCall, worstCaseNanoUsd('s'.repeat(30), 'u'.repeat(30), 2048));
-  assert.equal(sum(store), 1000 * 100 + 200 * 500);
+  assert.equal(reservedDuringCall, (60 + 64) * 4_000 + 2048 * 20_000);
+  assert.equal(sum(store), 1000 * 4_000 + 200 * 20_000);
 });
 
 test('a call without measured usage, or one that failed after it was sent, keeps its whole worst case', async () => {
@@ -95,7 +114,7 @@ test('a call without measured usage, or one that failed after it was sent, keeps
     const store = new MemorySpendStore();
     const metered = new MeteredProvider(new SpyProvider(outcome), store);
     await metered.stream('sys', 'user', () => {}).catch(() => undefined);
-    assert.equal(sum(store), worstCaseNanoUsd('sys', 'user', 2048), JSON.stringify(outcome));
+    assert.equal(sum(store), worst('sys', 'user'), JSON.stringify(outcome));
   }
 });
 
@@ -118,7 +137,7 @@ test('past the daily stop the call is refused before the provider is reached, an
   const error = await metered.complete('s', 'u').catch((e: unknown) => e);
   assert.ok(error instanceof AiPausedError);
   assert.equal(error.reason, 'day_cap');
-  assert.equal(error.message, AI_PAUSED_TODAY);
+  assert.equal(error.message, AI_LIMIT_TODAY);
   assert.equal(inner.calls, 0);
   assert.equal(store.days.get('2026-10-29'), DAY_CAP_NANO_USD - 1000);
 
@@ -127,15 +146,23 @@ test('past the daily stop the call is refused before the provider is reached, an
   assert.equal(inner.calls, 1);
 });
 
-test('the total stop holds on a new day and refuses the call that would cross it', async () => {
-  const store = new MemorySpendStore(() => new Date('2026-11-02T08:00:00Z'));
-  store.days.set('2026-11-01', TOTAL_CAP_NANO_USD - worstCaseNanoUsd('s', 'u', 2048) + 1);
+test('the monthly stop counts every day of this UTC month, refuses honestly, and the 1st opens again', async () => {
+  let now = new Date('2026-11-30T12:00:00Z');
+  const store = new MemorySpendStore(() => now);
+  store.days.set('2026-10-31', MONTH_CAP_NANO_USD); // last month: never counted against this one
+  store.days.set('2026-11-01', MONTH_CAP_NANO_USD - DAY_CAP_NANO_USD);
+  store.days.set('2026-11-29', DAY_CAP_NANO_USD - worst('s', 'u') + 1); // today is empty, the month is not
   const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
-  const error = await new MeteredProvider(inner, store).complete('s', 'u').catch((e: unknown) => e);
+  const metered = new MeteredProvider(inner, store);
+  const error = await metered.complete('s', 'u').catch((e: unknown) => e);
   assert.ok(error instanceof AiPausedError);
-  assert.equal(error.reason, 'total_cap');
-  assert.equal(error.message, AI_PAUSED);
+  assert.equal(error.reason, 'month_cap');
+  assert.equal(error.message, AI_LIMIT_MONTH);
   assert.equal(inner.calls, 0);
+
+  now = new Date('2026-12-01T00:00:00Z');
+  await metered.complete('s', 'u');
+  assert.equal(inner.calls, 1);
 });
 
 test('fail closed: no store, or a store that throws, refuses without calling the provider', async () => {
@@ -157,15 +184,131 @@ test('a failed settle keeps the worst case counted and still returns the answer'
   const store: SpendStore = { reserve: (n) => memory.reserve(n), settle: async () => { throw new Error('timeout'); } };
   const { text } = await new MeteredProvider(new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } }), store).complete('s', 'u');
   assert.equal(text, 'answer');
-  assert.equal(sum(memory), worstCaseNanoUsd('s', 'u', 2048));
+  assert.equal(sum(memory), worst('s', 'u'));
+});
+
+test("one account's daily share stops that account only, settles with the call, and opens again the next UTC day", async () => {
+  let now = new Date('2026-11-02T10:00:00Z');
+  const store = new MemorySpendStore(() => now);
+  const heavy = spendAccount('user', 'user-a');
+  const other = spendAccount('install', 'install-b');
+  store.accounts.set(`2026-11-02 ${heavy}`, ACCOUNT_DAY_CAP_NANO_USD - worst('s', 'u') + 1);
+  const inner = new SpyProvider({ usage: { inputTokens: 100, outputTokens: 10 } });
+
+  const error = await new MeteredProvider(inner, store, heavy).complete('s', 'u').catch((e: unknown) => e);
+  assert.ok(error instanceof AiPausedError);
+  assert.equal(error.reason, 'account_day_cap');
+  assert.equal(error.message, AI_LIMIT_ACCOUNT);
+  assert.equal(inner.calls, 0);
+  assert.equal(sum(store), 0, 'a refused call counts nowhere');
+
+  // Another account, and the Try box (no account), still have the day.
+  await new MeteredProvider(inner, store, other).complete('s', 'u');
+  await new MeteredProvider(inner, store).complete('s', 'u');
+  assert.equal(inner.calls, 2);
+  const measured = 100 * 4_000 + 10 * 20_000;
+  assert.equal(store.accounts.get(`2026-11-02 ${other}`), measured, 'the account row settles to the measured cost');
+  assert.equal(sum(store), 2 * measured);
+
+  now = new Date('2026-11-03T00:00:00Z');
+  await new MeteredProvider(inner, store, heavy).complete('s', 'u');
+  assert.equal(inner.calls, 3);
+});
+
+test('the account key is a hash that keeps users and installs apart', () => {
+  assert.match(spendAccount('user', 'abc'), /^[0-9a-f]{64}$/);
+  assert.notEqual(spendAccount('user', 'abc'), spendAccount('install', 'abc'));
+  assert.ok(!spendAccount('user', 'abc').includes('abc'));
+});
+
+test('the budget is $25 a month, $5 a day and $1 per account a day: a fifth of each level above it', () => {
+  assert.equal(MONTH_CAP_NANO_USD, 25_000_000_000);
+  assert.equal(DAY_CAP_NANO_USD, 5_000_000_000);
+  assert.equal(ACCOUNT_DAY_CAP_NANO_USD, 1_000_000_000);
+  assert.equal(ACCOUNT_DAY_CAP_NANO_USD * 5, DAY_CAP_NANO_USD);
+  assert.equal(DAY_CAP_NANO_USD * 5, MONTH_CAP_NANO_USD);
+});
+
+test('every payload the size check lets through is held under one account\'s daily share, so it is never refused as a spent limit', () => {
+  const context = (code: string) => ({ language: 'typescript', projectStructure: [], imports: [], code });
+  // The largest of each kind the size check accepts: ASCII at the character cap, 3-byte CJK and
+  // 4-byte emoji at the byte cap, each with the longest question in the longest script.
+  const fill = (unit: string) => {
+    const overhead = Buffer.byteLength(JSON.stringify(context('')));
+    const bytes = Buffer.byteLength(unit);
+    const chars = unit.length;
+    let n = Math.min(Math.floor((MAX_CONTEXT_BYTES - overhead) / bytes), Math.floor((MAX_CONTEXT_CHARS - overhead) / chars));
+    while (payloadSizeError({ scope: 'selection', level: 'expert', context: context(unit.repeat(n + 1)) }) === null) n += 1;
+    return unit.repeat(n);
+  };
+  for (const unit of ['x', '漢', '😀']) {
+    const code = fill(unit);
+    // The longest question, and "More detail" sending back the longest short answer (the prompt keeps 1,500 characters).
+    const extras: Array<Partial<ReviewRequestPayload>> = [{}, { question: '漢'.repeat(MAX_QUESTION_CHARS) }, { detail: 'full', shortAnswer: '😀'.repeat(2_000) }, { detail: 'full', shortAnswer: '漢'.repeat(2_000) }];
+    for (const extra of extras) {
+      const payload: ReviewRequestPayload = { scope: 'selection', level: 'expert', variant: 'different', context: context(code), ...extra };
+      assert.equal(payloadSizeError(payload), null, `${unit} is accepted at its largest`);
+      const held = Math.max(
+        worstCaseNanoUsd(PRICES, buildSystemPrompt(payload), buildUserPrompt(payload), 2048),
+        worstCaseNanoUsd(PRICES, buildComprehensionPrompt(payload).system, buildComprehensionPrompt(payload).user, 2048),
+      );
+      assert.ok(held <= ACCOUNT_DAY_CAP_NANO_USD, `${unit} with ${JSON.stringify(Object.keys(extra))} holds $${held / 1e9}`);
+    }
+    // One more unit is refused as too much code (413), before anything is reserved.
+    const over = payloadSizeError({ scope: 'selection', level: 'expert', context: context(code + unit) });
+    assert.equal(over?.status, 413, unit);
+  }
+});
+
+test('the Supabase store sends the account hash to the account RPCs, and Try (no account) to the month RPC', async () => {
+  const originalFetch = globalThis.fetch;
+  const account = spendAccount('user', 'user-a');
+  try {
+    for (const [status, expect] of [['ok', 'ok'], ['account_day_cap', 'account_day_cap'], ['month_cap', 'month_cap']] as const) {
+      const calls: Array<{ path: string; body: Record<string, unknown> }> = [];
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(input instanceof Request ? input.url : String(input));
+        calls.push({ path: url.pathname, body: JSON.parse(String(init?.body ?? '{}')) });
+        if (url.pathname.endsWith('/rpc/settle_ai_spend_account')) return new Response(null, { status: 204 });
+        return Response.json([{ status, day: '2026-11-02' }]);
+      }) as typeof fetch;
+      const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
+      const store = new SupabaseSpendStore('http://127.0.0.1:54321', 'service-role-key');
+      const result = await new MeteredProvider(inner, store, account).complete('s', 'u').catch((e: unknown) => e);
+      assert.equal(calls[0].path, '/rest/v1/rpc/reserve_ai_spend_account', status);
+      assert.equal(calls[0].body.p_account_hash, account);
+      assert.equal(calls[0].body.p_account_day_cap, ACCOUNT_DAY_CAP_NANO_USD);
+      if (expect === 'ok') {
+        assert.equal(inner.calls, 1);
+        assert.equal(calls[1].path, '/rest/v1/rpc/settle_ai_spend_account');
+        assert.equal(calls[1].body.p_account_hash, account);
+      } else {
+        assert.equal(inner.calls, 0);
+        assert.ok(result instanceof AiPausedError && result.reason === expect, status);
+      }
+    }
+
+    // Without an account the month RPC answers; an account stop from it is not a valid answer.
+    const paths: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      paths.push(new URL(input instanceof Request ? input.url : String(input)).pathname);
+      return Response.json([{ status: 'account_day_cap', day: '2026-11-02' }]);
+    }) as typeof fetch;
+    const result = await new MeteredProvider(new SpyProvider({}), new SupabaseSpendStore('http://127.0.0.1:54321', 'k')).complete('s', 'u').catch((e: unknown) => e);
+    assert.deepEqual(paths, ['/rest/v1/rpc/reserve_ai_spend_month']);
+    assert.ok(result instanceof AiPausedError && result.reason === 'unavailable');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('the Supabase store accepts only a well-formed answer; anything else pauses AI', async () => {
   const originalFetch = globalThis.fetch;
-  const answers: Array<{ status: number; body: unknown; expect: 'ok' | 'day_cap' | 'total_cap' | 'paused' }> = [
+  const answers: Array<{ status: number; body: unknown; expect: 'ok' | 'day_cap' | 'month_cap' | 'paused' }> = [
     { status: 200, body: [{ status: 'ok', day: '2026-10-29' }], expect: 'ok' },
     { status: 200, body: [{ status: 'day_cap', day: '2026-10-29' }], expect: 'day_cap' },
-    { status: 200, body: [{ status: 'total_cap', day: '2026-10-29' }], expect: 'total_cap' },
+    { status: 200, body: [{ status: 'month_cap', day: '2026-10-29' }], expect: 'month_cap' },
+    { status: 200, body: [{ status: 'total_cap', day: '2026-10-29' }], expect: 'paused' },
     { status: 200, body: [{ status: 'OK', day: '2026-10-29' }], expect: 'paused' },
     { status: 200, body: [{ status: 'ok', day: 'tomorrow' }], expect: 'paused' },
     { status: 200, body: [], expect: 'paused' },
@@ -187,7 +330,7 @@ test('the Supabase store accepts only a well-formed answer; anything else pauses
       const label = JSON.stringify(answer);
       if (answer.expect === 'ok') {
         assert.equal(inner.calls, 1, label);
-        assert.deepEqual(rpc, ['/rest/v1/rpc/reserve_ai_spend', '/rest/v1/rpc/settle_ai_spend'], label);
+        assert.deepEqual(rpc, ['/rest/v1/rpc/reserve_ai_spend_month', '/rest/v1/rpc/settle_ai_spend'], label);
       } else {
         assert.equal(inner.calls, 0, label);
         assert.ok(result instanceof AiPausedError, label);
@@ -235,12 +378,12 @@ function appRequest(route: string): Request {
   });
 }
 
-test('reviews past the daily stop: the stream says AI is paused for today, coded ai_paused; no provider is called', async () => {
+test('reviews past the daily stop: the stream says the AI limit is reached for today, coded ai_paused; no provider is called', async () => {
   fullMeter();
   const response = await review(appRequest('reviews'));
   assert.equal(response.status, 200);
   const events = (await response.text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
-  assert.deepEqual(events, [{ type: 'error', message: AI_PAUSED_TODAY, code: 'ai_paused' }]);
+  assert.deepEqual(events, [{ type: 'error', message: AI_LIMIT_TODAY, code: 'ai_paused' }]);
   assert.deepEqual(hosts, []);
 });
 
@@ -248,7 +391,7 @@ test('comprehension past the daily stop: 503 ai_paused; no provider is called', 
   fullMeter();
   const response = await comprehension(appRequest('comprehension'));
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: 'ai_paused', message: AI_PAUSED_TODAY });
+  assert.deepEqual(await response.json(), { error: 'ai_paused', message: AI_LIMIT_TODAY });
   assert.deepEqual(hosts, []);
 });
 
@@ -260,7 +403,23 @@ test('Try it past the daily stop: 503 with the paused text; no provider is calle
     body: JSON.stringify({ code: 'const a = 1;', consent: { v: TRY_CONSENT_VERSION, aiSend: true, age18: true } }),
   }));
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: AI_PAUSED_TODAY });
+  assert.deepEqual(await response.json(), { error: AI_LIMIT_TODAY });
+  assert.deepEqual(hosts, []);
+});
+
+test("an install past its daily share: the app's explanation and the quiz say so; no provider is called", async () => {
+  const store = new MemorySpendStore();
+  (globalThis as unknown as { __unvibeSpendMemory?: MemorySpendStore }).__unvibeSpendMemory = store;
+  const first = appRequest('reviews');
+  const install = trialInstallFromRequest(first);
+  assert.ok(install);
+  store.accounts.set(`${new Date().toISOString().slice(0, 10)} ${spendAccount('install', install)}`, ACCOUNT_DAY_CAP_NANO_USD);
+  const events = (await (await review(first)).text()).split('\n\n').filter(Boolean).map((line) => JSON.parse(line.replace(/^data: /, '')));
+  assert.deepEqual(events, [{ type: 'error', message: AI_LIMIT_ACCOUNT }]);
+  const sameInstall = new Request('http://localhost/api/v1/comprehension', { method: 'POST', headers: first.headers, body: JSON.stringify({ scope: 'selection', level: 'beginner', context: { language: 'typescript', projectStructure: [], imports: [], code: 'const x = 1;' } }) });
+  const quiz = await comprehension(sameInstall);
+  assert.equal(quiz.status, 503);
+  assert.deepEqual(await quiz.json(), { error: 'ai_paused', message: AI_LIMIT_ACCOUNT });
   assert.deepEqual(hosts, []);
 });
 

@@ -61,6 +61,13 @@ test('review checklist covers sensitive files, config, missing tests and stale k
   assert.equal(review.headline, '5 files changed, +206 / -32');
 });
 
+test('the areas line names all 3 areas, and says "including" when there are more', () => {
+  const four = buildAgentReview(brief(files)).reviewFirst.find((line) => line.startsWith('The change spans'));
+  assert.equal(four, 'The change spans 4 areas (including auth, api and ui). Check the seams between them.');
+  const three = buildAgentReview(brief(files.filter((f) => f.path !== 'package.json'))).reviewFirst.find((line) => line.startsWith('The change spans'));
+  assert.equal(three, 'The change spans 3 areas (auth, api and ui). Check the seams between them.');
+});
+
 test('an empty change produces an empty review', () => {
   const review = buildAgentReview(brief([]));
   assert.equal(review.whatMatters.length, 0);

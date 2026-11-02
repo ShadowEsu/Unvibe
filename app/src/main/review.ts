@@ -7,9 +7,9 @@ import { scanReviewPayload, hasBlocking, type SecretFinding } from '../core/secr
 import { SseParser } from '../core/sse';
 import { explanationFailure, serviceMessage } from '../core/serviceError';
 import { guessLanguage } from '../core/language';
-import type { ExplanationLevel, ReviewRequestPayload } from '../core/protocol';
+import type { ExplanationLevel, QuizMode, ReviewRequestPayload } from '../core/protocol';
 import { localDayKey, type LocalEvent } from '../core/learning';
-import { aiAuthHeaders, BACKEND, fetchQuestion, networkFetch } from './backend';
+import { fetchQuestion, PlanLimitError, postReview } from './backend';
 import { store } from './store';
 
 /** Longest wait for the first words of an explanation. */
@@ -21,23 +21,34 @@ import { cachedAppUsage, refreshAppUsage } from './usage';
 import { settings } from './settings';
 import { readAiKey } from './aiKey';
 import { buildLocalSystemPrompt, buildLocalUserPrompt, estimateCost, streamLocalAi } from './localAi';
-import { buildSelectionPayload, isProPlan, type ReviewMode } from './contextBuilder';
+import { buildSelectionPayload, sendNearbyFiles, type ReviewMode } from './contextBuilder';
+import { isProPlan } from '../core/plan';
 import { raiseLimitPause } from './windows';
 import { pulseBar } from './notify';
 import { knowledgeStore } from './knowledgeStore';
+import { noteOwnCodeExplained } from './ownCodeStep';
 import { productEvent } from '../core/productEvents';
+import { CONSENT_PROVIDERS, ConsentRequiredError, type ConsentProvider } from '../core/consent';
+import { codeConsented } from './consentStore';
+import { providerInUse } from './consent';
 
 export type WidgetEvent =
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; mode?: string; level: ExplanationLevel }
-  | { type: 'status'; tabId: string; message: string }
+  /**
+   * `consentProvider`: ask first, for this provider (the person hasn't agreed to sending code to it);
+   * `confirm`: a link started this review, and Explain must be pressed before anything is sent.
+   */
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; providerName: string; mode?: string; level: ExplanationLevel }
+  /** The person hasn't agreed to sending their code to this provider: the panel asks first. */
+  | { type: 'consentNeeded'; tabId: string; provider: ConsentProvider }
+  | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
   | { type: 'consent'; tabId: string; findings: SecretFinding[] }
   | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
   | { type: 'token'; tabId: string; text: string }
   | { type: 'done'; tabId: string; model: string; mock: boolean }
   | { type: 'error'; tabId: string; message: string; code?: string; upgradePath?: string }
   | { type: 'cancelled'; tabId: string }
-  | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string }
-  | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string }
+  | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string; index: number; total: number; mode: QuizMode }
+  | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string; hasMissed: boolean }
   | { type: 'usage'; tabId: string; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
   | { type: 'understood'; tabId: string }
   /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
@@ -63,8 +74,15 @@ export interface ReviewSession {
   snapshotText?: string;
   mode?: ReviewMode;
   pendingAnswer?: { answerIndex: number; concept: string; conceptLabel: string; rationale: string };
+  /** Per-explanation progress, kept in main so renderer clicks cannot choose angles or exceed three. */
+  comprehension?: { asked: number; hasMissed: boolean; understood: boolean; loading: boolean };
   /** True while the session holds the built-in first-run sample rather than the user's own code. */
   isSample?: () => boolean;
+  /**
+   * True when an `unvibe://review` link captured this code: any web page can open that link, so
+   * nothing is sent until the person presses Explain in the panel (Security 10-22 LOW #8).
+   */
+  awaitingConfirm?: boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
   /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
@@ -110,13 +128,16 @@ async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise
   const code = session.code;
   if (!code) throw new Error('No code captured.');
   const usage = await cachedAppUsage();
+  const sample = session.isSample?.() === true;
   const built = await buildSelectionPayload({
     code,
     level: opts.level,
     filePath: session.sourceFilePath,
     question: opts.question,
     variant: opts.variant,
-    withNearby: isProPlan(usage.plan),
+    // The sample is Unvibe's own code: no project name or nearby files of the person's go with it.
+    noRepo: sample,
+    withNearby: !sample && sendNearbyFiles(usage.plan),
   });
   session.payload = built.payload;
   session.file = built.file ?? session.file;
@@ -145,6 +166,10 @@ export function applyBuiltReview(session: ReviewSession, built: {
   session.mode = built.mode;
   session.level = built.payload.level;
   session.recorded = false;
+  session.comprehension = undefined;
+  session.pendingAnswer = undefined;
+  // Built from something the person picked (a file, a brief, a Study lesson), not a link capture.
+  session.awaitingConfirm = false;
 }
 
 function persistUnderstoodSnapshot(session: ReviewSession): void {
@@ -186,6 +211,9 @@ export function initWidget(
   opts?: { autoStart?: boolean },
 ): void {
   const code = session.code;
+  // Asked when the panel opens, before anything can be sent; an empty panel asks too, so a
+  // shortcut or link that captured nothing still shows what Unvibe would do (Security CC-4, CC-5).
+  const consentProvider = consentNeededFor(session);
   send(win, session, {
     type: 'init',
     hasCode: code !== null,
@@ -195,11 +223,30 @@ export function initWidget(
     language: code ? guessLanguage(code) : undefined,
     // Renderer-local only. The preview never leaves this process and is not persisted here.
     preview: code ? code.slice(0, 600) : undefined,
-    autoStart: Boolean(opts?.autoStart && code),
+    autoStart: Boolean(opts?.autoStart && code && !session.awaitingConfirm) && !consentProvider,
+    ...(consentProvider ? { consentProvider } : {}),
+    providerName: CONSENT_PROVIDERS[providerInUse()],
+    confirm: Boolean(session.awaitingConfirm && code),
     mode: session.mode,
     // The panel's depth row and every re-request it sends start from the session depth (the user's default).
     level: session.level,
   });
+}
+
+/**
+ * The provider this run would send to, when the person hasn't agreed to sending code there; null
+ * when it may go. The built-in sample is exempt while nothing of the person's is added (a typed
+ * question is theirs). `remaining` lets the automatic switch to an own key count.
+ */
+function consentNeededFor(session: ReviewSession, remaining?: number, question?: string): ConsentProvider | null {
+  if (session.isSample?.() && !question) return null;
+  const provider = providerInUse(remaining);
+  return codeConsented(provider) ? null : provider;
+}
+
+function askConsent(win: BrowserWindow, session: ReviewSession, provider: ConsentProvider): void {
+  send(win, session, { type: 'consentNeeded', provider });
+  pulseBar({ phase: 'idle', label: 'Ready' });
 }
 
 function appendExplanation(session: ReviewSession, text: string): void {
@@ -262,6 +309,8 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
     });
     return false;
   }
+  // Every explanation path saves here, so the companion's own-code step ends after whichever came first.
+  if (!ev.sample) noteOwnCodeExplained();
   try {
     if (explanation && session.file) {
       knowledgeStore().upsert({
@@ -290,11 +339,23 @@ function recordReview(win: BrowserWindow, session: ReviewSession, followUp: bool
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
+  if (session.awaitingConfirm) return;
+  // Fails closed: nothing of the person's is sent before they agree; the panel shows the form.
+  const before = consentNeededFor(session, undefined, opts.question);
+  if (before) {
+    askConsent(win, session, before);
+    return;
+  }
   if (!session.code && !session.payload) {
     send(win, session, { type: 'error', message: 'No code captured.' });
     return;
   }
   session.level = opts.level;
+  if (!opts.question) {
+    session.comprehension = undefined;
+    session.pendingAnswer = undefined;
+  }
   session.explanationText = '';
   session.islandStreaming = false;
   // A lesson this panel saved before a wipe went with it: this run saves a new one.
@@ -303,6 +364,12 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   pulseBar({ phase: 'contextualizing', label: 'Contextualizing' });
 
   const usageEarly = await cachedAppUsage();
+  // With the free allowance used up, a saved key takes over: that provider needs its own agreement.
+  const switched = consentNeededFor(session, usageEarly.remaining, opts.question);
+  if (switched) {
+    askConsent(win, session, switched);
+    return;
+  }
   if (opts.level === 'expert' && !isProPlan(usageEarly.plan)) {
     send(win, session, {
       type: 'error',
@@ -345,7 +412,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, STREAM_IDLE_MS);
   };
 
-  send(win, session, { type: 'status', message: 'thinking' });
+  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question });
   try {
     const token = store().token();
     const usage = await cachedAppUsage();
@@ -405,6 +472,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           if (next.remaining <= 0) raiseLimitPause(win);
         }).catch(() => undefined);
       } catch (err) {
+        if (err instanceof ConsentRequiredError) {
+          askConsent(win, session, err.provider);
+          return;
+        }
         if (abort.signal.aborted) {
           if (timedOut) send(win, session, { type: 'error', message: 'The explanation took too long. Please try again.' });
           return;
@@ -417,15 +488,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
       return;
     }
 
-    const res = await networkFetch(`${BACKEND}/api/v1/reviews`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...aiAuthHeaders(token),
-      },
-      body: JSON.stringify(payload),
-      signal: abort.signal,
-    });
+    const res = await postReview(payload, token, abort.signal);
     if (!res.ok || !res.body) {
       const body = (await res.json().catch(() => ({}))) as {
         error?: string; message?: string; upgradePath?: string;
@@ -472,7 +535,7 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
           // The service's error text reaches the panel only as a capped string.
           send(win, session, { type: 'error', message: serviceMessage(ev) || 'The explanation service could not complete that request. Please try again.' });
         } else if (ev.type === 'done') {
-          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model : undefined, mock: ev.mock === true });
+          send(win, session, { type: 'done', model: typeof ev.model === 'string' ? ev.model.slice(0, 80) : undefined, mock: ev.mock === true });
           completed = true;
           if (recordReview(win, session, Boolean(opts.question))) pulseBar({ phase: 'ready', label: 'Ready' });
           void refreshAppUsage().then((next) => {
@@ -491,6 +554,10 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     }
     if (!completed) send(win, session, { type: 'error', message: 'The explanation ended before it was complete. Please try again.' });
   } catch (err) {
+    if (err instanceof ConsentRequiredError) {
+      askConsent(win, session, err.provider);
+      return;
+    }
     if (abort.signal.aborted) {
       if (timedOut) send(win, session, { type: 'error', message: 'The explanation stopped responding. Check your connection and try again.' });
       return;
@@ -508,12 +575,27 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
 }
 
+const QUESTION_MODES: readonly QuizMode[] = ['quick-check', 'scenario', 'recall'];
+
 export async function startComprehension(win: BrowserWindow, session: ReviewSession): Promise<void> {
+  // Questions always come from Unvibe's server; the sample's are exempt (fetchQuestion checks again).
+  if (!session.isSample?.() && !codeConsented('unvibe')) {
+    askConsent(win, session, 'unvibe');
+    return;
+  }
   if (!session.code && !session.payload) return;
+  const progress = session.comprehension ??= { asked: 0, hasMissed: false, understood: false, loading: false };
+  if (progress.loading || progress.asked >= QUESTION_MODES.length) return;
+  const mode = QUESTION_MODES[progress.asked];
+  progress.loading = true;
+  session.pendingAnswer = undefined;
   try {
     pulseBar({ phase: 'thinking', label: 'Thinking' });
     const payload = await ensurePayload(session, { level: session.level });
-    const q = await fetchQuestion(payload, store().token());
+    if (session.comprehension !== progress) return;
+    const q = await fetchQuestion({ ...payload, quizMode: mode }, store().token());
+    if (session.comprehension !== progress) return;
+    progress.asked++;
     session.pendingAnswer = {
       answerIndex: q.answerIndex,
       concept: q.concept,
@@ -525,21 +607,36 @@ export async function startComprehension(win: BrowserWindow, session: ReviewSess
       question: q.question,
       options: q.options,
       conceptLabel: q.conceptLabel,
+      index: progress.asked,
+      total: QUESTION_MODES.length,
+      mode,
     });
     pulseBar({ phase: 'ready', label: 'Ready' });
-  } catch {
-    send(win, session, { type: 'quizError', message: 'Could not write a question for this one. Your explanation is still here.' });
+  } catch (error) {
+    if (session.comprehension !== progress) return;
+    if (error instanceof ConsentRequiredError) {
+      askConsent(win, session, error.provider);
+      return;
+    }
+    send(win, session, { type: 'quizError', message: error instanceof PlanLimitError
+      ? error.message
+      : 'Could not write a question for this one. Your explanation is still here.' });
+  } finally {
+    progress.loading = false;
   }
 }
 
 export function gradeComprehension(win: BrowserWindow, session: ReviewSession, choice: number): void {
   if (wipedSinceRun(session)) return;
   const a = session.pendingAnswer;
-  if (!a) return;
+  const progress = session.comprehension;
+  if (!a || !progress) return;
   const correct = choice === a.answerIndex;
+  const hasMissed = progress.hasMissed || !correct;
+  const firstRight = correct && !progress.understood;
   try {
-    store().setOutcome(session.reviewId, correct ? 'understood' : 'needs_review', a.concept, a.conceptLabel);
-    if (correct) persistUnderstoodSnapshot(session);
+    store().setOutcome(session.reviewId, hasMissed ? 'needs_review' : 'understood', a.concept, a.conceptLabel, new Date());
+    if (firstRight) persistUnderstoodSnapshot(session);
   } catch (error) {
     send(win, session, {
       type: 'error',
@@ -547,12 +644,18 @@ export function gradeComprehension(win: BrowserWindow, session: ReviewSession, c
     });
     return;
   }
-  if (correct) session.onUnderstood?.();
+  progress.hasMissed = hasMissed;
+  if (firstRight) {
+    progress.understood = true;
+    session.onUnderstood?.();
+  }
+  session.pendingAnswer = undefined;
   void flush();
   send(win, session, {
     type: 'graded',
     correct,
     answerIndex: a.answerIndex,
     rationale: a.rationale,
+    hasMissed,
   });
 }

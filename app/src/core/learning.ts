@@ -30,8 +30,10 @@ export interface LocalEvent {
   explanation?: string;
   /** Optional personal note attached to this lesson. Local only — never synced. */
   note?: string;
-  /** The built-in first-run sample, not the user's own code. Never a streak day. */
+  /** The built-in first-run sample, not the user's own code. */
   sample?: true;
+  /** Local days (YYYY-MM-DD) a Test me or quiz question about this lesson was answered. Local only, never synced. */
+  answeredOn?: string[];
 }
 
 export interface Usage {
@@ -50,8 +52,6 @@ export interface Profile {
   conceptsFamiliar: number;
   conceptsStrong: number;
   conceptsNeedReview: number;
-  streak: number;
-  bestStreak: number;
   usage: Usage[];
   /** Intensity 0..5 per day from lines explained that day. Oldest to newest, ending today. Length = HEAT_DAYS. */
   heat: number[];
@@ -81,9 +81,9 @@ export interface LearningItem extends FeedItem {
   note?: string;
 }
 
-/** Strip local-only lesson bodies before any remote sync. */
+/** Strip local-only lesson bodies and answer days before any remote sync. */
 export function forSync(event: LocalEvent): LocalEvent {
-  const { code: _code, explanation: _explanation, note: _note, ...rest } = event;
+  const { code: _code, explanation: _explanation, note: _note, answeredOn: _answeredOn, ...rest } = event;
   return rest;
 }
 
@@ -102,6 +102,20 @@ export function heatLevel(lines: number): number {
 
 function isLearningEvent(event: LocalEvent): boolean {
   return event.eventType !== 'day_active' && event.scope !== 'app';
+}
+
+/** A saved explanation of the user's own code: not the first-run sample, an Ask chat or an app open. */
+export function isOwnCodeLesson(event: LocalEvent): boolean {
+  return isLearningEvent(event) && event.scope !== 'chat' && !event.sample;
+}
+
+/**
+ * The companion's own-code paste step is due once setup is done while no saved lesson is the user's
+ * own code (only the first-run sample, or nothing). `ownCodeExplained` keeps it gone for good after
+ * the first one, even if that lesson is deleted later.
+ */
+export function ownCodeStepDue(state: { onboarded: boolean; ownCodeExplained: boolean; events: readonly LocalEvent[] }): boolean {
+  return state.onboarded && !state.ownCodeExplained && !state.events.some(isOwnCodeLesson);
 }
 
 function dayKey(iso: string): string {
@@ -125,29 +139,30 @@ function shift(key: string, delta: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function currentStreak(days: Set<string>, todayKey: string): number {
-  let cursor: string;
-  if (days.has(todayKey)) cursor = todayKey;
-  else if (days.has(shift(todayKey, -1))) cursor = shift(todayKey, -1);
-  else return 0;
-  let n = 0;
-  while (days.has(cursor)) {
-    n += 1;
-    cursor = shift(cursor, -1);
-  }
-  return n;
+/** Adds the local day of `now` (the computer's midnight is the boundary) to a lesson's answer days. */
+export function withAnswerDay(answeredOn: string[] | undefined, now: Date): string[] {
+  const day = localDayKey(now);
+  const days = answeredOn ?? [];
+  return days.includes(day) ? days : [...days, day];
 }
 
-export function bestStreak(days: Set<string>): number {
-  if (days.size === 0) return 0;
-  const sorted = [...days].sort();
-  let best = 1;
-  let run = 1;
-  for (let i = 1; i < sorted.length; i++) {
-    run = shift(sorted[i - 1], 1) === sorted[i] ? run + 1 : 1;
-    if (run > best) best = run;
-  }
-  return best;
+export interface TodayGoal {
+  /** An explanation of the user's own code was saved today. */
+  explained: boolean;
+  /** A Test me or quiz question about the user's own code was answered today. */
+  answered: boolean;
+}
+
+/**
+ * The daily goal (explain 1 piece of code, answer 1 question) derived from the saved lessons.
+ * The two can come from different lessons. Chats and the first-run sample count for neither.
+ */
+export function computeToday(events: LocalEvent[], now: Date): TodayGoal {
+  const own = events.filter(isOwnCodeLesson);
+  const explainedDays = new Set(own.map(eventDay));
+  const answeredDays = new Set(own.flatMap((e) => e.answeredOn ?? []));
+  const today = localDayKey(now);
+  return { explained: explainedDays.has(today), answered: answeredDays.has(today) };
 }
 
 const APP_BUCKETS: Array<{ label: string; re: RegExp }> = [
@@ -163,11 +178,6 @@ function bucket(app?: string): string {
 
 export function computeProfile(events: LocalEvent[], todayKey: string): Profile {
   const learning = events.filter(isLearningEvent);
-  // A streak day is a local calendar day with at least one finished explanation of the user's own
-  // code (marking one understood also records it). App opens, login launches, Ask chats and the
-  // first-run sample don't count.
-  const days = new Set(learning.filter((e) => e.scope !== 'chat' && !e.sample).map(eventDay));
-
   const conceptEvents = new Map<string, LocalEvent[]>();
   for (const e of learning) {
     if (!e.concept || e.concept === 'day_active' || e.concept === 'chat') continue;
@@ -205,8 +215,6 @@ export function computeProfile(events: LocalEvent[], todayKey: string): Profile 
     conceptsFamiliar: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Familiar').length,
     conceptsStrong: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Strong').length,
     conceptsNeedReview: [...conceptEvents.values()].filter((e) => deriveSkillState(e) === 'Needs review').length,
-    streak: currentStreak(days, todayKey),
-    bestStreak: bestStreak(days),
     usage,
     heat,
     lastActive: events.length ? events[events.length - 1].ts : undefined,

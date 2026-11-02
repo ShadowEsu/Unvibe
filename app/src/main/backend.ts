@@ -5,6 +5,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
+import { isFirstRunSamplePayload } from '../core/consent';
+import { requireCodeConsent } from './consentStore';
 import { serviceMessage } from '../core/serviceError';
 import { store } from './store';
 import { bakedTrialToken } from './trial';
@@ -67,12 +69,25 @@ export function aiAuthHeaders(sessionToken?: string | null): Record<string, stri
 }
 
 /** One setup-progress ping (see progress.ts). Returns the HTTP status, or null when nothing came back. */
-export async function postTrialProgress(step: string, headers: Record<string, string>): Promise<number | null> {
+export function postTrialProgress(step: string, headers: Record<string, string>): Promise<number | null> {
+  return postForStatus('/api/v1/trial/progress', { step }, headers);
+}
+
+/**
+ * One PMF survey answer (pmf.ts), sent only when the person presses Send. Always the trial headers
+ * (`aiAuthHeaders(null)`), signed in or not: the server keys answers by a hash of the install ID.
+ * Returns the HTTP status, or null when nothing came back. Never retried automatically.
+ */
+export function postPmfAnswer(body: unknown, headers: Record<string, string>): Promise<number | null> {
+  return postForStatus('/api/v1/feedback/pmf', body, headers);
+}
+
+async function postForStatus(route: string, body: unknown, headers: Record<string, string>): Promise<number | null> {
   if (!headers.authorization) return null;
-  const res = await request(`${BACKEND}/api/v1/trial/progress`, {
+  const res = await request(`${BACKEND}${route}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify({ step }),
+    body: JSON.stringify(body),
   }).catch(() => null);
   await res?.body?.cancel().catch(() => undefined);
   return res?.status ?? null;
@@ -121,11 +136,14 @@ async function request(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
+/** Allowance refusals retain their existing wording without treating every service error as a limit. */
+export class PlanLimitError extends Error {}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => ({}));
     if (res.status === 401) throw new Error('Your session has expired. Please sign in again.');
-    if (res.status === 429 || res.status === 402) throw new Error(serviceMessage(body) || 'Your plan limit has been reached. Open Plan & usage to review options.');
+    if (res.status === 429 || res.status === 402) throw new PlanLimitError(serviceMessage(body) || 'Your plan limit has been reached. Open Plan & usage to review options.');
     if (res.status === 501) throw new Error('Cloud sign-in is not configured for this build. You can keep learning locally.');
     if (res.status >= 500) throw new Error('The service is temporarily unavailable. Please try again shortly.');
     throw new Error(`The service could not complete that request (${res.status}).`);
@@ -353,7 +371,27 @@ export async function pullEvents(
   return [...byId.values()].sort((a, b) => a.ts.localeCompare(b.ts) || a.id.localeCompare(b.id));
 }
 
+/**
+ * The one way the person's code, diffs and questions reach Unvibe's server for an explanation
+ * (Unvibe's server uses Anthropic (Claude)). Refuses with ConsentRequiredError, before any request,
+ * without an agreement; only the verbatim built-in sample is exempt (Security CC-1, CC-6).
+ */
+export async function postReview(payload: ReviewRequestPayload, token: string | null | undefined, signal: AbortSignal): Promise<Response> {
+  if (!isFirstRunSamplePayload(payload)) requireCodeConsent('unvibe');
+  return networkFetch(`${BACKEND}/api/v1/reviews`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...aiAuthHeaders(token),
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+}
+
+/** A quiz question about the code: the code goes to Unvibe's server too, so the same agreement applies. */
 export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null, signal?: AbortSignal): Promise<ComprehensionQuestion> {
+  if (!isFirstRunSamplePayload(payload)) requireCodeConsent('unvibe');
   const res = await request(`${BACKEND}/api/v1/comprehension`, {
     method: 'POST',
     headers: {

@@ -22,8 +22,10 @@
   --ask: #111111;
   --ask-soft: #f3f3f3;
 }
+/* System dark applies to the ink panel only: the paper panel (data-panel="light", the default) keeps
+   its own light colours, or its dark ink text lands on a dark card (Design C1 P1: 1.1:1 rail labels). */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not([data-panel="light"]) {
     --bg: #111111;
     --fg: #f4f4f4;
     --muted: rgb(245 243 250 / 0.82);
@@ -44,7 +46,7 @@
     --ask-soft: #1c1c1c;
   }
 }
-:root[data-theme="dark"] {
+:root[data-theme="dark"]:not([data-panel="light"]) {
   --bg: #111111;
   --fg: #f4f4f4;
   --muted: rgb(245 243 250 / 0.82);
@@ -117,13 +119,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
 .card::before { content:""; position:absolute; left:32%; right:32%; top:0; height:2px; border-radius:0 0 2px 2px; background:var(--fg); opacity:.7; pointer-events:none; z-index:2; }
 .card::after { content: none; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .card {
+  :root:not([data-theme="light"]):not([data-panel="light"]) .card {
     background: var(--bg);
     backdrop-filter: blur(30px) saturate(1.25);
     box-shadow: 0 18px 48px rgb(0 0 0 / 0.5), inset 0 1px rgb(255 255 255 / 0.12);
   }
 }
-:root[data-theme="dark"] .card {
+:root[data-theme="dark"]:not([data-panel="light"]) .card {
   background: var(--bg);
   backdrop-filter: blur(30px) saturate(1.25);
   box-shadow: 0 18px 48px rgb(0 0 0 / 0.5), inset 0 1px rgb(255 255 255 / 0.12);
@@ -209,12 +211,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   backdrop-filter: blur(14px) saturate(1.15);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .head {
+  :root:not([data-theme="light"]):not([data-panel="light"]) .head {
     background: var(--bg);
     border-bottom-color: rgb(255 255 255 / 0.12);
   }
 }
-:root[data-theme="dark"] .head {
+:root[data-theme="dark"]:not([data-panel="light"]) .head {
   background: var(--bg);
   border-bottom-color: rgb(255 255 255 / 0.12);
 }
@@ -519,6 +521,10 @@ code.inline {
 .pause-actions .btn { margin-top: 0; width: 100%; }
 .state .findings { text-align: left; font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px dashed var(--danger-line); border-radius: 8px; padding: 8px 12px; max-width: 320px; }
 .ready-state { justify-content: center; }
+/* The code the person is deciding to send reads as written: full width, indentation kept,
+   no ligatures (=> stays =>), as in pasteTarget.css (QA, Design). */
+.ready-state .code-context { align-self: stretch; text-align: left; }
+.ready-state .code-context pre { text-align: left; font-variant-ligatures: none; }
 .container-progress { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:4px; color:var(--muted); font:8px var(--font-mono); letter-spacing:.04em; text-transform:uppercase; }
 .container-progress span { opacity:.48; }.container-progress span.on { color:var(--fill-strong); opacity:1; }
 .empty-picker { justify-content: flex-start; padding-top: 18px; gap: 10px; }
@@ -953,14 +959,14 @@ code.inline {
   backdrop-filter: none; animation-duration: .18s;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .card {
+  :root:not([data-theme="light"]):not([data-panel="light"]) .card {
     --bg: #1e1e20; --fg: #f2f2f3; --muted: #a1a1a6; --line: #343437;
     --chip-bg: #2a2a2d; --panel-tint: #242427; --fill: #f2f2f3; --fill-strong: #fff; --on-fill: #111;
     --plain-code-bg: #161618; --plain-code-fg: #e8e8ea;
     box-shadow: 0 10px 30px rgba(0,0,0,.45);
   }
 }
-:root[data-theme="dark"] .card {
+:root[data-theme="dark"]:not([data-panel="light"]) .card {
   --bg: #1e1e20; --fg: #f2f2f3; --muted: #a1a1a6; --line: #343437;
   --chip-bg: #2a2a2d; --panel-tint: #242427; --fill: #f2f2f3; --fill-strong: #fff; --on-fill: #111;
   --plain-code-bg: #161618; --plain-code-fg: #e8e8ea;
@@ -1203,6 +1209,9 @@ code.inline {
 .card .askrow .btn-ask:disabled { background: var(--p-raised); color: var(--p-faint); }
 .card .teach-panel, .card .origin-panel { padding: 10px 12px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-surface); }
 .card .teach-box { border: 1px solid var(--p-line); border-radius: 10px; background: var(--p-code); color: var(--p-ink); }
+/* Chromium's default placeholder grey was 4.2:1 on the dark field; --p-muted is about 8.9:1 there
+   and 6.6:1 on the light panel's white (Design P3). */
+.card .teach-box::placeholder, .card .paste-box::placeholder { color: var(--p-muted); }
 
 /* Empty, error and consent states */
 .card .state .big { color: var(--p-ink); font-size: 15px; font-weight: 650; }
@@ -1408,6 +1417,8 @@ code.inline {
 .card .body li::marker { color: var(--p-lime); }
 .card .body a { color: var(--p-sky); }
 .card .body :not(pre) > code { background: var(--p-raised); color: var(--p-sun); }
+/* A code chip inside a bold label keeps the label's lime band running through it (Design P3-1). */
+.card .body strong > code { background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.28) 62%), var(--p-raised); }
 .card .code-context, .card .cb { border-radius: 12px; border-color: var(--p-line); }
 .card .tk-k { color: var(--p-lilac); } .card .tk-s { color: var(--p-lime); } .card .tk-c { color: #6f6c64; } .card .tk-n { color: var(--p-sun); }
 
@@ -1490,6 +1501,7 @@ code.inline {
 :root[data-panel="light"] .card .body p { color: #2e2e2e; }
 :root[data-panel="light"] .card .body strong { color: #141414; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%); }
 :root[data-panel="light"] .card .body :not(pre) > code { background: #f1eee6; color: #9a3412; }
+:root[data-panel="light"] .card .body strong > code { background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.7) 62%), #f1eee6; }
 :root[data-panel="light"] .card .body a { color: #1d6fa5; }
 /* List numbers and bullets are text: lime on cream was 1.29:1; #4d5c00 is 7.08:1 on the light panel. */
 :root[data-panel="light"] .card .body li::marker { color: #4d5c00; }
@@ -1517,6 +1529,8 @@ code.inline {
 :root[data-panel="light"] .card .ask-sandbox { background: #ffffff; }
 :root[data-panel="light"] .card .askrow input { color: #141414; }
 :root[data-panel="light"] .card .paste-box { background: #ffffff; color: #141414; }
+/* The Teach box takes --p-code, which stays dark in the light panel, so typed text was #141414 on #141413. */
+:root[data-panel="light"] .card .teach-box { background: #ffffff; color: #141414; }
 :root[data-panel="light"] .card .opt { box-shadow: 0 2px 0 #e4dfd3; color: #141414; }
 :root[data-panel="light"] .card .quiz__kicker { color: #1d6fa5; }
 :root[data-panel="light"] .card .head__status i { box-shadow: 0 0 0 3px rgb(20 20 20 / 0.08); }
@@ -1544,7 +1558,7 @@ code.inline {
 :root[data-panel="light"] .card.card { --p-faint: #6f6b63; --p-focus: #5b4bd6; }
 .card.card :focus-visible { outline: 2px solid var(--p-focus); outline-offset: 2px; }
 
-/* Golden Gate dusk: a soft coral → lilac → sky wash behind the header and a dusk rule under it. */
+/* Dusk wash: a soft coral → lilac → sky gradient behind the header and a dusk rule under it. */
 .card .head { background: linear-gradient(100deg, rgb(249 151 143 / 0.12), rgb(180 156 240 / 0.12) 50%, rgb(105 158 252 / 0.12)); }
 .card .head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--p-dusk); opacity: 0.85; }
 :root[data-panel="light"] .card .head { background: linear-gradient(100deg, rgb(255 196 150 / 0.32), rgb(243 238 248 / 0.9) 50%, rgb(140 190 255 / 0.28)); }
@@ -1569,8 +1583,13 @@ code.inline {
 .card .tab__x:hover, .card .tab__x:focus-visible { opacity: 1; background: var(--p-raised); }
 .card .tab-add { width: 30px; height: 30px; }
 
-/* Disabled controls stay legible as "not yet" instead of vanishing. */
-.card .widget-tools button:disabled { opacity: 0.55; }
+/* Disabled controls stay legible as "not yet" instead of vanishing. Rail labels are ink when the tool
+   is available or open; an unavailable tool keeps a muted label at full strength (4.5:1 or more on
+   paper and ink) and only its icon dims. */
+.card .widget-tools button b { color: var(--p-ink); }
+.card .widget-tools button:disabled { opacity: 1; }
+.card .widget-tools button:disabled b { color: var(--p-muted); }
+.card .widget-tools button:disabled .widget-tool-icon { opacity: 0.45; }
 .card .lvl:disabled { opacity: 0.55; cursor: default; }
 
 /* Saved note: a round dot that reads on paper and ink, not a lime square. */
@@ -1589,3 +1608,51 @@ code.inline {
 
 /* Long explanations fade into the action row instead of being sliced by it. */
 .card .stage > .body { padding-bottom: 26px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }
+
+/* Mac without Accessibility: the paste box leads, the shortcut offer sits under an "or" rule, and
+   its guide is the access note, as a numbered list. Colours follow the panel's paper or ink. */
+/* The panel's main area clips, so this state scrolls itself when the guide makes it taller. */
+.card .empty-picker--paste { gap: 12px; padding-top: 12px; min-height: 0; overflow-y: auto; }
+.card .empty-picker--paste .state__vibe { margin: 0; }
+.card .empty-picker--paste .paste-target { max-width: 420px; }
+.card .empty-picker--paste .paste-target__box { border-color: var(--p-faint); background: var(--p-surface); color: var(--p-ink); }
+.card .empty-picker--paste .paste-target__box:focus { border-color: var(--p-ink); }
+.card .empty-picker--paste .paste-target__hint { color: var(--p-muted); }
+.card .empty-picker--paste .sub { max-width: 380px; font-size: 13.5px; line-height: 1.5; }
+.card .empty-or { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; color: var(--p-muted); font: 500 12.5px/1 var(--font-sans); }
+.card .empty-or::before, .card .empty-or::after { content: ""; flex: 1; height: 1px; background: var(--p-line); }
+.card .empty-picker--paste .access-note { width: 100%; max-width: 420px; box-sizing: border-box; margin: 0; padding: 14px; }
+.card .access-note .shortcut-guide__steps li { font-size: 13.5px; }
+
+/* The PMF survey card (FE-09): inline under a finished explanation, styled like the limit strip
+   and the Test me options so it reads as part of the panel, never as a pop-up. */
+.pmf-card { position: relative; display: grid; gap: 12px; margin: 18px 0 4px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.pmf-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pmf-card__head .quiz__kicker { margin-bottom: 4px; }
+.pmf-card__sub, .pmf-card__consent { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.pmf-card__close { flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.pmf-card__close:hover:not(:disabled) { color: var(--fg); background: var(--chip-bg); }
+.pmf-card__q { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; font-size: 13px; font-weight: 650; line-height: 1.4; }
+.pmf-card__q legend { padding: 0; margin-bottom: 8px; }
+.pmf-card__options { display: grid; gap: 6px; }
+.pmf-card .opt { cursor: pointer; font-weight: 500; }
+.pmf-card .opt input { margin: 2px 0 0; accent-color: var(--test); }
+/* Its own field, not .teach-box: that one takes --p-code, which stays dark in the light panel
+   (Design MUST on #103). Same fill, border and radius as the answer rows; the focus ring is
+   the panel's 2px --p-focus outline. */
+.card .pmf-card__field { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid var(--p-line); border-radius: 12px; background: var(--p-surface); color: var(--p-ink); font: 400 13px/1.45 var(--font-sans); resize: vertical; }
+/* --uv-danger (#e08b82) is about 2.5:1 on the light panel's white; #a1291f (the companion's error
+   red) is about 7.3:1 there. Dark keeps --uv-danger. */
+.card .pmf-card { --pmf-danger: var(--uv-danger); }
+:root[data-panel="light"] .card .pmf-card { --pmf-danger: #a1291f; }
+.pmf-card__error { margin: 0; font-size: 12.5px; }
+/* Above '.card .body p' (dark, 0,2,1) and its light rule (0,4,1), which otherwise set the text grey. */
+:root .card.card .body p.pmf-card__error { color: var(--pmf-danger, var(--uv-danger)); }
+.pmf-card__error--field { display: flex; align-items: flex-start; gap: 6px; margin-top: -4px; }
+.pmf-card__error-icon { flex: none; display: inline-grid; place-items: center; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; background: var(--pmf-danger, var(--uv-danger)); color: var(--p-surface); font: 700 10px/1 var(--font-sans); }
+.card .pmf-card__field[aria-invalid="true"] { border-color: var(--pmf-danger); }
+.pmf-card .btn.ghost:disabled { opacity: 0.5; cursor: default; }
+.pmf-card--thanks { grid-template-columns: 1fr auto; align-items: center; }
+.pmf-card--thanks p { margin: 0; font-size: 13px; line-height: 1.45; }
+.pmf-card__id { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; cursor: text; }
+.pmf-card .btn.pmf-card__copy { min-width: 24px; min-height: 24px; margin-left: 2px; padding: 3px 9px; border-radius: 7px; font-size: 11.5px; line-height: 16px; vertical-align: baseline; }

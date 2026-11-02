@@ -78,8 +78,7 @@ Set these on the marketing hosting project for `https://unvibe.site`.
 | `WAITLIST_NOTIFY_EMAIL` | Your monitored support inbox. | Yes for notifications |
 | `RESEND_API_KEY` | Server-only Resend key. | Strongly recommended |
 | `WAITLIST_FROM_EMAIL` | A verified sender, for example `Unvibe Waitlist <waitlist@unvibe.site>`. | Yes with Resend |
-| `NEXT_PUBLIC_POSTHOG_KEY` | Optional analytics key. Leave blank for no analytics. | Optional |
-| `NEXT_PUBLIC_POSTHOG_HOST` | Your approved PostHog host, if analytics is enabled. | Optional |
+| `NEXT_PUBLIC_MIXPANEL_TOKEN` | Optional analytics token. Leave blank for no analytics. | Optional |
 
 After configuring these, submit one disposable waitlist entry on the deployed
 site and confirm all three outcomes: the entry is stored, it is visible to an

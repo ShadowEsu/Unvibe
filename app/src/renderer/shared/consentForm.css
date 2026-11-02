@@ -1,0 +1,78 @@
+/*
+ * The first-send consent form, shared by the review panel (widget) and the companion. Colours come
+ * from each renderer's own theme so light and dark both work: the companion names its text --ink
+ * and its card --panel; the widget uses --fg and --panel-tint. Both define --muted, --line and
+ * --font-display. The --uv-* palette is the dark bar's and is not used for colour here.
+ */
+.consent-form {
+  --cf-fg: var(--ink, var(--fg));
+  display: grid;
+  gap: var(--uv-space-3);
+  max-width: 520px;
+  text-align: left;
+  color: var(--cf-fg);
+}
+.consent-form__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--cf-fg);
+}
+.consent-form__lead,
+.consent-form__note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.consent-form__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--uv-space-2);
+  align-items: start;
+  padding: var(--uv-space-2) var(--uv-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--uv-radius-m);
+  background: transparent;
+  color: var(--cf-fg);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.consent-form__row:has(input:checked) { border-color: var(--cf-fg); }
+.consent-form__row input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--cf-fg);
+}
+.consent-form__row a { color: inherit; text-decoration: underline; }
+/* Neither renderer has a danger colour; the note is the text colour, bold, and announced (role=alert). */
+.consent-form__error { margin: 0; color: var(--cf-fg); font-size: 0.86rem; font-weight: 650; }
+.consent-form__actions { display: flex; gap: var(--uv-space-2); flex-wrap: wrap; }
+.consent-form__actions [aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+/* The companion's modal around the same form, matching its Settings overlay and modal. */
+.consent-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--uv-space-5);
+  background: rgba(14, 12, 18, 0.38);
+  backdrop-filter: blur(8px);
+}
+.consent-dialog__card {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: var(--uv-space-5);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel, var(--panel-tint));
+  box-shadow: 0 28px 90px rgba(6, 4, 16, 0.36);
+  backdrop-filter: blur(22px);
+}

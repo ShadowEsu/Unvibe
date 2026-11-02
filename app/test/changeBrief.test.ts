@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildChangeBrief, hunkStats } from '../src/core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, hunkStats } from '../src/core/changeBrief';
 import { parseUnifiedDiff } from '../src/core/gitDiff';
 import { buildOriginReport } from '../src/core/codeOrigin';
 import { freshnessFromChange, hashCode, pathImportance } from '../src/core/knowledge';
@@ -67,4 +67,18 @@ test('coverage stays honest with no data', () => {
   assert.ok((coverageFromEvidence(['teachback', 'confirmed']).score ?? 0) > 20);
   assert.equal(knowledgeRisk({ missing: 80, concentration: 80, stale: 80, unreviewed: 80 }).label, 'CRITICAL');
   assert.equal(understandingGap(43, 21), 22);
+});
+
+test('the brief shows a project under the home folder as ~/…, never the account name', () => {
+  assert.equal(briefRepoLabel('/Users/sam/code/app', '/Users/sam'), '~/code/app');
+  assert.equal(briefRepoLabel('/Users/sam/code/app', '/Users/sam/'), '~/code/app');
+  assert.equal(briefRepoLabel('/Users/sam', '/Users/sam'), '~');
+  // Git for Windows prints forward slashes while the home folder uses backslashes; case is ignored.
+  assert.equal(briefRepoLabel('C:/Users/sam/app', 'C:\\Users\\sam'), '~/app');
+  assert.equal(briefRepoLabel('C:\\Users\\sam\\code\\app', 'C:\\Users\\sam'), '~/code/app');
+  assert.equal(briefRepoLabel('c:/users/Sam/app', 'C:\\Users\\sam'), '~/app');
+  // A sibling folder that only shares the prefix is not inside home.
+  assert.equal(briefRepoLabel('/Users/samuel/app', '/Users/sam'), '/Users/samuel/app');
+  assert.equal(briefRepoLabel('/srv/app', '/Users/sam'), '/srv/app');
+  assert.equal(briefRepoLabel('/srv/app', ''), '/srv/app');
 });

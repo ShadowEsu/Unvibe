@@ -12,6 +12,11 @@ app.getPath = (): string => userData;
 import { claimGiftCode } from '../src/main/backend';
 import { store } from '../src/main/store';
 import { askChat, askStudyAssistant } from '../src/main/studyQuiz';
+import { CONSENT_ITEMS } from '../src/core/consent';
+import { consentStore } from '../src/main/consentStore';
+
+// The service's messages only arrive after something was sent, which needs the person's agreement.
+consentStore().agree([...CONSENT_ITEMS], 'unvibe');
 
 /** What the service answers next: a JSON refusal, or an SSE stream of these events. */
 let answer: { status: number; body: unknown } | { events: unknown[] } = { status: 200, body: {} };

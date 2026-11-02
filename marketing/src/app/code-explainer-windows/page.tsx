@@ -96,7 +96,7 @@ export default function CodeExplainerWindowsPage() {
         <h2 id="win-what">What Vibe can do with your code</h2>
         <ul className="explain-notes">
           <li>Explain it at the level you pick. New, Beginner, Intermediate and Advanced are free; Expert comes with Pro.</li>
-          <li>Quiz you with Test me: one question written about the lines you highlighted.</li>
+          <li>Quiz you with Test me: up to three questions written about the lines you highlighted.</li>
           <li>Keep the lessons you want in your Library, saved on this PC.</li>
           <li>See what changed in your repo in a Change Brief, built on your PC at no cost (its AI explanation is Pro).</li>
           <li>
@@ -111,7 +111,7 @@ export default function CodeExplainerWindowsPage() {
           and your project folder&apos;s name when Unvibe knows them (on Pro, some code around it for context), or, on
           Pro, the git changes you ask the AI to explain, and any question you type. A request with
           a key or token in it is stopped on your PC, and a possible one asks you first; since version 0.1.44 that check
-          covers your questions and Chat messages too. Your repository is never uploaded.
+          covers your questions and Ask Vibe chat messages too. Your repository is never uploaded.
         </p>
       </section>
 

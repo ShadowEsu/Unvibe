@@ -5,7 +5,7 @@ import { SHORTCUTS } from "@/lib/shortcuts";
 /**
  * FAQ content, kept short and true to the shipped app (app/src):
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
- * keys and tokens in code and diffs filtered on the device (typed questions and Chat too from
+ * keys and tokens in code and diffs filtered on the device (typed questions and Ask Vibe chat too from
  * v0.1.44, not in v0.1.43); no local-only mode yet; AI explanations can be wrong.
  * No allowance numbers here until the live trial configuration is confirmed.
  */
@@ -30,7 +30,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "what-is-it",
     question: "What is Unvibe?",
-    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, take a one-question Test me, and save the lesson to your Library.`,
+    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, check yourself with Test me (up to three questions about that code), and save the lesson to your Library. The Today page sets a small daily goal: explain one piece of code and answer one question.`,
     category: "product",
   },
   {
@@ -76,7 +76,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Chat messages. Your repo is never uploaded.",
+      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Ask Vibe chat messages. Your repo is never uploaded.",
     category: "privacy",
   },
   {
