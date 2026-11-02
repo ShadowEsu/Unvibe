@@ -7,6 +7,7 @@ import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { getBillingStore, resetBillingStoreCacheForTests } from '../src/billing/store';
 import { seedMemoryPromoBatch } from '../src/billing/promo';
 import { getStore, resetStoreCacheForTests } from '../src/data/store';
+import { ACCOUNT_POLICY_VERSION } from '../src/lib/accountConsent';
 import { formatPromoCode, PROMO_ALPHABET, promoCodeHash } from '../src/lib/promoCode';
 
 // Real routes on the memory backends (no database): the memory promo backend mirrors the SQL
@@ -17,6 +18,7 @@ const ADMIN_TOKEN = 'test-admin-token-0123456789abcdef';
 process.env.UNVIBE_ADMIN_STATS_TOKEN = ADMIN_TOKEN;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const AGREED = { terms: true, age18: true, policyVersion: ACCOUNT_POLICY_VERSION };
 
 function resetStores(): void {
   const g = globalThis as unknown as { __uncodeData?: unknown; __uncodeBillingData?: unknown; __unvibePromo?: unknown };
@@ -69,9 +71,10 @@ async function payingPerson(): Promise<{ userId: string; token: string }> {
 
 interface RedeemBody { ok: boolean; status?: string; error?: string; months?: number | null; proUntil?: string | null; message?: string }
 
-async function redeem(body: unknown, ip = freshIp()): Promise<{ http: number; body: RedeemBody }> {
+/** Every call carries the agreement /redeem asks for (promoRedeemAgreement.test.ts covers its refusals). */
+async function redeem(body: Record<string, unknown>, ip = freshIp()): Promise<{ http: number; body: RedeemBody }> {
   const response = await redeemRoute(new Request('https://api.example.test/api/v1/promo/redeem', {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ agreement: AGREED, ...body }),
   }));
   assert.equal(response.headers.get('cache-control'), 'no-store');
   return { http: response.status, body: await response.json() as RedeemBody };
