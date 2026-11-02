@@ -1660,21 +1660,27 @@ code.inline {
 
 /* Short default answer (Preston 2026-11-02): body size, then the honest "Not sure:" line in the quiet style.
    "More detail" is a text button, not a chip; its content fades in under the answer with no height animation. */
-.short-answer__unsure { margin-top: 8px; color: var(--muted); font-size: .9em; }
+.short-answer__unsure { margin-top: 8px; font-size: .9em; }
 .short-answer__unsure p { margin: 0; }
+/* The panel themes color `.card .body p` directly (up to :root[data-panel] specificity), so the quiet lines
+   name their own p, with :root to win over the light theme's rule. */
+:root .card .body .short-answer__unsure p,
+:root .card .body .more-detail__wait,
+:root .card .body .more-detail__error,
+.short-answer__unsure p, .more-detail__wait, .more-detail__error { color: var(--p-muted, var(--muted)); }
 .more-detail { margin-top: 10px; }
 .more-detail__toggle {
   display: inline-flex; align-items: center; gap: 5px;
   min-height: 32px; padding: 4px 2px;
-  border: 0; background: transparent; color: var(--fill-strong);
+  border: 0; background: transparent; color: inherit;
   font: 600 calc(13px * var(--widget-scale)) var(--font-sans);
   cursor: pointer;
 }
 .more-detail__toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
-.more-detail__toggle:focus-visible { outline: 2px solid var(--fill-strong); outline-offset: 2px; border-radius: 4px; }
+.more-detail__toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
 .more-detail__chevron { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .more-detail__toggle[aria-expanded="true"] .more-detail__chevron { transform: rotate(180deg); }
 .more-detail__body { margin-top: 6px; animation: more-detail-in 200ms ease-out both; }
-.more-detail__wait, .more-detail__error { margin: 0; color: var(--muted); font-size: .9em; }
+.more-detail__wait, .more-detail__error { margin: 0; font-size: .9em; }
 @keyframes more-detail-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .more-detail__body { animation: none; } }
