@@ -79,6 +79,7 @@ import {
   claimGiftCode,
   type Account as BackendAccount,
   warmBackend,
+  BACKEND,
   networkFetch,
   aiAuthHeaders,
   postPmfAnswer,
@@ -1703,7 +1704,7 @@ app.whenReady().then(() => {
     try {
       const device = await startDeviceAuth();
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
-      const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
+      const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode, BACKEND);
       currentDeviceVerificationUrl = verificationUrl;
       let browserOpened = true;
       try {
