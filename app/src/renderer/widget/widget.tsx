@@ -437,6 +437,12 @@ function Widget() {
   const detailLeaveTimer = useRef(0);
   /** Less detail was pressed while the reader was below the top of the short answer. */
   const snapToAnswer = useRef(false);
+  /**
+   * More detail was just opened: show its first 3 lines above the action bar if its first line would be below the
+   * visible bottom (Design, amended spec §4, 2 Nov). `target` is the scrollTop that shows them; null until measured.
+   */
+  const revealDetail = useRef<{ target: number | null } | null>(null);
+  const revealFrame = useRef(0);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -712,9 +718,11 @@ function Widget() {
           detailLeaveTimer.current = window.setTimeout(() => setDetailLeaving(null), EXIT_MS);
         }
       }
+      if (!detail.open) revealDetail.current = { target: null };
       setTabs((prev) => patchTab(prev, activeRef.current, { detail: { ...detail, open: !detail.open } }));
       return;
     }
+    revealDetail.current = { target: null };
     setTabs((prev) => patchTab(prev, activeRef.current, { detail: { phase: 'streaming', text: '', error: '', open: true } }));
     // Not request(): More detail is a follow-up, not a new explanation, so an exhausted explanation
     // allowance must not replace the answer on screen; a refusal shows under the short answer.
@@ -803,6 +811,42 @@ function Widget() {
     const answerTop = body ? shortAnswerTop(body) : null;
     if (body && answerTop !== null) body.scrollTop = Math.min(body.scrollTop, answerTop);
   }, [detailShown]);
+  // More detail opens below a short answer; when it would start out of sight, bring its first 3 lines into view.
+  useLayoutEffect(() => {
+    const reveal = revealDetail.current;
+    const body = bodyRef.current;
+    if (!reveal || !body || !active.detail.open) return;
+    const first = body.querySelector<HTMLElement>('.more-detail__body > *');
+    if (!first) return;
+    if (reveal.target === null) {
+      const style = getComputedStyle(first);
+      const line = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
+      const bodyBox = body.getBoundingClientRect();
+      const top = first.getBoundingClientRect().top - bodyBox.top + body.scrollTop;
+      if (top + line <= body.scrollTop + body.clientHeight) {
+        revealDetail.current = null; // its first line is already in view: no scroll
+        return;
+      }
+      reveal.target = top + 3 * line + 12 - body.clientHeight;
+    }
+    const goal = Math.min(reveal.target, body.scrollHeight - body.clientHeight);
+    if (goal >= reveal.target || active.detail.phase !== 'streaming') revealDetail.current = null;
+    if (goal <= body.scrollTop) return;
+    cancelAnimationFrame(revealFrame.current);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      body.scrollTop = goal;
+      return;
+    }
+    const from = body.scrollTop;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / 240);
+      body.scrollTop = from + (goal - from) * (1 - (1 - t) ** 3);
+      if (t < 1) revealFrame.current = requestAnimationFrame(step);
+    };
+    revealFrame.current = requestAnimationFrame(step);
+  }, [active.detail.open, active.detail.text, active.detail.phase]);
+  useEffect(() => () => cancelAnimationFrame(revealFrame.current), []);
   useEffect(() => {
     if (!pmfReady || pmf || pmfClosed.current) return;
     let live = true;
