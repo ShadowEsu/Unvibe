@@ -17,12 +17,12 @@ delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.VERCEL_ENV;
 delete process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION;
-delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+delete process.env.UNVIBE_CHECKOUT_LIVE;
 delete process.env.APP_URL;
 delete process.env.PUBLIC_APP_URL;
 // A made-up key, short enough that the secret scan of added lines does not mistake it for a real one.
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnly';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 process.env.STRIPE_PRICE_PRO_ANNUAL = 'price_pro_annual';
 
@@ -61,7 +61,7 @@ function deliver(event: { id?: string; type: string; data: { object: Record<stri
   const payload = JSON.stringify({ object: 'event', livemode: false, id: `evt_${randomUUID()}`, ...event });
   return webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
 }

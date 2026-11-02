@@ -4,7 +4,7 @@ import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
 import { CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { automaticTax, checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, SubscriptionStatus, WorkspaceAccess } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -151,6 +151,7 @@ export async function POST(req: Request): Promise<Response> {
           metadata,
           payment_intent_data: { metadata },
           allow_promotion_codes: true,
+          ...automaticTax(Boolean(current.subscription.stripeCustomerId)),
         }, { idempotencyKey: `uncode-checkout-${intent.id}` })
         : await stripe.checkout.sessions.create({
           mode: 'subscription',
@@ -169,6 +170,7 @@ export async function POST(req: Request): Promise<Response> {
           metadata,
           subscription_data: { metadata },
           allow_promotion_codes: true,
+          ...automaticTax(Boolean(current.subscription.stripeCustomerId)),
         }, { idempotencyKey: `uncode-checkout-${intent.id}` });
     } catch (error) {
       await billing.expireCheckoutIntent(intent.id);

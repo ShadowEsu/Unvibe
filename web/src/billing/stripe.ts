@@ -1,18 +1,18 @@
 import Stripe from 'stripe';
-import { stripeKeyMode } from './stripeKey';
+import { stripeKeyMode, webhookSecretValid } from './stripeKey';
 import type { BillingInterval, PlanId } from './types';
 
 let stripeClient: Stripe | undefined;
 
 /**
- * The Stripe client, only for a well-formed secret or restricted key (`stripeKeyMode`): any other
+ * The Stripe client, only for an accepted key (`stripeKeyMode`: a test key or a restricted live key): any other
  * value throws before a client exists, so nothing is sent with it. It does not check the payment
  * lock: cancellations, refunds and account deletion keep serving existing customers while purchases
  * are locked, and each purchase path checks the lock itself.
  */
 export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
-  if (key === undefined || stripeKeyMode(key) === null) throw new Error('Stripe is not configured. Set STRIPE_SECRET_KEY on the server to a secret or restricted key.');
+  if (key === undefined || stripeKeyMode(key) === null) throw new Error('Stripe is not configured. Set STRIPE_SECRET_KEY on the server to a test key or a restricted live key.');
   stripeClient ??= new Stripe(key, { apiVersion: '2026-06-24.dahlia', typescript: true });
   return stripeClient;
 }
@@ -34,21 +34,21 @@ export function stripePriceId(plan: Exclude<PlanId, 'free'>, interval: BillingIn
 export function stripeIsConfigured(): boolean {
   return Boolean(
     stripeKeyMode(process.env.STRIPE_SECRET_KEY) !== null &&
-      process.env.STRIPE_WEBHOOK_SECRET?.trim() &&
+      webhookSecretValid(process.env.STRIPE_WEBHOOK_SECRET) &&
       process.env.STRIPE_PRICE_PRO_MONTHLY?.trim() &&
       process.env.STRIPE_PRICE_PRO_ANNUAL?.trim(),
   );
 }
 
 /**
- * Checkout stays closed until Preston opens it:
- * - a live (or restricted live) key opens checkout only on the production deployment, and only with
- *   BILLING_LIVE_PAYMENTS_APPROVED set to exactly `true` (no trimming, so a stray " true " stays shut);
+ * Checkout stays closed until Preston opens it (Security L3, 2 Nov):
+ * - a live key (restricted `rk_live_` only, see `stripeKeyMode`) opens checkout only on the production
+ *   deployment, and only with UNVIBE_CHECKOUT_LIVE set to exactly `1` (nothing else truthy, no trimming);
  *   a preview or a local server with a live key is always closed;
  * - a test key on the production deployment is closed too (it would grant real Pro for card 4242
  *   and refuse every real card) unless BILLING_TEST_CHECKOUT_IN_PRODUCTION is exactly `true` (no trimming).
  * Test keys on previews and local servers stay open, so sandbox checkout keeps working. A key that is
- * set but not a well-formed secret or restricted key (`stripeKeyMode` is null) is always locked.
+ * set but not accepted (`stripeKeyMode` is null, which includes `sk_live_`) is always locked.
  */
 export function paymentsLocked(): boolean {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -58,7 +58,27 @@ export function paymentsLocked(): boolean {
   if (mode === 'test') {
     return process.env.VERCEL_ENV === 'production' && process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION !== 'true';
   }
-  return !(process.env.VERCEL_ENV === 'production' && process.env.BILLING_LIVE_PAYMENTS_APPROVED === 'true');
+  return !(process.env.VERCEL_ENV === 'production' && process.env.UNVIBE_CHECKOUT_LIVE === '1');
+}
+
+/** What the health probe reports (Security L4): `off` while checkout is closed, else the key's mode. Values only. */
+export function billingMode(): 'off' | 'test' | 'live' {
+  return checkoutOpen() ? (stripeKeyMode(process.env.STRIPE_SECRET_KEY) ?? 'off') : 'off';
+}
+
+/** The webhook can verify events: an accepted key and a real `whsec_` signing secret. */
+export function webhookConfigured(): boolean {
+  return stripeKeyMode(process.env.STRIPE_SECRET_KEY) !== null && webhookSecretValid(process.env.STRIPE_WEBHOOK_SECRET);
+}
+
+/**
+ * Stripe Tax on Checkout (Preston, ledger 415): off until he has turned Stripe Tax on in the Dashboard and
+ * STRIPE_AUTOMATIC_TAX is set to exactly `1`. A returning customer's address is saved back to the customer,
+ * which Stripe needs to calculate tax for an existing customer.
+ */
+export function automaticTax(reusesCustomer: boolean): Pick<Stripe.Checkout.SessionCreateParams, 'automatic_tax' | 'customer_update'> {
+  if (process.env.STRIPE_AUTOMATIC_TAX !== '1') return {};
+  return { automatic_tax: { enabled: true }, ...(reusesCustomer ? { customer_update: { address: 'auto' } } : {}) };
 }
 
 export const PAYMENTS_NOT_OPEN = {

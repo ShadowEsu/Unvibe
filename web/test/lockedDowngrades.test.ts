@@ -11,10 +11,10 @@ import { getStripe, paymentsLocked } from '../src/billing/stripe';
 // replaced, so no request leaves the machine.
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+delete process.env.UNVIBE_CHECKOUT_LIVE;
 delete process.env.BILLING_GRACE_PERIOD_DAYS;
-process.env.STRIPE_SECRET_KEY = 'sk_live_fake';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_SECRET_KEY = 'rk_live_fake';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 process.env.STRIPE_PRICE_PRO_ANNUAL = 'price_pro_annual';
 process.env.VERCEL_ENV = 'production';
@@ -38,7 +38,7 @@ function deliver(type: string, subscriptionId: string, eventId = `evt_${randomUU
   const payload = JSON.stringify({ id: eventId, object: 'event', type, livemode: true, data: { object } });
   return webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
 }

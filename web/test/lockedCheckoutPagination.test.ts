@@ -12,7 +12,7 @@ delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION;
 process.env.VERCEL_ENV = 'production';
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnly';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 
 test('locked checkout refunds read the second invoice-payment page before and after cancellation', async () => {
   const stripe = getStripe();
@@ -57,7 +57,7 @@ test('locked checkout refunds read the second invoice-payment page before and af
       data: { object: { id: sessionId, mode: 'subscription', subscription: subscriptionId, invoice: invoiceId, payment_status: 'paid', metadata: { workspace_id: workspace.id } } },
     });
     const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
-      method: 'POST', headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) }, body: payload,
+      method: 'POST', headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) }, body: payload,
     }));
     assert.equal(response.status, 200);
     assert.deepEqual(pages, [null, 'ip_first'], `second page read with ended=${ended}`);

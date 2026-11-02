@@ -12,13 +12,13 @@ import { getStripe } from '../src/billing/stripe';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.VERCEL_ENV;
-delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+delete process.env.UNVIBE_CHECKOUT_LIVE;
 delete process.env.APP_URL;
 delete process.env.PUBLIC_APP_URL;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 
 const CONFIG = {
-  STRIPE_WEBHOOK_SECRET: 'whsec_local_only',
+  STRIPE_WEBHOOK_SECRET: 'whsec_localonly',
   STRIPE_PRICE_PRO_MONTHLY: 'price_pro_monthly',
   STRIPE_PRICE_PRO_ANNUAL: 'price_pro_annual',
 } as const;

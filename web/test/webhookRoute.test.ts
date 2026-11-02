@@ -11,14 +11,14 @@ import { getStripe } from '../src/billing/stripe';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 
 function post(event: { id: string; type: string; livemode?: boolean; data?: { object: Record<string, unknown> } }): Promise<Response> {
   const payload = JSON.stringify({ object: 'event', livemode: false, data: { object: { id: 'cus_ignored', object: 'customer' } }, ...event });
   return webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': getStripe().webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': getStripe().webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
 }

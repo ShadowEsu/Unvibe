@@ -12,7 +12,7 @@ import { processStripeEvent } from '../src/billing/webhooks';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 
 type Audit = { action: string; workspaceId: string | null; metadata: Record<string, unknown> };
@@ -237,7 +237,7 @@ test('the signed webhook links the charge through Invoice Payments and a replay 
   const payload = JSON.stringify(chargeRefunded(paymentIntent, 'cus_x', 1000, 1000));
   const post = () => webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
   const first = await post();
@@ -276,7 +276,7 @@ test('on a locked production deployment a signed lost dispute is still processed
     const payload = JSON.stringify(dispute('charge.dispute.closed', paymentIntent, 'lost'));
     const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
       method: 'POST',
-      headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+      headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
       body: payload,
     }));
     assert.equal(response.status, 200);
@@ -328,7 +328,7 @@ test('the signed webhook finds the subscription invoice on the second Invoice Pa
   const payload = JSON.stringify(chargeRefunded(paymentIntent, `cus_${randomUUID()}`, 1000, 1000));
   const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
   assert.equal(response.status, 200);

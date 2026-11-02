@@ -39,11 +39,12 @@ Server variables on the API project (`web/`, the API the desktop app calls):
 
 | Variable | Value |
 | --- | --- |
-| `STRIPE_SECRET_KEY` | A test key (`sk_test_` or `rk_test_`) until live payments are approved. |
-| `STRIPE_WEBHOOK_SECRET` | The signing secret of the endpoint below. |
+| `STRIPE_SECRET_KEY` | A test key (`sk_test_` or `rk_test_`) until live payments are approved. For live, a restricted key only (`rk_live_`); a live secret key (`sk_live_`) is refused and keeps checkout closed. |
+| `STRIPE_WEBHOOK_SECRET` | The signing secret of the endpoint below, exactly as Stripe shows it (`whsec_` and letters/digits, no spaces). Anything else answers 503. |
 | `APP_URL` | The public origin that serves `/plan`, for Checkout and portal return links. |
 | `BILLING_TEST_CHECKOUT_IN_PRODUCTION` | Leave unset on production. |
-| `BILLING_LIVE_PAYMENTS_APPROVED` | Leave unset. Exactly `true` opens a live key on production; only after approval. |
+| `UNVIBE_CHECKOUT_LIVE` | Leave unset. Exactly `1` on the Production environment opens a live key; only after approval. |
+| `STRIPE_AUTOMATIC_TAX` | Leave unset. Exactly `1` turns on Stripe Tax at Checkout, only after Stripe Tax is enabled in the Dashboard. |
 
 Webhook endpoint (Stripe, Developers, Webhooks):
 
@@ -143,5 +144,5 @@ WAITLIST_ADMIN_TOKEN=<enter in the dashboard>
 3. Run one test checkout end to end (checkout, renewal failure, cancellation, refund) and keep the
    evidence.
 4. Security review of the deployed code, then the pricing and cost sign-off.
-5. Live keys, live prices and `BILLING_LIVE_PAYMENTS_APPROVED=true` only after the attorney has
+5. Live keys, live prices and `UNVIBE_CHECKOUT_LIVE=1` only after the attorney has
    named the seller and live payments are approved.

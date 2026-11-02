@@ -1,7 +1,7 @@
 import { errorSummary } from '@/billing/http';
 import { getBillingStore } from '@/billing/store';
 import { getStripe, paymentsLocked } from '@/billing/stripe';
-import { stripeKeyMode } from '@/billing/stripeKey';
+import { stripeKeyMode, webhookSecretValid } from '@/billing/stripeKey';
 import { processStripeEvent } from '@/billing/webhooks';
 
 export const runtime = 'nodejs';
@@ -33,9 +33,10 @@ function idempotencyKeyInUse(error: unknown): boolean {
 
 export async function POST(req: Request): Promise<Response> {
   const signature = req.headers.get('stripe-signature');
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
   const keyMode = stripeKeyMode(process.env.STRIPE_SECRET_KEY);
-  if (!secret || keyMode === null) return Response.json({ error: 'webhook_not_configured' }, { status: 503 });
+  // A missing or placeholder secret, or one stored with whitespace, is not configured: 503 before any verification.
+  if (secret === undefined || !webhookSecretValid(secret) || keyMode === null) return Response.json({ error: 'webhook_not_configured' }, { status: 503 });
   // A request without Stripe's signature header is a bad request, not a server problem.
   if (!signature) return Response.json({ error: 'missing_signature' }, { status: 400 });
   const stripe = getStripe();
