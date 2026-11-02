@@ -893,6 +893,11 @@ html body {
   background: transparent;
 }
 
+/* Focus lands on <main> only as a target (skip link, after the analytics answer); its first link shows the ring. */
+#main:focus {
+  outline: none;
+}
+
 :is(
   .build-page,
   .releases-page,

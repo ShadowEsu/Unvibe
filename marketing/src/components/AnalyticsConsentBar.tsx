@@ -24,10 +24,16 @@ export const ANALYTICS_GPC_TEXT = "Your browser sends Global Privacy Control, so
  * is pressed nothing is tracked; ignoring the bar, or pressing Escape, leaves it that way. Not
  * shown to browsers that send Global Privacy Control, or on pages that never load analytics.
  * The footer's "Analytics settings" shows it again, so the answer can be changed at any time.
+ *
+ * The server renders it open, so a first visit sees it with the page rather than after hydration
+ * (it is the largest text in a phone's first view, so its paint time was the home page's LCP). Until
+ * the client has read the stored answer (`data-live`), CSS hides it for browsers whose boot script
+ * found an answer or GPC (`consent-known`, theme.ts) and for browsers without JS.
  */
 export function AnalyticsConsentBar() {
   const pathname = usePathname() ?? "/";
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [live, setLive] = useState(false);
   const [reopened, setReopened] = useState(false);
   const [current, setCurrent] = useState<AnalyticsConsent>("ask");
   const [gpc, setGpc] = useState(false);
@@ -39,6 +45,7 @@ export function AnalyticsConsentBar() {
     const consent = browserAnalyticsConsent();
     setCurrent(consent);
     setOpen(consent === "ask");
+    setLive(true);
     const onOpen = () => {
       returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       reopenedRef.current = true;
@@ -67,12 +74,39 @@ export function AnalyticsConsentBar() {
     if (open && reopened) barRef.current?.focus();
   }, [open, reopened]);
 
+  // While it shows, keyboard focus scrolls into view above it, not under it (WCAG 2.4.11).
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!open || !live || !bar) return undefined;
+    const html = document.documentElement;
+    const fit = () => {
+      html.style.removeProperty("scroll-padding-bottom");
+      const base = getComputedStyle(html).scrollPaddingBottom;
+      const space = Math.ceil(window.innerHeight - bar.getBoundingClientRect().top) + 12;
+      html.style.scrollPaddingBottom = `max(${base === "auto" ? "0px" : base}, ${space}px)`;
+    };
+    fit();
+    const resize = new ResizeObserver(fit);
+    resize.observe(bar);
+    window.addEventListener("resize", fit);
+    return () => {
+      resize.disconnect();
+      window.removeEventListener("resize", fit);
+      html.style.removeProperty("scroll-padding-bottom");
+    };
+  }, [open, live]);
+
+  // Focus goes back to where the footer reopen came from; after a first-visit answer it moves on to the
+  // page (#main), never to <body>.
   const close = () => {
+    const hadFocus = barRef.current?.contains(document.activeElement) ?? false;
+    const back = returnFocus.current;
+    returnFocus.current = null;
     setOpen(false);
     setReopened(false);
     reopenedRef.current = false;
-    returnFocus.current?.focus();
-    returnFocus.current = null;
+    if (back?.isConnected) back.focus();
+    else if (hadFocus) document.getElementById("main")?.focus({ preventScroll: true });
   };
 
   // Only the two answer buttons count, one per press (Security C-1). Escape and the GPC bar's OK
@@ -91,7 +125,7 @@ export function AnalyticsConsentBar() {
   if (!open || (!reopened && !analyticsAllowedOnPath(pathname))) return null;
 
   return (
-    <div className="consent-bar" role="region" aria-labelledby="consent-bar-text" tabIndex={-1} ref={barRef} onKeyDown={onKeyDown}>
+    <div className="consent-bar" data-live={live ? "" : undefined} role="region" aria-label="Analytics choice" aria-describedby="consent-bar-text" tabIndex={-1} ref={barRef} onKeyDown={onKeyDown}>
       <p id="consent-bar-text">{gpc ? ANALYTICS_GPC_TEXT : ANALYTICS_BAR_TEXT}</p>
       {reopened && !gpc && current !== "ask" ? (
         <p className="consent-bar__now">Your choice now: {current === "allow" ? "Allow" : "No thanks"}.</p>

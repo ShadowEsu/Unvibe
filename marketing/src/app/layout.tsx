@@ -10,6 +10,7 @@ import "./pages.css";
 import "./system.css";
 import "./home-ux.css";
 import { Providers } from "@/components/providers/Providers";
+import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { OG_CARD_SIZE, OG_CARDS } from "@/lib/pageMeta";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
@@ -174,8 +175,11 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             Skip to content
           </a>
+          {/* Fixed at the bottom of the view, but early in the HTML: it paints with the first frame (it was the
+              home page's LCP when it came after the page), and keyboard and screen-reader users meet it first. */}
+          <AnalyticsConsentBar />
           <Nav />
-          <main id="main">{children}</main>
+          <main id="main" tabIndex={-1}>{children}</main>
           <Footer />
           <SelectionExplain />
           <SitePalette />

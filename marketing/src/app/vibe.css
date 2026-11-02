@@ -461,6 +461,8 @@ p { font-size: 1.02rem; }
 
 /* Analytics bar (AnalyticsConsentBar): Allow and No thanks look the same, so neither is the default. */
 .consent-bar { position: fixed; left: 50%; bottom: calc(0.75rem + env(safe-area-inset-bottom)); z-index: 95; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; width: min(42rem, calc(100vw - 1.5rem)); padding: 0.9rem 1rem; border: 1.5px solid var(--v-ink); border-radius: 16px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); font-size: 0.95rem; line-height: 1.45; }
+/* Server-rendered open; before the client reads the stored answer, hidden where none is needed (theme.ts) or without JS. */
+html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not([data-live]) { display: none; }
 .consent-bar:focus { outline: none; }
 .consent-bar:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 3px; }
 .consent-bar p { flex: 1 1 18rem; margin: 0; }
