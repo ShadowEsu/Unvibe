@@ -1302,7 +1302,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             {pro.open ? (
               <>
                 <h2>Pro {pro.price}</h2>
-                <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
+                <p>Unlock git diffs, nearby files, and 200 explanations each month.</p>
                 <div className="plan-toggle" aria-label="Billing interval">
                   <button type="button" className={interval === 'monthly' ? 'on' : ''} onClick={() => setInterval('monthly')} aria-pressed={interval === 'monthly'}>Monthly</button>
                   <button type="button" className={interval === 'annual' ? 'on' : ''} onClick={() => setInterval('annual')} aria-pressed={interval === 'annual'}>Annual<span>Save 25%</span></button>
@@ -1324,7 +1324,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
             ) : (
               <>
                 <h2>Pro</h2>
-                <p>Unlock git diffs, nearby files, and 100 explanations each month.</p>
+                <p>Unlock git diffs, nearby files, and 200 explanations each month.</p>
                 <p>{pro.line}</p>
               </>
             )}
