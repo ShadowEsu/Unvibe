@@ -21,6 +21,8 @@ const SUPPORT_MAIL = 'support@unvibe.site';
 // UTC boundaries, so the day is the UTC day.
 const UTC_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 const formatDay = (iso: string): string => UTC_DAY.format(new Date(iso));
+const UTC_TIME = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
+const formatTime = (iso: string): string => `${UTC_TIME.format(new Date(iso))} UTC`;
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
@@ -281,7 +283,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
         {overview.canManageBilling && overview.subscription.plan === 'teams' && <div className="seat-editor"><label>Paid seats<input type="number" min={overview.minimumBillableSeats} max={TEAMS_MAX_SEATS} value={teamSeats} onChange={(event) => setTeamSeats(Number(event.target.value))} /></label><div><small>Estimated recurring total</small><strong>{overview.subscription.interval === 'annual' ? `${money.format(priceFor('teams', 'annual', teamSeats) / 100)}/year` : `${money.format(priceFor('teams', 'monthly', teamSeats) / 100)}/month`}</strong></div><button className="btn btn--secondary" onClick={() => void updateSeats()} disabled={busy}>Update seats</button></div>}
         <h3>Members</h3>
         <div className="member-list">{members.map((member) => <div className="member-row" key={member.userId}><span>{member.email ?? member.userId}</span><strong>{member.role}</strong>{overview.workspace.role === 'owner' && member.role !== 'owner' && <><select value={member.role} onChange={(event) => void updateRole(member.userId, event.target.value as 'admin' | 'member')}><option value="member">Member</option><option value="admin">Admin</option></select><button onClick={() => void removeMember(member.userId)}>Remove</button></>}</div>)}</div>
-        {overview.canManageMembers && <><h3>Invite someone</h3><p className="plan-help">Invitations reserve seats. Share the secure link with the invited person.</p><div className="invite-form"><input type="email" placeholder="coder@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} /><select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as 'admin' | 'member')}><option value="member">Member</option><option value="admin">Admin</option></select><button className="btn btn--primary" onClick={() => void invite()} disabled={busy || !inviteEmail}>Create invite</button></div>{lastInviteUrl && <div className="invite-link"><input readOnly value={lastInviteUrl} /><button onClick={() => void navigator.clipboard.writeText(lastInviteUrl)}>Copy</button></div>}<div className="invitation-list">{invitations.filter((inviteItem) => inviteItem.status === 'pending').map((inviteItem) => <p key={inviteItem.id}>{inviteItem.email} · {inviteItem.role} · expires {new Date(inviteItem.expiresAt).toLocaleDateString()} <button onClick={() => void revokeInvite(inviteItem.id)}>Revoke</button></p>)}</div></>}
+        {overview.canManageMembers && <><h3>Invite someone</h3><p className="plan-help">Invitations reserve seats. Share the secure link with the invited person.</p><div className="invite-form"><input type="email" placeholder="coder@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} /><select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as 'admin' | 'member')}><option value="member">Member</option><option value="admin">Admin</option></select><button className="btn btn--primary" onClick={() => void invite()} disabled={busy || !inviteEmail}>Create invite</button></div>{lastInviteUrl && <div className="invite-link"><input readOnly value={lastInviteUrl} /><button onClick={() => void navigator.clipboard.writeText(lastInviteUrl)}>Copy</button></div>}<div className="invitation-list">{invitations.filter((inviteItem) => inviteItem.status === 'pending').map((inviteItem) => <p key={inviteItem.id}>{inviteItem.email} · {inviteItem.role} · expires {formatDay(inviteItem.expiresAt)} <button onClick={() => void revokeInvite(inviteItem.id)}>Revoke</button></p>)}</div></>}
         <h3>Who reviewed what</h3>
         <p className="plan-help">Shared activity metadata with authorship. Full explanations stay on each device.</p>
         <div className="invitation-list">
@@ -294,7 +296,7 @@ export function PlanManager({ initialOverview, initialWorkspaces, checkoutAvaila
               {' · '}
               {event.concept ?? event.file ?? event.project ?? 'activity'}
               {' · '}
-              {new Date(event.ts).toLocaleString()}
+              {formatTime(event.ts)}
             </p>
           ))}
         </div>
