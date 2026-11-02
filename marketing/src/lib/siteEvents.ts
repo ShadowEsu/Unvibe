@@ -66,6 +66,8 @@ const UTM_SOURCES: ReadonlySet<string> = new Set([
   "linkedin",
   "github",
   "slack",
+  // Feedback's outreach email, one campaign tag per send day (Security U3, 2 Nov).
+  "outreach",
   "peerpush",
   "sideprojectors",
   "launchingnext",
