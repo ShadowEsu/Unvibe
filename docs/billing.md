@@ -10,7 +10,7 @@ does not activate production billing.
 usage reservations; the migration seeds it to the same initial values:
 
 - Free: $0; 50 AI explanations/month; 1 active project; 25 dictionary items; 20 saved items.
-- Pro: $9/month or $81/year (about $6.75/month, 25% annual savings); 100 AI explanations/month; up to 10 active projects.
+- Pro: $9/month or $81/year (about $6.75/month, 25% annual savings); 200 AI explanations/month (migration `20261102191000_pro_200_explanations.sql`); up to 10 active projects.
 - Pro Lifetime: $80 one-time (`PRO_LIFETIME_CENTS`), offered only while checkout is open, `STRIPE_PRICE_PRO_LIFETIME` is set and `BILLING_LIFETIME_ENABLED=true`.
 - Teams ($8/seat/month or $72/seat/year) is sold as a pilot by email: the site collects company email + seat request (mailto). Teams checkout has no separate switch: `teamsCheckoutEnabled()` in `web/src/billing/plans.ts` opens it as soon as both `STRIPE_PRICE_TEAMS_MONTHLY` and `STRIPE_PRICE_TEAMS_ANNUAL` are set, so leave those two unset until the site sells Teams by checkout. Backend Teams plan math remains for any existing workspace support.
 - Checkout gate (`paymentsLocked()` in `web/src/billing/stripe.ts`): a live key opens checkout only on the production deployment with `BILLING_LIVE_PAYMENTS_APPROVED` set to exactly `true`; a test key is closed on production unless `BILLING_TEST_CHECKOUT_IN_PRODUCTION=true`.
