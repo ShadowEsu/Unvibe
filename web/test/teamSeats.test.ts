@@ -12,7 +12,7 @@ import { getStripe } from '../src/billing/stripe';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.VERCEL_ENV;
-delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+delete process.env.UNVIBE_CHECKOUT_LIVE;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
 
 const subscriptionId = `sub_${randomUUID()}`;

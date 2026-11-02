@@ -1,13 +1,16 @@
 # Owner checklist: turn on charging
 
-Billing code is **not** all ready. Stripe stays in test mode and checkout stays locked on
-production until every step below is done and approved. Still open before anyone can be charged:
+Stripe stays in test mode and checkout stays locked on production until every step below is done
+and approved. Still open before anyone can be charged:
 
-- two production database migrations: clearing an ended Stripe subscription when complimentary
-  Pro is granted, and one conditional write for subscription sync;
+- the production database migrations not applied yet, among them
+  `20261102190000_pro_months_drop_stale_stripe.sql` (an ended Stripe subscription is cleared when
+  complimentary Pro is granted) and `20261102191000_pro_200_explanations.sql`. The subscription
+  sync's conditional write needs no migration: it compares `updated_at`;
 - the cancellation policy while purchases are locked (whether the customer portal stays open
   for existing subscribers);
-- a published refund policy, paid terms and terms consent at Checkout (attorney);
+- a published refund policy and paid terms. Terms consent at Checkout is in the code for a live
+  key; it needs the Terms URL in the live account's public details;
 - the tax route (Stripe Tax or Managed Payments), chosen before the first live sale.
 
 ## Never paste secret values anywhere but the dashboard
@@ -17,9 +20,9 @@ dashboard's environment variables. Never paste a value into a chat, an issue, a 
 commit or this file. When reporting progress, name which variables are set; never their values.
 
 Stripe keys must be entered exactly as Stripe shows them, with no spaces or trailing newline. The
-API reads a key only when it matches `^(sk|rk)_(test|live)_[0-9A-Za-z]+$`
-(`web/src/billing/stripeKey.ts`); anything else counts as not configured, so checkout stays
-closed and the webhook answers 503.
+API accepts a test key matching `^(sk|rk)_test_[0-9A-Za-z]+$` or a restricted live key matching
+`^rk_live_[0-9A-Za-z]+$` (`web/src/billing/stripeKey.ts`); anything else, a live secret key
+included, counts as not configured, so checkout stays closed and the webhook answers 503.
 
 ## A. Stripe (test mode first)
 
@@ -39,11 +42,12 @@ Server variables on the API project (`web/`, the API the desktop app calls):
 
 | Variable | Value |
 | --- | --- |
-| `STRIPE_SECRET_KEY` | A test key (`sk_test_` or `rk_test_`) until live payments are approved. |
-| `STRIPE_WEBHOOK_SECRET` | The signing secret of the endpoint below. |
+| `STRIPE_SECRET_KEY` | A test key (`sk_test_` or `rk_test_`) until live payments are approved. For live, a restricted key only (`rk_live_`); a live secret key (`sk_live_`) is refused and keeps checkout closed. |
+| `STRIPE_WEBHOOK_SECRET` | The signing secret of the endpoint below, exactly as Stripe shows it (`whsec_` and letters/digits, no spaces). Anything else answers 503. |
 | `APP_URL` | The public origin that serves `/plan`, for Checkout and portal return links. |
 | `BILLING_TEST_CHECKOUT_IN_PRODUCTION` | Leave unset on production. |
-| `BILLING_LIVE_PAYMENTS_APPROVED` | Leave unset. Exactly `true` opens a live key on production; only after approval. |
+| `UNVIBE_CHECKOUT_LIVE` | Leave unset. Exactly `1` on the Production environment opens a live key; only after approval. |
+| `STRIPE_AUTOMATIC_TAX` | Leave unset. Exactly `1` turns on Stripe Tax at Checkout, only after Stripe Tax is enabled in the Dashboard. |
 
 Webhook endpoint (Stripe, Developers, Webhooks):
 
@@ -64,8 +68,10 @@ Subscribe to exactly the events `web/src/billing/webhooks.ts` handles, with no w
 - `charge.dispute.created`
 - `charge.dispute.closed`
 
-Customer portal: keep plan and quantity switching off. Cancellation, payment methods and invoice
-history can stay on.
+Customer portal (Settings, Billing, Customer portal; the code uses the default configuration):
+cancellation on, at the end of the billing period; payment method updates on; invoice history on;
+plan switching off and quantity changes off (a switched price or a Pro quantity other than 1 fails
+the webhook, `web/src/billing/webhooks.ts`); pause off.
 
 ## B. AI and database
 
@@ -143,5 +149,5 @@ WAITLIST_ADMIN_TOKEN=<enter in the dashboard>
 3. Run one test checkout end to end (checkout, renewal failure, cancellation, refund) and keep the
    evidence.
 4. Security review of the deployed code, then the pricing and cost sign-off.
-5. Live keys, live prices and `BILLING_LIVE_PAYMENTS_APPROVED=true` only after the attorney has
+5. Live keys, live prices and `UNVIBE_CHECKOUT_LIVE=1` only after the attorney has
    named the seller and live payments are approved.

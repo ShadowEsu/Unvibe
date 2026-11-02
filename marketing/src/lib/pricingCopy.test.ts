@@ -33,7 +33,7 @@ describe("pricing copy while payments are closed", () => {
   });
 
   it("has no button that leads to a dead end", () => {
-    for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:hello@unvibe.site"), plan.id);
+    for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:support@unvibe.site"), plan.id);
     assert.equal(closed.plans.find((plan) => plan.id === "pro")?.cta, "Download free");
   });
 
@@ -87,14 +87,15 @@ describe("pricing copy once payments open", () => {
     assert.equal(open.heading.emphasis, "earns a place");
     assert.match(open.description, new RegExp(`\\$${PRICING.proMonthly} a month or \\$${PRICING.proAnnual} a year\\.$`));
     assert.doesNotMatch(open.description, /open soon/);
-    assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
+    // Teams has no checkout (founding seats start by email), so only Pro renews (Security SHOULD-LR3).
+    assert.equal(open.disclosure, "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
       ["free", "No card needed", "Included AI explanations with a usage limit. No card and no separate API key.", "Download free", "/beta"],
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
-    assert.match(open.plans[2].href, /^mailto:hello@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
+    assert.match(open.plans[2].href, /^mailto:support@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
   });
 
   it("shares features and the featured card with the closed copy", () => {
