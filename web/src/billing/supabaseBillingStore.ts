@@ -1,10 +1,14 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  CheckoutStopAudits,
   SubscriptionRecord,
+  SubscriptionStatus,
   SubscriptionSyncInput,
+  VersionedSubscription,
   UsageKind,
   UsageReservation,
   WebhookClaim,
@@ -27,8 +31,8 @@ export class SupabaseBillingStore implements BillingStore {
   readonly kind = 'supabase billing';
   private readonly db: SupabaseClient;
 
-  constructor(url: string, serviceRoleKey: string) {
-    this.db = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+  constructor(url: string, serviceRoleKey: string, fetcher: typeof fetch = noStoreFetch) {
+    this.db = createClient(url, serviceRoleKey, { auth: { persistSession: false }, global: { fetch: fetcher } });
   }
 
   private require(error: { message: string } | null, operation: string): void {
@@ -311,15 +315,52 @@ export class SupabaseBillingStore implements BillingStore {
     };
   }
 
-  async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
-    const { error } = await this.db.from('subscriptions').upsert({
+  private subscriptionRow(input: SubscriptionSyncInput) {
+    return {
       workspace_id: input.workspaceId, plan: input.plan, interval: input.interval, status: input.status, seats: input.seats,
       stripe_customer_id: input.stripeCustomerId, stripe_subscription_id: input.stripeSubscriptionId, stripe_price_id: input.stripePriceId,
       current_period_start: input.currentPeriodStart ?? null,
       current_period_end: input.currentPeriodEnd ?? null, grace_period_ends_at: input.gracePeriodEndsAt ?? null,
       cancel_at_period_end: input.cancelAtPeriodEnd, updated_at: new Date().toISOString(),
-    }, { onConflict: 'workspace_id' });
+    };
+  }
+
+  async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
+    const { error } = await this.db.from('subscriptions').upsert(this.subscriptionRow(input), { onConflict: 'workspace_id' });
     this.require(error, 'sync subscription');
+  }
+
+  async versionedSubscriptionByWorkspaceId(workspaceId: string): Promise<VersionedSubscription | null> {
+    const { data, error } = await this.db.from('subscriptions').select('*').eq('workspace_id', workspaceId).maybeSingle();
+    this.require(error, 'find subscription by workspace');
+    // updated_at goes back into the filter exactly as PostgREST returned it (microseconds included).
+    return data ? { subscription: this.mapSubscription(data as Record<string, unknown>), version: String(data.updated_at) } : null;
+  }
+
+  // Every writer of subscriptions sets updated_at (this store and the SQL functions), so an
+  // unchanged updated_at means no write landed since the read.
+  async syncSubscriptionIf(input: SubscriptionSyncInput, expectedVersion: string | null): Promise<boolean> {
+    const row = this.subscriptionRow(input);
+    if (expectedVersion === null) {
+      const { data, error } = await this.db.from('subscriptions').upsert(row, { onConflict: 'workspace_id', ignoreDuplicates: true }).select('workspace_id');
+      this.require(error, 'sync subscription');
+      return Array.isArray(data) && data.length > 0;
+    }
+    const { workspace_id: workspaceId, ...fields } = row;
+    const { data, error } = await this.db.from('subscriptions').update(fields)
+      .eq('workspace_id', workspaceId).eq('updated_at', expectedVersion)
+      .select('workspace_id');
+    this.require(error, 'sync subscription');
+    return Array.isArray(data) && data.length > 0;
+  }
+
+  async setSubscriptionStatusIf(stripeSubscriptionId: string, expected: SubscriptionStatus, status: SubscriptionStatus, gracePeriodEndsAt?: string): Promise<boolean> {
+    const { data, error } = await this.db.from('subscriptions')
+      .update({ status, grace_period_ends_at: gracePeriodEndsAt ?? null, updated_at: new Date().toISOString() })
+      .eq('stripe_subscription_id', stripeSubscriptionId).eq('status', expected)
+      .select('workspace_id');
+    this.require(error, 'set subscription status');
+    return Array.isArray(data) && data.length > 0;
   }
 
   async markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void> {
@@ -375,6 +416,15 @@ export class SupabaseBillingStore implements BillingStore {
   async recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
     const { error } = await this.db.from('billing_audit_log').insert({ user_id: userId, workspace_id: workspaceId, action, metadata });
     this.require(error, 'record audit');
+  }
+
+  async checkoutStopAudits(stripeCheckoutSessionId: string): Promise<CheckoutStopAudits> {
+    const { data, error } = await this.db.from('billing_audit_log').select('action')
+      .in('action', ['checkout.stop_started', 'checkout.stopped_while_locked'])
+      .contains('metadata', { checkoutSessionId: stripeCheckoutSessionId });
+    this.require(error, 'read checkout stop audits');
+    const actions = new Set((data ?? []).map((row) => row.action));
+    return { started: actions.has('checkout.stop_started'), finished: actions.has('checkout.stopped_while_locked') };
   }
 
   async deleteUserBilling(userId: string): Promise<void> {

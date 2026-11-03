@@ -1,5 +1,5 @@
 import { getBillingStore } from '@/billing/store';
-import { billingError, isResponse, requireUser } from '@/billing/http';
+import { billingError, errorSummary, isResponse, requireUser } from '@/billing/http';
 import { checkoutOpen, lifetimeCheckoutOpen, paymentsLocked } from '@/billing/stripe';
 import { publicBillingOverview } from '@/billing/presentation';
 import { teamsCheckoutEnabled } from '@/billing/plans';
@@ -14,7 +14,9 @@ export async function GET(req: Request): Promise<Response> {
     const workspaceId = new URL(req.url).searchParams.get('workspaceId') ?? undefined;
     const store = getBillingStore();
     const overview = await store.overview(user, workspaceId);
-    await store.recordAudit(user, overview.workspace.id, 'plan.viewed', { plan: overview.subscription.plan });
+    // A view is only logged: a failed audit write must never fail the read (Security 2233).
+    await store.recordAudit(user, overview.workspace.id, 'plan.viewed', { plan: overview.subscription.plan })
+      .catch((error: unknown) => console.error('billing overview: plan.viewed audit failed', errorSummary(error)));
     return Response.json({
       overview: publicBillingOverview(overview),
       workspaces: await store.listWorkspaces(user),

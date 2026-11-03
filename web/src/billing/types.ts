@@ -132,7 +132,19 @@ export interface SubscriptionSyncInput {
   cancelAtPeriodEnd: boolean;
 }
 
+/** A subscription row with the token a conditional write compares: changes whenever any write touches the row. */
+export interface VersionedSubscription {
+  subscription: SubscriptionRecord;
+  version: string;
+}
+
 export type WebhookClaim = 'claimed' | 'completed' | 'in_progress';
+
+/** Which locked-checkout stop rows exist for one Checkout session: `checkout.stop_started` and `checkout.stopped_while_locked`. */
+export interface CheckoutStopAudits {
+  started: boolean;
+  finished: boolean;
+}
 
 export interface BillingStore {
   readonly kind: string;
@@ -173,6 +185,19 @@ export interface BillingStore {
   completeCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null>;
   findCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null>;
   syncSubscription(input: SubscriptionSyncInput): Promise<void>;
+  /** The workspace's row and its version (Supabase: `updated_at` exactly as stored), or null when it has none. */
+  versionedSubscriptionByWorkspaceId(workspaceId: string): Promise<VersionedSubscription | null>;
+  /**
+   * Compare-and-set of the whole row: writes it only while the row still has `expectedVersion`, or,
+   * when that is null, only while the workspace has no row. Returns whether it wrote.
+   */
+  syncSubscriptionIf(input: SubscriptionSyncInput, expectedVersion: string | null): Promise<boolean>;
+  /**
+   * Compare-and-set: sets the status (and the grace end, cleared when undefined) of the row stored
+   * under this Stripe subscription id, only while its status is still `expected`. Nothing else on the
+   * row changes. Returns whether a row was updated.
+   */
+  setSubscriptionStatusIf(stripeSubscriptionId: string, expected: SubscriptionStatus, status: SubscriptionStatus, gracePeriodEndsAt?: string): Promise<boolean>;
   markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void>;
   subscriptionByProviderId(stripeSubscriptionId: string): Promise<SubscriptionRecord | null>;
   /** The subscription row stored for a workspace (one row per workspace), whatever its status. */
@@ -188,5 +213,7 @@ export interface BillingStore {
   completeWebhook(eventId: string): Promise<void>;
   failWebhook(eventId: string, message: string): Promise<void>;
   recordAudit(userId: string | null, workspaceId: string | null, action: string, metadata?: Record<string, unknown>): Promise<void>;
+  /** Both stop rows for a Checkout session, read in one query. */
+  checkoutStopAudits(stripeCheckoutSessionId: string): Promise<CheckoutStopAudits>;
   deleteUserBilling(userId: string): Promise<void>;
 }

@@ -150,6 +150,40 @@ test('account deletion reports a database failure instead of claiming success', 
   await assert.rejects(store.deleteAccount(randomUUID()), /delete failed/);
 });
 
+// Security MUST-RT0 (2 Nov): the deletion page promises the sign-in identity goes too, but the Supabase
+// Auth user (email, Google name) used to stay behind after "Delete account".
+function deletionRecorder(authStatus: number) {
+  const calls: string[] = [];
+  const fetcher: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
+    if (url.pathname.startsWith('/auth/v1/admin/users/')) {
+      return authStatus === 200 ? Response.json({}) : Response.json({ code: authStatus === 404 ? 'user_not_found' : 'unexpected_failure', msg: 'auth said no' }, { status: authStatus });
+    }
+    return new Response(null, { status: 204 });
+  };
+  return { calls, fetcher };
+}
+
+test('account deletion removes the Supabase Auth user, after every data table', async () => {
+  const user = randomUUID();
+  const { calls, fetcher } = deletionRecorder(200);
+  await new SupabaseStore('https://events.supabase.test', 'service-key', fetcher).deleteAccount(user);
+  assert.equal(calls.at(-1), `DELETE /auth/v1/admin/users/${user}`);
+  assert.ok(calls.includes('DELETE /rest/v1/users'), 'the user row is deleted');
+  assert.equal(calls.filter((call) => call.startsWith('DELETE /auth/')).length, 1);
+});
+
+test('an Auth user that is already gone counts as deleted', async () => {
+  const { fetcher } = deletionRecorder(404);
+  await new SupabaseStore('https://events.supabase.test', 'service-key', fetcher).deleteAccount(randomUUID());
+});
+
+test('a failed Auth user deletion is reported, never claimed as a full deletion', async () => {
+  const { fetcher } = deletionRecorder(500);
+  await assert.rejects(new SupabaseStore('https://events.supabase.test', 'service-key', fetcher).deleteAccount(randomUUID()), /sign-in account/);
+});
+
 test('POST /events answers 409 for another account\'s event id and leaves that account\'s history intact', async () => {
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;

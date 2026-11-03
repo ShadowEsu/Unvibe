@@ -450,6 +450,11 @@ img { max-width: 100%; display: block; }
     grid-template-columns: repeat(2, 1fr);
   }
   .plan-header { align-items: stretch; flex-direction: column; }.current-plan { align-items: stretch; flex-direction: column; gap: 10px; }.current-plan .btn { margin-left: 0; }.plan-grid { grid-template-columns: 1fr; }.member-row { grid-template-columns: 1fr 70px; padding: 8px 0; }.invite-form { align-items: stretch; flex-direction: column; }
+  /* The Lifetime and Teams bands stack too: side by side, their inputs and the 168px button made /plan 39px wider than a 390px phone (sweep 2 Nov). */
+  .plan-lifetime-band, .plan-teams-band { flex-direction: column; align-items: stretch; }
+  .plan-lifetime-band > div, .plan-teams-band > div { min-width: 0; }
+  .plan-lifetime-band .btn, .plan-teams-band .btn { width: 100%; min-width: 0; }
+  .plan-team-request { max-width: none; }
 }
 
 @media (max-width: 480px) {
