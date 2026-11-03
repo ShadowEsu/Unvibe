@@ -18,7 +18,7 @@ import {
   BETA_WINDOWS_DIRECT_DOWNLOAD,
 } from "@/lib/betaOffer";
 import { BETA_INSTALL_ASSET, BETA_MAC_INTEL_ASSET, BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
-import type { DownloadSurface, ThanksOs } from "@/lib/downloadTracking";
+import { downloadSurface, thanksOs, type DownloadSurface, type ThanksOs } from "@/lib/downloadTracking";
 
 export const THANKS_PATH = "/download/thanks";
 export const THANKS_TOKEN_KEY = "unvibe.dl";
@@ -48,6 +48,27 @@ export function thanksOsForHref(href: string): ThanksOs | null {
 /** The thanks page for one file; both values are already allowlisted. */
 export function thanksHref(os: ThanksOs, from: DownloadSurface | "other"): string {
   return `${THANKS_PATH}?os=${os}&from=${from}`;
+}
+
+/**
+ * Security SHOULD-TD6: the allowlisted form of an incoming /download/thanks query, or null when it
+ * already is one. The server page redirects to it, so a raw `?from=`, an unknown `?os=` or any other
+ * parameter never reaches the address bar, where a page view reads the URL. An unknown `os` is
+ * dropped rather than guessed, so the client still decides the system and the token exactly as it
+ * does with no `os` at all.
+ */
+export function thanksCanonicalHref(query: Readonly<Record<string, string | string[] | undefined>>): string | null {
+  const os = typeof query.os === "string" ? thanksOs(query.os) : "other";
+  const from = typeof query.from === "string" ? downloadSurface(query.from) : null;
+  const canonical = new URLSearchParams();
+  if (os !== "other") canonical.set("os", os);
+  if (from !== null) canonical.set("from", from);
+  const incoming = Object.entries(query).filter(([, value]) => value !== undefined);
+  const same = incoming.length === Array.from(canonical.keys()).length
+    && incoming.every(([key, value]) => typeof value === "string" && canonical.get(key) === value);
+  if (same) return null;
+  const search = canonical.toString();
+  return search ? `${THANKS_PATH}?${search}` : THANKS_PATH;
 }
 
 function sessionStore(): Storage | null {
@@ -144,7 +165,7 @@ export interface ThanksStep {
 
 /**
  * The three first-open steps for one file. Every word is Security-reviewed (MUST-TD1 for the Mac
- * step 3 wording) and restates FirstOpenSteps: change both together.
+ * step 3 wording) and restates FirstOpenSteps: a test checks each bold word here is emphasised there.
  */
 export function thanksSteps(os: ThanksOs): ThanksStep[] {
   const { file } = THANKS_DOWNLOADS[os];

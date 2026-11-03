@@ -113,7 +113,6 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
   );
   const preparingLine = (link: JSX.Element) => <>Your download will begin automatically. If it didn&apos;t start, {link}.</>;
   const startedLine = (link: JSX.Element) => <>Your download has started. If it didn&apos;t, {link}.</>;
-  const ghostLink = <span className="thanks__nowrap">download Unvibe manually</span>;
   const buttonLabel = mac ? "Download Unvibe for Mac" : "Download Unvibe for Windows";
   return (
     <section className="thanks" aria-labelledby="thanks-title" data-view={decided ? state : undefined} data-switched={switched || undefined}>
@@ -132,21 +131,14 @@ export function ThanksContent({ os, state, decided = false, leaving = false, swi
       </h1>
 
       <div className="thanks__lead thanks__in">
-        {/* The shown line and hidden copies of the other two share one grid cell, so swapping the state
-            never moves the steps below it (CLS 0). The copies hold no links and are hidden from everyone. */}
+        {/* The button and both lines share one grid cell, so a state change never moves the steps below
+            it (CLS 0). Only the one for this state shows; CSS hides the others from everyone, links included. */}
         <div className="thanks__slot">
-          {state === "ready" ? (
-            <a className="paper-join paper-join--win thanks__primary" href={href} onClick={file(os)}>
-              <span className="paper-join__label">{buttonLabel}</span>
-            </a>
-          ) : (
-            <p className="thanks__line">{state === "preparing" ? preparingLine(manual) : startedLine(manual)}</p>
-          )}
-          <div className="thanks__ghost" aria-hidden="true">
-            {state !== "ready" ? <span className="paper-join thanks__primary"><span className="paper-join__label">{buttonLabel}</span></span> : null}
-            {state !== "preparing" ? <p className="thanks__line">{preparingLine(ghostLink)}</p> : null}
-            {state !== "started" ? <p className="thanks__line">{startedLine(ghostLink)}</p> : null}
-          </div>
+          <a className="paper-join paper-join--win thanks__primary" href={href} onClick={file(os)} data-on={state === "ready" ? "" : undefined}>
+            <span className="paper-join__label">{buttonLabel}</span>
+          </a>
+          <p className="thanks__line" data-on={state === "preparing" ? "" : undefined}>{preparingLine(manual)}</p>
+          <p className="thanks__line" data-on={state === "started" ? "" : undefined}>{startedLine(manual)}</p>
         </div>
         {os === "mac" ? (
           <p className="thanks__sub">

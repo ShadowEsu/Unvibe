@@ -82,8 +82,10 @@ html:has(.thanks-page) body::after {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: opacity 160ms var(--u-ease);
+  /* The old face fades out first, then the new one fades in (Design SHOULD-1): never both at half. */
+  transition: opacity 60ms var(--u-ease);
 }
+.thanks__pill-layer[data-on] { transition: opacity 90ms var(--u-ease) 60ms; }
 .thanks__pill-layer:not([data-on]) { opacity: 0; }
 .thanks__pill svg { flex: none; width: 12px; height: 12px; }
 .thanks__spin { animation: thanks-spin 900ms linear infinite; }
@@ -106,14 +108,12 @@ html:has(.thanks-page) body::after {
 .thanks__title span { color: var(--thanks-ink-2); }
 
 .thanks__lead { max-width: 620px; margin: 16px auto 0; }
-/* The shown line and hidden copies of the other states in one cell: the tallest sets the height. */
-.thanks__slot,
-.thanks__ghost { display: grid; }
-.thanks__slot > *,
-.thanks__ghost > * { grid-area: 1 / 1; align-self: center; }
-.thanks__ghost { visibility: hidden; }
-.thanks__slot > .thanks__primary,
-.thanks__ghost > .thanks__primary { justify-self: center; }
+/* The button and both lines share one cell: the tallest sets the height, and only the one for this
+   state shows. visibility also takes the hidden ones' links out of the tab order and the a11y tree. */
+.thanks__slot { display: grid; }
+.thanks__slot > * { grid-area: 1 / 1; align-self: center; }
+.thanks__slot > :not([data-on]) { visibility: hidden; }
+.thanks__slot > .thanks__primary { justify-self: center; }
 .thanks__line {
   margin: 0;
   color: var(--thanks-ink-2);

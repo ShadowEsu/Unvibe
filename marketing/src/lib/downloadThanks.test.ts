@@ -9,6 +9,7 @@ import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ThanksContent, type ThanksState } from "@/components/paper/DownloadThanks";
+import { FirstOpenSteps } from "@/components/paper/FirstOpenSteps";
 import { BETA_INSTALL_ASSET, BETA_MAC_INTEL_ASSET, BETA_WINDOWS_ASSET } from "./betaInstallScript";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "./betaOffer";
 import type { ThanksOs } from "./downloadTracking";
@@ -21,6 +22,7 @@ import {
   registerThanksNavigation,
   takeThanksToken,
   thanksClick,
+  thanksCanonicalHref,
   thanksHref,
   thanksOsForHref,
   thanksSteps,
@@ -61,10 +63,11 @@ function render(os: ThanksOs, state: ThanksState): string {
   return renderToStaticMarkup(createElement(ThanksContent, { os, state, decided: true }));
 }
 
-/** What a person sees or hears: without the hidden copies that hold the lead's height, and without the pill's drawn faces. */
+/** What a person sees or hears: without the slot's hidden button or lines (CSS hides every one without data-on), and without the pill's drawn faces. */
 function shown(html: string): string {
   return html
-    .replace(/<div class="thanks__ghost" aria-hidden="true">[\s\S]*?<\/div>/, "")
+    .replace(/<a class="paper-join[^"]*"(?![^>]*data-on)[^>]*>[\s\S]*?<\/a>/, "")
+    .replace(/<p class="thanks__line"(?![^>]*data-on)[^>]*>[\s\S]*?<\/p>/g, "")
     .replace(/<span class="thanks__pill-face" aria-hidden="true">[\s\S]*?<\/span><\/p>/, "</p>");
 }
 
@@ -125,8 +128,10 @@ describe("thanks page files", () => {
         assert.deepEqual(names, [lastSegment(href)], "one step names the file, and it is the linked one");
         const links = Array.from(html.matchAll(/href="([^"]+)"/g), (match) => match[1]!.replace(/&amp;/g, "&"));
         const fileLinks = links.filter((link) => link.startsWith("https://github.com/"));
-        // The manual (or button) and direct links are this file; the only other files are the other Mac build and, on a Mac, the no-JS Windows link.
-        assert.equal(fileLinks.filter((link) => link === href).length, 2);
+        // The shown manual link (or button) and the direct link are this file; the slot's hidden button and line link it too.
+        // The only other files are the other Mac build and, on a Mac, the no-JS Windows link.
+        const shownLinks = Array.from(shown(html).matchAll(/href="([^"]+)"/g), (match) => match[1]!.replace(/&amp;/g, "&"));
+        assert.equal(shownLinks.filter((link) => link === href).length, 2);
         for (const link of fileLinks) assert.ok(ALL_OS.some((other) => THANKS_DOWNLOADS[other].href === link), link);
         assert.ok(links.includes("/install-help?from=thanks"));
       });
@@ -186,13 +191,20 @@ describe("thanks page copy", () => {
     }
   });
 
-  it("the hidden copies hold no link or button and are hidden from assistive tech", () => {
+  it("the slot is the same elements in every state; only data-on moves, and CSS hides the rest (Design SHOULD-2)", () => {
+    const css = readFileSync(path.join(marketingRoot, "src/app/download/thanks/thanks.css"), "utf8");
+    assert.match(css, /\.thanks__slot > :not\(\[data-on\]\) \{ visibility: hidden; \}/);
+    const expected = { ready: "Download Unvibe for", preparing: "will begin automatically", started: "has started" } as const;
     for (const os of ALL_OS) {
-      for (const state of ["ready", "preparing", "started"] as const) {
-        const ghost = render(os, state).match(/<div class="thanks__ghost" aria-hidden="true">([\s\S]*?)<\/div>/);
-        assert.ok(ghost, `${os} ${state}`);
-        assert.doesNotMatch(ghost[1]!, /<a |<button|href=|tabindex/);
-      }
+      const slots = (["ready", "preparing", "started"] as const).map((state) => {
+        const slot = render(os, state).match(/<div class="thanks__slot">([\s\S]*?)<\/div>/)![1]!;
+        assert.equal(slot.match(/data-on=""/g)?.length, 1, `${os} ${state}`);
+        const on = slot.match(/<(a|p) [^>]*data-on=""[^>]*>([\s\S]*?)<\/\1>/)![2]!;
+        assert.ok(on.includes(expected[state]), `${os} ${state}`);
+        return slot.replace(/ data-on=""/, "");
+      });
+      assert.equal(slots[1], slots[0], os);
+      assert.equal(slots[2], slots[0], os);
     }
   });
 
@@ -208,6 +220,50 @@ describe("thanks page copy", () => {
     for (const os of ALL_OS) {
       for (const state of ["ready", "preparing", "started"] as const) assert.doesNotMatch(render(os, state), /[\u2013\u2014]/);
       for (const step of thanksSteps(os)) assert.doesNotMatch(JSON.stringify(step.caption), /[\u2013\u2014]/);
+    }
+  });
+
+  it("says what FirstOpenSteps says: each bold step word is emphasised there for the same system (SHOULD-TD7)", () => {
+    for (const os of ALL_OS) {
+      const fos = renderToStaticMarkup(createElement(FirstOpenSteps, { initialOs: os === "windows" ? "windows" : "mac" }));
+      const emphasised = new Set(Array.from(fos.matchAll(/<(b|i)>([^<]*)<\/\1>/g), (m) => m[2]!.replace(/&amp;/g, "&").replace(/[\u201c\u201d]/g, "").trim()));
+      for (const step of thanksSteps(os)) {
+        for (const part of step.caption) {
+          if (typeof part === "string" || part.b === THANKS_DOWNLOADS[os].file) continue;
+          for (const phrase of part.b.split(" → ")) assert.ok(emphasised.has(phrase), `${os}: "${phrase}" is not in FirstOpenSteps`);
+        }
+      }
+    }
+  });
+});
+
+describe("thanks page query (SHOULD-TD6)", () => {
+  it("leaves an allowlisted query alone", () => {
+    assert.equal(thanksCanonicalHref({ os: "mac", from: "hero" }), null);
+    assert.equal(thanksCanonicalHref({ os: "windows", from: "other" }), null);
+    assert.equal(thanksCanonicalHref({ from: "nav" }), null);
+    assert.equal(thanksCanonicalHref({}), null);
+  });
+
+  it("maps a raw from to other and keeps a known os", () => {
+    assert.equal(thanksCanonicalHref({ os: "mac", from: "evil@example.com" }), `${THANKS_PATH}?os=mac&from=other`);
+  });
+
+  it("drops an unknown os instead of guessing one, so the client still decides the system and the token", () => {
+    assert.equal(thanksCanonicalHref({ os: "linux", from: "hero" }), `${THANKS_PATH}?from=hero`);
+    assert.equal(thanksCanonicalHref({ os: "other" }), THANKS_PATH);
+  });
+
+  it("drops any other parameter and any repeated one", () => {
+    assert.equal(thanksCanonicalHref({ os: "mac", from: "hero", utm_source: "x" }), `${THANKS_PATH}?os=mac&from=hero`);
+    assert.equal(thanksCanonicalHref({ os: ["mac", "windows"], from: "hero" }), `${THANKS_PATH}?from=hero`);
+    assert.equal(thanksCanonicalHref({ os: "mac", from: ["hero", "nav"] }), `${THANKS_PATH}?os=mac`);
+  });
+
+  it("an allowlisted href is already canonical", () => {
+    for (const os of ALL_OS) {
+      const query = Object.fromEntries(new URL(thanksHref(os, "hero"), "https://unvibe.site").searchParams);
+      assert.equal(thanksCanonicalHref(query), null, os);
     }
   });
 });

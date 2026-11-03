@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadThanks } from "@/components/paper/DownloadThanks";
-import { THANKS_PATH } from "@/lib/downloadThanks";
+import { THANKS_PATH, thanksCanonicalHref } from "@/lib/downloadThanks";
 import { thanksOs } from "@/lib/downloadTracking";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { visitorInstallOs } from "@/lib/shortcuts";
@@ -24,9 +25,12 @@ export const metadata: Metadata = {
 /**
  * Only the product mark, the next steps and one footer line: the Nav and Footer stay off this path.
  * Rendered per request so the first paint already shows the visitor's system: the allowlisted
- * `?os=` (MUST-TD2), else the user agent, exactly as the client decides it.
+ * `?os=` (MUST-TD2), else the user agent, exactly as the client decides it. Any other query first
+ * redirects to its allowlisted form (SHOULD-TD6), so a raw value never reaches the address bar.
  */
-export default function DownloadThanksPage({ searchParams }: { searchParams: { os?: string | string[] } }) {
+export default function DownloadThanksPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+  const canonical = thanksCanonicalHref(searchParams);
+  if (canonical) redirect(canonical);
   const asked = thanksOs(typeof searchParams.os === "string" ? searchParams.os : null);
   const initialOs = asked === "other" ? visitorInstallOs(headers().get("user-agent") ?? "") : asked;
   return (

@@ -387,7 +387,8 @@ describe("download_thanks_viewed (Security MUST-TD2)", () => {
     it(`the thanks page's file links (${os}, ${state}) send download_cta_clicked with surface thanks`, () => {
       const fileLinks = elements(ThanksContent({ os, state, decided: true }))
         .filter((element) => String(element.props.href ?? "").startsWith("https://github.com/") && typeof element.props.onClick === "function");
-      assert.equal(fileLinks.length, os === "windows" ? 2 : 3, "the manual or button link, the direct link, and on a Mac the other build");
+      // The slot's button and both lines' manual links (one shown, CSS hides the others), the direct link, and on a Mac the other build.
+      assert.equal(fileLinks.length, os === "windows" ? 4 : 5, "the slot's three, the direct link, and on a Mac the other build");
       for (const fileLink of fileLinks) click(fileLink);
       assert.deepEqual(sent, fileLinks.map((fileLink) => downloadClick("thanks", fileLink.props.href === BETA_WINDOWS_DIRECT_DOWNLOAD ? "windows" : "mac")));
       assert.equal(thanksToken(), null, "they download in place: no token, no second thanks page");
