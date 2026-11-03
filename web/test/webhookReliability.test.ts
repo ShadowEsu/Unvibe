@@ -165,8 +165,9 @@ function liveSubscription(workspaceId: string, id: string, created: number, stat
 
 /**
  * Stripe holding two subscriptions for one workspace: live state, each one's latest paid invoice
- * payments, and cancels and refunds that, like Stripe, replay the first result for a reused key.
- * With `refundErrorCode`, every refund fails with that Stripe error code.
+ * payments, refunds that, like Stripe, replay the first result for a reused key, and a cancel that,
+ * like Stripe's DELETE (which ignores the key), answers 404 resource_missing once the subscription
+ * is canceled. With `refundErrorCode`, every refund fails with that Stripe error code.
  */
 function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscription>, paid: Record<string, string[]>, refundErrorCode?: string) {
   const cancels: Array<{ id: string; key: string }> = [];
@@ -188,6 +189,7 @@ function twoSubscriptionsStripe(subscriptions: Record<string, Stripe.Subscriptio
       return refund;
     },
     cancelSubscription: async (id, key) => {
+      if (subscriptions[id]?.status === 'canceled') throw Object.assign(new Error(`No such subscription: '${id}'`), { code: 'resource_missing' });
       if (failNextCancel) {
         failNextCancel = false;
         throw new Error('Stripe is unavailable');
@@ -337,6 +339,81 @@ test('a duplicate whose payment was already refunded is still canceled once, and
   assert.deepEqual(c.audits.filter((a) => a.action === 'subscription.duplicate').map((a) => a.metadata), [
     { kept: keptId, stopped: duplicateId, refunded: [`already-refunded:${duplicatePayment}`] },
   ]);
+});
+
+test('two deliveries stopping the same duplicate at once: the later cancel finds it canceled (404 resource_missing) and its event still succeeds', async () => {
+  const c = await auditedWorkspace();
+  const keptId = `sub_${randomUUID()}`;
+  const duplicateId = `sub_${randomUUID()}`;
+  const duplicatePayment = `pi_${randomUUID()}`;
+  const stripe = twoSubscriptionsStripe({
+    [keptId]: liveSubscription(c.workspaceId, keptId, 1_797_000_000),
+    [duplicateId]: liveSubscription(c.workspaceId, duplicateId, 1_797_000_600),
+  }, { [duplicateId]: [duplicatePayment] });
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, keptId, 1_797_000_000)), stripe.deps);
+  // The second delivery read the duplicate from Stripe before the first one canceled it.
+  const staleRead = liveSubscription(c.workspaceId, duplicateId, 1_797_000_600);
+  let stale = true;
+  const racing: StripeWebhookDependencies = {
+    ...stripe.deps,
+    retrieveSubscription: async (id) => {
+      if (id === duplicateId && stale) {
+        stale = false;
+        return staleRead;
+      }
+      return stripe.deps.retrieveSubscription(id);
+    },
+  };
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', staleRead), stripe.deps);
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.updated', staleRead), racing);
+
+  assert.equal(stale, false, 'the second delivery saw the duplicate live');
+  assert.equal((await c.store.overview(c.userId)).subscription.stripeSubscriptionId, keptId);
+  assert.deepEqual(stripe.cancels, [{ id: duplicateId, key: `uncode-dup-cancel-${duplicateId}` }], 'Stripe canceled once');
+  assert.equal(stripe.refundIds().length, 1, 'one refund: the second refund reused the key');
+});
+
+test('a cancel answered resource_missing while Stripe still shows the subscription live fails the event', async () => {
+  const c = await auditedWorkspace();
+  const keptId = `sub_${randomUUID()}`;
+  const duplicateId = `sub_${randomUUID()}`;
+  const stripe = twoSubscriptionsStripe({
+    [keptId]: liveSubscription(c.workspaceId, keptId, 1_797_000_000),
+    [duplicateId]: liveSubscription(c.workspaceId, duplicateId, 1_797_000_600),
+  }, { [duplicateId]: [`pi_${randomUUID()}`] });
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, keptId, 1_797_000_000)), stripe.deps);
+  const missing: StripeWebhookDependencies = {
+    ...stripe.deps,
+    cancelSubscription: async (id) => { throw Object.assign(new Error(`No such subscription: '${id}'`), { code: 'resource_missing' }); },
+  };
+  await assert.rejects(
+    processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', liveSubscription(c.workspaceId, duplicateId, 1_797_000_600)), missing),
+    /No such subscription/,
+  );
+  assert.equal(c.audits.some((a) => a.action === 'subscription.duplicate'), false);
+});
+
+test('a cancel answered resource_missing for a subscription Stripe no longer has at all counts as stopped', async () => {
+  const c = await auditedWorkspace();
+  const keptId = `sub_${randomUUID()}`;
+  const duplicateId = `sub_${randomUUID()}`;
+  const subscriptions = {
+    [keptId]: liveSubscription(c.workspaceId, keptId, 1_797_000_000),
+    [duplicateId]: liveSubscription(c.workspaceId, duplicateId, 1_797_000_600),
+  };
+  const stripe = twoSubscriptionsStripe(subscriptions, { [duplicateId]: [`pi_${randomUUID()}`] });
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', subscriptions[keptId]), stripe.deps);
+  // Gone between this delivery's read and its cancel (deleted, so every later lookup is a 404).
+  const gone: StripeWebhookDependencies = {
+    ...stripe.deps,
+    cancelSubscription: async (id) => {
+      delete subscriptions[id];
+      throw Object.assign(new Error(`No such subscription: '${id}'`), { code: 'resource_missing' });
+    },
+  };
+  await processStripeEvent(c.store, subscriptionEvent('customer.subscription.created', subscriptions[duplicateId]), gone);
+  assert.equal((await c.store.overview(c.userId)).subscription.stripeSubscriptionId, keptId);
+  assert.deepEqual(c.audits.filter((a) => a.action === 'subscription.duplicate').map((a) => a.metadata.stopped), [duplicateId]);
 });
 
 test('any other refund error fails the event and cancels nothing, so Stripe retries it', async () => {

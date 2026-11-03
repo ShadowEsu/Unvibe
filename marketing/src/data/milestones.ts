@@ -13,6 +13,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "2 NOV 2026",
+    category: "PRODUCT",
+    title: "The panel says why an explanation could not start",
+    summary: "When Unvibe's service stopped an explanation and said why, for example while AI features were paused for maintenance, the panel showed that reason instead of saying the explanation ended before it was complete. In a narrow panel, the Depth row wrapped onto a second line instead of cutting off Expert.",
+    figure: "v0.1.48",
+  },
+  {
     date: "31 OCT 2026",
     category: "PRODUCT",
     title: "The app names Claude when it asks to send code, and asks for your feedback",

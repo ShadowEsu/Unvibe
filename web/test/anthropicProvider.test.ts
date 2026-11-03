@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { ANTHROPIC_MAX_TOKENS, ANTHROPIC_MODEL, AnthropicProvider, TRUNCATED_NOTE } from '../src/ai/anthropic';
+import { ANTHROPIC_MAX_TOKENS, AnthropicProvider, TRUNCATED_NOTE } from '../src/ai/anthropic';
 import { BilledProviderError, ProviderRejectedError, billedUsage, providerErrorSummary } from '../src/ai/provider';
+import { pricesFor } from '../src/ai/spendMeter';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
@@ -40,7 +41,8 @@ test('stream emits each text delta as it arrives and returns the measured usage,
   const usage = await new AnthropicProvider(FAKE_KEY).stream('s', 'u', (t) => got.push(t));
   assert.deepEqual(got, ['Hel', 'lo']);
   assert.ok(seenBeforeChunk.some((n) => n > 0 && n < 2), 'a token was emitted before the last chunk arrived');
-  assert.deepEqual(usage, { inputTokens: 975, outputTokens: 42 });
+  // Reads count as plain input; writes stay apart so the meter prices them as cache writes.
+  assert.deepEqual(usage, { inputTokens: 975, outputTokens: 42, cacheWriteTokens: 50 });
 });
 
 test('stream ignores blocks that are not text', async () => {
@@ -67,7 +69,7 @@ test('an answer cut off at max_tokens is labelled, once, in stream and complete'
   assert.equal(full, `Part${TRUNCATED_NOTE}`);
 });
 
-test('the request pins the metered model and output budget, with the system prompt kept apart from the user text', async () => {
+test('the request sends the metered model and output budget and nothing that changes the price', async () => {
   let body: Record<string, unknown> = {};
   let headers = new Headers();
   globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
@@ -75,13 +77,17 @@ test('the request pins the metered model and output budget, with the system prom
     headers = new Headers(init?.headers);
     return Response.json({ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: { input_tokens: 3, output_tokens: 1 } });
   }) as typeof fetch;
-  await new AnthropicProvider(FAKE_KEY).complete('SYSTEM', 'USER');
-  assert.equal(body.model, ANTHROPIC_MODEL);
+  const provider = new AnthropicProvider(FAKE_KEY);
+  await provider.complete('SYSTEM', 'USER');
+  assert.equal(body.model, provider.model);
+  assert.ok(pricesFor(String(body.model)), 'the model sent is one the meter has prices for');
   assert.equal(body.max_tokens, ANTHROPIC_MAX_TOKENS);
+  assert.equal(provider.maxOutputTokens, ANTHROPIC_MAX_TOKENS);
   assert.ok(ANTHROPIC_MAX_TOKENS <= 2048);
   assert.equal(body.system, 'SYSTEM');
   assert.deepEqual(body.messages, [{ role: 'user', content: 'USER' }]);
-  assert.equal(body.tools, undefined);
+  // No speed (fast mode), inference_geo (1.1x), cache_control, tools or thinking: only these keys.
+  assert.deepEqual(Object.keys(body).sort(), ['max_tokens', 'messages', 'model', 'stream', 'system']);
   assert.equal(headers.get('x-api-key'), FAKE_KEY);
 });
 

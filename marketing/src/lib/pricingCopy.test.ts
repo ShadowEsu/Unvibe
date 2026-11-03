@@ -58,7 +58,7 @@ describe("pricing copy while payments are closed", () => {
   it("has no button that leads to a dead end", () => {
     for (const plan of closed.plans) {
       if (plan.href === null) continue;
-      assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:hello@unvibe.site"), plan.id);
+      assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:support@unvibe.site"), plan.id);
     }
   });
 
@@ -70,7 +70,7 @@ describe("pricing copy while payments are closed", () => {
     assert.doesNotMatch(pro, /Pro isn&#x27;t on sale yet/);
     // Free keeps its download, Teams its email.
     assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);
-    assert.match(planCard(false, "teams"), /href="mailto:hello@unvibe\.site/);
+    assert.match(planCard(false, "teams"), /href="mailto:support@unvibe\.site/);
   });
 
   it("keeps the Pro button once payments open", () => {
@@ -91,10 +91,13 @@ describe("pricing copy in both states", () => {
       assert.deepEqual(copy.plans.filter((plan) => plan.primary).map((plan) => [plan.id, plan.cta, plan.href]), [["free", "Download free", "/beta"]]);
     });
 
-    it(`states the allowances from lib/allowance (payments ${paymentsOpen ? "open" : "closed"})`, () => {
+    // Pro is 200 AI explanations a month (ledger 417), the number production enforces
+    // (plan_entitlements, web/src/billing/plans.ts); the others come from lib/allowance too.
+    it(`states the allowances from lib/allowance, Pro at 200 (payments ${paymentsOpen ? "open" : "closed"})`, () => {
       const plans = Object.fromEntries(copy.plans.map((plan) => [plan.id, plan]));
       assert.equal(plans.free.detail, "50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in. No card and no separate API key.");
-      assert.ok(plans.pro.features.includes("100 explanations a month"));
+      assert.ok(plans.pro.features.includes("200 AI explanations a month"));
+      assert.doesNotMatch(allText(copy), /100 (ai )?explanations/i);
       assert.doesNotMatch(allText(copy), /usage limit|More explanations each month/i);
     });
   }
@@ -126,14 +129,15 @@ describe("pricing copy once payments open", () => {
     assert.equal(open.heading.emphasis, "earns a place");
     assert.match(open.description, new RegExp(`\\$${PRICING.proMonthly} a month or \\$${PRICING.proAnnual} a year\\.$`));
     assert.doesNotMatch(open.description, /open soon/);
-    assert.equal(open.disclosure, "Prices in USD. Pro and Teams renew until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
+    // Teams has no checkout (founding seats start by email), so only Pro renews (Security SHOULD-LR3).
+    assert.equal(open.disclosure, "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
       ["free", "No card needed", open.plans[0].detail, "Download free", "/beta"],
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
-    assert.match(open.plans[2].href ?? "", /^mailto:hello@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
+    assert.match(open.plans[2].href ?? "", /^mailto:support@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
   });
 
   it("shares features and the featured card with the closed copy", () => {

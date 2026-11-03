@@ -20,14 +20,15 @@ const VAGUE = /usage limit|usage allowance|monthly limit|free allowance|More exp
 
 describe("explanation allowances", () => {
   it("match the numbers the product enforces", () => {
-    assert.deepEqual(ALLOWANCE, { trialExplanations: 50, trialTestMe: 50, trialDays: 30, freeMonthly: 50, proMonthly: 100 });
+    assert.deepEqual(ALLOWANCE, { trialExplanations: 50, trialTestMe: 50, trialDays: 30, freeMonthly: 50, proMonthly: 200 });
   });
 
   it("/pricing states signed out, Free and Pro numbers", () => {
     for (const paymentsOpen of [false, true]) {
       const page = text(createElement(PricingPlans, { paymentsOpen }));
       assert.match(page, /50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in\./);
-      assert.match(page, /100 explanations a month/);
+      assert.match(page, /200 AI explanations a month/);
+      assert.doesNotMatch(page, /100 (AI )?explanations/);
       assert.doesNotMatch(page, VAGUE);
     }
   });

@@ -5,8 +5,8 @@ import { POST } from "../app/api/redeem/route";
 
 /**
  * /api/redeem against a fake API (node:http), with the limiter in its local-development memory
- * mode (no Supabase env): only the token and the code are forwarded, the API's answer passes
- * through, and foreign origins, bursts and a down API are handled.
+ * mode (no Supabase env): only the token, the code and the agreement's three fields are forwarded,
+ * the API's answer passes through, and foreign origins, bursts and a down API are handled.
  */
 
 delete process.env.SUPABASE_URL;
@@ -44,7 +44,7 @@ function post(body: unknown, headers: Record<string, string> = {}, ip?: string):
 }
 
 describe("/api/redeem proxy", () => {
-  it("forwards only the access token and the code, and passes the API's answer through", async () => {
+  it("forwards only the access token and the code when there is no agreement, and passes the API's answer through", async () => {
     forwarded.length = 0;
     answer = { status: 200, body: { ok: true, status: "redeemed", months: 3, proUntil: "2027-01-24T20:00:00.000Z" } };
     const res = await post({ accessToken: "tok", code: "ABCD-EFGH-JKMN-PQRS", email: "x@y.z", userId: "someone-else" });
@@ -52,6 +52,27 @@ describe("/api/redeem proxy", () => {
     assert.equal(res.headers.get("cache-control"), "no-store");
     assert.deepEqual(await res.json(), answer.body);
     assert.deepEqual(forwarded, [{ path: "/api/v1/promo/redeem", body: { accessToken: "tok", code: "ABCD-EFGH-JKMN-PQRS" } }]);
+  });
+
+  it("forwards the agreement's three fields and strips anything else in it", async () => {
+    forwarded.length = 0;
+    answer = { status: 200, body: { ok: true, status: "redeemed", months: 3, proUntil: null } };
+    const agreement = { terms: true, age18: true, policyVersion: "2026-10-28" };
+    await post({ accessToken: "tok", code: "ABCD-EFGH-JKMN-PQRS", agreement: { ...agreement, userId: "someone-else", agreedAt: "1999-01-01" }, extra: 1 });
+    assert.deepEqual(forwarded, [{ path: "/api/v1/promo/redeem", body: { accessToken: "tok", code: "ABCD-EFGH-JKMN-PQRS", agreement } }]);
+  });
+
+  it("forwards unticked boxes as they are, and leaves out an agreement of the wrong types", async () => {
+    forwarded.length = 0;
+    answer = { status: 400, body: { ok: false, error: "agreement_required" } };
+    await post({ accessToken: "tok", code: "c", agreement: { terms: true, age18: false, policyVersion: "2026-10-28" } });
+    for (const agreement of [{ terms: "true", age18: "true", policyVersion: "2026-10-28" }, { terms: true, age18: true }, { terms: true, age18: true, policyVersion: 20261028 }, "yes", true]) {
+      await post({ accessToken: "tok", code: "c", agreement });
+    }
+    assert.deepEqual(forwarded.map((f) => f.body), [
+      { accessToken: "tok", code: "c", agreement: { terms: true, age18: false, policyVersion: "2026-10-28" } },
+      ...Array.from({ length: 5 }, () => ({ accessToken: "tok", code: "c" })),
+    ]);
   });
 
   it("keeps the API's status codes", async () => {

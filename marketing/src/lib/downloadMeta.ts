@@ -2,16 +2,16 @@ import { BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 
 /**
  * What each download is, in words, for the download card and the pages that describe a download
- * (Design W10, W11, W14). Byte sizes are the v0.1.47 release assets (`gh release view v0.1.47 --repo
- * ShadowEsu/Unvibe --json assets`, 31 Oct). The Windows file the site links is the portable .exe
- * (Unvibe-0.1.47-win-x64-portable.exe): one file that runs from wherever it is saved, no installer.
+ * (Design W10, W11, W14). Byte sizes are the v0.1.48 release assets (`gh release view v0.1.48 --repo
+ * ShadowEsu/Unvibe --json assets`, 2 Nov). The Windows file the site links is the portable .exe
+ * (Unvibe-0.1.48-win-x64-portable.exe): one file that runs from wherever it is saved, no installer.
  * Update the sizes with the tag; downloadMeta.test.ts fails if the tag moves without them.
  */
 export const DOWNLOAD_SIZES = {
-  tag: "v0.1.47",
-  macArm64DmgBytes: 108_424_950,
-  macX64DmgBytes: 115_554_297,
-  windowsPortableExeBytes: 87_354_770,
+  tag: "v0.1.48",
+  macArm64DmgBytes: 108_423_012,
+  macX64DmgBytes: 115_553_767,
+  windowsPortableExeBytes: 87_354_828,
 } as const;
 
 const VERSION = BETA_INSTALL_TAG.replace(/^v/, "");

@@ -6,11 +6,13 @@ import { GET as overview } from '../app/api/v1/billing/overview/route';
 import { PATCH as seats } from '../app/api/v1/billing/seats/route';
 import { POST as portal } from '../app/api/v1/billing/portal/route';
 import { billingError } from '../src/billing/http';
-import { paymentsLocked } from '../src/billing/stripe';
+import { automaticTax, billingMode, getStripe, paymentsLocked, webhookConfigured } from '../src/billing/stripe';
+import { GET as health } from '../app/api/v1/health/route';
+import { POST as webhook } from '../app/api/v1/billing/webhook/route';
 
 // Live money stays off until Preston approves it. These tests use fake key strings only;
 // a locked request must be refused before any Stripe call is attempted.
-const STRIPE_ENV = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO_ANNUAL', 'STRIPE_PRICE_PRO_LIFETIME', 'BILLING_LIVE_PAYMENTS_APPROVED', 'BILLING_LIFETIME_ENABLED', 'BILLING_TEST_CHECKOUT_IN_PRODUCTION', 'VERCEL_ENV'] as const;
+const STRIPE_ENV = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO_ANNUAL', 'STRIPE_PRICE_PRO_LIFETIME', 'UNVIBE_CHECKOUT_LIVE', 'BILLING_LIFETIME_ENABLED', 'BILLING_TEST_CHECKOUT_IN_PRODUCTION', 'VERCEL_ENV', 'STRIPE_AUTOMATIC_TAX'] as const;
 
 function withBillingEnv(values: Partial<Record<(typeof STRIPE_ENV)[number], string>>, run: () => Promise<void> | void) {
   return async () => {
@@ -32,17 +34,17 @@ const post = (token: string, body: unknown) => new Request('https://example.test
   method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body),
 });
 
-test('a live or restricted-live Stripe key opens only on production with the exact approval', withBillingEnv({}, () => {
-  for (const key of ['sk_live_fake', 'rk_live_fake']) {
+test('a restricted live key opens only on production with UNVIBE_CHECKOUT_LIVE exactly 1; a live secret key never opens', withBillingEnv({}, () => {
+  for (const key of ['rk_live_fake']) {
     process.env.STRIPE_SECRET_KEY = key;
     process.env.VERCEL_ENV = 'production';
-    delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+    delete process.env.UNVIBE_CHECKOUT_LIVE;
     assert.equal(paymentsLocked(), true, key);
-    for (const value of ['yes', ' true ', 'true\n', 'TRUE']) {
-      process.env.BILLING_LIVE_PAYMENTS_APPROVED = value;
+    for (const value of ['yes', 'true', ' 1', '1\n', '01']) {
+      process.env.UNVIBE_CHECKOUT_LIVE = value;
       assert.equal(paymentsLocked(), true, `${key} with approval ${JSON.stringify(value)}`);
     }
-    process.env.BILLING_LIVE_PAYMENTS_APPROVED = 'true';
+    process.env.UNVIBE_CHECKOUT_LIVE = '1';
     assert.equal(paymentsLocked(), false, `${key} on production after explicit approval`);
     for (const env of ['preview', 'development', undefined]) {
       if (env === undefined) delete process.env.VERCEL_ENV;
@@ -50,9 +52,15 @@ test('a live or restricted-live Stripe key opens only on production with the exa
       assert.equal(paymentsLocked(), true, `${key} approved but off production (${env ?? 'local'})`);
     }
   }
+  process.env.STRIPE_SECRET_KEY = 'sk_live_fake';
+  process.env.VERCEL_ENV = 'production';
+  process.env.UNVIBE_CHECKOUT_LIVE = '1';
+  assert.equal(paymentsLocked(), true, 'a live secret key stays locked with every approval');
+  assert.throws(() => getStripe(), /Stripe is not configured/, 'no client is built for a live secret key');
+  delete process.env.VERCEL_ENV;
   for (const key of ['sk_test_fake', 'rk_test_fake']) {
     process.env.STRIPE_SECRET_KEY = key;
-    delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+    delete process.env.UNVIBE_CHECKOUT_LIVE;
     assert.equal(paymentsLocked(), false, key);
   }
 }));
@@ -64,7 +72,7 @@ test('a test-mode key is locked on the production deployment only', withBillingE
   assert.equal(paymentsLocked(), false, 'preview keeps test checkout');
   process.env.VERCEL_ENV = 'production';
   assert.equal(paymentsLocked(), true, 'production with a test key');
-  process.env.BILLING_LIVE_PAYMENTS_APPROVED = 'true';
+  process.env.UNVIBE_CHECKOUT_LIVE = '1';
   assert.equal(paymentsLocked(), true, 'live approval does not open a test key in production');
   for (const value of [' true ', 'true\n', 'TRUE', 'yes']) {
     process.env.BILLING_TEST_CHECKOUT_IN_PRODUCTION = value;
@@ -78,7 +86,7 @@ test('a test-mode key is locked on the production deployment only', withBillingE
   assert.equal((await res.json() as { error: string }).error, 'payments_not_open');
 }));
 
-test('checkout refuses every plan with payments_not_open while live payments are locked', withBillingEnv({ STRIPE_SECRET_KEY: 'sk_live_fake', STRIPE_PRICE_PRO_LIFETIME: 'price_life', BILLING_LIFETIME_ENABLED: 'true' }, async () => {
+test('checkout refuses every plan with payments_not_open while live payments are locked', withBillingEnv({ STRIPE_SECRET_KEY: 'rk_live_fake', STRIPE_PRICE_PRO_LIFETIME: 'price_life', BILLING_LIFETIME_ENABLED: 'true' }, async () => {
   const token = await signedIn();
   for (const body of [{ plan: 'pro', interval: 'monthly' }, { plan: 'pro', interval: 'annual' }, { plan: 'pro', interval: 'lifetime' }, { plan: 'teams', interval: 'monthly', seats: 3 }]) {
     const res = await checkout(post(token, body));
@@ -89,7 +97,7 @@ test('checkout refuses every plan with payments_not_open while live payments are
   }
 }));
 
-test('seat changes are refused while live payments are locked', withBillingEnv({ STRIPE_SECRET_KEY: 'sk_live_fake' }, async () => {
+test('seat changes are refused while live payments are locked', withBillingEnv({ STRIPE_SECRET_KEY: 'rk_live_fake' }, async () => {
   const token = await signedIn();
   const res = await seats(new Request('https://example.test/api/v1/billing/seats', {
     method: 'PATCH', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ workspaceId: 'w', seats: 4 }),
@@ -98,7 +106,7 @@ test('seat changes are refused while live payments are locked', withBillingEnv({
   assert.equal((await res.json() as { error: string }).error, 'payments_not_open');
 }));
 
-test('the billing portal is refused while payments are locked', withBillingEnv({ STRIPE_SECRET_KEY: 'sk_live_fake' }, async () => {
+test('the billing portal is refused while payments are locked', withBillingEnv({ STRIPE_SECRET_KEY: 'rk_live_fake' }, async () => {
   const token = await signedIn();
   const res = await portal(new Request('https://example.test/api/v1/billing/portal', {
     method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: '{}',
@@ -124,7 +132,7 @@ test('billing errors never echo provider or configuration details to the client'
   assert.equal(seat.message, 'Add a paid seat before sending another invitation.');
 });
 
-test('the plan overview reports checkout closed and payments not open under a live key', withBillingEnv({ STRIPE_SECRET_KEY: 'sk_live_fake', STRIPE_PRICE_PRO_LIFETIME: 'price_life' }, async () => {
+test('the plan overview reports checkout closed and payments not open under a live key', withBillingEnv({ STRIPE_SECRET_KEY: 'rk_live_fake', STRIPE_PRICE_PRO_LIFETIME: 'price_life' }, async () => {
   const token = await signedIn();
   const res = await overview(new Request('https://example.test/api/v1/billing/overview', { headers: { authorization: `Bearer ${token}` } }));
   assert.equal(res.status, 200);
@@ -139,4 +147,48 @@ test('Lifetime stays hidden and refused in test mode unless explicitly enabled',
   const res = await checkout(post(token, { plan: 'pro', interval: 'lifetime' }));
   assert.equal(res.status, 503);
   assert.equal((await res.json() as { error: string }).error, 'lifetime_unavailable');
+}));
+
+// Security L4: the public health probe says whether checkout is off, test or live and whether the
+// webhook can verify events, and nothing else about the configuration.
+test('health reports billing off/test/live and webhookConfigured, and no configuration values', withBillingEnv({ STRIPE_SECRET_KEY: 'rk_live_fake', VERCEL_ENV: 'production' }, async () => {
+  const read = async () => (await health()).json() as Promise<Record<string, unknown>>;
+  assert.deepEqual(await read(), { ok: true, service: 'unvibe-api', version: 'v1', billing: 'off', webhookConfigured: true }, 'live key before approval');
+  process.env.UNVIBE_CHECKOUT_LIVE = '1';
+  const live = await read();
+  assert.deepEqual(live, { ok: true, service: 'unvibe-api', version: 'v1', billing: 'live', webhookConfigured: true });
+  for (const value of ['rk_live_fake', 'whsec_fake', 'price_pm']) assert.equal(JSON.stringify(live).includes(value), false, value);
+  process.env.STRIPE_SECRET_KEY = 'sk_test_fake';
+  process.env.VERCEL_ENV = 'preview';
+  assert.equal(billingMode(), 'test');
+  for (const placeholder of ['whsec_REPLACE_ME', 'whsec_replace-me', 'whsec_']) {
+    process.env.STRIPE_WEBHOOK_SECRET = placeholder;
+    assert.deepEqual([billingMode(), webhookConfigured()], ['off', false], `placeholder ${placeholder} closes checkout and the webhook`);
+  }
+}));
+
+// A placeholder or newline-stored signing secret answers 503 before any verification, so the unsigned-POST
+// gate after a deploy sees it; only a real whsec_ value is used.
+test('the webhook answers 503 for a missing, placeholder or whitespace signing secret', withBillingEnv({ STRIPE_SECRET_KEY: 'sk_test_fake' }, async () => {
+  for (const secret of [undefined, '', 'whsec_', 'whsec_replace-me', 'whsec_abc\n', ' whsec_abc', 'whsec_abc ', 'sk_test_fake', 'placeholder']) {
+    if (secret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET;
+    else process.env.STRIPE_WEBHOOK_SECRET = secret;
+    const res = await webhook(new Request('https://example.test/api/v1/billing/webhook', { method: 'POST', headers: { 'stripe-signature': 't=1,v1=abc' }, body: '{}' }));
+    assert.deepEqual([res.status, await res.json()], [503, { error: 'webhook_not_configured' }], JSON.stringify(secret));
+  }
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_abc123';
+  const res = await webhook(new Request('https://example.test/api/v1/billing/webhook', { method: 'POST', headers: { 'stripe-signature': 't=1,v1=abc' }, body: '{}' }));
+  assert.equal(res.status, 400, 'a real-shaped secret reaches signature verification, which refuses the forged header');
+}));
+
+// Ledger 415: Stripe Tax stays off until Preston turns it on in Stripe and sets STRIPE_AUTOMATIC_TAX=1.
+test('Stripe Tax is off unless STRIPE_AUTOMATIC_TAX is exactly 1, and saves a returning customer address', withBillingEnv({}, () => {
+  for (const value of [undefined, 'true', ' 1', '0']) {
+    if (value === undefined) delete process.env.STRIPE_AUTOMATIC_TAX;
+    else process.env.STRIPE_AUTOMATIC_TAX = value;
+    assert.deepEqual(automaticTax(true), {}, JSON.stringify(value));
+  }
+  process.env.STRIPE_AUTOMATIC_TAX = '1';
+  assert.deepEqual(automaticTax(false), { automatic_tax: { enabled: true } });
+  assert.deepEqual(automaticTax(true), { automatic_tax: { enabled: true }, customer_update: { address: 'auto' } });
 }));
