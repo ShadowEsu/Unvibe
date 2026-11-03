@@ -297,3 +297,93 @@ test('a failed delivery stores only the Stripe error type and code as last_error
   }
   assert.deepEqual(stored, ['StripeInvalidRequestError invalid_request_error resource_missing']);
 });
+
+// Security MUST-J1: Jaymini sells on the same Stripe account, so its events reach this endpoint. Its
+// subscriptions carry workspace_id + plan and no interval, which today throws in requiredMetadata and
+// answers 500, so Stripe retries each one for 3 days. Another product's object is acknowledged instead.
+async function deliverWatched(event: Parameters<typeof post>[0], retrieve: Stripe['subscriptions']['retrieve']) {
+  const store = getBillingStore();
+  const stripe = getStripe();
+  let retrieved = 0;
+  stripe.subscriptions.retrieve = (async (id: string) => { retrieved += 1; return retrieve(id); }) as unknown as typeof stripe.subscriptions.retrieve;
+  const audits: string[] = [];
+  const failed: string[] = [];
+  const recordAudit = store.recordAudit.bind(store);
+  const failWebhook = store.failWebhook.bind(store);
+  store.recordAudit = async (userId, workspaceId, action, metadata) => { audits.push(action); return recordAudit(userId, workspaceId, action, metadata); };
+  store.failWebhook = async (eventId, message) => { failed.push(message); return failWebhook(eventId, message); };
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    const response = await post(event);
+    return { status: response.status, body: await response.json() as Record<string, unknown>, retrieved, audits, failed };
+  } finally {
+    console.error = original;
+    store.recordAudit = recordAudit;
+    store.failWebhook = failWebhook;
+  }
+}
+
+function jayminiSubscription(workspaceId: string, product: string | null) {
+  return (async (id: string) => ({
+    id, status: 'active', customer: 'cus_jaymini', cancel_at_period_end: false, cancel_at: null, created: 1_797_000_000,
+    metadata: { workspace_id: workspaceId, plan: 'pro', ...(product ? { product } : {}) },
+    items: { data: [{ quantity: 1, price: { id: 'price_jaymini_pro' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
+  })) as unknown as Stripe['subscriptions']['retrieve'];
+}
+
+test('a product=jaymini subscription.updated is a 200 other_product: never claimed, no Stripe call, no write, no failWebhook', async () => {
+  const store = getBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const subscriptionId = `sub_${randomUUID()}`;
+  const event = { id: `evt_${randomUUID()}`, type: 'customer.subscription.updated', data: { object: { id: subscriptionId, object: 'subscription', metadata: { workspace_id: workspace.id, plan: 'pro', product: 'jaymini' } } } };
+  const result = await deliverWatched(event, jayminiSubscription(workspace.id, 'jaymini'));
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, { ignored: 'other_product' });
+  assert.equal(result.retrieved, 0, 'read from the signed event: no Stripe call');
+  assert.deepEqual(result.failed, [], 'no failWebhook row');
+  assert.deepEqual(result.audits, ['webhook.ignored_other_product']);
+  assert.equal(await store.subscriptionByProviderId(subscriptionId), null, 'nothing written for it');
+  assert.equal(await store.claimWebhook(event.id, event.type), 'claimed', 'never claimed, so never processed');
+});
+
+test('a jaymini invoice.paid whose snapshot has no tag is still a 200 once the live subscription shows product=jaymini', async () => {
+  const store = getBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const subscriptionId = `sub_${randomUUID()}`;
+  const event = { id: `evt_${randomUUID()}`, type: 'invoice.paid', data: { object: { id: `in_${randomUUID()}`, object: 'invoice', parent: { type: 'subscription_details', subscription_details: { subscription: subscriptionId, metadata: null } } } } };
+  const result = await deliverWatched(event, jayminiSubscription(workspace.id, 'jaymini'));
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, { ignored: 'other_product' });
+  assert.equal(result.retrieved, 1);
+  assert.deepEqual(result.failed, []);
+  assert.deepEqual(result.audits, ['webhook.ignored_other_product']);
+  assert.equal(await store.subscriptionByProviderId(subscriptionId), null);
+  assert.deepEqual(await (await post(event)).json(), { received: true, duplicate: true }, 'completed, so a replay is a duplicate');
+});
+
+test('an invoice whose snapshot is tagged jaymini is a 200 other_product before any Stripe call', async () => {
+  const workspace = await getBillingStore().ensurePersonalWorkspace(randomUUID());
+  const event = { id: `evt_${randomUUID()}`, type: 'invoice.payment_failed', data: { object: { id: `in_${randomUUID()}`, object: 'invoice', parent: { type: 'subscription_details', subscription_details: { subscription: `sub_${randomUUID()}`, metadata: { product: 'jaymini' } } } } } };
+  const result = await deliverWatched(event, jayminiSubscription(workspace.id, 'jaymini'));
+  assert.deepEqual([result.status, result.body, result.retrieved, result.failed], [200, { ignored: 'other_product' }, 0, []]);
+});
+
+test('controls: a product=unvibe subscription is applied, and an untagged one with incomplete metadata still fails loudly', async () => {
+  const store = getBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const tagged = (async (id: string) => ({
+    ...(await activeProSubscription(workspace.id)(id)),
+    metadata: { product: 'unvibe', workspace_id: workspace.id, plan: 'pro', interval: 'monthly' },
+  })) as unknown as Stripe['subscriptions']['retrieve'];
+  const subscriptionId = `sub_${randomUUID()}`;
+  const ours = await deliverWatched({ id: `evt_${randomUUID()}`, type: 'customer.subscription.updated', data: { object: { id: subscriptionId, object: 'subscription', metadata: { product: 'unvibe' } } } }, tagged);
+  assert.equal(ours.status, 200);
+  assert.deepEqual(ours.body, { received: true });
+  assert.equal((await store.subscriptionByWorkspaceId(workspace.id))?.plan, 'pro', 'Unvibe\'s own subscription grants Pro');
+  assert.deepEqual(ours.failed, []);
+  const other = await store.ensurePersonalWorkspace(randomUUID());
+  const untagged = await deliverWatched({ id: `evt_${randomUUID()}`, type: 'customer.subscription.updated', data: { object: { id: `sub_${randomUUID()}`, object: 'subscription' } } }, jayminiSubscription(other.id, null));
+  assert.equal(untagged.status, 500, 'an untagged object with incomplete metadata keeps today\'s loud failure');
+  assert.equal(untagged.failed.length, 1);
+});

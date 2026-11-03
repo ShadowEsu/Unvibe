@@ -35,7 +35,9 @@ const liveStatus = new Map<string, Stripe.Subscription.Status>();
 const refundKeys: string[] = [];
 const cancelKeys: string[] = [];
 
+let lastCreate: Stripe.Checkout.SessionCreateParams | null = null;
 stripe.checkout.sessions.create = (async (params: Stripe.Checkout.SessionCreateParams) => {
+  lastCreate = params;
   calls.push(`checkout.sessions.create:${params.line_items?.[0]?.price}`);
   const id = `cs_test_${randomUUID()}`;
   return { id, url: `https://checkout.stripe.com/c/pay/${id}`, status: 'open', expires_at: params.expires_at };
@@ -173,6 +175,17 @@ test('once complimentary Pro has ended, checkout is allowed again', async () => 
   } finally {
     mock.timers.reset();
   }
+});
+
+// Security MUST-J1: the Stripe account is shared, so Unvibe's session and the subscription it creates
+// carry product=unvibe, the tag the webhook keeps; other products' tagged objects are acknowledged only.
+test('a checkout session and its subscription are tagged product=unvibe', async () => {
+  const me = await person();
+  lastCreate = null;
+  assert.equal((await startCheckout(me.token, 'monthly')).status, 201);
+  const params = lastCreate as Stripe.Checkout.SessionCreateParams | null;
+  assert.equal(params?.metadata?.product, 'unvibe');
+  assert.equal(params?.subscription_data?.metadata?.product, 'unvibe');
 });
 
 test('after complimentary Pro has ended, a completed checkout stores the paid subscription with no refund and no cancel', async () => {

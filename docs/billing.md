@@ -63,6 +63,12 @@ Webhook claims are idempotent, completed events cannot replay, and failed proces
 The Stripe client pins API version `2026-06-24.dahlia`; set the same version on each endpoint.
 An event whose `livemode` differs from the key's mode is answered 200 `livemode_mismatch`, logged
 and audited (`webhook.livemode_mismatch`), and never claimed or processed.
+The Stripe account is shared with other products (Jaymini). Unvibe's Checkout tags the session, the
+subscription and the PaymentIntent `metadata.product = unvibe`. An event whose own object is tagged
+with another product is answered 200 `other_product`, logged and audited
+(`webhook.ignored_other_product`), and never claimed or processed. When only the subscription
+retrieved for it carries the tag, the delivery is completed (a replay is a duplicate) with nothing
+granted, written or failed. Untagged objects are processed as before.
 The subscription sync writes the row only while its `updated_at` is still the value it read, so a
 cancel, refund, dispute or free-months grant that lands in between is never overwritten; it then
 retrieves the subscription again and decides again (three tries, then the event fails and Stripe

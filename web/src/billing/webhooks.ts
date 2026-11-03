@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
 import type { BillingStore, BillingInterval, CheckoutStopAudits, PlanId, SubscriptionRecord, SubscriptionStatus } from './types';
 import { complimentaryPaidEnd } from './plans';
-import { stripePriceId } from './stripe';
+import { STRIPE_PRODUCT, stripePriceId } from './stripe';
 
 /** Far-future end date used for Pro Lifetime grants (effectively permanent). */
 export const LIFETIME_PERIOD_END = '2099-12-31T23:59:59.000Z';
@@ -10,6 +10,39 @@ function mappedStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
   if (status === 'trialing' || status === 'active' || status === 'past_due' || status === 'unpaid' || status === 'canceled') return status;
   return 'inactive';
 }
+
+/** Another product's `metadata.product` tag, or null when the object is Unvibe's or carries no tag. */
+function otherProductTag(metadata: Stripe.Metadata | null | undefined): string | null {
+  const product = metadata?.product;
+  return product && product !== STRIPE_PRODUCT ? product.slice(0, 40) : null;
+}
+
+/**
+ * Security MUST-J1: the Stripe account is shared, and Stripe sends every product's events to every
+ * endpoint subscribed to their type. This reads the product tag from the event's own signed object (a
+ * session, a subscription, an invoice's snapshot of its subscription's metadata, or a charge) and
+ * returns another product's tag, so the event is acknowledged and never processed. Untagged objects
+ * return null and keep today's handling, a loud failure included.
+ */
+export function otherProductOf(event: Stripe.Event): string | null {
+  switch (event.type) {
+    case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded':
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+    case 'charge.refunded':
+      return otherProductTag(event.data.object.metadata);
+    case 'invoice.paid':
+    case 'invoice.payment_failed':
+      return otherProductTag(event.data.object.parent?.subscription_details?.metadata);
+    default:
+      return null;
+  }
+}
+
+/** What `processStripeEvent` did when it did not apply the event: another product's object, left alone. */
+export type StripeEventOutcome = { ignored: 'other_product'; product: string } | undefined;
 
 function requiredMetadata(subscription: Stripe.Subscription): { workspaceId: string; plan: Exclude<PlanId, 'free'>; interval: BillingInterval } {
   const workspaceId = subscription.metadata.workspace_id;
@@ -516,7 +549,9 @@ async function handleDispute(store: BillingStore, event: Stripe.ChargeDisputeCre
  * stop started or finished while locked goes to `stopCheckoutWhileLocked` and is never completed:
  * a retry after purchases reopen still refunds instead of granting, and a finished stop stays as is.
  */
-export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies, options: { revokeOnly?: boolean } = {}): Promise<void> {
+export async function processStripeEvent(store: BillingStore, event: Stripe.Event, deps: StripeWebhookDependencies, options: { revokeOnly?: boolean } = {}): Promise<StripeEventOutcome> {
+  const tagged = otherProductOf(event);
+  if (tagged) return { ignored: 'other_product', product: tagged };
   switch (event.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded': {
@@ -545,6 +580,8 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       }
       if (session.mode !== 'subscription' || !session.subscription) return;
       const subscription = await deps.retrieveSubscription(providerId(session.subscription));
+      const subscriptionProduct = otherProductTag(subscription.metadata);
+      if (subscriptionProduct) return { ignored: 'other_product', product: subscriptionProduct };
       await syncStripeSubscription(store, subscription, deps);
       await store.completeCheckoutIntent(session.id);
       await store.recordAudit(null, subscription.metadata.workspace_id ?? null, 'checkout.completed', { eventId: event.id });
@@ -555,6 +592,9 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       // Stripe does not deliver events in order. Sync the subscription as it is now, never the
       // event's snapshot, so a late older event cannot roll back or resurrect a subscription.
       const live = await deps.retrieveSubscription(event.data.object.id);
+      // The live subscription's tag decides too, in case the event's snapshot predates it.
+      const liveProduct = otherProductTag(live.metadata);
+      if (liveProduct) return { ignored: 'other_product', product: liveProduct };
       await (options.revokeOnly ? applyRevocationOnly(store, live) : syncStripeSubscription(store, live, deps));
       return;
     }
@@ -571,6 +611,8 @@ export async function processStripeEvent(store: BillingStore, event: Stripe.Even
       const id = subscriptionIdFromInvoice(event.data.object);
       if (!id) return;
       const live = await deps.retrieveSubscription(id);
+      const liveProduct = otherProductTag(live.metadata);
+      if (liveProduct) return { ignored: 'other_product', product: liveProduct };
       await (options.revokeOnly ? applyRevocationOnly(store, live) : syncStripeSubscription(store, live, deps));
       return;
     }
