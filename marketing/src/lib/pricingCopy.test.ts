@@ -57,14 +57,15 @@ describe("pricing copy while payments are closed", () => {
 
   it("has no button that leads to a dead end", () => {
     for (const plan of closed.plans) {
-      if (plan.href === null) continue;
       assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:support@unvibe.site"), plan.id);
     }
   });
 
-  it("gives the Pro card no button, says it isn't on sale and how to try it today", () => {
+  it("gives the Pro card an outlined Download free, says it isn't on sale and how to try it today", () => {
     const pro = planCard(false, "pro");
-    assert.doesNotMatch(pro, /<a |<button/);
+    assert.match(pro, /<a [^>]*href="\/beta"[^>]*>Download free<\/a>/);
+    assert.match(pro, /class="[^"]*pricing-button--quiet/);
+    assert.doesNotMatch(pro, /upgrade|checkout|subscribe/i);
     assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
     assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, plus a month for each friend who enters your gift code in the app \(up to five\)\.<\/p>/);
     assert.doesNotMatch(pro, /Pro isn&#x27;t on sale yet/);
@@ -137,7 +138,7 @@ describe("pricing copy once payments open", () => {
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
-    assert.match(open.plans[2].href ?? "", /^mailto:support@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
+    assert.match(open.plans[2].href, /^mailto:support@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
   });
 
   it("shares features and the featured card with the closed copy", () => {

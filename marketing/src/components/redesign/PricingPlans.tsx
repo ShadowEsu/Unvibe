@@ -25,7 +25,7 @@ function priceFor(id: string, interval: Interval, fallback: string): { price: st
 }
 
 /** Plan buttons that open the download page also count as download calls to action. */
-export function trackPlanCta(plan: { id: string; href: string | null }): void {
+export function trackPlanCta(plan: { id: string; href: string }): void {
   track('plan_cta_clicked', { plan: plan.id });
   if (plan.href === '/beta') trackDownloadPageClick('pricing');
 }
@@ -89,17 +89,15 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
             <small>{plan.detail}</small>
             <ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul>
             {plan.after ? <p className="plan-after">{plan.after}</p> : null}
-            {plan.cta && plan.href ? (
-              <Button
-                href={plan.href}
-                size="lg"
-                variant={plan.primary ? 'primary' : 'secondary'}
-                className={plan.primary ? 'pricing-button' : 'pricing-button pricing-button--quiet'}
-                onClick={() => trackPlanCta(plan)}
-              >
-                {plan.cta}
-              </Button>
-            ) : null}
+            <Button
+              href={plan.href}
+              size="lg"
+              variant={plan.primary ? 'primary' : 'secondary'}
+              className={plan.primary ? 'pricing-button' : 'pricing-button pricing-button--quiet'}
+              onClick={() => trackPlanCta(plan)}
+            >
+              {plan.cta}
+            </Button>
           </article>
         ))}
       </div>

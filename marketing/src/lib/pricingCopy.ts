@@ -18,9 +18,9 @@ export type PlanCopy = {
   price: string;
   detail: string;
   features: readonly string[];
-  /** The card's button; null for a card with nothing to act on yet (Pro while it isn't on sale). */
-  cta: string | null;
-  href: string | null;
+  /** The card's button. */
+  cta: string;
+  href: string;
   /** A short line under the price. */
   note?: string;
   /** A line under the feature list. */
@@ -83,8 +83,9 @@ const CLOSED: PricingCopy = {
   plans: [
     free,
     // Lead, 31 Oct: this card already says "Not on sale yet" under the price, so its line under the list is the
-    // "try it" half only, and nothing while AI features are paused (Security MUST-Q2).
-    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: proTryToday() ?? undefined, cta: null, href: null, featured: true, primary: false },
+    // "try it" half only, and nothing while AI features are paused (Security MUST-Q2). Its outlined Download free
+    // is that try path's next step and lines the three buttons up (Design S1, 3 Nov; production has the same button).
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: proTryToday() ?? undefined, cta: "Download free", href: "/beta", featured: true, primary: false },
     { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", note: "Not on sale yet", detail: `Founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
   disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
