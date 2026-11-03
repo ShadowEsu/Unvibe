@@ -97,10 +97,15 @@
 /* ── Pricing: one heading, then the tier cards inside the first viewport at 1440 and 390 ── */
 
 /* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important.
-   The bottom matches the top so the note doesn't float in an empty band above the footer (Design S2, 3 Nov). */
+   The bottom matches the top, and the page drops .launch-subpage's 110px bottom padding, so the note doesn't float
+   in an empty band above the footer (Design S2, 3 Nov). */
 .paper-pricing > .paper-section {
   padding-top: clamp(1.5rem, 4vw, 3rem) !important;
   padding-bottom: clamp(2rem, 5vw, 3.5rem) !important;
+}
+
+.launch-subpage.paper-pricing {
+  padding-bottom: 0;
 }
 
 /* The fixed Feedback tab (vibe.css .fb-tab, left 20px, bottom 20px) sits on the Free card's left edge here, and
@@ -242,7 +247,7 @@ body:has(.paper-pricing) .fb-tab {
 }
 
 .paper-pricing .marketing-plan-card .plan-after {
-  margin: 0;
+  margin: 0 0 1.25rem;
   color: var(--v-ink);
   font-size: 0.95rem;
   line-height: 1.45;
