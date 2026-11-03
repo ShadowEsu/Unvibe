@@ -5,6 +5,13 @@ import type { BillingInterval, PlanId } from './types';
 let stripeClient: Stripe | undefined;
 
 /**
+ * The `metadata.product` tag on every Checkout object Unvibe creates (the session, and through it the
+ * subscription or the PaymentIntent). The Stripe account is shared with other products, which tag their
+ * own; the webhook acknowledges theirs and never processes them (Security MUST-J1).
+ */
+export const STRIPE_PRODUCT = 'unvibe';
+
+/**
  * The Stripe client, only for an accepted key (`stripeKeyMode`: a test key or a restricted live key): any other
  * value throws before a client exists, so nothing is sent with it. It does not check the payment
  * lock: cancellations, refunds and account deletion keep serving existing customers while purchases
