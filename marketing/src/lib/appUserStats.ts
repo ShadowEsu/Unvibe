@@ -9,7 +9,8 @@ export interface AppUserStats {
   new30d: number;
   active7d: number;
   active30d: number;
-  daily: Array<{ day: string; installs: number; sample: number; code: number }>;
+  /** `first`: installs whose first explanation of any code was that day (absent from older backends). */
+  daily: Array<{ day: string; installs: number; sample: number; code: number; first?: number }>;
   qaExcluded: number;
   source: "supabase" | "unavailable" | "not_configured" | "error";
 }

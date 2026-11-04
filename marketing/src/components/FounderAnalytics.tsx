@@ -25,11 +25,21 @@ interface WaitlistSummary {
   dailySignups: Array<{ date: string; signups: number }>;
 }
 
+interface CopySourceCount {
+  source: string;
+  copied: number;
+}
+
 interface InstallCounts {
   copied: number;
   fetched: number;
   installed: number;
   survey?: number;
+  /** Install command copies per first-touch source label, last 14 Pacific days. */
+  copiedBySource?: {
+    daily: Array<{ date: string; sources: CopySourceCount[] }>;
+    totals: CopySourceCount[];
+  };
 }
 
 interface GrowthFunnel {
@@ -356,13 +366,43 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
               <div className="founder-table-wrap">
                 <table>
                   <thead>
-                    <tr><th scope="col">Date (UTC)</th><th scope="col">New trial installs</th><th scope="col">First sample</th><th scope="col">First own code</th></tr>
+                    <tr><th scope="col">Date (UTC)</th><th scope="col">New trial installs</th><th scope="col">First explanation</th><th scope="col">First sample</th><th scope="col">First own code</th></tr>
                   </thead>
                   <tbody>
                     {[...appUsers.daily].reverse().map((day) => (
                       <tr key={day.day}>
                         <th scope="row">{compactDate(day.day)}</th>
-                        <td>{day.installs}</td><td>{day.sample}</td><td>{day.code}</td>
+                        <td>{day.installs}</td><td>{day.first ?? "n/a"}</td><td>{day.sample}</td><td>{day.code}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          ) : null}
+
+          {data.installs?.copiedBySource ? (
+            <article className="founder-analytics__people founder-analytics__activation">
+              <header>
+                <div>
+                  <span>Install copies by first source, last 14 days</span>
+                  <Subhead className="founder-analytics__subhead">
+                    {data.installs.copiedBySource.totals.map((item) => `${item.source} ${item.copied}`).join(" · ") || "No labelled copies yet"}
+                  </Subhead>
+                </div>
+                <small>Pacific time</small>
+              </header>
+              <p>Only visitors who pressed Allow on the analytics bar. One label per copy from the link they first arrived on (utm_source, utm_medium or ref); direct means no tag. Curl and PowerShell fetches and finished installs carry no source.</p>
+              <div className="founder-table-wrap">
+                <table>
+                  <thead>
+                    <tr><th scope="col">Date</th><th scope="col">Copies by source</th></tr>
+                  </thead>
+                  <tbody>
+                    {[...data.installs.copiedBySource.daily].reverse().map((day) => (
+                      <tr key={day.date}>
+                        <th scope="row">{compactDate(day.date)}</th>
+                        <td>{day.sources.map((item) => `${item.source} ${item.copied}`).join(" · ") || "0"}</td>
                       </tr>
                     ))}
                   </tbody>

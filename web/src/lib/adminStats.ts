@@ -19,7 +19,8 @@ export interface InstallStats {
   active30d: number;
   /**
    * Last 14 UTC days, oldest first. `installs`: first online launch; `sample`: first-run sample
-   * explained; `code`: first explanation of the user's own code (the activation number).
+   * explained; `code`: first explanation of the user's own code (the activation number); `first`:
+   * installs whose explanation count went from 0 to 1 that day (the earlier of `sample` and `code`).
    * Funnel progress kinds and `return` are not counted here.
    */
   daily: DailyActivation[];
@@ -58,9 +59,13 @@ export interface DailyActivation {
   installs: number;
   sample: number;
   code: number;
+  /** Installs whose first explanation of any code (sample or own) was this day. */
+  first: number;
 }
 
 export interface ActivationMarker {
+  /** The hashed install key the marker belongs to (never returned; used to find each install's first). */
+  installKey: string;
   /** Any trial_activation kind; only `sample` and `code` are counted in `daily`. */
   kind: string;
   at: Date;
@@ -74,6 +79,8 @@ const DAY_MS = 86_400_000;
 const DAILY_DAYS = 14;
 /** PostgREST caps responses (1000 rows by default), so row fetches are paged. */
 const PAGE_SIZE = 1000;
+/** Install keys per `in (...)` filter: 100 keys of 64 hex characters keep the request URL near 7 KB. */
+const KEY_CHUNK = 100;
 
 /** Constant-time bearer check. Fails closed when the secret is unset or shorter than `minLength`. */
 function bearerMatches(req: Request, secret: string | undefined, minLength: number): boolean {
@@ -123,20 +130,39 @@ export function summarizeInstalls(
   };
 }
 
-/** Per-UTC-day counts. Install records and activation markers are write-once, so each time is the first. */
-export function dailyActivation(installStarts: Date[], activation: ActivationMarker[], now = new Date(), days = DAILY_DAYS): DailyActivation[] {
+/**
+ * Per-UTC-day counts. Install records and activation markers are write-once, so each time is the
+ * first. `first` counts each install once, on the day of its earliest `sample` or `code` marker;
+ * installs in `explainedBefore` had one before the window, so their first day isn't in it.
+ */
+export function dailyActivation(
+  installStarts: Date[],
+  activation: ActivationMarker[],
+  now = new Date(),
+  days = DAILY_DAYS,
+  explainedBefore: ReadonlySet<string> = new Set(),
+): DailyActivation[] {
   const rows: DailyActivation[] = [];
   for (let i = days - 1; i >= 0; i -= 1) {
-    rows.push({ day: new Date(now.getTime() - i * DAY_MS).toISOString().slice(0, 10), installs: 0, sample: 0, code: 0 });
+    rows.push({ day: new Date(now.getTime() - i * DAY_MS).toISOString().slice(0, 10), installs: 0, sample: 0, code: 0, first: 0 });
   }
   const byDay = new Map(rows.map((row) => [row.day, row]));
   for (const at of installStarts) {
     const row = byDay.get(at.toISOString().slice(0, 10));
     if (row) row.installs += 1;
   }
+  const earliest = new Map<string, Date>();
   for (const marker of activation) {
+    if (!isDailyKind(marker.kind)) continue;
     const row = byDay.get(marker.at.toISOString().slice(0, 10));
-    if (row && isDailyKind(marker.kind)) row[marker.kind] += 1;
+    if (row) row[marker.kind] += 1;
+    const seen = earliest.get(marker.installKey);
+    if (!seen || marker.at < seen) earliest.set(marker.installKey, marker.at);
+  }
+  for (const [installKey, at] of earliest) {
+    if (explainedBefore.has(installKey)) continue;
+    const row = byDay.get(at.toISOString().slice(0, 10));
+    if (row) row.first += 1;
   }
   return rows;
 }
@@ -220,12 +246,41 @@ export async function installStats(now = new Date()): Promise<InstallStats> {
   // Per-IP and global rows (`__…`) are not installs; the query skips them and this keeps it exact.
   const realExplanations = explanations.filter((row) => isInstallCounterKey(row.install_key) && !qa.has(row.install_key));
   const realActivation = activation.filter((row) => !qa.has(row.install_key));
+  const explainedBefore = await explainedBeforeWindow(db, [...new Set(realActivation.map((row) => row.install_key))], firstDay);
   return {
     ...summarizeInstalls(total, installStarts, realExplanations.map((row) => new Date(row.updated_at)), now),
-    daily: dailyActivation(installStarts, realActivation.map((row) => ({ kind: row.kind, at: new Date(row.at) })), now),
+    daily: dailyActivation(
+      installStarts,
+      realActivation.map((row) => ({ installKey: row.install_key, kind: row.kind, at: new Date(row.at) })),
+      now,
+      DAILY_DAYS,
+      explainedBefore,
+    ),
     qaExcluded,
     ...openDisputes(disputes),
     source: 'supabase',
     generatedAt,
   };
+}
+
+/**
+ * Of these installs, the ones with a `sample` or `code` marker before `windowStart`: their first
+ * explanation is older than the daily window, so `first` must not count them in it.
+ */
+async function explainedBeforeWindow(db: SupabaseClient, installKeys: string[], windowStart: Date): Promise<Set<string>> {
+  const before = new Set<string>();
+  for (let i = 0; i < installKeys.length; i += KEY_CHUNK) {
+    const chunk = installKeys.slice(i, i + KEY_CHUNK);
+    const rows = await fetchAll<{ install_key: string }>((from, to) => db
+      .from('trial_activation')
+      .select('install_key')
+      .in('install_key', chunk)
+      .in('kind', DAILY_KINDS)
+      .lt('at', windowStart.toISOString())
+      .order('install_key')
+      .order('kind')
+      .range(from, to), 'trial_activation before window');
+    for (const row of rows) before.add(row.install_key);
+  }
+  return before;
 }

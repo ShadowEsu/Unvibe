@@ -32,27 +32,48 @@ test('daily activation counts each install once per marker and splits sample fro
   const at = (iso: string) => new Date(iso);
   const rows = dailyActivation(
     [at('2026-10-18T01:00:00Z'), at('2026-10-17T23:59:59Z'), at('2026-09-01T00:00:00Z')],
-    [{ kind: 'sample', at: at('2026-10-18T01:00:05Z') },
-     { kind: 'code', at: at('2026-10-18T02:00:00Z') },
-     { kind: 'sample', at: at('2026-10-18T00:00:01Z') }],
+    [{ installKey: 'a', kind: 'sample', at: at('2026-10-18T01:00:05Z') },
+     { installKey: 'a', kind: 'code', at: at('2026-10-18T02:00:00Z') },
+     { installKey: 'b', kind: 'sample', at: at('2026-10-18T00:00:01Z') }],
     now, 2,
   );
   assert.deepEqual(rows, [
-    { day: '2026-10-17', installs: 1, sample: 0, code: 0 },
-    { day: '2026-10-18', installs: 1, sample: 2, code: 1 },
+    { day: '2026-10-17', installs: 1, sample: 0, code: 0, first: 0 },
+    { day: '2026-10-18', installs: 1, sample: 2, code: 1, first: 2 },
   ]);
 });
 
 test('daily activation ignores the funnel kinds, so its output is unchanged by them', () => {
   const now = new Date('2026-10-18T12:00:00Z');
   const at = (iso: string) => new Date(iso);
-  const base = [{ kind: 'sample', at: at('2026-10-18T01:00:05Z') }, { kind: 'code', at: at('2026-10-18T02:00:00Z') }];
+  const base = [{ installKey: 'a', kind: 'sample', at: at('2026-10-18T01:00:05Z') }, { installKey: 'a', kind: 'code', at: at('2026-10-18T02:00:00Z') }];
   const funnel = ['onboarded', 'accessibility', 'signed_in', 'return', 'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted']
-    .map((kind) => ({ kind, at: at('2026-10-18T03:00:00Z') }));
+    .map((kind) => ({ installKey: 'c', kind, at: at('2026-10-18T03:00:00Z') }));
   const installs = [at('2026-10-18T01:00:00Z')];
   const withFunnel = dailyActivation(installs, [...base, ...funnel], now, 2);
   assert.deepEqual(withFunnel, dailyActivation(installs, base, now, 2));
-  for (const row of withFunnel) assert.deepEqual(Object.keys(row), ['day', 'installs', 'sample', 'code']);
+  for (const row of withFunnel) assert.deepEqual(Object.keys(row), ['day', 'installs', 'sample', 'code', 'first']);
+});
+
+test('first explanations: each install once, on the day of its earliest sample or own-code marker', () => {
+  const now = new Date('2026-10-20T12:00:00Z');
+  const at = (iso: string) => new Date(iso);
+  const rows = dailyActivation([], [
+    // Sample on the 18th, own code on the 19th: first on the 18th only.
+    { installKey: 'a', kind: 'code', at: at('2026-10-19T09:00:00Z') },
+    { installKey: 'a', kind: 'sample', at: at('2026-10-18T09:00:00Z') },
+    // Own code first (skipped the sample).
+    { installKey: 'b', kind: 'code', at: at('2026-10-20T01:00:00Z') },
+    // Explained before the window (its sample marker is older), so its code marker is not a first.
+    { installKey: 'old', kind: 'code', at: at('2026-10-19T10:00:00Z') },
+    // Progress markers never make a first.
+    { installKey: 'd', kind: 'onboarded', at: at('2026-10-19T10:00:00Z') },
+  ], now, 3, new Set(['old']));
+  assert.deepEqual(rows.map((row) => [row.day, row.first, row.sample, row.code]), [
+    ['2026-10-18', 1, 1, 0],
+    ['2026-10-19', 0, 0, 2],
+    ['2026-10-20', 1, 0, 1],
+  ]);
 });
 
 test('only the built-in first-run sample counts as the sample, whatever its line endings', () => {
