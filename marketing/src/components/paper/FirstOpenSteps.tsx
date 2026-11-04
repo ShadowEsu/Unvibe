@@ -97,7 +97,7 @@ export function FirstOpenSteps({ initialOs, compact = false, surface }: { initia
           <p className="fos__tag">Or with the download</p>
           <ol>
             <li><b>Open the .dmg</b> you downloaded and drag <b>Unvibe</b> onto <b>Applications</b>. If it asks, choose <b>Replace</b>.</li>
-            <li><b>Open Unvibe</b> from Applications. macOS shows <i>&ldquo;Unvibe Not Opened&rdquo;</i> because Unvibe is not verified by Apple yet. Press <b>Done</b>.</li>
+            <li><b>Open Unvibe</b> from Applications. macOS shows &ldquo;Unvibe Not Opened&rdquo; because Unvibe is not verified by Apple yet. Press <b>Done</b>.</li>
             <li>Open <b>System Settings</b>, click <b>Privacy &amp; Security</b>, and scroll down to <b>Security</b>. Press <b>Open Anyway</b>, confirm when macOS asks again, then enter your Mac password. The button stays for about an hour after you try to open Unvibe. If it&apos;s gone, open Unvibe again first.</li>
             <li>That&apos;s it. You only do this once, and later versions install from inside the app with one click.</li>
           </ol>
@@ -123,7 +123,7 @@ export function FirstOpenSteps({ initialOs, compact = false, surface }: { initia
           <ol>
             <li>If your browser warns about the download, keep it. In Edge, press <b>…</b> next to the download, then <b>Keep</b>, then <b>Show more</b>, then <b>Keep anyway</b>.</li>
             <li>Run <b>{BETA_WINDOWS_ASSET}</b>, the file you downloaded.</li>
-            <li>If a blue <i>&ldquo;Windows protected your PC&rdquo;</i> box appears, press <b>More info</b>, then <b>Run anyway</b>. It shows because Unvibe is new and not yet signed with a paid certificate.</li>
+            <li>If a blue &ldquo;Windows protected your PC&rdquo; box appears, press <b>More info</b>, then <b>Run anyway</b>. It shows because Unvibe is new and not yet signed with a paid certificate.</li>
             <li>Unvibe opens and stays in your taskbar. Later versions install from inside the app with one click.</li>
           </ol>
           <p className="fos__note">No <b>Run anyway</b> button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it blocks unsigned apps like Unvibe and can&apos;t make an exception for one app. Email <a href="mailto:support@unvibe.site?subject=Unvibe%20Windows%20install">support@unvibe.site</a> and we&apos;ll help.</p>

@@ -78,7 +78,7 @@ export default function CodeExplainerMacPage() {
 
         <h2 id="mac-first-open">The first open</h2>
         <p>
-          Unvibe is not notarized by Apple yet, so the first time you open it macOS says &ldquo;Unvibe Not Opened&rdquo;.
+          Unvibe is not verified by Apple yet, so the first time you open it macOS says &ldquo;Unvibe Not Opened&rdquo;.
           You allow it once with Open Anyway in System Settings, under Privacy &amp; Security, and later versions install
           from inside the app with one click. The one-line Terminal install skips this step.
         </p>
@@ -97,8 +97,8 @@ export default function CodeExplainerMacPage() {
       <section className="explain-card" aria-labelledby="mac-what">
         <h2 id="mac-what">What it can explain</h2>
         <ul className="explain-notes">
-          <li>Any code you select, at four free depths: New, Beginner, Intermediate and Advanced. Expert is part of Pro.</li>
-          <li>Test me writes a question about the exact code you selected, and up to three if you want more, to check the explanation stuck.</li>
+          <li>Any code you select, at 4 free depths: New, Beginner, Intermediate and Advanced. Expert is part of Pro.</li>
+          <li>Test me writes a question about the exact code you selected, and up to 3 if you want more, to check the explanation stuck.</li>
           <li>Lessons you keep are saved to your Library on this Mac.</li>
           <li>Change Briefs list what changed in your git repo, made on your Mac, for free. The AI explanation of a change is Pro.</li>
           <li>

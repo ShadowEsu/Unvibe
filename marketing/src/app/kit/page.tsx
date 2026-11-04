@@ -20,7 +20,7 @@ export default function KitPage() {
       <header className="kit__head">
         <div>
           <p className="pstats__eyebrow">Resource kit</p>
-          <h1>Everything about Unvibe, <em>in one place.</em></h1>
+          <h1>Everything about Unvibe, in one place.</h1>
           <p className="kit__lead">For people and AI agents writing to users or investors. Use only what is here.</p>
           <div className="kit__actions">
             <a className="kit__btn kit__btn--lime" href="/kit.md">Plain text for your AI</a>

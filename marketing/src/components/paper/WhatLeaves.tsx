@@ -1,3 +1,5 @@
+import { Arrive } from "@/components/paper/Arrive";
+
 /**
  * "What leaves your computer." (Design W4): what an explanation sends and what stays, as two lists.
  * Every item restates /privacy ("What Unvibe processes", "Secret filtering", "Consent and the cloud",
@@ -23,36 +25,38 @@ export const KEPT: readonly string[] = [
 export function WhatLeaves() {
   return (
     <section className="paper-section" id="what-leaves" aria-labelledby="what-leaves-title">
-      <div className="paper-wrap u-sheet">
-        <div className="sec-head">
-          <p className="paper-meta">Privacy</p>
-          <h2 id="what-leaves-title">What leaves <em>your computer.</em></h2>
-          <p className="paper-lead">Only what&apos;s needed to explain what you ask about. The privacy policy has the full detail.</p>
-        </div>
-        <div className="leaves">
-          <div className="leaves__col">
-            <h3>Sent to write the explanation</h3>
-            <ul className="leaves__list">
-              {SENT.map((item) => (
-                <li key={item}><UpIcon />{item}</li>
-              ))}
-            </ul>
-            <p className="leaves__who">During the beta, Anthropic&apos;s Claude API writes the explanation, unless you add your own provider key in the app.</p>
+      <Arrive className="arrive--plate">
+        <div className="paper-wrap u-sheet u-solid">
+          <div className="sec-head">
+            <h2 id="what-leaves-title">What <mark className="u-mark">leaves</mark> your computer.</h2>
+            <p className="paper-lead">Only what&apos;s needed to explain what you ask about.</p>
           </div>
-          <div className="leaves__col">
-            <h3>Stays on your computer</h3>
-            <ul className="leaves__list">
-              {KEPT.map((item) => (
-                <li key={item}><HomeIcon />{item}</li>
-              ))}
-            </ul>
+          {/* Both lists word for word, closed by default (Security: collapsed is fine); the Anthropic line and the AI line stay visible. */}
+          <div className="leaves">
+            <details className="leaves__col leaves__panel">
+              <summary className="leaves__summary">Sent to write the explanation</summary>
+              <ul className="leaves__list">
+                {SENT.map((item) => (
+                  <li key={item}><UpIcon />{item}</li>
+                ))}
+              </ul>
+            </details>
+            <details className="leaves__col leaves__panel">
+              <summary className="leaves__summary">Stays on your computer</summary>
+              <ul className="leaves__list">
+                {KEPT.map((item) => (
+                  <li key={item}><HomeIcon />{item}</li>
+                ))}
+              </ul>
+            </details>
           </div>
+          <p className="leaves__who">During the beta, Anthropic&apos;s Claude API writes the explanation, unless you add your own provider key in the app.</p>
+          <p className="leaves__foot">
+            <span>AI can be wrong, even when it sounds sure. Each explanation sits next to its code so you can check it.</span>{" "}
+            <a className="paper-text-link" href="/privacy">Privacy policy</a>
+          </p>
         </div>
-        <p className="leaves__foot">
-          <span>AI can be wrong, even when it sounds sure. Each explanation sits next to its code so you can check it.</span>{" "}
-          <a className="paper-text-link" href="/privacy">Privacy policy</a>
-        </p>
-      </div>
+      </Arrive>
     </section>
   );
 }

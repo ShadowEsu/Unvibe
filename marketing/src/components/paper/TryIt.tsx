@@ -6,10 +6,11 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
-import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 import { detectVisitorDevice } from "@/lib/shortcuts";
+import { SKELETON_AFTER_MS, tryWaitView } from "@/lib/motionMoments";
 import { answerTimeLine } from "@/lib/tryTiming";
-import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, type TryConsentTicks } from "@/lib/tryConsent";
+import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, tryConsentReasons, type TryConsentTicks } from "@/lib/tryConsent";
 import type { DownloadSurface } from "@/lib/downloadTracking";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
@@ -30,11 +31,7 @@ const SAMPLE = `function debounce(fn, ms) {
   };
 }`;
 
-const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
-/** While the outage switch is on (see aiMaintenance.ts) the box says so and sends nothing. */
-const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
-
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
 function render(text: string): string {
   const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -82,7 +79,7 @@ interface TryItProps {
 
 /**
  * Paste code, pick a depth, get a real explanation from Vibe. Laid out like the desktop
- * panel: depth buttons along the top, the explanation streaming in below. No account.
+ * panel: depth buttons along the top, the explanation below, shown whole the moment it arrives. No account.
  * With no props it is the home page's box; /explain pages pass their own sample and surfaces.
  */
 export function TryIt({
@@ -96,16 +93,19 @@ export function TryIt({
   const [level, setLevel] = useState<Level>("intermediate");
   const [state, setState] = useState<"idle" | "thinking" | "done" | "error">("idle");
   const [answer, setAnswer] = useState("");
-  const [shown, setShown] = useState("");
   const [error, setError] = useState("");
-  const [note, setNote] = useState(0);
+  // How long this request has been out, in the only step that matters: past the skeleton threshold or not.
+  const [waitedMs, setWaitedMs] = useState(0);
   const [phone, setPhone] = useState(false);
   // Request start to the whole answer received, for the last explanation that succeeded.
   const [tookMs, setTookMs] = useState(0);
   // Both boxes start unticked; a tick of the current consent version is remembered in localStorage.
   const [ticks, setTicks] = useState<TryConsentTicks>({ aiSend: false, age18: false });
   const consented = ticks.aiSend && ticks.age18;
-  const timer = useRef<number | null>(null);
+  // Explain it stays enabled: a press with a box unticked sends nothing and says why next to that box.
+  const [pressed, setPressed] = useState(false);
+  const reasons = tryConsentReasons(ticks, pressed);
+  const boxes = { aiSend: useRef<HTMLInputElement>(null), age18: useRef<HTMLInputElement>(null) };
   // Group sessions: opened as unvibe.site/?room, Try it shows a room code field. The host says the code
   // out loud, so it is never in a page address, a referrer or analytics.
   const [roomField, setRoomField] = useState(false);
@@ -136,29 +136,16 @@ export function TryIt({
     }
   };
 
+  // The shimmer bars join the step line only once the wait passes SKELETON_AFTER_MS, so a fast answer
+  // never flashes them. Nothing here delays the answer: it shows the moment the text arrives.
   useEffect(() => {
-    if (state !== "thinking") return;
-    setNote(0);
-    const id = window.setInterval(() => setNote((n) => Math.min(NOTES.length - 1, n + 1)), 1300);
-    return () => window.clearInterval(id);
-  }, [state]);
-
-  // Reveal the answer a few characters at a time so it feels like Vibe is writing.
-  useEffect(() => {
-    if (!answer) { setShown(""); return; }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setShown(answer);
+    if (state !== "thinking") {
+      setWaitedMs(0);
       return;
     }
-    let i = 0;
-    const step = () => {
-      i = Math.min(answer.length, i + 6);
-      setShown(answer.slice(0, i));
-      if (i < answer.length) timer.current = window.setTimeout(step, 14);
-    };
-    step();
-    return () => { if (timer.current) window.clearTimeout(timer.current); };
-  }, [answer]);
+    const id = window.setTimeout(() => setWaitedMs(SKELETON_AFTER_MS), SKELETON_AFTER_MS);
+    return () => window.clearTimeout(id);
+  }, [state]);
 
   const explain = async (depth: Level = level) => {
     // Nothing is sent to Anthropic until both boxes are ticked, and nothing at all while paused.
@@ -202,23 +189,33 @@ export function TryIt({
     if (state === "done") void explain(next);
   };
 
+  /** Explain it, Try again and Cmd/Ctrl+Enter: send when both boxes are ticked, else show why and focus the first unticked box. */
+  const press = () => {
+    if (!consented) {
+      setPressed(true);
+      boxes[ticks.aiSend ? "age18" : "aiSend"].current?.focus();
+      return;
+    }
+    void explain();
+  };
+
   const onEditorKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim() && consented) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim() && !AI_MAINTENANCE) {
       event.preventDefault();
-      void explain();
+      press();
     }
   };
 
   const lines = code ? code.split("\n").length : 0;
-  const writing = state === "done" && shown.length < answer.length;
+  const wait = tryWaitView(state, waitedMs);
   const status =
-    state === "thinking" ? "Vibe is thinking." : state === "error" ? error : state === "done" && !writing ? "Explanation ready." : "";
+    state === "thinking" ? "Loading explanation" : state === "error" ? error : state === "done" ? "Explanation ready." : "";
   const depthLabel = LEVELS.find(([id]) => id === level)?.[1] ?? "";
   const timeLine = answerTimeLine(tookMs);
 
   return (
     <div className="try">
-      <div className="try__editor">
+      <div className="try__editor code-window">
         <div className="try__bar"><i /><i /><i /><span>{fileName}</span></div>
         <label className="sr-only" htmlFor="try-code">Code to explain</label>
         <textarea
@@ -233,13 +230,31 @@ export function TryIt({
         />
         <div className="try__foot">
           <p className="try__fine try__consent">
-            <input type="checkbox" id="try-consent-send" checked={ticks.aiSend} onChange={(e) => tick("aiSend", e.target.checked)} />
+            <input
+              ref={boxes.aiSend}
+              type="checkbox"
+              id="try-consent-send"
+              checked={ticks.aiSend}
+              aria-invalid={reasons.aiSend ? true : undefined}
+              aria-describedby={reasons.aiSend ? "try-consent-send-why" : undefined}
+              onChange={(e) => tick("aiSend", e.target.checked)}
+            />
             <label htmlFor="try-consent-send">Send this code to Anthropic&apos;s Claude API to explain it</label>
           </p>
+          <p className="try__fine try__why" id="try-consent-send-why" role="alert">{reasons.aiSend}</p>
           <p className="try__fine try__consent">
-            <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />
+            <input
+              ref={boxes.age18}
+              type="checkbox"
+              id="try-consent-age"
+              checked={ticks.age18}
+              aria-invalid={reasons.age18 ? true : undefined}
+              aria-describedby={reasons.age18 ? "try-consent-age-why" : undefined}
+              onChange={(e) => tick("age18", e.target.checked)}
+            />
             <label htmlFor="try-consent-age">I&apos;m 18 or older</label>
           </p>
+          <p className="try__fine try__why" id="try-consent-age-why" role="alert">{reasons.age18}</p>
           {roomField ? (
             <p className="try__fine try__room">
               <label htmlFor="try-room">Room code</label>{" "}
@@ -262,13 +277,10 @@ export function TryIt({
             type="button"
             className="try__go"
             disabled={AI_MAINTENANCE || state === "thinking" || !code.trim()}
-            aria-disabled={consented ? undefined : true}
-            aria-describedby={consented ? undefined : "try-consent-hint"}
-            onClick={() => void explain()}
+            onClick={press}
           >
             {AI_MAINTENANCE ? "Paused for maintenance" : state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
           </button>
-          {consented ? null : <p className="try__fine" id="try-consent-hint">Tick both boxes to explain.</p>}
           <p className="try__fine" id="try-fine">
             Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Anthropic to write the
             explanation. Don&apos;t paste keys or passwords. Common key formats are refused.
@@ -279,7 +291,7 @@ export function TryIt({
       <div className="try__panel">
         <div className="try__head">
           <Vibe size={34} follow={false} />
-          <p><b>Vibe</b><span>{lines} {lines === 1 ? "line" : "lines"} selected</span></p>
+          <p><b>Vibe</b><span className="code-window">{lines} {lines === 1 ? "line" : "lines"} selected</span></p>
         </div>
         <div className="try__levels" role="group" aria-label="Explanation depth">
           {LEVELS.map(([id, label]) => (
@@ -296,7 +308,7 @@ export function TryIt({
           ))}
         </div>
         <p className="sr-only" role="status">{status}</p>
-        <div className="try__body">
+        <div className="try__body" aria-busy={wait.busy || undefined}>
           {state === "idle" ? (
             <div className="try__state">
               <Vibe size={72} />
@@ -304,10 +316,10 @@ export function TryIt({
                 {AI_MAINTENANCE ? AI_MAINTENANCE_NOTE : <>Press <b>Explain it</b> for the sample, or paste your own code first.</>}
               </p>
             </div>
-          ) : state === "thinking" ? (
-            <div className="try__state try__state--thinking" aria-hidden="true">
+          ) : wait.step ? (
+            <div className={wait.skeleton ? "try__state try__state--thinking is-slow" : "try__state try__state--thinking"} aria-hidden="true">
               <Vibe size={60} follow={false} />
-              <p key={note}>{NOTES[note]}</p>
+              <p>{wait.step}</p>
               <i /><i /><i />
             </div>
           ) : state === "error" ? (
@@ -317,9 +329,7 @@ export function TryIt({
               <button
                 type="button"
                 className="try__retry"
-                aria-disabled={consented ? undefined : true}
-                aria-describedby={consented ? undefined : "try-consent-hint"}
-                onClick={() => void explain()}
+                onClick={press}
               >
                 Try again
               </button>
@@ -327,14 +337,12 @@ export function TryIt({
             </div>
           ) : (
             <div className="try__answer">
-              <div dangerouslySetInnerHTML={{ __html: render(shown) }} />
-              {writing ? null : (
-                <div className="try__after">
-                  {timeLine ? <p className="try__took">{timeLine}</p> : null}
-                  <GetUnvibe surface={answerSurface} />
-                  <p className="try__again">Pick another depth above to explain it again. The app does this beside your editor, free.</p>
-                </div>
-              )}
+              <div dangerouslySetInnerHTML={{ __html: render(answer) }} />
+              <div className="try__after">
+                {timeLine ? <p className="try__took">{timeLine}</p> : null}
+                <GetUnvibe surface={answerSurface} />
+                <p className="try__again">Pick another depth above to explain it again. The app does this beside your editor, free.</p>
+              </div>
             </div>
           )}
         </div>

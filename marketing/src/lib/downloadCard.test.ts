@@ -79,11 +79,10 @@ describe("download card: the same card on home #install and /beta", () => {
 });
 
 describe("home has one download card", () => {
-  it("the closing card links to #install instead of repeating the downloads", () => {
+  it("the install section closes the page, with no closing card repeating it (Design 466)", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
     assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
-    const closing = html.slice(html.indexOf('class="paper-invite__card'));
-    assert.match(closing, /^[^]*?<a class="paper-join paper-join--mac" href="#install"><span class="paper-join__label">Go to the download<\/span><\/a>/);
-    assert.doesNotMatch(closing.slice(0, closing.indexOf("</section>")), /releases\/download|Download free for/);
+    assert.doesNotMatch(html, /class="paper-invite__card/);
+    assert.equal(html.lastIndexOf("<section"), html.lastIndexOf("<section", html.indexOf('id="install"')), "#install is the last section");
   });
 });

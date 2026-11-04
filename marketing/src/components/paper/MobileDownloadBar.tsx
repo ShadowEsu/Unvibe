@@ -5,6 +5,18 @@ import { usePathname } from "next/navigation";
 import { track } from "@/lib/analytics";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { detectVisitorDevice } from "@/lib/shortcuts";
+import { GlassPlate } from "@/components/glass/GlassPlate";
+
+/**
+ * Pages with no bar: the download pages, whose own content is the download it would cover
+ * (/pricing, /beta, /install-help; Design W16), and the private and form pages. /redeem and
+ * /activate are forms: at 390 the bar covered the promo-code field (QA, 2 Nov).
+ */
+const NO_BAR = ["/pricing", "/beta", "/install-help", "/founder", "/stats", "/s/", "/waitlist", "/redeem", "/activate"];
+
+export function mobileBarHidden(pathname: string | null): boolean {
+  return NO_BAR.some((prefix) => pathname?.startsWith(prefix));
+}
 
 /**
  * Small-screen bar that appears after the hero. On a phone the useful action is getting the
@@ -32,11 +44,12 @@ export function MobileDownloadBar() {
     };
   }, [pathname]);
 
-  if (pathname?.startsWith("/beta") || pathname?.startsWith("/founder") || pathname?.startsWith("/stats") || pathname?.startsWith("/s/") || pathname?.startsWith("/waitlist")) return null;
+  if (mobileBarHidden(pathname)) return null;
 
   // An <aside>, so the bar sits in a landmark once it shows (axe `region`, seen at 390 with the try-it answer open).
   return (
     <aside className={visible ? "mobile-dl is-in" : "mobile-dl"} aria-label="Get Unvibe" aria-hidden={!visible}>
+      <GlassPlate />
       <span>{phone ? "Free for your Mac or PC" : "Free for Mac and Windows"}</span>
       {phone ? (
         <a href="/#email-link" tabIndex={visible ? 0 : -1} onClick={() => track("email_link_cta_clicked", { surface: "mobile_bar" })}>

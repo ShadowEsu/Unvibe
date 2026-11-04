@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = pageMetadata({
   path: "/releases",
-  title: "Unvibe Change Log: What Shipped",
+  title: "Unvibe Changelog: What Shipped",
   absolute: true,
   description: "Every Unvibe release and product change, newest first, with the date of each update for Mac and Windows.",
 });
@@ -24,8 +24,8 @@ export default async function ReleasesPage() {
         <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
-          <p className="paper-meta">Change log</p>
-          <h1>What <em>shipped.</em></h1>
+          <p className="paper-meta">Changelog</p>
+          <h1>What shipped.</h1>
           <p>
             {latest
               ? `${latest.name.replace(/[—–]/g, ",")} is the newest build on GitHub.`
@@ -40,7 +40,7 @@ export default async function ReleasesPage() {
       <section className="paper-section">
         <div className="paper-wrap paper-log-wrap paper-glass">
           <h2 className="sr-only">Release notes</h2>
-          <ChangelogList items={changelogEntries()} />
+          <ChangelogList items={changelogEntries()} arrive />
         </div>
       </section>
     </article>
