@@ -1119,6 +1119,8 @@ app.whenReady().then(() => {
     sendsSetupProgress: trialBuildEnabled() && !fullProductBuildEnabled(),
     user: greetingName(await firstName()),
     shortcut: settings().all().shortcut,
+    // BRANCH-ONLY (app/glass, ledger 436): the Liquid Glass level for Design's screenshots.
+    glass: process.env.UNVIBE_GLASS?.trim() === 'subtle' ? 'subtle' as const : 'full' as const,
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
   ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));

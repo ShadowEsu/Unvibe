@@ -12,7 +12,8 @@ const api = {
   openCompanion: () => ipcRenderer.send('bar:openCompanion'),
   openSettings: () => ipcRenderer.send('bar:openSettings'),
   companionReview: () => ipcRenderer.send('companion:review'),
-  appInfo: (): Promise<{ version: string; user: string; shortcut: string; sendsSetupProgress: boolean }> => ipcRenderer.invoke('app:info'),
+  // `glass` is branch-only (app/glass): UNVIBE_GLASS, subtle or full, for Design's screenshots.
+  appInfo: (): Promise<{ version: string; user: string; shortcut: string; sendsSetupProgress: boolean; glass: 'subtle' | 'full' }> => ipcRenderer.invoke('app:info'),
   onBarNotify: (cb: (msg: string) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, message: string) => cb(message);
     ipcRenderer.on('bar:notify', listener);

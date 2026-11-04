@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, readFileSync, rmSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, readdirSync, writeFileSync } from 'node:fs';
 
 const testsOnly = process.argv.includes('--tests');
 const releaseBackend = process.env.UNVIBE_BACKEND?.trim() ?? '';
@@ -58,6 +58,10 @@ for (const name of ['bar', 'widget', 'companion']) {
     jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"production"' },
   });
+  // CSS the entry imports (glisse/styles.css and the glass layers) comes out as <name>.css, which the
+  // layered stylesheet below overwrites, so it moves to <name>.glass.css. The HTML links it with
+  // id="glisse-styles" so Glisse skips its inline <style>, which the CSP (style-src 'self') blocks.
+  if (existsSync(`dist/renderer/${name}/${name}.css`)) renameSync(`dist/renderer/${name}/${name}.css`, `dist/renderer/${name}/${name}.glass.css`);
   mkdirSync(`dist/renderer/${name}`, { recursive: true });
   cpSync(`src/renderer/${name}/${name}.html`, `dist/renderer/${name}/${name}.html`);
   const tokens = readFileSync('src/renderer/shared/tokens.css', 'utf8');

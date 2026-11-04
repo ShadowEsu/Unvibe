@@ -1,0 +1,76 @@
+/* BRANCH-ONLY (app/glass, ledger 436). Liquid Glass layers shared by the companion and the panel.
+   Bundled after glisse/styles.css into <window>.glass.css, which loads before the app's own CSS,
+   so the rules that must win use !important. Window rules live in companion/glass.css and
+   widget/glass.css. Nothing here animates: Glisse's springs stop when they settle, and its
+   reduced-motion rule turns the lens and springs off. */
+
+/* ── GlassLayer: a Glisse pane behind its host's content ──────────────────── */
+.lg-glass.glass-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  margin: 0 !important;
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* The host keeps its element and role; it becomes the stacking context, so the pane sits above
+   whatever is behind the host and under the host's own content. :where keeps any position the
+   app already gives the host (fixed toasts, sticky bars). */
+:where(:has(> .glass-layer)) { position: relative; }
+:has(> .glass-layer) { isolation: isolate; }
+:root[data-glass] :has(> .glass-layer) {
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Fill and blur per kind (Design spec 4 Nov, §1). The fill is the window's own paper colour
+   (--glass-paper: white in the companion, the panel's --p-bg in light or dark), so the alpha
+   floors hold in both themes: bars with text 0.74, sheets 0.86, cards 0.78, the panel shell 0.82. */
+.glass-layer--bar { --lg-glass: color-mix(in srgb, var(--glass-paper, #fff) 74%, transparent); --lg-blur: 3px; }
+.glass-layer--sheet { --lg-glass: color-mix(in srgb, var(--glass-paper, #fff) 86%, transparent); --lg-blur: 22px; }
+.glass-layer--card { --lg-glass: color-mix(in srgb, var(--glass-paper, #fff) 78%, transparent); --lg-blur: 12px; }
+.glass-layer--shell { --lg-glass: color-mix(in srgb, var(--glass-paper, #fff) 82%, transparent); --lg-blur: 12px; }
+
+/* Focus: a 2px ring outside the glass on every Glisse control (spec §3). */
+.lg-button:focus-visible,
+.lg-switch:focus-visible,
+.lg-tab:focus-visible,
+.lg-menu-item:focus-visible,
+.lg-slider input:focus-visible {
+  outline: 2px solid var(--glass-ring, currentColor) !important;
+  outline-offset: 2px !important;
+}
+.lg-input:focus-within { outline: 2px solid var(--glass-ring, currentColor); outline-offset: 2px; }
+
+/* ── Solid fallbacks: Glisse has none (spec §2) ──────────────────────────── */
+/* --surface-solid and --border-strong are each window's opaque paper and ink (companion/glass.css,
+   widget/glass.css). [data-theme] re-reads them where the panel sets its own theme. The lit rim
+   (--lg-rim, set inline by Glisse) goes too: an !important rule beats the inline value. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  [class^="lg-"], [class*=" lg-"] {
+    --lg-rim: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-image: none !important;
+  }
+  :root, [data-theme], .glass-layer {
+    --lg-glass: var(--surface-solid) !important;
+    --lg-glass-active: var(--surface-solid) !important;
+    --lg-surface: var(--surface-solid) !important;
+    --lg-edge: var(--border-strong) !important;
+  }
+}
+@media (forced-colors: active) {
+  [class^="lg-"], [class*=" lg-"] {
+    --lg-rim: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: Canvas !important;
+    border: 1px solid CanvasText;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, [data-theme], .glass-layer { --lg-glass: var(--surface-solid) !important; --lg-surface: var(--surface-solid) !important; }
+}
