@@ -396,6 +396,7 @@ async function watch(panel) {
         status: q('.answer-wait__status')?.textContent?.trim() ?? null,
         spinner: document.querySelectorAll('[class*="spinner"], [class*="loader"]').length,
         sentences: [...document.querySelectorAll('.short-answer__sentence')].map((e) => e.textContent),
+        src: q('.src b')?.textContent?.trim() ?? null,
         short: sa ? sa.innerText : null,
         buddy: q('.head__mark .buddy')?.className ?? '',
         more: !!q('.more-detail__toggle'),
@@ -408,13 +409,21 @@ async function watch(panel) {
   }
   return frames;
 }
-function m1m2(label, frames) {
+/** `lines`: how many lines were selected, so the header and the wait status must say exactly "1 line" / "N lines". */
+function m1m2(label, frames, lines = null) {
   const last = frames.at(-1) ?? {};
   if (last.error) { check(false, `M1 ${label}: explained`, last.error.replace(/\s+/g, ' ').slice(0, 140)); return; }
   if (!/card--done/.test(last.card ?? '')) { check(false, `M1 ${label}: finished`, `${frames.length} frames, last card ${last.card}`); return; }
+  const want = lines === null ? null : `${lines} ${lines === 1 ? 'line' : 'lines'}`;
+  if (want) {
+    const shown = [...new Set(frames.map((f) => f.src).filter((x) => /^\d+ lines?$/.test(x ?? '')))]; // "Ready" before the count is known
+    check(shown.length > 0 && shown.every((x) => x === want), `M1 ${label}: the panel header says "${want}"`, shown.join(' / ') || 'no line count seen in the header');
+  }
   if (last.short === null) { note(`M1/M2 ${label}: a full answer, not a short one; the sentence checks apply to short answers only`); return; }
   const waiting = frames.filter((f) => f.skeleton);
-  check(waiting.some((f) => /^Reading (\d+ lines?|your request) of .+\u2026$|^Reading your request\u2026$/.test(f.status ?? '')), `M1 ${label}: waiting shows the skeleton and "Reading N lines of <language>\u2026"`, [...new Set(waiting.map((f) => f.status))].join(' / ') || 'no waiting frame caught');
+  const status = want ? new RegExp(`^Reading ${want} of .+\u2026$`) : /^Reading (\d+ lines?|your request) of .+\u2026$|^Reading your request\u2026$/;
+  if (!waiting.length && !frames.some((f) => f.status)) note(`M1 ${label}: no skeleton in this build (pre-0.1.50)`);
+  else check(waiting.some((f) => status.test(f.status ?? '')), `M1 ${label}: waiting shows the skeleton and "Reading ${want ?? 'N lines'} of <language>\u2026"`, [...new Set(waiting.map((f) => f.status))].join(' / ') || 'no waiting frame caught');
   check(frames.every((f) => f.spinner === 0), `M1 ${label}: no spinner`);
   const streaming = frames.filter((f) => /card--streaming/.test(f.card));
   // Complete = ends at . ! ? (plus closing quotes/brackets), or a colon (a sentence also ends at a blank line).
@@ -478,8 +487,8 @@ if (PASS === 'mock') {
     m1m2('first-run sample', await watch(panel)); await shot(panel, 'm1-sample');
     await focusApp(s);
     await finishSetup(s);
-    const long = await ownCode(s, LONG, true); m1m2('long selection', long.frames); await shot(long.panel, 'm1-long');
-    const unsure = await ownCode(s, UNSURE, false); m1m2('not sure', unsure.frames); await shot(unsure.panel, 'm1-unsure');
+    const long = await ownCode(s, LONG, true); m1m2('long selection', long.frames, LONG.split('\n').length); await shot(long.panel, 'm1-long');
+    const unsure = await ownCode(s, UNSURE, false); m1m2('not sure', unsure.frames, 1); await shot(unsure.panel, 'm1-unsure');
   } catch (e) { check(false, 'M1/M2 real explanations', e.message.split('\n')[0]); } finally { await s?.app.close(); }
 }
 writeFileSync(path.join(OUT, `motion-${PASS}.json`), JSON.stringify(result, null, 1));
