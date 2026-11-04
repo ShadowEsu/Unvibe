@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="2 November 2026"
+      updated="5 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -207,9 +207,9 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong>Anthropic</strong> generates explanations with Claude. In the app, it gets the snippet you
-            approve after it is filtered on your computer. In the website&apos;s Try it box, it gets
+            approve after Unvibe has checked it for keys and tokens on your computer. In the website&apos;s Try it box, it gets
             the code you paste after Unvibe&apos;s server checks it and refuses common key formats;
-            nothing is filtered in your browser.
+            nothing is checked in your browser.
           </li>
           <li><strong>Vercel</strong> hosts the website and API.</li>
           <li><strong>Supabase</strong> stores accounts and synced learning records.</li>
