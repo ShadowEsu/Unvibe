@@ -1,6 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getStore } from '@/data/store';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import { MemoryBillingStore } from './memoryBillingStore';
 
 /**
@@ -177,7 +178,7 @@ function giftBackend(): GiftBackend {
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) return memoryBackend;
-  return supabaseBackend(createClient(url, key, { auth: { persistSession: false } }));
+  return supabaseBackend(createClient(url, key, { auth: { persistSession: false }, global: { fetch: noStoreFetch } }));
 }
 
 /** The signed-in giver's code, share link and count. Issuing the code registers it. */

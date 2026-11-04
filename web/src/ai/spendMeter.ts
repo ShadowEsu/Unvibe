@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
@@ -123,7 +124,7 @@ export class SupabaseSpendStore implements SpendStore {
 
   /** Built on first use: createClient throws on a malformed URL, and that must pause AI, not crash the route. */
   private get db() {
-    this.client ??= createClient(this.url, this.key, { auth: { persistSession: false, autoRefreshToken: false } });
+    this.client ??= createClient(this.url, this.key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: noStoreFetch } });
     return this.client;
   }
 

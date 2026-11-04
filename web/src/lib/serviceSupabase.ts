@@ -5,6 +5,14 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+/**
+ * Next.js caches server fetch() calls across requests and deployments, POSTs included in GET route
+ * handlers (supabase-js sends RPCs as POST). Every server-side Supabase client passes this, so reads
+ * and RPCs always reach the database: on 2 Nov the GET billing overview route served a cached
+ * billing_overview answer whose workspace had since been deleted (400 on the app's Plan tab).
+ */
+export const noStoreFetch: typeof fetch = (input, init) => fetch(input, { ...init, cache: 'no-store' });
+
 let cached: { url: string; key: string; client: SupabaseClient } | null = null;
 
 export function serviceSupabase(): SupabaseClient | null {
@@ -17,9 +25,8 @@ export function serviceSupabase(): SupabaseClient | null {
       key,
       client: createClient(url, key, {
         auth: { persistSession: false },
-        // Next.js caches fetch() GETs across requests and deployments. Counters and limits must
-        // always read live rows, or a stale cached count would let a user past the free limit.
-        global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
+        // Counters and limits must always read live rows, or a stale cached count would let a user past the free limit.
+        global: { fetch: noStoreFetch },
       }),
     };
   }

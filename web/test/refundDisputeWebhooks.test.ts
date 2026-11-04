@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 import { POST as webhook } from '../app/api/v1/billing/webhook/route';
 import { MemoryBillingStore } from '../src/billing/memoryBillingStore';
 import { getBillingStore } from '../src/billing/store';
@@ -12,7 +12,7 @@ import { processStripeEvent } from '../src/billing/webhooks';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 
 type Audit = { action: string; workspaceId: string | null; metadata: Record<string, unknown> };
@@ -69,6 +69,7 @@ function fakeStripe(links: Record<string, InvoiceLink>, statuses: Record<string,
     invoicesForPaymentIntent: async (paymentIntent) => (links[paymentIntent] ? [invoiceFor(links[paymentIntent])] : []),
     cancelSubscription: async (id) => { cancels.push(id); statuses[id] = 'canceled'; },
     latestPaidInvoicePayments: async () => { throw new Error('not used'); },
+    paidInvoicePayments: async () => { throw new Error('not used'); },
     refundPayment: async () => { throw new Error('not used'); },
   };
   return { deps, cancels };
@@ -162,6 +163,21 @@ test('a full refund of a subscription Stripe already canceled does not cancel it
   assert.equal((await c.store.overview(c.userId)).subscription.plan, 'free');
 });
 
+test('a full refund whose cancel loses the race to another delivery (404 resource_missing) still ends access', async () => {
+  const c = await proCustomer();
+  const statuses: Record<string, Stripe.Subscription.Status> = {};
+  const stripe = fakeStripe({ [c.paymentIntent]: c.subscriptionId }, statuses);
+  // The lost dispute's delivery cancels it after this one read it live; Stripe ignores the key on a DELETE.
+  stripe.deps.cancelSubscription = async (id) => {
+    statuses[id] = 'canceled';
+    throw Object.assign(new Error(`No such subscription: '${id}'`), { code: 'resource_missing' });
+  };
+  await processStripeEvent(c.store, chargeRefunded(c.paymentIntent, c.customer, 1000, 1000), stripe.deps);
+  assert.equal((await c.store.overview(c.userId)).subscription.plan, 'free');
+  assert.equal((await c.store.subscriptionByProviderId(c.subscriptionId))?.status, 'canceled');
+  assert.equal(c.audits.find((a) => a.action === 'refund.full')?.metadata.revoked, true);
+});
+
 test('a full refund of a Lifetime payment revokes Lifetime', async () => {
   const c = await proCustomer('lifetime');
   const stripe = fakeStripe({});
@@ -208,9 +224,9 @@ test('the signed webhook links the charge through Invoice Payments and a replay 
   const stripe = getStripe();
   const listed: unknown[] = [];
   const cancels: string[] = [];
-  stripe.invoicePayments.list = (async (params: Stripe.InvoicePaymentListParams) => {
+  stripe.invoicePayments.list = (async function* (params: Stripe.InvoicePaymentListParams) {
     listed.push(params);
-    return { data: [{ invoice: invoiceFor(subscriptionId) }] };
+    yield { invoice: invoiceFor(subscriptionId) };
   }) as unknown as typeof stripe.invoicePayments.list;
   stripe.subscriptions.retrieve = (async (id: string) => ({
     id, status: cancels.includes(id) ? 'canceled' : 'active',
@@ -221,7 +237,7 @@ test('the signed webhook links the charge through Invoice Payments and a replay 
   const payload = JSON.stringify(chargeRefunded(paymentIntent, 'cus_x', 1000, 1000));
   const post = () => webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
   const first = await post();
@@ -245,7 +261,7 @@ test('on a locked production deployment a signed lost dispute is still processed
   });
   const stripe = getStripe();
   const cancels: string[] = [];
-  stripe.invoicePayments.list = (async () => ({ data: [{ invoice: invoiceFor(subscriptionId) }] })) as unknown as typeof stripe.invoicePayments.list;
+  stripe.invoicePayments.list = (async function* () { yield { invoice: invoiceFor(subscriptionId) }; }) as unknown as typeof stripe.invoicePayments.list;
   stripe.subscriptions.retrieve = (async (id: string) => ({
     id, status: cancels.includes(id) ? 'canceled' : 'active',
     items: { data: [{ current_period_start: CURRENT_PERIOD_START, current_period_end: CURRENT_PERIOD_START + MONTH }] },
@@ -260,7 +276,7 @@ test('on a locked production deployment a signed lost dispute is still processed
     const payload = JSON.stringify(dispute('charge.dispute.closed', paymentIntent, 'lost'));
     const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
       method: 'POST',
-      headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+      headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
       body: payload,
     }));
     assert.equal(response.status, 200);
@@ -271,4 +287,51 @@ test('on a locked production deployment a signed lost dispute is still processed
   }
   assert.deepEqual(cancels, [subscriptionId]);
   assert.equal((await store.overview(workspace.ownerUserId)).subscription.plan, 'free');
+});
+
+test('the signed webhook finds the subscription invoice on the second Invoice Payments page', async () => {
+  const store = getBillingStore();
+  const workspace = await store.ensurePersonalWorkspace(randomUUID());
+  const subscriptionId = `sub_${randomUUID()}`;
+  const paymentIntent = `pi_${randomUUID()}`;
+  await store.syncSubscription({
+    workspaceId: workspace.id, plan: 'pro', interval: 'monthly', status: 'active', seats: 1,
+    stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: subscriptionId, stripePriceId: 'price_pro_monthly', cancelAtPeriodEnd: false,
+  });
+  const pages: Array<string | null> = [];
+  // The real SDK follows `has_more` against a local HTTP fake; no request leaves this process.
+  const client = new Stripe('sk_test_localOnly', {
+    httpClient: Stripe.createFetchHttpClient(async (input) => {
+      const url = new URL(String(input));
+      assert.equal(url.pathname, '/v1/invoice_payments');
+      assert.equal(url.searchParams.get('payment[payment_intent]'), paymentIntent);
+      const after = url.searchParams.get('starting_after');
+      pages.push(after);
+      const invoice = after === null
+        ? { id: `in_${randomUUID()}`, object: 'invoice', parent: null, lines: { data: [] } }
+        : invoiceFor(subscriptionId);
+      return Response.json({
+        object: 'list', url: '/v1/invoice_payments', has_more: after === null,
+        data: [{ id: after === null ? 'ip_first' : 'ip_second', object: 'invoice_payment', invoice }],
+      });
+    }),
+  });
+  const stripe = getStripe();
+  const cancels: string[] = [];
+  stripe.invoicePayments.list = client.invoicePayments.list.bind(client.invoicePayments);
+  stripe.subscriptions.retrieve = (async (id: string) => ({
+    id, status: cancels.includes(id) ? 'canceled' : 'active',
+    items: { data: [{ current_period_start: CURRENT_PERIOD_START, current_period_end: CURRENT_PERIOD_START + MONTH }] },
+  })) as unknown as typeof stripe.subscriptions.retrieve;
+  stripe.subscriptions.cancel = (async (id: string) => { cancels.push(id); return { id, status: 'canceled' }; }) as unknown as typeof stripe.subscriptions.cancel;
+
+  const payload = JSON.stringify(chargeRefunded(paymentIntent, `cus_${randomUUID()}`, 1000, 1000));
+  const response = await webhook(new Request('http://localhost/api/v1/billing/webhook', {
+    method: 'POST',
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
+    body: payload,
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(pages, [null, 'ip_first'], 'the second page is read');
+  assert.deepEqual(cancels, [subscriptionId], 'the full refund of the subscription invoice ends access');
 });

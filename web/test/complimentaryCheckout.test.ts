@@ -9,6 +9,7 @@ import { seedMemoryPromoBatch } from '../src/billing/promo';
 import { getBillingStore } from '../src/billing/store';
 import { getStripe } from '../src/billing/stripe';
 import { getStore } from '../src/data/store';
+import { ACCOUNT_POLICY_VERSION } from '../src/lib/accountConsent';
 import { PROMO_ALPHABET, promoCodeHash } from '../src/lib/promoCode';
 
 // Real checkout, promo and webhook routes on the memory stores. Test-mode key; every Stripe method
@@ -16,11 +17,11 @@ import { PROMO_ALPHABET, promoCodeHash } from '../src/lib/promoCode';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.VERCEL_ENV;
-delete process.env.BILLING_LIVE_PAYMENTS_APPROVED;
+delete process.env.UNVIBE_CHECKOUT_LIVE;
 delete process.env.APP_URL;
 delete process.env.PUBLIC_APP_URL;
 process.env.STRIPE_SECRET_KEY = 'sk_test_localOnlyNeverSent';
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_local_only';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_localonly';
 process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_monthly';
 process.env.STRIPE_PRICE_PRO_ANNUAL = 'price_pro_annual';
 
@@ -29,10 +30,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const stripe = getStripe();
 const calls: string[] = [];
 const canceled = new Set<string>();
+/** Stripe's status for a subscription that is not canceled; active when unset. */
+const liveStatus = new Map<string, Stripe.Subscription.Status>();
 const refundKeys: string[] = [];
 const cancelKeys: string[] = [];
 
+let lastCreate: Stripe.Checkout.SessionCreateParams | null = null;
 stripe.checkout.sessions.create = (async (params: Stripe.Checkout.SessionCreateParams) => {
+  lastCreate = params;
   calls.push(`checkout.sessions.create:${params.line_items?.[0]?.price}`);
   const id = `cs_test_${randomUUID()}`;
   return { id, url: `https://checkout.stripe.com/c/pay/${id}`, status: 'open', expires_at: params.expires_at };
@@ -46,7 +51,7 @@ function useSubscription(workspaceId: string): void {
   stripe.subscriptions.retrieve = (async (id: string) => {
     calls.push(`subscriptions.retrieve:${id}`);
     return {
-      id, status: canceled.has(id) ? 'canceled' : 'active', customer: 'cus_crossover', cancel_at_period_end: false, cancel_at: null, created: 1_797_000_000,
+      id, status: canceled.has(id) ? 'canceled' : liveStatus.get(id) ?? 'active', customer: 'cus_crossover', cancel_at_period_end: false, cancel_at: null, created: 1_797_000_000,
       metadata: { workspace_id: workspaceId, plan: 'pro', interval: 'monthly' },
       items: { data: [{ quantity: 1, price: { id: 'price_pro_monthly' }, current_period_start: 1_797_321_600, current_period_end: 1_800_000_000 }] },
     };
@@ -56,9 +61,9 @@ stripe.invoices.list = (async (params: Stripe.InvoiceListParams) => {
   calls.push(`invoices.list:${params.subscription}`);
   return { data: [{ id: `in_${params.subscription}`, status: 'paid' }] };
 }) as unknown as typeof stripe.invoices.list;
-stripe.invoicePayments.list = (async (params: Stripe.InvoicePaymentListParams) => {
+stripe.invoicePayments.list = (async function* (params: Stripe.InvoicePaymentListParams) {
   calls.push(`invoicePayments.list:${params.invoice}`);
-  return { data: [{ status: 'paid', payment: { type: 'payment_intent', payment_intent: `pi_${params.invoice}` } }] };
+  yield { status: 'paid', payment: { type: 'payment_intent', payment_intent: `pi_${params.invoice}` } };
 }) as unknown as typeof stripe.invoicePayments.list;
 stripe.refunds.create = (async (_params: Stripe.RefundCreateParams, options: Stripe.RequestOptions) => {
   refundKeys.push(String(options.idempotencyKey));
@@ -86,7 +91,7 @@ async function redeem(token: string, code: string): Promise<string> {
   const response = await redeemRoute(new Request('https://api.example.test/api/v1/promo/redeem', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-forwarded-for': `10.77.0.${ipCounter}` },
-    body: JSON.stringify({ accessToken: token, code }),
+    body: JSON.stringify({ accessToken: token, code, agreement: { terms: true, age18: true, policyVersion: ACCOUNT_POLICY_VERSION } }),
   }));
   const body = await response.json() as { ok: boolean; proUntil?: string };
   assert.equal(response.status, 200);
@@ -107,7 +112,7 @@ function deliver(event: { type: string; data: { object: Record<string, unknown> 
   const payload = JSON.stringify({ id: `evt_${randomUUID()}`, object: 'event', livemode: false, ...event });
   return webhook(new Request('http://localhost/api/v1/billing/webhook', {
     method: 'POST',
-    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_local_only' }) },
+    headers: { 'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_localonly' }) },
     body: payload,
   }));
 }
@@ -172,6 +177,54 @@ test('once complimentary Pro has ended, checkout is allowed again', async () => 
   }
 });
 
+// Security MUST-J1: the Stripe account is shared, so Unvibe's session and the subscription it creates
+// carry product=unvibe, the tag the webhook keeps; other products' tagged objects are acknowledged only.
+test('a checkout session and its subscription are tagged product=unvibe', async () => {
+  const me = await person();
+  lastCreate = null;
+  assert.equal((await startCheckout(me.token, 'monthly')).status, 201);
+  const params = lastCreate as Stripe.Checkout.SessionCreateParams | null;
+  assert.equal(params?.metadata?.product, 'unvibe');
+  assert.equal(params?.subscription_data?.metadata?.product, 'unvibe');
+});
+
+test('after complimentary Pro has ended, a completed checkout stores the paid subscription with no refund and no cancel', async () => {
+  const me = await person();
+  const proUntil = await redeem(me.token, promoCode(1));
+  mock.timers.enable({ apis: ['Date'], now: new Date(proUntil).getTime() + 60_000 });
+  try {
+    const later = await getStore().signIn(me.email);
+    const opened = await startCheckout(later.token, 'monthly');
+    assert.equal(opened.status, 201);
+    const { workspace } = await storedRow(me.userId);
+    const intent = await getBillingStore().pendingCheckout(me.userId, workspace.id);
+    assert.ok(intent?.stripeCheckoutSessionId);
+
+    const subscriptionId = `sub_${randomUUID()}`;
+    useSubscription(workspace.id);
+    calls.length = 0;
+    refundKeys.length = 0;
+    cancelKeys.length = 0;
+    const session = {
+      id: intent.stripeCheckoutSessionId, object: 'checkout.session', mode: 'subscription', subscription: subscriptionId,
+      metadata: { workspace_id: workspace.id, user_id: me.userId, plan: 'pro', interval: 'monthly', checkout_intent_id: intent.id },
+    };
+    assert.equal((await deliver({ type: 'checkout.session.completed', data: { object: session } })).status, 200);
+
+    const { row } = await storedRow(me.userId);
+    assert.equal(row?.stripeSubscriptionId, subscriptionId, 'the paid subscription is stored');
+    assert.equal(row?.status, 'active');
+    assert.equal(row?.plan, 'pro');
+    assert.equal(row?.currentPeriodEnd, new Date(1_800_000_000 * 1_000).toISOString(), 'the paid period replaces the ended complimentary one');
+    assert.deepEqual(refundKeys, [], 'no refund');
+    assert.deepEqual(cancelKeys, [], 'no cancel');
+    assert.deepEqual(calls, [`subscriptions.retrieve:${subscriptionId}`], 'only the subscription lookup');
+    assert.equal(await getBillingStore().pendingCheckout(me.userId, workspace.id), null, 'the checkout intent is closed');
+  } finally {
+    mock.timers.reset();
+  }
+});
+
 test('a session opened before a promo is redeemed keeps the promo end when it completes; the paid subscription is refunded and canceled once', async () => {
   const me = await person();
   const opened = await startCheckout(me.token, 'monthly');
@@ -214,4 +267,53 @@ test('a session opened before a promo is redeemed keeps the promo end when it co
   assert.deepEqual(refundKeys, [`uncode-dup-refund-${subscriptionId}-pi_in_${subscriptionId}`], 'refunded exactly once');
   assert.deepEqual(cancelKeys, [`uncode-dup-cancel-${subscriptionId}`], 'canceled exactly once');
   assert.equal(await getBillingStore().pendingCheckout(me.userId, workspace.id), null, 'the checkout intent is closed');
+});
+
+test('an incomplete subscription (3DS pending) under complimentary Pro is left alone; once it pays it is refunded and canceled once', async () => {
+  const me = await person();
+  const opened = await startCheckout(me.token, 'monthly');
+  assert.equal(opened.status, 201);
+  const { workspace } = await storedRow(me.userId);
+  const intent = await getBillingStore().pendingCheckout(me.userId, workspace.id);
+  assert.ok(intent?.stripeCheckoutSessionId);
+  const proUntil = await redeem(me.token, promoCode(3));
+
+  const subscriptionId = `sub_${randomUUID()}`;
+  useSubscription(workspace.id);
+  liveStatus.set(subscriptionId, 'incomplete');
+  calls.length = 0;
+  refundKeys.length = 0;
+  cancelKeys.length = 0;
+  const subscriptionEvent = (type: string) => ({ type, data: { object: { id: subscriptionId, object: 'subscription' } } });
+  for (const event of [subscriptionEvent('customer.subscription.created'), subscriptionEvent('customer.subscription.updated')]) {
+    assert.equal((await deliver(event)).status, 200, event.type);
+  }
+  assert.deepEqual(calls, [`subscriptions.retrieve:${subscriptionId}`, `subscriptions.retrieve:${subscriptionId}`], 'only the status lookups: no invoice, refund or cancel call');
+  assert.deepEqual(refundKeys, [], 'no refund while incomplete');
+  assert.deepEqual(cancelKeys, [], 'no cancel while incomplete');
+
+  // The customer completes 3DS: Stripe says active, and the payment's events arrive.
+  liveStatus.set(subscriptionId, 'active');
+  const session = {
+    id: intent.stripeCheckoutSessionId, object: 'checkout.session', mode: 'subscription', subscription: subscriptionId,
+    metadata: { workspace_id: workspace.id, user_id: me.userId, plan: 'pro', interval: 'monthly', checkout_intent_id: intent.id },
+  };
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    assert.equal((await deliver({ type: 'invoice.paid', data: { object: { id: `in_${randomUUID()}`, object: 'invoice', parent: { subscription_details: { subscription: subscriptionId } } } } })).status, 200);
+    assert.deepEqual(refundKeys, [`uncode-dup-refund-${subscriptionId}-pi_in_${subscriptionId}`], 'one refund once it pays');
+    assert.deepEqual(cancelKeys, [`uncode-dup-cancel-${subscriptionId}`], 'one cancel once it pays');
+    for (const event of [subscriptionEvent('customer.subscription.updated'), { type: 'checkout.session.completed', data: { object: session } }]) {
+      assert.equal((await deliver(event)).status, 200, event.type);
+    }
+  } finally {
+    console.error = original;
+  }
+  assert.equal(refundKeys.length, 1, 'still exactly one refund');
+  assert.equal(cancelKeys.length, 1, 'still exactly one cancel');
+  const { row } = await storedRow(me.userId);
+  assert.equal(row?.currentPeriodEnd, proUntil, 'the complimentary end is kept');
+  assert.equal(row?.status, 'trialing');
+  assert.equal(row?.stripeSubscriptionId, undefined, 'the paid subscription was not stored over the complimentary row');
 });
