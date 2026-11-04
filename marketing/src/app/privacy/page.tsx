@@ -230,10 +230,11 @@ export default function PrivacyPage() {
             only after you press Allow on the analytics bar.
           </li>
           <li>
-            <strong>Google Fonts.</strong> Desktop app versions up to 0.1.49 load their fonts from Google
-            (fonts.googleapis.com and fonts.gstatic.com) when the explanation window or companion opens, so
-            Google receives your IP address and app details with that request. 0.1.50 builds the fonts into
-            the app, so it sends no request to Google.
+            <strong>Google Fonts.</strong> Desktop app versions 0.1.49 and earlier load their fonts from Google
+            (fonts.googleapis.com and fonts.gstatic.com) when the explanation window or companion opens. That
+            request gives Google your IP address and your device&apos;s browser details, such as the operating
+            system and app version. From version 0.1.50 (coming soon), the fonts are built into the app, so it
+            makes no request to Google.
           </li>
         </ul>
       </LegalSection>
