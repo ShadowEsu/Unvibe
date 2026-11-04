@@ -17,19 +17,15 @@
 .vhero__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem 1rem; max-width: 100%; }
 .vhero__actions .paper-join { max-width: 100%; text-align: center; line-height: 1.2; }
 
-/* Plain words on a plate (glass.css), not a bordered box: it supports the button, it doesn't compete with it. */
+/* Plain words straight on the hero plate (glass.css), no strip of their own: it supports the button, it doesn't
+   compete with it. */
 .vhero__trust {
-  max-width: 44rem; margin: 0; padding: 0.4rem 0.95rem; border-radius: 12px;
-  background: var(--u-sheet); color: var(--u-text); font-size: 0.9rem; font-weight: 550; line-height: 1.5; text-wrap: balance;
+  max-width: 44rem; margin: 0;
+  color: var(--u-text); font-size: 0.9rem; font-weight: 550; line-height: 1.5; text-wrap: balance;
 }
 .vhero__trust a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .vhero a:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 3px; }
 .vtour h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
-
-@media (max-width: 720px) {
-  /* On phones the kicker reads on a plate like the trust line (glass.css). */
-  .vhero__kicker { padding: 0.5rem 0.9rem; border-radius: 12px; background: var(--u-sheet); }
-}
 
 @media (max-width: 520px) {
   .home-page .vhero { padding: 5.25rem 1.25rem 1.25rem; }

@@ -158,13 +158,33 @@
   vertical-align: 0.08em;
 }
 
-/* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion. */
+/* The hero plate (PhotoHero, Design FIX 1): one sky plate holding the H1, the kicker, the buttons and the trust
+   line, so no words sit on the field's selection bands. It is in the hero, not a .paper-section, so the rotation
+   above never reaches it; the tint is pinned anyway. The H1 is the LCP: no reveal and no hover lift, and no
+   ancestor (.vhero__copy, .vhero, .home-page) carries opacity, filter, transform, isolation or mask. */
+.home-page .vhero .vhero__plate.u-sheet {
+  --u-glass-a: 0.80;
+  --u-sheet-tint: var(--u-glass-sky);
+  --u-sheet-solid: #e2f1fd;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 0.75rem;
+  width: min(900px, 100%);
+  margin-inline: auto;
+  padding: clamp(24px, 4.5vw, 56px) clamp(18px, 5vw, 64px);
+  border-radius: var(--u-radius-sheet);
+  text-align: center;
+}
+
+/* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion.
+   Not the hero plate (LCP). */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .u-sheet {
+  .u-sheet:not(.vhero__plate) {
     transition: transform var(--m-fast) var(--m-ease-sharp);
   }
 
-  .u-sheet:hover {
+  .u-sheet:not(.vhero__plate):hover {
     transform: translateY(-2px);
   }
 }
@@ -205,9 +225,6 @@
 
 /* ── Text on the backdrop: short lines read on a near-solid plate ───────── */
 
-.vhero__kicker,
-.vhero__trust,
-.vhero .vhero__claims,
 .pricing-plans__intro > p,
 .beta-page__head > p {
   justify-self: center;
@@ -242,17 +259,9 @@
 
 /* Plates are absolute, so every plated surface is the positioning box for its own. */
 .who-panel,
-.backing-panel,
-.ssync,
 .vhero__still,
 .paper-beta {
   position: relative;
-}
-
-.backing-panel,
-.ssync {
-  padding: clamp(22px, 4vw, 40px);
-  border-radius: 20px;
 }
 
 /* The home install card leaves the flattened sheet rule (system.css) and becomes a card again. */
@@ -267,8 +276,6 @@
    (.u-sheet .glass-plate below): never glass on glass. */
 :is(
   .who-panel,
-  .backing-panel,
-  .ssync,
   .flexacc__item,
   .vtour__window,
   .vhero__still,
@@ -288,8 +295,6 @@
 
 :is(
   .who-panel,
-  .backing-panel,
-  .ssync,
   .flexacc__item,
   .vtour__window,
   .vhero__still,
@@ -493,9 +498,6 @@
 
   [class^="lg-"],
   [class*=" lg-"],
-  .vhero__kicker,
-  .vhero__trust,
-  .vhero .vhero__claims,
   .pricing-plans__intro > p,
   .beta-page__head > p {
     -webkit-backdrop-filter: none !important;
@@ -519,9 +521,6 @@
 
   [class^="lg-"],
   [class*=" lg-"],
-  .vhero__kicker,
-  .vhero__trust,
-  .vhero .vhero__claims,
   .pricing-plans__intro > p,
   .beta-page__head > p {
     -webkit-backdrop-filter: none !important;
@@ -538,8 +537,6 @@
 
   :is(
     .who-panel,
-    .backing-panel,
-    .ssync,
     .flexacc__item,
     .vtour__window,
     .vhero__still,
@@ -593,9 +590,6 @@ html[data-performance="lite"] body::before {
 html[data-performance="lite"] :is(
   [class^="lg-"],
   [class*=" lg-"],
-  .vhero__kicker,
-  .vhero__trust,
-  .vhero .vhero__claims,
   .pricing-plans__intro > p,
   .beta-page__head > p
 ) {
