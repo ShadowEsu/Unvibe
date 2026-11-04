@@ -132,8 +132,9 @@ export default async function ReviewAiCodePage() {
       >
         <p>
           For a change across several files, Briefs list what changed in your working tree, staged files, the latest
-          commit or a branch. Briefs are made on your computer for free; the AI explanation of a change is Pro. On Pro,
-          when an agent changes many files, After-Agent Review ranks the diff by what deserves a human look.
+          commit or a branch. Briefs are made on your computer for free; the AI explanation of a change is Pro. When an
+          agent changes many files, After-Agent Review in Briefs ranks the change by what deserves a human look, on your
+          computer; the AI explanation of that change is Pro.
         </p>
       </UseCaseSteps>
 
