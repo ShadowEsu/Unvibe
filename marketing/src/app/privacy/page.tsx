@@ -229,6 +229,13 @@ export default function PrivacyPage() {
             <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
             only after you press Allow on the analytics bar.
           </li>
+          <li>
+            <strong>Google Fonts.</strong> Desktop app versions 0.1.49 and earlier load their fonts from Google
+            (fonts.googleapis.com and fonts.gstatic.com) when the explanation window or companion opens. That
+            request gives Google your IP address and your device&apos;s browser details, such as the operating
+            system and app version. From version 0.1.50 (coming soon), the fonts are built into the app, so it
+            makes no request to Google.
+          </li>
         </ul>
       </LegalSection>
 
