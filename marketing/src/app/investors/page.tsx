@@ -76,7 +76,7 @@ export default function InvestorsPage() {
         <div className="inv-stat inv-stat--lime"><b>{total}</b><span>{compensationTotalPhrase()}</span></div>
         <div className="inv-stat inv-stat--sky"><b>{programs}</b><span>startup programs we&apos;re in</span></div>
         <div className="inv-stat inv-stat--sun"><b>{releases}+</b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
-        <div className="inv-stat inv-stat--lilac"><b>Mac + Windows</b><span>beta, free to download</span></div>
+        <div className="inv-stat inv-stat--lilac"><b>Mac and Windows</b><span>beta, free to download</span></div>
       </section>
 
       <section className="inv-section inv-thesis">

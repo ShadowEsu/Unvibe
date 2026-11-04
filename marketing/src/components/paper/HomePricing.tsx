@@ -1,9 +1,6 @@
-import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
-
-/** The Try box's own outage note (TryIt.tsx), repeated word for word under the allowances it qualifies. */
-export const PRICING_PAUSED_NOTE = "AI features are paused for maintenance. Back soon.";
 
 /**
  * The home page's two-card price strip (Design W5): Free today, Pro's real price and that it is not on
@@ -51,7 +48,7 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
           Teams for {PRICING.teamsMinSeats} to {PRICING.teamsMaxSeats} seats also opens soon.{" "}
           <a className="paper-text-link" href="/pricing">See all plans</a>
         </p>
-        {paused ? <p className="plans-strip__paused" role="status">{PRICING_PAUSED_NOTE}</p> : null}
+        {paused ? <p className="plans-strip__paused" role="status">{AI_MAINTENANCE_NOTE}</p> : null}
       </div>
     </section>
   );

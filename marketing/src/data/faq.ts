@@ -1,5 +1,7 @@
+import { FREE_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
+import { proSentence } from "@/lib/proOffer";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 /**
@@ -7,7 +9,7 @@ import { SHORTCUTS } from "@/lib/shortcuts";
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
  * keys and tokens in code and diffs filtered on the device (typed questions and Ask Vibe chat too from
  * v0.1.44, not in v0.1.43); no local-only mode yet; AI explanations can be wrong.
- * No allowance numbers here until the live trial configuration is confirmed.
+ * Allowance numbers come only from lib/allowance.
  */
 
 export interface FaqItem {
@@ -19,9 +21,9 @@ export interface FaqItem {
 
 export const faqCategories: Record<FaqItem["category"], string> = {
   product: "Product",
-  privacy: "Privacy & data",
+  privacy: "Privacy and data",
   platform: "Platforms",
-  pricing: "Access & pricing",
+  pricing: "Access and pricing",
 };
 
 const { mac, windows } = SHORTCUTS;
@@ -111,13 +113,13 @@ export const faqItems: FaqItem[] = [
     id: "free",
     question: "Is Free actually usable?",
     answer:
-      "Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library, within a usage allowance. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. No card and no API key.",
+      `Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library: ${SIGNED_OUT_ALLOWANCE}, then ${FREE_MONTHLY_ALLOWANCE} when you sign in. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. No card and no API key.`,
     category: "pricing",
   },
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year.`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
     category: "pricing",
   },
   {

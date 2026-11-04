@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalLayout, LegalSection } from "@/components/LegalLayout";
+import { PRO_MONTHLY_ALLOWANCE } from "@/lib/allowance";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { pricingCopy } from "@/lib/pricingCopy";
 import { pageMetadata } from "@/lib/pageMeta";
@@ -73,7 +74,7 @@ export default async function TermsPage() {
       <LegalSection heading="Payments and cancellation">
         <p>
           {termsNote ? `${termsNote} ` : null}Free use needs no card. Pro is sold by Unvibe and
-          billed through Stripe, monthly or yearly, and includes 200 AI explanations a month. It
+          billed through Stripe, monthly or yearly, and includes {PRO_MONTHLY_ALLOWANCE}. It
           renews automatically until you cancel.
           You can cancel a subscription at any time from the Plan page in the app. Paid access
           continues until the end of the period you already paid for, then your account returns
