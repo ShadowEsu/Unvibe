@@ -185,6 +185,12 @@ html:not([data-glass="subtle"]) :is(
   font: 500 1rem var(--font-sans);
 }
 
+/* The newsletter field keeps its 3 px focus ring (sections.css), now on the Glisse field's outline. */
+.newsletter__row .lg-input:focus-within {
+  outline: 3px solid var(--u-focus);
+  outline-offset: 2px;
+}
+
 .fb-dialog .lg-input {
   max-width: none;
   height: auto;
